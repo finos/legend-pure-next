@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
+import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
@@ -81,23 +82,22 @@ public final class TruffleCompilerBinaryBuilder
         {
             throw new IllegalArgumentException("source dir does not exist: " + sourceDir);
         }
+        ModuleManifest manifest = ModuleManifest.locate(sourceDir);
 
         System.out.println("Compiling Pure model from " + sourceDir
                 + " (base: " + basePdbs + ") via truffle interpreter...");
+        System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies());
 
-        // 1. Load base PDBs and build the module registry. PDBs are listed
-        // dependency-first by convention (e.g. core then compiler) — declare
-        // each PDB depending on every PDB before it so the registry can
-        // cascade-invalidate on unregister.
+        // 1. Load base PDBs — each carries its identity (name + dependencies)
+        // in its embedded manifest, so the registry can cascade-invalidate on
+        // unregister without us having to fabricate dep chains here.
         List<TrufflePdbLoader> loaders = new ArrayList<>();
         TruffleModuleRegistry resolver = new TruffleModuleRegistry();
-        List<String> priorNames = new ArrayList<>();
         for (Path p : basePdbs)
         {
-            TrufflePdbLoader loader = new TrufflePdbLoader(p, deriveName(p), List.copyOf(priorNames));
+            TrufflePdbLoader loader = new TrufflePdbLoader(p);
             loaders.add(loader);
             resolver.register(loader);
-            priorNames.add(loader.name());
         }
         for (TrufflePdbLoader loader : loaders)
         {
@@ -227,7 +227,7 @@ public final class TruffleCompilerBinaryBuilder
             {
                 Files.createDirectories(outputFile.getParent());
             }
-            TrufflePdbWriter.write(new ArrayList<>(elementsByPath.values()), outputFile);
+            TrufflePdbWriter.write(new ArrayList<>(elementsByPath.values()), manifest, outputFile, true);
             System.out.println("Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
         }
         finally
@@ -275,12 +275,6 @@ public final class TruffleCompilerBinaryBuilder
         sb.append("To diagnose, re-run with `-Dpolyglot.engine.CompilationFailureAction=Diagnose` ")
                 .append("and inspect the produced graal_dumps/ directory.");
         throw new RuntimeException(sb.toString());
-    }
-
-    private static String deriveName(Path pdbPath)
-    {
-        String fileName = pdbPath.getFileName().toString();
-        return fileName.endsWith(".pdb") ? fileName.substring(0, fileName.length() - 4) : fileName;
     }
 
     /**

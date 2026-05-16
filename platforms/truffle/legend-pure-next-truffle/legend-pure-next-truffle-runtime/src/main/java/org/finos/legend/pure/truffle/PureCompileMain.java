@@ -251,19 +251,11 @@ public final class PureCompileMain
             System.exit(1);
         }
 
+        // Each PDB carries its identity in its embedded manifest.
         List<PDBModule> modules = new ArrayList<>();
-        List<String> moduleNames = new ArrayList<>();
-        for (int i = 0; i < pdbPaths.size(); i++)
+        for (String p : pdbPaths)
         {
-            String name = "pdb" + i;
-            moduleNames.add(name);
-            PDBModule module = new PDBModule(
-                    Path.of(pdbPaths.get(i)),
-                    PDBModule.Mode.EXECUTION,
-                    name,
-                    "*",
-                    Lists.mutable.withAll(moduleNames.subList(0, i)));
-            modules.add(module);
+            modules.add(new PDBModule(Path.of(p), PDBModule.Mode.EXECUTION));
         }
 
         PureModel model = PureModel.withModules(Lists.mutable.withAll(modules))
@@ -271,25 +263,19 @@ public final class PureCompileMain
                 .build();
         model.compile();
 
-        // Build truffle PDB loaders + module registry. Each loader depends on
-        //   every loader before it so the registry resolves dependencies in
-        //   declared order; the composite resolver in the registry then
-        //   delegates {@code getElement} to the loaders in registration order.
+        // Build truffle PDB loaders + module registry. Identity (name +
+        // dependencies) comes from each archive's embedded manifest; the
+        // registry resolves cross-module references in registration order.
         java.util.List<org.finos.legend.pure.truffle.runtime.TrufflePdbLoader> loaders = new java.util.ArrayList<>();
         org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry resolver =
                 new org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry();
-        java.util.List<String> declaredDeps = new java.util.ArrayList<>();
-        for (int mi = 0; mi < pdbPaths.size(); mi++)
+        for (String p : pdbPaths)
         {
-            String moduleName = "pdb" + mi;
             org.finos.legend.pure.truffle.runtime.TrufflePdbLoader loader =
                     new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(
-                            java.nio.file.Path.of(pdbPaths.get(mi)),
-                            moduleName,
-                            java.util.List.copyOf(declaredDeps));
+                            java.nio.file.Path.of(p));
             resolver.register(loader);
             loaders.add(loader);
-            declaredDeps.add(moduleName);
         }
         // Wire composite resolver into each loader for cross-module FBW resolution
         for (var loader : loaders) loader.setResolver(resolver);

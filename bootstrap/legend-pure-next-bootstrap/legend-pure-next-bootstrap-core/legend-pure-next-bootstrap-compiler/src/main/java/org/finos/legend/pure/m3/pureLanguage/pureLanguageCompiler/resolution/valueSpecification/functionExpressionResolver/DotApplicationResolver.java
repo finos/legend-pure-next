@@ -94,7 +94,7 @@ public final class DotApplicationResolver
             // Preserve resolved receiver in the returned $expr so downstream
             // passes / validation see the receiver's resolved genericType.
             // Mirrors the corresponding error-path fix in
-            // pure/compiler-pure/.../dotApplicationResolver.pure (the Pure
+            // pure/specification/compiler/compiler-pure/.../dotApplicationResolver.pure (the Pure
             // compiler), which also writes processParameters into $dot here.
             return expr._parametersValues(processParameters);
         }

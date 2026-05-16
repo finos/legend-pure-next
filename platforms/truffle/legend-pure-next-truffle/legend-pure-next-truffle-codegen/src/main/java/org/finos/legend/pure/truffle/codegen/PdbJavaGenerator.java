@@ -3218,16 +3218,13 @@ public class PdbJavaGenerator
                 continue;
             }
             Path pdbPath = Path.of(args[i]);
-            String moduleName = pdbPath.getFileName().toString().replace(".pdb", "");
             // Canonicalize for the banner — Maven passes
             // ${project.basedir}/../../../../shared/core.pdb which is
             // functionally correct but unreadable in build logs.
             inputPaths.add(pdbPath.toAbsolutePath().normalize().toString());
-            MutableList<String> deps = Lists.mutable.withAll(moduleNames);
-            PDBModule pdb = new PDBModule(pdbPath, PDBModule.Mode.EXECUTION,
-                    moduleName, "*", deps);
+            PDBModule pdb = new PDBModule(pdbPath, PDBModule.Mode.EXECUTION);
             modules.add(pdb);
-            moduleNames.add(moduleName);
+            moduleNames.add(pdb.getName());
         }
         // Load FBS schema if --fbs flag is provided (for wrapper generation)
         FbsSchema fbsSchema = null;

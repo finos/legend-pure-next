@@ -177,8 +177,12 @@
                         <configuration>
                             <mainClass>org.finos.legend.pure.m3.SpecificationBinaryBuilder</mainClass>
                             <arguments>
+                                <argument>--m3-ttl</argument>
                                 <argument>${spec.dir}/m3.ttl</argument>
-                                <argument>${spec.dir}/functions</argument>
+                                <argument>${spec.dir}/runtime/functions</argument>
+                                <argument>${spec.dir}/runtime/featureTests</argument>
+                                <argument>${spec.dir}/runtime/ui</argument>
+                                <argument>${spec.dir}/runtime/test</argument>
                                 <argument>${gen.spec.dir}/protocol</argument>
                                 <argument>${project.build.outputDirectory}/core.pdb</argument>
                             </arguments>

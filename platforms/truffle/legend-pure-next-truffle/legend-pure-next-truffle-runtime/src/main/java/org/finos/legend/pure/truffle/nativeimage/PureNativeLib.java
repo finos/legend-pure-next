@@ -165,15 +165,11 @@ public final class PureNativeLib
     private static String executeWithPdbs(List<String> pdbPaths, String function, List<String> args)
             throws Exception
     {
+        // Each PDB carries its own identity in its embedded manifest.
         List<PDBModule> modules = new ArrayList<>();
-        List<String> moduleNames = new ArrayList<>();
-        for (int i = 0; i < pdbPaths.size(); i++)
+        for (String p : pdbPaths)
         {
-            String name = "pdb" + i;
-            moduleNames.add(name);
-            modules.add(new PDBModule(Path.of(pdbPaths.get(i)),
-                    PDBModule.Mode.EXECUTION, name, "*",
-                    Lists.mutable.withAll(moduleNames.subList(0, i))));
+            modules.add(new PDBModule(Path.of(p), PDBModule.Mode.EXECUTION));
         }
         PureModel model = PureModel.withModules(Lists.mutable.withAll(modules))
                 .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
@@ -182,15 +178,11 @@ public final class PureNativeLib
 
         List<TrufflePdbLoader> loaders = new ArrayList<>();
         TruffleModuleRegistry resolver = new TruffleModuleRegistry();
-        List<String> declaredDeps = new ArrayList<>();
-        for (int mi = 0; mi < pdbPaths.size(); mi++)
+        for (String p : pdbPaths)
         {
-            String moduleName = "pdb" + mi;
-            TrufflePdbLoader loader = new TrufflePdbLoader(
-                    Path.of(pdbPaths.get(mi)), moduleName, List.copyOf(declaredDeps));
+            TrufflePdbLoader loader = new TrufflePdbLoader(Path.of(p));
             resolver.register(loader);
             loaders.add(loader);
-            declaredDeps.add(moduleName);
         }
         for (var l : loaders) l.setResolver(resolver);
         for (var l : loaders) l.preloadAll();

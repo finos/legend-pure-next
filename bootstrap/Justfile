@@ -33,7 +33,7 @@ repo_root      := bootstrap_root / ".."
 boot           := bootstrap_root / "legend-pure-next-bootstrap"
 bcore          := boot / "legend-pure-next-bootstrap-core"
 spec           := repo_root / "pure" / "specification"
-compiler_src   := repo_root / "pure" / "compiler-pure"
+compiler_src   := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 boot_out       := bootstrap_root / "build"
 shared_out     := repo_root / "shared"
 cli            := boot_out / "pure-bootstrap.jar"
@@ -111,7 +111,7 @@ test-pure-compiler:
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/compiler.pdb \
-        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
+        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
 
 # Self-host: compile compiler-pure on Pure-on-Java, run compiler tests, then diff PDBs vs Java direct (and Truffle if present).
@@ -126,7 +126,7 @@ test-pure-self-host: build-compiler-pdb
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{boot_out}}/compiler_bootstrap.pdb \
-        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
+        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
     @{{banner}} '[self-host-java]' 'diff compiler.pdb (Java compiler) ↔ compiler_bootstrap.pdb (Pure compiler)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \

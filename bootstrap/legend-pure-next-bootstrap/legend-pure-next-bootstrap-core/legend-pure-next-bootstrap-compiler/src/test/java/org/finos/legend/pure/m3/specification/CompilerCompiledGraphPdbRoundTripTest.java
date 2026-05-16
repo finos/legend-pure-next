@@ -161,7 +161,10 @@ public class CompilerCompiledGraphPdbRoundTripTest
             List<PDBExtension> pdbExtensions = List.of(new PureLanguageExtension());
             try
             {
-                new CompressedArchiveWriter().write(allModuleElements, pdbExtensions, testModule, tempPdb);
+                new CompressedArchiveWriter().write(allModuleElements, pdbExtensions, testModule,
+                        new org.finos.legend.pure.m3.module.ModuleManifest(
+                                testModule.getName(), testModule.getPackagePattern(), testModule.getDependencies()),
+                        List.of(), tempPdb);
             }
             catch (IllegalArgumentException e)
             {
@@ -170,8 +173,7 @@ public class CompilerCompiledGraphPdbRoundTripTest
             }
 
             // --- Step 3: Read back from PDB ---
-            PDBModule roundTripModule = new PDBModule(tempPdb, PDBModule.Mode.EXECUTION,
-                    "roundtrip", "*", Lists.mutable.with(baseModule.getName()));
+            PDBModule roundTripModule = new PDBModule(tempPdb, PDBModule.Mode.EXECUTION);
             PureModel model2 = PureModel.withModules(Lists.mutable.with(roundTripModule, baseModule))
                     .withExtensions(Lists.mutable.with(pureExt))
                     .build();

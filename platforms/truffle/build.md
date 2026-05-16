@@ -59,7 +59,7 @@ test
 │   ├── cd truffle && mvn clean install                            parent + codegen + runtime + 804 unit tests via surefire
 │   └── cp runtime/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
 └── body
-    └── pure-truffle execute meta::pure::test::runCompiledGraphTests pure/specification/compiler/tests
+    └── pure-truffle execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
 ```
 
 ```
@@ -99,7 +99,7 @@ test-pure-compiler-native
 │       ├── cd truffle && mvn -Pnative package -DskipTests
 │       └── cp runtime/target/pure-truffle-native → truffle/build/pure-truffle-native
 └── body
-    └── pure-truffle-native execute meta::pure::test::runCompiledGraphTests pure/specification/compiler/tests
+    └── pure-truffle-native execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
 ```
 
 ```
@@ -124,7 +124,7 @@ test-pure-self-host
 │   └── cp runtime/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
 └── body
     ├── pure-truffle compile compiler-pure → truffle/build/compiler_truffle.pdb
-    └── pure-truffle execute meta::pure::test::runCompiledGraphTests pure/specification/compiler/tests
+    └── pure-truffle execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
                               (using compiler_truffle.pdb instead of shared/compiler.pdb)
 ```
 

@@ -15,6 +15,7 @@
 package org.finos.legend.pure.truffle.runtime;
 
 import com.google.flatbuffers.FlatBufferBuilder;
+import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndex;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndexEntry;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndex;
@@ -56,22 +57,18 @@ public final class TrufflePdbWriter
     }
 
     /**
-     * Write the given elements to a {@code .pdb} archive at {@code outputPath}.
-     * Required-property validation is on by default — call the overload to
-     * disable it for round-tripping content already on disk.
+     * Write the given elements to {@code outputPath} alongside the supplied
+     * {@code manifest}. The manifest is mandatory — every PDB carries its
+     * own identity in the archive's {@code manifest} section so loaders
+     * never need filename guessing or constructor overrides.
+     *
+     * <p>When {@code validateRequired} is false, the generated writer skips
+     * the "[1] / [1..*] property must be non-null/non-empty" checks — useful
+     * when round-tripping elements loaded from a PDB whose readers may have
+     * gaps.</p>
      */
-    public static void write(Iterable<?> elements, Path outputPath) throws IOException
-    {
-        write(elements, outputPath, true);
-    }
-
-    /**
-     * Write the given elements to {@code outputPath}. When
-     * {@code validateRequired} is false, the generated writer skips the
-     * "[1] / [1..*] property must be non-null/non-empty" checks — useful when
-     * round-tripping elements loaded from a PDB whose readers may have gaps.
-     */
-    public static void write(Iterable<?> elements, Path outputPath, boolean validateRequired) throws IOException
+    public static void write(Iterable<?> elements, ModuleManifest manifest,
+                             Path outputPath, boolean validateRequired) throws IOException
     {
         if (outputPath.getParent() != null)
         {
@@ -114,8 +111,17 @@ public final class TrufflePdbWriter
             }
 
             writeElementIndex(zos, indexEntries);
+            writeManifest(zos, manifest);
             writeFunctionIndex(zos, functionEntries, validateRequired);
         }
+    }
+
+    private static void writeManifest(ZipOutputStream zos, ModuleManifest manifest) throws IOException
+    {
+        ZipEntry entry = new ZipEntry(ModuleManifest.ARCHIVE_SECTION);
+        zos.putNextEntry(entry);
+        zos.write(manifest.toBytes());
+        zos.closeEntry();
     }
 
     /**

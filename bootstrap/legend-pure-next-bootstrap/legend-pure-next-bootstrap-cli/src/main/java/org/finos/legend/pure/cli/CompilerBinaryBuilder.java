@@ -21,6 +21,7 @@ import org.finos.legend.pure.m3.LanguageExtension;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
+import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveWriter;
@@ -45,6 +46,7 @@ public class CompilerBinaryBuilder
         if (args.length < 3)
         {
             System.err.println("Usage: CompilerBinaryBuilder <corePdb> <sourceDir> <outputFile.pdb>");
+            System.err.println("  module.json is auto-discovered by walking up from <sourceDir>.");
             System.exit(1);
         }
 
@@ -57,18 +59,24 @@ public class CompilerBinaryBuilder
 
     public static void compile(Path corePdb, Path sourceDir, Path outputFile) throws IOException
     {
+        ModuleManifest manifest = ModuleManifest.locate(sourceDir);
+
         System.out.println();
         System.out.println("Pure Compiler Binary Builder From Pure Files (PDB)");
         System.out.println("==================================================");
         System.out.println("  Inputs: " + corePdb);
         System.out.println("          " + sourceDir);
+        System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies());
         System.out.println("  Output: " + outputFile);
 
-        // Load core.pdb which includes both bootstrap types and compiled spec functions
+        // Load core.pdb — its identity (name "specification", etc.) comes from
+        // the manifest embedded inside the archive.
         PDBModule coreModule = new PDBModule(corePdb, PDBModule.Mode.COMPILATION);
+        verifyDependencies(manifest, List.of(coreModule.getName()));
 
-        // Local module for compiler helper files, depends on the PDB module
-        LocalModule localModule = new LocalModule("compiler", "*", Lists.mutable.with(coreModule.getName()), sourceDir);
+        // Local module for compiler helper files, identity from the source manifest
+        LocalModule localModule = new LocalModule(
+                manifest.name(), manifest.packagePattern(), manifest.dependencies(), sourceDir);
 
         MutableList<Module> modules = Lists.mutable.with(coreModule, localModule);
         MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());
@@ -102,7 +110,19 @@ public class CompilerBinaryBuilder
 
         // Write compiler.pdb
         Files.createDirectories(outputFile.getParent());
-        new CompressedArchiveWriter().write(elements, extensions, localModule, outputFile);
+        new CompressedArchiveWriter().write(elements, extensions, localModule, manifest, List.of(), outputFile);
         System.out.println("    Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
+    }
+
+    private static void verifyDependencies(ModuleManifest manifest, List<String> availableNames)
+    {
+        for (String dep : manifest.dependencies())
+        {
+            if (!availableNames.contains(dep))
+            {
+                throw new RuntimeException("Manifest '" + manifest.name() + "' declares dependency '"
+                        + dep + "' but no module of that name was loaded (available: " + availableNames + ")");
+            }
+        }
     }
 }

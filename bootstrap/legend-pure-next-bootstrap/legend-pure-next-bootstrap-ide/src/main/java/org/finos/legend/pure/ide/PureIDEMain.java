@@ -89,8 +89,7 @@ public class PureIDEMain
                         Path.of("shared/compiler.pdb"),
                         Path.of("legend-pure-next/shared/compiler.pdb"));
         System.out.println("Loading compiler.pdb from: " + compilerPdbPath);
-        PDBModule compilerModule = new PDBModule(compilerPdbPath, PDBModule.Mode.COMPILATION,
-                "compiler", "*", java.util.List.of(coreModule.getName()));
+        PDBModule compilerModule = new PDBModule(compilerPdbPath, PDBModule.Mode.COMPILATION);
         System.out.println("Compiler PDB loaded (" + compilerModule.elementPaths().size() + " elements)");
 
         // Add LocalModule for welcome scratch pad — the only user-editable

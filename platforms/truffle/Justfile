@@ -28,7 +28,7 @@ repo_root       := truffle_root / ".." / ".."
 truffle         := truffle_root / "legend-pure-next-truffle"
 truffle_runtime := truffle / "legend-pure-next-truffle-runtime"
 spec            := repo_root / "pure" / "specification"
-compiler_src    := repo_root / "pure" / "compiler-pure"
+compiler_src    := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 truffle_out     := truffle_root / "build"
 shared_out      := repo_root / "shared"
 truffle_cli     := truffle_out / "pure-truffle.jar"
@@ -79,7 +79,7 @@ test-pure-compiler:
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/compiler.pdb \
-        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
+        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
 
 # Standalone Pure PCT tests over meta::pure::functions (also covered by `test-java` via TrufflePureTestRunner).
@@ -102,7 +102,7 @@ test-pure-self-host: (_mvn "skip-tests")
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{truffle_out}}/compiler_truffle.pdb \
-        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
+        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
     @{{banner}} '[self-host-truffle]' 'diff compiler.pdb (Java compiler) ↔ compiler_truffle.pdb (Truffle compiler)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \

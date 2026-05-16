@@ -22,7 +22,7 @@ explicitly so the chain works on a fresh tree.
   - `bootstrap/build/pure-bootstrap.jar` ← `legend-pure-next-bootstrap-cli/target/pure-bootstrap-*-fat.jar`
   - `<repo>/shared/core.pdb` ← `legend-pure-next-bootstrap-compiler/target/classes/core.pdb`
   - `<repo>/shared/specification/` ← `legend-pure-next-bootstrap-generators/target/generated-specification/`
-- `build-compiler-pdb` — runs `pure-bootstrap compile` over `pure/compiler-pure/`, producing `<repo>/shared/compiler.pdb`. Truffle codegen reads this.
+- `build-compiler-pdb` — runs `pure-bootstrap compile` over `pure/specification/compiler/compiler-pure/`, producing `<repo>/shared/compiler.pdb`. Truffle codegen reads this.
 
 The `test-pure-testFunctions`, `test-pure-PCTs`, and `test-pure-compiler` recipes are zero-dep
 "expert mode" entry points — they assume `just build` (or `just test`) has
@@ -50,7 +50,7 @@ test
 ├── stage                    cp pure-bootstrap.jar + core.pdb + specs/
 ├── build-compiler-pdb       pure-bootstrap compile compiler-pure → shared/compiler.pdb
 └── test-pure-compiler
-    └── body: pure-bootstrap execute meta::pure::test::runCompiledGraphTests pure/specification/compiler/tests
+    └── body: pure-bootstrap execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
 ```
 
 ```
@@ -72,7 +72,7 @@ test-pure-PCTs
 
 ```
 test-pure-compiler
-└── body: pure-bootstrap execute meta::pure::test::runCompiledGraphTests pure/specification/compiler/tests
+└── body: pure-bootstrap execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
                                  (assumes `just build` was run — no Maven, no stage)
 ```
 
@@ -81,7 +81,7 @@ test-pure-self-host
 └── build-compiler-pdb     pure-bootstrap compile (assumes core.pdb staged)
     └── body
         ├── pure-bootstrap compile-via-pure compiler-pure → bootstrap/build/compiler_bootstrap.pdb
-        └── pure-bootstrap execute meta::pure::test::runCompiledGraphTests pure/specification/compiler/tests
+        └── pure-bootstrap execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
                                     (using compiler_bootstrap.pdb instead of compiler.pdb)
 ```
 

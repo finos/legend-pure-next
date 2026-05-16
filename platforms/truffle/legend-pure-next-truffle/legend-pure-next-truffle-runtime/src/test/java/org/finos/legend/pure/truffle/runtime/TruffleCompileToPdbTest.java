@@ -81,10 +81,8 @@ public class TruffleCompileToPdbTest
     static void setupOnce() throws IOException
     {
         Path buildDir = locateBuildDir();
-        TrufflePdbLoader coreLoader = new TrufflePdbLoader(
-                buildDir.resolve("core.pdb"), "core", java.util.List.of());
-        TrufflePdbLoader compilerLoader = new TrufflePdbLoader(
-                buildDir.resolve("compiler.pdb"), "compiler", java.util.List.of("core"));
+        TrufflePdbLoader coreLoader = new TrufflePdbLoader(buildDir.resolve("core.pdb"));
+        TrufflePdbLoader compilerLoader = new TrufflePdbLoader(buildDir.resolve("compiler.pdb"));
         TruffleModuleRegistry registry = new TruffleModuleRegistry();
         registry.register(coreLoader);
         registry.register(compilerLoader);
@@ -283,7 +281,9 @@ public class TruffleCompileToPdbTest
                     tmpPdb = Files.createTempFile("truffle-compile-roundtrip-", ".pdb");
                     try
                     {
-                        TrufflePdbWriter.write(elements, tmpPdb, /*validateRequired=*/ false);
+                        TrufflePdbWriter.write(elements,
+                                new org.finos.legend.pure.m3.module.ModuleManifest("roundtrip", "*", java.util.List.of()),
+                                tmpPdb, /*validateRequired=*/ false);
                         if (Files.size(tmpPdb) == 0) issues.add("Round-tripped PDB is empty");
                         TrufflePdbLoader rt = new TrufflePdbLoader(tmpPdb);
                         int matched = 0;

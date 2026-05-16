@@ -98,10 +98,8 @@ public final class TruffleBackend implements PureBackend
         {
             Object[] built = executor.submit(() ->
             {
-                TrufflePdbLoader coreLoader = new TrufflePdbLoader(
-                        corePdb, "core", List.of());
-                TrufflePdbLoader compilerLoader = new TrufflePdbLoader(
-                        compilerPdb, "compiler", List.of("core"));
+                TrufflePdbLoader coreLoader = new TrufflePdbLoader(corePdb);
+                TrufflePdbLoader compilerLoader = new TrufflePdbLoader(compilerPdb);
                 TruffleModuleRegistry reg = new TruffleModuleRegistry();
                 reg.register(coreLoader);
                 reg.register(compilerLoader);

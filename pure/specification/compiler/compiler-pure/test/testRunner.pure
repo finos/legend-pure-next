@@ -27,14 +27,14 @@ import meta::pure::ui::progress::*;
 //   pure-bootstrap execute \
 //       --pdb shared/core.pdb \
 //       --pdb shared/compiler.pdb \
-//       --function "meta::pure::test::runCompiledGraphTests" \
+//       --function "meta::pure::compiler::test::runCompiledGraphTests" \
 //       --args "pure/specification/compiler/tests"
 //
 // Walks the filesystem under the given directory, reads each .pure file,
 // and asserts it compiles correctly against the ###CompiledGraph or ###Error
 // section that documents the expected output.
 // ---------------------------------------------------------------------------
-function <<test.TestDependency>> meta::pure::test::runCompiledGraphTests(testDir:String[1]):String[1]
+function <<test.TestDependency>> meta::pure::compiler::test::runCompiledGraphTests(testDir:String[1]):String[1]
 {
     let files = directoryTree($testDir)
         ->filter(f | $f->endsWith('.pure'));

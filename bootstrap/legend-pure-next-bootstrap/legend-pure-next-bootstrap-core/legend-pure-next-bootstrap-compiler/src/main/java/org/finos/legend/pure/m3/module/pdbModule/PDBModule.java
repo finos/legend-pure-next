@@ -20,6 +20,7 @@ import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
 import org.finos.legend.pure.m3.module.Module;
+import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveReader;
 import org.finos.legend.pure.m3.module.pdbModule.archive.PdbLoader;
@@ -64,24 +65,34 @@ public class PDBModule implements Module
     private MutableList<MetadataAccessExtension> metadataAccessExtensions;
 
     /**
-     * Open a .pdb archive in the specified mode.
+     * Open a .pdb archive and adopt the identity (name, package pattern,
+     * dependencies) declared in the archive's embedded manifest.
      *
      * @param pdbPath path to the .pdb file
      * @param mode    the operating mode
+     * @throws IOException if the archive has no manifest section
      */
     public PDBModule(Path pdbPath, Mode mode) throws IOException
     {
-        this(pdbPath, mode, pdbPath.getFileName().toString(), "*", List.of());
+        this.archive = new CompressedArchiveReader(pdbPath);
+        this.loader = new PdbLoader(pdbPath);
+        this.mode = mode;
+        ModuleManifest manifest = archive.readManifest();
+        if (manifest == null)
+        {
+            throw new IOException("PDB archive at " + pdbPath + " has no module manifest section. "
+                    + "It must be rebuilt with a writer that embeds one.");
+        }
+        this.name = manifest.name();
+        this.packagePattern = manifest.packagePattern();
+        this.dependencies = manifest.dependencies();
     }
 
     /**
-     * Open a .pdb archive in the specified mode with metadata.
-     *
-     * @param pdbPath        path to the .pdb file
-     * @param mode           the operating mode
-     * @param name           the module name
-     * @param packagePattern the package pattern
-     * @param dependencies   the module dependencies
+     * Open a .pdb archive and override its identity with caller-supplied
+     * values. Used by tools like the PDB differ that need synthetic
+     * module names ("a", "b") for two archives being compared without
+     * adopting the production identity baked into the manifest.
      */
     public PDBModule(Path pdbPath, Mode mode, String name, String packagePattern, List<String> dependencies) throws IOException
     {

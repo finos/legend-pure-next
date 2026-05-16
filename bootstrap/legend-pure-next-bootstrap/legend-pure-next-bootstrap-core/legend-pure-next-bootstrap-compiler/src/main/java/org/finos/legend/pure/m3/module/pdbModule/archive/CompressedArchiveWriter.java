@@ -17,6 +17,7 @@ package org.finos.legend.pure.m3.module.pdbModule.archive;
 import com.google.flatbuffers.FlatBufferBuilder;
 import meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.m3.module.Module;
+import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndex;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndexEntry;
 
@@ -45,32 +46,22 @@ import java.util.zip.ZipOutputStream;
 public class CompressedArchiveWriter
 {
     /**
-     * Write all elements into a ZIP archive, using extensions for
-     * element serialization, element index filtering, and
-     * language-specific archive sections.
+     * Write all elements into a ZIP archive, using extensions for element
+     * serialization and language-specific archive sections.
      *
-     * @param elements   the elements to serialize
-     * @param extensions PDB extensions providing serialization and archive sections
-     * @param module     the module being serialized (passed to extensions)
-     * @param outputPath the output archive path
+     * @param elements           the elements to serialize
+     * @param extensions         PDB extensions providing serialization and archive sections
+     * @param module             the module driving extension-contributed sections (e.g. function index)
+     * @param manifest           the manifest embedded in the archive — its name/pattern/deps may
+     *                           differ from {@code module}'s identity (e.g. compile-via-pure runs
+     *                           against base PDB modules but tags the output with the source manifest)
+     * @param additionalSections caller-provided archive sections, written after extension sections
+     * @param outputPath         the output archive path
      */
     public void write(Iterable<? extends PackageableElement> elements,
                       List<? extends PDBExtension> extensions,
                       Module module,
-                      Path outputPath) throws IOException
-    {
-        write(elements, extensions, module, List.of(), outputPath);
-    }
-
-    /**
-     * Same as {@link #write(Iterable, List, Module, Path)}, but also writes
-     * caller-provided archive sections in addition to anything contributed
-     * by the extensions. Used by writers (e.g. compile-via-pure) that build
-     * sections from elements directly rather than via a {@link Module}.
-     */
-    public void write(Iterable<? extends PackageableElement> elements,
-                      List<? extends PDBExtension> extensions,
-                      Module module,
+                      ModuleManifest manifest,
                       List<PDBArchiveSection> additionalSections,
                       Path outputPath) throws IOException
     {
@@ -115,6 +106,11 @@ public class CompressedArchiveWriter
 
             writeElementIndex(zos, elementEntries);
 
+            // Embed the module manifest (name, package pattern, dependencies)
+            // so the archive carries its own identity. Loaders read this on
+            // open instead of guessing from filename or constructor args.
+            writeManifest(zos, manifest);
+
             // Write extension-contributed archive sections
             for (PDBExtension ext : extensions)
             {
@@ -131,6 +127,14 @@ public class CompressedArchiveWriter
                 writeSection(zos, section);
             }
         }
+    }
+
+    private static void writeManifest(ZipOutputStream zos, ModuleManifest manifest) throws IOException
+    {
+        ZipEntry entry = new ZipEntry(ModuleManifest.ARCHIVE_SECTION);
+        zos.putNextEntry(entry);
+        zos.write(manifest.toBytes());
+        zos.closeEntry();
     }
 
     private static void writeSection(ZipOutputStream zos, PDBArchiveSection section) throws IOException
