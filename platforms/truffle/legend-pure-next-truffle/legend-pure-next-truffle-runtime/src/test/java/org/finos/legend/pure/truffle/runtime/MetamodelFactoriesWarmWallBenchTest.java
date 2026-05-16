@@ -8,9 +8,9 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
-import org.finos.legend.pure.next.parser.PureParser;
 import org.finos.legend.pure.truffle.PureLanguage;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
+import org.finos.legend.pure.truffle.parser.TrufflePureParser;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -44,7 +44,7 @@ public class MetamodelFactoriesWarmWallBenchTest
     private static PureTruffleRuntime runtime;
     private static TruffleMetadataAccess resolver;
     private static Object compileFn;
-    private static PureParser pureParser;
+    private static TrufflePureParser pureParser;
     private static String metamodelFactoriesSource;
     private static String testName;
 
@@ -70,7 +70,7 @@ public class MetamodelFactoriesWarmWallBenchTest
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
-                        new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
+                        new TruffleErrorLanguageExtension()))
                 .withCompileImmediately(false);
         if (Boolean.getBoolean("pure.bench.profiler"))
         {
@@ -100,16 +100,9 @@ public class MetamodelFactoriesWarmWallBenchTest
     @Test
     void bench()
     {
-        // Parse + translate ONCE up front; reuse the resulting truffleFile
-        // across all measured runs. This isolates the steady-state Truffle
-        // compile cost from the source-PDO FlatBuffer lazy-decode tax
-        // (each fresh parse produces fresh PDOs whose `Utf8Safe.decodeUtf8`
-        // strings get materialised on first read). For "how fast is the
-        // pure compiler in steady state" the cached-AST form is the right
-        // measurement; for "real cold-start compile" use the unrelated
-        // CLI benchmark.
-        meta.pure.protocol.PureFile bootstrapFile = pureParser.parse(testName, metamodelFactoriesSource);
-        Object truffleFile = new ProtocolTranslator(resolver).translate(bootstrapFile);
+        // Parse ONCE up front to a PDO PureFile and reuse it across all measured runs.
+        // Post-TrufflePureParser the parse already produces PDOs — no ProtocolTranslator copy.
+        Object truffleFile = pureParser.parse(testName, metamodelFactoriesSource);
 
         // Single warm-up to trigger AST build + Graal compilation of the
         // hot metamodel-walking paths. Subsequent runs measure the

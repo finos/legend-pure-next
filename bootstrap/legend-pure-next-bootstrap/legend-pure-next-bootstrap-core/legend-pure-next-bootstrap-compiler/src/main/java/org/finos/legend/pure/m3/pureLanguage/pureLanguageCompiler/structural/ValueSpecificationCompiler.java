@@ -76,19 +76,137 @@ public final class ValueSpecificationCompiler
         return result;
     }
 
-    private static FunctionInvocationImpl compileFunctionInvocation(
+    private static ValueSpecification compileFunctionInvocation(
             meta.pure.protocol.grammar.valuespecification.FunctionInvocationImpl fa,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
+        MutableList<ValueSpecification> params = fa._parametersValues()
+                .collect(pv -> compile(pv, imports, model, context));
+
+        // Constant-fold unary minus on a numeric literal:
+        //   minus(AtomicValue(N)) → AtomicValue(-N), preserving generic type/multiplicity.
+        // Mirrors the symmetric fold in compiler-pure (compileFunctionInvocation).
+        ValueSpecification folded = tryFoldUnaryMinus(fa, params, model, context);
+        if (folded != null)
+        {
+            return folded;
+        }
+
+        // Arity-based name dispatch for column-spec builders. Parser emits the
+        // unsuffixed funcColSpec / aggColSpec / funcColSpecArray / aggColSpecArray;
+        // the compiler rewrites to the *2 variant when the lambda has 3 params
+        // (Relation, Window, U). Pure's function mangling collapses Function<{...}>
+        // argument types, so we can't merge them as overloads — name-rewrite is
+        // the path. Symmetric to compiler-pure.
+        String effectiveName = dispatchColSpecArity(fa._functionName(), params);
+
         FunctionInvocationImpl result = new FunctionInvocationImpl(model)
-                ._functionName(fa._functionName())
-                ._parametersValues(fa._parametersValues()
-                        .collect(pv -> compile(pv, imports, model, context)));
+                ._functionName(effectiveName)
+                ._parametersValues(params);
         if (fa._p_sourceInformation() != null)
         {
             result._sourceInformation(SourceInformationCompiler.compile(fa._p_sourceInformation(), context.getSourceId(), model));
         }
         return result;
+    }
+
+    private static String dispatchColSpecArity(String name, MutableList<ValueSpecification> params)
+    {
+        if (params.isEmpty())
+        {
+            return name;
+        }
+        if ("funcColSpec".equals(name) || "aggColSpec".equals(name))
+        {
+            return firstParamIsLambdaOfArity(params, 3) ? name + "2" : name;
+        }
+        if ("funcColSpecArray".equals(name) || "aggColSpecArray".equals(name))
+        {
+            return firstCollectionElementUsesArity2(params) ? name + "2" : name;
+        }
+        return name;
+    }
+
+    private static boolean firstParamIsLambdaOfArity(MutableList<ValueSpecification> params, int arity)
+    {
+        ValueSpecification first = params.get(0);
+        if (!(first instanceof AtomicValueImpl av))
+        {
+            return false;
+        }
+        Object inner = av._value();
+        if (!(inner instanceof meta.pure.metamodel.function.LambdaFunction lambda))
+        {
+            return false;
+        }
+        return lambda._parameters() != null && lambda._parameters().size() == arity;
+    }
+
+    private static boolean firstCollectionElementUsesArity2(MutableList<ValueSpecification> params)
+    {
+        ValueSpecification first = params.get(0);
+        if (!(first instanceof CollectionImpl coll))
+        {
+            return false;
+        }
+        if (coll._values() == null || coll._values().isEmpty())
+        {
+            return false;
+        }
+        Object firstVal = coll._values().get(0);
+        if (!(firstVal instanceof FunctionInvocationImpl inner))
+        {
+            return false;
+        }
+        String n = inner._functionName();
+        return "funcColSpec2".equals(n) || "aggColSpec2".equals(n);
+    }
+
+    private static ValueSpecification tryFoldUnaryMinus(
+            meta.pure.protocol.grammar.valuespecification.FunctionInvocationImpl fa,
+            MutableList<ValueSpecification> params,
+            MetadataAccess model,
+            CompilationContext context)
+    {
+        if (!"minus".equals(fa._functionName()) || params.size() != 1)
+        {
+            return null;
+        }
+        if (!(params.get(0) instanceof AtomicValueImpl av))
+        {
+            return null;
+        }
+        Object v = av._value();
+        if (!(v instanceof Number num) || v instanceof ValueSpecification)
+        {
+            return null;
+        }
+        // Fold only Integer/Float-typed literals. Skip Decimal (BigDecimal encoding
+        // varies across compiler backends and folding it breaks PDB parity with
+        // the Truffle compiler) and any other Number subtype that doesn't come
+        // from a parser-produced literal token.
+        Object negated;
+        if (num instanceof Long l) { negated = -l; }
+        else if (num instanceof Double d) { negated = -d; }
+        else if (num instanceof Integer i) { negated = -i; }
+        else if (num instanceof Float f) { negated = -f; }
+        else { return null; }
+
+        AtomicValueImpl folded = new AtomicValueImpl(model);
+        folded._value(negated);
+        if (av._genericType() != null)
+        {
+            folded._genericType(av._genericType());
+        }
+        if (av._multiplicity() != null)
+        {
+            folded._multiplicity(av._multiplicity());
+        }
+        if (fa._p_sourceInformation() != null)
+        {
+            folded._sourceInformation(SourceInformationCompiler.compile(fa._p_sourceInformation(), context.getSourceId(), model));
+        }
+        return folded;
     }
 
     private static DotApplicationImpl compileDotApplication(

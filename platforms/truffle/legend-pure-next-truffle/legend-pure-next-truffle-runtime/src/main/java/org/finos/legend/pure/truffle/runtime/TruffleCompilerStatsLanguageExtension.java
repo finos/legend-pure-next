@@ -8,21 +8,16 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
-import meta.pure.protocol.grammar.Package_PointerImpl;
-import meta.pure.protocol.grammar.PackageableElement;
-import org.finos.legend.pure.next.parser.ParserExtension;
+import org.finos.legend.pure.truffle.parser.topLevel.TruffleParserExtension;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureObjBuilder;
 
 import java.util.List;
 
 /**
  * Truffle-native parser extension for {@code ###CompilerStats} test sections.
- *
- * <p>Mirrors {@link TruffleCompiledGraphLanguageExtension} but for the
- * resolver-telemetry section. Creates grammar elements that
- * {@code ProtocolTranslator} routes to the PDB-generated
- * {@code org.finos.legend.pure.truffle.pdb.meta.pure.compiler.test.CompilerStatsImpl}.</p>
+ * Produces a PDO at {@code meta::pure::compiler::test::CompilerStats}.
  */
-public final class TruffleCompilerStatsLanguageExtension implements ParserExtension
+public final class TruffleCompilerStatsLanguageExtension implements TruffleParserExtension
 {
     @Override
     public String sectionName()
@@ -31,12 +26,16 @@ public final class TruffleCompilerStatsLanguageExtension implements ParserExtens
     }
 
     @Override
-    public List<PackageableElement> parseSection(String content, String sourceId, int lineOffset)
+    public List<Object> parseSection(String content, String sourceId, int lineOffset, TruffleMetadataAccess resolver)
     {
-        meta.pure.compiler.test.CompilerStatsImpl cs = new meta.pure.compiler.test.CompilerStatsImpl();
-        cs._name("CompilerStats");
-        cs._value(content);
-        cs._package(new Package_PointerImpl()._value(sourceId));
+        Object pkg = PureObjBuilder.of("meta::pure::protocol::grammar::Package_Pointer", resolver)
+                .put("value", sourceId)
+                .build();
+        Object cs = PureObjBuilder.of("meta::pure::compiler::test::CompilerStats", resolver)
+                .put("name", "CompilerStats")
+                .put("value", content)
+                .put("package", pkg)
+                .build();
         return List.of(cs);
     }
 }

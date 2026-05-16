@@ -14,12 +14,8 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
-import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
-import org.finos.legend.pure.next.parser.topLevel.TopLevelProtocolBuilder;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
 import org.finos.legend.pure.truffle.types.PureSequence;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -50,7 +46,7 @@ public class TruffleCompileToPdbTest
     private static PureTruffleRuntime runtime;
     private static TruffleMetadataAccess resolver;
     private static Object compileFn;
-    private static org.finos.legend.pure.next.parser.PureParser pureParser;
+    private static org.finos.legend.pure.truffle.parser.TrufflePureParser pureParser;
 
     private static Path locateBuildDir()
     {
@@ -103,7 +99,7 @@ public class TruffleCompileToPdbTest
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
-                        new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
+                        new TruffleErrorLanguageExtension()))
                 .build();
 
         compileFn = resolver.getElement("meta::pure::compiler::compile_PureFile_1__CompilationResult_1_");
@@ -199,34 +195,25 @@ public class TruffleCompileToPdbTest
             return;
         }
 
-        meta.pure.protocol.PureFile bootstrapFile = null;
+        // PDO PureFile straight from the parser — no protocol-Impl intermediate, no
+        // ProtocolTranslator copy step.
+        Object truffleFile = null;
         try
         {
-            bootstrapFile = pureParser.parse(testName, pureSource);
+            truffleFile = pureParser.parse(testName, pureSource);
         }
         catch (Exception e)
         {
             issues.add("parse failed: " + e.getClass().getSimpleName() + " " + e.getMessage());
         }
-        if (bootstrapFile != null && bootstrapFile._sections().isEmpty())
+        if (truffleFile != null)
         {
-            issues.add("no sections to compile");
-        }
-
-        Object truffleFile = null;
-        if (bootstrapFile != null && !bootstrapFile._sections().isEmpty())
-        {
-            try
+            Object sections = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(truffleFile, "sections");
+            boolean isEmpty = sectionsEmpty(sections);
+            if (isEmpty)
             {
-                truffleFile = new ProtocolTranslator(resolver).translate(bootstrapFile);
-                if (truffleFile == null)
-                {
-                    issues.add("ProtocolTranslator returned null");
-                }
-            }
-            catch (Exception e)
-            {
-                issues.add("ProtocolTranslator threw: " + e.getClass().getSimpleName() + " " + e.getMessage());
+                issues.add("no sections to compile");
+                truffleFile = null; // skip execute below
             }
         }
 
@@ -353,5 +340,14 @@ public class TruffleCompileToPdbTest
         if (simple.endsWith("FlatBufferWrapper")) return simple.substring(0, simple.length() - "FlatBufferWrapper".length());
         if (simple.endsWith("Impl")) return simple.substring(0, simple.length() - "Impl".length());
         return simple;
+    }
+
+    /** Empty-check on a PureFile.sections value (PureSequence | List | null). */
+    private static boolean sectionsEmpty(Object sections)
+    {
+        if (sections == null) return true;
+        if (sections instanceof PureSequence seq) return seq.size() == 0;
+        if (sections instanceof java.util.List<?> list) return list.isEmpty();
+        return false;
     }
 }

@@ -42,6 +42,9 @@ public final class MathNodeFactories
         // ── Float arithmetic ───────────────────────────────────────────
         registry.register("plus_Float_1__Float_1__Float_1_",
                 (args, gt, mul, fe) -> new PlusFloatNode(args[0], args[1]));
+        registry.register("minus_Float_1__Float_1__Float_1_",
+                (args, gt, mul, fe) -> new BinaryNumberNode(args[0], args[1],
+                        "minus_Float_1__Float_1__Float_1_", (a, b) -> a - b));
         registry.register("times_Float_1__Float_1__Float_1_",
                 (args, gt, mul, fe) -> new TimesFloatNode(args[0], args[1]));
 
@@ -87,6 +90,10 @@ public final class MathNodeFactories
 
         // ── Single-arg negate ──────────────────────────────────────────
         registry.register("minus_Number_1__Number_1_",
+                (args, gt, mul, fe) -> new MinusNegateNumberNode(args[0]));
+        registry.register("minus_Integer_1__Integer_1_",
+                (args, gt, mul, fe) -> new MinusNegateNumberNode(args[0]));
+        registry.register("minus_Float_1__Float_1_",
                 (args, gt, mul, fe) -> new MinusNegateNumberNode(args[0]));
 
         // ── Comparisons ────────────────────────────────────────────────

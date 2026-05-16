@@ -40,7 +40,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.Pro
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.QualifiedPropertyCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.VariableCompiler;
-import org.finos.legend.pure.next.parser.m3.helper._G_PackageableElement;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._G_PackageableElement;
 
 import java.util.Objects;
 

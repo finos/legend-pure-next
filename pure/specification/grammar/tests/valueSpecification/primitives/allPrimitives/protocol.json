@@ -22,22 +22,33 @@
         },
         "value" : 1
       }, {
-        "_type" : "AtomicValue",
-        "genericType" : {
-          "_type" : "UserDefinedGenericType",
-          "type" : {
-            "_type" : "Type_Pointer",
-            "value" : "Integer"
-          }
-        },
+        "_type" : "FunctionInvocation",
+        "functionName" : "minus",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 4,
           "endLine" : 5,
-          "startColumn" : 4,
+          "startColumn" : 3,
           "startLine" : 5
         },
-        "value" : -1
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Integer"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 4,
+            "endLine" : 5,
+            "startColumn" : 4,
+            "startLine" : 5
+          },
+          "value" : 1
+        } ]
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
@@ -56,22 +67,33 @@
         },
         "value" : 1.9
       }, {
-        "_type" : "AtomicValue",
-        "genericType" : {
-          "_type" : "UserDefinedGenericType",
-          "type" : {
-            "_type" : "Type_Pointer",
-            "value" : "Float"
-          }
-        },
+        "_type" : "FunctionInvocation",
+        "functionName" : "minus",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 6,
           "endLine" : 7,
-          "startColumn" : 4,
+          "startColumn" : 3,
           "startLine" : 7
         },
-        "value" : -1.9
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Float"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 6,
+            "endLine" : 7,
+            "startColumn" : 4,
+            "startLine" : 7
+          },
+          "value" : 1.9
+        } ]
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
@@ -90,22 +112,33 @@
         },
         "value" : 1.2
       }, {
-        "_type" : "AtomicValue",
-        "genericType" : {
-          "_type" : "UserDefinedGenericType",
-          "type" : {
-            "_type" : "Type_Pointer",
-            "value" : "Decimal"
-          }
-        },
+        "_type" : "FunctionInvocation",
+        "functionName" : "minus",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 7,
           "endLine" : 9,
-          "startColumn" : 4,
+          "startColumn" : 3,
           "startLine" : 9
         },
-        "value" : -1.2
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Decimal"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 7,
+            "endLine" : 9,
+            "startColumn" : 4,
+            "startLine" : 9
+          },
+          "value" : 1.2
+        } ]
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
@@ -229,22 +262,33 @@
           },
           "value" : 1
         }, {
-          "_type" : "AtomicValue",
-          "genericType" : {
-            "_type" : "UserDefinedGenericType",
-            "type" : {
-              "_type" : "Type_Pointer",
-              "value" : "Integer"
-            }
-          },
+          "_type" : "FunctionInvocation",
+          "functionName" : "minus",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 8,
             "endLine" : 15,
-            "startColumn" : 8,
+            "startColumn" : 7,
             "startLine" : 15
           },
-          "value" : -1
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 8,
+              "endLine" : 15,
+              "startColumn" : 8,
+              "startLine" : 15
+            },
+            "value" : 1
+          } ]
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
@@ -263,22 +307,33 @@
           },
           "value" : 1.9
         }, {
-          "_type" : "AtomicValue",
-          "genericType" : {
-            "_type" : "UserDefinedGenericType",
-            "type" : {
-              "_type" : "Type_Pointer",
-              "value" : "Float"
-            }
-          },
+          "_type" : "FunctionInvocation",
+          "functionName" : "minus",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 19,
             "endLine" : 15,
-            "startColumn" : 17,
+            "startColumn" : 16,
             "startLine" : 15
           },
-          "value" : -1.9
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Float"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 19,
+              "endLine" : 15,
+              "startColumn" : 17,
+              "startLine" : 15
+            },
+            "value" : 1.9
+          } ]
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
@@ -297,22 +352,33 @@
           },
           "value" : 1.2
         }, {
-          "_type" : "AtomicValue",
-          "genericType" : {
-            "_type" : "UserDefinedGenericType",
-            "type" : {
-              "_type" : "Type_Pointer",
-              "value" : "Decimal"
-            }
-          },
+          "_type" : "FunctionInvocation",
+          "functionName" : "minus",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 32,
             "endLine" : 15,
-            "startColumn" : 29,
+            "startColumn" : 28,
             "startLine" : 15
           },
-          "value" : -1.2
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Decimal"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 32,
+              "endLine" : 15,
+              "startColumn" : 29,
+              "startLine" : 15
+            },
+            "value" : 1.2
+          } ]
         }, {
           "_type" : "AtomicValue",
           "genericType" : {

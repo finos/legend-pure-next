@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.next.parser.m3;
+package org.finos.legend.pure.next.parser.pureLanguage;
 
 import meta.pure.protocol.grammar.Package_Pointer;
 import meta.pure.protocol.grammar.constraint.Constraint;
@@ -64,7 +64,7 @@ import java.util.function.BiConsumer;
 /**
  * Serializes protocol model objects back to Pure code.
  */
-public class M3ProtocolSerializer
+public class PureLanguageSerializer
 {
     /**
      * Controls how parentheses are emitted around operator expressions.
@@ -89,12 +89,12 @@ public class M3ProtocolSerializer
 
     private final ParenthesisMode parenMode;
 
-    public M3ProtocolSerializer()
+    public PureLanguageSerializer()
     {
         this(ParenthesisMode.MINIMAL);
     }
 
-    public M3ProtocolSerializer(final ParenthesisMode mode)
+    public PureLanguageSerializer(final ParenthesisMode mode)
     {
         this.parenMode = mode;
     }
@@ -1050,11 +1050,20 @@ public class M3ProtocolSerializer
                     && sfe._parametersValues() != null
                     && sfe._parametersValues().size() == 1)
             {
-                // Wrap negation expression -(expr) in parens in collection context
-                sb.append("(");
-                serializeFunctionExpression(sb, sfe);
-                sb.append(")");
-                return;
+                // Wrap negation expression -(expr) in parens in collection context,
+                // but only when the operand is a complex expression. Plain negative
+                // literals like -1 render bare so `[1, -1, 2]` round-trips cleanly.
+                ValueSpecification operand = sfe._parametersValues().get(0);
+                boolean isLiteral = operand instanceof AtomicValue av
+                        && !(av._value() instanceof ValueSpecification)
+                        && !(av._value() instanceof java.util.Collection<?>);
+                if (!isLiteral)
+                {
+                    sb.append("(");
+                    serializeFunctionExpression(sb, sfe);
+                    sb.append(")");
+                    return;
+                }
             }
         }
         if (v instanceof LambdaFunction lf)
@@ -1690,6 +1699,9 @@ public class M3ProtocolSerializer
         boolean wrap = false;
         if (first instanceof FunctionExpression sfe)
         {
+            // Arrow binds tighter than unary minus/not, so any unary
+            // expression as receiver must be wrapped to preserve the
+            // intended bracketing: (!x)->f() vs !x->f() parse differently.
             wrap = isInfix(sfe) || isUnary(sfe);
         }
         if (wrap)
@@ -1702,6 +1714,21 @@ public class M3ProtocolSerializer
         {
             serializeExpression(sb, first);
         }
+    }
+
+    /**
+     * Returns true if {@code sfe} is a unary operator whose operand is a plain
+     * AtomicValue literal (e.g. -1, !true). Such unary-on-literal expressions
+     * can stand as primary expressions in operator-context positions where
+     * removing parens won't change the parse.
+     */
+    private static boolean isUnaryOnLiteral(final FunctionExpression sfe)
+    {
+        if (!isUnary(sfe)) return false;
+        ValueSpecification operand = sfe._parametersValues().get(0);
+        return operand instanceof AtomicValue av
+                && !(av._value() instanceof ValueSpecification)
+                && !(av._value() instanceof java.util.Collection<?>);
     }
 
     /**
@@ -1733,10 +1760,15 @@ public class M3ProtocolSerializer
         {
             String innerFunc = String.valueOf(sfe._functionName());
 
-            // Negation -(expr) inside an operator always needs parens: e.g. 2 * -(3 + 4)
+            // Negation -(expr) inside an operator needs parens when the operand is complex
+            // (e.g. 2 * -(3 + 4)), but not when it's a plain literal: 2 * -1 stays bare.
             if ("minus".equals(innerFunc) && sfe._parametersValues() != null && sfe._parametersValues().size() == 1 && isOperatorContext(outerFunc))
             {
-                return true;
+                ValueSpecification negOperand = sfe._parametersValues().get(0);
+                boolean isLiteralOperand = negOperand instanceof AtomicValue av
+                        && !(av._value() instanceof ValueSpecification)
+                        && !(av._value() instanceof java.util.Collection<?>);
+                return !isLiteralOperand;
             }
 
             if (parenMode == ParenthesisMode.MINIMAL)

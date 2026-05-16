@@ -25,8 +25,15 @@
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
-            "_type" : "TypeParameter",
-            "name" : "T"
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 10,
+              "endLine" : 4,
+              "startColumn" : 10,
+              "startLine" : 4
+            },
+            "value" : "T"
           }
         },
         "multiplicity" : {

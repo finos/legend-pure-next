@@ -211,7 +211,10 @@ propertyOrFunctionExpression: propertyExpression | functionExpression
 propertyExpression: DOT propertyName (functionExpressionLatestMilestoningDateParameter | functionExpressionParameters)?
 ;
 
-functionExpression: ARROW qualifiedName functionExpressionParameters (ARROW qualifiedName functionExpressionParameters)*
+functionExpression: arrowStep+
+;
+
+arrowStep: ARROW qualifiedName functionExpressionParameters
 ;
 
 functionExpressionLatestMilestoningDateParameter: GROUP_OPEN LATEST_DATE (COMMA LATEST_DATE)? GROUP_CLOSE

@@ -56,6 +56,9 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     private static final long DEBOUNCE_DELAY_MS = 500;
 
     private LanguageClient client;
+    private final MutableList<PDBModule> pdbModules;
+    /** First PDB by convention is core — used for native-extension lookups and
+     *  the element-index banner that drives the package tree. */
     private final PDBModule coreModule;
     private final MutableList<LocalModule> editableModules;
     private final PureBackend backend;
@@ -65,9 +68,14 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     private final ScheduledExecutorService debounceExecutor = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> pendingCompile;
 
-    public PureLSPServer(PDBModule coreModule, MutableList<LocalModule> editableModules, PureBackend backend)
+    public PureLSPServer(MutableList<PDBModule> pdbModules, MutableList<LocalModule> editableModules, PureBackend backend)
     {
-        this.coreModule = coreModule;
+        if (pdbModules.isEmpty())
+        {
+            throw new IllegalArgumentException("PureLSPServer requires at least one PDB (core.pdb)");
+        }
+        this.pdbModules = pdbModules;
+        this.coreModule = pdbModules.get(0);
         this.editableModules = editableModules;
         this.backend = backend;
         System.out.println("[LSP] backend = " + backend.name());
@@ -379,7 +387,9 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         // Persist the live editor content to the welcome module's filesystem
         saveToModule("welcome.pure", currentSource);
 
-        MutableList<Module> modules = Lists.mutable.<Module>withAll(editableModules).with(coreModule);
+        // editableModules + every PDB (core, compiler, …) — the PDBs are
+        // read-only so model.compile() doesn't re-parse them per keystroke.
+        MutableList<Module> modules = Lists.mutable.<Module>withAll(editableModules).withAll(pdbModules);
 
         PureModel model = PureModel.withModules(modules)
                 .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
@@ -466,6 +476,12 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         }
 
         client.publishDiagnostics(new PublishDiagnosticsParams(currentUri, diagnostics));
+
+        // Refresh the package tree so newly compiled (or removed) editable
+        // elements show up without the client having to re-request it. Even
+        // when compile fails, LocalModule.state holds whatever parsed/compiled
+        // before the error — so the tree reflects current source.
+        sendPackageTree();
     }
 
     // =========================================================================
@@ -484,7 +500,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             // Persist the live editor content to the welcome module's filesystem
             saveToModule("welcome.pure", currentSource);
 
-            MutableList<Module> modules = Lists.mutable.<Module>withAll(editableModules).with(coreModule);
+            MutableList<Module> modules = Lists.mutable.<Module>withAll(editableModules).withAll(pdbModules);
 
             PureModel model = PureModel.withModules(modules)
                     .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
@@ -755,66 +771,63 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         // Build function signatures from PDB metadata
         Map<String, String> functionSignatures = buildFunctionDisplayNames();
 
-        // Collect element paths from editable modules to determine which elements have source
-        Set<String> editableElementPaths = new HashSet<>();
+        // Add elements from editable LocalModules directly. We don't gate this
+        // on lastModel because LocalModule populates its own state during
+        // compile() — so as soon as the user's source has been parsed once
+        // (even if a later phase errored), the elements show up in the tree.
+        // The PDB loop below will skip any path the LocalModule already owns,
+        // so editable elements win precedence over PDB shadows.
         for (LocalModule module : editableModules)
         {
-            editableElementPaths.addAll(module.elementPaths());
+            for (String path : module.elementPaths())
+            {
+                if (elementEntries.containsKey(path)) { continue; }
+                meta.pure.metamodel.PackageableElement element = module.getElement(path);
+                String type = "UserDefined";
+                String displayName = null;
+                if (element != null)
+                {
+                    if (element instanceof meta.pure.metamodel.type.Class) { type = "Class"; }
+                    else if (element instanceof meta.pure.metamodel.type.Enumeration) { type = "Enumeration"; }
+                    else if (element instanceof meta.pure.metamodel.relationship.Association) { type = "Association"; }
+                    else if (element instanceof meta.pure.metamodel.extension.Profile) { type = "Profile"; }
+                    else if (element instanceof meta.pure.metamodel.function.UserDefinedFunction) { type = "UserDefinedFunction"; }
+                    else if (element instanceof meta.pure.metamodel.function.NativeFunction) { type = "NativeFunction"; }
+                    else if (element instanceof meta.pure.metamodel.type.PrimitiveType) { type = "PrimitiveType"; }
+                    else if (element instanceof meta.pure.metamodel.Package) { type = "Package"; }
+                    if (element instanceof FunctionIndexEntry fie)
+                    {
+                        displayName = fie.signatureWithoutPackage();
+                    }
+                    else if (element instanceof meta.pure.metamodel.function.PackageableFunction fn)
+                    {
+                        displayName = buildFunctionSignature(fn);
+                    }
+                }
+                elementEntries.put(path, new String[]{type, displayName, "true"});
+            }
         }
 
-        // Read elementIndex from PDB archive
-        byte[] indexBytes = coreModule.archive().readSection("elementIndex");
-        if (indexBytes != null)
+        // Read elementIndex from EVERY PDB (core, compiler, …) so the
+        // package tree surfaces all loaded PDB elements, not just core's.
+        for (PDBModule pdb : pdbModules)
         {
+            byte[] indexBytes = pdb.archive().readSection("elementIndex");
+            if (indexBytes == null)
+            {
+                throw new IllegalStateException(
+                        "PDB '" + pdb.getName() + "' has no elementIndex section — "
+                                + "this is required for the package tree. Rebuild the PDB.");
+            }
             ElementIndex index = ElementIndex.getRootAsElementIndex(ByteBuffer.wrap(indexBytes));
             for (int i = 0; i < index.elementsLength(); i++)
             {
                 ElementIndexEntry entry = index.elements(i);
                 String path = entry.elementPath();
+                if (elementEntries.containsKey(path)) { continue; }
                 String type = entry.elementType();
                 String displayName = functionSignatures.get(path);
-                boolean hasSource = editableElementPaths.contains(path);
-                elementEntries.put(path, new String[]{type, displayName, hasSource ? "true" : "false"});
-            }
-        }
-
-        // Also add elements from any local modules in the last compiled model
-        if (lastModel != null)
-        {
-            for (Module m : lastModel.modules())
-            {
-                if (m instanceof LocalModule)
-                {
-                    for (String path : m.elementPaths())
-                    {
-                        if (!elementEntries.containsKey(path))
-                        {
-                            meta.pure.metamodel.PackageableElement element = m.getElement(path);
-                            String type = "UserDefined";
-                            String displayName = null;
-                            if (element != null)
-                            {
-                                if (element instanceof meta.pure.metamodel.type.Class) { type = "Class"; }
-                                else if (element instanceof meta.pure.metamodel.type.Enumeration) { type = "Enumeration"; }
-                                else if (element instanceof meta.pure.metamodel.relationship.Association) { type = "Association"; }
-                                else if (element instanceof meta.pure.metamodel.extension.Profile) { type = "Profile"; }
-                                else if (element instanceof meta.pure.metamodel.function.UserDefinedFunction) { type = "UserDefinedFunction"; }
-                                else if (element instanceof meta.pure.metamodel.function.NativeFunction) { type = "NativeFunction"; }
-                                else if (element instanceof meta.pure.metamodel.type.PrimitiveType) { type = "PrimitiveType"; }
-                                else if (element instanceof meta.pure.metamodel.Package) { type = "Package"; }
-                                if (element instanceof FunctionIndexEntry fie)
-                                {
-                                    displayName = fie.signatureWithoutPackage();
-                                }
-                                else if (element instanceof meta.pure.metamodel.function.PackageableFunction fn)
-                                {
-                                    displayName = buildFunctionSignature(fn);
-                                }
-                            }
-                            elementEntries.put(path, new String[]{type, displayName, "true"});
-                        }
-                    }
-                }
+                elementEntries.put(path, new String[]{type, displayName, "false"});
             }
         }
 
@@ -958,16 +971,28 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
     private String buildFileTreeJson()
     {
+        // Each editable LocalModule is a top-level folder named by the
+        // module; its source files sit under it (preserving any directory
+        // structure inside the module's source folder). welcome.pure lands at
+        // the top of the "welcome" folder rather than nested under a
+        // redundant package path.
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("__children", new LinkedHashMap<>());
 
         for (LocalModule module : editableModules)
         {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> rootChildren = (Map<String, Object>) root.get("__children");
+            Map<String, Object> moduleNode = new LinkedHashMap<>();
+            moduleNode.put("__type", "Module");
+            moduleNode.put("__children", new LinkedHashMap<>());
+            rootChildren.put(module.getName(), moduleNode);
+
             for (String sourceId : module.sourceFiles())
             {
                 String[] parts = sourceId.split("/");
                 @SuppressWarnings("unchecked")
-                Map<String, Object> current = (Map<String, Object>) root.get("__children");
+                Map<String, Object> current = (Map<String, Object>) moduleNode.get("__children");
 
                 for (int i = 0; i < parts.length; i++)
                 {

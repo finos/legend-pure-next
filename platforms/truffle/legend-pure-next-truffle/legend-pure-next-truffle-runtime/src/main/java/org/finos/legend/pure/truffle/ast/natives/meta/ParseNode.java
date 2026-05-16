@@ -16,21 +16,18 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.next.parser.PureParser;
 import org.finos.legend.pure.truffle.PureContext;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
-import org.finos.legend.pure.truffle.runtime.ProtocolTranslator;
+import org.finos.legend.pure.truffle.parser.TrufflePureParser;
 
 /**
  * {@code parse(sourceId:String[1], content:String[1]) : PureFile[1]}.
  *
- * <p>Invokes the Pure parser and converts the resulting protocol
- * objects to {@code DynamicInstance} trees via
- * {@code ProtocolToDynamicInstance}. This is needed because the
- * compiled-graph test runner uses {@code match} / {@code instanceOf}
- * on the parsed elements, which requires {@code classifierGenericType}
- * metadata that only DynamicInstance provides.</p>
+ * <p>Parses Pure source directly into a {@code PureDynamicObject} {@code PureFile}
+ * tree via {@link TrufflePureParser}. The ###Pure section is built straight to
+ * PDOs by the code-generated {@code TrufflePureLanguageProtocolBuilder}; the legacy
+ * protocol-Impl → PDO copy via {@code ProtocolTranslator} is no longer needed.</p>
  */
 @NodeInfo(shortName = "parse")
 public final class ParseNode extends PureNode
@@ -57,12 +54,11 @@ public final class ParseNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doParse(PureContext eval, String sourceId, String content)
     {
-        PureParser parser = eval.pureParser();
+        TrufflePureParser parser = eval.pureParser();
         if (parser == null)
         {
-            throw new RuntimeException("parse native: no PureParser configured on PureContext");
+            throw new RuntimeException("parse native: no TrufflePureParser configured on PureContext");
         }
-        Object bootstrapResult = parser.parse(sourceId, content);
-        return new ProtocolTranslator(eval.resolver()).translate(bootstrapResult);
+        return parser.parse(sourceId, content);
     }
 }

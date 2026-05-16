@@ -119,6 +119,18 @@ public final class RawLambdaRootNode extends RootNode
         return name;
     }
 
+    /**
+     * Truffle's compilation listener logs `target.toString()` (which falls back
+     * to `RootNode.toString()` → `Node.toString()` → "ClassName@hashCode").
+     * Include the source-located {@code name} so Graal failure messages name
+     * the offending lambda's file:line:col instead of an opaque identity hash.
+     */
+    @Override
+    public String toString()
+    {
+        return getClass().getSimpleName() + "[" + name + "]";
+    }
+
     @Override
     protected com.oracle.truffle.api.nodes.ExecutionSignature prepareForAOT()
     {

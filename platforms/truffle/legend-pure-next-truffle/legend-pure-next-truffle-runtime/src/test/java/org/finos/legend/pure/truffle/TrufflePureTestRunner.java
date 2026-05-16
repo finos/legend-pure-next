@@ -128,11 +128,10 @@ class TrufflePureTestRunner
                 .build();
         model.compile();
 
-        // Configure the PureParser for the parse native
-        java.util.List<org.finos.legend.pure.next.parser.ParserExtension> parserExts = new java.util.ArrayList<>();
-        parserExts.add(new org.finos.legend.pure.next.parser.m3.PureLanguageParser());
-        context.setPureParser(org.finos.legend.pure.next.parser.PureParser.builder()
-                .withExtensions(parserExts)
+        // Configure the TrufflePureParser for the parse native — ###Pure section builds
+        // PDOs directly via TrufflePureLanguageProtocolBuilder, no ProtocolTranslator copy.
+        context.setPureParser(org.finos.legend.pure.truffle.parser.TrufflePureParser.builder()
+                .resolver(resolver)
                 .build());
 
         // Find PCT adapter via truffle loader
@@ -197,13 +196,24 @@ class TrufflePureTestRunner
         // surface them. (On Oracle GraalVM the log is rich; on CE it may be
         // empty even though compilation IS happening — which is fine: silence
         // here means no failures rather than no compilations.)
+        // HotSpot code-installation size bailouts are tolerated — see
+        // {@link PureTruffleRuntime#isUnavoidableCodeSizeBailout(String)}.
         String log = graalLog.toString(StandardCharsets.UTF_8);
-        List<String> failures = log.lines()
+        List<String> allFailures = log.lines()
                 .filter(line -> line.contains("opt failed"))
                 .toList();
-        String preview = failures.stream().limit(10).collect(Collectors.joining("\n"));
-        assertEquals(0, failures.size(),
-                () -> "Graal compilation failures: " + failures.size() + ". Top failures:\n" + preview);
+        List<String> actionable = allFailures.stream()
+                .filter(line -> !PureTruffleRuntime.isUnavoidableCodeSizeBailout(line))
+                .toList();
+        int tolerated = allFailures.size() - actionable.size();
+        if (tolerated > 0)
+        {
+            System.err.println("[graal-tripwire] tolerated " + tolerated
+                    + " unavoidable code-size bailout(s); affected lambdas stay Tier-1.");
+        }
+        String preview = actionable.stream().limit(10).collect(Collectors.joining("\n"));
+        assertEquals(0, actionable.size(),
+                () -> "Graal compilation failures: " + actionable.size() + ". Top failures:\n" + preview);
     }
 
     @TestFactory

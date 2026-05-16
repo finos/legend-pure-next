@@ -28,7 +28,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 /**
  * Main entry point for the Pure IDE on the Java-direct backend.
@@ -44,7 +44,7 @@ import java.util.function.Function;
  *
  * <p>Other backends live in their own modules (e.g.
  * {@code legend-pure-next-truffle-ide}) and reuse this launcher via
- * {@link #run(List, Function)}. Bootstrap must not depend on platform
+ * {@link #run(List, BiFunction)}. Bootstrap must not depend on platform
  * runtimes, so any Truffle-specific main lives outside this module.</p>
  */
 public class PureIDEMain
@@ -54,19 +54,19 @@ public class PureIDEMain
 
     public static void main(String[] args) throws Exception
     {
-        run(List.of(args), corePdb -> new JavaDirectBackend());
+        run(List.of(args), (corePdb, compilerPdb) -> new JavaDirectBackend());
     }
 
     /**
-     * Boot the IDE with the given backend factory. The factory receives the
-     * resolved {@code core.pdb} path so backends that need their own resolver
-     * (e.g. Truffle) can load the same bootstrap without re-resolving it.
+     * Boot the IDE with the given backend factory. The factory receives both
+     * resolved PDB paths so backends that need their own resolver (e.g.
+     * Truffle) load the exact same files the package tree was built from.
      *
      * <p>Positional args (in order): {@code [path-to-core.pdb]
-     * [compiler-pure-path] [welcome-path]}. Callers (e.g. a Truffle launcher)
-     * should strip their own flags before invoking this.</p>
+     * [path-to-compiler.pdb] [welcome-path]}. Callers should strip their own
+     * flags before invoking this.</p>
      */
-    public static void run(List<String> args, Function<Path, PureBackend> backendFactory) throws Exception
+    public static void run(List<String> args, BiFunction<Path, Path, PureBackend> backendFactory) throws Exception
     {
         // Resolve core.pdb path (CLI arg or classpath-bundled core.pdb)
         Path pdbPath = args.size() > 0
@@ -77,24 +77,25 @@ public class PureIDEMain
         PDBModule coreModule = new PDBModule(pdbPath, PDBModule.Mode.COMPILATION);
         System.out.println("Core PDB loaded (" + coreModule.elementPaths().size() + " elements)");
 
-        // Add LocalModule for compiler-pure. Resolve relative to the launch
-        // cwd OR the project root — IntelliJ run configs default cwd to the
-        // project root, command-line `mvn exec`-from-bootstrap-ide module
-        // defaults to the module dir. The default candidates cover both.
-        Path compilerPurePath = args.size() > 1
+        // Load compiler.pdb as a PDB (read-only, pre-compiled) so the IDE
+        // doesn't re-compile compiler-pure on every keystroke and so the
+        // package tree picks up its elements via the same elementIndex path
+        // it uses for core. The file is built by `just bootstrap::build-compiler-pdb`
+        // and staged into shared/.
+        Path compilerPdbPath = args.size() > 1
                 ? Path.of(args.get(1))
-                : resolveExisting("compiler-pure",
-                        Path.of("../../../pure/compiler-pure"),
-                        Path.of("pure/compiler-pure"),
-                        Path.of("legend-pure-next/pure/compiler-pure"));
-        System.out.println("Loading compiler pure from: " + compilerPurePath);
-        LocalModule compilerPureModule = new LocalModule(
-                "next-compiler-pure", "*",
-                java.util.List.of(coreModule.getName()),
-                compilerPurePath
-        );
+                : resolveExistingFile("compiler.pdb",
+                        Path.of("../../../shared/compiler.pdb"),
+                        Path.of("shared/compiler.pdb"),
+                        Path.of("legend-pure-next/shared/compiler.pdb"));
+        System.out.println("Loading compiler.pdb from: " + compilerPdbPath);
+        PDBModule compilerModule = new PDBModule(compilerPdbPath, PDBModule.Mode.COMPILATION,
+                "compiler", "*", java.util.List.of(coreModule.getName()));
+        System.out.println("Compiler PDB loaded (" + compilerModule.elementPaths().size() + " elements)");
 
-        // Add LocalModule for welcome scratch pad (same cwd-resilience).
+        // Add LocalModule for welcome scratch pad — the only user-editable
+        // module. Depends on both PDBs so user code can reference any
+        // metamodel or compiler-pure element.
         Path welcomePath = args.size() > 2
                 ? Path.of(args.get(2))
                 : resolveExisting("welcome",
@@ -104,11 +105,12 @@ public class PureIDEMain
         System.out.println("Loading welcome from: " + welcomePath);
         LocalModule welcomeModule = new LocalModule(
                 "welcome", "*",
-                java.util.List.of(coreModule.getName(), compilerPureModule.getName()),
+                java.util.List.of(coreModule.getName(), compilerModule.getName()),
                 welcomePath
         );
 
-        MutableList<LocalModule> editableModules = Lists.mutable.with(welcomeModule, compilerPureModule);
+        MutableList<LocalModule> editableModules = Lists.mutable.with(welcomeModule);
+        MutableList<PDBModule> pdbModules = Lists.mutable.with(coreModule, compilerModule);
 
         // Start HTTP server for static files
         HttpServer httpServer = HttpServer.create(new InetSocketAddress(HTTP_PORT), 0);
@@ -145,11 +147,11 @@ public class PureIDEMain
         httpServer.start();
         System.out.println("HTTP server started: http://localhost:" + HTTP_PORT);
 
-        PureBackend backend = backendFactory.apply(pdbPath);
+        PureBackend backend = backendFactory.apply(pdbPath, compilerPdbPath);
         System.out.println("Backend: " + backend.name());
 
         // Start LSP WebSocket server
-        PureLSPWebSocketServer lspServer = new PureLSPWebSocketServer(LSP_PORT, coreModule, editableModules, backend);
+        PureLSPWebSocketServer lspServer = new PureLSPWebSocketServer(LSP_PORT, pdbModules, editableModules, backend);
         lspServer.start();
         System.out.println("LSP WebSocket server started: ws://localhost:" + LSP_PORT);
 
@@ -188,5 +190,28 @@ public class PureIDEMain
                         + ". Tried:" + tried
                         + "\nPass an explicit path as a positional CLI arg, or set the run "
                         + "config's working directory to a parent of the bootstrap-ide module.");
+    }
+
+    /** Same shape as {@link #resolveExisting} but for a regular file (not a directory). */
+    private static Path resolveExistingFile(String label, Path... candidates)
+    {
+        for (Path p : candidates)
+        {
+            if (java.nio.file.Files.isRegularFile(p))
+            {
+                return p;
+            }
+        }
+        StringBuilder tried = new StringBuilder();
+        for (Path p : candidates)
+        {
+            tried.append("\n  - ").append(p.toAbsolutePath().normalize());
+        }
+        throw new IllegalStateException(
+                "Cannot locate " + label + " file. cwd=" + Path.of("").toAbsolutePath()
+                        + ". Tried:" + tried
+                        + "\nRun `just bootstrap::build-compiler-pdb` (or `just build`) to "
+                        + "produce shared/compiler.pdb, or pass an explicit path as a "
+                        + "positional CLI arg.");
     }
 }

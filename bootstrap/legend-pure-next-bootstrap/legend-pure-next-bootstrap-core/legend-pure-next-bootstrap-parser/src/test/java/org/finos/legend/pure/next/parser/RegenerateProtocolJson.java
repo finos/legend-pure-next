@@ -15,8 +15,8 @@
 package org.finos.legend.pure.next.parser;
 
 import org.eclipse.collections.impl.factory.Lists;
-import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
-import org.finos.legend.pure.next.parser.topLevel.TopLevelProtocolBuilder;
+import org.finos.legend.pure.next.parser.pureLanguage.PureLanguageParser;
+import org.finos.legend.pure.next.parser.topLevel.TopLevelParser;
 import org.finos.legend.pure.next.parser.topLevel.TopLevelProtocolJsonSerializer;
 
 import java.net.URI;
@@ -101,7 +101,7 @@ public class RegenerateProtocolJson
 
                             // Parse and serialize to JSON
                             meta.pure.protocol.PureFile pureFile =
-                                    TopLevelProtocolBuilder.parse(pureSource, "testFile", Lists.mutable.with(new PureLanguageParser()));
+                                    TopLevelParser.parse(pureSource, "testFile", Lists.mutable.with(new PureLanguageParser()));
                             String json = jsonSerializer.serialize(pureFile);
 
                             // Write to source directory

@@ -200,7 +200,7 @@ public final class PureNativeLib
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
-                        new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
+                        new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()))
                 .build();
         try
         {

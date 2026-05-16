@@ -97,6 +97,14 @@ public class MathNatives
                                 / ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
                         genericType, multiplicity, resolver));
 
+        // minus(Integer[1]) : Integer[1] — single-arg negate
+        natives.put("minus_Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(-((Number) _E_ValueSpecification.unwrap(args.get(0))).longValue(), genericType, multiplicity, resolver));
+
+        // minus(Float[1]) : Float[1] — single-arg negate
+        natives.put("minus_Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(-((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue(), genericType, multiplicity, resolver));
+
         // minus(Decimal[1]) : Decimal[1] — single-arg negate
         natives.put("minus_Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(-((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue(), genericType, multiplicity, resolver));
