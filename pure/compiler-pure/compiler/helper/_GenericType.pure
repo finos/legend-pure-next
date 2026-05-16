@@ -961,7 +961,7 @@ function meta::pure::compiler::helper::genericType::asInferredGenericType(gt:Gen
 // as TypeParameter rather than the intended Class.
 //
 // The reproducer at
-// {@code specification/compiler/valueSpecification/atomicValue/element/classWithTypeParameter.pure}
+// {@code specification/compiler/tests/valueSpecification/atomicValue/element/classWithTypeParameter.pure}
 // demonstrates the failure mode this fixes.
 function meta::pure::compiler::helper::genericType::withUndefinedTypeParams(gt:GenericType[1]):GenericType[1]
 {

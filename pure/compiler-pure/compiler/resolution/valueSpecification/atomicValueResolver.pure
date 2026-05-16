@@ -149,7 +149,7 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                 // (e.g. T in `Class<List<T>>` when referencing List as a value) are wildcarded —
                 // otherwise an outer call's binder sees that T as a free TypeParameter, NO_MATCH's
                 // the arg, and finalises with its own type parameter unbound (see reproducer at
-                // specification/compiler/valueSpecification/atomicValue/element/classWithTypeParameter.pure).
+                // specification/compiler/tests/valueSpecification/atomicValue/element/classWithTypeParameter.pure).
                 if($a->instanceOf(PackageableElement),
                     | let path = $a->cast(@PackageableElement)->elementToPath();
                       let fromMap = $context->resolveElement($path);

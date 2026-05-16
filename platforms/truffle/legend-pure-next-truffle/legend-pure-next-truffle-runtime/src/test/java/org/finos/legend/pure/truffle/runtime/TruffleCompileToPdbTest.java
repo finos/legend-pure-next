@@ -38,7 +38,7 @@ import java.util.stream.Stream;
  *
  * <p>{@link #smokeTest} compiles a single hardcoded class as a sanity check.
  * {@link #roundTripCompilerSpec} parameterises over every {@code ###Pure} test
- * file under {@code specification/compiler/} (the same set bootstrap's
+ * file under {@code specification/compiler/tests/} (the same set bootstrap's
  * {@code PdbRoundTripTest} covers).</p>
  */
 public class TruffleCompileToPdbTest
@@ -70,11 +70,11 @@ public class TruffleCompileToPdbTest
         Path current = Path.of("").toAbsolutePath();
         while (current != null)
         {
-            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler");
+            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests");
             if (Files.isDirectory(candidate)) return candidate;
             current = current.getParent();
         }
-        throw new RuntimeException("Cannot locate pure/specification/compiler");
+        throw new RuntimeException("Cannot locate pure/specification/compiler/tests");
     }
 
     @BeforeAll

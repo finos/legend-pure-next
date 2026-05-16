@@ -50,7 +50,7 @@ test
 ├── stage                    cp pure-bootstrap.jar + core.pdb + specs/
 ├── build-compiler-pdb       pure-bootstrap compile compiler-pure → shared/compiler.pdb
 └── test-pure-compiler
-    └── body: pure-bootstrap execute meta::pure::test::runCompiledGraphTests pure/specification/compiler
+    └── body: pure-bootstrap execute meta::pure::test::runCompiledGraphTests pure/specification/compiler/tests
 ```
 
 ```
@@ -72,7 +72,7 @@ test-pure-PCTs
 
 ```
 test-pure-compiler
-└── body: pure-bootstrap execute meta::pure::test::runCompiledGraphTests pure/specification/compiler
+└── body: pure-bootstrap execute meta::pure::test::runCompiledGraphTests pure/specification/compiler/tests
                                  (assumes `just build` was run — no Maven, no stage)
 ```
 
@@ -81,7 +81,7 @@ test-pure-self-host
 └── build-compiler-pdb     pure-bootstrap compile (assumes core.pdb staged)
     └── body
         ├── pure-bootstrap compile-via-pure compiler-pure → bootstrap/build/compiler_bootstrap.pdb
-        └── pure-bootstrap execute meta::pure::test::runCompiledGraphTests pure/specification/compiler
+        └── pure-bootstrap execute meta::pure::test::runCompiledGraphTests pure/specification/compiler/tests
                                     (using compiler_bootstrap.pdb instead of compiler.pdb)
 ```
 

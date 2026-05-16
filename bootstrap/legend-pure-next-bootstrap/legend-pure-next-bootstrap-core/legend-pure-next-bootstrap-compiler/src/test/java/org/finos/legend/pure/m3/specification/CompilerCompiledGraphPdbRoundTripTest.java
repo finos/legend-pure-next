@@ -51,7 +51,7 @@ import java.util.stream.Stream;
 /**
  * PDB round-trip test: compile → write to PDB → read back → print compiled graph.
  *
- * <p>Reuses the same specification/compiler test files as {@link CompilerCompiledGraphTest}
+ * <p>Reuses the same specification/compiler/tests test files as {@link CompilerCompiledGraphTest}
  * but adds a PDB serialization/deserialization cycle. The compiled graph after the
  * round-trip must match the original compiled graph.</p>
  *
@@ -67,14 +67,14 @@ public class CompilerCompiledGraphPdbRoundTripTest
         Path current = Path.of("").toAbsolutePath();
         while (current != null)
         {
-            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler");
+            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests");
             if (Files.isDirectory(candidate))
             {
                 return candidate;
             }
             current = current.getParent();
         }
-        throw new RuntimeException("Cannot locate pure/specification/compiler");
+        throw new RuntimeException("Cannot locate pure/specification/compiler/tests");
     }
 
     public static Collection<Arguments> discoverTests() throws IOException

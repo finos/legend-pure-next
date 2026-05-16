@@ -28,7 +28,7 @@ import meta::pure::ui::progress::*;
 //       --pdb shared/core.pdb \
 //       --pdb shared/compiler.pdb \
 //       --function "meta::pure::test::runCompiledGraphTests" \
-//       --args "pure/specification/compiler"
+//       --args "pure/specification/compiler/tests"
 //
 // Walks the filesystem under the given directory, reads each .pure file,
 // and asserts it compiles correctly against the ###CompiledGraph or ###Error
