@@ -2383,3 +2383,13 @@
     :classifierGenericType :GenericType_Stereotype ;
     :stereotype_name [ :classifierGenericType :GenericType_String ; :data "abstract" ] ;
     :profile :meta_pure_profiles_typemodifiers .
+
+:meta_pure_profiles_compiler a :Profile ;
+    :name [ :classifierGenericType :GenericType_String ; :data "compiler" ] ;
+    :classifierGenericType :GenericType_Profile ;
+    :package :meta_pure_profiles .
+
+:meta_pure_profiles_compiler_pointer a :Stereotype ;
+    :classifierGenericType :GenericType_Stereotype ;
+    :stereotype_name [ :classifierGenericType :GenericType_String ; :data "pointer" ] ;
+    :profile :meta_pure_profiles_compiler .

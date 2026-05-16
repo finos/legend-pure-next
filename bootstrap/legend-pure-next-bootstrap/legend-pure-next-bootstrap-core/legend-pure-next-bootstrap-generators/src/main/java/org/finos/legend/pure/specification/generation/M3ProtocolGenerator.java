@@ -664,11 +664,19 @@ public class M3ProtocolGenerator
     {
         writeSectionHeader(w, "PROFILES AND STEREOTYPES");
 
+        // Profiles defined in m3.ttl are already in the BootstrapModule; the
+        // protocol generator must not re-emit them or the compile-time
+        // LocalModule will declare a duplicate of the m3 element. Listed names
+        // are matched against the RDF resource's local name.
+        java.util.Set<String> skipProfiles = java.util.Set.of(
+                "meta_pure_profiles_typemodifiers",
+                "meta_pure_profiles_compiler"
+        );
         ResIterator profileIter = model.listSubjectsWithProperty(rdfType, m3Profile);
         while (profileIter.hasNext())
         {
             Resource profileRes = profileIter.next();
-            if (!"meta_pure_profiles_typemodifiers".equals(getLocalName(profileRes)))
+            if (!skipProfiles.contains(getLocalName(profileRes)))
             {
                 writeProfile(w, profileRes);
             }

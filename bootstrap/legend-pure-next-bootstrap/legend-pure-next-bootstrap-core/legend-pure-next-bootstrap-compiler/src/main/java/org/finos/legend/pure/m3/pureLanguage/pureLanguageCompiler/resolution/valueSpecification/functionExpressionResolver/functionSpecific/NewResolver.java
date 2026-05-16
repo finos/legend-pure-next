@@ -75,6 +75,16 @@ public class NewResolver
             return;
         }
 
+        // Class-level `<<meta::pure::profiles::compiler.pointer>>` stereotype
+        // declares the class an indirect-reference subtype: instances are
+        // empty shells carrying only a resolution key. Skip the abstract +
+        // required-property checks so `^FooPointer(path = "...")` type-checks
+        // without supplying every `[1]` field inherited from Foo.
+        if (isCompilerPointer(cls))
+        {
+            return;
+        }
+
         // Check if the class is abstract
         if (cls._stereotypes() != null && cls._stereotypes().anySatisfy(s ->
                 "abstract".equals(s._value()) &&
@@ -395,4 +405,18 @@ public class NewResolver
         }
     }
 
+    /**
+     * True iff the class carries the {@code <<meta::pure::profiles::compiler.pointer>>}
+     * stereotype — meaning instances are indirect-reference shells whose only real
+     * field is the resolution key. The compiler skips required-property validation
+     * for {@code ^X(...)} expressions of such classes.
+     */
+    private static boolean isCompilerPointer(meta.pure.metamodel.type.Class cls)
+    {
+        return cls._stereotypes() != null && cls._stereotypes().anySatisfy(s ->
+                "pointer".equals(s._value()) &&
+                s._profile() != null &&
+                "meta::pure::profiles::compiler".equals(
+                        org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(s._profile())));
+    }
 }

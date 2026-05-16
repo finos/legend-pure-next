@@ -117,13 +117,28 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     if($compiledClass->isEmpty(),
         | $context,
         | let cls = $compiledClass->toOne();
-          let ctx1 = checkAbstract($cls, $fi, $context);
-          if($ctx1.errors->size() > $context.errors->size(),
-              | $ctx1,
-              | let ctx2 = checkMissingProperties($cls, $providedPropertyNames, $fi, $ctx1);
-                checkKeyExpressions($cls, $providedPropertyNames, $fi, $ctx2);
+          // Class-level `<<compiler.pointer>>` stereotype declares the class an
+          // indirect-reference subtype: instances are empty shells carrying only
+          // a resolution key. Skip the abstract + required-property checks so
+          // `^FooPointer(path = '...')` type-checks without supplying every
+          // `[1]` field inherited from Foo.
+          if($cls->isCompilerPointer(),
+              | $context,
+              | let ctx1 = checkAbstract($cls, $fi, $context);
+                if($ctx1.errors->size() > $context.errors->size(),
+                    | $ctx1,
+                    | let ctx2 = checkMissingProperties($cls, $providedPropertyNames, $fi, $ctx1);
+                      checkKeyExpressions($cls, $providedPropertyNames, $fi, $ctx2);
+                );
           );
     );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::isCompilerPointer(cls:Class<Any>[1]):Boolean[1]
+{
+    $cls.stereotypes->exists(s | $s.value == 'pointer'
+        && $s.profile->isNotEmpty()
+        && $s.profile->toOne()->fullPath() == 'meta::pure::profiles::compiler');
 }
 
 // Matches Java NewResolver.validateCopyProperties — copy only checks key expressions, not abstract/missing
