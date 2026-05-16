@@ -14,23 +14,16 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
-import meta.pure.protocol.grammar.Package_PointerImpl;
-import meta.pure.protocol.grammar.PackageableElement;
-import org.finos.legend.pure.next.parser.ParserExtension;
+import org.finos.legend.pure.truffle.parser.topLevel.TruffleParserExtension;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureObjBuilder;
 
 import java.util.List;
 
 /**
  * Truffle-native parser extension for {@code ###CompiledGraph} test sections.
- *
- * <p>Creates grammar elements in the {@code meta.pure.compiler.test} namespace
- * so that {@link ProtocolTranslator} can translate them to the PDB-generated
- * {@code org.finos.legend.pure.truffle.pdb.meta.pure.compiler.test.CompiledGraphImpl}.
- * This replaces the M3
- * {@code org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension}
- * for Truffle-based evaluation.</p>
+ * Produces a PDO at {@code meta::pure::compiler::test::CompiledGraph}.
  */
-public final class TruffleCompiledGraphLanguageExtension implements ParserExtension
+public final class TruffleCompiledGraphLanguageExtension implements TruffleParserExtension
 {
     @Override
     public String sectionName()
@@ -39,12 +32,16 @@ public final class TruffleCompiledGraphLanguageExtension implements ParserExtens
     }
 
     @Override
-    public List<PackageableElement> parseSection(String content, String sourceId, int lineOffset)
+    public List<Object> parseSection(String content, String sourceId, int lineOffset, TruffleMetadataAccess resolver)
     {
-        meta.pure.compiler.test.CompiledGraphImpl cg = new meta.pure.compiler.test.CompiledGraphImpl();
-        cg._name("CompiledGraph");
-        cg._value(content);
-        cg._package(new Package_PointerImpl()._value(sourceId));
+        Object pkg = PureObjBuilder.of("meta::pure::protocol::grammar::Package_Pointer", resolver)
+                .put("value", sourceId)
+                .build();
+        Object cg = PureObjBuilder.of("meta::pure::compiler::test::CompiledGraph", resolver)
+                .put("name", "CompiledGraph")
+                .put("value", content)
+                .put("package", pkg)
+                .build();
         return List.of(cg);
     }
 }

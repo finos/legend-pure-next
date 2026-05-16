@@ -15,8 +15,8 @@
 package org.finos.legend.pure.next.parser;
 
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.next.parser.m3.PureLanguageSerializer;
-import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
+import org.finos.legend.pure.next.parser.pureLanguage.PureLanguageSerializer;
+import org.finos.legend.pure.next.parser.pureLanguage.PureLanguageParser;
 import org.finos.legend.pure.next.parser.topLevel.TopLevelParser;
 import org.finos.legend.pure.next.parser.topLevel.TopLevelProtocolJsonSerializer;
 import org.finos.legend.pure.next.parser.topLevel.TopLevelSerializer;

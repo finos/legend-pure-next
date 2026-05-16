@@ -22,7 +22,7 @@ import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionInde
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.NativeFunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.UserDefinedFunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerExtension;
-import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
+import org.finos.legend.pure.next.parser.pureLanguage.PureLanguageParser;
 
 import java.util.List;
 

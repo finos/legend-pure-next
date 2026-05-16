@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.next.parser.m3.codegen;
+package org.finos.legend.pure.next.parser.codegen;
 
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStreams;
@@ -21,8 +21,9 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
 import org.antlr.v4.runtime.misc.Interval;
-import org.finos.legend.pure.next.parser.m3.codegen.mapping.VisitorMappingLexer;
-import org.finos.legend.pure.next.parser.m3.codegen.mapping.VisitorMappingParser;
+import org.finos.legend.pure.next.parser.pureLanguage.codegen.ProtocolPureLanguageEmitterTarget;
+import org.finos.legend.pure.next.parser.codegen.mapping.VisitorMappingLexer;
+import org.finos.legend.pure.next.parser.codegen.mapping.VisitorMappingParser;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -38,7 +39,7 @@ import java.util.Map;
  *
  * Prototype: covers two rules (variable, instanceLiteralToken).
  *
- * DSL syntax — see m3-mappings.dsl for the full set:
+ * DSL syntax — see pure-language-mappings.dsl for the full set:
  *   rule X { ... }                       — declares a visitor for ANTLR rule X
  *   emit T                               — what AST node type to construct
  *   field name = expr                    — field assignment
@@ -60,109 +61,123 @@ import java.util.Map;
  *                                                       : buildPrimitiveGenericType("StrictDate")
  *
  * Outputs a single Java source file containing the generated methods. The
- * methods are intended to be folded into M3ProtocolBuilder (or a sibling
+ * methods are intended to be folded into PureLanguageProtocolBuilder (or a sibling
  * partial class) by hand or by post-processing.
  */
-public final class M3VisitorMappingCompiler
+public final class VisitorMappingGenerator
 {
+    /**
+     * Active backend target. Set per compile() invocation. Single-threaded by construction
+     * (each `main` runs in its own JVM under exec-maven-plugin).
+     */
+    private static EmitterTarget target;
+
+    /** ANTLR parser-class name the DSL targets. Set by the `grammar X;` directive; default M3Parser. */
+    private static String grammarName = "M3Parser";
+
+    /** Whether to skip the M3-specific scaffolding emission. Set by `noScaffolding;`. */
+    private static boolean noScaffolding = false;
+
+    /** True when at least one rule in the DSL uses {@code dispatchSection}. Drives the
+     *  per-class emission of a parserExtensions field + dispatchSection helper. */
+    private static boolean usesDispatchSection = false;
+
+    /** Caller-registered extension primitives — keyed by DSL function name. Consulted by
+     *  {@link #emitCallPrim} when the name isn't a generic built-in. Domain-specific
+     *  primitives (e.g. {@code primitiveType}, {@code multBounds}, {@code enumPointer},
+     *  {@code dateLiteralType} for Pure-language DSLs) register here. */
+    private static final java.util.Map<String, PrimitiveEmitter> EXTENSION_PRIMITIVES = new java.util.HashMap<>();
+
+    /** Register a custom primitive. Survives across {@link #compile} invocations in the
+     *  same JVM — caller registers once at startup (typically in their own {@code main}). */
+    public static void registerPrimitive(String name, PrimitiveEmitter emitter)
+    {
+        EXTENSION_PRIMITIVES.put(name, emitter);
+    }
+
+    /** The active target. Visible to {@link PrimitiveEmitter} implementations that consult
+     *  {@code primitiveTypeExpr} / {@code multBoundsExpr} / etc. */
+    public static EmitterTarget target()
+    {
+        return target;
+    }
+
+    /** Public alias for the generic expression-tree emitter — extension primitives need it
+     *  to recurse on sub-expressions and produce Java text. */
+    public static String emitExpression(VisitorMappingParser.ExpressionContext ctx, String cachedTextToken, boolean inFoldBody)
+    {
+        return emitExpr(ctx, cachedTextToken, inFoldBody);
+    }
+
     public static void main(String[] args) throws IOException
     {
         if (args.length < 2)
         {
-            System.err.println("Usage: M3VisitorMappingCompiler <dsl-file> <output-java-file>");
+            System.err.println("Usage: VisitorMappingGenerator <dsl-file> <output-java-file>");
             System.exit(1);
         }
-        Path dslPath = Path.of(args[0]);
-        Path outPath = Path.of(args[1]);
+        compile(Path.of(args[0]), Path.of(args[1]), new ProtocolPureLanguageEmitterTarget());
+    }
 
+    /** Library entry point — read the DSL at `dslPath`, emit Java to `outPath` using `target`. */
+    public static void compile(Path dslPath, Path outPath, EmitterTarget target) throws IOException
+    {
+        VisitorMappingGenerator.target = target;
+        // Reset per-compile directives to their defaults so a TOP-followed-by-M3 invocation
+        // doesn't carry over stale state inside a single JVM (mvn exec spawns a fresh JVM
+        // per invocation today, but resetting here makes the library entry point safe to
+        // call multiple times from the same JVM).
+        VisitorMappingGenerator.grammarName = "M3Parser";
+        VisitorMappingGenerator.noScaffolding = false;
+        VisitorMappingGenerator.usesDispatchSection = false;
         String source = Files.readString(dslPath, StandardCharsets.UTF_8);
         List<Rule> rules = parse(source);
 
-        StringBuilder sb = new StringBuilder();
-        emitFullClassHeader(sb, dslPath.getFileName().toString());
-        emitParserScaffolding(sb);
+        // Emit rule bodies first (into a sub-buffer) so any usage flags they set
+        // (e.g. usesDispatchSection from the dispatchSection primitive) are visible
+        // when the scaffolding chunk decides what to emit.
+        StringBuilder body = new StringBuilder();
         for (Rule r : rules)
         {
-            emit(sb, r);
+            emit(body, r);
             if (r.topLevel)
             {
-                emitTopLevelVisitWrapper(sb, r);
+                emitTopLevelVisitWrapper(body, r);
             }
-            sb.append('\n');
+            body.append('\n');
         }
-        sb.append("}\n");
+
+        StringBuilder sb = new StringBuilder();
+        target.emitClassHeader(sb, dslPath.getFileName().toString());
+        if (usesDispatchSection)
+        {
+            target.emitDispatchSectionScaffolding(sb, extractSimpleClassName(target));
+        }
+        if (!noScaffolding)
+        {
+            emitParserScaffolding(sb);
+        }
+        sb.append(body);
+        target.emitClassFooter(sb);
 
         Files.createDirectories(outPath.getParent());
         Files.writeString(outPath, sb.toString(), StandardCharsets.UTF_8);
         System.out.println("  Wrote " + outPath + " (" + rules.size() + " rule(s))");
     }
 
-    private static void emitFullClassHeader(StringBuilder sb, String dslFileName)
+    /** Best-effort extraction of the generated class's simple name from the target's header.
+     *  Used by the dispatchSection-scaffolding emitter to declare the constructor. */
+    private static String extractSimpleClassName(EmitterTarget t)
     {
-        sb.append("// AUTO-GENERATED from ").append(dslFileName).append(" by M3VisitorMappingCompiler — DO NOT EDIT\n");
-        sb.append("// Concrete parser: extends M3ParserBaseVisitor directly. Contains the elements\n");
-        sb.append("// accumulator, parser entry points, build<RuleName> methods, and @Override\n");
-        sb.append("// visit wrappers for topLevel rules. Fully self-contained — no hand-written\n");
-        sb.append("// parent class. To port to another language, port this generator + the DSL.\n");
-        sb.append("package org.finos.legend.pure.next.parser.m3;\n\n");
-        sb.append("import meta.pure.protocol.grammar.Enum_PointerImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.Package_PointerImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.PackageableElement;\n");
-        sb.append("import meta.pure.protocol.grammar.SourceInformation;\n");
-        sb.append("import meta.pure.protocol.grammar.SourceInformationImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.constraint.Constraint;\n");
-        sb.append("import meta.pure.protocol.grammar.constraint.ConstraintImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.extension.AnnotatedElement;\n");
-        sb.append("import meta.pure.protocol.grammar.extension.ProfileImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.extension.StereotypeImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.extension.Stereotype_PointerImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.extension.TagImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.extension.Tag_PointerImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.extension.TaggedValueImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.function.LambdaFunctionImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.function.NativeFunctionImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.function.UserDefinedFunctionImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.function.property.PropertyImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.function.property.QualifiedPropertyImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.multiplicity.MultiplicityParameter;\n");
-        sb.append("import meta.pure.protocol.grammar.multiplicity.MultiplicityValueImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;\n");
-        sb.append("import meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicityImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.multiplicity.UserDefinedAdHocMultiplicityImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.multiplicity.UserDefinedMultiplicityParameterImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.type.generics.TypeParameterImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.PointerValueImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.relation.ColumnImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.relation.GenericTypeOperationImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.relation.RelationTypeImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.relationship.AssociationImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.relationship.GeneralizationImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.type.ClassImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.type.EnumerationImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.type.FunctionTypeImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.type.PrimitiveTypeImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.type.Type_PointerImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.type.generics.GenericType;\n");
-        sb.append("import meta.pure.protocol.grammar.type.generics.TypeParameter;\n");
-        sb.append("import meta.pure.protocol.grammar.type.generics.UndefinedGenericTypeImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.type.generics.UserDefinedGenericTypeImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.valuespecification.ArrowInvocationImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.valuespecification.AtomicValueImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.valuespecification.CollectionImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.valuespecification.DotApplicationImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.valuespecification.FunctionInvocationImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl;\n");
-        sb.append("import meta.pure.protocol.grammar.valuespecification.ValueSpecification;\n");
-        sb.append("import meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl;\n");
-        sb.append("import org.antlr.v4.runtime.ParserRuleContext;\n");
-        sb.append("import org.antlr.v4.runtime.Token;\n");
-        sb.append("import org.eclipse.collections.api.list.MutableList;\n");
-        sb.append("import org.eclipse.collections.impl.factory.Lists;\n");
-        sb.append("import org.eclipse.collections.impl.list.mutable.ListAdapter;\n\n");
-        sb.append("public class M3ProtocolBuilder extends M3ParserBaseVisitor<Object>\n");
-        sb.append("{\n");
-        sb.append("    protected final MutableList<PackageableElement> elements = Lists.mutable.empty();\n\n");
+        StringBuilder probe = new StringBuilder();
+        t.emitClassHeader(probe, "(probe)");
+        String s = probe.toString();
+        int idx = s.indexOf("public class ");
+        if (idx < 0) throw new RuntimeException("EmitterTarget header doesn't declare a `public class X`");
+        int start = idx + "public class ".length();
+        int end = start;
+        while (end < s.length() && (Character.isLetterOrDigit(s.charAt(end)) || s.charAt(end) == '_')) end++;
+        return s.substring(start, end);
     }
 
     /**
@@ -173,14 +188,17 @@ public final class M3VisitorMappingCompiler
      */
     private static void emitParserScaffolding(StringBuilder sb)
     {
+        // `elementsType` is the Java declaration type for the list returned by parseElements.
+        // Protocol: `PackageableElement` (typed). Truffle: `Object` (PDOs).
+        String elementType = target.abstractType("PackageableElement");
         sb.append("    protected int lineOffset = 0;\n\n");
         sb.append("    /** Parse Pure source and return the list of top-level packageable elements. */\n");
-        sb.append("    public java.util.List<PackageableElement> parseElements(final String source, final int lineOffsetIn)\n");
+        sb.append("    public java.util.List<").append(elementType).append("> parseElements(final String source, final int lineOffsetIn)\n");
         sb.append("    {\n");
         sb.append("        this.lineOffset = lineOffsetIn;\n");
-        sb.append("        M3Lexer lexer = new M3Lexer(org.antlr.v4.runtime.CharStreams.fromString(source));\n");
+        sb.append("        org.finos.legend.pure.next.parser.m3.M3Lexer lexer = new org.finos.legend.pure.next.parser.m3.M3Lexer(org.antlr.v4.runtime.CharStreams.fromString(source));\n");
         sb.append("        org.antlr.v4.runtime.CommonTokenStream tokens = new org.antlr.v4.runtime.CommonTokenStream(lexer);\n");
-        sb.append("        M3Parser parser = new M3Parser(tokens);\n");
+        sb.append("        org.finos.legend.pure.next.parser.m3.M3Parser parser = new org.finos.legend.pure.next.parser.m3.M3Parser(tokens);\n");
         sb.append("        parser.removeErrorListeners();\n");
         sb.append("        parser.addErrorListener(new org.antlr.v4.runtime.BaseErrorListener()\n");
         sb.append("        {\n");
@@ -195,7 +213,7 @@ public final class M3VisitorMappingCompiler
         sb.append("        return elements;\n");
         sb.append("    }\n\n");
         sb.append("    /** parseElements with no line offset (lineOffset = 0). */\n");
-        sb.append("    public java.util.List<PackageableElement> parseElements(final String source)\n");
+        sb.append("    public java.util.List<").append(elementType).append("> parseElements(final String source)\n");
         sb.append("    {\n");
         sb.append("        return parseElements(source, 0);\n");
         sb.append("    }\n\n");
@@ -206,21 +224,14 @@ public final class M3VisitorMappingCompiler
         sb.append("    }\n\n");
     }
 
-    /**
-     * Emit an @Override `visit<RuleName>` wrapper that calls the rule's build method,
-     * appends to `elements`, and returns the built value as Object (ANTLR convention).
-     */
+    /** Delegate to the backend target. The wrapper shape is shared across targets but
+     *  the declared type for `__built` is target-specific (Impl vs Object). */
     private static void emitTopLevelVisitWrapper(StringBuilder sb, Rule r)
     {
         String ctxType = qualifyCtxType(r.contextTypeOverride != null ? r.contextTypeOverride : capitalize(r.name) + "Context");
         String visitName = "visit" + capitalize(r.name);
         String buildName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
-        String implType = r.emitType + "Impl";
-        sb.append("\n    @Override\n");
-        sb.append("    public Object ").append(visitName).append("(final ").append(ctxType).append(" ctx)\n    {\n");
-        sb.append("        ").append(implType).append(" __built = ").append(buildName).append("(ctx);\n");
-        sb.append("        elements.add(__built);\n");
-        sb.append("        return __built;\n    }\n");
+        target.emitTopLevelVisitWrapper(sb, visitName, buildName, ctxType, r.emitType);
     }
 
     // ------------------------------------------------------------------ model
@@ -390,6 +401,18 @@ public final class M3VisitorMappingCompiler
             }
         });
         VisitorMappingParser.DslContext tree = parser.dsl();
+        // Apply top-of-file directives.
+        for (VisitorMappingParser.DirectiveContext d : tree.directive())
+        {
+            if (d instanceof VisitorMappingParser.GrammarDirectiveContext g)
+            {
+                grammarName = g.name.getText();
+            }
+            else if (d instanceof VisitorMappingParser.NoScaffoldingDirectiveContext)
+            {
+                noScaffolding = true;
+            }
+        }
         List<Rule> rules = new ArrayList<>();
         for (VisitorMappingParser.DeclarationContext decl : tree.declaration())
         {
@@ -729,7 +752,7 @@ public final class M3VisitorMappingCompiler
                             if (!args.isEmpty())
                             {
                                 r.emitType = args.get(0).getText();
-                                r.returnType = r.emitType + "Impl";
+                                r.returnType = target.resultType(r.emitType);
                                 return;
                             }
                         }
@@ -763,7 +786,7 @@ public final class M3VisitorMappingCompiler
             if (commonType == null) commonType = t;
             else if (!commonType.equals(t)) return;
         }
-        if (commonType != null) r.returnType = commonType + "Impl";
+        if (commonType != null) r.returnType = target.resultType(commonType);
     }
 
     /**
@@ -889,6 +912,30 @@ public final class M3VisitorMappingCompiler
 
     // ------------------------------------------------------------------ emitter
 
+    /** Build a [pureName, javaExpr] kv list from an ordered Fields list (unconditional only). */
+    private static List<String[]> fieldsToKvs(List<Field> fields, String cachedTextToken)
+    {
+        List<String[]> kvs = new ArrayList<>();
+        for (Field f : fields)
+        {
+            if (f.predicate != null) continue;
+            kvs.add(new String[] {f.name, exprToJava(f.expr, cachedTextToken)});
+        }
+        return kvs;
+    }
+
+    /** Emit per-optional-field conditional setter statements ({@code if (p) __r.setX(v);}). */
+    private static void emitOptionalFieldSetters(StringBuilder sb, String indent, String receiver,
+                                                 List<Field> fields, String cachedTextToken)
+    {
+        for (Field f : fields)
+        {
+            if (f.predicate == null) continue;
+            target.emitConditionalSetter(sb, indent, predicateAsJava(f.predicate),
+                    receiver, f.name, exprToJava(f.expr, cachedTextToken));
+        }
+    }
+
     private static void emit(StringBuilder sb, Rule r)
     {
         if (r.delegateTarget != null)
@@ -916,17 +963,13 @@ public final class M3VisitorMappingCompiler
         // interface methods (visit<RuleName>) whose return type is fixed to Object.
         String methodName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
         boolean hasAltOverrides = r.alts.stream().anyMatch(a -> a.altEmitType != null || a.returnExpr != null || a.delegateRule != null);
-        String returnType = r.returnType != null ? r.returnType
-                : (hasAltOverrides ? "ValueSpecification" : r.emitType + "Impl");
+        String returnType = r.returnType != null ? target.letDeclType(r.returnType)
+                : (hasAltOverrides ? target.abstractType("ValueSpecification") : target.resultType(r.emitType));
 
         sb.append("    protected ").append(returnType).append(' ').append(methodName)
                 .append("(").append(extraParamsPrefix(r)).append("final ").append(ctxType).append(" ctx)\n    {\n");
         emitLetBindings(sb, r);
-        // Post-actions are emitted here when the rule reaches the multi-alt /
-        // single-return path (i.e. the let-and-mutate unified pattern):
-        // post-actions mutate a let-bound `__r` and the synth alt then `return __r`.
-        // The single-alt-no-return path below has its own (legacy) postActions
-        // emission tied to `__result`.
+        // Post-actions: emitted before the single-return alt path.
         boolean emitPostsHere = r.alts.size() == 1 && r.alts.get(0).returnExpr != null && !r.postActions.isEmpty();
         if (emitPostsHere)
         {
@@ -948,39 +991,27 @@ public final class M3VisitorMappingCompiler
         if (r.alts.size() == 1 && r.alts.get(0).predicate == null
                 && r.alts.get(0).returnExpr == null && r.alts.get(0).delegateRule == null)
         {
-            // Single-branch rule (no `alt when`). Build a single fluent chain.
-            String implType = (r.alts.get(0).altEmitType != null ? r.alts.get(0).altEmitType : r.emitType) + "Impl";
+            // Single-branch rule (no `alt when`).
+            String pureType = r.alts.get(0).altEmitType != null ? r.alts.get(0).altEmitType : r.emitType;
+            String implType = target.resultType(pureType);
             List<Field> all = new ArrayList<>();
             all.addAll(r.alts.get(0).fields);
             all.addAll(r.sharedFields);
-            // Split into unconditional vs optional fields. Unconditional fields go in the
-            // initial fluent chain; optional fields become `if (predicate) __result._X(EXPR);`.
-            List<Field> unconditional = new ArrayList<>();
             List<Field> optional = new ArrayList<>();
             for (Field f : all)
             {
                 if (f.predicate != null) optional.add(f);
-                else unconditional.add(f);
             }
             boolean needsResultLocal = !r.postActions.isEmpty() || !optional.isEmpty();
+            String construction = target.constructExpression(pureType, fieldsToKvs(all, null));
             if (!needsResultLocal)
             {
-                sb.append("        return new ").append(implType).append("()\n");
-                emitFluentChain(sb, unconditional, "                ");
-                sb.append(";\n    }\n");
+                sb.append("        return ").append(construction).append(";\n    }\n");
             }
             else
             {
-                // Capture in local so post-build actions and optional-field assignments can run.
-                sb.append("        ").append(implType).append(" __result = new ").append(implType).append("()\n");
-                emitFluentChain(sb, unconditional, "                ");
-                sb.append(";\n");
-                for (Field f : optional)
-                {
-                    String cond = predicateAsJava(f.predicate);
-                    sb.append("        if (").append(cond).append(") __result.")
-                            .append(setter(f.name)).append('(').append(exprToJava(f.expr, null)).append(");\n");
-                }
+                sb.append("        ").append(implType).append(" __result = ").append(construction).append(";\n");
+                emitOptionalFieldSetters(sb, "        ", "__result", optional, null);
                 for (PostAction post : r.postActions)
                 {
                     String stmtJava = substituteContextRefs(post.stmt, null).replace("$$result", "__result");
@@ -999,21 +1030,13 @@ public final class M3VisitorMappingCompiler
             return;
         }
 
-        // Multi-alternative rule. If any alt overrides the emit type or uses
-        // return/delegate, we emit per-branch construction with no shared
-        // __result variable. Otherwise we set up a shared __result with
-        // shared fields and each branch layers on its own fields.
-        String defaultImplType = r.emitType != null ? r.emitType + "Impl" : null;
+        // Multi-alternative rule.
+        String defaultImplType = r.emitType != null ? target.resultType(r.emitType) : null;
         boolean useSharedResult = !hasAltOverrides && r.alts.stream().allMatch(a -> a.altEmitType == null);
         if (useSharedResult && defaultImplType != null)
         {
-            sb.append("        ").append(defaultImplType).append(" __result = new ").append(defaultImplType).append("()");
-            if (!r.sharedFields.isEmpty())
-            {
-                sb.append('\n');
-                emitFluentChain(sb, r.sharedFields, "                ");
-            }
-            sb.append(";\n\n");
+            String shared = target.constructExpression(r.emitType, fieldsToKvs(r.sharedFields, null));
+            sb.append("        ").append(defaultImplType).append(" __result = ").append(shared).append(";\n\n");
         }
 
         boolean sawAltElse = false;
@@ -1022,8 +1045,6 @@ public final class M3VisitorMappingCompiler
             boolean isElse = a.predicate == null;
             if (isElse)
             {
-                // `alt else { ... }` — emit unconditionally (skips the `if` wrapper)
-                // and mark that we should not fall through to elseError.
                 sawAltElse = true;
             }
             else
@@ -1032,7 +1053,6 @@ public final class M3VisitorMappingCompiler
                 sb.append("        if (").append(cond).append(")\n        {\n");
             }
             String indent = isElse ? "        " : "            ";
-            // Per-alt action: return, delegate, or emit/build.
             if (a.returnExpr != null)
             {
                 sb.append(indent).append("return ").append(exprToJava(a.returnExpr, null)).append(";\n");
@@ -1047,101 +1067,49 @@ public final class M3VisitorMappingCompiler
                 continue;
             }
             // Emit case (default — uses rule.emitType, or per-alt override).
-            String altImpl = (a.altEmitType != null ? a.altEmitType : r.emitType) + "Impl";
+            String altPureType = a.altEmitType != null ? a.altEmitType : r.emitType;
+            String altImpl = target.resultType(altPureType);
             String cachedTextToken = detectRepeatedText(a);
             if (cachedTextToken != null)
             {
-                sb.append("            String __t = ctx.").append(cachedTextToken).append("().getText();\n");
+                sb.append(indent).append("String __t = ctx.").append(cachedTextToken).append("().getText();\n");
             }
-            boolean altHasOptional = a.fields.stream().anyMatch(f -> f.predicate != null);
-            // `alt else` doesn't emit an `if (cond) {` wrapper, so it must not emit a `}` either.
             String closeBrace = isElse ? "" : "        }\n";
             if (useSharedResult)
             {
-                if (!altHasOptional)
+                // Layer fields onto the shared __result (no fresh construction).
+                List<Field> uncond = new ArrayList<>();
+                List<Field> optional = new ArrayList<>();
+                for (Field f : a.fields)
                 {
-                    // Fluent return form preserves the existing layout for alts
-                    // with only unconditional fields.
-                    sb.append("            return __result");
-                    for (Field f : a.fields)
-                    {
-                        String javaExpr = exprToJava(f.expr, cachedTextToken);
-                        sb.append("\n                    .").append(setter(f.name))
-                                .append('(').append(javaExpr).append(')');
-                    }
-                    sb.append(";\n").append(closeBrace);
+                    if (f.predicate == null) uncond.add(f); else optional.add(f);
                 }
-                else
+                for (Field f : uncond)
                 {
-                    // Statement form: each unconditional field becomes `__result._X(EXPR);`
-                    // and each optional field becomes `if (P) __result._X(EXPR);`.
-                    for (Field f : a.fields)
-                    {
-                        String javaExpr = exprToJava(f.expr, cachedTextToken);
-                        if (f.predicate != null)
-                        {
-                            sb.append("            if (").append(predicateAsJava(f.predicate))
-                                    .append(") __result.").append(setter(f.name))
-                                    .append('(').append(javaExpr).append(");\n");
-                        }
-                        else
-                        {
-                            sb.append("            __result.").append(setter(f.name))
-                                    .append('(').append(javaExpr).append(");\n");
-                        }
-                    }
-                    sb.append("            return __result;\n").append(closeBrace);
+                    target.emitSetterStatement(sb, indent, "__result", f.name, exprToJava(f.expr, cachedTextToken));
                 }
+                emitOptionalFieldSetters(sb, indent, "__result", optional, cachedTextToken);
+                sb.append(indent).append("return __result;\n").append(closeBrace);
             }
             else
             {
-                // Build fresh node — combine shared + alt fields.
+                // Build fresh — combine shared + alt fields.
                 List<Field> all = new ArrayList<>();
                 all.addAll(r.sharedFields);
                 all.addAll(a.fields);
-                boolean anyOptional = all.stream().anyMatch(f -> f.predicate != null);
+                List<Field> optional = new ArrayList<>();
+                for (Field f : all) if (f.predicate != null) optional.add(f);
+                boolean anyOptional = !optional.isEmpty();
+                String construction = target.constructExpression(altPureType, fieldsToKvs(all, cachedTextToken));
                 if (!anyOptional)
                 {
-                    sb.append("            return new ").append(altImpl).append("()");
-                    if (!all.isEmpty()) sb.append('\n');
-                    for (int j = 0; j < all.size(); j++)
-                    {
-                        Field f = all.get(j);
-                        String javaExpr = exprToJava(f.expr, cachedTextToken);
-                        sb.append("                    .").append(setter(f.name))
-                                .append('(').append(javaExpr).append(')');
-                        if (j < all.size() - 1) sb.append('\n');
-                    }
-                    sb.append(";\n").append(closeBrace);
+                    sb.append(indent).append("return ").append(construction).append(";\n").append(closeBrace);
                 }
                 else
                 {
-                    // Use __result local so optional fields can apply.
-                    sb.append("            ").append(altImpl).append(" __result = new ").append(altImpl).append("()");
-                    List<Field> uncondAll = new ArrayList<>();
-                    List<Field> optAll = new ArrayList<>();
-                    for (Field f : all)
-                    {
-                        if (f.predicate != null) optAll.add(f); else uncondAll.add(f);
-                    }
-                    if (!uncondAll.isEmpty()) sb.append('\n');
-                    for (int j = 0; j < uncondAll.size(); j++)
-                    {
-                        Field f = uncondAll.get(j);
-                        String javaExpr = exprToJava(f.expr, cachedTextToken);
-                        sb.append("                    .").append(setter(f.name))
-                                .append('(').append(javaExpr).append(')');
-                        if (j < uncondAll.size() - 1) sb.append('\n');
-                    }
-                    sb.append(";\n");
-                    for (Field f : optAll)
-                    {
-                        String javaExpr = exprToJava(f.expr, cachedTextToken);
-                        sb.append("            if (").append(predicateAsJava(f.predicate))
-                                .append(") __result.").append(setter(f.name))
-                                .append('(').append(javaExpr).append(");\n");
-                    }
-                    sb.append("            return __result;\n").append(closeBrace);
+                    sb.append(indent).append(altImpl).append(" __result = ").append(construction).append(";\n");
+                    emitOptionalFieldSetters(sb, indent, "__result", optional, cachedTextToken);
+                    sb.append(indent).append("return __result;\n").append(closeBrace);
                 }
             }
         }
@@ -1167,7 +1135,7 @@ public final class M3VisitorMappingCompiler
         String ctxType = qualifyCtxType(r.contextTypeOverride != null ? r.contextTypeOverride : capitalize(r.name) + "Context");
         String methodName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
         String tgtMethod = methodNameFor(r.delegateTarget);
-        sb.append("    protected ").append(r.delegateReturn).append(' ').append(methodName)
+        sb.append("    protected ").append(target.letDeclType(r.delegateReturn)).append(' ').append(methodName)
                 .append("(").append(extraParamsPrefix(r)).append("final ").append(ctxType).append(" ctx)\n    {\n");
         sb.append("        return ").append(tgtMethod).append("(ctx.").append(r.delegateTarget).append("());\n");
         sb.append("    }\n");
@@ -1180,7 +1148,7 @@ public final class M3VisitorMappingCompiler
         String rhsCtxType = qualifyCtxType(capitalize(lf.operandRule) + "Context");
         String methodName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
         String operandMethod = methodNameFor(lf.operandRule);
-        String returnType = r.returnType != null ? r.returnType : "ValueSpecification";
+        String returnType = r.returnType != null ? target.letDeclType(r.returnType) : target.abstractType("ValueSpecification");
 
         sb.append("    protected ").append(returnType).append(' ').append(methodName)
                 .append("(").append(extraParamsPrefix(r)).append("final ").append(ctxType).append(" ctx)\n    {\n");
@@ -1196,7 +1164,7 @@ public final class M3VisitorMappingCompiler
         // Per-iteration `let` bindings — the binding expressions can reference acc/rhs/$tok/$loc.
         for (String[] l : lf.lets)
         {
-            sb.append("            ").append(l[0]).append(' ').append(l[1])
+            sb.append("            ").append(target.letDeclType(l[0])).append(' ').append(l[1])
                     .append(" = ").append(foldExprToJava(l[2])).append(";\n");
         }
 
@@ -1219,7 +1187,7 @@ public final class M3VisitorMappingCompiler
                     int eq = tokName.indexOf('=');
                     if (eq >= 0) tokName = tokName.substring(eq + 1).strip();
                     sb.append("            ").append(j == 0 ? "if" : "else if")
-                            .append(" (opTok.getType() == M3Lexer.").append(tokName).append(")\n");
+                            .append(" (opTok.getType() == org.finos.legend.pure.next.parser.m3.M3Lexer.").append(tokName).append(")\n");
                 }
                 else
                 {
@@ -1374,9 +1342,26 @@ public final class M3VisitorMappingCompiler
             emitItPathChain(out, chain);
             return;
         }
+        int receiverStart = out.length();
         emitPrimary(out, primary, cachedTextToken, inFoldBody);
         for (VisitorMappingParser.ChainSegmentContext seg : chain)
         {
+            // CallSeg whose member starts with `_` and takes no args is a Pure-protocol
+            // property read (e.g. `leftSrc._startLine()`). Route the (receiver, getter)
+            // pair through the target so Truffle can emit PureObj.read(...) instead of
+            // a typed accessor call.
+            if (seg instanceof VisitorMappingParser.CallSegContext)
+            {
+                VisitorMappingParser.CallSegContext cs = (VisitorMappingParser.CallSegContext) seg;
+                String member = cs.member.getText();
+                if (member.startsWith("_") && cs.argList() == null)
+                {
+                    String receiver = out.substring(receiverStart);
+                    out.setLength(receiverStart);
+                    out.append(target.getterCall(receiver, member));
+                    continue;
+                }
+            }
             emitChainSegment(out, seg, cachedTextToken, inFoldBody);
         }
     }
@@ -1579,9 +1564,7 @@ public final class M3VisitorMappingCompiler
             case "filterMap": emitFilterMap(out, args, false); return;
             case "filterMapNot": emitFilterMap(out, args, true); return;
             case "prepended": emitPrepended(out, args, cachedTextToken, inFoldBody); return;
-            case "primitiveType": emitPrimitiveType(out, args); return;
             case "count": emitCount(out, args); return;
-            case "multBounds": emitMultBounds(out, args, cachedTextToken, inFoldBody); return;
             case "joinTextWith": emitJoinTextWith(out, args, cachedTextToken, inFoldBody); return;
             case "joinStringsWith": emitJoinStringsWith(out, args, cachedTextToken, inFoldBody); return;
             case "joinStripped": emitJoinStripped(out, args); return;
@@ -1593,7 +1576,6 @@ public final class M3VisitorMappingCompiler
             case "stripParens": emitStripParens(out, args, cachedTextToken, inFoldBody); return;
             case "stripIfQuoted": emitStripIfQuoted(out, args, cachedTextToken, inFoldBody); return;
             case "capitalize": emitCapitalizeCall(out, args, cachedTextToken, inFoldBody); return;
-            case "enumPointer": emitEnumPointer(out, args, cachedTextToken, inFoldBody); return;
             case "notEmpty": emitNotEmpty(out, args, cachedTextToken, inFoldBody); return;
             case "nonNull": emitNonNull(out, args, cachedTextToken, inFoldBody); return;
             case "simpleNameOf": emitSimpleNameOf(out, args, cachedTextToken, inFoldBody); return;
@@ -1605,8 +1587,22 @@ public final class M3VisitorMappingCompiler
             case "anyHasAny": emitAnyHasAny(out, args); return;
             case "selectMapHasAny": emitSelectMapHasAny(out, args); return;
             case "hasAny": emitHasAny(out, args); return;
-            case "dateLiteralType": emitDateLiteralType(out, args, cachedTextToken, inFoldBody); return;
+            case "stripPrefix": emitStripPrefix(out, args, cachedTextToken, inFoldBody); return;
+            case "concatTokens": emitConcatTokens(out, args, cachedTextToken, inFoldBody); return;
+            case "firstNonNewlineLine": emitFirstNonNewlineLine(out, args, cachedTextToken, inFoldBody); return;
+            case "dispatchSection":
+                usesDispatchSection = true;
+                emitDispatchSectionCall(out, args, cachedTextToken, inFoldBody);
+                return;
             default:
+                // Try caller-registered extension primitives first — domain-specific
+                // emitters (e.g. PureLanguagePrimitives) register here.
+                PrimitiveEmitter ext = EXTENSION_PRIMITIVES.get(name);
+                if (ext != null)
+                {
+                    ext.emit(out, args, cachedTextToken, inFoldBody);
+                    return;
+                }
                 // Unknown function name — emit as a plain Java call.
                 out.append(name).append('(');
                 for (int i = 0; i < args.size(); i++)
@@ -1657,7 +1653,7 @@ public final class M3VisitorMappingCompiler
         for (int j = 0; j < nPairs - 1; j++)
         {
             String tok = args.get(1 + 2 * j).getText();
-            out.append(disc).append(".getType() == M3Lexer.").append(tok).append(" ? ");
+            out.append(disc).append(".getType() == org.finos.legend.pure.next.parser.m3.M3Lexer.").append(tok).append(" ? ");
             emitExprInto(out, args.get(2 + 2 * j).expression(), cachedTextToken, inFoldBody);
             out.append(" : ");
         }
@@ -1675,21 +1671,15 @@ public final class M3VisitorMappingCompiler
     {
         if (args.isEmpty()) throw new RuntimeException("newImpl needs at least a type");
         String typeName = args.get(0).getText();
-        out.append("new ").append(typeName).append("Impl()");
+        List<String[]> kvs = new ArrayList<>();
         for (int j = 1; j < args.size(); j++)
         {
             VisitorMappingParser.ArgContext a = args.get(j);
             if (a.namedArg() == null) throw new RuntimeException("newImpl args after type must be `key = value`");
             VisitorMappingParser.NamedArgContext na = a.namedArg();
-            out.append("._").append(setter(na.name.getText()).substring(1));   // _sourceInformation special-case via setter()
-            // setter() returns "_p_sourceInformation" for "sourceInformation"; strip the leading "_" we already added.
-            // Rewind: simpler to just compute directly.
-            out.setLength(out.length() - setter(na.name.getText()).length());
-            out.append(setter(na.name.getText()));
-            out.append('(');
-            emitExprInto(out, na.value, cachedTextToken, inFoldBody);
-            out.append(')');
+            kvs.add(new String[] {na.name.getText(), emitExpr(na.value, cachedTextToken, inFoldBody)});
         }
+        out.append(target.constructExpression(typeName, kvs));
     }
 
     private static void emitListOf(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
@@ -1731,18 +1721,11 @@ public final class M3VisitorMappingCompiler
     private static void emitPrepended(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
     {
         if (args.size() != 2) throw new RuntimeException("prepended needs 2 args");
-        out.append("Lists.mutable.<ValueSpecification>with(");
+        out.append("Lists.mutable.<").append(target.abstractType("ValueSpecification")).append(">with(");
         emitExprInto(out, args.get(0).expression(), cachedTextToken, inFoldBody);
         out.append(").withAll(");
         emitExprInto(out, args.get(1).expression(), cachedTextToken, inFoldBody);
         out.append(')');
-    }
-
-    private static void emitPrimitiveType(StringBuilder out, List<VisitorMappingParser.ArgContext> args)
-    {
-        if (args.size() != 1) throw new RuntimeException("primitiveType needs 1 arg");
-        String nameStr = args.get(0).getText();
-        out.append("new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(").append(nameStr).append("))");
     }
 
     private static void emitCount(StringBuilder out, List<VisitorMappingParser.ArgContext> args)
@@ -1751,16 +1734,6 @@ public final class M3VisitorMappingCompiler
         if (args.size() != 1) throw new RuntimeException("count needs 1 arg");
         emitExprInto(out, args.get(0).expression(), null, false);
         out.append(".size()");
-    }
-
-    private static void emitMultBounds(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
-    {
-        if (args.size() != 2) throw new RuntimeException("multBounds needs 2 args");
-        out.append("new UserDefinedAdHocMultiplicityImpl()._lowerBound(new MultiplicityValueImpl()._value((long) (");
-        emitExprInto(out, args.get(0).expression(), cachedTextToken, inFoldBody);
-        out.append(")))._upperBound(new MultiplicityValueImpl()._value((long) (");
-        emitExprInto(out, args.get(1).expression(), cachedTextToken, inFoldBody);
-        out.append(")))");
     }
 
     private static void emitJoinTextWith(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
@@ -1856,14 +1829,6 @@ public final class M3VisitorMappingCompiler
                 .append(".charAt(0)) + ").append(exprJava).append(".substring(1) : ").append(exprJava).append(')');
     }
 
-    private static void emitEnumPointer(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
-    {
-        if (args.size() != 2) throw new RuntimeException("enumPointer needs 2 args (qualifiedName, value)");
-        String qn = args.get(0).getText();
-        out.append("new Enum_PointerImpl()._value(").append(qn).append(")._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value(");
-        emitExprInto(out, args.get(1).expression(), cachedTextToken, inFoldBody);
-        out.append(")))");
-    }
 
     private static void emitNotEmpty(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
     {
@@ -1945,12 +1910,65 @@ public final class M3VisitorMappingCompiler
                 .append("() != null || ctx.").append(args.get(2).getText()).append("() != null)");
     }
 
-    private static void emitDateLiteralType(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
+
+    /** stripPrefix(text, prefix) — emit {@code text.substring(prefix.length())}. */
+    private static void emitStripPrefix(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
     {
-        String inner = emitExpr(args.get(0).expression(), cachedTextToken, inFoldBody);
-        String dateTimeType = "new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(\"DateTime\"))";
-        String strictDateType = "new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(\"StrictDate\"))";
-        out.append(inner).append(".contains(\"T\") ? ").append(dateTimeType).append(" : ").append(strictDateType);
+        if (args.size() != 2) throw new RuntimeException("stripPrefix needs 2 args (text, prefix)");
+        String prefix = args.get(1).getText();
+        emitExprInto(out, args.get(0).expression(), cachedTextToken, inFoldBody);
+        out.append(".substring(").append(prefix).append(".length())");
+    }
+
+    /**
+     * concatTokens(list-of-token-or-tree) — concatenate the {@code getText()} of every
+     * element of the list and trim. Mirrors {@code TopLevelParser.extractContent}.
+     * Caller is responsible for null-safety (wrap with {@code ifPresent} if needed).
+     */
+    private static void emitConcatTokens(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
+    {
+        if (args.size() != 1) throw new RuntimeException("concatTokens needs 1 arg (list of tokens / parse trees)");
+        out.append("ListAdapter.adapt(");
+        emitExprInto(out, args.get(0).expression(), cachedTextToken, inFoldBody);
+        out.append(").collect(__n -> __n.getText()).makeString(\"\").trim()");
+    }
+
+    /**
+     * firstNonNewlineLine($ctx.X, syntheticHeader) — line number of the first
+     * non-NEWLINE child of X, minus 1 (0-based) and minus another 1 when
+     * {@code syntheticHeader} is true (the ###Pure header was prepended).
+     */
+    private static void emitFirstNonNewlineLine(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
+    {
+        if (args.size() != 2) throw new RuntimeException("firstNonNewlineLine needs 2 args ($ctx.X, syntheticHeader)");
+        StringBuilder sb = new StringBuilder();
+        emitExprInto(sb, args.get(0).expression(), cachedTextToken, inFoldBody);
+        String container = sb.toString();
+        StringBuilder synth = new StringBuilder();
+        emitExprInto(synth, args.get(1).expression(), cachedTextToken, inFoldBody);
+        out.append("computeFirstNonNewlineLine(")
+                .append(container)
+                .append(", ")
+                .append(synth)
+                .append(")");
+    }
+
+    /**
+     * dispatchSection(name, content, sourceId, lineOffset) — call the section parser
+     * registered under {@code name}. The auto-emitted {@code dispatchSection} helper
+     * (see {@link #emitDispatchSectionScaffolding}) routes to the configured
+     * {@code parserExtensions} map.
+     */
+    private static void emitDispatchSectionCall(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
+    {
+        if (args.size() != 4) throw new RuntimeException("dispatchSection needs 4 args (name, content, sourceId, lineOffset)");
+        out.append("dispatchSection(");
+        for (int j = 0; j < args.size(); j++)
+        {
+            if (j > 0) out.append(", ");
+            emitExprInto(out, args.get(j).expression(), cachedTextToken, inFoldBody);
+        }
+        out.append(")");
     }
 
     /**
@@ -2060,7 +2078,7 @@ public final class M3VisitorMappingCompiler
         String ctxType = qualifyCtxType(r.contextTypeOverride != null ? r.contextTypeOverride : capitalize(r.name) + "Context");
         String itemCtxType = qualifyCtxType(capitalize(cf.overRule) + "Context");
         String methodName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
-        String returnType = r.returnType != null ? r.returnType : "ValueSpecification";
+        String returnType = r.returnType != null ? target.letDeclType(r.returnType) : target.abstractType("ValueSpecification");
 
         sb.append("    protected ").append(returnType).append(' ').append(methodName)
                 .append("(").append(extraParamsPrefix(r)).append("final ").append(ctxType).append(" ctx)\n    {\n");
@@ -2085,10 +2103,10 @@ public final class M3VisitorMappingCompiler
         String ctxType = qualifyCtxType(r.contextTypeOverride != null ? r.contextTypeOverride : capitalize(r.name) + "Context");
         String itemCtxType = qualifyCtxType(capitalize(gl.overRule) + "Context");
         String methodName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
-        String returnType = r.returnType != null ? r.returnType : "MutableList<ValueSpecification>";
+        String returnType = r.returnType != null ? target.letDeclType(r.returnType) : ("MutableList<" + target.abstractType("ValueSpecification") + ">");
         // Element type for the lambda return — for now, hardcode ValueSpecification.
         // (Could be plumbed via the rule's `as` clause if other element types appear.)
-        String elemType = "ValueSpecification";
+        String elemType = target.abstractType("ValueSpecification");
 
         StringBuilder pred = new StringBuilder();
         for (int j = 0; j < gl.alts.size(); j++)
@@ -2144,22 +2162,6 @@ public final class M3VisitorMappingCompiler
                 .orElse(null);
     }
 
-    private static void emitFluentChain(StringBuilder sb, List<Field> fields, String indent)
-    {
-        for (int i = 0; i < fields.size(); i++)
-        {
-            Field f = fields.get(i);
-            sb.append(indent).append('.').append(setter(f.name))
-                    .append('(').append(exprToJava(f.expr, null)).append(')');
-            if (i < fields.size() - 1) sb.append('\n');
-        }
-    }
-
-    private static String setter(String fieldName)
-    {
-        return ("sourceInformation".equals(fieldName) ? "_p_sourceInformation" : "_" + fieldName);
-    }
-
     /**
      * Translate a predicate DSL string to Java. Parses with ANTLR, then walks the
      * predicate tree: `$ctx.X` becomes a null-safe chain (`ctx.X() != null && …`),
@@ -2207,7 +2209,7 @@ public final class M3VisitorMappingCompiler
             String expr = l[2];
             if (!emitConditionalNewImplLet(sb, type, name, expr))
             {
-                sb.append("        ").append(type).append(' ').append(name)
+                sb.append("        ").append(target.letDeclType(type)).append(' ').append(name)
                         .append(" = ").append(exprToJava(expr, null)).append(";\n");
             }
         }
@@ -2221,8 +2223,8 @@ public final class M3VisitorMappingCompiler
     /**
      * If the let value is `newImpl(T, k=v, k=ifPresent(p, e), ...)` and has at least one
      * 2-arg `ifPresent` field, emit it as a local-var multi-statement block:
-     *   T NAME = new TImpl()._k1(v1)._k2(v2);
-     *   if (p) NAME._kCond(e);
+     *   T NAME = construct(T, uncondKvs);
+     *   if (p) NAME.setCond(e); (target chooses setter form)
      * Returns true if emitted, false to let the caller fall back to the default
      * single-expression form. Mirrors the rule-level decompose-newImpl path.
      */
@@ -2242,25 +2244,23 @@ public final class M3VisitorMappingCompiler
             fields.add(f);
         }
         if (!anyConditional) return false;
-        String implType = args.get(0).getText() + "Impl";
-        sb.append("        ").append(type).append(' ').append(name)
-                .append(" = new ").append(implType).append("()");
+        String pureType = args.get(0).getText();
+        List<String[]> uncondKvs = new ArrayList<>();
         for (Field f : fields)
         {
             if (f.predicate == null)
             {
-                sb.append("\n                .").append(setter(f.name))
-                        .append('(').append(exprToJava(f.expr, null)).append(')');
+                uncondKvs.add(new String[] {f.name, exprToJava(f.expr, null)});
             }
         }
-        sb.append(";\n");
+        sb.append("        ").append(target.letDeclType(type)).append(' ').append(name)
+                .append(" = ").append(target.constructExpression(pureType, uncondKvs)).append(";\n");
         for (Field f : fields)
         {
             if (f.predicate != null)
             {
-                sb.append("        if (").append(predicateAsJava(f.predicate))
-                        .append(") ").append(name).append('.').append(setter(f.name))
-                        .append('(').append(exprToJava(f.expr, null)).append(");\n");
+                target.emitConditionalSetter(sb, "        ", predicateAsJava(f.predicate),
+                        name, f.name, exprToJava(f.expr, null));
             }
         }
         return true;
@@ -2277,7 +2277,7 @@ public final class M3VisitorMappingCompiler
         StringBuilder sb = new StringBuilder();
         for (String[] p : r.extraParams)
         {
-            sb.append("final ").append(p[0]).append(' ').append(p[1]).append(", ");
+            sb.append("final ").append(target.letDeclType(p[0])).append(' ').append(p[1]).append(", ");
         }
         return sb.toString();
     }
@@ -2298,7 +2298,8 @@ public final class M3VisitorMappingCompiler
     }
 
     /**
-     * Qualify a context type with `M3Parser.` if it's an M3 grammar-rule context.
+     * Qualify a context type with the configured grammar prefix (default
+     * {@code M3Parser.}, overridable via the {@code grammar X;} DSL directive).
      * Pre-imported ANTLR runtime types (ParserRuleContext, RuleContext, Token) are
      * emitted bare so helpers can declare them directly.
      */
@@ -2309,7 +2310,7 @@ public final class M3VisitorMappingCompiler
     {
         if (t.contains(".")) return t;                // already qualified
         if (ANTLR_RUNTIME_TYPES.contains(t)) return t; // pre-imported runtime type
-        return "M3Parser." + t;
+        return grammarName + "." + t;
     }
 
 }

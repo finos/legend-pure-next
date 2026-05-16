@@ -114,7 +114,7 @@ public final class TruffleCompilerBinaryBuilder
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
-                        new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()));
+                        new TruffleErrorLanguageExtension()));
         runtimeCustomizer.accept(runtimeBuilder);
         PureTruffleRuntime runtime = runtimeBuilder.build();
 

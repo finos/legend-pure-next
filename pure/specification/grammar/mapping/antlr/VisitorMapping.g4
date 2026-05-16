@@ -12,7 +12,23 @@ grammar VisitorMapping;
 
 // === Top level ==========================================================
 
-dsl: declaration* EOF;
+dsl: directive* declaration* EOF;
+
+// Top-of-file directives. Optional; default behavior matches the M3 mapping.
+//
+//   grammar X;          — pick the ANTLR parser class. Generated build methods
+//                         reference `X.YContext` for context types and the
+//                         scaffolding (when emitted) wires `XLexer`/`XParser`.
+//                         Default: M3Parser.
+//   noScaffolding;      — skip emission of the M3-specific scaffolding
+//                         (`parseElements`, `operatorTokenAt`, `elements`
+//                         accumulator, `lineOffset` field). Used when the
+//                         generated class is consumed by hand-written code
+//                         that drives ANTLR itself.
+directive
+  : 'grammar' name=IDENT ';'        # grammarDirective
+  | 'noScaffolding' ';'             # noScaffoldingDirective
+  ;
 
 // Alternate entry point used by the emitter to re-parse a stored expression text.
 exprEntry: expression EOF ;

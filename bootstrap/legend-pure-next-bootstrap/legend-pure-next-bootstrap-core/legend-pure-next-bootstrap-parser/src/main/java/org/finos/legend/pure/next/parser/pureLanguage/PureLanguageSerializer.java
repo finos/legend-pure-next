@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.next.parser.m3;
+package org.finos.legend.pure.next.parser.pureLanguage;
 
 import meta.pure.protocol.grammar.Package_Pointer;
 import meta.pure.protocol.grammar.constraint.Constraint;

@@ -144,7 +144,7 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.build.directory}/antlr4/org/finos/legend/pure/next/parser/m3/codegen/mapping</outputDirectory>
+                            <outputDirectory>${project.build.directory}/antlr4/org/finos/legend/pure/next/parser/codegen/mapping</outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${spec.dir}/grammar/mapping/antlr</directory>
@@ -177,7 +177,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Pre-compile the codegen sub-package (M3VisitorMappingCompiler + the ANTLR
+            <!-- Pre-compile the codegen sub-package (PureLanguageVisitorMappingGenerator + the ANTLR
                  mapping parser/lexer) before the visitor-generation exec below. This is the
                  bootstrap step: the compiler lives in this module but must be runnable in the
                  generate-sources phase, before the regular `compile` phase processes the rest
@@ -221,11 +221,11 @@
                             </arguments>
                         </configuration>
                     </execution>
-                    <!-- M3 visitor: emit M3ProtocolBuilder.java by compiling the visitor-mapping
-                         DSL at pure/specification/grammar/mapping/m3-mappings.dsl. The
+                    <!-- M3 visitor: emit PureLanguageProtocolBuilder.java by compiling the visitor-mapping
+                         DSL at pure/specification/grammar/mapping/pure-language-mappings.dsl. The
                          generated class extends M3ParserBaseVisitor directly; there is no
                          hand-written parent. To port the parser to another target language,
-                         port the DSL and the M3VisitorMappingCompiler (grammar lives in
+                         port the DSL and the PureLanguageVisitorMappingGenerator (grammar lives in
                          pure/specification/grammar/mapping/antlr/). -->
                     <execution>
                         <id>generate-m3-visitor</id>
@@ -234,10 +234,27 @@
                             <goal>java</goal>
                         </goals>
                         <configuration>
-                            <mainClass>org.finos.legend.pure.next.parser.m3.codegen.M3VisitorMappingCompiler</mainClass>
+                            <mainClass>org.finos.legend.pure.next.parser.pureLanguage.codegen.ProtocolPureLanguageVisitorMappingGenerator</mainClass>
                             <arguments>
-                                <argument>${spec.dir}/grammar/mapping/m3-mappings.dsl</argument>
-                                <argument>${project.build.directory}/generated-sources/org/finos/legend/pure/next/parser/m3/M3ProtocolBuilder.java</argument>
+                                <argument>${spec.dir}/grammar/mapping/pure-language-mappings.dsl</argument>
+                                <argument>${project.build.directory}/generated-sources/org/finos/legend/pure/next/parser/pureLanguage/PureLanguageProtocolBuilder.java</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <!-- Top-level visitor: emit TopLevelProtocolBuilder.java from
+                         top-mappings.dsl. Built methods drive section detection +
+                         dispatch — replaces the hand-written TopLevelParser body. -->
+                    <execution>
+                        <id>generate-top-visitor</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.next.parser.topLevel.codegen.ProtocolTopLevelGenerator</mainClass>
+                            <arguments>
+                                <argument>${spec.dir}/grammar/mapping/top-mappings.dsl</argument>
+                                <argument>${project.build.directory}/generated-sources/org/finos/legend/pure/next/parser/topLevel/TopLevelProtocolBuilder.java</argument>
                             </arguments>
                         </configuration>
                     </execution>

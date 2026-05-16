@@ -33,9 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.finos.legend.pure.next.parser.ParserExtension;
-import org.finos.legend.pure.next.parser.PureParser;
-import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
+import org.finos.legend.pure.truffle.parser.topLevel.TruffleParserExtension;
+import org.finos.legend.pure.truffle.parser.TrufflePureParser;
 
 /**
  * Plain Java entry point for running Pure code through the Truffle interpreter.
@@ -53,7 +52,7 @@ public final class PureTruffleRuntime
     private final TruffleMetadataAccess resolver;
 
     private PureTruffleRuntime(TruffleMetadataAccess resolver,
-                               List<? extends ParserExtension> parserExtensions,
+                               List<? extends TruffleParserExtension> parserExtensions,
                                List<Path> sourceRoots,
                                Map<String, String> polyglotOptions)
     {
@@ -134,12 +133,13 @@ public final class PureTruffleRuntime
         // Get the PureContext created by the language
         this.context = PureLanguage.get(null);
 
-        // Build the PureParser with the standard Pure language parser + any extra extensions
-        List<ParserExtension> allExtensions = new ArrayList<>();
-        allExtensions.add(new PureLanguageParser());
-        parserExtensions.forEach(allExtensions::add);
-        this.context.setPureParser(PureParser.builder()
-                .withExtensions(allExtensions)
+        // Build the TrufflePureParser. The ###Pure section is parsed directly to PDOs
+        // via the generated TrufflePureLanguageProtocolBuilder; non-Pure sections (e.g. ###CompiledGraph)
+        // are handled by their TruffleParserExtension, also producing PDOs — no
+        // protocol-Impl intermediate.
+        this.context.setPureParser(TrufflePureParser.builder()
+                .resolver(resolver)
+                .withNonPureExtensions(new ArrayList<>(parserExtensions))
                 .build());
     }
 
@@ -244,7 +244,7 @@ public final class PureTruffleRuntime
     public static final class Builder
     {
         private TruffleMetadataAccess resolver;
-        private final List<ParserExtension> parserExtensions = new ArrayList<>();
+        private final List<TruffleParserExtension> parserExtensions = new ArrayList<>();
         private final List<Path> sourceRoots = new ArrayList<>();
         private final Map<String, String> polyglotOptions = new LinkedHashMap<>();
 
@@ -254,7 +254,7 @@ public final class PureTruffleRuntime
             return this;
         }
 
-        public Builder withParserExtensions(Iterable<? extends ParserExtension> extensions)
+        public Builder withParserExtensions(Iterable<? extends TruffleParserExtension> extensions)
         {
             if (extensions != null)
             {

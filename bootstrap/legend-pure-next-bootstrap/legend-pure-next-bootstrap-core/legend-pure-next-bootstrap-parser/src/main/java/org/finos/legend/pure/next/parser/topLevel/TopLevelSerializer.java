@@ -20,7 +20,7 @@ import meta.pure.protocol.PureFile;
 import meta.pure.protocol.Section;
 import meta.pure.protocol.grammar.PackageableElement;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.next.parser.m3.PureLanguageSerializer;
+import org.finos.legend.pure.next.parser.pureLanguage.PureLanguageSerializer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

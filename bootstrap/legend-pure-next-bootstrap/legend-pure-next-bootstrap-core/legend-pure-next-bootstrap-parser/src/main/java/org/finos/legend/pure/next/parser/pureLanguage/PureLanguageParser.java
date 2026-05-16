@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.finos.legend.pure.next.parser.m3;
+package org.finos.legend.pure.next.parser.pureLanguage;
 
 import meta.pure.protocol.grammar.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * Parser extension for the default {@code ###Pure} section.
  *
- * <p>Delegates to the {@link M3ProtocolBuilder} for parsing
+ * <p>Delegates to the {@link PureLanguageProtocolBuilder} for parsing
  * core Pure grammar (classes, enumerations, functions, etc.).</p>
  */
 public final class PureLanguageParser implements ParserExtension
@@ -43,6 +43,6 @@ public final class PureLanguageParser implements ParserExtension
         {
             return Lists.mutable.empty();
         }
-        return new M3ProtocolBuilder().parseElements(content, lineOffset);
+        return new PureLanguageProtocolBuilder().parseElements(content, lineOffset);
     }
 }

@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 //      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package org.finos.legend.pure.truffle.runtime;
 
@@ -14,15 +20,17 @@ import org.finos.legend.pure.truffle.runtime.dynobj.PureObjBuilder;
 import java.util.List;
 
 /**
- * Truffle-native parser extension for {@code ###CompilerStats} test sections.
- * Produces a PDO at {@code meta::pure::compiler::test::CompilerStats}.
+ * Truffle-side parser extension for {@code ###Error} test sections.
+ * Mirrors the bootstrap {@code ErrorLanguageExtension} but builds a PDO at
+ * {@code meta::pure::protocol::grammar::error::Error} directly, so the Truffle
+ * pipeline doesn't need {@code ProtocolTranslator}.
  */
-public final class TruffleCompilerStatsLanguageExtension implements TruffleParserExtension
+public final class TruffleErrorLanguageExtension implements TruffleParserExtension
 {
     @Override
     public String sectionName()
     {
-        return "CompilerStats";
+        return "Error";
     }
 
     @Override
@@ -31,11 +39,10 @@ public final class TruffleCompilerStatsLanguageExtension implements TruffleParse
         Object pkg = PureObjBuilder.of("meta::pure::protocol::grammar::Package_Pointer", resolver)
                 .put("value", sourceId)
                 .build();
-        Object cs = PureObjBuilder.of("meta::pure::compiler::test::CompilerStats", resolver)
-                .put("name", "CompilerStats")
+        Object err = PureObjBuilder.of("meta::pure::protocol::grammar::error::Error", resolver)
                 .put("value", content)
                 .put("package", pkg)
                 .build();
-        return List.of(cs);
+        return List.of(err);
     }
 }

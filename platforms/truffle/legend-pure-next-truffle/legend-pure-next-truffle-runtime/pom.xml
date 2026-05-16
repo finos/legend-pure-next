@@ -13,6 +13,10 @@
     <name>Legend Pure - Next - Truffle - Runtime</name>
     <description>GraalVM Truffle interpreter for Pure — JIT-compiled, native-image-ready.</description>
 
+    <properties>
+        <spec.dir>${project.basedir}/../../../../pure/specification</spec.dir>
+    </properties>
+
     <dependencies>
         <!-- Codegen module (generates truffle PDB classes before this module compiles) -->
         <dependency>
@@ -175,6 +179,85 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+                <executions>
+                    <!-- Pre-compile the parser-codegen sub-package in generate-sources so
+                         the exec below can run TrufflePureLanguageMappingGenerator before the main
+                         compile phase processes the rest of src/main/java. Mirrors the
+                         bootstrap-parser bootstrap step. -->
+                    <execution>
+                        <id>compile-truffle-parser-codegen</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/parser/**/TrufflePdoEmitterTarget.java</include>
+                                <include>**/parser/**/TrufflePureLanguageEmitterTarget.java</include>
+                                <include>**/parser/**/TruffleTopLevelEmitterTarget.java</include>
+                                <include>**/parser/**/TruffleParserExtension.java</include>
+                                <include>**/parser/**/TrufflePureLanguageVisitorMappingGenerator.java</include>
+                                <include>**/parser/**/TruffleTopLevelGenerator.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Emit TrufflePureLanguageProtocolBuilder.java from the shared visitor-mapping DSL. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-truffle-builder</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.truffle.parser.pureLanguage.TrufflePureLanguageVisitorMappingGenerator</mainClass>
+                            <arguments>
+                                <argument>${spec.dir}/grammar/mapping/pure-language-mappings.dsl</argument>
+                                <argument>${project.build.directory}/generated-truffle-parser-sources/org/finos/legend/pure/truffle/parser/pureLanguage/TrufflePureLanguageProtocolBuilder.java</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate-truffle-top-builder</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.truffle.parser.topLevel.TruffleTopLevelGenerator</mainClass>
+                            <arguments>
+                                <argument>${spec.dir}/grammar/mapping/top-mappings.dsl</argument>
+                                <argument>${project.build.directory}/generated-truffle-parser-sources/org/finos/legend/pure/truffle/parser/TruffleTopLevelProtocolBuilder.java</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Add the generated-sources directory to the compile path. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-generated-truffle-parser-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-truffle-parser-sources</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <!-- Generated PDB classes come from codegen JAR dependency -->
             <plugin>

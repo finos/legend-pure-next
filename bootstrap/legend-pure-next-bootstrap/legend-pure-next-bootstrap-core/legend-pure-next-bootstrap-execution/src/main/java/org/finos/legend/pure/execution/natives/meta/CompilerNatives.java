@@ -26,7 +26,7 @@ import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
 import org.finos.legend.pure.next.parser.ParserExtension;
 import org.finos.legend.pure.next.parser.PureParser;
-import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
+import org.finos.legend.pure.next.parser.pureLanguage.PureLanguageParser;
 
 import java.util.ArrayList;
 import java.util.List;

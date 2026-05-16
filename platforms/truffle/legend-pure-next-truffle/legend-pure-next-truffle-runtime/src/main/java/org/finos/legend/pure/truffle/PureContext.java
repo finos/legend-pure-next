@@ -23,8 +23,8 @@ import org.finos.legend.pure.truffle.builder.PureASTBuilder;
 import org.finos.legend.pure.truffle.frame.CompiledFunction;
 import org.finos.legend.pure.truffle.frame.FrameDescriptorBuilder;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
+import org.finos.legend.pure.truffle.parser.TrufflePureParser;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
-import org.finos.legend.pure.next.parser.PureParser;
 
 import java.util.ArrayDeque;
 import java.util.WeakHashMap;
@@ -55,7 +55,7 @@ public final class PureContext
     private TruffleMetadataAccess resolver;
     private org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry modules;
     private PureASTBuilder astBuilder;
-    private PureParser pureParser;
+    private TrufflePureParser pureParser;
 
     // Per-FD compilation cache: layout + lowered body
     private final WeakHashMap<Object, CompiledFunction> functionCache = new WeakHashMap<>();
@@ -169,8 +169,8 @@ public final class PureContext
      */
     public org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry modules() { return modules; }
     public PureASTBuilder astBuilder() { return astBuilder; }
-    public PureParser pureParser() { return pureParser; }
-    public void setPureParser(PureParser parser) { this.pureParser = parser; }
+    public TrufflePureParser pureParser() { return pureParser; }
+    public void setPureParser(TrufflePureParser parser) { this.pureParser = parser; }
 
     // ---------------------------------------------------------------
     // Construction stack (for new/copy parent references)

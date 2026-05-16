@@ -128,11 +128,10 @@ class TrufflePureTestRunner
                 .build();
         model.compile();
 
-        // Configure the PureParser for the parse native
-        java.util.List<org.finos.legend.pure.next.parser.ParserExtension> parserExts = new java.util.ArrayList<>();
-        parserExts.add(new org.finos.legend.pure.next.parser.m3.PureLanguageParser());
-        context.setPureParser(org.finos.legend.pure.next.parser.PureParser.builder()
-                .withExtensions(parserExts)
+        // Configure the TrufflePureParser for the parse native — ###Pure section builds
+        // PDOs directly via TrufflePureLanguageProtocolBuilder, no ProtocolTranslator copy.
+        context.setPureParser(org.finos.legend.pure.truffle.parser.TrufflePureParser.builder()
+                .resolver(resolver)
                 .build());
 
         // Find PCT adapter via truffle loader
