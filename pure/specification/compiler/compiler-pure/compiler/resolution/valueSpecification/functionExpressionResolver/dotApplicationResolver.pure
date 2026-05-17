@@ -134,16 +134,12 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                   )
                             );,
                           cls:Class<Any>[1] |
-                            // Look up the fully compiled class from the context (the receiver may reference the pass 1 skeleton)
+                            // Look up the fully compiled class from the context (the receiver may
+                            // reference the pass 1 skeleton). Path-keyed lookup is authoritative —
+                            // no fallback to $cls; if the class isn't in the context, that's a
+                            // structural bug worth surfacing.
                             let path = $cls->cast(@PackageableElement)->elementToPath();
-                            let fromCtx = $context->resolveElement($path);
-                            let resolvedOwner = if($fromCtx->isNotEmpty(),
-                                | $fromCtx->toOne()->match([
-                                      c:Class<Any>[1] | $c,
-                                      a:Any[1] | $cls
-                                  ]),
-                                | $cls
-                            );
+                            let resolvedOwner = $context->resolveElement($path)->toOne()->cast(@Class<Any>);
                             // Look up property or qualified property on the owner type (mirrors Java DotApplicationResolver.lookupFunction)
                             let paramCount = $resolvedParams->size();
                             // Try simple property first (only when no additional params)
@@ -253,15 +249,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             // to find inherited fields like `name`. Enumerations
                             // don't have qualified properties so the lookup is
                             // simpler than the Class arm's full QP logic.
+                            // Path-keyed lookup is authoritative — no fallback to $en.
                             let path = $en->cast(@PackageableElement)->elementToPath();
-                            let fromCtx = $context->resolveElement($path);
-                            let resolvedOwner = if($fromCtx->isNotEmpty(),
-                                | $fromCtx->toOne()->match([
-                                      e:Enumeration<Any>[1] | $e,
-                                      a:Any[1] | $en
-                                  ]),
-                                | $en
-                            );
+                            let resolvedOwner = $context->resolveElement($path)->toOne()->cast(@Enumeration<Any>);
                             let foundProp = findProperty($resolvedOwner, $functionName, $context);
                             if($foundProp->isEmpty(),
                                 | ^CompilerResult<ValueSpecification>(

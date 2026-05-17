@@ -319,13 +319,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveFunctionApplicationUsingTemplateFunction(fi:FunctionApplication[1], entry:PackageableFunction<Any>[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
-    // Get the fully-compiled function from context (all PackageableElements should be resolved from context)
+    // Path-keyed lookup is authoritative — no fallback to $entry.
     let entryPath = $entry->elementToPath();
-    let fromContext = $context->resolveElement($entryPath);
-    let resolvedEntry = if($fromContext->isNotEmpty() && $fromContext->toOne()->instanceOf(Function),
-        | $fromContext->toOne()->cast(@Function<Any>),
-        | $entry
-    );
+    let resolvedEntry = $context->resolveElement($entryPath)->toOne()->cast(@Function<Any>);
     let ft = $resolvedEntry->getFunctionType($context);
     let funcParams = $ft.parameters->cast(@VariableExpression);
 

@@ -106,13 +106,12 @@ function meta::pure::compiler::helper::class::findInheritedProperty(generalizati
             | let t = $g.general->genericTypeRawType();
               if($t->isEmpty() || (!$t->toOne()->instanceOf(Class) && !$t->toOne()->instanceOf(Enumeration)),
                   | $acc,
-                  | let actualT = $t->toOne();
-                    let superPath = $actualT->cast(@PackageableElement)->elementToPath();
-                    let resolved = $context->resolveElement($superPath);
-                    let superCls = if($resolved->isNotEmpty(),
-                        | $resolved->toOne()->match([c:Class<Any>[1] | $c, e:Enumeration<Any>[1] | $e, a:Any[1] | $actualT]),
-                        | $actualT
-                    );
+                  | let superPath = $t->toOne()->cast(@PackageableElement)->elementToPath();
+                    // Path-keyed lookup is authoritative; no fallback to the
+                    // (potentially stale) raw type. resolveElement throws if
+                    // the parent isn't in the context — that's a structural
+                    // bug worth surfacing rather than silently masking.
+                    let superCls = $context->resolveElement($superPath)->toOne();
                     $superCls->findProperty($name, $context);
               );
         );
@@ -140,11 +139,8 @@ function meta::pure::compiler::helper::class::findQualifiedProperties(cls:Class<
         ->filter(t | $t->instanceOf(Class))
         ->map(t |
             let superPath = $t->cast(@PackageableElement)->elementToPath();
-            let resolved = $context->resolveElement($superPath);
-            let superCls = if($resolved->isNotEmpty(),
-                | $resolved->toOne()->match([c:Class<Any>[1] | $c, a:Any[1] | $t->cast(@Class<Any>)]),
-                | $t->cast(@Class<Any>)
-            );
+            // Path-keyed lookup is authoritative; no fallback to the raw type.
+            let superCls = $context->resolveElement($superPath)->toOne()->cast(@Class<Any>);
             $superCls->findQualifiedProperties($name, $context);
         );
     $directMatch->concatenate($inherited);

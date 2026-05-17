@@ -1155,12 +1155,54 @@ public class RdfFbsJavaGenerator
         sb.append("        if (obj instanceof Tag t && t._profile() != null) { return _PackageableElement.path(t._profile()) + \"#\" + t._value(); }\n");
         sb.append("        return String.valueOf(obj);\n");
         sb.append("    }\n\n");
-        // writePointerRef: typed pointer for union PointerRef fields
+        // writePointerRef: typed pointer for union PointerRef fields.
+        //
+        // TempCompilerPointer arms come FIRST. Concrete pointer subtypes
+        // (PackageableFunctionPointer, PropertyPointer, ...) inherit from their
+        // metamodel parents (PackageableElement / AbstractProperty / ...) but
+        // are opaque: only ._path() and ._element() are populated; ._name(),
+        // ._owner(), ._package() are null. Reading them through the legacy
+        // chain would compute empty / null paths and round-trip incorrectly.
         sb.append("    private int writePointerRef(Object obj)\n");
         sb.append("    {\n");
         sb.append("        byte kind;\n");
         sb.append("        String[] segments;\n");
-        sb.append("        if (obj instanceof meta.pure.metamodel.function.property.QualifiedProperty qp && qp._owner() instanceof PackageableElement owner)\n");
+        sb.append("        if (obj instanceof meta.pure.metamodel.pointer.QualifiedPropertyPointer qpp)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 2; // QualifiedProperty\n");
+        sb.append("            segments = new String[]{qpp._path(), qpp._element()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.PropertyPointer pp)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 1; // Property\n");
+        sb.append("            segments = new String[]{pp._path(), pp._element()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.ColumnPointer cp)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 1; // Column round-trips as Property kind today\n");
+        sb.append("            segments = new String[]{cp._path(), cp._element()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.StereotypePointer sp)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 3; // Stereotype\n");
+        sb.append("            segments = new String[]{sp._path(), sp._element()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.TagPointer tp)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 4; // Tag\n");
+        sb.append("            segments = new String[]{tp._path(), tp._element()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.EnumPointer ep)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 1; // Enum value round-trips as Property kind today\n");
+        sb.append("            segments = new String[]{ep._path(), ep._element()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.TempCompilerPointer tcp)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 0; // PackageableElement-style pointer (path only)\n");
+        sb.append("            segments = new String[]{tcp._path()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof meta.pure.metamodel.function.property.QualifiedProperty qp && qp._owner() instanceof PackageableElement owner)\n");
         sb.append("        {\n");
         sb.append("            kind = 2; // QualifiedProperty\n");
         sb.append("            segments = new String[]{_PackageableElement.path(owner), qp._name()};\n");
