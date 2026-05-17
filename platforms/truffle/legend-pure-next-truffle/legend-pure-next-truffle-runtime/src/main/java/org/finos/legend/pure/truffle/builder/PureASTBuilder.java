@@ -128,7 +128,7 @@ public final class PureASTBuilder
     /**
      * Lower a single {@link ValueSpecification} into an executable Truffle node.
      *
-     * <p>Each arm matches the typed XImpl form first (covers all subtype-of-X
+     * <p>Each arm matches the typed XPDBHelper form first (covers all subtype-of-X
      * cases for free via {@code instanceof}); a fallback resolver-driven
      * {@link org.finos.legend.pure.truffle.runtime.dynobj.PureObj#isType}
      * handles {@link org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject}
@@ -269,7 +269,7 @@ public final class PureASTBuilder
             }
         }
         final Object resolvedFunc = func;
-        // Dispatch by Pure metaclass — works for both XImpl (legacy) and
+        // Dispatch by Pure metaclass — works for both XPDBHelper (legacy) and
         // PureDynamicObject (post-flip). NativeFunction is a leaf concrete
         // type (no subtypes), so pureTypeIs is enough; FunctionDefinition /
         // AbstractProperty are interface roots requiring isType (subtype check).

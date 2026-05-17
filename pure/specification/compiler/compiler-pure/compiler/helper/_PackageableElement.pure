@@ -16,21 +16,27 @@ import meta::pure::compiler::helper::functionType::*;
 import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::helper::class::*;
+import meta::pure::metamodel::pointer::*;
 
 // PackageableElement path helpers
 
 function meta::pure::compiler::helper::packageableElement::fullPath(element:PackageableElement[1]):String[1]
 {
-    let pkg = $element.package;
-    let name = $element.name->toOne();
-    if($pkg->isEmpty(),
-        | $name,
-        | let pkgPath = $pkg->toOne()->packagePath();
-          if($pkgPath == '',
-              | $name,
-              | $pkgPath + '::' + $name
-          );
-    );
+    $element->match([
+        // TempCompilerPointer carries its canonical path directly; package/name are unset.
+        ptr : TempCompilerPointer[1] | $ptr.path,
+        pe  : PackageableElement[1] |
+            let pkg = $pe.package;
+            let name = $pe.name->toOne();
+            if($pkg->isEmpty(),
+                | $name,
+                | let pkgPath = $pkg->toOne()->packagePath();
+                  if($pkgPath == '',
+                      | $name,
+                      | $pkgPath + '::' + $name
+                  );
+            );
+    ])
 }
 
 function meta::pure::compiler::helper::packageableElement::packagePath(pkg:Package[1]):String[1]

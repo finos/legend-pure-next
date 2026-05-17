@@ -14,12 +14,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Per-Pure-class registry of FB-decode logic. Replaces the per-class
- * {@code XImpl} class that previously held both the property storage and
+ * {@code XPDBHelper} class that previously held both the property storage and
  * the decode switch — after the migration, storage lives in {@link
  * PureDynamicObject}'s {@code DynamicObjectLibrary} slots and decode lives
  * here.
  *
- * <p>Each generated {@code XImplDecoder.java} registers itself in a
+ * <p>Each generated {@code XPDBHelperDecoder.java} registers itself in a
  * {@code static{}} block at class-load time. {@link PureDynamicObject#readProperty}
  * uses {@link #lookup} on cache miss, keyed by the Shape's dynamic type
  * (the Pure-class path string).</p>
@@ -40,7 +40,7 @@ public final class PureFbDecoderRegistry
 
     private PureFbDecoderRegistry() {}
 
-    /** Called from each generated {@code XImplDecoder}'s static initialiser. */
+    /** Called from each generated {@code XPDBHelperDecoder}'s static initialiser. */
     public static void register(String purePath, Decoder decoder)
     {
         DECODERS.put(purePath, decoder);
@@ -54,7 +54,7 @@ public final class PureFbDecoderRegistry
 
     /**
      * One-shot decode call. Registry miss falls through to a Class.forName
-     * load of the corresponding {@code XImplDecoder} (which triggers its
+     * load of the corresponding {@code XPDBHelperDecoder} (which triggers its
      * static init); a second registry get returns the now-installed decoder.
      */
     public static Object decode(String purePath, String name, Object fb,
@@ -73,11 +73,11 @@ public final class PureFbDecoderRegistry
 
     private static Decoder lazyLoad(String purePath)
     {
-        // meta::pure::metamodel::type::Class → org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.ClassImpl
-        // The XImpl class's static{} block registers a decoder lambda that
+        // meta::pure::metamodel::type::Class → org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.ClassPDBHelper
+        // The XPDBHelper class's static{} block registers a decoder lambda that
         // wraps its existing readProperty switch — see PdbJavaGenerator's
-        // generateImpl (around the "static\n    {" emission).
-        String fqn = "org.finos.legend.pure.truffle.pdb." + purePath.replace("::", ".") + "Impl";
+        // generateHelper (around the "static\n    {" emission).
+        String fqn = "org.finos.legend.pure.truffle.pdb." + purePath.replace("::", ".") + "PDBHelper";
         try
         {
             Class.forName(fqn);

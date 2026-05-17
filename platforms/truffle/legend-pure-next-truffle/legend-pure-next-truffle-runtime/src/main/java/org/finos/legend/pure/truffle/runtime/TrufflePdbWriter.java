@@ -140,9 +140,9 @@ public final class TrufflePdbWriter
             return idx < 0 ? pt : pt.substring(idx + 2);
         }
         String simple = element.getClass().getSimpleName();
-        if (simple.endsWith("Impl"))
+        if (simple.endsWith("PDBHelper"))
         {
-            return simple.substring(0, simple.length() - "Impl".length());
+            return simple.substring(0, simple.length() - "PDBHelper".length());
         }
         if (simple.endsWith("FlatBufferWrapper"))
         {

@@ -1,0 +1,207 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::metamodel::pointer::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::compiler::*;
+import meta::pure::compiler::helper::class::*;
+import meta::pure::functions::asserts::*;
+
+// ---------------------------------------------------------------------------
+// Pointer construction helpers — compile-pure uses these at every cross-element
+// reference site in place of `field = $resolvedElement`.
+//
+// A pointer is intentionally OPAQUE: it carries only the fields needed to
+// resolve through the live element registry — never cached copies of the
+// target's data. Every other inherited field (.name, .package, .genericType,
+// .classifierGenericType, ...) is intentionally unpopulated. Reading those
+// fields on a pointer is a bug; consumers must call `dereferencePointer(ptr,
+// context)` to look up the live element first, then read fields off it.
+//
+// Why so strict: pointers exist to keep cross-element references identity-
+// stable across compile passes. A cached copy of any non-identity field can
+// go stale exactly the way a direct reference does. Forcing dereference-
+// before-read makes the staleness window impossible.
+//
+// Two pointer shapes:
+//   * Single-path: the pointer's target is itself a PackageableElement —
+//     identified by `path` alone. Examples: PackageableFunctionPointer,
+//     ClassPointer, ProfilePointer.
+//   * Owner + element: the pointer's target is a member of an owner (Property
+//     on a Class, Stereotype on a Profile, Enum value on an Enumeration, ...)
+//     — identified by `path` (the owner's PE path) and `element` (the member's
+//     local identifier within that owner). Examples: PropertyPointer,
+//     StereotypePointer, EnumPointer.
+//
+// Stereotype `compiler.pointer` exempts these `^X(...)` constructions from
+// `validateNewFromFI`'s required-field init check.
+// ---------------------------------------------------------------------------
+
+function meta::pure::compiler::helper::pointer::toPackageableFunctionPointer<T>(fn:PackageableFunction<T>[1]):PackageableFunctionPointer<T>[1]
+{
+    ^PackageableFunctionPointer<T>(path = $fn->elementToPath());
+}
+
+function meta::pure::compiler::helper::pointer::toClassPointer<T>(c:Class<T>[1]):ClassPointer<T>[1]
+{
+    ^ClassPointer<T>(path = $c->elementToPath());
+}
+
+function meta::pure::compiler::helper::pointer::toPrimitiveTypePointer(pt:PrimitiveType[1]):PrimitiveTypePointer[1]
+{
+    ^PrimitiveTypePointer(path = $pt->elementToPath());
+}
+
+function meta::pure::compiler::helper::pointer::toEnumerationPointer<E>(e:Enumeration<E>[1]):EnumerationPointer<E>[1]
+{
+    ^EnumerationPointer<E>(path = $e->elementToPath());
+}
+
+function meta::pure::compiler::helper::pointer::toProfilePointer(p:Profile[1]):ProfilePointer[1]
+{
+    ^ProfilePointer(path = $p->elementToPath());
+}
+
+function meta::pure::compiler::helper::pointer::toAssociationPointer(a:Association[1]):AssociationPointer[1]
+{
+    ^AssociationPointer(path = $a->elementToPath());
+}
+
+function meta::pure::compiler::helper::pointer::toPackagePointer(p:meta::pure::metamodel::Package[1]):PackagePointer[1]
+{
+    ^PackagePointer(path = $p->elementToPath());
+}
+
+function meta::pure::compiler::helper::pointer::toPropertyPointer<U,V|m>(p:Property<U,V|m>[1]):PropertyPointer<U,V|m>[1]
+{
+    ^PropertyPointer<U,V|m>(
+        path = $p.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath(),
+        element = $p.name->toOne()
+    );
+}
+
+function meta::pure::compiler::helper::pointer::toQualifiedPropertyPointer<T>(qp:QualifiedProperty<T>[1]):QualifiedPropertyPointer<T>[1]
+{
+    ^QualifiedPropertyPointer<T>(
+        path = $qp.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath(),
+        element = $qp.name->toOne()
+    );
+}
+
+function meta::pure::compiler::helper::pointer::toStereotypePointer(s:Stereotype[1]):StereotypePointer[1]
+{
+    ^StereotypePointer(
+        path = $s.profile->toOne()->elementToPath(),
+        element = $s.value->toOne()
+    );
+}
+
+function meta::pure::compiler::helper::pointer::toTagPointer(t:Tag[1]):TagPointer[1]
+{
+    ^TagPointer(
+        path = $t.profile->toOne()->elementToPath(),
+        element = $t.value->toOne()
+    );
+}
+
+function meta::pure::compiler::helper::pointer::toEnumPointer(e:Enum[1]):EnumPointer[1]
+{
+    ^EnumPointer(
+        path = $e.classifierGenericType->toOne().type->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath(),
+        element = $e.name->toOne()
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Pointer dereference
+//
+// `dereferencePointer(ptr, context)` looks up the live target element from
+// the registry. Throws on missed lookup — no silent fallback. The pointer
+// guarantees a stable path; an unresolvable target is a graph bug we want to
+// surface loudly.
+//
+// Return type is `Any[1]` because different pointer kinds resolve to different
+// metamodel types. Callers cast to their expected type (typically Function<Any>
+// for func-slot use cases).
+// ---------------------------------------------------------------------------
+
+function meta::pure::compiler::helper::pointer::dereferencePointer(ptr:TempCompilerPointer[1], context:meta::pure::compiler::CompilerContext[1]):Any[1]
+{
+    $ptr->match([
+        // Single-path pointers: path → registry lookup
+        pfp : PackageableFunctionPointer<Any>[1] |
+            let target = $context->resolveElement($pfp.path);
+            assert($target->isNotEmpty(), 'PackageableFunctionPointer target not found in registry: ' + $pfp.path);
+            $target->toOne();,
+        cp : ClassPointer<Any>[1] |
+            let target = $context->resolveElement($cp.path);
+            assert($target->isNotEmpty(), 'ClassPointer target not found in registry: ' + $cp.path);
+            $target->toOne();,
+        ptp : PrimitiveTypePointer[1] |
+            let target = $context->resolveElement($ptp.path);
+            assert($target->isNotEmpty(), 'PrimitiveTypePointer target not found in registry: ' + $ptp.path);
+            $target->toOne();,
+        ep : EnumerationPointer<Any>[1] |
+            let target = $context->resolveElement($ep.path);
+            assert($target->isNotEmpty(), 'EnumerationPointer target not found in registry: ' + $ep.path);
+            $target->toOne();,
+        pp : ProfilePointer[1] |
+            let target = $context->resolveElement($pp.path);
+            assert($target->isNotEmpty(), 'ProfilePointer target not found in registry: ' + $pp.path);
+            $target->toOne();,
+        ap : AssociationPointer[1] |
+            let target = $context->resolveElement($ap.path);
+            assert($target->isNotEmpty(), 'AssociationPointer target not found in registry: ' + $ap.path);
+            $target->toOne();,
+        pkp : PackagePointer[1] |
+            let target = $context->resolveElement($pkp.path);
+            assert($target->isNotEmpty(), 'PackagePointer target not found in registry: ' + $pkp.path);
+            $target->toOne();,
+        // Owner + element pointers: path → owner, find member by element
+        pp : PropertyPointer<Nil, Any|*>[1] |
+            let owner = $context->resolveElement($pp.path);
+            assert($owner->isNotEmpty(), 'PropertyPointer owner not found in registry: ' + $pp.path);
+            let prop = findProperty($owner->toOne(), $pp.element, $context);
+            assert($prop->isNotEmpty(), 'PropertyPointer element \'' + $pp.element + '\' not found on owner ' + $pp.path);
+            $prop->toOne();,
+        qpp : QualifiedPropertyPointer<Any>[1] |
+            let owner = $context->resolveElement($qpp.path);
+            assert($owner->isNotEmpty(), 'QualifiedPropertyPointer owner not found in registry: ' + $qpp.path);
+            let qps = findQualifiedProperties($owner->toOne()->cast(@Class<Any>), $qpp.element, $context);
+            assert($qps->isNotEmpty(), 'QualifiedPropertyPointer element \'' + $qpp.element + '\' not found on owner ' + $qpp.path);
+            $qps->at(0);,
+        sp : StereotypePointer[1] |
+            let profile = $context->resolveElement($sp.path);
+            assert($profile->isNotEmpty(), 'StereotypePointer profile not found in registry: ' + $sp.path);
+            let stereotype = $profile->toOne()->cast(@Profile).p_stereotypes->filter(s | $s.value == $sp.element);
+            assert($stereotype->isNotEmpty(), 'StereotypePointer element \'' + $sp.element + '\' not found on profile ' + $sp.path);
+            $stereotype->toOne();,
+        tp : TagPointer[1] |
+            let profile = $context->resolveElement($tp.path);
+            assert($profile->isNotEmpty(), 'TagPointer profile not found in registry: ' + $tp.path);
+            let tag = $profile->toOne()->cast(@Profile).p_tags->filter(t | $t.value == $tp.element);
+            assert($tag->isNotEmpty(), 'TagPointer element \'' + $tp.element + '\' not found on profile ' + $tp.path);
+            $tag->toOne();,
+        enp : EnumPointer[1] |
+            let enumeration = $context->resolveElement($enp.path);
+            assert($enumeration->isNotEmpty(), 'EnumPointer enumeration not found in registry: ' + $enp.path);
+            let enumValue = $enumeration->toOne()->cast(@Enumeration<Any>).properties->filter(p | $p.name == $enp.element);
+            assert($enumValue->isNotEmpty(), 'EnumPointer element \'' + $enp.element + '\' not found on enumeration ' + $enp.path);
+            $enumValue->toOne();
+    ])
+}

@@ -265,7 +265,7 @@ public class TruffleCompileToPdbTest
                 for (int i = 0; i < elementsSeq.size(); i++)
                 {
                     Object el = elementsSeq.getBoxed(i);
-                    // Accept both typed XImpl and PureDynamicObject elements.
+                    // Accept both typed XPDBHelper and PureDynamicObject elements.
                     if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(el,
                             "meta::pure::metamodel::PackageableElement", resolver))
                     {
@@ -329,7 +329,7 @@ public class TruffleCompileToPdbTest
     private static Object invokeAccessor(Object target, String accessor)
     {
         // accessor is `_X` form; strip leading underscore for PureObj.read
-        // which expects the bare property name. Works for both typed XImpl
+        // which expects the bare property name. Works for both typed XPDBHelper
         // and PureDynamicObject.
         String propName = accessor.startsWith("_") ? accessor.substring(1) : accessor;
         return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, propName);
@@ -338,7 +338,7 @@ public class TruffleCompileToPdbTest
     private static String baseTypeName(String simple)
     {
         if (simple.endsWith("FlatBufferWrapper")) return simple.substring(0, simple.length() - "FlatBufferWrapper".length());
-        if (simple.endsWith("Impl")) return simple.substring(0, simple.length() - "Impl".length());
+        if (simple.endsWith("PDBHelper")) return simple.substring(0, simple.length() - "PDBHelper".length());
         return simple;
     }
 

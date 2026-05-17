@@ -17,6 +17,7 @@ import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::*;
+import meta::pure::functions::asserts::*;
 
 // Class helpers — property lookup across inheritance hierarchy
 
@@ -82,6 +83,12 @@ function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:St
                     | $directMatch->head(),
                     | findInheritedProperty($en.generalizations, $name, $context);
                 );,
+            // Association extends PropertyOwner directly, so its `.properties`
+            // hold the association's declared properties (e.g. `dept` on
+            // `test::PersonDept`). Pointer dereference targets the Association
+            // by path; this arm makes the lookup reach those properties.
+            assoc : meta::pure::metamodel::relationship::Association[1] |
+                $assoc.properties->filter(p | $p.name == $name)->cast(@Property<Nil, Any|*>)->head();,
             a : Any[1] | []
         ]
     )

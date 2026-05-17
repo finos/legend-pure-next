@@ -18,7 +18,7 @@ import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
- * Value coercion for typed property setters generated on each {@code XImpl}.
+ * Value coercion for typed property setters generated on each {@code XPDBHelper}.
  * Pure-side property writes deliver values whose actual type may differ from
  * the declared field type — a single-element {@link PureSequence} for a
  * scalar slot, an {@link Enum} for an interface-typed enum field, etc. This

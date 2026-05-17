@@ -209,13 +209,13 @@ public final class TrufflePdbLoader implements TruffleModule
         // Loader flip: construct PureDynamicObject backed by the raw FB Def.
         // The Shape's dynamic type is the Pure-class path (derived from the
         // wrapperClassName); per-class decoders registered by each generated
-        // XImpl's static{} block in PureFbDecoderRegistry handle property reads.
-        // Each XImpl's class is loaded lazily on first read (via Class.forName
+        // XPDBHelper's static{} block in PureFbDecoderRegistry handle property reads.
+        // Each XPDBHelper's class is loaded lazily on first read (via Class.forName
         // in PureFbDecoderRegistry.lazyLoad), which triggers static-init and
         // registers the decoder.
         String purePath = wrapperClassName
                 .replace("org.finos.legend.pure.truffle.pdb.", "")
-                .replaceFirst("Impl$", "")
+                .replaceFirst("PDBHelper$", "")
                 .replace(".", "::");
         try
         {
@@ -252,76 +252,76 @@ public final class TrufflePdbLoader implements TruffleModule
         String p = "org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.";
 
         // Functions
-        m.put("UserDefinedFunction", p + "function.UserDefinedFunctionImpl");
-        m.put("NativeFunction", p + "function.NativeFunctionImpl");
-        m.put("LambdaFunction", p + "function.LambdaFunctionImpl");
+        m.put("UserDefinedFunction", p + "function.UserDefinedFunctionPDBHelper");
+        m.put("NativeFunction", p + "function.NativeFunctionPDBHelper");
+        m.put("LambdaFunction", p + "function.LambdaFunctionPDBHelper");
 
         // Types
-        m.put("Class", p + "type.ClassImpl");
-        m.put("Enumeration", p + "type.EnumerationImpl");
-        m.put("PrimitiveType", p + "type.PrimitiveTypeImpl");
-        m.put("FunctionType", p + "type.FunctionTypeImpl");
+        m.put("Class", p + "type.ClassPDBHelper");
+        m.put("Enumeration", p + "type.EnumerationPDBHelper");
+        m.put("PrimitiveType", p + "type.PrimitiveTypePDBHelper");
+        m.put("FunctionType", p + "type.FunctionTypePDBHelper");
 
         // Properties
-        m.put("Property", p + "function.property.PropertyImpl");
-        m.put("QualifiedProperty", p + "function.property.QualifiedPropertyImpl");
+        m.put("Property", p + "function.property.PropertyPDBHelper");
+        m.put("QualifiedProperty", p + "function.property.QualifiedPropertyPDBHelper");
 
         // ValueSpecifications
         String vs = p + "valuespecification.";
-        m.put("ArrowInvocation", vs + "ArrowInvocationImpl");
-        m.put("AtomicValue", vs + "AtomicValueImpl");
-        m.put("Collection", vs + "CollectionImpl");
-        m.put("DotApplication", vs + "DotApplicationImpl");
-        m.put("FunctionInvocation", vs + "FunctionInvocationImpl");
-        m.put("VariableExpression", vs + "VariableExpressionImpl");
-        m.put("GenericTypeAndMultiplicityHolder", vs + "GenericTypeAndMultiplicityHolderImpl");
-        m.put("UserDefinedGenericTypeAndMultiplicityHolder", vs + "UserDefinedGenericTypeAndMultiplicityHolderImpl");
-        m.put("CompilerGenericTypeAndMultiplicityHolder", vs + "CompilerGenericTypeAndMultiplicityHolderImpl");
+        m.put("ArrowInvocation", vs + "ArrowInvocationPDBHelper");
+        m.put("AtomicValue", vs + "AtomicValuePDBHelper");
+        m.put("Collection", vs + "CollectionPDBHelper");
+        m.put("DotApplication", vs + "DotApplicationPDBHelper");
+        m.put("FunctionInvocation", vs + "FunctionInvocationPDBHelper");
+        m.put("VariableExpression", vs + "VariableExpressionPDBHelper");
+        m.put("GenericTypeAndMultiplicityHolder", vs + "GenericTypeAndMultiplicityHolderPDBHelper");
+        m.put("UserDefinedGenericTypeAndMultiplicityHolder", vs + "UserDefinedGenericTypeAndMultiplicityHolderPDBHelper");
+        m.put("CompilerGenericTypeAndMultiplicityHolder", vs + "CompilerGenericTypeAndMultiplicityHolderPDBHelper");
 
         // Generics
         String gt = p + "type.generics.";
-        m.put("UserDefinedGenericType", gt + "UserDefinedGenericTypeImpl");
-        m.put("UserDefinedPackageableGenericType", gt + "UserDefinedPackageableGenericTypeImpl");
-        m.put("InferredGenericType", gt + "InferredGenericTypeImpl");
-        m.put("InferredPackageableGenericType", gt + "InferredPackageableGenericTypeImpl");
-        m.put("UndefinedGenericType", gt + "UndefinedGenericTypeImpl");
-        m.put("CompilerNotSetGenericType", gt + "CompilerNotSetGenericTypeImpl");
-        m.put("TypeParameter", gt + "TypeParameterImpl");
-        m.put("ResolvedTypeParameter", gt + "ResolvedTypeParameterImpl");
-        m.put("ResolvedMultiplicityParameter", gt + "ResolvedMultiplicityParameterImpl");
-        m.put("GenericTypeOperation", p + "relation.GenericTypeOperationImpl");
+        m.put("UserDefinedGenericType", gt + "UserDefinedGenericTypePDBHelper");
+        m.put("UserDefinedPackageableGenericType", gt + "UserDefinedPackageableGenericTypePDBHelper");
+        m.put("InferredGenericType", gt + "InferredGenericTypePDBHelper");
+        m.put("InferredPackageableGenericType", gt + "InferredPackageableGenericTypePDBHelper");
+        m.put("UndefinedGenericType", gt + "UndefinedGenericTypePDBHelper");
+        m.put("CompilerNotSetGenericType", gt + "CompilerNotSetGenericTypePDBHelper");
+        m.put("TypeParameter", gt + "TypeParameterPDBHelper");
+        m.put("ResolvedTypeParameter", gt + "ResolvedTypeParameterPDBHelper");
+        m.put("ResolvedMultiplicityParameter", gt + "ResolvedMultiplicityParameterPDBHelper");
+        m.put("GenericTypeOperation", p + "relation.GenericTypeOperationPDBHelper");
 
         // Multiplicities
         String mu = p + "multiplicity.";
-        m.put("UserDefinedAdHocMultiplicity", mu + "UserDefinedAdHocMultiplicityImpl");
-        m.put("UserDefinedPackageableMultiplicity", mu + "UserDefinedPackageableMultiplicityImpl");
-        m.put("UserDefinedMultiplicityParameter", mu + "UserDefinedMultiplicityParameterImpl");
-        m.put("InferredAdHocMultiplicity", mu + "InferredAdHocMultiplicityImpl");
-        m.put("InferredPackageableMultiplicity", mu + "InferredPackageableMultiplicityImpl");
-        m.put("InferredMultiplicityParameter", mu + "InferredMultiplicityParameterImpl");
-        m.put("UndefinedMultiplicity", mu + "UndefinedMultiplicityImpl");
-        m.put("CompilerNotSetMultiplicity", mu + "CompilerNotSetMultiplicityImpl");
-        m.put("MultiplicityValue", mu + "MultiplicityValueImpl");
+        m.put("UserDefinedAdHocMultiplicity", mu + "UserDefinedAdHocMultiplicityPDBHelper");
+        m.put("UserDefinedPackageableMultiplicity", mu + "UserDefinedPackageableMultiplicityPDBHelper");
+        m.put("UserDefinedMultiplicityParameter", mu + "UserDefinedMultiplicityParameterPDBHelper");
+        m.put("InferredAdHocMultiplicity", mu + "InferredAdHocMultiplicityPDBHelper");
+        m.put("InferredPackageableMultiplicity", mu + "InferredPackageableMultiplicityPDBHelper");
+        m.put("InferredMultiplicityParameter", mu + "InferredMultiplicityParameterPDBHelper");
+        m.put("UndefinedMultiplicity", mu + "UndefinedMultiplicityPDBHelper");
+        m.put("CompilerNotSetMultiplicity", mu + "CompilerNotSetMultiplicityPDBHelper");
+        m.put("MultiplicityValue", mu + "MultiplicityValuePDBHelper");
 
         // Other
-        m.put("Package", p + "PackageImpl");
-        m.put("Association", p + "relationship.AssociationImpl");
-        m.put("Generalization", p + "relationship.GeneralizationImpl");
-        m.put("Constraint", p + "constraint.ConstraintImpl");
-        m.put("Profile", p + "extension.ProfileImpl");
-        m.put("Enum", p + "type.EnumImpl");
-        m.put("Stereotype", p + "extension.StereotypeImpl");
-        m.put("Tag", p + "extension.TagImpl");
-        m.put("TaggedValue", p + "extension.TaggedValueImpl");
-        m.put("Annotation", p + "extension.AnnotationImpl");
-        m.put("SourceInformation", p + "SourceInformationImpl");
-        m.put("ConstraintsGetterOverride", p + "constraint.ConstraintsGetterOverrideImpl");
-        m.put("Relation", p + "relation.RelationImpl");
-        m.put("RelationElementAccessor", p + "relation.RelationElementAccessorImpl");
-        m.put("RelationType", p + "relation.RelationTypeImpl");
-        m.put("Column", p + "relation.ColumnImpl");
-        m.put("Nil", p + "type.NilImpl");
-        m.put("Test", p + "testable.TestImpl");
+        m.put("Package", p + "PackagePDBHelper");
+        m.put("Association", p + "relationship.AssociationPDBHelper");
+        m.put("Generalization", p + "relationship.GeneralizationPDBHelper");
+        m.put("Constraint", p + "constraint.ConstraintPDBHelper");
+        m.put("Profile", p + "extension.ProfilePDBHelper");
+        m.put("Enum", p + "type.EnumPDBHelper");
+        m.put("Stereotype", p + "extension.StereotypePDBHelper");
+        m.put("Tag", p + "extension.TagPDBHelper");
+        m.put("TaggedValue", p + "extension.TaggedValuePDBHelper");
+        m.put("Annotation", p + "extension.AnnotationPDBHelper");
+        m.put("SourceInformation", p + "SourceInformationPDBHelper");
+        m.put("ConstraintsGetterOverride", p + "constraint.ConstraintsGetterOverridePDBHelper");
+        m.put("Relation", p + "relation.RelationPDBHelper");
+        m.put("RelationElementAccessor", p + "relation.RelationElementAccessorPDBHelper");
+        m.put("RelationType", p + "relation.RelationTypePDBHelper");
+        m.put("Column", p + "relation.ColumnPDBHelper");
+        m.put("Nil", p + "type.NilPDBHelper");
+        m.put("Test", p + "testable.TestPDBHelper");
 
         return m;
     }

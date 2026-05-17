@@ -24,6 +24,7 @@ import meta::pure::compiler::resolution::valueSpecification::functionExpressionR
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::helper::functionExpression::*;
 import meta::pure::compiler::helper::function::*;
@@ -411,9 +412,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let enrichedBindings = $enrichResult.bindings;
     let enrichedCtx = $enrichResult.context;
 
+    let entryPointer = $entry->toPackageableFunctionPointer();
+
     if($hasUnresolved,
         | ^CompilerResult<ValueSpecification>(
-              value = ^$cleanFI(func = $entry, parametersValues = $enrichedParams),
+              value = ^$cleanFI(func = $entryPointer, parametersValues = $enrichedParams),
               context = $enrichedCtx),
         | // All resolved — validate arg types against param types. Mirrors Java
           // FunctionApplicationResolver.resolveFunctionApplicationUsingTemplateFunctionForInference
@@ -435,7 +438,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           if($validationCtx.errors->size() > $enrichedCtx.errors->size(),
               | // Preserve func on validation failure
                 ^CompilerResult<ValueSpecification>(
-                    value = ^$cleanFI(func = $entry, parametersValues = $validatedParams->cast(@ValueSpecification)),
+                    value = ^$cleanFI(func = $entryPointer, parametersValues = $validatedParams->cast(@ValueSpecification)),
                     context = $validationCtx);,
               |
           // Build return type using validated bindings (includes reconciled inferred values)
@@ -467,7 +470,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
           ^CompilerResult<ValueSpecification>(
               value = ^$cleanFI(
-                  func = $entry,
+                  func = $entryPointer,
                   parametersValues = $validatedParams->cast(@ValueSpecification),
                   genericType = $inferredReturnGT,
                   multiplicity = $inferredReturnMul,

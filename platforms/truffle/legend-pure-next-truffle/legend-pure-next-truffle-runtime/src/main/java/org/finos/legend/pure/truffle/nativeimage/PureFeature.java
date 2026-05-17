@@ -109,7 +109,7 @@ public final class PureFeature implements Feature
             // Register all methods. The interpreter calls a variety of
             // reflectively-looked-up methods that aren't easily expressed as
             // a single name filter:
-            //   - {@code _<property>()} Pure-property accessors on XImpl /
+            //   - {@code _<property>()} Pure-property accessors on XPDBHelper /
             //     XFlatBufferWrapper classes.
             //   - {@code getRootAsX(ByteBuffer)} FB factory methods on m3
             //     protocol Def classes.

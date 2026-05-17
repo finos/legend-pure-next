@@ -187,7 +187,7 @@ public final class CopyWithKeysNode extends PureNode
             throw new RuntimeException("Cannot copy: null");
         }
         // Every Pure metamodel value is an Any. Single PureObj-driven path
-        // works for both legacy XImpl and the future PureDynamicObject.
+        // works for both legacy XPDBHelper and the future PureDynamicObject.
         Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(original, SLOT_CLASSIFIER_GENERIC_TYPE);
         String classPath = classPathFromInstance(original);
         if ((classPath == null || classPath.isEmpty()) && cgt != null)
@@ -197,7 +197,7 @@ public final class CopyWithKeysNode extends PureNode
 
         // Post-flip: original is always a PureDynamicObject. The typed
         // `Any._copy()` fast path was a relic of the pre-flip world; no
-        // user-visible value is a typed XImpl anymore.
+        // user-visible value is a typed XPDBHelper anymore.
         Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
         shallowCopyProperties(original, copy, cgt);
         Object copyCgt = fixSelfReferentialCGT(cgt, original, copy, eval.resolver());
@@ -394,7 +394,7 @@ public final class CopyWithKeysNode extends PureNode
      * org.finos.legend.pure.truffle.runtime.PropertyAccessor} (i.e. another
      * PDO). The previous typed-reflection fallback ({@code
      * source.getClass().getInterfaces()[0].getMethods()}) was a relic of
-     * the typed-XImpl era — no live caller produces a non-PDO source.
+     * the typed-XPDBHelper era — no live caller produces a non-PDO source.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void copyViaReflection(Object source, Object target)
@@ -527,7 +527,7 @@ public final class CopyWithKeysNode extends PureNode
             }
             // Copy the sub-object so we don't mutate the original. All Pure
             // values are PDOs post-flip; the typed Any._copy() fast path was
-            // removed when FB-decode stopped handing back typed XImpls.
+            // removed when FB-decode stopped handing back typed XPDBHelpers.
             Object childCopy = (child instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject)
                     ? CopySimpleNode.pdoCopyPublic(child) : null;
             if (childCopy != null)

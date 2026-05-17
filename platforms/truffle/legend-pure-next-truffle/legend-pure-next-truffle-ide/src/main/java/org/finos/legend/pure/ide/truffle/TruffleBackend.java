@@ -86,8 +86,26 @@ public final class TruffleBackend implements PureBackend
     private final PureTruffleRuntime runtime;
     private final TruffleModuleRegistry registry;
 
-    public TruffleBackend(Path corePdb, Path compilerPdb) throws IOException
+    /**
+     * Build the Truffle backend's own compilation graph (core.pdb +
+     * compiler.pdb), independent of the IDE's edit graph. compileDir is
+     * always available in this runtime, regardless of which module the user
+     * is editing.
+     */
+    public TruffleBackend(Path pdbDir) throws IOException
     {
+        Path corePdb = pdbDir.resolve("core.pdb");
+        Path compilerPdb = pdbDir.resolve("compiler.pdb");
+        if (!java.nio.file.Files.isRegularFile(corePdb))
+        {
+            throw new IOException("Truffle backend requires " + corePdb
+                    + ". Run `just bootstrap::build` first.");
+        }
+        if (!java.nio.file.Files.isRegularFile(compilerPdb))
+        {
+            throw new IOException("Truffle backend requires " + compilerPdb
+                    + ". Run `just bootstrap::build-compiler-pdb` first.");
+        }
         this.executor = Executors.newSingleThreadExecutor(r ->
         {
             Thread t = new Thread(r, "pure-truffle-backend");

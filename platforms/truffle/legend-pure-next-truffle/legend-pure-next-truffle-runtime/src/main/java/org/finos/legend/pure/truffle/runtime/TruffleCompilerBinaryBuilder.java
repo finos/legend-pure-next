@@ -195,7 +195,7 @@ public final class TruffleCompilerBinaryBuilder
             // ancestors (`meta`, `meta::pure`, …) and core.pdb already owns
             // those, so re-emitting them would diverge from bootstrap's output.
             // Non-Package elements always pass through.
-            // Accepts both typed XImpl (instanceof PackageableElement) and
+            // Accepts both typed XPDBHelper (instanceof PackageableElement) and
             // PureDynamicObject (PureObj.pureTypeOf returns Pure path) since
             // TrufflePdbWriter.write now accepts Iterable<?>.
             LinkedHashMap<String, Object> elementsByPath = new LinkedHashMap<>();
@@ -280,7 +280,7 @@ public final class TruffleCompilerBinaryBuilder
     /**
      * Read a property via {@link
      * org.finos.legend.pure.truffle.runtime.dynobj.PureObj#read} — works for
-     * both typed XImpls and {@code PureDynamicObject}s. The previous
+     * both typed XPDBHelpers and {@code PureDynamicObject}s. The previous
      * reflection-on-`_X()` path failed on PDO targets since the typed
      * `<X>` interface (which declared the default getter) is no longer
      * generated and {@code PureDynamicObject} only implements

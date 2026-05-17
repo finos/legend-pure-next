@@ -68,7 +68,7 @@ public abstract class TrufflePdoEmitterTarget implements EmitterTarget
         sb.append("        return __built;\n    }\n");
     }
 
-    /** Every PDO is an {@code Object} at the Java level — no typed XImpl interfaces post-flip. */
+    /** Every PDO is an {@code Object} at the Java level — no typed XPDBHelper interfaces post-flip. */
     @Override
     public String resultType(String pureType) { return "Object"; }
 
@@ -137,6 +137,12 @@ public abstract class TrufflePdoEmitterTarget implements EmitterTarget
      * managed simple name (with or without {@code Impl} suffix) collapses to
      * {@code Object}. Primitives and ANTLR runtime types stay verbatim.
      * Parameterised types recurse on their type arguments.
+     *
+     * <p>The {@code Impl} suffix here is the DSL convention (see
+     * {@code pure-language-mappings.dsl}) — distinct from the renamed
+     * codegen output suffix ({@code PDBHelper}). The DSL writes
+     * {@code let TImpl __r = newImpl(T, ...)} and the strip-suffix step
+     * collapses {@code TImpl} to {@code T} before the abstract-name lookup.</p>
      */
     private String mapDeclType(String dslType)
     {
@@ -160,7 +166,7 @@ public abstract class TrufflePdoEmitterTarget implements EmitterTarget
             }
             return out.toString();
         }
-        String key = t.endsWith("Impl") ? t.substring(0, t.length() - 4) : t;
+        String key = t.endsWith("Impl") ? t.substring(0, t.length() - "Impl".length()) : t;
         if (isAbstractName(key)) return "Object";
         if (PRESERVED_NAMES.contains(t)) return t;
         // Unknown — preserve verbatim. Likely a parameter name like 'String' inside a more

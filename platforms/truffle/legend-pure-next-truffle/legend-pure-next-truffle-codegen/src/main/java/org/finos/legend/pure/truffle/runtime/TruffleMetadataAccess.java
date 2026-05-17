@@ -32,7 +32,7 @@ public interface TruffleMetadataAccess
     /**
      * Reverse lookup: return the PDB path for an element previously loaded
      * via {@link #getElement(String)}.  Returns {@code null} if the element
-     * was not loaded through this resolver (e.g. runtime-created Impl).
+     * was not loaded through this resolver (e.g. runtime-created PDBHelper).
      */
     default String pathOf(Object element)
     {

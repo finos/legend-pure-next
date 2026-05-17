@@ -555,7 +555,7 @@ public final class PureContext
         {
             return null;
         }
-        // Read the property generically — works for both legacy XImpl
+        // Read the property generically — works for both legacy XPDBHelper
         // (PropertyAccessor) and the post-flip PureDynamicObject.
         return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(target, SLOT_CLASSIFIER_GENERIC_TYPE);
     }

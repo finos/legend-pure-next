@@ -15,11 +15,11 @@ import java.util.List;
 /**
  * Pure IDE entry point with the Truffle execute backend.
  *
- * <p>Wraps {@link PureIDEMain#run(List, java.util.function.BiFunction)} — the
- * bootstrap launcher boots the HTTP UI + LSP WebSocket server, resolves
- * {@code core.pdb} and {@code compiler.pdb}, and hands both to the backend
- * factory so this module can load the exact same files into a long-lived
- * {@code PureTruffleRuntime}.</p>
+ * <p>Wraps {@link PureIDEMain#run(List, java.util.function.Function)} — the
+ * bootstrap launcher boots the HTTP UI + LSP WebSocket server, resolves the
+ * full transitive PDB closure from each {@code --module}'s manifest, and
+ * hands the ordered list to the backend factory so this module can load the
+ * exact same files into a long-lived {@code PureTruffleRuntime}.</p>
  *
  * <h3>Runtime requirements</h3>
  * Truffle's Graal compiler needs GraalVM JDK + JVMCI flags:
@@ -31,17 +31,21 @@ import java.util.List;
  *
  * <h3>Usage</h3>
  * {@code java -cp ... org.finos.legend.pure.ide.truffle.PureIDETruffleMain
- *     [path-to-core.pdb] [path-to-compiler.pdb] [welcome-path]}
+ *     [--module <sourceDir>]... [--pdb-dir <dir>] [--welcome <dir>]}
  */
 public final class PureIDETruffleMain
 {
     public static void main(String[] args) throws Exception
     {
-        PureIDEMain.run(List.of(args), (corePdb, compilerPdb) ->
+        // TruffleBackend owns its own compilation graph (core.pdb +
+        // compiler.pdb), independent of whatever the user is editing in the
+        // IDE's edit graph. The factory just receives the PDB output dir;
+        // the backend resolves its own needs from there.
+        PureIDEMain.run(List.of(args), pdbDir ->
         {
             try
             {
-                return new TruffleBackend(corePdb, compilerPdb);
+                return new TruffleBackend(pdbDir);
             }
             catch (java.io.IOException e)
             {

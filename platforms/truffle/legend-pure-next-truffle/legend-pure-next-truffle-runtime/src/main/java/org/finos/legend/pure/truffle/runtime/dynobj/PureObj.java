@@ -90,7 +90,7 @@ public final class PureObj
         return pureTypeOfNonPdo(obj);
     }
 
-    /** Slow-path resolver for non-PDO receivers (legacy XImpl / FB wrappers).
+    /** Slow-path resolver for non-PDO receivers (legacy XPDBHelper / FB wrappers).
      *  Behind {@code @TruffleBoundary} so the {@code ConcurrentHashMap} path
      *  (which triggers the JDK Locale/SignatureParser recursive inline
      *  chain) doesn't get pulled into Graal's PE of hot pure-PDO code. */
@@ -149,9 +149,9 @@ public final class PureObj
         {
             simpleName = simpleName.substring(0, simpleName.length() - "FlatBufferWrapper".length());
         }
-        else if (simpleName.endsWith("Impl"))
+        else if (simpleName.endsWith("PDBHelper"))
         {
-            simpleName = simpleName.substring(0, simpleName.length() - "Impl".length());
+            simpleName = simpleName.substring(0, simpleName.length() - "PDBHelper".length());
         }
         return pkgRest.replace(".", "::") + "::" + simpleName;
     }

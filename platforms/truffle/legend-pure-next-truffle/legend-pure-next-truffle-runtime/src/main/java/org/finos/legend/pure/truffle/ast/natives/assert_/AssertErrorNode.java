@@ -85,7 +85,7 @@ public final class AssertErrorNode extends PureNode
                     "meta::pure::metamodel::function::LambdaFunction"))
             {
                 // RawClosure accepts Object lambda — handles both typed
-                // LambdaFunction (XImpl) and PureDynamicObject post-flip.
+                // LambdaFunction (XPDBHelper) and PureDynamicObject post-flip.
                 RawClosure closure = new RawClosure(fn, new Object[0], new String[0], null);
                 bodyCallNode.call(closure);
             }

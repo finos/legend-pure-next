@@ -45,7 +45,7 @@ public final class PureFbDecoder
         }
         if (obj.fb instanceof PropertyAccessor accessor)
         {
-            // Legacy backing: XImpl / XFBW. Per-class readProperty is the
+            // Legacy backing: XPDBHelper / XFBW. Per-class readProperty is the
             // generated decode switch — propagate ABSENT so callers can
             // distinguish "no such property" from "property holds null".
             return accessor.readProperty(propertyName);

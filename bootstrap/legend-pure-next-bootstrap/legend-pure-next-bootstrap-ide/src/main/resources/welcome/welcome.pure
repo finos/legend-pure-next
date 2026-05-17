@@ -1,1 +1,4 @@
-function go():Any[*] { println(08009); }
+function go():Any[*]
+{
+   meta::external::language::java::test::testTransformAndSerialize();  
+}

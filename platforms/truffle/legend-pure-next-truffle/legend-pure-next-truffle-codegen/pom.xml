@@ -11,7 +11,7 @@
     <artifactId>legend-pure-next-truffle-codegen</artifactId>
     <packaging>jar</packaging>
     <name>Legend Pure - Next - Truffle - Codegen</name>
-    <description>PDB Java class generator for Truffle runtime — generates Impl classes with PureSequence for [*] properties.</description>
+    <description>PDB Java class generator for Truffle runtime — generates PDBHelper classes with PureSequence for [*] properties.</description>
 
     <dependencies>
         <dependency>

@@ -102,7 +102,7 @@ function meta::pure::compiler::test::assertCompiledGraphOnResult(parsedFile:meta
     if($expectedGraphElement->isEmpty(),
        | assert(false, 'Test file contains ###CompiledGraph section but CompiledGraph element was not found in parsed output for ' + $sourceId);,
        | let expectedGraphValue = $expectedGraphElement->toOne()->cast(@meta::pure::compiler::test::CompiledGraph).value;
-         let actualGraph = meta::pure::compiler::test::printer::printCompiledGraph($result.elements);
+         let actualGraph = meta::pure::compiler::test::printer::printCompiledGraph($result.elements, $result.context->toOne());
 
          let cleanedExpected = $expectedGraphValue->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
          let cleanedActual = $actualGraph->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();

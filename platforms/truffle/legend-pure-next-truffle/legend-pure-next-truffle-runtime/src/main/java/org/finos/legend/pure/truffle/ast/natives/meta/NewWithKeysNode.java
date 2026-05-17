@@ -132,7 +132,7 @@ public final class NewWithKeysNode extends PureNode
                     validateClassifierOverride(propValue, instance);
                     // Widened to non-null check: post-loader-flip propValue may
                     // be a PureDynamicObject (pureType=GenericTypeValue) rather
-                    // than the typed XImpl. Validation above already enforces
+                    // than the typed XPDBHelper. Validation above already enforces
                     // the raw-type compatibility constraint.
                     if (propValue != null)
                     {
@@ -633,11 +633,11 @@ public final class NewWithKeysNode extends PureNode
         }
         // Determine if the property is multi-valued. The PDO's
         // PropertyMetadataRegistry holds per-property Java types populated
-        // either by an XImpl static{} block (for codegen'd metamodel
+        // either by an XPDBHelper static{} block (for codegen'd metamodel
         // classes) or by `ensurePopulated` walking the Class element (for
         // user/compiler/protocol/functions classes). The previous reflective
         // fallback over `target.getClass().getMethods()` covered typed
-        // XImpls — post-PDO-flip no caller produces one.
+        // XPDBHelpers — post-PDO-flip no caller produces one.
         try
         {
             boolean isMulti = false;

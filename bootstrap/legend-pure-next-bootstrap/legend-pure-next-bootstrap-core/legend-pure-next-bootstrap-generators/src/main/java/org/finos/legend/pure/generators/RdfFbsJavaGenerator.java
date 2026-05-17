@@ -337,7 +337,7 @@ public class RdfFbsJavaGenerator
     {
         for (ClassInfo classInfo : m3Model.classInfoMap().valuesView())
         {
-            if (isAbstract(classInfo))
+            if (isAbstract(classInfo) || isCompilerPointer(classInfo))
             {
                 continue;
             }
@@ -1211,7 +1211,7 @@ public class RdfFbsJavaGenerator
         // Generate a write method for each class
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
         {
-            if (isAbstract(classInfo))
+            if (isAbstract(classInfo) || isCompilerPointer(classInfo))
             {
                 return;
             }

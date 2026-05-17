@@ -29,6 +29,8 @@ import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::helper::relationType::*;
 import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::pointer::*;
+import meta::pure::metamodel::pointer::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::*;
 
@@ -88,7 +90,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             let enumGT = buildInferredGenericType($enumeration);
                             ^CompilerResult<ValueSpecification>(
                                 value = ^$dot(
-                                    func = $matchedProp->at(0),
+                                    func = $matchedProp->at(0)->toPropertyPointer(),
                                     genericType = $enumGT,
                                     multiplicity = PureOne,
                                     parametersValues = $resolvedParams->cast(@ValueSpecification)
@@ -217,13 +219,21 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                   let propGT = $propResolved.first;
                                   let propMul = $propResolved.second;
                                   let receiverMul = $receiver.multiplicity;
+                                  // Wrap in TempCompilerPointer so the func slot stays path-stable
+                                  // across compile passes. Dispatch on Property vs QualifiedProperty;
+                                  // each helper copies the source's classifier so downstream getFunctionType
+                                  // produces the right return type.
+                                  let resolvedPropPointer = $resolvedProp->match([
+                                      qp:QualifiedProperty<Any>[1] | $qp->toQualifiedPropertyPointer()->cast(@AbstractProperty<Any>),
+                                      p:Property<Nil,Any|*>[1] | $p->toPropertyPointer()->cast(@AbstractProperty<Any>)
+                                  ]);
                                   // Check if automap needed: receiver multiplicity is NOT [1]
                                   if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
                                       | // Direct access — receiver is [1]
                                         debug($context, | '  direct access [1]');
                                         ^CompilerResult<ValueSpecification>(
                                             value = ^$dot(
-                                                func = $resolvedProp,
+                                                func = $resolvedPropPointer,
                                                 genericType = $propGT,
                                                 multiplicity = $propMul,
                                                 parametersValues = $resolvedParams->cast(@ValueSpecification)
@@ -262,10 +272,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                   let propGT = asInferredGenericType($resolvedProp.genericType->toOne());
                                   let propMul = $resolvedProp.multiplicity->toOne();
                                   let receiverMul = $receiver.multiplicity;
+                                  let resolvedPropPointer = $resolvedProp->toPropertyPointer();
                                   if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
                                       | ^CompilerResult<ValueSpecification>(
                                             value = ^$dot(
-                                                func = $resolvedProp,
+                                                func = $resolvedPropPointer,
                                                 genericType = $propGT,
                                                 multiplicity = $propMul,
                                                 parametersValues = $resolvedParams->cast(@ValueSpecification)

@@ -82,6 +82,7 @@ public class M3ProtocolGenerator
     private final Resource protocolInfoNonPointer;
     private final Resource protocolInfoTransientCompilerOnly;
     private final Resource protocolInfoPointerSource;
+    private final Resource compilerPointer;
     private final Resource protocolInfoAbstract;
     private final Property taggedValuesProp;
     private final Property tagProp;
@@ -136,6 +137,8 @@ public class M3ProtocolGenerator
             model.createResource(M3_NS + "ProtocolInfo_transientCompilerOnly");
         this.protocolInfoPointerSource =
             model.createResource(M3_NS + "ProtocolInfo_pointerSource");
+        this.compilerPointer =
+            model.createResource(M3_NS + "meta_pure_profiles_compiler_pointer");
 
         this.protocolInfoAbstract =
             model.createResource(M3_NS + "meta_pure_profiles_typemodifiers_abstract");
@@ -836,7 +839,8 @@ public class M3ProtocolGenerator
                 {
                     Resource stereotype = node.asResource();
                     if (stereotype.equals(protocolInfoExcluded)
-                            || stereotype.equals(protocolInfoInferred))
+                            || stereotype.equals(protocolInfoInferred)
+                            || stereotype.equals(compilerPointer))
                     {
                         excludedTypes.add(r);
                         break;

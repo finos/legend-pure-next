@@ -104,6 +104,27 @@ function <<test.Test>> meta::pure::functions::meta::tests::elementToPath::testEp
     assertEquals('', ^meta::pure::metamodel::extension::Profile(name='')->elementToPath());
 }
 
+// `TempCompilerPointer`s carry the canonical path in their `.path` field and
+// leave inherited PackageableElement fields (.name, .package) unset — they're
+// opaque, must be dereferenced before any field read. `elementToPath` on a
+// pointer must short-circuit to the `.path` field rather than walking the
+// (null) package chain, otherwise it would NPE or produce a garbage path.
+function <<test.Test>> meta::pure::functions::meta::tests::elementToPath::testCompilerPointerElementToPath():Boolean[1]
+{
+    // PE-style pointer: single `path` carries the full canonical path.
+    assertEquals('test::pkg::myFn__String_1_',
+        ^meta::pure::metamodel::pointer::PackageableFunctionPointer<Any>(path='test::pkg::myFn__String_1_')->elementToPath());
+
+    // ClassPointer through the same elementToPath dispatcher.
+    assertEquals('test::pkg::MyClass',
+        ^meta::pure::metamodel::pointer::ClassPointer<Any>(path='test::pkg::MyClass')->elementToPath());
+
+    // Custom separator on a pointer — the separator argument applies to the
+    // pointer's stored path the same way it does to a walked path.
+    assertEquals('test.pkg.MyClass',
+        ^meta::pure::metamodel::pointer::ClassPointer<Any>(path='test::pkg::MyClass')->elementToPath('.'));
+}
+
 function <<test.Test>> meta::pure::functions::meta::tests::elementPath::testTopLevelElementPath():Boolean[1]
 {
     assertEquals([meta, meta::pure, meta::pure::metamodel, meta::pure::metamodel::Package], elementPath(Package));

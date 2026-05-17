@@ -139,7 +139,7 @@ public final class RawPropertyAccessNode extends PureNode
                     return viaProp;
                 }
                 // We already gated on pureTypeIs(target, Enumeration), so
-                // target is a Pure Enumeration value (typed XImpl pre-flip,
+                // target is a Pure Enumeration value (typed XPDBHelper pre-flip,
                 // PureDynamicObject post-flip). coerceToJavaEnum accepts
                 // Object — it resolves the path generically.
                 Object enumVal = getContext().coerceToJavaEnum(target, propName);

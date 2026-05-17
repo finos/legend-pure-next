@@ -66,7 +66,7 @@ public final class TruffleTopLevelEmitterTarget extends TrufflePdoEmitterTarget
     @Override
     protected String pureTypePath(String pureType)
     {
-        String key = pureType.endsWith("Impl") ? pureType.substring(0, pureType.length() - 4) : pureType;
+        String key = pureType.endsWith("Impl") ? pureType.substring(0, pureType.length() - "Impl".length()) : pureType;
         String path = PATH_BY_SIMPLE_NAME.get(key);
         if (path == null)
         {

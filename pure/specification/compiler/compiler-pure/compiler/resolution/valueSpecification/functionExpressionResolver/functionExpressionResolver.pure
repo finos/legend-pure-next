@@ -22,6 +22,8 @@ import meta::pure::compiler::resolution::valueSpecification::functionExpressionR
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::functionExpression::*;
 import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::pointer::*;
+import meta::pure::metamodel::pointer::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::helper::parametersBinding::*;
@@ -60,14 +62,17 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression(fi:FunctionExpression[1], checkpoint:Integer[1], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     if($fi.func->isNotEmpty(),
-        | // func resolved — compute return type from FunctionType + bindings (like Java lines 89-107)
-          // Get the fully-compiled function from the context if available
-          let funcPath = $fi.func->toOne()->elementToPath();
-          let fromContext = $context->resolveElement($funcPath);
-          let resolvedFunc = firstNonEmpty([
-              | $fromContext->filter(f | $f->instanceOf(Function))->cast(@Function<Any>),
-              | $fi.func
-          ])->toOne();
+        | // func resolved — compute return type from FunctionType + bindings.
+          // Pointer values MUST be dereferenced through the registry (throws on
+          // miss — a missing-target is a graph bug). Direct Function values are
+          // already live; use them in place. The previous "registry lookup with
+          // fallback" pattern was a defensive workaround for stale references
+          // across compile passes — pointers are the proper mechanism for that
+          // and remove the need for a fallback.
+          let resolvedFunc = $fi.func->toOne()->match([
+              ptr : TempCompilerPointer[1] | $ptr->dereferencePointer($context)->cast(@Function<Any>),
+              f : Function<Any>[1] | $f
+          ]);
           let ft = $resolvedFunc->getFunctionType($context);
           let baseBindings = extractResolvedParametersBinding($fi);
           // For class properties, enrich bindings with class type parameter bindings

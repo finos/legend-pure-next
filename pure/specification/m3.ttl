@@ -2322,6 +2322,11 @@
     :package :meta_pure_metamodel ;
     :classifierGenericType :GenericType_Package .
 
+:meta_pure_metamodel_pointer a :Package ;
+    :name [ :classifierGenericType :GenericType_String ; :data "pointer" ] ;
+    :package :meta_pure_metamodel ;
+    :classifierGenericType :GenericType_Package .
+
 # =============================================================================
 # PROFILES AND STEREOTYPES
 # =============================================================================
@@ -2393,3 +2398,242 @@
     :classifierGenericType :GenericType_Stereotype ;
     :stereotype_name [ :classifierGenericType :GenericType_String ; :data "pointer" ] ;
     :profile :meta_pure_profiles_compiler .
+
+# =============================================================================
+# COMPILER POINTER TYPES
+# =============================================================================
+# Lightweight by-path indirection used by compile-pure at every cross-element
+# reference site. Each *Pointer extends the m3 type it indirects (so existing
+# slot types — `func: Function[1]`, `rawType: Type[0..1]`, etc. — continue to
+# type-check). The pointer's resolution key (`path` / `ownerPath`+`name` /
+# `profilePath`+`name` / `enumerationPath`+`name`) is captured at mint time
+# from a freshly resolved element, then deferred-resolved through the live
+# registry at read time, so consumers never see a stale snapshot.
+#
+# All classes carry the `compiler.pointer` stereotype, which:
+#   - lets validateNewFromFI accept the partially populated `^X(...)` form
+#   - flags them so FBS schema gen / FBS Java wrapper+writer / protocol gen
+#     skip the class (no `XPointerDef`, no `XPointerFlatBufferWrapper`, no
+#     `writeXPointer`, no protocol entry)
+#
+# Java codegen (RdfJavaGenerator) is NOT filtered — pointer classes get a
+# Java interface + XImpl just like any other m3 type. This lets compile-pure
+# slot `^FunctionPointer(path = ...)` into typed setters like
+# `FunctionInvocationImpl._func(Function)` without reflection rejecting the
+# value: FunctionPointerImpl implements FunctionPointer which extends
+# Function, so the Java type system accepts it.
+#
+# Pointer instances themselves never appear as standalone elements on the
+# wire — at PDB serialization time, the path-extraction helper sees the
+# `compiler.pointer` stereotype on the slot value's classifier and emits a
+# PointerRef using the pointer's own `path` field rather than walking
+# `elementToPath(...)` on a possibly-stale referent.
+
+# --- TempCompilerPointer (abstract base) — every compile-graph pointer has a path ---
+
+:TempCompilerPointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer, :meta_pure_profiles_typemodifiers_abstract ;
+    :name [ :classifierGenericType :GenericType_String ; :data "TempCompilerPointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :TempCompilerPointer ; :general :GenericType_Any ] .
+
+:TempCompilerPointer_path a :Property ;
+    :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "path" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] :GenericType_String ) ; :multiplicityArguments :PureOne ] ;
+    :owner :TempCompilerPointer ;
+    :genericType :GenericType_String ;
+    :multiplicity :PureOne .
+
+# --- PackageableFunctionPointer<T> extends TempCompilerPointer, PackageableFunction<T> ---
+
+:PackageableFunctionPointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "PackageableFunctionPointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :PackageableFunctionPointer ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ] ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :PackageableFunctionPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :PackageableFunctionPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :PackageableFunction ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ] ] ] .
+
+# --- PropertyPointer<U,V|m> extends TempCompilerPointer, Property<U,V|m> ---
+
+:PropertyPointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "PropertyPointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :PropertyPointer ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "U" ] ; :contravariant [ :classifierGenericType :GenericType_Boolean ; :data "true" ] ] ] [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "V" ] ] ] ) ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :TypeAndMultiplicityParametersOwner_typeParameters ( [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "U" ] ; :contravariant [ :classifierGenericType :GenericType_Boolean ; :data "true" ] ] [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "V" ] ] ) ;
+    :TypeAndMultiplicityParametersOwner_multiplicityParameters [ a :MultiplicityParameter ; :classifierGenericType :GenericType_MultiplicityParameter ; :MultiplicityParameter_name [ :classifierGenericType :GenericType_String ; :data "m" ] ] ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :PropertyPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :PropertyPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "U" ] ; :contravariant [ :classifierGenericType :GenericType_Boolean ; :data "true" ] ] ] [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "V" ] ] ] ) ] ] .
+
+:PropertyPointer_element a :Property ;
+    :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "element" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :PropertyPointer ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "U" ] ; :contravariant [ :classifierGenericType :GenericType_Boolean ; :data "true" ] ] ] [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "V" ] ] ] ) ] :GenericType_String ) ; :multiplicityArguments :PureOne ] ;
+    :owner :PropertyPointer ;
+    :genericType :GenericType_String ;
+    :multiplicity :PureOne .
+
+# --- QualifiedPropertyPointer<T> extends TempCompilerPointer, QualifiedProperty<T> ---
+
+:QualifiedPropertyPointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "QualifiedPropertyPointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :QualifiedPropertyPointer ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ] ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :QualifiedPropertyPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :QualifiedPropertyPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :QualifiedProperty ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ] ] ] .
+
+:QualifiedPropertyPointer_element a :Property ;
+    :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "element" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :QualifiedPropertyPointer ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ] ] :GenericType_String ) ; :multiplicityArguments :PureOne ] ;
+    :owner :QualifiedPropertyPointer ;
+    :genericType :GenericType_String ;
+    :multiplicity :PureOne .
+
+# --- ColumnPointer<U,V|m> extends TempCompilerPointer, Column<U,V|m> ---
+
+:ColumnPointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "ColumnPointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :ColumnPointer ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "U" ] ; :contravariant [ :classifierGenericType :GenericType_Boolean ; :data "true" ] ] ] [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "V" ] ] ] ) ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :TypeAndMultiplicityParametersOwner_typeParameters ( [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "U" ] ; :contravariant [ :classifierGenericType :GenericType_Boolean ; :data "true" ] ] [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "V" ] ] ) ;
+    :TypeAndMultiplicityParametersOwner_multiplicityParameters [ a :MultiplicityParameter ; :classifierGenericType :GenericType_MultiplicityParameter ; :MultiplicityParameter_name [ :classifierGenericType :GenericType_String ; :data "m" ] ] ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :ColumnPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :ColumnPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Column ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "U" ] ; :contravariant [ :classifierGenericType :GenericType_Boolean ; :data "true" ] ] ] [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "V" ] ] ] ) ] ] .
+
+:ColumnPointer_element a :Property ;
+    :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "element" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :ColumnPointer ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "U" ] ; :contravariant [ :classifierGenericType :GenericType_Boolean ; :data "true" ] ] ] [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "V" ] ] ] ) ] :GenericType_String ) ; :multiplicityArguments :PureOne ] ;
+    :owner :ColumnPointer ;
+    :genericType :GenericType_String ;
+    :multiplicity :PureOne .
+
+# --- ClassPointer<T> extends TempCompilerPointer, Class<T> ---
+
+:ClassPointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "ClassPointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :ClassPointer ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ] ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :ClassPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :ClassPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ] ] ] .
+
+# --- PrimitiveTypePointer extends TempCompilerPointer, PrimitiveType ---
+
+:PrimitiveTypePointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "PrimitiveTypePointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :PrimitiveTypePointer ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :PrimitiveTypePointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :PrimitiveTypePointer ; :general :GenericType_PrimitiveType ] .
+
+# --- EnumerationPointer<E> extends TempCompilerPointer, Enumeration<E> ---
+
+:EnumerationPointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "EnumerationPointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :EnumerationPointer ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "E" ] ] ] ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "E" ] ] ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :EnumerationPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :EnumerationPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Enumeration ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "E" ] ] ] ] ] .
+
+# --- StereotypePointer extends TempCompilerPointer, Stereotype ---
+
+:StereotypePointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "StereotypePointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :StereotypePointer ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :StereotypePointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :StereotypePointer ; :general :GenericType_Stereotype ] .
+
+:StereotypePointer_element a :Property ;
+    :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "element" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :StereotypePointer ] :GenericType_String ) ; :multiplicityArguments :PureOne ] ;
+    :owner :StereotypePointer ;
+    :genericType :GenericType_String ;
+    :multiplicity :PureOne .
+
+# --- TagPointer extends TempCompilerPointer, Tag ---
+
+:TagPointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "TagPointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TagPointer ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :TagPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :TagPointer ; :general :GenericType_Tag ] .
+
+:TagPointer_element a :Property ;
+    :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "element" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TagPointer ] :GenericType_String ) ; :multiplicityArguments :PureOne ] ;
+    :owner :TagPointer ;
+    :genericType :GenericType_String ;
+    :multiplicity :PureOne .
+
+# --- ProfilePointer extends TempCompilerPointer, Profile ---
+
+:ProfilePointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "ProfilePointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :ProfilePointer ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :ProfilePointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :ProfilePointer ; :general :GenericType_Profile ] .
+
+# --- AssociationPointer extends TempCompilerPointer, Association ---
+
+:AssociationPointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "AssociationPointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :AssociationPointer ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :AssociationPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :AssociationPointer ; :general :GenericType_Association ] .
+
+# --- PackagePointer extends TempCompilerPointer, Package ---
+
+:PackagePointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "PackagePointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :PackagePointer ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :PackagePointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :PackagePointer ; :general :GenericType_Package ] .
+
+# --- EnumPointer extends TempCompilerPointer, Enum ---
+
+:EnumPointer a :Class ;
+    :stereotypes :meta_pure_profiles_compiler_pointer ;
+    :name [ :classifierGenericType :GenericType_String ; :data "EnumPointer" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :EnumPointer ] ] ;
+    :package :meta_pure_metamodel_pointer ;
+    :generalizations
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :EnumPointer ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :TempCompilerPointer ] ],
+        [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :EnumPointer ; :general :GenericType_Enum ] .
+
+:EnumPointer_element a :Property ;
+    :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "element" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :EnumPointer ] :GenericType_String ) ; :multiplicityArguments :PureOne ] ;
+    :owner :EnumPointer ;
+    :genericType :GenericType_String ;
+    :multiplicity :PureOne .

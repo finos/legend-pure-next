@@ -134,7 +134,7 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
         // Global slot may exceed classInfo.nameBySlot() length OR map to a
         // slot this class doesn't declare (null entry). Both mean "property
         // not on this class" — store null and return; never pass null to a
-        // typed FB Impl's readProperty(switch) which would NPE.
+        // typed FB PDBHelper's readProperty(switch) which would NPE.
         String name = slotIdx < names.length ? names[slotIdx] : null;
         if (name == null)
         {
@@ -217,7 +217,7 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
         {
             Object v = readProperty(k);
             // Only primitive-typed equality keys contribute, matching the
-            // original XImpl hashCode that filtered to String/Number/Boolean
+            // original XPDBHelper hashCode that filtered to String/Number/Boolean
             // to avoid recursive self-references.
             if (v instanceof String || v instanceof Number || v instanceof Boolean)
             {

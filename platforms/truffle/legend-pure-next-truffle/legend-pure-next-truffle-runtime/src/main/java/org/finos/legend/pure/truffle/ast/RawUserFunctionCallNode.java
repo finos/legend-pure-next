@@ -39,7 +39,7 @@ import com.oracle.truffle.api.nodes.NodeInfo;
  * <p>The {@code fd} field is typed as {@link Object} so a future loader
  * flip to {@code PureDynamicObject} keeps working — the dispatch only
  * needs the metaclass identity which {@code PureObj.pureTypeIs} reports
- * uniformly across XImpl and PDO.</p>
+ * uniformly across XPDBHelper and PDO.</p>
  */
 @NodeInfo(shortName = "userFunctionCall")
 public final class RawUserFunctionCallNode extends PureNode
