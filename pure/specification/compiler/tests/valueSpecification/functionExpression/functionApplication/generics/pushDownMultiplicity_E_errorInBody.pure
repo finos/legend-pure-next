@@ -1,0 +1,19 @@
+###Error
+No matching function 'check' found for argument types (String[2]) (at valueSpecification/functionExpression/functionApplication/generics/pushDownMultiplicity_E_errorInBody:10c24-10c32)
+
+###Pure
+native function check(s:String[1]):Boolean[1];
+function g<|m>(f:Function<{String[m]->Boolean[1]}>[1]):String[m]{[]}
+function f<|m>(s:String[m], a:String[m]):String[1]{'a'}
+function test():Any[*]
+{
+    f(['a','b'], g(t|$t->check()))
+}
+
+###CompilerStats
+inferenceRollbacks: 4
+candidateEvaluations: 4
+rollbackSites:
+  LAMBDA_DISPATCH = 2
+  PARAM_UNRESOLVED = 1
+  REVERSE_MATCH_DISPATCH = 1

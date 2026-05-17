@@ -1,0 +1,14 @@
+###Error
+The function 'unknownFunc' with 2 parameter(s) can't be found (at valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_unknownFunction:9c5-9c21)
+
+###Pure
+import pack::*;
+native function pack::compute(left: Number[1], right: Number[1]): Number[1];
+function pack::test(a: Number[1], b: Number[1]): Number[1]
+{
+  $a->unknownFunc($b);
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

@@ -1,0 +1,9 @@
+###Pure
+function protocol::f(): Any[*]
+{
+  '''
+  line one
+          line two
+          line three
+  '''
+}

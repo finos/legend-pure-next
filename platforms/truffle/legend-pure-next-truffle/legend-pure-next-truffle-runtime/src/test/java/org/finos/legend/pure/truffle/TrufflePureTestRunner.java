@@ -75,10 +75,8 @@ class TrufflePureTestRunner
         Path compilerPdb = Path.of("../../../../shared/compiler.pdb");
 
         // Use truffle PDB loader — reads FlatBuffer directly into truffle-namespaced wrappers
-        coreLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(
-                corePdb, "core", Lists.mutable.empty());
-        compilerLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(
-                compilerPdb, "compiler", Lists.mutable.with("core"));
+        coreLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(corePdb);
+        compilerLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(compilerPdb);
 
         // Module registry replaces the previous anonymous-class composite resolver.
         // Registration order is dependency-first: core, then compiler.
@@ -121,8 +119,8 @@ class TrufflePureTestRunner
         context = PureLanguage.get(null);
 
         // Keep bootstrap PDB modules for element path discovery
-        coreModule = new PDBModule(corePdb, PDBModule.Mode.EXECUTION, "core", "*", Lists.mutable.empty());
-        compilerModule = new PDBModule(compilerPdb, PDBModule.Mode.EXECUTION, "compiler", "*", Lists.mutable.with("core"));
+        coreModule = new PDBModule(corePdb, PDBModule.Mode.EXECUTION);
+        compilerModule = new PDBModule(compilerPdb, PDBModule.Mode.EXECUTION);
         PureModel model = PureModel.withModules(Lists.mutable.with(coreModule, compilerModule))
                 .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
                 .build();

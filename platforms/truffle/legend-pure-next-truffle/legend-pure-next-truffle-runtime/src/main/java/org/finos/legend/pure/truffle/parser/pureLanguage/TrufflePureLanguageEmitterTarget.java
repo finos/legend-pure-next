@@ -44,7 +44,7 @@ public class TrufflePureLanguageEmitterTarget extends TrufflePdoEmitterTarget
      * Pure-protocol name (e.g. {@code Class}); the Truffle factory needs the
      * full path. Derived from the protocol target's import list — each entry
      * mirrors the Java package the protocol target imports the corresponding
-     * Impl from.
+     * PDBHelper from.
      */
     private static final Map<String, String> PURE_PATH_BY_SIMPLE_NAME = Map.ofEntries(
             Map.entry("Enum_Pointer", "meta::pure::protocol::grammar::Enum_Pointer"),
@@ -127,7 +127,7 @@ public class TrufflePureLanguageEmitterTarget extends TrufflePdoEmitterTarget
     @Override
     protected String pureTypePath(String pureType)
     {
-        String key = pureType.endsWith("Impl") ? pureType.substring(0, pureType.length() - 4) : pureType;
+        String key = pureType.endsWith("Impl") ? pureType.substring(0, pureType.length() - "Impl".length()) : pureType;
         String path = PURE_PATH_BY_SIMPLE_NAME.get(key);
         if (path == null)
         {

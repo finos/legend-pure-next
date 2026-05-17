@@ -1,0 +1,264 @@
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
+import meta::pure::compiler::*;
+import meta::pure::functions::asserts::*;
+
+// Class helpers — property lookup across inheritance hierarchy
+
+function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:String[1]):Property<Nil, Any|*>[0..1]
+{
+    $owner->match(
+        [
+            cls : Class<Any>[1] |
+                // Direct properties
+                let directMatch = $cls.properties->filter(p | $p.name == $name);
+                if($directMatch->isNotEmpty(),
+                    | $directMatch->head(),
+                    | // Association properties
+                      let assocMatch = $cls.propertiesFromAssociations->filter(p | $p.name == $name);
+                      if($assocMatch->isNotEmpty(),
+                          | $assocMatch->head(),
+                          | // Inherited properties via generalizations
+                            let inherited = $cls.generalizations
+                                ->map(g | $g.general->genericTypeRawType())
+                                ->map(superType | $superType->findProperty($name))
+                                ->filter(p | $p->isNotEmpty())
+                                ->head();
+                            $inherited;
+                      );
+                );,
+            a : Any[1] | []
+        ]
+    )
+}
+
+// Context-aware findProperty: resolves each parent class from the element map
+// so that association properties (registered during pass 2) are visible.
+//
+// Generalizations are walked with a short-circuiting fold rather than
+// `->map(...)->filter(p | $p->isNotEmpty())->head()`, which evaluates findProperty
+// recursively on EVERY ancestor before picking the first non-empty result.
+// Eager descent on a class with N ancestors costs N recursive walks even when the
+// first ancestor already has the property; the fold version stops after the first
+// hit. Property lookup is on the hot path of every dot-application resolution
+// (see resolveDotApplication), so the saved walks compound across the compile.
+function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:String[1], context:CompilerContext[1]):Property<Nil, Any|*>[0..1]
+{
+    $owner->match(
+        [
+            cls : Class<Any>[1] |
+                let directMatch = $cls.properties->filter(p | $p.name == $name);
+                if($directMatch->isNotEmpty(),
+                    | $directMatch->head(),
+                    | let assocMatch = $cls.propertiesFromAssociations->filter(p | $p.name == $name);
+                      if($assocMatch->isNotEmpty(),
+                          | $assocMatch->head(),
+                          | findInheritedProperty($cls.generalizations, $name, $context);
+                      );
+                );,
+            // Enumeration is not a Class<Any> at the Pure type level (it extends
+            // DataType), but its properties + generalizations chain to Enum →
+            // AnnotatedElement → … → PackageableElement, which is where `name`
+            // lives. Without this arm, `someEnumValue.name` on a PDB-loaded
+            // enumeration fails to resolve.
+            en : Enumeration<Any>[1] |
+                let directMatch = $en.properties->filter(p | $p.name == $name);
+                if($directMatch->isNotEmpty(),
+                    | $directMatch->head(),
+                    | findInheritedProperty($en.generalizations, $name, $context);
+                );,
+            // Association extends PropertyOwner directly, so its `.properties`
+            // hold the association's declared properties (e.g. `dept` on
+            // `test::PersonDept`). Pointer dereference targets the Association
+            // by path; this arm makes the lookup reach those properties.
+            assoc : meta::pure::metamodel::relationship::Association[1] |
+                $assoc.properties->filter(p | $p.name == $name)->cast(@Property<Nil, Any|*>)->head();,
+            a : Any[1] | []
+        ]
+    )
+}
+
+// Walks generalizations in order with early-exit on first match. Skips entries
+// whose raw type isn't a Class or Enumeration (mirroring the original filter).
+// Pure's fold returns U[*] from a U[*] seed even when each iteration produces
+// at most one element, so coerce with ->head() for the [0..1] signature.
+function meta::pure::compiler::helper::class::findInheritedProperty(generalizations:meta::pure::metamodel::relationship::Generalization[*], name:String[1], context:CompilerContext[1]):Property<Nil, Any|*>[0..1]
+{
+    $generalizations->fold({g, acc |
+        if($acc->isNotEmpty(),
+            | $acc,
+            | let t = $g.general->genericTypeRawType();
+              if($t->isEmpty() || (!$t->toOne()->instanceOf(Class) && !$t->toOne()->instanceOf(Enumeration)),
+                  | $acc,
+                  | let superPath = $t->toOne()->cast(@PackageableElement)->elementToPath();
+                    // Path-keyed lookup is authoritative; no fallback to the
+                    // (potentially stale) raw type. resolveElement throws if
+                    // the parent isn't in the context — that's a structural
+                    // bug worth surfacing rather than silently masking.
+                    let superCls = $context->resolveElement($superPath)->toOne();
+                    $superCls->findProperty($name, $context);
+              );
+        );
+    }, []->cast(@Property<Nil, Any|*>))->head();
+}
+
+function meta::pure::compiler::helper::class::findQualifiedProperties(cls:Class<Any>[1], name:String[1]):QualifiedProperty<Any>[*]
+{
+    // Direct qualified properties
+    let directMatch = $cls.qualifiedProperties->filter(qp | $qp.name == $name);
+    // Inherited qualified properties via generalizations
+    let inherited = $cls.generalizations
+        ->map(g | $g.general->genericTypeRawType())
+        ->filter(t | $t->instanceOf(Class))
+        ->map(t | $t->cast(@Class<Any>)->findQualifiedProperties($name));
+    $directMatch->concatenate($inherited);
+}
+
+// Context-aware findQualifiedProperties: resolves each parent class from the element map.
+function meta::pure::compiler::helper::class::findQualifiedProperties(cls:Class<Any>[1], name:String[1], context:CompilerContext[1]):QualifiedProperty<Any>[*]
+{
+    let directMatch = $cls.qualifiedProperties->filter(qp | $qp.name == $name);
+    let inherited = $cls.generalizations
+        ->map(g | $g.general->genericTypeRawType())
+        ->filter(t | $t->instanceOf(Class))
+        ->map(t |
+            let superPath = $t->cast(@PackageableElement)->elementToPath();
+            // Path-keyed lookup is authoritative; no fallback to the raw type.
+            let superCls = $context->resolveElement($superPath)->toOne()->cast(@Class<Any>);
+            $superCls->findQualifiedProperties($name, $context);
+        );
+    $directMatch->concatenate($inherited);
+}
+
+
+// buildBindingsFromGenericType — zips class type/multiplicity params with receiver type args
+
+function meta::pure::compiler::helper::class::buildBindingsFromGenericType(ownerClass:Class<Any>[1], receiverType:GenericType[1]):ParametersBinding[1]
+{
+    let typeArgs = $receiverType->genericTypeTypeArguments();
+    let mulArgs = $receiverType->genericTypeMultiplicityArguments();
+
+    let withTypes = $ownerClass.typeParameters->zip($typeArgs)->fold({pair, b |
+        $b->addTypeBinding($pair.first, $pair.second);
+    }, newPlainParametersBinding()->cast(@ParametersBinding));
+
+    $ownerClass.multiplicityParameters->zip($mulArgs)->fold({pair, b |
+        $b->addMultiplicityBinding($pair.first, $pair.second);
+    }, $withTypes->cast(@ParametersBinding));
+}
+
+
+// Tests
+
+Class <<test.TestDependency>> meta::pure::compiler::helper::class::tests::SuperClass
+{
+    superProp : String[1];
+    superQual(a:String[1]) { $a } : String[1];
+    overloadedQual(a:String[1]) { $a } : String[1];
+}
+
+Class <<test.TestDependency>> meta::pure::compiler::helper::class::tests::SubClass extends meta::pure::compiler::helper::class::tests::SuperClass
+{
+    subProp : Integer[1];
+    subQual(a:String[1]) { $a } : String[1];
+    overloadedQual(a:String[1], b:String[1]) { $a } : String[1];
+}
+
+Association <<test.TestDependency>> meta::pure::compiler::helper::class::tests::Asso
+{
+    origin : meta::pure::compiler::helper::class::tests::SubClass[1];
+    assocProp : meta::pure::compiler::helper::class::tests::SuperClass[1];
+}
+
+function <<test.Test>> meta::pure::compiler::helper::class::tests::testFindProperty():Boolean[1]
+{
+    let subClass = meta::pure::compiler::helper::class::tests::SubClass;
+
+    // Direct
+    let subProp = $subClass->findProperty('subProp');
+    assert($subProp->isNotEmpty());
+    assertEquals('subProp', $subProp->toOne().name);
+
+    // Inherited
+    let superProp = $subClass->findProperty('superProp');
+    assert($superProp->isNotEmpty());
+    assertEquals('superProp', $superProp->toOne().name);
+
+    // Association
+    let assocProp = $subClass->findProperty('assocProp');
+    assert($assocProp->isNotEmpty());
+    assertEquals('assocProp', $assocProp->toOne().name);
+
+    // Not Found
+    let notFound = $subClass->findProperty('notFound');
+    assert($notFound->isEmpty());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::class::tests::testFindQualifiedProperties():Boolean[1]
+{
+    let subClass = meta::pure::compiler::helper::class::tests::SubClass;
+
+    assertEquals(1, $subClass->findQualifiedProperties('subQual')->size());
+    assertEquals(1, $subClass->findQualifiedProperties('superQual')->size());
+    // Since SubClass defines overloadedQual with different signature than SuperClass, both are returned
+    assertEquals(2, $subClass->findQualifiedProperties('overloadedQual')->size());
+
+    assertEquals(0, $subClass->findQualifiedProperties('notFound')->size());
+}
+
+Class <<test.TestDependency>> meta::pure::compiler::helper::class::tests::Wrapper<Z>
+{
+}
+
+Class <<test.TestDependency>> meta::pure::compiler::helper::class::tests::MyClass<T, U|m>
+{
+}
+
+Class <<test.TestDependency>> meta::pure::compiler::helper::class::tests::TestClass
+{
+    prop : meta::pure::compiler::helper::class::tests::MyClass<meta::pure::compiler::helper::class::tests::Wrapper<String>, Integer | 1..*>[1];
+}
+
+function <<test.Test>> meta::pure::compiler::helper::class::tests::testBuildBindingsFromGenericType():Boolean[1]
+{
+    let ownerClass = meta::pure::compiler::helper::class::tests::MyClass;
+    let prop = meta::pure::compiler::helper::class::tests::TestClass.properties->filter(p | $p.name == 'prop')->toOne();
+    let receiverType = $prop.genericType->toOne();
+
+    let bindings = $ownerClass->buildBindingsFromGenericType($receiverType);
+    
+    let tKeys = $bindings.typeBindings->keys();
+    assertEquals(['T', 'U'], $tKeys->sort());
+    
+    let mKeys = $bindings.multiplicityBindings->keys();
+    assertEquals(['m'], $mKeys);
+    
+    let tBinding = $bindings.typeBindings->get('T')->toOne().values->at(0);
+    assertEquals(meta::pure::compiler::helper::class::tests::Wrapper, $tBinding->genericTypeRawType()->toOne());
+    assertEquals(String, $tBinding->genericTypeTypeArguments()->at(0)->genericTypeRawType()->toOne());
+    
+    let uBinding = $bindings.typeBindings->get('U')->toOne().values->at(0);
+    assertEquals(Integer, $uBinding->genericTypeRawType()->toOne());
+
+    let mBinding = $bindings.multiplicityBindings->get('m')->toOne().values->at(0);
+    assertEquals(1, $mBinding->multiplicityLowerBound());
+    assertEquals(-1, $mBinding->multiplicityUpperBound());
+
+    assertEquals('{T=Wrapper<String>, U=Integer | m=[1..*]}', $bindings->toString());
+}

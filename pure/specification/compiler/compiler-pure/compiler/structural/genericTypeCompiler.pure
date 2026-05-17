@@ -1,0 +1,251 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::relation::*;
+import meta::pure::functions::lang::*;
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::relationTypeCompiler::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::structural::genericTypeCompiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*]):CompilerResult<GenericType>[1]
+{
+    compileGenericType($protocolGT, $context, $packagePath, $typeParameters, '', '');
+}
+
+// Mirrors Java GenericTypeCompiler.compile(GenericType_Protocol).
+// Accepts the parent protocol type (after the structural change where
+// GenericType extends GenericType_Protocol). GenericType_Pointer is a
+// PDB-only construct and must never reach the compiler; if one slips
+// through (parser bug, leaked PDB form), record an error.
+function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTypeArg(protocolGT:meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<GenericType>[1]
+{
+    $protocolGT->match([
+        ptr : meta::pure::protocol::grammar::type::generics::GenericType_Pointer[1] |
+            ^CompilerResult<GenericType>(
+                value = ^CompilerNotSetGenericType(),
+                context = ^$context(errors += ('GenericType_Pointer reached compiler (path=' + $ptr.value + '): PDB-only construct should never appear in grammar.'))
+            ),
+        ugt : meta::pure::protocol::grammar::type::generics::UndefinedGenericType[1] |
+            ^CompilerResult<GenericType>(
+                value = ^UndefinedGenericType(),
+                context = $context
+            ),
+        gto : meta::pure::protocol::grammar::relation::GenericTypeOperation[1] |
+            compileGenericTypeOperation($gto, $context, $packagePath, $typeParameters, $ownerContext),
+        gtv : meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] |
+            compileGenericType($gtv, $context, $packagePath, $typeParameters, '', $ownerContext),
+        a : Any[1] |
+            ^CompilerResult<GenericType>(
+                value = ^CompilerNotSetGenericType(),
+                context = $context
+            )
+    ]);
+}
+
+function meta::pure::compiler::structural::genericTypeCompiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], elementContext:String[1], ownerContext:String[1]):CompilerResult<GenericType>[1]
+{
+    let protocolType = $protocolGT.type->toOne();
+    let result = $protocolType->match([
+        p:meta::pure::protocol::grammar::type::Type_Pointer[1] |
+            // Scope-aware resolution: if the pointer's value matches a type
+            // parameter in scope (local or inherited from the owning class /
+            // function), promote it to a TypeParameter. This lets the parser
+            // stay scope-free — it always emits Type_Pointer and the compiler
+            // disambiguates here. Mirrors the resolution Java's GenericTypeCompiler
+            // does for the symmetric case.
+            let asTypeParam = $typeParameters->filter(tp | $tp.name == $p.value);
+            let asInheritedTypeParam = if($asTypeParam->isNotEmpty(),
+                | $asTypeParam,
+                | $context.ownerTypeParams->filter(tp | $tp.name == $p.value)
+            );
+            if($asInheritedTypeParam->isNotEmpty(),
+                | ^CompilerResult<GenericType>(
+                      value = buildUserDefinedGenericType($asInheritedTypeParam->toOne()),
+                      context = $context
+                  ),
+                | let allMatches = $context->resolveAllElements($p.value);
+                  let elemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
+                  let ownerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
+                  let siCtx = if($p.p_sourceInformation->isNotEmpty(),
+                      | formatSourceInfo($p.p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
+                      | ''
+                  );
+                  if($allMatches->size() > 1,
+                      | let errorMsg = 'The element \'' + $p.value + '\' is ambiguous, found in multiple imports: ' + $allMatches->map(m | '\'' + $m + '\'')->joinStrings(', ') + $elemCtx + $ownerCtx + $siCtx;
+                        ^CompilerResult<GenericType>(
+                            value = buildUserDefinedGenericType(Any),
+                            context = ^$context(errors += $errorMsg)
+                        );,
+                      | let resolvedOpt = $context->resolveElement($p.value);
+                        let resolvedOptWithPackage = if($resolvedOpt->isEmpty(),
+                            | $context->resolveElement($packagePath + '::' + $p.value),
+                            | $resolvedOpt
+                        );
+                        if($resolvedOptWithPackage->isEmpty(),
+                            | let errorMsg = 'The type \'' + $p.value + '\' can\'t be found' + $elemCtx + $ownerCtx + $siCtx;
+                              ^CompilerResult<GenericType>(
+                                  value = buildUserDefinedGenericType(Any),
+                                  context = ^$context(errors += $errorMsg)
+                              );,
+                            | ^CompilerResult<GenericType>(
+                                  value = buildUserDefinedGenericType($resolvedOptWithPackage->toOne()->cast(@Type)),
+                                  context = $context
+                              )
+                        );
+                  );
+            );,
+        t:meta::pure::protocol::grammar::type::generics::TypeParameter[1] |
+            let matched = $typeParameters->filter(tp | $tp.name == $t.name);
+            let resolved = if($matched->isNotEmpty(), | $matched, | $context.ownerTypeParams->filter(tp | $tp.name == $t.name));
+            if($resolved->isNotEmpty(),
+                | ^CompilerResult<GenericType>(
+                      value = buildUserDefinedGenericType($resolved->toOne()),
+                      context = $context
+                  ),
+                | let tElemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
+                  let tOwnerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
+                  let siCtx = if($t.p_sourceInformation->isNotEmpty(),
+                      | formatSourceInfo($t.p_sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
+                      | ''
+                  );
+                  let errorMsg = 'The type \'' + $t.name + '\' can\'t be found' + $tElemCtx + $tOwnerCtx + $siCtx;
+                  ^CompilerResult<GenericType>(
+                      value = buildUserDefinedGenericType(Any),
+                      context = ^$context(errors += $errorMsg)
+                  );
+            );,
+        ft:meta::pure::protocol::grammar::type::FunctionType[1] |
+            let ftParamAccum = $ft.parameters->fold({fp, acc |
+                let fpType = $fp.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+                let fpGtResult = $fpType->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext);
+                let fpMult = $fp.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+                ^$acc(
+                    values += ^VariableExpression(
+                        // Anonymous params in `Function<{X[1]->Y[1]}>` have no
+                        // grammar name; default to '' so the writer's [1]
+                        // validation accepts the VariableExpression.
+                        name = if($fp.name->isEmpty(), | '', | $fp.name->toOne()),
+                        genericType = $fpGtResult.value->toOne(),
+                        multiplicity = $fpMult
+                    ),
+                    context = $fpGtResult.context
+                );
+            }, ^CompilerListResult<VariableExpression>(context = $context));
+            let ftReturnGT = $ft.returnType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ftParamAccum.context, $packagePath, $typeParameters, '', $ownerContext);
+            let ftReturnMul = $ft.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+            let functionType = new(^UserDefinedGenericType(type = FunctionType))->cast(@FunctionType);
+            let compiledFT = ^$functionType(
+                parameters = $ftParamAccum.values,
+                returnType = $ftReturnGT.value->toOne(),
+                returnMultiplicity = $ftReturnMul
+            );
+            ^CompilerResult<GenericType>(
+                value = buildUserDefinedGenericType($compiledFT),
+                context = $ftReturnGT.context
+            );,
+        rt:meta::pure::protocol::grammar::relation::RelationType[1] |
+            let rtResult = compileRelationType($rt, $context, $packagePath, $typeParameters, $ownerContext);
+            ^CompilerResult<GenericType>(
+                value = $rtResult.value,
+                context = $rtResult.context
+            );,
+        a:Any[1] |
+            ^CompilerResult<GenericType>(
+                value = ^CompilerNotSetGenericType(),
+                context = $context
+            );
+    ]);
+
+    // Compile type arguments — mirrors Java line 85: gtv._typeArguments().collect(arg -> compile(arg, ...))
+    let typeArgResult = $protocolGT.typeArguments->fold({a, acc |
+        let argResult = compileGenericTypeArg($a, $acc.context, $packagePath, $typeParameters, $ownerContext);
+        ^$acc(values += $argResult.value, context = $argResult.context);
+    }, ^CompilerListResult<GenericType>(context = $result.context));
+
+    // Compile multiplicity arguments — mirrors Java line 86
+    // Resolve multiplicity parameters against ownerMulParams (matches Java MultiplicityCompiler.resolveOrCreateMultiplicityParameter)
+    let mulArgs = $protocolGT.multiplicityArguments->map(m |
+        let compiled = $m->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+        if($compiled->instanceOf(MultiplicityParameter),
+            | let mp = $compiled->cast(@MultiplicityParameter);
+              let fromOwner = $typeArgResult.context.ownerMulParams->filter(p | $p.name == $mp.name);
+              if($fromOwner->isNotEmpty(), | $fromOwner->toOne(), | $mp);,
+            | $compiled
+        );
+    );
+
+    // Compile type variable values (e.g., Varchar(200)) — mirrors Java line 87
+    let typeVarValues = $protocolGT.typeVariableValues->map(tvv | $tvv->meta::pure::compiler::structural::valueSpecificationCompiler::compileValueSpecification($typeArgResult.context, [])).values->cast(@ValueSpecification);
+
+    let resultGT = $result.value->toOne();
+    // Canonical-anchor preservation: when the parser-built GT is a leaf (no
+    // type/mult/typeVar args) wrapping a named PE rawType with a `GenericType_<name>`
+    // UDPGT-PE in core.pdb, return the canonical anchor instead of a fresh UDGT.
+    // Mirrors Java GenericTypeCompiler.java lines 99-117.
+    let canonicalAnchor = $resultGT->match([
+        gtv : GenericTypeValue[1] |
+            if($typeArgResult.values->isEmpty() && $mulArgs->isEmpty() && $typeVarValues->isEmpty() && $gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(PackageableElement) && $gtv.type->toOne()->cast(@PackageableElement).name->isNotEmpty(),
+                | meta::pure::compiler::helper::genericType::canonicalAnchorFor($gtv.type->toOne(), [], [], [], $resultGT, $typeArgResult.context),
+                | []->cast(@GenericType)
+            ),
+        a : Any[1] | []->cast(@GenericType)
+    ]);
+    if($canonicalAnchor->isNotEmpty(),
+        | ^CompilerResult<GenericType>(value = $canonicalAnchor->toOne(), context = $typeArgResult.context),
+        | $resultGT->match(
+            [
+                resultValue : UserDefinedGenericType[1] |
+                    ^CompilerResult<GenericType>(
+                        value = ^$resultValue(typeArguments = $typeArgResult.values, multiplicityArguments = $mulArgs, typeVariableValues = $typeVarValues),
+                        context = $typeArgResult.context
+                    ),
+                resultValue : GenericTypeValue[1] |
+                    ^CompilerResult<GenericType>(
+                        value = ^$resultValue(typeArguments = $typeArgResult.values, multiplicityArguments = $mulArgs),
+                        context = $typeArgResult.context
+                    ),
+                a : Any[1] |
+                    // UndefinedGenericType or other non-GenericTypeValue — return as-is
+                    ^CompilerResult<GenericType>(
+                        value = $resultGT,
+                        context = $typeArgResult.context
+                    )
+            ]
+        )
+    );
+}
+
+// Mirrors Java GenericTypeCompiler.compileGenericTypeOperation (lines 93-108)
+function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTypeOperation(gto:meta::pure::protocol::grammar::relation::GenericTypeOperation[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<GenericType>[1]
+{
+    let leftResult = compileGenericTypeArg($gto.left, $context, $packagePath, $typeParameters, $ownerContext);
+    let rightResult = compileGenericTypeArg($gto.right, $leftResult.context, $packagePath, $typeParameters, $ownerContext);
+    // Read enum value from Enum_Pointer and map to metamodel enum
+    let opName = $gto.operationType->cast(@meta::pure::protocol::grammar::Enum_Pointer).extraPointerValues->at(0).value;
+    let opType = if([pair(| $opName == 'Union', | GenericTypeOperationType.Union),
+                     pair(| $opName == 'Difference', | GenericTypeOperationType.Difference),
+                     pair(| $opName == 'Subset', | GenericTypeOperationType.Subset)],
+                    | GenericTypeOperationType.Equal);
+    ^CompilerResult<GenericType>(
+        value = ^GenericTypeOperation(left = $leftResult.value->toOne(), right = $rightResult.value->toOne(), operationType = $opType),
+        context = $rightResult.context
+    );
+}

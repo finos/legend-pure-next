@@ -1,7 +1,7 @@
 package org.finos.legend.pure.truffle.runtime;
 
 /**
- * Creates truffle-namespaced Impl instances from Pure class paths.
+ * Creates truffle-namespaced PDBHelper instances from Pure class paths.
  */
 public final class TruffleInstanceFactory
 {
@@ -31,9 +31,9 @@ public final class TruffleInstanceFactory
     }
 
     /**
-     * Create an instance of the truffle Impl class for the given Pure class path.
+     * Create an instance of the truffle PDBHelper class for the given Pure class path.
      * e.g. "meta::pure::functions::collection::tests::fold::FO_Person" →
-     *       org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.tests.fold.FO_PersonImpl
+     *       org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.tests.fold.FO_PersonPDBHelper
      *
      * <p>Cached path: pass the resolver so {@link TruffleTypeCache#classForPath}
      * memoises {@code Class.forName} (the dominant {@code String.replace} hot
@@ -60,7 +60,7 @@ public final class TruffleInstanceFactory
     }
 
     /**
-     * Resolve a Pure class path to its runtime Java {@code Impl} class.
+     * Resolve a Pure class path to its runtime Java {@code PDBHelper} class.
      * Public entry point for {@link TruffleTypeCache} to use as the cache
      * compute function.
      */
@@ -74,7 +74,7 @@ public final class TruffleInstanceFactory
             stripped = stripped.replace("org::finos::legend::pure::truffle::pdb::", "")
                     .replace("org.finos.legend.pure.truffle.pdb.", "");
         }
-        String javaClassName = TRUFFLE_PREFIX + escapeJavaKeywords(stripped.replace("::", ".")) + "Impl";
+        String javaClassName = TRUFFLE_PREFIX + escapeJavaKeywords(stripped.replace("::", ".")) + "PDBHelper";
         try
         {
             return Class.forName(javaClassName);
@@ -82,14 +82,14 @@ public final class TruffleInstanceFactory
         catch (ClassNotFoundException e)
         {
             // Fallback: try without truffle prefix (for bootstrap-generated classes still on classpath)
-            String fallback = stripped.replace("::", ".") + "Impl";
+            String fallback = stripped.replace("::", ".") + "PDBHelper";
             try
             {
                 return Class.forName(fallback);
             }
             catch (ClassNotFoundException e2)
             {
-                throw new RuntimeException("No Impl class found for: " + classPath
+                throw new RuntimeException("No PDBHelper class found for: " + classPath
                         + " (tried " + javaClassName + " and " + fallback + ")", e2);
             }
         }

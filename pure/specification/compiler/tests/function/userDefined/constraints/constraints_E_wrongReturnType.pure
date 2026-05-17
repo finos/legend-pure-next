@@ -1,0 +1,17 @@
+###Error
+No matching function 'plus' found for argument types (Integer[1], String[1]) (at function/userDefined/constraints/constraints_E_wrongReturnType:7c5-7c18)
+
+###Pure
+function pack::constrained(x: Integer[1]): Integer[1]
+[
+    $return + 'ok'
+]
+{
+    $x + 1
+}
+
+###CompilerStats
+inferenceRollbacks: 9
+candidateEvaluations: 8
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 2

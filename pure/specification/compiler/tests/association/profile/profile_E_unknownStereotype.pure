@@ -1,0 +1,29 @@
+###Error
+The stereotype 'unknown' can't be found in profile 'AProfile' in association 'pack::MyAssociation' (at association/profile/profile_E_unknownStereotype:7c24-7c30)
+
+###Pure
+import pack::*;
+
+Association <<AProfile.unknown>> pack::MyAssociation
+{
+  a: ClassA[1];
+  b: ClassB[*];
+}
+
+Profile pack::AProfile
+{
+  stereotypes: [flag];
+  tags: [tag1];
+}
+
+Class pack::ClassA
+{
+}
+
+Class pack::ClassB
+{
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

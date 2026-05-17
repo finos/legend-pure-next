@@ -16,7 +16,6 @@ package org.finos.legend.pure.execution;
 
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.natives.boolean_.BooleanNatives;
 import org.finos.legend.pure.execution.natives.collection.CollectionNatives;

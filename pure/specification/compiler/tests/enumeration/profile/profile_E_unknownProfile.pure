@@ -1,0 +1,20 @@
+###Error
+The profile 'Unknown' can't be found in enumeration 'pack::MyEnum' (at enumeration/profile/profile_E_unknownProfile:7c8-7c14)
+
+###Pure
+import pack::*;
+
+Enum <<Unknown.flag>> pack::MyEnum
+{
+  Val
+}
+
+Profile pack::AProfile
+{
+  stereotypes: [flag];
+  tags: [tag1];
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

@@ -23,6 +23,7 @@ import org.finos.legend.pure.execution.PureExecution;
 import org.finos.legend.pure.m3.LanguageExtension;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.Module;
+import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveWriter;
@@ -91,6 +92,7 @@ public final class PureRuntimeCompilerBinaryBuilder
      */
     public static void compile(List<Path> basePdbs, Path sourceDir, Path outputFile) throws IOException
     {
+        ModuleManifest manifest = ModuleManifest.locate(sourceDir);
         if (basePdbs.isEmpty())
         {
             throw new IllegalArgumentException("At least one --base-pdb is required (need core.pdb plus an existing compiler.pdb to host the compile function).");
@@ -110,18 +112,16 @@ public final class PureRuntimeCompilerBinaryBuilder
         }
         System.out.println("  Output: " + outputFile);
 
-        // 1. Load base PDBs as PDB modules. Earlier PDBs are dependencies of
-        // later ones (so the resolver can find e.g. `Class` in core.pdb when
-        // walking compiler.pdb wrappers).
+        // 1. Load base PDBs — each carries its identity in its embedded manifest.
         MutableList<Module> modules = Lists.mutable.empty();
-        List<String> priorNames = new ArrayList<>();
+        List<String> loadedNames = new ArrayList<>();
         for (Path p : basePdbs)
         {
-            String name = deriveName(p);
-            modules.add(new PDBModule(p, PDBModule.Mode.EXECUTION, name, "*",
-                    Lists.mutable.withAll(priorNames)));
-            priorNames.add(name);
+            PDBModule mod = new PDBModule(p, PDBModule.Mode.EXECUTION);
+            modules.add(mod);
+            loadedNames.add(mod.getName());
         }
+        verifyDependencies(manifest, loadedNames);
         MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());
         PureModel model = PureModel.withModules(modules).withExtensions(extensions).build();
         model.compile();
@@ -252,8 +252,20 @@ public final class PureRuntimeCompilerBinaryBuilder
         {
             Files.createDirectories(outputFile.getParent());
         }
-        new CompressedArchiveWriter().write(elements, extensions, lastModule, additionalSections, outputFile);
+        new CompressedArchiveWriter().write(elements, extensions, lastModule, manifest, additionalSections, outputFile);
         System.out.println("    Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
+    }
+
+    private static void verifyDependencies(ModuleManifest manifest, List<String> availableNames)
+    {
+        for (String dep : manifest.dependencies())
+        {
+            if (!availableNames.contains(dep))
+            {
+                throw new RuntimeException("Manifest '" + manifest.name() + "' declares dependency '"
+                        + dep + "' but no module of that name was loaded (available: " + availableNames + ")");
+            }
+        }
     }
 
     private static String elementPath(PackageableElement pe)

@@ -250,7 +250,7 @@ public class TopLevelCompiler
                         if (elementIndex.containsKey(fullPath))
                         {
                             meta.pure.protocol.grammar.SourceInformation si = grammarElement._p_sourceInformation();
-                            throw new RuntimeException("The element '" + fullPath + "' already exists at: " + si._sourceId() + " " + si._startLine() + ":" + si._startColumn());
+                            throw new RuntimeException("The element '" + fullPath + "' already exists at: " + si._sourceId() + ":" + si._startLine() + "c" + si._startColumn());
                         }
                         long t0 = System.nanoTime();
                         PackageableElement element = firstPassElement(grammarElement, model);

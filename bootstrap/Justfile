@@ -33,7 +33,7 @@ repo_root      := bootstrap_root / ".."
 boot           := bootstrap_root / "legend-pure-next-bootstrap"
 bcore          := boot / "legend-pure-next-bootstrap-core"
 spec           := repo_root / "pure" / "specification"
-compiler_src   := repo_root / "pure" / "compiler-pure"
+compiler_src   := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 boot_out       := bootstrap_root / "build"
 shared_out     := repo_root / "shared"
 cli            := boot_out / "pure-bootstrap.jar"
@@ -105,14 +105,14 @@ test-pure-PCTs:
         --function "meta::pure::test::runPCTTests_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
 
-# Pure compiler-graph spec tests over pure/specification/compiler via the bootstrap CLI (Pure-on-Java; assumes `just build` was run). Run as part of `just test`.
+# Pure compiler-graph spec tests over pure/specification/compiler/tests via the bootstrap CLI (Pure-on-Java; assumes `just build` was run). Run as part of `just test`.
 test-pure-compiler:
-    @{{banner}} '[pure→bootstrap]' 'runCompiledGraphTests over pure/specification/compiler'
+    @{{banner}} '[pure→bootstrap]' 'runCompiledGraphTests over pure/specification/compiler/tests'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/compiler.pdb \
-        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
-        --args "{{spec}}/compiler" {{err_filter}}
+        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" {{err_filter}}
 
 # Self-host: compile compiler-pure on Pure-on-Java, run compiler tests, then diff PDBs vs Java direct (and Truffle if present).
 test-pure-self-host: build-compiler-pdb
@@ -126,8 +126,8 @@ test-pure-self-host: build-compiler-pdb
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{boot_out}}/compiler_bootstrap.pdb \
-        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
-        --args "{{spec}}/compiler" {{err_filter}}
+        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" {{err_filter}}
     @{{banner}} '[self-host-java]' 'diff compiler.pdb (Java compiler) ↔ compiler_bootstrap.pdb (Pure compiler)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
         {{shared_out}}/compiler.pdb \

@@ -89,21 +89,21 @@ public class CompilerCompiledGraphTest
     private static final Set<String> SKIP_TESTS = Set.of();
 
     /**
-     * Walk up from cwd until we find the {@code specification/compiler/} directory.
+     * Walk up from cwd until we find the {@code specification/compiler/tests/} directory.
      */
     private static Path locateTestsRoot()
     {
         Path current = Path.of("").toAbsolutePath();
         while (current != null)
         {
-            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler");
+            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests");
             if (Files.isDirectory(candidate))
             {
                 return candidate;
             }
             current = current.getParent();
         }
-        throw new RuntimeException("Cannot locate pure/specification/compiler by walking up from " + Path.of("").toAbsolutePath());
+        throw new RuntimeException("Cannot locate pure/specification/compiler/tests by walking up from " + Path.of("").toAbsolutePath());
     }
 
     public static Collection<Arguments> discoverTests() throws IOException

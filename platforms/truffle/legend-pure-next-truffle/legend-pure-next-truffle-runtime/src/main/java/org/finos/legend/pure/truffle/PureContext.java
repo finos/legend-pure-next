@@ -555,7 +555,7 @@ public final class PureContext
         {
             return null;
         }
-        // Read the property generically — works for both legacy XImpl
+        // Read the property generically — works for both legacy XPDBHelper
         // (PropertyAccessor) and the post-flip PureDynamicObject.
         return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(target, SLOT_CLASSIFIER_GENERIC_TYPE);
     }
@@ -619,8 +619,31 @@ public final class PureContext
 
     private static String getFunctionName(Object fd)
     {
+        // Prefer the unmangled name = package::functionName. fd._name() is
+        // the mangled identifier (`assertError_Function_1__String_1__...`);
+        // fd._functionName() is the source-level name (`assertError`). The
+        // mangled form leaks the type signature into stack traces; bootstrap
+        // already renders the unmangled form via _functionName, so emit the
+        // same here for byte-identical cross-engine stacks.
         try
         {
+            Object fnNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(
+                    fd, org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("functionName"));
+            if (fnNameObj instanceof String fnName && !fnName.isEmpty())
+            {
+                Object pkg = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(
+                        fd, org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("package"));
+                if (pkg != null)
+                {
+                    String pkgPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pkg);
+                    return (pkgPath == null || pkgPath.isEmpty() || "Root".equals(pkgPath))
+                            ? fnName
+                            : pkgPath + "::" + fnName;
+                }
+                return fnName;
+            }
+            // Fallback to mangled path for fd types without `functionName`
+            // (lambdas, native function placeholders).
             String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(fd);
             if (path != null) return path;
         }

@@ -81,7 +81,7 @@ public final class CastNode extends PureNode
             if (hoistedTypeArgs != null && hoistedTypeArgs.size() > 0)
             {
                 Object rawTargetGT = hoistedTypeArgs.getBoxed(0);
-                // Hold onto rawTargetGT regardless of typed-XImpl vs PDO so
+                // Hold onto rawTargetGT regardless of typed-XPDBHelper vs PDO so
                 // downstream `read(targetGT, "typeVariableValues")` finds the
                 // type-variable bindings (e.g. {x: 8} for `cast(@P(8))`).
                 targetGT = rawTargetGT;

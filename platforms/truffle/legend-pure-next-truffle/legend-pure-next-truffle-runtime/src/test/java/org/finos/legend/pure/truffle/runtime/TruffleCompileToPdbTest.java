@@ -38,7 +38,7 @@ import java.util.stream.Stream;
  *
  * <p>{@link #smokeTest} compiles a single hardcoded class as a sanity check.
  * {@link #roundTripCompilerSpec} parameterises over every {@code ###Pure} test
- * file under {@code specification/compiler/} (the same set bootstrap's
+ * file under {@code specification/compiler/tests/} (the same set bootstrap's
  * {@code PdbRoundTripTest} covers).</p>
  */
 public class TruffleCompileToPdbTest
@@ -70,21 +70,19 @@ public class TruffleCompileToPdbTest
         Path current = Path.of("").toAbsolutePath();
         while (current != null)
         {
-            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler");
+            Path candidate = current.resolve("pure").resolve("specification").resolve("compiler").resolve("tests");
             if (Files.isDirectory(candidate)) return candidate;
             current = current.getParent();
         }
-        throw new RuntimeException("Cannot locate pure/specification/compiler");
+        throw new RuntimeException("Cannot locate pure/specification/compiler/tests");
     }
 
     @BeforeAll
     static void setupOnce() throws IOException
     {
         Path buildDir = locateBuildDir();
-        TrufflePdbLoader coreLoader = new TrufflePdbLoader(
-                buildDir.resolve("core.pdb"), "core", java.util.List.of());
-        TrufflePdbLoader compilerLoader = new TrufflePdbLoader(
-                buildDir.resolve("compiler.pdb"), "compiler", java.util.List.of("core"));
+        TrufflePdbLoader coreLoader = new TrufflePdbLoader(buildDir.resolve("core.pdb"));
+        TrufflePdbLoader compilerLoader = new TrufflePdbLoader(buildDir.resolve("compiler.pdb"));
         TruffleModuleRegistry registry = new TruffleModuleRegistry();
         registry.register(coreLoader);
         registry.register(compilerLoader);
@@ -267,7 +265,7 @@ public class TruffleCompileToPdbTest
                 for (int i = 0; i < elementsSeq.size(); i++)
                 {
                     Object el = elementsSeq.getBoxed(i);
-                    // Accept both typed XImpl and PureDynamicObject elements.
+                    // Accept both typed XPDBHelper and PureDynamicObject elements.
                     if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(el,
                             "meta::pure::metamodel::PackageableElement", resolver))
                     {
@@ -283,7 +281,9 @@ public class TruffleCompileToPdbTest
                     tmpPdb = Files.createTempFile("truffle-compile-roundtrip-", ".pdb");
                     try
                     {
-                        TrufflePdbWriter.write(elements, tmpPdb, /*validateRequired=*/ false);
+                        TrufflePdbWriter.write(elements,
+                                new org.finos.legend.pure.m3.module.ModuleManifest("roundtrip", "*", java.util.List.of()),
+                                tmpPdb, /*validateRequired=*/ false);
                         if (Files.size(tmpPdb) == 0) issues.add("Round-tripped PDB is empty");
                         TrufflePdbLoader rt = new TrufflePdbLoader(tmpPdb);
                         int matched = 0;
@@ -329,7 +329,7 @@ public class TruffleCompileToPdbTest
     private static Object invokeAccessor(Object target, String accessor)
     {
         // accessor is `_X` form; strip leading underscore for PureObj.read
-        // which expects the bare property name. Works for both typed XImpl
+        // which expects the bare property name. Works for both typed XPDBHelper
         // and PureDynamicObject.
         String propName = accessor.startsWith("_") ? accessor.substring(1) : accessor;
         return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, propName);
@@ -338,7 +338,7 @@ public class TruffleCompileToPdbTest
     private static String baseTypeName(String simple)
     {
         if (simple.endsWith("FlatBufferWrapper")) return simple.substring(0, simple.length() - "FlatBufferWrapper".length());
-        if (simple.endsWith("Impl")) return simple.substring(0, simple.length() - "Impl".length());
+        if (simple.endsWith("PDBHelper")) return simple.substring(0, simple.length() - "PDBHelper".length());
         return simple;
     }
 

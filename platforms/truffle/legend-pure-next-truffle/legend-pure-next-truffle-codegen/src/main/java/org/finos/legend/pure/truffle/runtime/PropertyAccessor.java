@@ -16,7 +16,7 @@ package org.finos.legend.pure.truffle.runtime;
 
 /**
  * Common contract for getting a property by name on every generated metamodel
- * class — both {@code XImpl} (mutable POJOs) and {@code XFlatBufferWrapper}
+ * class — both {@code XPDBHelper} (mutable POJOs) and {@code XFlatBufferWrapper}
  * (read-only FB-backed). Implemented via a generated {@code switch} on the
  * property name in each class. Replaces {@code MethodHandle.invoke}-based
  * reflection in {@code PropertyReadNode}, which was opaque to Graal partial
@@ -36,7 +36,7 @@ public interface PropertyAccessor
     /**
      * Set the named property to {@code value}. Read-only receivers
      * (FlatBuffer wrappers) throw {@link UnsupportedOperationException};
-     * mutable {@code XImpl} classes assign directly. Throws
+     * mutable {@code XPDBHelper} classes assign directly. Throws
      * {@link IllegalArgumentException} when the name doesn't match a
      * declared property — distinguishes "no such property" from "property
      * exists but is empty".

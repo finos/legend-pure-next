@@ -1,0 +1,21 @@
+###Error
+Can't find enum value 'EW' in enumeration 'test::primitive::MyEnum' (at valueSpecification/functionExpression/dot/enumeraiton_E_unknownValue:15c26-15c28)
+Can't find enum value 'EWW' in enumeration 'test::primitive::MyEnum' (at valueSpecification/functionExpression/dot/enumeraiton_E_unknownValue:16c26-16c29)
+
+###Pure
+Enum test::primitive::MyEnum
+{
+  A,
+  B,
+  C
+}
+
+function test::primitive::testEnumValue(): Any[*]
+{
+  test::primitive::MyEnum.EW;
+  test::primitive::MyEnum.EWW;
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

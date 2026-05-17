@@ -31,7 +31,7 @@ public final class MetaHelper
     /**
      * Get the raw Pure Type of a raw value.
      * Handles raw Java values (Long, Double, etc.),
-     * generated Impl classes (Any), and PureSequence.
+     * generated PDBHelper classes (Any), and PureSequence.
      */
     public static Object getRawValueType(Object value, TruffleMetadataAccess resolver)
     {
@@ -158,7 +158,7 @@ public final class MetaHelper
      */
     public static Object getRawGenericType(Object value)
     {
-        // Any Pure metamodel object (typed XImpl OR PureDynamicObject) carries a
+        // Any Pure metamodel object (typed XPDBHelper OR PureDynamicObject) carries a
         // classifierGenericType. Detect via PureObj.pureTypeOf which works for
         // both representations — the typed `instanceof Any` Java guard misses
         // PureDynamicObject post-loader-flip, falling through to the

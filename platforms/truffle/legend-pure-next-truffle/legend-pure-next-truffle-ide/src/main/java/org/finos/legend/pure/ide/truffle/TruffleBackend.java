@@ -86,8 +86,26 @@ public final class TruffleBackend implements PureBackend
     private final PureTruffleRuntime runtime;
     private final TruffleModuleRegistry registry;
 
-    public TruffleBackend(Path corePdb, Path compilerPdb) throws IOException
+    /**
+     * Build the Truffle backend's own compilation graph (core.pdb +
+     * compiler.pdb), independent of the IDE's edit graph. compileDir is
+     * always available in this runtime, regardless of which module the user
+     * is editing.
+     */
+    public TruffleBackend(Path pdbDir) throws IOException
     {
+        Path corePdb = pdbDir.resolve("core.pdb");
+        Path compilerPdb = pdbDir.resolve("compiler.pdb");
+        if (!java.nio.file.Files.isRegularFile(corePdb))
+        {
+            throw new IOException("Truffle backend requires " + corePdb
+                    + ". Run `just bootstrap::build` first.");
+        }
+        if (!java.nio.file.Files.isRegularFile(compilerPdb))
+        {
+            throw new IOException("Truffle backend requires " + compilerPdb
+                    + ". Run `just bootstrap::build-compiler-pdb` first.");
+        }
         this.executor = Executors.newSingleThreadExecutor(r ->
         {
             Thread t = new Thread(r, "pure-truffle-backend");
@@ -98,10 +116,8 @@ public final class TruffleBackend implements PureBackend
         {
             Object[] built = executor.submit(() ->
             {
-                TrufflePdbLoader coreLoader = new TrufflePdbLoader(
-                        corePdb, "core", List.of());
-                TrufflePdbLoader compilerLoader = new TrufflePdbLoader(
-                        compilerPdb, "compiler", List.of("core"));
+                TrufflePdbLoader coreLoader = new TrufflePdbLoader(corePdb);
+                TrufflePdbLoader compilerLoader = new TrufflePdbLoader(compilerPdb);
                 TruffleModuleRegistry reg = new TruffleModuleRegistry();
                 reg.register(coreLoader);
                 reg.register(compilerLoader);
@@ -176,6 +192,7 @@ public final class TruffleBackend implements PureBackend
         // output is captured into runBuf and surfaced in the Output tab.
         ByteArrayOutputStream runBuf = new ByteArrayOutputStream();
         PrintStream original = System.out;
+        PrintStream runStream = null;
         System.setOut(NULL_OUT);
         Object result = null;
         Throwable err = null;
@@ -270,7 +287,12 @@ public final class TruffleBackend implements PureBackend
             {
                 // Switch to the run-phase buffer so go()'s println output is
                 // captured separately from the compileDir progress + stats.
-                System.setOut(new PrintStream(runBuf));
+                // autoFlush=true so each println lands in runBuf at the
+                // newline — otherwise an exception mid-execution leaves the
+                // last println(s) trapped in the PrintStream's internal buffer
+                // and the user never sees their debug output.
+                runStream = new PrintStream(runBuf, true);
+                System.setOut(runStream);
                 result = args.length == 0
                         ? runtime.execute(truffleFn)
                         : runtime.execute(truffleFn, (Object[]) args);
@@ -282,6 +304,12 @@ public final class TruffleBackend implements PureBackend
         }
         finally
         {
+            // Flush any pending output before restoring stdout, so a partial
+            // println caught mid-character on the exception path still drains.
+            if (runStream != null)
+            {
+                runStream.flush();
+            }
             System.setOut(original);
         }
         // Surface the full cause chain to the IDE log so the user sees what
@@ -289,6 +317,20 @@ public final class TruffleBackend implements PureBackend
         if (err != null)
         {
             err.printStackTrace(System.err);
+            // Pure stack: PureException carries Truffle Node locations and the
+            // polyglot stack records each Pure frame with file:line:col. Without
+            // this the user only sees the Java stack — "toOne expected exactly
+            // 1 element, got 0" tells them nothing about which Pure call chain
+            // produced the error.
+            String pureStack = org.finos.legend.pure.truffle.runtime.PureStackFormatter.format(err);
+            if (!pureStack.isEmpty())
+            {
+                System.err.println(pureStack);
+                // Wrap the error so the Pure stack reaches the IDE's error
+                // panel (which renders ExecutionResult.error.getMessage()),
+                // not just stderr.
+                err = new RuntimeException(err.getMessage() + pureStack, err);
+            }
         }
         return new ExecutionResult(
                 runBuf.toString(StandardCharsets.UTF_8),

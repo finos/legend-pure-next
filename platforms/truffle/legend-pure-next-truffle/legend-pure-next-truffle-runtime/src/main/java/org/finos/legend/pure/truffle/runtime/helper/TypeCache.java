@@ -89,7 +89,7 @@ public final class TypeCache implements TruffleTypeCache
     /**
      * Pre-built {@link java.util.function.Supplier} per Pure class path.
      * Each entry wraps a {@link java.lang.invoke.MethodHandle} produced via
-     * {@link java.lang.invoke.LambdaMetafactory} from the Impl class's
+     * {@link java.lang.invoke.LambdaMetafactory} from the PDBHelper class's
      * no-arg constructor — invocation is a direct virtual call into the
      * constructor body, no reflection per use. JFR identified
      * {@code Constructor.newInstance} + JDK access-check overhead at ~7%
@@ -127,7 +127,7 @@ public final class TypeCache implements TruffleTypeCache
     }
 
     /**
-     * Reflection-free factory for the Impl class at {@code classPath}. The
+     * Reflection-free factory for the PDBHelper class at {@code classPath}. The
      * first lookup resolves a no-arg-constructor {@link java.lang.invoke.MethodHandle};
      * subsequent calls go through {@code MethodHandle.invoke} — slightly slower
      * than a {@code LambdaMetafactory}-generated {@code Supplier} but

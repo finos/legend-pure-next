@@ -52,10 +52,8 @@ public class MetamodelFactoriesWarmWallBenchTest
     static void setup() throws IOException
     {
         Path buildDir = locateBuildDir();
-        TrufflePdbLoader coreLoader = new TrufflePdbLoader(
-                buildDir.resolve("core.pdb"), "core", List.of());
-        TrufflePdbLoader compilerLoader = new TrufflePdbLoader(
-                buildDir.resolve("compiler.pdb"), "compiler", List.of("core"));
+        TrufflePdbLoader coreLoader = new TrufflePdbLoader(buildDir.resolve("core.pdb"));
+        TrufflePdbLoader compilerLoader = new TrufflePdbLoader(buildDir.resolve("compiler.pdb"));
         TruffleModuleRegistry registry = new TruffleModuleRegistry();
         registry.register(coreLoader);
         registry.register(compilerLoader);

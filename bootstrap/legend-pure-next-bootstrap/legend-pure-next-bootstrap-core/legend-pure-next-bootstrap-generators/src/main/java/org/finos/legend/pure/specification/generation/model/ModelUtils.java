@@ -237,8 +237,9 @@ public final class ModelUtils
     /**
      * Concrete subtypes reachable from {@code typeName} (its closure plus self if
      * concrete). The returned set contains only non-abstract class names. Classes
-     * marked {@code @transientCompilerOnly} are excluded — they exist only in
-     * the in-memory compile-time graph and never participate in serialization.
+     * marked {@code @transientCompilerOnly} or carrying the {@code compiler.pointer}
+     * stereotype are excluded — they exist only in the in-memory compile-time graph
+     * and never participate in serialization as their own table.
      */
     public static MutableSet<String> reachableConcreteSubtypes(M3Model m3Model, String typeName)
     {
@@ -248,14 +249,14 @@ public final class ModelUtils
             return result;
         }
         ClassInfo self = m3Model.classInfoMap().get(typeName);
-        if (self != null && !isAbstract(self) && !isTransientCompilerOnly(self))
+        if (self != null && !isAbstract(self) && !isTransientCompilerOnly(self) && !isCompilerPointer(self))
         {
             result.add(typeName);
         }
         for (String s : collectAllSubtypes(m3Model, typeName))
         {
             ClassInfo ci = m3Model.classInfoMap().get(s);
-            if (ci == null || !isTransientCompilerOnly(ci))
+            if (ci == null || (!isTransientCompilerOnly(ci) && !isCompilerPointer(ci)))
             {
                 result.add(s);
             }
@@ -270,6 +271,23 @@ public final class ModelUtils
     public static boolean isTransientCompilerOnly(ClassInfo ci)
     {
         return ci != null && hasStereotype(ci.stereotypes, "transientCompilerOnly");
+    }
+
+    /**
+     * True iff the class carries the {@code compiler.pointer} stereotype.
+     *
+     * <p>Pointer classes (e.g. {@code FunctionPointer}, {@code ClassPointer}) live
+     * in m3.ttl so they get Java interfaces + XImpls — but their instances are
+     * compile-time-only indirections and never serialize as their own table.
+     * The pointer DI's resolution key collapses to a {@code PointerRef} at
+     * slot-write time, in the slot where the pointer appears.</p>
+     *
+     * <p>So FBS schema gen, FBS Java wrapper/writer gen, and protocol gen all
+     * skip pointer classes; only Java interface/XImpl codegen runs.</p>
+     */
+    public static boolean isCompilerPointer(ClassInfo ci)
+    {
+        return ci != null && ci.stereotypes.contains("compiler.pointer");
     }
 
     /**
@@ -450,7 +468,11 @@ public final class ModelUtils
     {
         MutableList<String> result = Lists.mutable.empty();
         collectSubtypesRecursive(m3Model, className, result);
-        return result.reject(name -> isAbstract(m3Model.classInfoMap().get(name))).sortThis();
+        return result.reject(name ->
+        {
+            ClassInfo ci = m3Model.classInfoMap().get(name);
+            return isAbstract(ci) || isCompilerPointer(ci);
+        }).sortThis();
     }
 
     private static void collectSubtypesRecursive(M3Model m3Model, String className, MutableList<String> result)

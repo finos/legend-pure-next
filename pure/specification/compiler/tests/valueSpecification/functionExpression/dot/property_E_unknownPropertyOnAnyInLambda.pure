@@ -1,0 +1,21 @@
+###Error
+Can't find property 'name' in class 'Any' (at valueSpecification/functionExpression/dot/property_E_unknownPropertyOnAnyInLambda:20c37-20c41)
+
+###Pure
+import meta::pure::metamodel::type::*;
+
+function test::anyValues():Any[*]
+{
+    [];
+}
+
+// Regression: when an unresolved property access on an Any[1]-typed lambda
+// parameter is followed by a downstream `cast(@T)` (or any other dispatch
+// over multiple candidates that re-resolves the lambda body), the error
+// must still be surfaced. Earlier the candidate-trial rollback dropped the
+// `Can't find property` error and the unresolved FunctionExpression reached
+// the PDB writer, which crashed with `null _func()`.
+function test::tst():String[*]
+{
+    test::anyValues()->filter(v | $v.name == 'RED')->cast(@String);
+}

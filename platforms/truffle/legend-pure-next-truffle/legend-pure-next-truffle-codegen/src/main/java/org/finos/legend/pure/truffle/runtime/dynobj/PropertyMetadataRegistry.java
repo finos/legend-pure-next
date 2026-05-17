@@ -12,13 +12,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Per-(Pure-class, property-name) declared Java type registry. Populated by
- * each generated XImpl's {@code static} initialiser when its class first
+ * each generated XPDBHelper's {@code static} initialiser when its class first
  * loads. Used by {@link PureDynamicObject#writeProperty(String, Object)} to
  * pick the right {@code PropertyCoercion} target — the same per-property
- * type info the XImpl's typed setter parameter carries.
+ * type info the XPDBHelper's typed setter parameter carries.
  *
  * <p>Lazy-load on miss: if a {@code getType} call doesn't find an entry,
- * the matching XImpl class is loaded via {@link Class#forName}, which runs
+ * the matching XPDBHelper class is loaded via {@link Class#forName}, which runs
  * its {@code static} block and populates the registry. Subsequent calls hit
  * the cached entry.</p>
  */
@@ -33,7 +33,7 @@ public final class PropertyMetadataRegistry
     /**
      * Populate the registry by walking the Pure {@code Class} element's
      * properties + propertiesFromAssociations + stereotypes. This is the
-     * "no-codegen" path for user-defined classes: no per-class XImpl exists,
+     * "no-codegen" path for user-defined classes: no per-class XPDBHelper exists,
      * so the per-property type and equality-key metadata is derived directly
      * from the Pure class definition at runtime. Idempotent and lazy
      * (one-shot per Pure path).
@@ -42,7 +42,7 @@ public final class PropertyMetadataRegistry
      * org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory#createInstance}
      * and from {@link PureShapeRegistry#shapeFor} before snapshotting, so the
      * Shape's sharedData ends up populated for user classes the same way
-     * metamodel classes inherit theirs from XImpl static{} blocks.</p>
+     * metamodel classes inherit theirs from XPDBHelper static{} blocks.</p>
      */
     public static void ensurePopulated(String purePath,
             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
@@ -69,7 +69,7 @@ public final class PropertyMetadataRegistry
     }
 
     /**
-     * PropertyAccessor-driven read for either a PDO or a typed XImpl —
+     * PropertyAccessor-driven read for either a PDO or a typed XPDBHelper —
      * mirrors {@code PureObj.read} but lives in the codegen module so this
      * class can stay alongside the registry. Returns null for ABSENT.
      */
@@ -158,7 +158,7 @@ public final class PropertyMetadataRegistry
 
     /**
      * Register a property's declared Java type for a Pure class. Called
-     * from each XImpl's {@code static} initialiser at class-load time.
+     * from each XPDBHelper's {@code static} initialiser at class-load time.
      */
     public static void register(String purePath, String propName, Class<?> paramType)
     {
@@ -169,7 +169,7 @@ public final class PropertyMetadataRegistry
      * Register the {@code <<equality.Key>>}-annotated property names for a
      * Pure class. Used by {@link PureDynamicObject#equals(Object)} and
      * {@code hashCode()} to compare by key-property values, matching the
-     * generated XImpl's equality semantics.
+     * generated XPDBHelper's equality semantics.
      */
     public static void registerEqualityKeys(String purePath, String... propNames)
     {
@@ -182,7 +182,7 @@ public final class PropertyMetadataRegistry
         String[] keys = EQUALITY_KEYS.get(purePath);
         if (keys == null)
         {
-            // Lazy-load the XImpl class so its static{} block registers.
+            // Lazy-load the XPDBHelper class so its static{} block registers.
             try { Class.forName(toJavaClassName(purePath)); } catch (ClassNotFoundException ignored) {}
             keys = EQUALITY_KEYS.get(purePath);
         }
@@ -191,7 +191,7 @@ public final class PropertyMetadataRegistry
 
     /**
      * Look up the declared Java type for a property on a Pure class.
-     * Triggers XImpl class load on first miss so the registry self-populates.
+     * Triggers XPDBHelper class load on first miss so the registry self-populates.
      * Returns {@code null} when the property/class is unknown (caller skips
      * coercion).
      */
@@ -208,7 +208,7 @@ public final class PropertyMetadataRegistry
 
     /**
      * Snapshot the per-property type map for {@code purePath}, loading the
-     * XImpl if needed. Returns an empty map when no XImpl exists. Used by
+     * XPDBHelper if needed. Returns an empty map when no XPDBHelper exists. Used by
      * {@link PureShapeRegistry} to bake the lookup into the Shape's
      * sharedData so per-write coercion avoids re-traversing the two-level
      * CHM here.
@@ -223,26 +223,26 @@ public final class PropertyMetadataRegistry
         return inner != null ? inner : java.util.Map.of();
     }
 
-    /** Pure paths that have no XImpl on the classpath. Avoids retrying
+    /** Pure paths that have no XPDBHelper on the classpath. Avoids retrying
      *  {@code Class.forName} (which itself walks the classpath) + the
      *  regex {@code split("::")} on every miss for the same path. */
-    private static final java.util.concurrent.ConcurrentHashMap<String, Boolean> NO_XIMPL =
+    private static final java.util.concurrent.ConcurrentHashMap<String, Boolean> NO_XPDBHELPER =
             new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** Resolve the XImpl class for {@code purePath} and return the populated
-     *  inner map (or {@code null} when no XImpl exists). Memoises the
-     *  "no XImpl" verdict in {@link #NO_XIMPL} so subsequent calls for the
+    /** Resolve the XPDBHelper class for {@code purePath} and return the populated
+     *  inner map (or {@code null} when no XPDBHelper exists). Memoises the
+     *  "no XPDBHelper" verdict in {@link #NO_XPDBHELPER} so subsequent calls for the
      *  same path skip the {@code Class.forName} and the path-to-FQN build. */
     private static ConcurrentHashMap<String, Class<?>> tryLoadInner(String purePath)
     {
-        if (NO_XIMPL.containsKey(purePath)) return null;
+        if (NO_XPDBHELPER.containsKey(purePath)) return null;
         try
         {
             Class.forName(toJavaClassName(purePath));
         }
         catch (ClassNotFoundException ignored)
         {
-            NO_XIMPL.put(purePath, Boolean.TRUE);
+            NO_XPDBHELPER.put(purePath, Boolean.TRUE);
             return null;
         }
         return META.get(purePath);
@@ -268,7 +268,7 @@ public final class PropertyMetadataRegistry
             if (idx < 0) break;
             start = idx + 2;
         }
-        sb.append("Impl");
+        sb.append("PDBHelper");
         return sb.toString();
     }
 

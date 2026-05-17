@@ -1,0 +1,17 @@
+###Error
+The variable 'y' is unknown! (at function/userDefined/constraints/constraints_E_unknownVariable:7c5-7c6)
+
+###Pure
+function pack::constrained(x: Integer[1]): Integer[1]
+[
+    $y > 0
+]
+{
+    $x + 1
+}
+
+###CompilerStats
+inferenceRollbacks: 20
+candidateEvaluations: 19
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 2

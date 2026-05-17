@@ -1,0 +1,20 @@
+###Error
+The profile 'Unknown' can't be found in property 'value' in class 'pack::MyClass' (at class/property/profile_E_unknownProfile:15c5-15c11)
+
+###Pure
+import pack::*;
+
+Profile pack::AProfile
+{
+  stereotypes: [flag];
+  tags: [tag1];
+}
+
+Class pack::MyClass
+{
+  <<Unknown.flag>> value: Integer[1];
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

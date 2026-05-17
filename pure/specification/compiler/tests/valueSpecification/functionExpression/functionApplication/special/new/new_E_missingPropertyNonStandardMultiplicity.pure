@@ -1,0 +1,21 @@
+###Error
+Missing required property 'values' of type String in new expression (at valueSpecification/functionExpression/functionApplication/special/new/new_E_missingPropertyNonStandardMultiplicity:8c3-8c22)
+Missing required property 'label' of type String in new expression (at valueSpecification/functionExpression/functionApplication/special/new/new_E_missingPropertyNonStandardMultiplicity:8c3-8c22)
+
+###Pure
+function test::new::testNew(): Any[*]
+{
+  ^test::new::Holder();
+}
+
+Class test::new::Holder
+{
+  values: String[2..*];
+  label: String[1];
+}
+
+###CompilerStats
+inferenceRollbacks: 2
+candidateEvaluations: 2
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1

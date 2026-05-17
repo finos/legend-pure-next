@@ -41,14 +41,14 @@ import java.nio.file.Path;
 import java.util.Set;
 
 /**
- * Generates Java Interface + Impl classes from Pure Class definitions in a PDB.
+ * Generates Java Interface + PDBHelper classes from Pure Class definitions in a PDB.
  *
  * <p>Reads Class elements from a compiled PDB (core.pdb, compiler.pdb) and
  * emits Java source files following the same pattern as RdfJavaGenerator:
  * underscore-prefixed getters/setters, fluent setters, MutableList for [*],
  * _copy() for shallow cloning.</p>
  *
- * <p>Skips classes whose Impl already exists on the classpath (metamodel
+ * <p>Skips classes whose PDBHelper already exists on the classpath (metamodel
  * classes generated from m3.ttl by RdfJavaGenerator).</p>
  *
  * <p>This is temporary Java code — will eventually be rewritten in Pure.</p>
@@ -101,7 +101,7 @@ public class PdbJavaGenerator
         Files.createDirectories(outputDir);
 
         int interfaces = 0;
-        int impls = 0;
+        int helpers = 0;
         int enumCount = 0;
         int skipped = 0;
 
@@ -111,7 +111,7 @@ public class PdbJavaGenerator
             // through PDO + PureShapeRegistry + PropertyMetadataRegistry
             // (populated at PDB load time from the Class element's
             // properties). Only the bootstrap metamodel + protocol/grammar
-            // + core collection types need generated XImpls, because the
+            // + core collection types need generated XPDBHelpers, because the
             // runtime reads their FB encoding via per-property `__load_X`
             // logic. Test/user classes living in core.pdb / compiler.pdb
             // are loaded as Pure-built PDOs from the resolver and never go
@@ -128,13 +128,13 @@ public class PdbJavaGenerator
             // generated writer's typed `instanceof <X>` clauses have been
             // dropped (they were paired with `pureTypeIs`/`pureTypeOf != null`
             // checks that already cover both PDO and the no-longer-existing
-            // typed XImpls).
+            // typed XPDBHelpers).
 
             if (!cr.isAbstract)
             {
-                Files.write(packageDir.resolve(cr.name + "Impl.java"),
-                        generateImpl(cr).getBytes(StandardCharsets.UTF_8));
-                impls++;
+                Files.write(packageDir.resolve(cr.name + "PDBHelper.java"),
+                        generateHelper(cr).getBytes(StandardCharsets.UTF_8));
+                helpers++;
             }
         }
 
@@ -167,11 +167,11 @@ public class PdbJavaGenerator
 
         // The "skipped" tally is everything outside meta::pure::metamodel::*
         // — those classes deliberately use the PDO + PureShapeRegistry path
-        // at runtime instead of generated Impls. The previous "already on
+        // at runtime instead of generated PDBHelpers. The previous "already on
         // classpath" label was misleading; this is by design, not a
         // collision.
         System.out.println("    Generated " + interfaces + " interfaces, "
-                + impls + " impls, " + enumCount + " enums ("
+                + helpers + " helpers, " + enumCount + " enums ("
                 + skipped + " non-metamodel skipped — use PDO at runtime)");
     }
 
@@ -222,13 +222,13 @@ public class PdbJavaGenerator
 
     /**
      * Heuristic: is the Pure class part of the bootstrap metamodel (one that
-     * actually needs an FB-decoder XImpl)? Everything outside is treated as a
+     * actually needs an FB-decoder XPDBHelper)? Everything outside is treated as a
      * user/test class — its instances are Pure-built at runtime via
      * {@code TruffleInstanceFactory.createInstance} → {@code PureDynamicObject}
      * and don't go through per-class FB decode. Class-element-side metadata
      * (property types, equality keys) is populated at PDB-load time by the
      * loader walking the {@code Class} element's {@code properties} sequence,
-     * not via {@code XImpl.static{}} blocks.
+     * not via {@code XPDBHelper.static{}} blocks.
      */
     private static boolean isMetamodelClass(String fullPath)
     {
@@ -482,7 +482,7 @@ public class PdbJavaGenerator
         sb.append("public interface ").append(cr.name);
 
         MutableList<String> validExtends = cr.generalizations.select(g ->
-                findClass(g) != null || implExistsOnClasspath(resolveFullPath(g)));
+                findClass(g) != null || helperExistsOnClasspath(resolveFullPath(g)));
         if (validExtends.isEmpty() && !"Any".equals(cr.name))
         {
             if (!cr.generalizations.isEmpty())
@@ -535,11 +535,11 @@ public class PdbJavaGenerator
     }
 
     // =========================================================================
-    // Impl generation
+    // PDBHelper generation
     // =========================================================================
 
     /**
-     * Emits the merged Pure-type Impl class. One class per Pure type
+     * Emits the merged Pure-type PDBHelper class. One class per Pure type
      * supports BOTH:
      * <ul>
      *   <li><b>Pure-built mode</b> — default constructor, fields populated
@@ -549,7 +549,7 @@ public class PdbJavaGenerator
      *       first read, then cached.</li>
      * </ul>
      *
-     * <p>This replaces the previous two-class design ({@code XImpl} +
+     * <p>This replaces the previous two-class design ({@code XPDBHelper} +
      * {@code XFlatBufferWrapper}) which forced every Pure property access
      * to carry a bi-morphic class guard at runtime — even though Pure's
      * type system says regular (non-QP) properties are statically dispatched.
@@ -561,14 +561,14 @@ public class PdbJavaGenerator
      * null". The sentinel lives at the package-level via the static field
      * (only emitted on classes that have FBW backing).</p>
      */
-    private String generateImpl(ClassRecord cr)
+    private String generateHelper(ClassRecord cr)
     {
         StringBuilder sb = new StringBuilder();
         String pkg = toJavaPackage(cr.packagePath);
 
         // Determine if this class has a FlatBuffer schema definition. If so,
         // we generate the merged class with FBW lazy-decode capability.
-        // Otherwise we generate the plain Impl form (no fb field, no UNSET
+        // Otherwise we generate the plain PDBHelper form (no fb field, no UNSET
         // sentinel — saves memory for classes that can never come from PDB).
         String defName = (fbsSchema != null) ? fbsSchema.findDefTableName(cr.name) : null;
         java.util.List<FbsSchema.FbsField> fbsFields = (defName != null) ? fbsSchema.getTableFields(defName) : null;
@@ -582,7 +582,7 @@ public class PdbJavaGenerator
             sb.append("import org.finos.legend.pure.truffle.types.ObjectSequence;\n");
             sb.append("import org.finos.legend.pure.truffle.types.PureSequence;\n\n");
         }
-        sb.append("public class ").append(cr.name).append("Impl");
+        sb.append("public class ").append(cr.name).append("PDBHelper");
         sb.append(" implements org.finos.legend.pure.truffle.runtime.PropertyAccessor");
         if (hasFbw)
         {
@@ -601,7 +601,7 @@ public class PdbJavaGenerator
             // Static-init: register a PureFbDecoderRegistry decoder for this
             // Pure type so PureDynamicObject.readProperty can fall through
             // to here on cache miss when constructed with a raw XDef as fb.
-            // Lambda allocates a transient XImpl and calls its readProperty
+            // Lambda allocates a transient XPDBHelper and calls its readProperty
             // (which has the per-property decode switch). PureDynamicObject
             // caches the result in its DOL slot so subsequent reads bypass
             // this path entirely.
@@ -609,7 +609,7 @@ public class PdbJavaGenerator
             sb.append("        org.finos.legend.pure.truffle.runtime.dynobj.PureFbDecoderRegistry.register(\n");
             sb.append("                \"").append(cr.fullPath).append("\",\n");
             sb.append("                (__name, __fb, __resolver, __parent) -> {\n");
-            sb.append("                    ").append(cr.name).append("Impl __tmp = new ").append(cr.name).append("Impl(\n");
+            sb.append("                    ").append(cr.name).append("PDBHelper __tmp = new ").append(cr.name).append("PDBHelper(\n");
             sb.append("                            (").append(FBS_PKG).append(".").append(defName).append(") __fb, __resolver, __parent);\n");
             // Return readProperty's result verbatim — including the ABSENT
             // sentinel for "no such property". PureFbDecoder propagates this
@@ -621,7 +621,7 @@ public class PdbJavaGenerator
             sb.append("                });\n");
             // Register per-property declared types so PDO.writeProperty can
             // run PropertyCoercion (singleton → PureSequence wrapping for [*]
-            // properties, enum coercion, etc.). Same paramType the XImpl's
+            // properties, enum coercion, etc.). Same paramType the XPDBHelper's
             // typed setter parameter carries.
             for (PropRecord pr : allProps)
             {
@@ -637,7 +637,7 @@ public class PdbJavaGenerator
                 sb.append("                \"").append(cr.fullPath).append("\", \"").append(pr.name).append("\", ").append(registered).append(".class);\n");
             }
             // Register equality-key property names so PDO.equals/hashCode
-            // can match the typed XImpl's `<<equality.Key>>`-based semantics.
+            // can match the typed XPDBHelper's `<<equality.Key>>`-based semantics.
             // Walks the hierarchy directly so an override that adds
             // @equality.Key on a redeclared inherited property still gets
             // picked up — `allProps` shadows the override.
@@ -673,7 +673,7 @@ public class PdbJavaGenerator
                 sb.append("                \"").append(cr.fullPath).append("\", \"").append(pr.name).append("\", ").append(registered).append(".class);\n");
             }
             // Register equality-key property names so PDO.equals/hashCode
-            // can match the typed XImpl's `<<equality.Key>>`-based semantics.
+            // can match the typed XPDBHelper's `<<equality.Key>>`-based semantics.
             // Walks the hierarchy directly so an override that adds
             // @equality.Key on a redeclared inherited property still gets
             // picked up — `allProps` shadows the override.
@@ -691,9 +691,9 @@ public class PdbJavaGenerator
             sb.append("    }\n\n");
         }
 
-        // Per-property storage fields dropped post-XImpl-slim: the typed
+        // Per-property storage fields dropped post-XPDBHelper-slim: the typed
         // `_X()` getter is gone (interface defaults handle it via
-        // PropertyAccessor.readProperty), and XImpls are transient
+        // PropertyAccessor.readProperty), and XPDBHelpers are transient
         // decoder-lambda locals so per-instance caching adds no value
         // (the PDO's DOL caches the decoded value on the user-visible side).
         // FBW back-reference (null for Pure-built instances). Final so PE
@@ -713,27 +713,27 @@ public class PdbJavaGenerator
         // Default constructor (Pure-built mode)
         if (hasFbw)
         {
-            sb.append("    public ").append(cr.name).append("Impl()\n");
+            sb.append("    public ").append(cr.name).append("PDBHelper()\n");
             sb.append("    {\n        this.fb = null;\n        this.resolver = null;\n        this._parent = null;\n    }\n\n");
             // FBW-built constructors
-            sb.append("    public ").append(cr.name).append("Impl(")
+            sb.append("    public ").append(cr.name).append("PDBHelper(")
                     .append(FBS_PKG).append(".").append(defName).append(" fb, TruffleMetadataAccess resolver)\n");
             sb.append("    {\n        this(fb, resolver, null);\n    }\n\n");
-            sb.append("    public ").append(cr.name).append("Impl(")
+            sb.append("    public ").append(cr.name).append("PDBHelper(")
                     .append(FBS_PKG).append(".").append(defName).append(" fb, TruffleMetadataAccess resolver, Object parent)\n");
             sb.append("    {\n        this.fb = fb;\n        this.resolver = resolver;\n        this._parent = parent;\n    }\n\n");
             sb.append("    @Override\n    public Object _fbParent() { return this._parent; }\n\n");
         }
         else
         {
-            sb.append("    public ").append(cr.name).append("Impl() {}\n\n");
+            sb.append("    public ").append(cr.name).append("PDBHelper() {}\n\n");
         }
 
         // FBW lazy-decode helpers `__load_X()` — used by `__readRaw__X()`
         // in the readProperty switch when the field is still UNSET. No
         // longer paired with typed `_X()`/`_X(v)` overrides: the typed
         // interface's default bodies route through PropertyAccessor, and
-        // post-FB-decode-flip no caller invokes typed getters on an XImpl
+        // post-FB-decode-flip no caller invokes typed getters on an XPDBHelper
         // (decoder lambdas use readProperty directly; user-visible values
         // are PDOs).
         if (hasFbw)
@@ -755,13 +755,13 @@ public class PdbJavaGenerator
             }
         }
 
-        // equals() / hashCode() — XImpls are transient (decoder-lambda
+        // equals() / hashCode() — XPDBHelpers are transient (decoder-lambda
         // locals), never compared. PDO equality goes through the Shape's
         // ShapeMeta.equalityKeys. Default Object equals/hashCode (identity)
         // is sufficient.
 
         // _copy() — dropped entirely. The typed interface no longer declares
-        // `_copy()`; nothing remaining in the runtime calls it on an XImpl.
+        // `_copy()`; nothing remaining in the runtime calls it on an XPDBHelper.
 
         appendReadPropertySwitch(sb, allProps, hasFbw);
         appendWritePropertySwitch(sb, allProps, false, hasFbw);
@@ -784,7 +784,7 @@ public class PdbJavaGenerator
         sb.append("    @Override\n");
         sb.append("    public Object readProperty(String name)\n");
         sb.append("    {\n");
-        // FBW classes: switch directly to `__load_X()` (FB decode). XImpls
+        // FBW classes: switch directly to `__load_X()` (FB decode). XPDBHelpers
         // are transient — the per-instance cache that `__readRaw__X` provided
         // is now redundant because the PDO's DOL caches the decoded value on
         // the user-visible side. Non-FBW classes have no `fb`, no storage
@@ -812,7 +812,7 @@ public class PdbJavaGenerator
     /**
      * Emits the {@code writeProperty(String, Object)} method required by
      * {@link org.finos.legend.pure.truffle.runtime.PropertyAccessor}. For
-     * {@code XImpl} classes this delegates to the typed setter
+     * {@code XPDBHelper} classes this delegates to the typed setter
      * ({@code _foo(coerce(value))}); FlatBuffer wrappers throw
      * {@code UnsupportedOperationException} because they're read-only.
      * Replaces {@code MethodHandle.invoke} reflection in
@@ -826,13 +826,13 @@ public class PdbJavaGenerator
         sb.append("    @Override\n");
         sb.append("    public void writeProperty(String name, Object value)\n");
         sb.append("    {\n");
-        // Post-FB-decode flip + ProtocolTranslator migration: XImpls are
+        // Post-FB-decode flip + ProtocolTranslator migration: XPDBHelpers are
         // transient decoder-lambda locals and never receive property writes
         // from any runtime path. Stubbing the body removes ~30 lines × 246
-        // XImpls of dead code while preserving the PropertyAccessor contract.
+        // XPDBHelpers of dead code while preserving the PropertyAccessor contract.
         if (true)
         {
-            sb.append("        throw new UnsupportedOperationException(\"XImpl is transient; write to PDO instead\");\n");
+            sb.append("        throw new UnsupportedOperationException(\"XPDBHelper is transient; write to PDO instead\");\n");
             sb.append("    }\n\n");
             return;
         }
@@ -856,7 +856,7 @@ public class PdbJavaGenerator
                 String esc = pr.name.replace("\"", "\\\"");
                 String javaType = resolveJavaType(pr);
                 String boxed = boxType(javaType);
-                // Both FBW and plain Impl classes use Object storage post-flip,
+                // Both FBW and plain PDBHelper classes use Object storage post-flip,
                 // so the same direct-Object-assignment form works for both.
                 // PropertyCoercion handles single-value → PureSequence wrapping
                 // for [*] properties; no typed downcast that would CCE on PDO.
@@ -970,8 +970,8 @@ public class PdbJavaGenerator
         }
 
         // _copy()
-        sb.append("    @Override\n    public ").append(cr.name).append("Impl _copy()\n    {\n");
-        sb.append("        ").append(cr.name).append("Impl copy = new ").append(cr.name).append("Impl();\n");
+        sb.append("    @Override\n    public ").append(cr.name).append("PDBHelper _copy()\n    {\n");
+        sb.append("        ").append(cr.name).append("PDBHelper copy = new ").append(cr.name).append("PDBHelper();\n");
         for (PropRecord pr : allProps)
         {
             sb.append("        copy._").append(pr.name).append("(this._").append(pr.name).append("());\n");
@@ -1013,7 +1013,7 @@ public class PdbJavaGenerator
     // in the eight per-property emit cases.
     // =========================================================================
 
-    // The generated FB writer lives alongside the XImpls in the pdb/codec
+    // The generated FB writer lives alongside the XPDBHelpers in the pdb/codec
     // package — it's part of the PDB codec, not the runtime.
     private static final String WRITER_PKG = "org.finos.legend.pure.truffle.pdb.codec";
     private static final String FBS_FQN = "org.finos.legend.pure.m3.module.pdbModule.fbs";
@@ -1098,7 +1098,7 @@ public class PdbJavaGenerator
         // name `"::"` (BootstrapModule), so a name-based check leaks `::::`
         // into every path that walks through it.
         // pathOf — recursive ::-separated path of a PackageableElement.
-        // Reads via readProp so it works for both typed XImpl and PDO.
+        // Reads via readProp so it works for both typed XPDBHelper and PDO.
         sb.append("    private static String pathOf(Object pe)\n    {\n");
         sb.append("        if (pe == null) { return null; }\n");
         sb.append("        Object nameObj = readProp(pe, \"name\");\n");
@@ -1131,7 +1131,7 @@ public class PdbJavaGenerator
 
         // pointerPath — diagnostic path for validation messages. Uses
         // pureTypeIs to dispatch on the Pure type, falling back to pathOf for
-        // any PackageableElement-like value (typed XImpl OR PDO).
+        // any PackageableElement-like value (typed XPDBHelper OR PDO).
         sb.append("    private static String pointerPath(Object obj)\n    {\n");
         sb.append("        if (pureTypeIs(obj, \"meta::pure::metamodel::function::property::QualifiedProperty\"))\n");
         sb.append("        {\n");
@@ -1163,9 +1163,49 @@ public class PdbJavaGenerator
         sb.append("    }\n\n");
 
         // writePointerRef — typed pointer for union PointerRef fields.
+        //
+        // TempCompilerPointer arms come FIRST. Pointers are opaque (only .path
+        // and .element are populated; all inherited fields like .name / .owner /
+        // .package / .profile are null). Reading them through pathOf(...) would
+        // NPE on null name/package. Pointer arms read .path (and .element for
+        // owner-keyed pointers) directly. pureTypeIs is exact-class — list each
+        // pointer subtype we care about.
         sb.append("    private int writePointerRef(Object obj)\n    {\n");
         sb.append("        byte kind;\n        String[] segments;\n");
-        sb.append("        if (pureTypeIs(obj, \"meta::pure::metamodel::function::property::QualifiedProperty\"))\n");
+        // PE pointers: single-path identity, encoded as kind=0 (Element).
+        sb.append("        if (pureTypeIs(obj, \"meta::pure::metamodel::pointer::PackageableFunctionPointer\")\n");
+        sb.append("                || pureTypeIs(obj, \"meta::pure::metamodel::pointer::ClassPointer\")\n");
+        sb.append("                || pureTypeIs(obj, \"meta::pure::metamodel::pointer::PrimitiveTypePointer\")\n");
+        sb.append("                || pureTypeIs(obj, \"meta::pure::metamodel::pointer::EnumerationPointer\")\n");
+        sb.append("                || pureTypeIs(obj, \"meta::pure::metamodel::pointer::ProfilePointer\")\n");
+        sb.append("                || pureTypeIs(obj, \"meta::pure::metamodel::pointer::AssociationPointer\")\n");
+        sb.append("                || pureTypeIs(obj, \"meta::pure::metamodel::pointer::PackagePointer\"))\n");
+        sb.append("        {\n            kind = 0;\n");
+        sb.append("            segments = new String[]{(String) readProp(obj, \"path\")};\n");
+        sb.append("        }\n");
+        // QualifiedPropertyPointer (kind=2)
+        sb.append("        else if (pureTypeIs(obj, \"meta::pure::metamodel::pointer::QualifiedPropertyPointer\"))\n");
+        sb.append("        {\n            kind = 2;\n");
+        sb.append("            segments = new String[]{(String) readProp(obj, \"path\"), (String) readProp(obj, \"element\")};\n");
+        sb.append("        }\n");
+        // PropertyPointer (kind=1) — also handles ColumnPointer if a ColumnPointer
+        // ever lands here (column has no owner today so this is defensive).
+        sb.append("        else if (pureTypeIs(obj, \"meta::pure::metamodel::pointer::PropertyPointer\")\n");
+        sb.append("                || pureTypeIs(obj, \"meta::pure::metamodel::pointer::ColumnPointer\"))\n");
+        sb.append("        {\n            kind = 1;\n");
+        sb.append("            segments = new String[]{(String) readProp(obj, \"path\"), (String) readProp(obj, \"element\")};\n");
+        sb.append("        }\n");
+        // StereotypePointer (kind=3)
+        sb.append("        else if (pureTypeIs(obj, \"meta::pure::metamodel::pointer::StereotypePointer\"))\n");
+        sb.append("        {\n            kind = 3;\n");
+        sb.append("            segments = new String[]{(String) readProp(obj, \"path\"), (String) readProp(obj, \"element\")};\n");
+        sb.append("        }\n");
+        // TagPointer (kind=4)
+        sb.append("        else if (pureTypeIs(obj, \"meta::pure::metamodel::pointer::TagPointer\"))\n");
+        sb.append("        {\n            kind = 4;\n");
+        sb.append("            segments = new String[]{(String) readProp(obj, \"path\"), (String) readProp(obj, \"element\")};\n");
+        sb.append("        }\n");
+        sb.append("        else if (pureTypeIs(obj, \"meta::pure::metamodel::function::property::QualifiedProperty\"))\n");
         sb.append("        {\n            kind = 2;\n");
         sb.append("            Object _ow = readProp(obj, \"owner\");\n");
         sb.append("            Object _nm = readProp(obj, \"name\");\n");
@@ -1214,7 +1254,7 @@ public class PdbJavaGenerator
         sb.append("    }\n\n");
 
         // readProp — single entry point for reading a Pure property off
-        // either a typed XImpl or a PureDynamicObject. Both implement
+        // either a typed XPDBHelper or a PureDynamicObject. Both implement
         // PropertyAccessor. Coerces PropertyAccessor.ABSENT → null so callers
         // see the same "missing" sentinel as the typed `_X()` getter.
         sb.append("    private static Object readProp(Object o, String name)\n    {\n");
@@ -1257,7 +1297,7 @@ public class PdbJavaGenerator
 
     private void emitWriteMethod(StringBuilder sb, ClassRecord cr)
     {
-        // Parameter is Object so both typed XImpl and PureDynamicObject can
+        // Parameter is Object so both typed XPDBHelper and PureDynamicObject can
         // flow through. Method name uses the full Pure path so two classes
         // sharing a simple name across packages don't collide on the Object
         // overload. Reads inside use readProp(obj, "X") (PropertyAccessor).
@@ -1370,7 +1410,7 @@ public class PdbJavaGenerator
 
     private void emitValidation(StringBuilder sb, PropRecord pr, String className)
     {
-        // readProp returns Object; works for both XImpl (typed) and PDO.
+        // readProp returns Object; works for both XPDBHelper (typed) and PDO.
         if ("PureOne".equals(pr.multiplicity))
         {
             sb.append("        if (validateRequired && readProp(obj, \"").append(pr.name).append("\") == null) { throw new IllegalArgumentException(")
@@ -1800,7 +1840,7 @@ public class PdbJavaGenerator
         sb.append("        byte ").append(camel).append("Type = 0;\n");
         // Self-ref flows through the AncestorRef branch (encoded explicitly
         // as depth=0), so `uType == 0` strictly means "field absent."
-        // Reads through readProp so both XImpl and PDO receivers work.
+        // Reads through readProp so both XPDBHelper and PDO receivers work.
         // Dispatch order: AncestorRef (cycle break) → concrete Defs (typed +
         // PDO twin) → PointerRef as fallback for any remaining PE-like value.
         sb.append("        { Object _u_").append(camel).append(" = readProp(obj, \"").append(pr.name).append("\");\n");
@@ -1868,7 +1908,7 @@ public class PdbJavaGenerator
             String defaultLit = primitiveDefaultLiteral(fb.type());
             String boxedType = primitiveBoxedTypeName(fb.type());
             // readProp returns Object; cast through the boxed type for the
-            // typed FBS add(...). Works for both XImpl (returns boxed) and PDO.
+            // typed FBS add(...). Works for both XPDBHelper (returns boxed) and PDO.
             sb.append("        { Object _p = readProp(obj, \"").append(pr.name).append("\");\n");
             sb.append("          if (_p != null) ").append(defName).append(".").append(addMethod).append("(builder, (").append(boxedType).append(") _p); }\n");
             // Rely on FBS default-omission for null; no explicit add when null.
@@ -2255,10 +2295,10 @@ public class PdbJavaGenerator
         ClassRecord cr = findClassByShortName(pureName);
         if (cr != null)
         {
-            // Post-XFBW-drop: nested decode constructs Impl directly (which
+            // Post-XFBW-drop: nested decode constructs PDBHelper directly (which
             // has the same {@code (XDef fb, TruffleMetadataAccess resolver,
             // Object parent)} constructor as the old FBW had).
-            return toJavaPackage(cr.packagePath) + "." + cr.name + "Impl";
+            return toJavaPackage(cr.packagePath) + "." + cr.name + "PDBHelper";
         }
         return null;
     }
@@ -2648,9 +2688,9 @@ public class PdbJavaGenerator
         return false;
     }
 
-    private static boolean implExistsOnClasspath(String fullPurePath)
+    private static boolean helperExistsOnClasspath(String fullPurePath)
     {
-        String javaClassName = fullPurePath.replace("::", ".") + "Impl";
+        String javaClassName = fullPurePath.replace("::", ".") + "PDBHelper";
         try
         {
             Class.forName(javaClassName);
@@ -3218,16 +3258,13 @@ public class PdbJavaGenerator
                 continue;
             }
             Path pdbPath = Path.of(args[i]);
-            String moduleName = pdbPath.getFileName().toString().replace(".pdb", "");
             // Canonicalize for the banner — Maven passes
             // ${project.basedir}/../../../../shared/core.pdb which is
             // functionally correct but unreadable in build logs.
             inputPaths.add(pdbPath.toAbsolutePath().normalize().toString());
-            MutableList<String> deps = Lists.mutable.withAll(moduleNames);
-            PDBModule pdb = new PDBModule(pdbPath, PDBModule.Mode.EXECUTION,
-                    moduleName, "*", deps);
+            PDBModule pdb = new PDBModule(pdbPath, PDBModule.Mode.EXECUTION);
             modules.add(pdb);
-            moduleNames.add(moduleName);
+            moduleNames.add(pdb.getName());
         }
         // Load FBS schema if --fbs flag is provided (for wrapper generation)
         FbsSchema fbsSchema = null;

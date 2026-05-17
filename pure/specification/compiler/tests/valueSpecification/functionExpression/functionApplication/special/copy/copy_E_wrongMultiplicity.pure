@@ -1,0 +1,25 @@
+###Error
+Multiplicity mismatch for property 'name': expected [1], got [0] (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongMultiplicity:10c11-10c24)
+Multiplicity mismatch for property 'name': expected [1], got [3] (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongMultiplicity:11c11-11c37)
+Multiplicity mismatch for property 'value': expected [0..1], got [3] (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongMultiplicity:12c11-12c32)
+
+###Pure
+function test::copy::testCopy(): Any[*]
+{
+  let c = ^test::copy::Holder(name='ok');
+  let a = ^$c(name = []);
+  let b = ^$c(name = ['a', 'b', 'c']);
+  let d = ^$c(value = [1, 2, 3]);
+  let e = ^$c(many = [1, 2, 3]);
+}
+
+Class test::copy::Holder
+{
+  name: String[1];
+  value: Integer[0..1];
+  many: Any[*];
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 15

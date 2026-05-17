@@ -1,0 +1,21 @@
+###Error
+Type mismatch for property 'name': expected String, got Integer (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongType:9c11-9c24)
+Type mismatch for property 'value': expected Integer, got String (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongType:10c11-10c28)
+
+###Pure
+function test::copy::testCopy(): Any[*]
+{
+  let c = ^test::copy::Holder(name='ok');
+  let a = ^$c(name = 42);
+  let b = ^$c(value = 'bad');
+}
+
+Class test::copy::Holder
+{
+  name: String[1];
+  value: Integer[0..1];
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 9

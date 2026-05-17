@@ -83,7 +83,7 @@ public final class EqualNode extends PureNode
 
     /**
      * Slow path — handles AtomicValue/PureSequence wrappers, deep PureSequence
-     * equality, generated-Impl property-key equality (uses reflection), Map
+     * equality, generated-PDBHelper property-key equality (uses reflection), Map
      * deep equality, etc. Boundary-isolated so PE doesn't try to inline the
      * recursive {@code callPureEquals} chain (would bust the inlining budget,
      * see comment on callPureEquals).
@@ -279,9 +279,9 @@ public final class EqualNode extends PureNode
                 return sa.equals(sb);
             }
         }
-        // Generated Impl equality — compare by property values respecting <<equality.Key>>.
+        // Generated PDBHelper equality — compare by property values respecting <<equality.Key>>.
         // Both are Pure metamodel objects iff their pureTypeOf is non-null
-        // (covers PureDynamicObject + legacy XImpl).
+        // (covers PureDynamicObject + legacy XPDBHelper).
         String ptA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(a);
         String ptB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(b);
         boolean aIsPure = ptA != null;
@@ -318,7 +318,7 @@ public final class EqualNode extends PureNode
      * Check if two Any instances represent the same Pure type.
      * Compares classifierGenericType paths. This correctly distinguishes
      * LeftClass from BottomClass (different types, not equal) while still
-     * matching FlatBufferWrapper vs Impl of the same type.
+     * matching FlatBufferWrapper vs PDBHelper of the same type.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean samePureType(Object a, Object b)
@@ -388,7 +388,7 @@ public final class EqualNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static java.util.Set<String> collectEqualityKeyProperties(Object obj, TruffleMetadataAccess resolver)
     {
-        // Fast path: PropertyMetadataRegistry is populated by each XImpl's
+        // Fast path: PropertyMetadataRegistry is populated by each XPDBHelper's
         // static{} block with the @equality.Key property names — direct
         // lookup by Pure path, no resolver/Type walk needed.
         String purePath = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(obj);

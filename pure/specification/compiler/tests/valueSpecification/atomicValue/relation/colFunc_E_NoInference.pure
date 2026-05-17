@@ -1,0 +1,16 @@
+###Error
+Can't resolve lambda parameter types (at valueSpecification/atomicValue/relation/colFunc_E_NoInference:8c10-8c15)
+
+###Pure
+
+function test():Any[1]
+{
+   ~name:x|'ok'
+}
+
+###CompilerStats
+inferenceRollbacks: 4
+candidateEvaluations: 1
+rollbackSites:
+  LAMBDA_DISPATCH = 2
+  PARAM_UNRESOLVED = 2

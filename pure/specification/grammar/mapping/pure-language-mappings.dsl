@@ -98,6 +98,15 @@ rule instanceLiteralToken {
                    value = stripQuotes($ctx.STRING.text),
                    genericType = primitiveType("String"))
   }
+  # Triple-quoted multi-line string literal — `'''body'''`. Same AST shape as
+  # STRING (an AtomicValue of String type), the body is the lexed text with
+  # the 3-char `'''` opening + closing delimiters stripped, newlines preserved.
+  alt when $ctx.STRING_TRIPLE {
+    return newImpl(AtomicValue,
+                   sourceInformation = buildSourceInfo($ctx),
+                   value = stripTripleQuotes($ctx.STRING_TRIPLE.text),
+                   genericType = primitiveType("String"))
+  }
   alt when $ctx.FLOAT {
     return newImpl(AtomicValue,
                    sourceInformation = buildSourceInfo($ctx),

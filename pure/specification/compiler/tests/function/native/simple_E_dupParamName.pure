@@ -1,0 +1,9 @@
+###Error
+Duplicate parameter name 'x' in native function 'pack::broken_String_1__Integer_1__String_1_' (at function/native/simple_E_dupParamName:5c1-5c68)
+
+###Pure
+native function pack::broken(x: String[1], x:Integer[1]): String[1];
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

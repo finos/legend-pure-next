@@ -1,0 +1,19 @@
+###Error
+The type 'UnknownClass' can't be found in property 'b' in association 'pack::MyAssociation' (at association/property/simple_E_unknownTypeInProperty:10c6-10c17)
+
+###Pure
+import pack::*;
+
+Association pack::MyAssociation
+{
+  a: ClassA[1];
+  b: UnknownClass[*];
+}
+
+Class pack::ClassA
+{
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

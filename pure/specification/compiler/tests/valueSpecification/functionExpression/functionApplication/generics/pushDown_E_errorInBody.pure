@@ -1,0 +1,16 @@
+###Error
+No matching function 'plus' found for argument types (String[1], Integer[1]) (at valueSpecification/functionExpression/functionApplication/generics/pushDown_E_errorInBody:7c41-7c46)
+
+###Pure
+function g<K>(f:Function<{K[1]->Boolean[1]}>[1]):K[0..1]{[]}
+function f<T>(s:T[*], a:T[0..1]):String[1]{'a'}
+function test():Any[*]{f(['a','b'], g(t|$t + 1; true;))}
+
+###CompilerStats
+inferenceRollbacks: 10
+candidateEvaluations: 8
+rollbackSites:
+  LAMBDA_DISPATCH = 2
+  MULTI_CANDIDATE_PRE_RESOLVE = 1
+  PARAM_UNRESOLVED = 1
+  REVERSE_MATCH_DISPATCH = 1

@@ -82,9 +82,15 @@ public class RdfFbsSchemaGenerator
         sb.append("// AUTO-GENERATED from m3.ttl - DO NOT EDIT\n\n");
         sb.append("namespace org.finos.legend.pure.m3.module.pdbModule.fbs;\n\n");
 
-        // Forward-declare all tables
-        m3Model.classInfoMap().keysView().toSortedList().forEach(name ->
-                sb.append("// forward: table ").append(name).append("Def\n"));
+        // Forward-declare all tables (skip pointer classes — they get no FBS table)
+        m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(ci ->
+        {
+            if (isCompilerPointer(ci))
+            {
+                return;
+            }
+            sb.append("// forward: table ").append(ci.name).append("Def\n");
+        });
         sb.append("\n");
 
         // Pointer reference table for union pointer fields
@@ -197,7 +203,7 @@ public class RdfFbsSchemaGenerator
         // Generate tables
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
         {
-            if (isAbstract(classInfo))
+            if (isAbstract(classInfo) || isCompilerPointer(classInfo))
             {
                 return;
             }
@@ -285,7 +291,7 @@ public class RdfFbsSchemaGenerator
         entryFields.put("element_type", "string");
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(ci ->
         {
-            if (isAbstract(ci))
+            if (isAbstract(ci) || isCompilerPointer(ci))
             {
                 return;
             }

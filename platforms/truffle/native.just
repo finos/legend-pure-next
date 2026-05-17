@@ -22,7 +22,7 @@ repo_root       := truffle_root / ".." / ".."
 truffle         := truffle_root / "legend-pure-next-truffle"
 truffle_runtime := truffle / "legend-pure-next-truffle-runtime"
 spec            := repo_root / "pure" / "specification"
-compiler_src    := repo_root / "pure" / "compiler-pure"
+compiler_src    := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 truffle_out     := truffle_root / "build"
 shared_out      := repo_root / "shared"
 truffle_native  := truffle_out / "pure-truffle-native"
@@ -61,8 +61,8 @@ test-pure-compiler: build
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/compiler.pdb \
-        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
-        --args "{{spec}}/compiler" {{err_filter}}
+        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" {{err_filter}}
 
 # Run Pure runTests over meta::pure::functions via the native binary.
 test-pure-testFunctions: build
@@ -93,8 +93,8 @@ test-pure-self-host: build
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{truffle_out}}/compiler_truffle_native.pdb \
-        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
-        --args "{{spec}}/compiler" {{err_filter}}
+        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" {{err_filter}}
     @{{banner}} '[self-host-native]' 'diff compiler.pdb (Java compiler) ↔ compiler_truffle_native.pdb (native compiler)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
         {{shared_out}}/compiler.pdb \

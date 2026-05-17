@@ -1,0 +1,18 @@
+###Error
+The element 'a::A' can't be found (at valueSpecification/atomicValue/element/graphElement_E_wrongElements:10c9-10c12)
+The element 'x::b::f__Any_1_' can't be found (at valueSpecification/atomicValue/element/graphElement_E_wrongElements:11c9-11c23)
+The element 'z::AProfile' can't be found (at valueSpecification/atomicValue/element/graphElement_E_wrongElements:12c9-12c19)
+
+###Pure
+function test():Any[*]
+{
+    [
+        a::A,
+        x::b::f__Any_1_,
+        z::AProfile
+    ]
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

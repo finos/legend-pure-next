@@ -67,6 +67,8 @@ public class PureCLI
         System.err.println("  compile-spec --m3-ttl <file> <sourceDir...> <output.pdb>   Compile specification Pure sources into core.pdb");
         System.err.println("  compile --base-pdb <file> --source <dir> --output <file>   Compile Pure sources against a base PDB (Java compiler)");
         System.err.println("  compile-via-pure --base-pdb <file>... --source <dir> --output <file>   Compile Pure sources by running compiler-pure on the Java runtime");
+        System.err.println();
+        System.err.println("  All compile commands auto-discover module.json by walking up from the source dir.");
         System.err.println("  execute --pdb <file>... --function <path> [--args <arg>...]   Execute a Pure function");
         System.err.println("  diff-pdb [--deep] <a.pdb> <b.pdb>                          Compare two PDB archives (path-set + per-element byte hash; --deep walks typed properties)");
     }
@@ -228,20 +230,26 @@ public class PureCLI
             System.exit(1);
         }
 
-        // Load PDB modules
+        // Load PDB modules — each one carries its identity in its embedded manifest.
         List<PDBModule> modules = new ArrayList<>();
-        List<String> moduleNames = new ArrayList<>();
-        for (int i = 0; i < pdbPaths.size(); i++)
+        List<String> loadedNames = new ArrayList<>();
+        for (String pdbPath : pdbPaths)
         {
-            String name = "pdb" + i;
-            moduleNames.add(name);
-            PDBModule module = new PDBModule(
-                    Path.of(pdbPaths.get(i)),
-                    PDBModule.Mode.EXECUTION,
-                    name,
-                    "*",
-                    Lists.mutable.withAll(moduleNames.subList(0, i)));
+            PDBModule module = new PDBModule(Path.of(pdbPath), PDBModule.Mode.EXECUTION);
             modules.add(module);
+            loadedNames.add(module.getName());
+        }
+        // Validate that every declared dep is among the loaded modules.
+        for (PDBModule module : modules)
+        {
+            for (String dep : module.getDependencies())
+            {
+                if (!loadedNames.contains(dep))
+                {
+                    throw new IllegalArgumentException("Module '" + module.getName()
+                            + "' declares dependency '" + dep + "' but it was not loaded (loaded: " + loadedNames + ")");
+                }
+            }
         }
 
         PureModel model = PureModel.withModules(Lists.mutable.withAll(modules))

@@ -100,10 +100,10 @@ public final class FbsResolverHelper
     private static Object searchListByValue(Object owner, String listName, String targetValue)
     {
         // Use PropertyAccessor + PureDynamicObject access so this works for
-        // both PureDynamicObject (post-flip) and legacy XImpl (which
+        // both PureDynamicObject (post-flip) and legacy XPDBHelper (which
         // implements PropertyAccessor). Reflection-on-typed-getter wouldn't
         // find _p_stereotypes / _value on PureDynamicObject because those
-        // typed getters only live on the per-class XImpl.
+        // typed getters only live on the per-class XPDBHelper.
         Object list = readProperty(owner, listName);
         if (list instanceof PureSequence seq)
         {
@@ -192,9 +192,9 @@ public final class FbsResolverHelper
     private static Object searchPropertyList(Object owner, String listName, String memberName)
     {
         // Use readProperty so this works for both PureDynamicObject (post-flip)
-        // and legacy XImpl (PropertyAccessor). Reflection-on-typed-getter
+        // and legacy XPDBHelper (PropertyAccessor). Reflection-on-typed-getter
         // (`getClass().getMethod("_properties")`) fails on PureDynamicObject
-        // because the typed `_X()` getters only live on the per-class XImpl.
+        // because the typed `_X()` getters only live on the per-class XPDBHelper.
         Object list = readProperty(owner, listName);
         if (!(list instanceof PureSequence seq))
         {

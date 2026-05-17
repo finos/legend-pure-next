@@ -1,0 +1,17 @@
+###Error
+The function 'xif' with 3 parameter(s) can't be found. Possible matches with 3 parameter(s) not in scope:
+    test::xif(test: Boolean[1], valid: Function<{->T[m]}>[1], invalid: Function<{->T[m]}>[1]): T[m] (at valueSpecification/functionExpression/functionApplication/generics/if_E_notFound:10c5-10c19)
+
+###Pure
+native function test::xif<T|m>(test:Boolean[1], valid:Function<{->T[m]}>[1], invalid:Function<{->T[m]}>[1]):T[m];
+
+function test::tst():Any[*]
+{
+    xif(true,|3,|1) + 2;
+}
+
+###CompilerStats
+inferenceRollbacks: 6
+candidateEvaluations: 5
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1

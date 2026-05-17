@@ -1,0 +1,28 @@
+###Error
+Missing required property 'name' of type String in new expression (at valueSpecification/functionExpression/functionApplication/special/new/new_E_missingProperties:9c3-9c12)
+
+###Pure
+import test::new::support::*;
+
+function test::new::testNew(): Any[*]
+{
+  ^MyClass();
+  ^Yo();
+}
+
+Class test::new::support::MyClass
+{
+  name: String[1];
+  value: Integer[0..1];
+}
+
+Class test::new::support::Yo
+{
+  name: String[1] = 'aa';
+}
+
+###CompilerStats
+inferenceRollbacks: 4
+candidateEvaluations: 4
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 2

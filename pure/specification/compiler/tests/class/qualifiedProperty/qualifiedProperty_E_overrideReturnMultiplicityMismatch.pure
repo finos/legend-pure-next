@@ -1,0 +1,21 @@
+###Error
+Qualified property override variance mismatch for 'demo' in class 'SubClass'. Return multiplicity is not subsumed. Overridden property has return multiplicity '[1]', but overriding property has return multiplicity '[*]'. (at class/qualifiedProperty/qualifiedProperty_E_overrideReturnMultiplicityMismatch:14c5-16c17)
+
+###Pure
+Class test::SuperClass
+{
+    demo() {
+        'ok'
+    }: String[1];
+}
+
+Class test::SubClass extends test::SuperClass
+{
+    demo() {
+        ['ok', 'ok2']
+    }: String[*];
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

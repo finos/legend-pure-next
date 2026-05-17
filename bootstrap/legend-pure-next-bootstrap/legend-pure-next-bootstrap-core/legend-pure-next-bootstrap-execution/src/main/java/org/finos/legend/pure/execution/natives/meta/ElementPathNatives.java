@@ -15,6 +15,7 @@
 package org.finos.legend.pure.execution.natives.meta;
 
 import meta.pure.metamodel.PackageableElement;
+import meta.pure.metamodel.pointer.TempCompilerPointer;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
@@ -94,6 +95,17 @@ public class ElementPathNatives
             Object separatorObj = _E_ValueSpecification.unwrap(args.get(1));
             String separator = separatorObj != null ? separatorObj.toString() : "::";
 
+            // TempCompilerPointer carries its canonical path directly; don't walk
+            // the package chain (its package/name fields are unset).
+            if (element instanceof TempCompilerPointer p)
+            {
+                String path = p._path();
+                if (!"::".equals(separator))
+                {
+                    path = path.replace("::", separator);
+                }
+                return _E_ValueSpecification.wrap(path, genericType, multiplicity, resolver);
+            }
             if (element instanceof PackageableElement pe)
             {
                 return _E_ValueSpecification.wrap(elementToPathString(pe, separator, resolver), genericType, multiplicity, resolver);
@@ -134,6 +146,12 @@ public class ElementPathNatives
         NativeImpl elementToPath = (args, eval, genericType, multiplicity) ->
         {
             Object element = _E_ValueSpecification.unwrap(args.get(0));
+            // TempCompilerPointer carries its canonical path directly; don't walk
+            // the package chain (its package/name fields are unset).
+            if (element instanceof TempCompilerPointer p)
+            {
+                return _E_ValueSpecification.wrap(p._path(), genericType, multiplicity, resolver);
+            }
             if (element instanceof PackageableElement pe)
             {
                 return _E_ValueSpecification.wrap(elementToPathString(pe, "::", resolver), genericType, multiplicity, resolver);
@@ -157,6 +175,17 @@ public class ElementPathNatives
             Object element = _E_ValueSpecification.unwrap(args.get(0));
             Object separatorObj = _E_ValueSpecification.unwrap(args.get(1));
             String separator = separatorObj != null ? separatorObj.toString() : "::";
+            // TempCompilerPointer carries its canonical path directly; don't walk
+            // the package chain (its package/name fields are unset).
+            if (element instanceof TempCompilerPointer p)
+            {
+                String path = p._path();
+                if (!"::".equals(separator))
+                {
+                    path = path.replace("::", separator);
+                }
+                return _E_ValueSpecification.wrap(path, genericType, multiplicity, resolver);
+            }
             if (element instanceof PackageableElement pe)
             {
                 return _E_ValueSpecification.wrap(elementToPathString(pe, separator, resolver), genericType, multiplicity, resolver);

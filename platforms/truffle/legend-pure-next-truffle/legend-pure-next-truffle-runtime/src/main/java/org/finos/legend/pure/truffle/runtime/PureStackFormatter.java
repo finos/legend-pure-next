@@ -61,11 +61,35 @@ public final class PureStackFormatter
             {
                 return "";
             }
-            StringBuilder sb = new StringBuilder("\nPure stack:");
+            // Match the bootstrap (Java direct) runtime's stack format exactly
+            // so the IDE renders both backends identically:
+            //  - header `\nPure stack trace:`
+            //  - each frame `\n    at <fn> (<sourceId>:<line>c<col>)`  (4-space indent)
+            //  - innermost frame first (the throwing site)
+            //
+            // Bootstrap's ValueSpecificationEvaluator.getCallStackTrace iterates
+            // its ArrayDeque<FunctionExpression> in stack-order (top-first =
+            // innermost-first). Truffle's TruffleStackTrace.getStackTrace also
+            // returns frames innermost-first, so we iterate in natural order.
+            StringBuilder sb = new StringBuilder("\nPure stack trace:");
             for (TruffleStackTraceElement frame : frames)
             {
                 RootNode rootNode = frame.getTarget().getRootNode();
                 String name = rootNode != null ? rootNode.getName() : "?";
+                // Normalize anonymous-lambda names. Truffle's RootNode for a
+                // lambda is auto-named `lambda@<sourceId>:<line>:<col>` —
+                // bootstrap renders the same frame as just `lambda`. Strip the
+                // synthetic suffix so the two engines emit identical names;
+                // the per-frame location (rendered separately below) still
+                // pins where the lambda lives.
+                //
+                // (PureContext.getFunctionName now emits the unmangled
+                // `package::functionName` form directly, so the older
+                // first-`__` strip is no longer needed.)
+                if (name != null && name.startsWith("lambda@"))
+                {
+                    name = "lambda";
+                }
 
                 // Prefer the location node's source section (the actual call
                 // site or expression), walking up the AST until we hit one;
@@ -87,12 +111,15 @@ public final class PureStackFormatter
                     sourceSection = rootNode.getSourceSection();
                 }
 
-                sb.append("\n  at ").append(name != null ? name : "?");
+                // 4-space indent matches bootstrap's `\n    at` exactly.
+                sb.append("\n    at ").append(name != null ? name : "?");
                 if (sourceSection != null && sourceSection.getSource() != null)
                 {
+                    // Column separator `c` matches both bootstrap's format and
+                    // the IDE's stack-link regex (`at <fn> (<sourceId>:<line>c<col>)`).
                     sb.append(" (").append(sourceSection.getSource().getName())
                             .append(":").append(sourceSection.getStartLine())
-                            .append(":").append(sourceSection.getStartColumn()).append(")");
+                            .append("c").append(sourceSection.getStartColumn()).append(")");
                 }
             }
             return sb.toString();

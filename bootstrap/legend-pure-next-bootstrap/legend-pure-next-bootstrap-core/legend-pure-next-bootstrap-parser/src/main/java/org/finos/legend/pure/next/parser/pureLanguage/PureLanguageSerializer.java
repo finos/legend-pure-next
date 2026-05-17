@@ -1119,6 +1119,22 @@ public class PureLanguageSerializer
                 // DSL text: emit as-is without quotes
                 sb.append(str);
             }
+            else if (str.indexOf('\n') >= 0)
+            {
+                // Triple-quoted form. If any line after a `\n` starts with
+                // whitespace, the stripper would treat that as a common
+                // prefix to strip on re-parse — so insert a `\n` right after
+                // the opening `'''` to make the value's first line a
+                // continuation line. With a flush-left line in the value,
+                // min-prefix is 0 and the stripper is a no-op.
+                boolean hasIndentedContinuation = hasWhitespaceAfterNewline(str);
+                sb.append("'''");
+                if (hasIndentedContinuation)
+                {
+                    sb.append('\n');
+                }
+                sb.append(str).append("'''");
+            }
             else
             {
                 sb.append("'").append(str).append("'");
@@ -1139,6 +1155,21 @@ public class PureLanguageSerializer
             case String str -> sb.append("'").append(str).append("'");
             default -> sb.append(v);
         }
+    }
+
+    private static boolean hasWhitespaceAfterNewline(final String str)
+    {
+        int i = str.indexOf('\n');
+        while (i >= 0 && i + 1 < str.length())
+        {
+            char next = str.charAt(i + 1);
+            if (next == ' ' || next == '\t')
+            {
+                return true;
+            }
+            i = str.indexOf('\n', i + 1);
+        }
+        return false;
     }
 
     private void serializeDotApplication(

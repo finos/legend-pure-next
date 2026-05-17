@@ -27,6 +27,12 @@ TILDE: '~';
 QUESTION: '?';
 PATH_SEPARATOR: PathSeparator;
 
+// Multi-line string literal — `'''<body>'''`. Declared before STRING so the
+// lexer picks it for any input starting with `'''` (ANTLR longest-match rule).
+// Body is non-greedy so the FIRST closing `'''` terminates the literal.
+// Newlines inside are preserved as-is in the body; the AST-side
+// `stripTripleQuotes` helper drops the six delimiter characters.
+STRING_TRIPLE: '\'\'\'' .*? '\'\'\'';
 STRING: String;
 BOOLEAN: Boolean;
 TRUE: True;

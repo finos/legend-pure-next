@@ -354,7 +354,7 @@ lambdaParamType: COLON type multiplicity
 instanceLiteral: instanceLiteralToken | (MINUS INTEGER) | (MINUS FLOAT) | (MINUS DECIMAL) | (PLUS INTEGER) | (PLUS FLOAT) | (PLUS DECIMAL)
 ;
 
-instanceLiteralToken: STRING | INTEGER | FLOAT | DECIMAL | DATE | BOOLEAN | STRICTTIME
+instanceLiteralToken: STRING | STRING_TRIPLE | INTEGER | FLOAT | DECIMAL | DATE | BOOLEAN | STRICTTIME
 ;
 
 functionVariableExpression: identifier COLON type multiplicity

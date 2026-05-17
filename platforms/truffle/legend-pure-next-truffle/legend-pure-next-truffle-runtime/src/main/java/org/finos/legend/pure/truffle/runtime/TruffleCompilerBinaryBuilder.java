@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
+import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
@@ -81,23 +82,22 @@ public final class TruffleCompilerBinaryBuilder
         {
             throw new IllegalArgumentException("source dir does not exist: " + sourceDir);
         }
+        ModuleManifest manifest = ModuleManifest.locate(sourceDir);
 
         System.out.println("Compiling Pure model from " + sourceDir
                 + " (base: " + basePdbs + ") via truffle interpreter...");
+        System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies());
 
-        // 1. Load base PDBs and build the module registry. PDBs are listed
-        // dependency-first by convention (e.g. core then compiler) — declare
-        // each PDB depending on every PDB before it so the registry can
-        // cascade-invalidate on unregister.
+        // 1. Load base PDBs — each carries its identity (name + dependencies)
+        // in its embedded manifest, so the registry can cascade-invalidate on
+        // unregister without us having to fabricate dep chains here.
         List<TrufflePdbLoader> loaders = new ArrayList<>();
         TruffleModuleRegistry resolver = new TruffleModuleRegistry();
-        List<String> priorNames = new ArrayList<>();
         for (Path p : basePdbs)
         {
-            TrufflePdbLoader loader = new TrufflePdbLoader(p, deriveName(p), List.copyOf(priorNames));
+            TrufflePdbLoader loader = new TrufflePdbLoader(p);
             loaders.add(loader);
             resolver.register(loader);
-            priorNames.add(loader.name());
         }
         for (TrufflePdbLoader loader : loaders)
         {
@@ -195,7 +195,7 @@ public final class TruffleCompilerBinaryBuilder
             // ancestors (`meta`, `meta::pure`, …) and core.pdb already owns
             // those, so re-emitting them would diverge from bootstrap's output.
             // Non-Package elements always pass through.
-            // Accepts both typed XImpl (instanceof PackageableElement) and
+            // Accepts both typed XPDBHelper (instanceof PackageableElement) and
             // PureDynamicObject (PureObj.pureTypeOf returns Pure path) since
             // TrufflePdbWriter.write now accepts Iterable<?>.
             LinkedHashMap<String, Object> elementsByPath = new LinkedHashMap<>();
@@ -227,7 +227,7 @@ public final class TruffleCompilerBinaryBuilder
             {
                 Files.createDirectories(outputFile.getParent());
             }
-            TrufflePdbWriter.write(new ArrayList<>(elementsByPath.values()), outputFile);
+            TrufflePdbWriter.write(new ArrayList<>(elementsByPath.values()), manifest, outputFile, true);
             System.out.println("Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
         }
         finally
@@ -277,16 +277,10 @@ public final class TruffleCompilerBinaryBuilder
         throw new RuntimeException(sb.toString());
     }
 
-    private static String deriveName(Path pdbPath)
-    {
-        String fileName = pdbPath.getFileName().toString();
-        return fileName.endsWith(".pdb") ? fileName.substring(0, fileName.length() - 4) : fileName;
-    }
-
     /**
      * Read a property via {@link
      * org.finos.legend.pure.truffle.runtime.dynobj.PureObj#read} — works for
-     * both typed XImpls and {@code PureDynamicObject}s. The previous
+     * both typed XPDBHelpers and {@code PureDynamicObject}s. The previous
      * reflection-on-`_X()` path failed on PDO targets since the typed
      * `<X>` interface (which declared the default getter) is no longer
      * generated and {@code PureDynamicObject} only implements

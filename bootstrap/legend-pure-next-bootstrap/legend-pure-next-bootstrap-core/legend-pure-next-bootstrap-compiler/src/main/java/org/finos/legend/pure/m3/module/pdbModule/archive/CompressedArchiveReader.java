@@ -14,6 +14,8 @@
 
 package org.finos.legend.pure.m3.module.pdbModule.archive;
 
+import org.finos.legend.pure.m3.module.ModuleManifest;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Enumeration;
@@ -139,6 +141,16 @@ public class CompressedArchiveReader
     {
         String entryName = sections.get(name);
         return readZipEntry(entryName);
+    }
+
+    /**
+     * Read the embedded module manifest (name, package pattern, dependencies).
+     * Returns {@code null} if the archive predates the manifest section.
+     */
+    public ModuleManifest readManifest()
+    {
+        byte[] bytes = readSection(ModuleManifest.ARCHIVE_SECTION);
+        return bytes == null ? null : ModuleManifest.parse(bytes);
     }
 
     private byte[] readZipEntry(String entryName)

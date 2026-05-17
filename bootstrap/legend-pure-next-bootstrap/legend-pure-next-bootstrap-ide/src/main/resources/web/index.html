@@ -2150,14 +2150,31 @@
                 safeText = stackParts[0] + "Pure stack trace:\n" + stackLines.join('\n') + (restLines.length > 0 ? '\n' + restLines.join('\n') : '');
             }
 
-            // Create links only for known files
-            safeText = safeText.replace(/at (.*?) \(([^:]+):(\d+)(c(\d+))?\)/g, (match, funcName, sourceId, line, cGroup, col) => {
-                if (!knownFiles.has(sourceId)) {
-                    return match;
-                }
-                const c = col || 1;
-                return `at ${funcName} (<a href="#" onclick="openFileAndJump('${sourceId}', ${line}, ${c}); return false;" style="color: var(--accent); text-decoration: underline; cursor: pointer;">${sourceId}:${line}${cGroup || ''}</a>)`;
-            });
+            // Unified source-location format used everywhere a Pure position
+            // is rendered:
+            //   `(at <sourceId>:<line>c<col>[-<endLine>c<endCol>])`
+            //
+            // Two render styles:
+            //   - stack frame   : `at <fnName> (at? <sourceId>:<line>c<col>...)`
+            //                     (legacy bootstrap stack frames omit the
+            //                     inner "at " — match it as optional)
+            //   - compile error : `... (at <sourceId>:<line>c<col>-<endL>c<endC>)`
+            //
+            // Single regex, two captures we care about — the rest of the
+            // location (end pos, function name) is only used to keep the
+            // original text intact when we splice the anchor in.
+            safeText = safeText.replace(
+                /(at (\S+?) )?\((?:at )?([^():\s]+):(\d+)c(\d+)(-\d+c\d+)?\)/g,
+                (match, atFn, funcName, sourceId, line, col, rangeTail) => {
+                    if (!knownFiles.has(sourceId)) {
+                        return match;
+                    }
+                    const prefix = atFn || '';
+                    const tail = rangeTail || '';
+                    const linkText = `${sourceId}:${line}c${col}${tail}`;
+                    const innerAt = match.indexOf('(at ') >= 0 ? 'at ' : '';
+                    return `${prefix}(${innerAt}<a href="#" onclick="openFileAndJump('${sourceId}', ${line}, ${col}); return false;" style="color: var(--accent); text-decoration: underline; cursor: pointer;">${linkText}</a>)`;
+                });
 
             content.innerHTML = safeText;
             content.className = 'result-content ' + (isError ? 'error' : 'success');

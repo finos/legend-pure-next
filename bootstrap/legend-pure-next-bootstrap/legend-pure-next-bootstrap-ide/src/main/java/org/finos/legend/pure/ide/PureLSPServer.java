@@ -555,7 +555,14 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             else
             {
                 Throwable err = execResult.error();
-                sendExecuteResult("Execution error: " + err.getMessage(), true, execResult.compileStats());
+                // Include any captured stdout (println debug output the user
+                // wrote before the throw) so it doesn't get lost on the error
+                // path — otherwise debugging via println is impossible when the
+                // last call throws.
+                String stdout = execResult.capturedStdout();
+                String body = (stdout != null && !stdout.isEmpty() ? stdout + "\n" : "")
+                        + "Execution error: " + err.getMessage();
+                sendExecuteResult(body, true, execResult.compileStats());
             }
         }
         catch (Exception e)

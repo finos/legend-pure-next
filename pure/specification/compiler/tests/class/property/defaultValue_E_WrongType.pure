@@ -1,0 +1,14 @@
+###Error
+Default value type mismatch: expected Integer but got String (at class/property/defaultValue_E_WrongType:9c3-9c27)
+
+###Pure
+import pack::*;
+
+Class pack::MyClass
+{
+  value: Integer[1] = 'ok';
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

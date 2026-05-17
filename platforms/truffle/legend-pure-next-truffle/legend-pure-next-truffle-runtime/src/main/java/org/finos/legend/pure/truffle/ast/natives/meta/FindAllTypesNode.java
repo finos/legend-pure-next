@@ -62,7 +62,7 @@ public final class FindAllTypesNode extends PureNode
         {
             Object element = resolver.getElement(path);
             // Filter by Pure type via isType so this works for both legacy
-            // XImpl and PureDynamicObject post-loader-flip. The typed
+            // XPDBHelper and PureDynamicObject post-loader-flip. The typed
             // `instanceof Type` Java guard would silently exclude every PDO,
             // leaving primitive types out of buildLinearizationCache and
             // tripping the Pure-side LINEARIZE MISS assert.

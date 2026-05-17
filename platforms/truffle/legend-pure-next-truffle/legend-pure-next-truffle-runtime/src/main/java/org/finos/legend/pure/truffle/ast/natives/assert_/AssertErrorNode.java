@@ -85,7 +85,7 @@ public final class AssertErrorNode extends PureNode
                     "meta::pure::metamodel::function::LambdaFunction"))
             {
                 // RawClosure accepts Object lambda — handles both typed
-                // LambdaFunction (XImpl) and PureDynamicObject post-flip.
+                // LambdaFunction (XPDBHelper) and PureDynamicObject post-flip.
                 RawClosure closure = new RawClosure(fn, new Object[0], new String[0], null);
                 bodyCallNode.call(closure);
             }
@@ -93,8 +93,14 @@ public final class AssertErrorNode extends PureNode
             {
                 throw new RuntimeException("assertError: argument is not a function");
             }
+            // Pass `this` (the AssertErrorNode) as the location: it carries
+            // the Pure source section attached at AST-build time via
+            // PureSourceHelper.withSource, so the throwing frame's
+            // `frame.getLocation()` returns this node and stack-trace
+            // rendering can show the call site. Passing null here lost the
+            // source location entirely.
             throw new PureException.AssertionError("Expected error with message containing: '"
-                    + expectedMessage + "' but no error was thrown", null);
+                    + expectedMessage + "' but no error was thrown", this);
         }
         catch (PureException.AssertionError pae)
         {
@@ -102,12 +108,26 @@ public final class AssertErrorNode extends PureNode
         }
         catch (Exception e)
         {
-            String actualMessage = e.getMessage();
-            if (actualMessage == null || !actualMessage.contains(expectedMessage))
+            // Bootstrap (Java direct) embeds the Pure stack trace into the
+            // exception message via NativeRepository's wrap; Truffle stores it
+            // in the polyglot frames instead. Append the formatted Pure stack
+            // to actualMessage so cross-engine assertError tests can match
+            // against the full `error\nPure stack trace:...` body on both
+            // backends.
+            String actualMessage = e.getMessage() != null ? e.getMessage() : "";
+            if (!actualMessage.contains("\nPure stack trace:"))
+            {
+                String pureStack = org.finos.legend.pure.truffle.runtime.PureStackFormatter.format(e);
+                if (!pureStack.isEmpty())
+                {
+                    actualMessage = actualMessage + pureStack;
+                }
+            }
+            if (!actualMessage.contains(expectedMessage))
             {
                 throw new PureException.AssertionError(
                         "Expected error message containing: '" + expectedMessage
-                                + "' but got: '" + actualMessage + "'", null);
+                                + "' but got: '" + actualMessage + "'", this);
             }
             return true;
         }

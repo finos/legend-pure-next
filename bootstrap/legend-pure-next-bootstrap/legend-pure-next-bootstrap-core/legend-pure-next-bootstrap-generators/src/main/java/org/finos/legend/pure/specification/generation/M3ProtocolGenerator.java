@@ -82,6 +82,7 @@ public class M3ProtocolGenerator
     private final Resource protocolInfoNonPointer;
     private final Resource protocolInfoTransientCompilerOnly;
     private final Resource protocolInfoPointerSource;
+    private final Resource compilerPointer;
     private final Resource protocolInfoAbstract;
     private final Property taggedValuesProp;
     private final Property tagProp;
@@ -136,6 +137,8 @@ public class M3ProtocolGenerator
             model.createResource(M3_NS + "ProtocolInfo_transientCompilerOnly");
         this.protocolInfoPointerSource =
             model.createResource(M3_NS + "ProtocolInfo_pointerSource");
+        this.compilerPointer =
+            model.createResource(M3_NS + "meta_pure_profiles_compiler_pointer");
 
         this.protocolInfoAbstract =
             model.createResource(M3_NS + "meta_pure_profiles_typemodifiers_abstract");
@@ -664,11 +667,19 @@ public class M3ProtocolGenerator
     {
         writeSectionHeader(w, "PROFILES AND STEREOTYPES");
 
+        // Profiles defined in m3.ttl are already in the BootstrapModule; the
+        // protocol generator must not re-emit them or the compile-time
+        // LocalModule will declare a duplicate of the m3 element. Listed names
+        // are matched against the RDF resource's local name.
+        java.util.Set<String> skipProfiles = java.util.Set.of(
+                "meta_pure_profiles_typemodifiers",
+                "meta_pure_profiles_compiler"
+        );
         ResIterator profileIter = model.listSubjectsWithProperty(rdfType, m3Profile);
         while (profileIter.hasNext())
         {
             Resource profileRes = profileIter.next();
-            if (!"meta_pure_profiles_typemodifiers".equals(getLocalName(profileRes)))
+            if (!skipProfiles.contains(getLocalName(profileRes)))
             {
                 writeProfile(w, profileRes);
             }
@@ -828,7 +839,8 @@ public class M3ProtocolGenerator
                 {
                     Resource stereotype = node.asResource();
                     if (stereotype.equals(protocolInfoExcluded)
-                            || stereotype.equals(protocolInfoInferred))
+                            || stereotype.equals(protocolInfoInferred)
+                            || stereotype.equals(compilerPointer))
                     {
                         excludedTypes.add(r);
                         break;

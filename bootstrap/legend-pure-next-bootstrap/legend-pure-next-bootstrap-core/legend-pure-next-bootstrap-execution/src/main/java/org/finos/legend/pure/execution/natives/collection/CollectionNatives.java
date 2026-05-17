@@ -613,7 +613,7 @@ public class CollectionNatives
 
         // contains(Any[*], Any[1]) : Boolean[1] — Pure body was
         // {@code $collection->exists(x | $value == $x)}; declared native in
-        // {@code pure/specification/functions/collection/boolean/contains.pure}
+        // {@code pure/specification/runtime/functions/collection/boolean/contains.pure}
         // to let backends skip the per-element closure dispatch.
         natives.put("contains_Any_MANY__Any_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {

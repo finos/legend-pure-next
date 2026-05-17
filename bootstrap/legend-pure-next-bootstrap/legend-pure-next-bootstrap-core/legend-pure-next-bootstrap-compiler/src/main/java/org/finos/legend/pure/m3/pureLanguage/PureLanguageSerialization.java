@@ -238,8 +238,8 @@ public class PureLanguageSerialization
                 throw new IllegalStateException(
                         "FunctionExpression '" + fe._functionName() + "' has null _func() in " + funcPath
                                 + " at " + (fe._sourceInformation() != null
-                                ? fe._sourceInformation()._sourceId() + ":" + fe._sourceInformation()._startLine() + ":" + fe._sourceInformation()._startColumn()
-                                        + "-" + fe._sourceInformation()._endLine() + ":" + fe._sourceInformation()._endColumn()
+                                ? fe._sourceInformation()._sourceId() + ":" + fe._sourceInformation()._startLine() + "c" + fe._sourceInformation()._startColumn()
+                                        + "-" + fe._sourceInformation()._endLine() + "c" + fe._sourceInformation()._endColumn()
                                 : "unknown"));
             }
             if (fe._parametersValues() != null)

@@ -45,14 +45,14 @@ public interface TruffleTypeCache
 
     /**
      * Resolve a Pure class path (e.g. {@code "meta::pure::metamodel::type::Class"})
-     * to the runtime Java {@code Impl} class. Cached because {@code Class.forName}
+     * to the runtime Java {@code PDBHelper} class. Cached because {@code Class.forName}
      * is the dominant {@code String.replace} hot caller in JFR and the result
      * is invariant for a given path.
      */
     Class<?> classForPath(String classPath);
 
     /**
-     * Reflection-free instance creation: returns a fresh {@code Impl} instance
+     * Reflection-free instance creation: returns a fresh {@code PDBHelper} instance
      * for {@code classPath}. The first call builds a typed {@code Supplier}
      * via {@code LambdaMetafactory}; subsequent calls are direct virtual
      * dispatches into the no-arg constructor with no per-call reflection.

@@ -1,0 +1,36 @@
+###Pure
+import test::new::support::*;
+
+function test::new::testPointerStereotype(): Any[*]
+{
+   ^MyPointer(path='meta::pure::test::Foo');
+}
+
+Class test::new::support::MyTarget
+{
+   requiredString: String[1];
+   requiredInt: Integer[1];
+}
+
+Class <<meta::pure::profiles::compiler.pointer>> test::new::support::MyPointer extends test::new::support::MyTarget
+{
+   path: String[1];
+}
+
+###CompiledGraph
+function test::new::testPointerStereotype__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyPointer##[1]#  ~@FunctionInvocation@  @6:4-6:43
+    typeParam T -> test::new::support::MyPointer
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyPointer|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyPointer|1>  @6:4-6:43
+    Collection :#KeyExpression#[1]  ~@Collection@  @6:4-6:43
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:15-6:42
+        AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @6:15-6:42
+        AtomicValue  'meta::pure::test::Foo' :@String@[1]  ~@AtomicValue@  @6:20-6:42
+
+class test::new::support::MyTarget extends Any  ~Class<test::new::support::MyTarget>  @9:1-13:1
+  property requiredString :@String@[1]  ~Property<test::new::support::MyTarget, @String@|1>
+  property requiredInt :@Integer@[1]  ~Property<test::new::support::MyTarget, @Integer@|1>
+
+class test::new::support::MyPointer extends test::new::support::MyTarget  ~Class<test::new::support::MyPointer>  @15:1-18:1
+  <<meta::pure::profiles::compiler.pointer>>
+  property path :@String@[1]  ~Property<test::new::support::MyPointer, @String@|1>

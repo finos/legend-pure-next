@@ -1,0 +1,16 @@
+###Error
+Duplicate enum value 'Val' in enumeration 'pack::MyEnum' (at enumeration/simple_E_duplicateValue:7c1-12c1)
+
+###Pure
+import pack::*;
+
+Enum pack::MyEnum
+{
+  Val,
+  Other,
+  Val
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

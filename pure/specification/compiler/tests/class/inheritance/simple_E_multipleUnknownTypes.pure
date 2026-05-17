@@ -1,0 +1,14 @@
+###Error
+The type 'UnknownA' can't be found in super type in class 'pack::Child' (at class/inheritance/simple_E_multipleUnknownTypes:7c27-7c34)
+The type 'UnknownB' can't be found in super type in class 'pack::Child' (at class/inheritance/simple_E_multipleUnknownTypes:7c37-7c44)
+
+###Pure
+
+Class pack::Child extends UnknownA, UnknownB
+{
+  value: Integer[1];
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

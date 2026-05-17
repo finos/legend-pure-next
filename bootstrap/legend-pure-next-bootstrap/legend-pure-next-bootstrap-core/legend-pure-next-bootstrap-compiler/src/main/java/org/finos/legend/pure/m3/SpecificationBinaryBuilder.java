@@ -19,6 +19,7 @@ import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
+import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveWriter;
@@ -43,19 +44,31 @@ public class SpecificationBinaryBuilder
 {
     public static void main(String[] args) throws Exception
     {
-        if (args.length < 3)
+        Path m3TtlPath = null;
+        List<String> positional = new ArrayList<>();
+        for (int i = 0; i < args.length; i++)
         {
-            System.err.println("Usage: SpecificationBinaryBuilder <m3.ttl> <sourceDir...> <outputFile.pdb>");
+            if ("--m3-ttl".equals(args[i]))
+            {
+                m3TtlPath = Path.of(args[++i]);
+            }
+            else
+            {
+                positional.add(args[i]);
+            }
+        }
+        if (m3TtlPath == null || positional.size() < 2)
+        {
+            System.err.println("Usage: SpecificationBinaryBuilder --m3-ttl <file> <sourceDir...> <outputFile.pdb>");
+            System.err.println("  module.json is auto-discovered by walking up from the first <sourceDir>.");
             System.exit(1);
         }
-
-        Path m3TtlPath = Path.of(args[0]);
         List<Path> sourceDirs = new ArrayList<>();
-        for (int i = 1; i < args.length - 1; i++)
+        for (int i = 0; i < positional.size() - 1; i++)
         {
-            sourceDirs.add(Path.of(args[i]));
+            sourceDirs.add(Path.of(positional.get(i)));
         }
-        Path outputFile = Path.of(args[args.length - 1]);
+        Path outputFile = Path.of(positional.get(positional.size() - 1));
 
         compile(m3TtlPath, sourceDirs, outputFile);
     }
@@ -64,9 +77,14 @@ public class SpecificationBinaryBuilder
      * Compile all .pure files under sourceDir and write a .pdb archive.
      * The archive includes both bootstrap M3 types and locally compiled elements,
      * driven from the module index rather than scanning the package tree.
+     *
+     * <p>The {@code module.json} manifest is auto-discovered by walking up
+     * from {@code sourceDirs.get(0)}.</p>
      */
     public static void compile(Path m3TtlPath, List<Path> sourceDirs, Path outputFile) throws IOException
     {
+        ModuleManifest manifest = ModuleManifest.locate(sourceDirs.get(0));
+
         System.out.println();
         System.out.println("Pure Specification Binary Builder From TTL And Pure Files (PDB)");
         System.out.println("===============================================================");
@@ -75,11 +93,21 @@ public class SpecificationBinaryBuilder
         {
             System.out.println("          " + src);
         }
+        System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies());
         System.out.println("  Output: " + outputFile);
 
         // --- Compile ---
-        LocalModule localModule = new LocalModule("specification", "(meta::pure)(::.*)?", sourceDirs, List.of("m3"));
-        MutableList<Module> modules = Lists.mutable.with(new BootstrapModule(m3TtlPath), localModule);
+        // m3 is the bootstrap supply of metamodel types (Class, Property, ...).
+        // It is NOT a runtime dependency — its elements get folded into the
+        // resulting core.pdb during serialization. So the manifest declares
+        // no m3 dep (consumers don't need to load m3.ttl), but the build-time
+        // LocalModule sees m3 so element resolution finds those types.
+        BootstrapModule m3 = new BootstrapModule(m3TtlPath);
+        List<String> buildDeps = new ArrayList<>(manifest.dependencies());
+        buildDeps.add(m3.getName());
+        LocalModule localModule = new LocalModule(
+                manifest.name(), manifest.packagePattern(), sourceDirs, buildDeps);
+        MutableList<Module> modules = Lists.mutable.with(m3, localModule);
         MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());
         PureModel model = PureModel.withModules(modules).withExtensions(extensions).build();
         CompilationResult result = model.compile();
@@ -113,7 +141,8 @@ public class SpecificationBinaryBuilder
         System.out.println("  Compiled " + elements.size() + " elements");
         // --- Serialize to .pdb ---
         Files.createDirectories(outputFile.getParent());
-        new CompressedArchiveWriter().write(elements, extensions, localModule, outputFile);
+        new CompressedArchiveWriter().write(elements, extensions, localModule, manifest, List.of(), outputFile);
         System.out.println("    Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
     }
+
 }

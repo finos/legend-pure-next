@@ -1,0 +1,21 @@
+###Error
+Qualified property override variance mismatch for 'demo' in class 'SubClass'. Return type is not covariant. Overridden property has return type 'Integer', but overriding property has return type 'String'. (at class/qualifiedProperty/qualifiedProperty_E_overrideReturnTypeMismatch:14c5-16c17)
+
+###Pure
+Class test::SuperClass
+{
+    demo() {
+        1
+    }: Integer[1];
+}
+
+Class test::SubClass extends test::SuperClass
+{
+    demo() {
+        'ok'
+    }: String[1];
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

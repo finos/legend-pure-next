@@ -1,0 +1,110 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionTypeCompiler::*;
+import meta::pure::compiler::structural::packageableFunctionCompiler::*;
+import meta::pure::compiler::structural::variableCompiler::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
+import meta::pure::compiler::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::functions::lang::*;
+
+function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:CompilerContext[1]):CompilerContext[1]
+{
+    let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().value);
+
+    let mangledName = $fn.name;
+    let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
+
+    let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+    // Pass-1 skeleton — see comment in userDefinedFunctionHandler for why we
+    // still use `new(...)` here (mul-1 fields filled in pass-2).
+    let emptyFunc = new(^UserDefinedGenericType(type = NativeFunction))->cast(@NativeFunction<Any>);
+    let skeleton = ^$emptyFunc(
+        name = $mangledName,
+        functionName = if($fn.functionName->isEmpty(), | $fn.name, | $fn.functionName->toOne()),
+        package = $pkgRes.value->toOne(),
+        sourceInformation = compileSourceInformation($fn.p_sourceInformation)
+    );
+
+    putElementUnderPackage($pkgRes.context, $fName, $packagePath, $skeleton);
+}
+
+function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:CompilerContext[1]):CompilerResult<NativeFunction<Any>>[1]
+{
+    let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().value);
+    let mangledName = $fn.name;
+    let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
+    let skeleton = $ctx.elementMap->get($fName)->toOne()->cast(@NativeFunction<Any>);
+    let ownerCtx = 'native function \'' + $fName + '\'';
+    let siCtx = if($fn.p_sourceInformation->isNotEmpty(), | formatSourceInfo($fn.p_sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
+
+    // Check for duplicate parameter names
+    let ctx1 = validateDuplicateParameters($fn.parameters, $ctx, $ownerCtx, $siCtx);
+
+    // Compile type parameters — set owner to the function skeleton
+    let fnTypeParams = compileTypeParameters($fn.typeParameters)->map(tp | ^$tp(owner = $skeleton));
+
+    // Compile multiplicity parameters — set owner to the function skeleton (mirrors Java PackageableFunctionCompiler.compileShared line 57-59)
+    let fnMulParams = $fn.multiplicityParameters->map(mp | buildUserDefinedMultiplicityParameter($mp.name, $skeleton)->cast(@MultiplicityParameter));
+
+    // Set ownerMulParams on context so compileGenericType can resolve multiplicity parameter references
+    let ctx1b = ^$ctx1(ownerMulParams = $fnMulParams);
+
+    // Compile parameters
+    let paramAccum = compileParameters($fn.parameters, $ctx1b, $packagePath, $fnTypeParams, $ownerCtx);
+    let compiledParams = $paramAccum.values;
+    let ctx2 = $paramAccum.context;
+
+    // Compile return type
+    let rTypeStr = $fn.returnGenericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+    let rResult = $rTypeStr->compileGenericType($ctx2, $packagePath, $fnTypeParams, '', $ownerCtx);
+    let rMGenType = $rResult.value->toOne();
+    let ctx3 = $rResult.context;
+
+    let rMMult = $fn.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+
+    let classifierGT = compileFunctionClassifierGenericType(NativeFunction, $compiledParams, $rMGenType, $rMMult);
+
+    // Compile stereotypes and tagged values
+    let stereoAccum = $fn.stereotypes->fold({s, acc |
+                                compileStereotype($s, $acc, $ownerCtx);
+                            }, ^CompilerListResult<Stereotype>(context = $ctx3));
+    let tvAccum = $fn.taggedValues->fold({t, acc |
+                                compileTaggedValue($t, $acc, $ownerCtx);
+                            }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));
+    let ctx4 = $tvAccum.context;
+
+    ^CompilerResult<NativeFunction<Any>>(
+        value = ^$skeleton(
+            stereotypes = $stereoAccum.values,
+            taggedValues = $tvAccum.values,
+            typeParameters = $fnTypeParams,
+            multiplicityParameters = $fnMulParams,
+            parameters = $compiledParams,
+            returnGenericType = $rMGenType,
+            returnMultiplicity = $rMMult,
+            classifierGenericType = $classifierGT
+        ),
+        context = $ctx4
+    );
+}
