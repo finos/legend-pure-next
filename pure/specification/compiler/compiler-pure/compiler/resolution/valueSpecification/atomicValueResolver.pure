@@ -20,6 +20,7 @@ import meta::pure::metamodel::multiplicity::*;
 import meta::pure::compiler::resolution::functionDefinitionResolver::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::*;
 
@@ -114,7 +115,7 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                                         if($lastExpr.multiplicity->isEmpty(), | PureOne, | $lastExpr.multiplicity->toOne());
                                   );
                                   let lambdaFT = meta::pure::functions::lang::new(
-                                      buildUserDefinedGenericType(FunctionType)
+                                      ^UserDefinedGenericType(type = FunctionType)
                                   )->cast(@FunctionType);
                                   let ft = ^$lambdaFT(parameters = $lambdaParams, returnType = $bodyReturnGT, returnMultiplicity = $bodyReturnMul);
                                   let lambdaInnerGT = buildInferredGenericType($ft);

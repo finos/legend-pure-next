@@ -30,7 +30,12 @@ import org.eclipse.collections.api.list.MutableList;
  *   <li>{@code PropertyCompiler} adds context: "property 'other'"</li>
  *   <li>{@code ClassHandler} adds context: "class 'pack::MyClass'"</li>
  * </ul>
- * <p>Formatted message: "The type 'X' can't be found in property 'other' in class 'pack::MyClass' (at 4:11-4:20)"</p>
+ * <p>Formatted message: "The type 'X' can't be found in property 'other' in class 'pack::MyClass' (at 4c11-4c20)"</p>
+ *
+ * <p>The {@code (at <sourceId>:<line>c<col>-<endLine>c<endCol>)} suffix uses
+ * the same syntax as the Pure-side {@code formatSourceInfo} and the
+ * stack-frame formatters, so the IDE can render any of them as a clickable
+ * jump-to-source link through a single regex.</p>
  */
 public class CompilationError
 {
@@ -77,14 +82,17 @@ public class CompilationError
         }
         if (sourceInformation != null)
         {
+            // Unified source-location format: (at <sourceId>:<line>c<col>-<endLine>c<endCol>).
+            // Matches Pure-side formatSourceInfo and the stack-frame formatters,
+            // so the IDE renders all of them via the same clickable-link regex.
             sb.append(" (at ");
             if (sourceInformation._sourceId() != null && !sourceInformation._sourceId().isEmpty())
             {
-                sb.append(sourceInformation._sourceId()).append(' ');
+                sb.append(sourceInformation._sourceId()).append(':');
             }
-            sb.append(sourceInformation._startLine()).append(':').append(sourceInformation._startColumn());
+            sb.append(sourceInformation._startLine()).append('c').append(sourceInformation._startColumn());
             sb.append('-');
-            sb.append(sourceInformation._endLine()).append(':').append(sourceInformation._endColumn());
+            sb.append(sourceInformation._endLine()).append('c').append(sourceInformation._endColumn());
             sb.append(')');
         }
         return sb.toString();

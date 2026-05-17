@@ -8,9 +8,15 @@ import meta::pure::compiler::helper::genericType::*;
 
 function meta::pure::compiler::helper::column::buildColumn(name:String[1], owner:GenericType[1], genericType:GenericType[1], multiplicity:Multiplicity[1], nameWildCard:Boolean[1]):Column[1]
 {
-    let cgtypeBase = buildUserDefinedGenericType(Column);
-    let cgtype = ^$cgtypeBase(typeArguments = [$owner, $genericType], multiplicityArguments = [$multiplicity]);
-
+    // `new(...)` so the platform's preferCanonicalAnchor picks the packageable
+    // variant (GenericType_UserDefinedPackageableGenericType) for the GT-of-GT
+    // classifier, matching Java direct compile output. Classifier type is a
+    // literal `Column` so no pointer deref is needed.
+    let cgtype = ^UserDefinedGenericType(
+        type = Column,
+        typeArguments = [$owner, $genericType],
+        multiplicityArguments = [$multiplicity]
+    );
     let col = new($cgtype)->cast(@Column);
     ^$col(
         name = $name,

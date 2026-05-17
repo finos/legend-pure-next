@@ -28,8 +28,7 @@ function meta::pure::compiler::structural::packageableFunctionCompiler::compileT
 function meta::pure::compiler::structural::packageableFunctionCompiler::compileFunctionClassifierGenericType(functionMetaType:Type[1], parameters:VariableExpression[*], returnGenericType:GenericType[1], returnMultiplicity:Multiplicity[1]):UserDefinedGenericType[1]
 {
     let funcType = compileFunctionType($parameters, $returnGenericType, $returnMultiplicity);
-    let baseGT = buildUserDefinedGenericType($functionMetaType);
-    ^$baseGT(typeArguments = [buildUserDefinedGenericType($funcType)]);
+    ^UserDefinedGenericType(type = $functionMetaType, typeArguments = [^UserDefinedGenericType(type = $funcType)]);
 }
 
 function meta::pure::compiler::structural::packageableFunctionCompiler::validateDuplicateParameters(parameters:meta::pure::protocol::grammar::valuespecification::VariableExpression[*], context:CompilerContext[1], ownerCtx:String[1], siCtx:String[1]):CompilerContext[1]

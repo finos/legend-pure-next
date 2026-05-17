@@ -1,6 +1,6 @@
 ###Error
-Can't resolve lambda parameter types (at valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 18:16-18:18)
-Can't resolve lambda parameter types (at valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 18:21-18:27)
+Can't resolve lambda parameter types (at valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount:18c16-18c18)
+Can't resolve lambda parameter types (at valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount:18c21-18c27)
 
 ###Pure
 Class Person

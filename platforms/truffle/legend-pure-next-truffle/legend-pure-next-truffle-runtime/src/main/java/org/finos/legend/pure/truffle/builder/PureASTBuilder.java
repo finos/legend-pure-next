@@ -248,6 +248,24 @@ public final class PureASTBuilder
             throw new RuntimeException("_func() returned null for: " + fnNameDbg + " [" + fe.getClass().getName() + "]");
         }
         Object func = funcObj;
+        // Pointer dereference: compile-pure emits TempCompilerPointer-typed funcs
+        // (PackageableFunctionPointer, PropertyPointer, QualifiedPropertyPointer)
+        // to keep cross-element refs identity-stable across compile passes. The
+        // AST builder needs the live target's metaclass (NativeFunction /
+        // FunctionDefinition / AbstractProperty) to choose a dispatch arm, so
+        // resolve through the registry here before the metaclass checks below.
+        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess pointerResolver =
+                org.finos.legend.pure.truffle.PureLanguage.get(null).resolver();
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(func,
+                "meta::pure::metamodel::pointer::TempCompilerPointer", pointerResolver))
+        {
+            func = dereferencePointer(func, pointerResolver);
+            if (func == null)
+            {
+                throw new RuntimeException("Failed to dereference pointer func in: "
+                        + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNCTION_NAME));
+            }
+        }
         // QP overload disambiguation: the PDB func path may resolve to the wrong
         // overload when multiple QPs share the same simple name (e.g. res() vs res(z)).
         // Fix by matching the QP's param count against the call's arg count.
@@ -296,9 +314,10 @@ public final class PureASTBuilder
         {
             return lowerPropertyAccess(resolvedFunc, fe);
         }
+        String pureType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(resolvedFunc);
         throw new RuntimeException(
-                "Unsupported function type: " + resolvedFunc.getClass().getName() + " for: "
-                        + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNCTION_NAME));
+                "Unsupported function type: " + (pureType != null ? pureType : resolvedFunc.getClass().getName())
+                        + " for: " + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNCTION_NAME));
     }
 
     /**
@@ -586,6 +605,66 @@ public final class PureASTBuilder
     /**
      * Find the correct QP overload from the owning class by matching parameter count.
      */
+    /**
+     * Resolve a TempCompilerPointer subtype to its live target via the registry.
+     *
+     * <p>Mirrors the Pure-side {@code dereferencePointer} in {@code _Pointer.pure}:
+     * PE-style pointers (PackageableFunctionPointer, ClassPointer, etc.) carry
+     * only {@code .path}; member pointers (PropertyPointer, QualifiedPropertyPointer)
+     * carry {@code .path} (owner) + {@code .element} (member name).</p>
+     */
+    private Object dereferencePointer(Object ptr,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        Object pathObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(
+                ptr, org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("path"));
+        if (!(pathObj instanceof String path) || resolver == null)
+        {
+            return null;
+        }
+        Object owner = resolver.getElement(path);
+        if (owner == null)
+        {
+            return null;
+        }
+        // Member pointers — find the member by element name on the owner.
+        Object elementObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(
+                ptr, org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("element"));
+        if (elementObj instanceof String elementName)
+        {
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(ptr,
+                    "meta::pure::metamodel::pointer::QualifiedPropertyPointer"))
+            {
+                Object qps = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(owner, SLOT_QUALIFIED_PROPERTIES);
+                if (qps instanceof PureSequence qpsSeq)
+                {
+                    for (int i = 0; i < qpsSeq.size(); i++)
+                    {
+                        Object qp = qpsSeq.getBoxed(i);
+                        Object qpName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(qp, SLOT_NAME);
+                        if (elementName.equals(qpName)) return qp;
+                    }
+                }
+                return null;
+            }
+            // PropertyPointer (default member pointer arm).
+            Object props = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(owner,
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("properties"));
+            if (props instanceof PureSequence propsSeq)
+            {
+                for (int i = 0; i < propsSeq.size(); i++)
+                {
+                    Object p = propsSeq.getBoxed(i);
+                    Object pName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(p, SLOT_NAME);
+                    if (elementName.equals(pName)) return p;
+                }
+            }
+            return null;
+        }
+        // PE-style pointer — owner IS the target.
+        return owner;
+    }
+
     private Object findQpOverload(Object wrongQp, int expectedParamCount)
     {
         Object owner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(wrongQp, SLOT_OWNER);

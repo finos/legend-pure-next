@@ -1,5 +1,5 @@
 ###Error
-The type 'Unknown' can't be found in class 'pack::MyClass' (at class/property/typeArguments_E_Unknown 14:18-14:24)
+The type 'Unknown' can't be found in class 'pack::MyClass' (at class/property/typeArguments_E_Unknown:14c18-14c24)
 
 ###Pure
 import pack::*;

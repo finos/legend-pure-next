@@ -1,5 +1,5 @@
 ###Error
-Qualified property override variance mismatch for 'demo' in class 'SubClass'. Return multiplicity is not subsumed. Overridden property has return multiplicity '[1]', but overriding property has return multiplicity '[*]'. (at class/qualifiedProperty/qualifiedProperty_E_overrideReturnMultiplicityMismatch 14:5-16:17)
+Qualified property override variance mismatch for 'demo' in class 'SubClass'. Return multiplicity is not subsumed. Overridden property has return multiplicity '[1]', but overriding property has return multiplicity '[*]'. (at class/qualifiedProperty/qualifiedProperty_E_overrideReturnMultiplicityMismatch:14c5-16c17)
 
 ###Pure
 Class test::SuperClass

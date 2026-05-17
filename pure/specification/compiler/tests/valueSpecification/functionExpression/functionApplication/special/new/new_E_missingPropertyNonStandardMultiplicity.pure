@@ -1,6 +1,6 @@
 ###Error
-Missing required property 'values' of type String in new expression (at valueSpecification/functionExpression/functionApplication/special/new/new_E_missingPropertyNonStandardMultiplicity 8:3-8:22)
-Missing required property 'label' of type String in new expression (at valueSpecification/functionExpression/functionApplication/special/new/new_E_missingPropertyNonStandardMultiplicity 8:3-8:22)
+Missing required property 'values' of type String in new expression (at valueSpecification/functionExpression/functionApplication/special/new/new_E_missingPropertyNonStandardMultiplicity:8c3-8c22)
+Missing required property 'label' of type String in new expression (at valueSpecification/functionExpression/functionApplication/special/new/new_E_missingPropertyNonStandardMultiplicity:8c3-8c22)
 
 ###Pure
 function test::new::testNew(): Any[*]

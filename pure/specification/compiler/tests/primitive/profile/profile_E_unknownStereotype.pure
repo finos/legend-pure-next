@@ -1,5 +1,5 @@
 ###Error
-The stereotype 'unknown' can't be found in profile 'AProfile' in primitive type 'pack::MyPrimitive' (at primitive/profile/profile_E_unknownStereotype 7:22-7:28)
+The stereotype 'unknown' can't be found in profile 'AProfile' in primitive type 'pack::MyPrimitive' (at primitive/profile/profile_E_unknownStereotype:7c22-7c28)
 
 ###Pure
 import pack::*;

@@ -1,5 +1,5 @@
 ###Error
-No matching function 'check' found for argument types (String[2]) (at valueSpecification/functionExpression/functionApplication/generics/pushDownMultiplicity_E_errorInBody 10:24-10:32)
+No matching function 'check' found for argument types (String[2]) (at valueSpecification/functionExpression/functionApplication/generics/pushDownMultiplicity_E_errorInBody:10c24-10c32)
 
 ###Pure
 native function check(s:String[1]):Boolean[1];

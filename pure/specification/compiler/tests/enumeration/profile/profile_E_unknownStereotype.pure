@@ -1,5 +1,5 @@
 ###Error
-The stereotype 'unknown' can't be found in profile 'AProfile' in enumeration 'pack::MyEnum' (at enumeration/profile/profile_E_unknownStereotype 7:17-7:23)
+The stereotype 'unknown' can't be found in profile 'AProfile' in enumeration 'pack::MyEnum' (at enumeration/profile/profile_E_unknownStereotype:7c17-7c23)
 
 ###Pure
 import pack::*;

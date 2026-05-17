@@ -1,6 +1,6 @@
 ###Error
-Can't find enum value 'EW' in enumeration 'test::primitive::MyEnum' (at valueSpecification/functionExpression/dot/enumeraiton_E_unknownValue 15:26-15:28)
-Can't find enum value 'EWW' in enumeration 'test::primitive::MyEnum' (at valueSpecification/functionExpression/dot/enumeraiton_E_unknownValue 16:26-16:29)
+Can't find enum value 'EW' in enumeration 'test::primitive::MyEnum' (at valueSpecification/functionExpression/dot/enumeraiton_E_unknownValue:15c26-15c28)
+Can't find enum value 'EWW' in enumeration 'test::primitive::MyEnum' (at valueSpecification/functionExpression/dot/enumeraiton_E_unknownValue:16c26-16c29)
 
 ###Pure
 Enum test::primitive::MyEnum

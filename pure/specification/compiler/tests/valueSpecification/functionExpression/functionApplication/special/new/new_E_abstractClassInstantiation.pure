@@ -1,5 +1,5 @@
 ###Error
-Cannot instantiate abstract class 'pack::MyAbstractClass' (at valueSpecification/functionExpression/functionApplication/special/new/new_E_abstractClassInstantiation 14:13-14:41)
+Cannot instantiate abstract class 'pack::MyAbstractClass' (at valueSpecification/functionExpression/functionApplication/special/new/new_E_abstractClassInstantiation:14c13-14c41)
 
 ###Pure
 import pack::*;

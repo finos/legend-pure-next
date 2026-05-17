@@ -1,5 +1,5 @@
 ###Error
-No matching function 'doStuff' found for argument types (Integer[1]) (at valueSpecification/functionExpression/functionApplication/simple/type/type_e_wrongParameterType 9:5-9:15)
+No matching function 'doStuff' found for argument types (Integer[1]) (at valueSpecification/functionExpression/functionApplication/simple/type/type_e_wrongParameterType:9c5-9c15)
 
 ###Pure
 import pack::*;

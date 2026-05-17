@@ -1,5 +1,5 @@
 ###Error
-The tag 'unknown' can't be found in profile 'AProfile' in class 'pack::MyClass' (at class/profile/profile_E_unknownTag 13:17-13:23)
+The tag 'unknown' can't be found in profile 'AProfile' in class 'pack::MyClass' (at class/profile/profile_E_unknownTag:13c17-13c23)
 
 ###Pure
 import pack::*;

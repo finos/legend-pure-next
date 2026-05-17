@@ -33,7 +33,7 @@ function meta::pure::compiler::structural::generalizationCompiler::compileGenera
     if($protocolGeneralizations->isEmpty(),
         | ^CompilerListResult<Generalization>(
               values = [^Generalization(
-                  general = buildUserDefinedGenericType(Any),
+                  general = ^UserDefinedGenericType(type = Any),
                   specific = $skeleton
               )],
               context = $context

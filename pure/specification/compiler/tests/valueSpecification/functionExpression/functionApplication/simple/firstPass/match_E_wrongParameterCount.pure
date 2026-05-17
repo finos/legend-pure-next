@@ -1,6 +1,6 @@
 ###Error
 The function 'myPlus' with 3 parameter(s) can't be found. Possible matches with different number of parameters:
-    pack::myPlus(left: Number[1], right: Number[1]): Number[1] (at valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_wrongParameterCount 10:5-10:20)
+    pack::myPlus(left: Number[1], right: Number[1]): Number[1] (at valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_wrongParameterCount:10c5-10c20)
 
 ###Pure
 import pack::*;

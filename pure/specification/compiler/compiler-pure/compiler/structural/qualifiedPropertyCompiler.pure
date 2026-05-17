@@ -26,6 +26,7 @@ import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::qualifiedPropertyCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperty(qp:meta::pure::protocol::grammar::function::property::QualifiedProperty[1], context:CompilerContext[1], packagePath:String[1], owner:Class<Any>[1]):CompilerResult<QualifiedProperty<Any>>[1]
@@ -75,20 +76,15 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
     let ctx3 = if($bodyResult.context->isNotEmpty(), | $bodyResult.context->toOne(), | $ctx2);
 
     // Build FunctionType and classifierGenericType
-    let functionType = new(
-        buildUserDefinedGenericType(FunctionType)
-    )->cast(@FunctionType);
+    let functionType = new(^UserDefinedGenericType(type = FunctionType))->cast(@FunctionType);
     let ft = ^$functionType(
         parameters = $allParams,
         returnType = $returnGenType,
         returnMultiplicity = $returnMult
     );
-    let qpClassifierGTBase = buildUserDefinedGenericType(QualifiedProperty);
-    let qpClassifierGT = ^$qpClassifierGTBase(typeArguments = [buildUserDefinedGenericType($ft)]);
+    let qpClassifierGT = ^UserDefinedGenericType(type = QualifiedProperty, typeArguments = [^UserDefinedGenericType(type = $ft)]);
+    let emptyQP = new($qpClassifierGT)->cast(@QualifiedProperty<Any>);
 
-    let emptyQP = new(
-        buildUserDefinedGenericType(QualifiedProperty)
-    )->cast(@QualifiedProperty<Any>);
     // Compile stereotypes and tagged values
     let qpCtx = 'qualified property \'' + $qp.name + '\' in ' + $classCtx;
     let stereoAccum = $qp.stereotypes->fold({s, acc |
@@ -106,7 +102,6 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
         stereotypes = $stereoAccum.values,
         taggedValues = $tvAccum.values,
         expressionSequence = $bodyResult.specs,
-        classifierGenericType = $qpClassifierGT,
         sourceInformation = compileSourceInformation($qp.p_sourceInformation)
     );
     ^CompilerResult<QualifiedProperty<Any>>(

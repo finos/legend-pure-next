@@ -1,5 +1,5 @@
 ###Error
-Type mismatch for property 'name': expected String, got AtomicValue (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongType_VS 7:3-7:295)
+Type mismatch for property 'name': expected String, got AtomicValue (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongType_VS:7c3-7c295)
 
 ###Pure
 function test::new::testNewWrongTypeVS(): Any[*]

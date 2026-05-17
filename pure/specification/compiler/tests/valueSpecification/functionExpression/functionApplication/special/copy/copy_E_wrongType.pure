@@ -1,6 +1,6 @@
 ###Error
-Type mismatch for property 'name': expected String, got Integer (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongType 9:11-9:24)
-Type mismatch for property 'value': expected Integer, got String (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongType 10:11-10:28)
+Type mismatch for property 'name': expected String, got Integer (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongType:9c11-9c24)
+Type mismatch for property 'value': expected Integer, got String (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongType:10c11-10c28)
 
 ###Pure
 function test::copy::testCopy(): Any[*]

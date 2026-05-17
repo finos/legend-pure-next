@@ -1,5 +1,5 @@
 ###Error
-The function 'unknownFunc' with 2 parameter(s) can't be found (at valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_unknownFunction 9:5-9:21)
+The function 'unknownFunc' with 2 parameter(s) can't be found (at valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_unknownFunction:9c5-9c21)
 
 ###Pure
 import pack::*;

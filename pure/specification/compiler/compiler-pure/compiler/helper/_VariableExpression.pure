@@ -19,10 +19,11 @@ import meta::pure::functions::lang::*;
 import meta::pure::compiler::helper::type::*;
 import meta::pure::compiler::helper::variableExpression::*;
 import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
 
 function meta::pure::compiler::helper::variableExpression::newVariableExpression():VariableExpression[1]
 {
-    let ve = new(buildInferredGenericType(VariableExpression))->cast(@VariableExpression);
+    let ve = new(^InferredGenericType(type = VariableExpression))->cast(@VariableExpression);
     ^$ve(
         name = '',
         genericType = buildInferredGenericType(Any),

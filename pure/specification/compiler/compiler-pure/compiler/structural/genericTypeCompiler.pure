@@ -22,6 +22,7 @@ import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::relationTypeCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::genericTypeCompiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*]):CompilerResult<GenericType>[1]
@@ -150,9 +151,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
             }, ^CompilerListResult<VariableExpression>(context = $context));
             let ftReturnGT = $ft.returnType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ftParamAccum.context, $packagePath, $typeParameters, '', $ownerContext);
             let ftReturnMul = $ft.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
-            let functionType = new(
-                buildUserDefinedGenericType(FunctionType)
-            )->cast(@FunctionType);
+            let functionType = new(^UserDefinedGenericType(type = FunctionType))->cast(@FunctionType);
             let compiledFT = ^$functionType(
                 parameters = $ftParamAccum.values,
                 returnType = $ftReturnGT.value->toOne(),

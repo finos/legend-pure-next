@@ -21,9 +21,7 @@ import meta::pure::compiler::structural::functionTypeCompiler::*;
 
 function meta::pure::compiler::structural::functionTypeCompiler::compileFunctionType(parameters:VariableExpression[*], returnGenericType:GenericType[1], returnMultiplicity:Multiplicity[1]):FunctionType[1]
 {
-    let functionType = new(
-        buildUserDefinedGenericType(FunctionType)
-    )->cast(@FunctionType);
+    let functionType = new(^UserDefinedGenericType(type = FunctionType))->cast(@FunctionType);
     ^$functionType(
         parameters = $parameters,
         returnType = $returnGenericType,

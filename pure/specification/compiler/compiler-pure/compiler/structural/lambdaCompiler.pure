@@ -25,6 +25,7 @@ import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::*;
 
@@ -42,10 +43,9 @@ function meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(lamb
         | PureOne,
         | $lastExpr->toOne().multiplicity->toOne()
     );
-    let ft = new(buildUserDefinedGenericType(FunctionType))->cast(@FunctionType);
+    let ft = new(^UserDefinedGenericType(type = FunctionType))->cast(@FunctionType);
     let rebuiltFT = ^$ft(parameters = $params, returnType = $bodyReturnGT, returnMultiplicity = $bodyReturnMul);
-    let rebuiltCGTBase = buildInferredGenericType(LambdaFunction);
-    let rebuiltCGT = ^$rebuiltCGTBase(typeArguments = [buildInferredGenericType($rebuiltFT)]);
+    let rebuiltCGT = ^InferredGenericType(type = LambdaFunction, typeArguments = [^InferredGenericType(type = $rebuiltFT)]);
     ^$lambda(classifierGenericType = $rebuiltCGT);
 }
 
@@ -111,21 +111,16 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
                 );
           );
 
-          let lambdaFunctionType = new(
-              buildUserDefinedGenericType(FunctionType)
-          )->cast(@FunctionType);
+          let lambdaFunctionType = new(^UserDefinedGenericType(type = FunctionType))->cast(@FunctionType);
           let ft = ^$lambdaFunctionType(
               parameters = $compiledParams,
               returnType = $bodyReturnGT,
               returnMultiplicity = $bodyReturnMul
           );
 
-          let lambdaCGTBase = buildInferredGenericType(LambdaFunction);
-          let lambdaCGT = ^$lambdaCGTBase(typeArguments = [buildInferredGenericType($ft)]);
+          let lambdaCGT = ^InferredGenericType(type = LambdaFunction, typeArguments = [buildInferredGenericType($ft)]);
 
-          let emptyLambda = new(
-              buildUserDefinedGenericType(LambdaFunction)
-          )->cast(@LambdaFunction<Any>);
+          let emptyLambda = new(^UserDefinedGenericType(type = LambdaFunction))->cast(@LambdaFunction<Any>);
           let m3Lambda = ^$emptyLambda(
               parameters = $compiledParams,
               expressionSequence = $compiledSequence.specs,

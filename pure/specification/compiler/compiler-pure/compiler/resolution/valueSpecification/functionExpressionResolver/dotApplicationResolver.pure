@@ -331,8 +331,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         genericType = ^CompilerNotSetGenericType(),
         multiplicity = ^CompilerNotSetMultiplicity()
     );
+    // Skeleton dot — multiplicity/genericType filled by later resolution.
     let innerDot = meta::pure::functions::lang::new(
-        buildUserDefinedGenericType(DotApplication)
+        ^UserDefinedGenericType(type = DotApplication)
     )->cast(@DotApplication);
     let dotBody = ^$innerDot(
         functionName = $functionName,
@@ -340,9 +341,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         sourceInformation = $dot.sourceInformation
     );
 
-    // Build lambda function
+    // Build lambda function — skeleton, classifierGenericType filled by later inference.
     let emptyLambda = meta::pure::functions::lang::new(
-        buildUserDefinedGenericType(LambdaFunction)
+        ^UserDefinedGenericType(type = LambdaFunction)
     )->cast(@LambdaFunction<Any>);
     let lambda = ^$emptyLambda(
         parameters = [$lambdaParam],

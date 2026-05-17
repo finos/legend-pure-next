@@ -1572,6 +1572,7 @@ public final class VisitorMappingGenerator
             case "parseDouble": emitParse(out, args, "Double", cachedTextToken, inFoldBody); return;
             case "parseBoolean": emitParse(out, args, "Boolean", cachedTextToken, inFoldBody); return;
             case "stripQuotes": emitStripQuotes(out, args, cachedTextToken, inFoldBody); return;
+            case "stripTripleQuotes": emitStripTripleQuotes(out, args, cachedTextToken, inFoldBody); return;
             case "stripPercent": emitStripPercent(out, args, cachedTextToken, inFoldBody); return;
             case "stripParens": emitStripParens(out, args, cachedTextToken, inFoldBody); return;
             case "stripIfQuoted": emitStripIfQuoted(out, args, cachedTextToken, inFoldBody); return;
@@ -1777,6 +1778,19 @@ public final class VisitorMappingGenerator
         out.append(".substring(1, ");
         emitInnerStrExpr(out, args.get(0), cachedTextToken, inFoldBody);
         out.append(".length() - 1)");
+    }
+
+    /**
+     * Strip 3-char opening + 3-char closing delimiters from a triple-quoted
+     * literal (`'''body'''` → `body`). Used for {@code STRING_TRIPLE} tokens
+     * lexed by the multi-line string rule in M3Lexer.g4. Newlines inside the
+     * body are preserved as-is — Java's `String.substring` is byte-range only.
+     */
+    private static void emitStripTripleQuotes(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
+    {
+        out.append("org.finos.legend.pure.next.parser.shared.TripleStringStripper.strip(");
+        emitInnerStrExpr(out, args.get(0), cachedTextToken, inFoldBody);
+        out.append(")");
     }
 
     private static void emitStripPercent(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)

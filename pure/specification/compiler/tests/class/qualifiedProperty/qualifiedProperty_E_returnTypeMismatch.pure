@@ -1,5 +1,5 @@
 ###Error
-Return type error in qualified property 'badTypeProp': expected Integer, got String (at class/qualifiedProperty/qualifiedProperty_E_returnTypeMismatch 8:34-8:38)
+Return type error in qualified property 'badTypeProp': expected Integer, got String (at class/qualifiedProperty/qualifiedProperty_E_returnTypeMismatch:8c34-8c38)
 
 ###Pure
 Class test::MyClass

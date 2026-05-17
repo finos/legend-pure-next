@@ -1,6 +1,6 @@
 ###Error
 The function 'doStuff' with 1 parameter(s) can't be found. Possible matches with 1 parameter(s) not in scope:
-    other_pack::doStuff(a: String[1]): String[1] (at valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_packageVisibility 10:6-10:16)
+    other_pack::doStuff(a: String[1]): String[1] (at valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_packageVisibility:10c6-10c16)
 
 ###Pure
 import pack::*;

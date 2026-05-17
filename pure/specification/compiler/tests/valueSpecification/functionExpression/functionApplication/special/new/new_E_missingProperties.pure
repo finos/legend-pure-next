@@ -1,5 +1,5 @@
 ###Error
-Missing required property 'name' of type String in new expression (at valueSpecification/functionExpression/functionApplication/special/new/new_E_missingProperties 9:3-9:12)
+Missing required property 'name' of type String in new expression (at valueSpecification/functionExpression/functionApplication/special/new/new_E_missingProperties:9c3-9c12)
 
 ###Pure
 import test::new::support::*;

@@ -519,6 +519,10 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printType(
                 if($gtv.type->isEmpty(), | '?', |
                     $gtv.type->toOne()->match(
                         [
+                            // Pointer arm — match BEFORE PackageableElement so the
+                            // pointer's `.path` is used directly. shortPath has its
+                            // own pointer arm that reads `.path` instead of `.name`.
+                            ptr:TempCompilerPointer[1] | $ptr->cast(@PackageableElement)->shortPath(),
                             tp:TypeParameter[1] | $tp.name + if($tp.owner->isEmpty(), | '', | '~' + $tp.owner->toOne()->match([ pe:PackageableElement[1] | $pe->shortPath(), a:Any[1] | '?' ])),
                             ft:FunctionType[1] |
                                 let pStr = $ft.parameters->cast(@VariableExpression)->map(p | $p.genericType->toOne()->printType() + $p.multiplicity->toOne()->printMul())->joinStrings(', ');

@@ -1,5 +1,5 @@
 ###Error
-No matching function 'tt' found for argument types (Integer[3], LambdaFunction<{Integer[1]->Integer[1]}>[2]) (at valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters_E_noMatch 14:4-14:31)
+No matching function 'tt' found for argument types (Integer[3], LambdaFunction<{Integer[1]->Integer[1]}>[2]) (at valueSpecification/functionExpression/functionApplication/generics/lambdaCollectionAsParameters_E_noMatch:14c4-14c31)
 
 ###Pure
 Class Person{age:Integer[1];}

@@ -1,5 +1,5 @@
 ###Error
-Ambiguous function call: multiple equally-specific matches found [pack2::compute(left: Number[1], right: Number[1]): Number[1], pack::compute(left: Number[1], right: Number[1]): Number[1]] (at valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_ambiguousFunction 11:5-11:17)
+Ambiguous function call: multiple equally-specific matches found [pack2::compute(left: Number[1], right: Number[1]): Number[1], pack::compute(left: Number[1], right: Number[1]): Number[1]] (at valueSpecification/functionExpression/functionApplication/simple/firstPass/match_E_ambiguousFunction:11c5-11c17)
 
 ###Pure
 import pack::*;

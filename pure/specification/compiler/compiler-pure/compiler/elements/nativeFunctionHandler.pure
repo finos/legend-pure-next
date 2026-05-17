@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::functionTypeCompiler::*;
 import meta::pure::compiler::structural::packageableFunctionCompiler::*;
@@ -35,8 +36,9 @@ function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pur
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
 
     let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
-    let emptyFunc = new(buildUserDefinedGenericType(NativeFunction))->cast(@NativeFunction<Any>);
-
+    // Pass-1 skeleton — see comment in userDefinedFunctionHandler for why we
+    // still use `new(...)` here (mul-1 fields filled in pass-2).
+    let emptyFunc = new(^UserDefinedGenericType(type = NativeFunction))->cast(@NativeFunction<Any>);
     let skeleton = ^$emptyFunc(
         name = $mangledName,
         functionName = if($fn.functionName->isEmpty(), | $fn.name, | $fn.functionName->toOne()),

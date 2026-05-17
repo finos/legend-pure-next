@@ -1,5 +1,5 @@
 ###Error
-Variable 'z' is already defined (at function/lambda/lambda_E_VarConflicts 8:13-8:25)
+Variable 'z' is already defined (at function/lambda/lambda_E_VarConflicts:8c13-8c25)
 
 ###Pure
 function test::t():Any[*]

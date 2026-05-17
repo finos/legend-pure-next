@@ -1,5 +1,5 @@
 ###Error
-No matching function 'fl' found for argument types (String[2], LambdaFunction<{Integer[1]->Boolean[1]}>[1]) (at valueSpecification/functionExpression/functionApplication/generics/lambdaWithParamTypeAndMul_E_wrongVarType 12:15-12:45)
+No matching function 'fl' found for argument types (String[2], LambdaFunction<{Integer[1]->Boolean[1]}>[1]) (at valueSpecification/functionExpression/functionApplication/generics/lambdaWithParamTypeAndMul_E_wrongVarType:12c15-12c45)
 
 ###Pure
 import test::*;

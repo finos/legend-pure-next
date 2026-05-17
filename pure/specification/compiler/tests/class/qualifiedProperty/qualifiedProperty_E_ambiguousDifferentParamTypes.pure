@@ -1,5 +1,5 @@
 ###Error
-Ambiguous qualified property 'lookup' with 1 parameter(s) in class 'test::Derived' (at class/qualifiedProperty/qualifiedProperty_E_ambiguousDifferentParamTypes 22:7-22:22)
+Ambiguous qualified property 'lookup' with 1 parameter(s) in class 'test::Derived' (at class/qualifiedProperty/qualifiedProperty_E_ambiguousDifferentParamTypes:22c7-22c22)
 
 ###Pure
 Class test::Base

@@ -1,5 +1,5 @@
 ###Error
-Can't find property 'unkown' in class 'test::MyClass' (at valueSpecification/functionExpression/dot/property_E_unknownProperty 9:24-9:30)
+Can't find property 'unkown' in class 'test::MyClass' (at valueSpecification/functionExpression/dot/property_E_unknownProperty:9c24-9c30)
 
 ###Pure
 import test::*;

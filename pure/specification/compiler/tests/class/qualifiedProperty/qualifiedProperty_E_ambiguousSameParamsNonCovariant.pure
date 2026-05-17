@@ -1,6 +1,6 @@
 ###Error
-Ambiguous qualified property 'info' with 0 parameter(s) in class 'test::Child' (at class/qualifiedProperty/qualifiedProperty_E_ambiguousSameParamsNonCovariant 9:7-9:13)
-Qualified property override variance mismatch for 'info' in class 'Child'. Return type is not covariant. Overridden property has return type 'Integer', but overriding property has return type 'String'. (at class/qualifiedProperty/qualifiedProperty_E_ambiguousSameParamsNonCovariant 21:5-23:17)
+Ambiguous qualified property 'info' with 0 parameter(s) in class 'test::Child' (at class/qualifiedProperty/qualifiedProperty_E_ambiguousSameParamsNonCovariant:9c7-9c13)
+Qualified property override variance mismatch for 'info' in class 'Child'. Return type is not covariant. Overridden property has return type 'Integer', but overriding property has return type 'String'. (at class/qualifiedProperty/qualifiedProperty_E_ambiguousSameParamsNonCovariant:21c5-23c17)
 
 ###Pure
 function test::use():Any[*]

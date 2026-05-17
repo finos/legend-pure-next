@@ -1,7 +1,7 @@
 ###Error
-Multiplicity mismatch for property 'name': expected [1], got [0] (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongMultiplicity 10:11-10:24)
-Multiplicity mismatch for property 'name': expected [1], got [3] (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongMultiplicity 11:11-11:37)
-Multiplicity mismatch for property 'value': expected [0..1], got [3] (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongMultiplicity 12:11-12:32)
+Multiplicity mismatch for property 'name': expected [1], got [0] (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongMultiplicity:10c11-10c24)
+Multiplicity mismatch for property 'name': expected [1], got [3] (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongMultiplicity:11c11-11c37)
+Multiplicity mismatch for property 'value': expected [0..1], got [3] (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_wrongMultiplicity:12c11-12c32)
 
 ###Pure
 function test::copy::testCopy(): Any[*]

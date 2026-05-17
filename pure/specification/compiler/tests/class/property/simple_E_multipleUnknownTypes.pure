@@ -1,6 +1,6 @@
 ###Error
-The type 'UnknownA' can't be found in property 'a' in class 'pack::MyClass' (at class/property/simple_E_multipleUnknownTypes 11:6-11:13)
-The type 'UnknownB' can't be found in property 'b' in class 'pack::MyClass' (at class/property/simple_E_multipleUnknownTypes 12:6-12:13)
+The type 'UnknownA' can't be found in property 'a' in class 'pack::MyClass' (at class/property/simple_E_multipleUnknownTypes:11c6-11c13)
+The type 'UnknownB' can't be found in property 'b' in class 'pack::MyClass' (at class/property/simple_E_multipleUnknownTypes:12c6-12c13)
 
 ###Pure
 import pack::*;

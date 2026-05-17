@@ -1,5 +1,5 @@
 ###Error
-No matching function 'plus' found for argument types (String[1], Integer[1]) (at valueSpecification/functionExpression/dot/property_E_wrongType 9:24-9:32)
+No matching function 'plus' found for argument types (String[1], Integer[1]) (at valueSpecification/functionExpression/dot/property_E_wrongType:9c24-9c32)
 
 ###Pure
 import test::*;

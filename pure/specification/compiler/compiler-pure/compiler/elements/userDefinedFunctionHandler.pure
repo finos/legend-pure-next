@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::functionTypeCompiler::*;
 import meta::pure::compiler::structural::packageableFunctionCompiler::*;
@@ -38,8 +39,11 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass1(fn:meta
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
 
     let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
-    let emptyFunc = new(buildUserDefinedGenericType(UserDefinedFunction))->cast(@UserDefinedFunction<Any>);
-
+    // Pass-1 skeleton: returnGenericType/returnMultiplicity are filled in pass-2.
+    // `^X(...)` would error on missing mul-1 fields; use `new()` to allow them
+    // to start null. The classifier is a literal `UserDefinedFunction` (stable
+    // metamodel class) so no pointer deref is needed.
+    let emptyFunc = new(^UserDefinedGenericType(type = UserDefinedFunction))->cast(@UserDefinedFunction<Any>);
     let skeleton = ^$emptyFunc(
         name = $mangledName,
         functionName = if($fn.functionName->isEmpty(), | $fn.name, | $fn.functionName->toOne()),

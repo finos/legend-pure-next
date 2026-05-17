@@ -1,5 +1,5 @@
 ###Error
-The element 'Pair' is ambiguous, found in multiple imports: 'meta::pure::functions::collection::Pair', 'pack::Pair' in property 'pets' in association 'pack::AnimalPairLink' (at association/property/simple_E_ambiguousType 24:9-24:12)
+The element 'Pair' is ambiguous, found in multiple imports: 'meta::pure::functions::collection::Pair', 'pack::Pair' in property 'pets' in association 'pack::AnimalPairLink' (at association/property/simple_E_ambiguousType:24c9-24c12)
 
 ###Pure
 import pack::*;

@@ -1,5 +1,5 @@
 ###Error
-The profile 'Unknown' can't be found in class 'pack::MyClass' (at class/profile/profile_E_unknownProfile 13:9-13:15)
+The profile 'Unknown' can't be found in class 'pack::MyClass' (at class/profile/profile_E_unknownProfile:13c9-13c15)
 
 ###Pure
 import pack::*;

@@ -1,5 +1,5 @@
 ###Error
-No matching function 'pl' found for argument types (Integer[1], String[1]) (at valueSpecification/functionExpression/functionApplication/generics/type_E_paramValueWrongType 7:28-7:37)
+No matching function 'pl' found for argument types (Integer[1], String[1]) (at valueSpecification/functionExpression/functionApplication/generics/type_E_paramValueWrongType:7c28-7c37)
 
 ###Pure
 function f<T>(s:T[1]):T[1]{$s}

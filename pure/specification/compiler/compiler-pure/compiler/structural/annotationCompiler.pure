@@ -18,6 +18,7 @@ import meta::pure::functions::lang::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::annotationCompiler::compileStereotype(s:meta::pure::protocol::grammar::extension::Stereotype_Pointer[1], acc:CompilerListResult<Stereotype>[1], ownerCtx:String[1]):CompilerListResult<Stereotype>[1]
@@ -69,7 +70,7 @@ function meta::pure::compiler::structural::annotationCompiler::compileTaggedValu
               | let siCtx = formatSourceInfo($t.tag.extraPointerValues->at(0).p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx);
                 let newCtx = ^$ctx(errors += 'The tag \'' + $tagName + '\' can\'t be found in profile \'' + $t.tag.value + '\' in ' + $ownerCtx + $siCtx);
                 ^$acc(context = $newCtx);,
-              | let tvGT = buildUserDefinedGenericType(TaggedValue);
+              | let tvGT = ^UserDefinedGenericType(type = TaggedValue);
                 let inst = new($tvGT)->cast(@TaggedValue);
                 ^$acc(values += ^$inst(tag = $matched->toOne(), value = $t.value));
           );

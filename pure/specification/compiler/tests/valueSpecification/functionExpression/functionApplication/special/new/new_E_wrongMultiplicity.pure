@@ -1,7 +1,7 @@
 ###Error
-Multiplicity mismatch for property 'single': expected [1], got [0] (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongMultiplicity 9:3-9:33)
-Multiplicity mismatch for property 'single': expected [1], got [3] (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongMultiplicity 10:3-10:40)
-Multiplicity mismatch for property 'optional': expected [0..1], got [3] (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongMultiplicity 11:3-11:54)
+Multiplicity mismatch for property 'single': expected [1], got [0] (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongMultiplicity:9c3-9c33)
+Multiplicity mismatch for property 'single': expected [1], got [3] (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongMultiplicity:10c3-10c40)
+Multiplicity mismatch for property 'optional': expected [0..1], got [3] (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongMultiplicity:11c3-11c54)
 
 ###Pure
 function test::new::testNew(): Any[*]

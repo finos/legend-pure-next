@@ -1,5 +1,5 @@
 ###Error
-Duplicate parameter name 'z' (at function/lambda/lambda_E_dupParamName 7:5-7:33)
+Duplicate parameter name 'z' (at function/lambda/lambda_E_dupParamName:7c5-7c33)
 
 ###Pure
 function test::t():Any[*]

@@ -1,5 +1,5 @@
 ###Error
-Return multiplicity error in qualified property 'badMulProp': expected [1], got [*] (at class/qualifiedProperty/qualifiedProperty_E_returnMultiplicityMismatch 8:33-8:38)
+Return multiplicity error in qualified property 'badMulProp': expected [1], got [*] (at class/qualifiedProperty/qualifiedProperty_E_returnMultiplicityMismatch:8c33-8c38)
 
 ###Pure
 Class test::MyClass

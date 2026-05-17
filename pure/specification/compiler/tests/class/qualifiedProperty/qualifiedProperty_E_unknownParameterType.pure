@@ -1,5 +1,5 @@
 ###Error
-The type 'UnknownType' can't be found in parameter 's' in class 'test::MyClass' (at class/qualifiedProperty/qualifiedProperty_E_unknownParameterType 8:16-8:26)
+The type 'UnknownType' can't be found in parameter 's' in class 'test::MyClass' (at class/qualifiedProperty/qualifiedProperty_E_unknownParameterType:8c16-8c26)
 
 ###Pure
 Class test::MyClass

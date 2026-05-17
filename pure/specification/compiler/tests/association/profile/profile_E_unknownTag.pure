@@ -1,5 +1,5 @@
 ###Error
-The tag 'unknown' can't be found in profile 'AProfile' in association 'pack::MyAssociation' (at association/profile/profile_E_unknownTag 7:23-7:29)
+The tag 'unknown' can't be found in profile 'AProfile' in association 'pack::MyAssociation' (at association/profile/profile_E_unknownTag:7c23-7c29)
 
 ###Pure
 import pack::*;

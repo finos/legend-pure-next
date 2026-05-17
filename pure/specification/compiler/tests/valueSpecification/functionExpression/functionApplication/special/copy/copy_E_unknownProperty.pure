@@ -1,5 +1,5 @@
 ###Error
-Unknown property 'unknown' in class 'test::copy::Holder' (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_unknownProperty 8:11-8:27)
+Unknown property 'unknown' in class 'test::copy::Holder' (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_unknownProperty:8c11-8c27)
 
 ###Pure
 function test::copy::testCopy(): Any[*]

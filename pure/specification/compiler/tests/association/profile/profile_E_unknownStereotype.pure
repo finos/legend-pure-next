@@ -1,5 +1,5 @@
 ###Error
-The stereotype 'unknown' can't be found in profile 'AProfile' in association 'pack::MyAssociation' (at association/profile/profile_E_unknownStereotype 7:24-7:30)
+The stereotype 'unknown' can't be found in profile 'AProfile' in association 'pack::MyAssociation' (at association/profile/profile_E_unknownStereotype:7c24-7c30)
 
 ###Pure
 import pack::*;

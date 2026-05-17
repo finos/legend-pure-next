@@ -37,7 +37,19 @@ function <<test.Test>> meta::pure::functions::meta::testParseNativeIntegration()
 
 function <<test.Test>> meta::pure::functions::meta::testParseUnknownSectionThrows() : Boolean[1]
 {
-    assertError(|meta::pure::functions::meta::parse('test', '###Pure\nClass a::A {}\n\n###Unknown\nstuff\n'), 'No parser registered for section: ###Unknown');
+    assertError(
+        |meta::pure::functions::meta::parse(
+            'test',
+            '''
+            ###Pure
+            Class a::A {}
+
+            ###Unknown
+            stuff
+            '''
+        ),
+        'No parser registered for section: ###Unknown'
+    );
 }
 
 function <<test.Test>> meta::pure::functions::meta::testParseEnumPropertyValues() : Boolean[1]

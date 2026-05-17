@@ -1,5 +1,5 @@
 ###Error
-The column 'NotInRel' can't be found in the relation (legal:String[1], other:Integer[0..1], yeah:Float[1]) (at valueSpecification/functionExpression/functionApplication/generics/relation/distinct_E_columnIsNotSubset 9:17-9:27)
+The column 'NotInRel' can't be found in the relation (legal:String[1], other:Integer[0..1], yeah:Float[1]) (at valueSpecification/functionExpression/functionApplication/generics/relation/distinct_E_columnIsNotSubset:9c17-9c27)
 
 ###Pure
 import meta::pure::metamodel::relation::*;

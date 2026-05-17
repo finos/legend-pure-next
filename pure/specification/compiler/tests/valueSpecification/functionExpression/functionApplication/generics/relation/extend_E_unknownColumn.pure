@@ -1,5 +1,5 @@
 ###Error
-Can't find column 'unknown' in relation type '(legal:String[1], other:Integer[0..1])' (at valueSpecification/functionExpression/functionApplication/generics/relation/extend_E_unknownColumn 9:46-9:53)
+Can't find column 'unknown' in relation type '(legal:String[1], other:Integer[0..1])' (at valueSpecification/functionExpression/functionApplication/generics/relation/extend_E_unknownColumn:9c46-9c53)
 
 ###Pure
 import meta::pure::metamodel::relation::*;

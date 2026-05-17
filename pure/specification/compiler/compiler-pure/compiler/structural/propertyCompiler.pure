@@ -39,6 +39,7 @@ import meta::pure::compiler::helper::functionType::*;
 import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::helper::class::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::propertyCompiler::compileProperty(protocolProperty:meta::pure::protocol::grammar::function::property::Property[1], context:CompilerContext[1], packagePath:String[1], owner:Class<Any>[1]):CompilerResult<Property<Nil, Any|*>>[1]
@@ -52,15 +53,14 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
         | ^CompilerResult<Property<Nil, Any|*>>(context = $updatedContext),
         | let mMult = $protocolProperty.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
 
-          let propClassifierGTBase = buildUserDefinedGenericType(Property);
-          let propClassifierGT = ^$propClassifierGTBase(
+          let propClassifierGT = ^UserDefinedGenericType(
+              type = Property,
               typeArguments = [
                   $owner.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0),
                   $mGenType
               ],
               multiplicityArguments = [$mMult]
           );
-
           let prop = new($propClassifierGT)->cast(@Property<Nil, Any|*>);
           let classCtx = 'class \'' + $packagePath + '::' + $owner.name->toOne() + '\'';
           let stereoResult = compilePropertyStereotypes($protocolProperty, $updatedContext, $classCtx);
@@ -180,23 +180,21 @@ function meta::pure::compiler::structural::propertyCompiler::compileEnumProperty
 {
     let pureOne = PureOne;
 
-    let propClassifierGTBase = buildUserDefinedGenericType(Property);
-    let propClassifierGT = ^$propClassifierGTBase(
+    let propClassifierGT = ^UserDefinedGenericType(
+        type = Property,
         typeArguments = [
             $skeleton.classifierGenericType->toOne(),
             $selfGenType
         ],
         multiplicityArguments = [$pureOne]
     );
-
     let prop = new($propClassifierGT)->cast(@Property<Nil, Any|*>);
 
     let lambdaReturn = ^FunctionType(
         returnType = $selfGenType,
         returnMultiplicity = $pureOne
     );
-    let defaultLambdaGTBase = buildInferredGenericType(LambdaFunction);
-    let defaultLambdaGT = ^$defaultLambdaGTBase(typeArguments = [buildInferredGenericType($lambdaReturn)]);
+    let defaultLambdaGT = ^InferredGenericType(type = LambdaFunction, typeArguments = [^InferredGenericType(type = $lambdaReturn)]);
     let emptyLambda = new($defaultLambdaGT)->cast(@LambdaFunction<Any>);
 
     // Compile stereotypes and tagged values on the enum value

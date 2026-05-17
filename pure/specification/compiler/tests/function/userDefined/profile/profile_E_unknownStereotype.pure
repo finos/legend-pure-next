@@ -1,5 +1,5 @@
 ###Error
-The stereotype 'unknown' can't be found in profile 'AProfile' in function 'pack::myFunc_Integer_1__Integer_1_' (at function/userDefined/profile/profile_E_unknownStereotype 7:21-7:27)
+The stereotype 'unknown' can't be found in profile 'AProfile' in function 'pack::myFunc_Integer_1__Integer_1_' (at function/userDefined/profile/profile_E_unknownStereotype:7c21-7c27)
 
 ###Pure
 import pack::*;

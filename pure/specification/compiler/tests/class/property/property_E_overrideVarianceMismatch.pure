@@ -1,5 +1,5 @@
 ###Error
-Property override variance mismatch for 'demo'. Overridden property has type 'Any[1]', but overriding property has type 'String[1]'. Simple property overrides must be strictly invariant in type and multiplicity. (at class/property/property_E_overrideVarianceMismatch 18:5-18:21)
+Property override variance mismatch for 'demo'. Overridden property has type 'Any[1]', but overriding property has type 'String[1]'. Simple property overrides must be strictly invariant in type and multiplicity. (at class/property/property_E_overrideVarianceMismatch:18c5-18c21)
 
 ###Pure
 function test::myFunc():Any[*]

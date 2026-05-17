@@ -1,5 +1,5 @@
 ###Error
-Can't find property 'name' in class 'Any' (at valueSpecification/functionExpression/dot/property_E_unknownPropertyOnAnyInLambda 20:37-20:41)
+Can't find property 'name' in class 'Any' (at valueSpecification/functionExpression/dot/property_E_unknownPropertyOnAnyInLambda:20c37-20c41)
 
 ###Pure
 import meta::pure::metamodel::type::*;

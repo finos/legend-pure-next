@@ -1,6 +1,6 @@
 ###Error
-Type mismatch for property 'name': expected String, got Integer (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongType 8:3-8:31)
-Type mismatch for property 'value': expected Integer, got String (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongType 9:3-9:48)
+Type mismatch for property 'name': expected String, got Integer (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongType:8c3-8c31)
+Type mismatch for property 'value': expected Integer, got String (at valueSpecification/functionExpression/functionApplication/special/new/new_E_wrongType:9c3-9c48)
 
 ###Pure
 function test::new::testNew(): Any[*]

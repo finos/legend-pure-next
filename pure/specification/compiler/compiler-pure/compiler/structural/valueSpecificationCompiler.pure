@@ -22,6 +22,7 @@ import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::helper::function::*;
 import meta::pure::compiler::helper::relationType::*;
 import meta::pure::compiler::helper::column::*;
@@ -496,7 +497,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
     // UserDefinedGenericTypeAndMultiplicityHolder → full compilation with genericType set
     if($gmh->instanceOf(meta::pure::protocol::grammar::valuespecification::CompilerGenericTypeAndMultiplicityHolder),
         | // Compiler-managed TypeHolder — bare instance with no genericType (matches Java line 118)
-          let compilerCGT = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
+          let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
           let holder = new($compilerCGT)->cast(@CompilerGenericTypeAndMultiplicityHolder);
           let holderWithProps = ^$holder(
               genericType = ^CompilerNotSetGenericType(),
@@ -514,8 +515,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
               | $gmh.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(),
               | []->cast(@Multiplicity)
           );
-          let classifierGTBase = buildUserDefinedGenericType(UserDefinedGenericTypeAndMultiplicityHolder);
-          let classifierGT = ^$classifierGTBase(typeArguments = $heldGT, multiplicityArguments = $heldMul);
+          let classifierGT = ^UserDefinedGenericType(type = UserDefinedGenericTypeAndMultiplicityHolder, typeArguments = $heldGT, multiplicityArguments = $heldMul);
           let holder = new($classifierGT)->cast(@UserDefinedGenericTypeAndMultiplicityHolder);
           let holderWithProps = ^$holder(
               genericType = $classifierGT,

@@ -49,7 +49,14 @@ function <<test.Test>> meta::pure::functions::io::tests::testPrintlnBoolean():Bo
 
 function <<test.Test>> meta::pure::functions::io::tests::testPrintlnList():Boolean[1]
 {
-    assertEquals('1\n2\n3\n', println([1, 2, 3]));
+    assertEquals(
+        '''
+        1
+        2
+        3
+        ''',
+        println([1, 2, 3])
+    );
 }
 
 function <<test.Test>> meta::pure::functions::io::tests::testPrintlnObject():Boolean[1]

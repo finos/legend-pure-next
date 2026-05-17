@@ -1,5 +1,5 @@
 ###Error
-Can't find property 'unknown' in class 'test::Class' (at class/constraints/simple_E_UnkownProperty 7:8-7:15)
+Can't find property 'unknown' in class 'test::Class' (at class/constraints/simple_E_UnkownProperty:7c8-7c15)
 
 ###Pure
 Class test::Class

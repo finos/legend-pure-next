@@ -50,6 +50,17 @@ public class ValueSpecificationEvaluator
 {
     private final NativeRepository natives;
     private final Deque<FunctionExpression> callStack = new ArrayDeque<>();
+    // Function whose body is currently being executed (the "executing function"
+    // at each frame). Mirrors callStack: when an FE is pushed onto callStack,
+    // the corresponding executingFnStack entry is the function whose body
+    // contains that FE. This lets Pure stack traces render the standard
+    // `at <executingFn> (<source position within that fn>)` convention used by
+    // Java / V8 / Rust / Python / Go — instead of the older "callee + callsite"
+    // form. Parallel-pushed/popped with callStack in evaluateFunctionExpression.
+    private final Deque<meta.pure.metamodel.function.FunctionDefinition> executingFnStack = new ArrayDeque<>();
+    // Tracks the currently-evaluating FunctionDefinition for any new FE pushes.
+    // Pushed when evaluateFunctionDefinition enters fd's body; popped on exit.
+    private final Deque<meta.pure.metamodel.function.FunctionDefinition> fnEvalStack = new ArrayDeque<>();
     private final Deque<Scope> varStack = new ArrayDeque<>();
     private final Deque<Object> constructionStack = new ArrayDeque<>();
 
@@ -266,6 +277,10 @@ public class ValueSpecificationEvaluator
     private ValueSpecification evaluateFunctionExpression(FunctionExpression fe)
     {
         callStack.push(fe);
+        // Snapshot the currently-executing function so getCallStackTrace can
+        // name this frame after it (Java/V8/Rust/Python/Go convention:
+        // `at <executingFn> (<source position within that fn>)`).
+        executingFnStack.push(fnEvalStack.peek());
         try
         {
             meta.pure.metamodel.function.Function func = fe._func();
@@ -313,6 +328,7 @@ public class ValueSpecificationEvaluator
         finally
         {
             callStack.pop();
+            executingFnStack.pop();
         }
     }
 
@@ -617,6 +633,10 @@ public class ValueSpecificationEvaluator
 
         // Push child scope and evaluate expression sequence
         varStack.push(childVars);
+        // Mark `fd` as the currently-executing function for any FE pushed
+        // while evaluating its body — drives the executing-function naming in
+        // getCallStackTrace (Java/V8/Rust/Python/Go convention).
+        fnEvalStack.push(fd);
         ValueSpecification result = null;
         try
         {
@@ -628,6 +648,7 @@ public class ValueSpecificationEvaluator
         finally
         {
             varStack.pop();
+            fnEvalStack.pop();
         }
         return result;
     }
@@ -667,22 +688,63 @@ public class ValueSpecificationEvaluator
     }
 
     /**
-     * Format a source frame string from a FunctionExpression's source information.
+     * Format one frame in the standard `at <executingFn> (<source>)` form
+     * used by Java / V8 / Rust / Python / Go stack traces.
+     *
+     * <p>{@code fe} is the FunctionExpression about to be invoked at this
+     * frame; its source location is the line/col within {@code executingFn}'s
+     * body where that call sits. {@code executingFn} is the function whose
+     * body contains this FE — captured at FE-push time via {@link #fnEvalStack}.</p>
+     *
+     * <p>When {@code executingFn} is null (frames pushed before any user
+     * function entered its body, e.g. the top-level go() call), fall back to
+     * the FE's `_functionName` so the frame still names something useful.</p>
      */
-    private static String formatSourceFrame(FunctionExpression fe)
+    private static String formatSourceFrame(FunctionExpression fe,
+            meta.pure.metamodel.function.FunctionDefinition executingFn)
     {
-        String functionName = fe._functionName() != null ? fe._functionName() : "?";
+        String name = executingFn != null
+                ? functionDefinitionName(executingFn)
+                : (fe._functionName() != null ? fe._functionName() : "?");
         SourceInformation si = fe._sourceInformation();
         if (si != null)
         {
             String sourceId = si._sourceId() != null ? si._sourceId() : "";
-            return functionName + " (" + sourceId + ":" + si._startLine() + "c" + si._startColumn() + ")";
+            return name + " (" + sourceId + ":" + si._startLine() + "c" + si._startColumn() + ")";
         }
-        return functionName;
+        return name;
     }
 
     /**
-     * Return the current Pure call stack as a formatted string.
+     * Resolve a FunctionDefinition's display name. PackageableFunctions use
+     * their `_functionName` (the unmangled, signature-free name) joined with
+     * their package path, matching Truffle's PureStackFormatter (which strips
+     * the type-signature suffix from the RootNode name). Lambdas render as
+     * `lambda`. Underscores inside the function name itself (e.g.
+     * `_length` natives) are preserved.
+     */
+    private static String functionDefinitionName(meta.pure.metamodel.function.FunctionDefinition fd)
+    {
+        if (fd instanceof meta.pure.metamodel.function.PackageableFunction pf
+                && pf._functionName() != null
+                && !pf._functionName().isEmpty()
+                && fd instanceof meta.pure.metamodel.PackageableElement pe
+                && pe._package() != null)
+        {
+            String pkgPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper
+                    ._PackageableElement.path(pe._package());
+            return pkgPath.isEmpty() ? pf._functionName() : pkgPath + "::" + pf._functionName();
+        }
+        return "lambda";
+    }
+
+    /**
+     * Return the current Pure call stack as a formatted string in the
+     * standard `at <executingFn> (<sourceId>:<line>c<col>)` form.
+     *
+     * <p>callStack and executingFnStack are pushed/popped in lockstep in
+     * {@link #evaluateFunctionExpression}, so they always have the same depth
+     * and corresponding entries.</p>
      */
     public String getCallStackTrace()
     {
@@ -691,9 +753,13 @@ public class ValueSpecificationEvaluator
             return "";
         }
         StringBuilder sb = new StringBuilder("\nPure stack trace:");
-        for (FunctionExpression frame : callStack)
+        java.util.Iterator<FunctionExpression> feIt = callStack.iterator();
+        java.util.Iterator<meta.pure.metamodel.function.FunctionDefinition> fnIt = executingFnStack.iterator();
+        while (feIt.hasNext() && fnIt.hasNext())
         {
-            sb.append("\n    at ").append(formatSourceFrame(frame));
+            FunctionExpression fe = feIt.next();
+            meta.pure.metamodel.function.FunctionDefinition fn = fnIt.next();
+            sb.append("\n    at ").append(formatSourceFrame(fe, fn));
         }
         return sb.toString();
     }

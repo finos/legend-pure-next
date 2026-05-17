@@ -1,7 +1,7 @@
 ###Error
-The type 'U' can't be found in native function 'test_FuncColSpec_1__Any_1_' (at multiPassErrorManagement 7:46-7:46)
-The type 'U' can't be found in native function 'test_FuncColSpec_1__Any_1_' (at multiPassErrorManagement 7:60-7:60)
-The type 'U' can't be found in native function 'test_FuncColSpec_1__Any_1_' (at multiPassErrorManagement 7:67-7:67)
+The type 'U' can't be found in native function 'test_FuncColSpec_1__Any_1_' (at multiPassErrorManagement:7c46-7c46)
+The type 'U' can't be found in native function 'test_FuncColSpec_1__Any_1_' (at multiPassErrorManagement:7c60-7c60)
+The type 'U' can't be found in native function 'test_FuncColSpec_1__Any_1_' (at multiPassErrorManagement:7c67-7c67)
 
 ###Pure
 native function test(x:FuncColSpec<{Relation<U>[1], Window<U>[1], U[1]->Any[1]}, Any>[1]):Any[1];

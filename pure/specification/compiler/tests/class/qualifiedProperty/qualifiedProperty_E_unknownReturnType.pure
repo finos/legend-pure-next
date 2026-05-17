@@ -1,5 +1,5 @@
 ###Error
-The type 'UnknownClass' can't be found in qualified property 'badProp' in class 'test::MyClass' (at class/qualifiedProperty/qualifiedProperty_E_unknownReturnType 8:38-8:49)
+The type 'UnknownClass' can't be found in qualified property 'badProp' in class 'test::MyClass' (at class/qualifiedProperty/qualifiedProperty_E_unknownReturnType:8c38-8c49)
 
 ###Pure
 Class test::MyClass

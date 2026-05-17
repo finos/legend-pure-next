@@ -1,5 +1,5 @@
 ###Error
-Default value type mismatch: expected Integer but got String (at class/property/defaultValue_E_WrongType 9:3-9:27)
+Default value type mismatch: expected Integer but got String (at class/property/defaultValue_E_WrongType:9c3-9c27)
 
 ###Pure
 import pack::*;

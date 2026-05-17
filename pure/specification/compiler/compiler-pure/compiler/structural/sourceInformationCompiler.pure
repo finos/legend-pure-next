@@ -50,6 +50,15 @@ function meta::pure::compiler::structural::sourceInformationCompiler::compileSou
     )
 }
 
+// Unified source-location format used everywhere a Pure source position is
+// rendered (compile errors, stack frames, validation messages):
+//
+//   (at <sourceId>:<line>c<col>-<endLine>c<endCol>)
+//
+// `c` separates line from column, matching bootstrap's call-stack format
+// (ValueSpecificationEvaluator.formatSourceFrame) and Truffle's
+// PureStackFormatter. A single IDE regex turns any of these into a clickable
+// jump-to-source link.
 function meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo(si:meta::pure::protocol::grammar::SourceInformation[0..1], context:CompilerContext[1]):String[1]
 {
     if($si->isEmpty(),
@@ -60,7 +69,7 @@ function meta::pure::compiler::structural::sourceInformationCompiler::formatSour
               | $context.sourceId
           ])->head();
           if($sid->isNotEmpty() && $sid->toOne()->length() > 0,
-              | ' (at ' + $sid->toOne() + ' ' + $psi.startLine->toOne()->toString() + ':' + $psi.startColumn->toOne()->toString() + '-' + $psi.endLine->toOne()->toString() + ':' + $psi.endColumn->toOne()->toString() + ')',
+              | ' (at ' + $sid->toOne() + ':' + $psi.startLine->toOne()->toString() + 'c' + $psi.startColumn->toOne()->toString() + '-' + $psi.endLine->toOne()->toString() + 'c' + $psi.endColumn->toOne()->toString() + ')',
               | ''
           );
     );
@@ -76,7 +85,7 @@ function meta::pure::compiler::structural::sourceInformationCompiler::formatMeta
               | $context.sourceId
           ])->head();
           if($sid->isNotEmpty() && $sid->toOne()->length() > 0,
-              | ' (at ' + $sid->toOne() + ' ' + $msi.startLine->toOne()->toString() + ':' + $msi.startColumn->toOne()->toString() + '-' + $msi.endLine->toOne()->toString() + ':' + $msi.endColumn->toOne()->toString() + ')',
+              | ' (at ' + $sid->toOne() + ':' + $msi.startLine->toOne()->toString() + 'c' + $msi.startColumn->toOne()->toString() + '-' + $msi.endLine->toOne()->toString() + 'c' + $msi.endColumn->toOne()->toString() + ')',
               | ''
           );
     );

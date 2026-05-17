@@ -1,5 +1,5 @@
 ###Error
-Unknown deep property path 'address.city' in class 'test::copy::Person': property 'city' not found in class 'test::copy::Address' (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_unknownDeepProperty 8:11-8:37)
+Unknown deep property path 'address.city' in class 'test::copy::Person': property 'city' not found in class 'test::copy::Address' (at valueSpecification/functionExpression/functionApplication/special/copy/copy_E_unknownDeepProperty:8c11-8c37)
 
 ###Pure
 function test::copy::testCopy(): Any[*]

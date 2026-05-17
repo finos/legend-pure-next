@@ -16,6 +16,7 @@ import meta::pure::compiler::structural::generalizationCompiler::*;
 import meta::pure::compiler::structural::constraintCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::*;
 import meta::pure::metamodel::type::*;
 import meta::pure::metamodel::type::generics::*;
@@ -38,7 +39,8 @@ function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta
             let mMult = $tv.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
             ^VariableExpression(
                 name = $tv.name,
-                genericType = buildCanonicalOrUserDefinedGenericType($ctx1->resolveElement($genType)->toOne()->cast(@Type), $ctx1),
+                // Cross-element ref into a type being compiled — wrap as pointer.
+                genericType = buildCanonicalOrUserDefinedGenericType($ctx1->resolveElement($genType)->toOne()->cast(@Type)->toTypePointer(), $ctx1),
                 multiplicity = $mMult
             );
         )
@@ -49,7 +51,8 @@ function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta
         typeVariables = $typeVariables,
         generalizations = $genAccum.values->map(g | ^$g(specific = ~.~))
     );
-    let ownerGenericType = buildUserDefinedGenericType($compiledPrim);
+    // The owner GT references the primitive being compiled — wrap as pointer.
+    let ownerGenericType = buildUserDefinedGenericType($compiledPrim->toTypePointer());
     let constraintAccum = compileConstraints($protocolPrimitive.constraints, $ownerGenericType, $typeVariables, $ctx1);
     let ctx2 = $constraintAccum.context;
 

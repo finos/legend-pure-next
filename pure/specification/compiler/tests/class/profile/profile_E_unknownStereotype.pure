@@ -1,5 +1,5 @@
 ###Error
-The stereotype 'unknown' can't be found in profile 'AProfile' in class 'pack::MyClass' (at class/profile/profile_E_unknownStereotype 13:18-13:24)
+The stereotype 'unknown' can't be found in profile 'AProfile' in class 'pack::MyClass' (at class/profile/profile_E_unknownStereotype:13c18-13c24)
 
 ###Pure
 import pack::*;

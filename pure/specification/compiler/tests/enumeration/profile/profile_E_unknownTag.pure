@@ -1,5 +1,5 @@
 ###Error
-The tag 'unknown' can't be found in profile 'AProfile' in enumeration 'pack::MyEnum' (at enumeration/profile/profile_E_unknownTag 7:16-7:22)
+The tag 'unknown' can't be found in profile 'AProfile' in enumeration 'pack::MyEnum' (at enumeration/profile/profile_E_unknownTag:7c16-7c22)
 
 ###Pure
 import pack::*;

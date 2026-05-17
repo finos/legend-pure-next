@@ -1,5 +1,5 @@
 ###Error
-No matching function 'sw' found for argument types (String[1], String[1]) (at valueSpecification/functionExpression/functionApplication/generics/lambda_E_errorInBody 12:24-12:33)
+No matching function 'sw' found for argument types (String[1], String[1]) (at valueSpecification/functionExpression/functionApplication/generics/lambda_E_errorInBody:12c24-12c33)
 
 ###Pure
 import test::*;

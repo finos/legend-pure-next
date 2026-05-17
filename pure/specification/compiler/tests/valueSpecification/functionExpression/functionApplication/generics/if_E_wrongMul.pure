@@ -1,5 +1,5 @@
 ###Error
-No matching function 'a' found for argument types (Integer[1..2], Integer[1]) (at valueSpecification/functionExpression/functionApplication/generics/if_E_wrongMul 16:5-16:28)
+No matching function 'a' found for argument types (Integer[1..2], Integer[1]) (at valueSpecification/functionExpression/functionApplication/generics/if_E_wrongMul:16c5-16c28)
 
 ###Pure
 import test::*;
