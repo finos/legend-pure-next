@@ -1295,6 +1295,24 @@ public class PdbJavaGenerator
         return "write_" + cr.fullPath.replace("::", "_");
     }
 
+    private static final String FUNCTION_EXPRESSION_PATH =
+            "meta::pure::metamodel::valuespecification::FunctionExpression";
+
+    private boolean extendsFunctionExpression(ClassRecord cr)
+    {
+        if (cr == null) return false;
+        if (FUNCTION_EXPRESSION_PATH.equals(cr.fullPath)) return true;
+        for (String parent : cr.generalizations)
+        {
+            ClassRecord parentCr = findClass(parent);
+            if (parentCr != null && extendsFunctionExpression(parentCr))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void emitWriteMethod(StringBuilder sb, ClassRecord cr)
     {
         // Parameter is Object so both typed XPDBHelper and PureDynamicObject can
@@ -1344,6 +1362,20 @@ public class PdbJavaGenerator
             FbsSchema.FbsField fb = findFbsField(fbsFields, pr.name);
             if (fb == null) continue;
             emitValidation(sb, pr, cr.name);
+        }
+
+        // FunctionExpression hierarchy: `func` is declared multiplicity [0..1]
+        // on the abstract base (a freshly-parsed FE has it null), but a
+        // RESOLVED FE written to PDB must have it set — a null `func` here
+        // means compile-pure left an unresolved call (typically an operator
+        // like `or`/`||`), and downstream readers see "absent", which
+        // surfaces far from origin as an opaque "_func() returned null"
+        // crash at lazy Truffle walk. NEVER silent-fail — catch it here.
+        if (extendsFunctionExpression(cr))
+        {
+            sb.append("        if (validateRequired && readProp(obj, \"func\") == null) { throw new IllegalArgumentException(")
+              .append("\"Validation error: Property 'func' on resolved '").append(cr.name)
+              .append("' is null (functionName='\" + readProp(obj, \"functionName\") + \"') — compile-pure left an unresolved call: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
         }
 
         // 2. Pre-table offset/value computation

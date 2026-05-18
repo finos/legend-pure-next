@@ -1,4 +1,6 @@
 import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::pointer::*;
+import meta::pure::metamodel::pointer::*;
 
 // Compare two types by path — equivalent to Java's pointer equality since Java resolves to unique singletons.
 // In Pure, types loaded from PDB may be different instances for the same type, so we compare by path.
@@ -54,6 +56,26 @@ function meta::pure::compiler::helper::type::genericTypeRawType(gt:GenericType[1
     )
 }
 
+// Cheap single-pointer-follow on a Type. If the Type is a TempCompilerPointer
+// (Class_Pointer / PrimitiveTypePointer / EnumerationPointer carrying only
+// `path`/`element`), resolves via the registry to the live target — one
+// HashMap lookup, no tree walk. Otherwise returns the Type unchanged.
+//
+// Use this immediately after `genericTypeRawType` at call sites that read
+// raw-type slots like `.name`, `.properties`, `.generalizations` directly,
+// since pointer subclasses don't carry those slots. Sites that only need
+// identity / path comparisons don't need to deref — pointers are still
+// PackageableElement subclasses, so `elementToPath` and `instanceOf<parent>`
+// work unchanged.
+function meta::pure::compiler::helper::type::derefTypeIfPointer(t:Type[0..1], context:meta::pure::compiler::CompilerContext[1]):Type[0..1]
+{
+    $t->match([
+        ptr   : TempCompilerPointer[1] | $ptr->dereferencePointer($context)->cast(@Type),
+        type  : Type[1]                | $type,
+        empty : Type[0..1]             | $empty
+    ]);
+}
+
 // Returns the C3 linearization of {@code t} as element paths. Non-PackageableElement
 // types (FunctionType / RelationType / TypeParameter instances) have no path and no
 // inheritance to walk, so the result is empty for those inputs. Callers that need
@@ -97,7 +119,11 @@ function meta::pure::compiler::helper::type::linearizeWalk(t:Type[1], context:me
     if(!$t->instanceOf(PackageableElement),
         | [],
         | let resolvedPath = $t->cast(@PackageableElement)->elementToPath();
-          let parents = $t->directSupertypes();
+          // Pointers have empty `.generalizations` — deref each parent before
+          // recursing so the linearization captures the full ancestor chain
+          // (otherwise CodeParameter's linearization would stop at Code
+          // without picking up Code's ancestors).
+          let parents = $t->directSupertypes()->map(p | $p->derefTypeIfPointer($context))->filter(p | $p->isNotEmpty())->map(p | $p->toOne());
           if($parents->isEmpty(),
               | $resolvedPath,
               | let parentLins = $parents->map(p | $p->linearizeWalk($context)->list());
@@ -179,7 +205,7 @@ function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contr
                                  // by walking that same chain, so the lookup always finds a
                                  // match.
                                  let resolvedFirst = $resolve->eval($types->at(0));
-                                 let found = findTypeByPath($resolvedFirst, $commonPath->toOne());
+                                 let found = findTypeByPath($resolvedFirst, $commonPath->toOne(), $context);
                                  if($found->isEmpty(), | Any, | $found->toOne());
                            );
                      );
@@ -190,12 +216,19 @@ function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contr
 
 // Walk the type's generalization chain to find a Type whose path matches.
 // Used by findCommonType to convert a c3merge path result back to a Type.
-function meta::pure::compiler::helper::type::findTypeByPath(t:Type[1], path:String[1]):Type[0..1]
+function meta::pure::compiler::helper::type::findTypeByPath(t:Type[1], path:String[1], context:meta::pure::compiler::CompilerContext[1]):Type[0..1]
 {
-    if($t->instanceOf(PackageableElement) && $t->cast(@PackageableElement)->elementToPath() == $path,
-        | $t,
-        | $t->directSupertypes()->map(p | findTypeByPath($p, $path))->head();
-    )
+    // Pointers carry only path/element — no `generalizations` slot — so
+    // walking their supertypes returns empty. Deref ONCE to the live target
+    // before recursing.
+    let live = $t->match([
+        ptr  : TempCompilerPointer[1] | $ptr->dereferencePointer($context)->cast(@Type),
+        type : Type[1]                | $type
+    ]);
+    if($live->instanceOf(PackageableElement) && $live->cast(@PackageableElement)->elementToPath() == $path,
+        | $live,
+        | $live->directSupertypes()->map(p | findTypeByPath($p, $path, $context))->head();
+    );
 }
 
 

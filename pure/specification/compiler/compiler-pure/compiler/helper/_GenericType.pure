@@ -1052,15 +1052,24 @@ function meta::pure::compiler::helper::genericType::inferLiteralType(value:Any[1
 // inferred-marker semantics.
 function meta::pure::compiler::helper::genericType::canonicalAnchorFor(newType:Type[1], reconciledTypeArgs:GenericType[*], mulArgs:Multiplicity[*], typeVarVals:ValueSpecification[*], actual:GenericType[1], context:meta::pure::compiler::CompilerContext[1]):GenericType[0..1]
 {
+    // Pointer-aware name derivation: pointers carry only `.path`, with `.name`
+    // unset. Derive simple-name from the path's last segment so the canonical
+    // anchor lookup still fires for pointer-wrapped leaf types (e.g.
+    // ClassPointer(test::String) → name "String" → lookup GenericType_String).
+    let peName = $newType->match([
+        ptr : meta::pure::metamodel::pointer::TempCompilerPointer[1] | $ptr->cast(@PackageableElement)->elementToPath()->split('::')->last(),
+        pe  : PackageableElement[1] | $pe.name,
+        other : Type[1] | []->cast(@String)
+    ]);
     let isLeaf = !$actual->instanceOf(Inferred)
         && $reconciledTypeArgs->isEmpty()
         && $mulArgs->isEmpty()
         && $typeVarVals->isEmpty()
         && $newType->instanceOf(PackageableElement)
-        && $newType->cast(@PackageableElement).name->isNotEmpty();
+        && $peName->isNotEmpty();
     if(!$isLeaf,
         | []->cast(@GenericType),
-        | let canonicalPath = 'meta::pure::metamodel::type::generics::optimization::GenericType_' + $newType->cast(@PackageableElement).name->toOne();
+        | let canonicalPath = 'meta::pure::metamodel::type::generics::optimization::GenericType_' + $peName->toOne();
           let resolved = $context->resolveElement($canonicalPath);
           if($resolved->isEmpty() || !$resolved->toOne()->instanceOf(GenericTypeValue),
               | []->cast(@GenericType),

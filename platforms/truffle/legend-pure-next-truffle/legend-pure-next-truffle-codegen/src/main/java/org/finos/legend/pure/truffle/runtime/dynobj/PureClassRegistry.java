@@ -193,7 +193,7 @@ public final class PureClassRegistry
         PropertyMetadataRegistry.ensurePopulated(info.purePath, resolver);
 
         ArrayList<Object> hierarchy = new ArrayList<>();
-        collectHierarchy(classElem, hierarchy, new java.util.IdentityHashMap<>());
+        collectHierarchy(classElem, hierarchy, new java.util.IdentityHashMap<>(), resolver);
 
         // Collect property names walking least-specific first.
         LinkedHashMap<String, Integer> nameToGlobalSlot = new LinkedHashMap<>();
@@ -210,7 +210,7 @@ public final class PureClassRegistry
     }
 
     private static void collectHierarchy(Object classElem, ArrayList<Object> sink,
-            java.util.IdentityHashMap<Object, Boolean> seen)
+            java.util.IdentityHashMap<Object, Boolean> seen, TruffleMetadataAccess resolver)
     {
         if (classElem == null || seen.containsKey(classElem)) return;
         seen.put(classElem, Boolean.TRUE);
@@ -223,8 +223,33 @@ public final class PureClassRegistry
             if (g == null) continue;
             Object general = readField(g, "general");
             Object parent = general != null ? readField(general, "type") : null;
-            if (parent != null) collectHierarchy(parent, sink, seen);
+            // `general.type` may be a TempCompilerPointer (Class_Pointer /
+            // PrimitiveTypePointer / EnumerationPointer) since the compiler
+            // wraps cross-element type refs as pointers. Pointers have no
+            // `generalizations` slot, so walking through them truncates the
+            // hierarchy — the leaf class loses inherited slots like
+            // `classifierGenericType` from Any. Deref via the resolver before
+            // recursing.
+            parent = derefIfPointer(parent, resolver);
+            if (parent != null) collectHierarchy(parent, sink, seen, resolver);
         }
+    }
+
+    private static Object derefIfPointer(Object obj, TruffleMetadataAccess resolver)
+    {
+        if (obj == null || resolver == null) return obj;
+        // Structural pointer detection: TempCompilerPointer subclasses carry
+        // only `path` (set) with `name` and `package` unset. A live PE has
+        // `name` (non-empty) and may not even have `path` exposed via
+        // readField in this lightweight reader. Codegen can't depend on
+        // runtime's PureObj.isType, so we use this structural test.
+        Object pathVal = readField(obj, "path");
+        if (!(pathVal instanceof String path) || path.isEmpty()) return obj;
+        Object nameVal = readField(obj, "name");
+        boolean looksLikePointer = nameVal == null || (nameVal instanceof String s && s.isEmpty());
+        if (!looksLikePointer) return obj;
+        Object el = resolver.getElement(path);
+        return el != null ? el : obj;
     }
 
     private static void addNamesFrom(Object element, String collectionName,

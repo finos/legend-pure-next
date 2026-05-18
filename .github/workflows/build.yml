@@ -157,7 +157,7 @@ jobs:
         if: (github.repository == 'finos/legend-pure-next') && (github.ref == 'refs/heads/main')
         run: |
           set -e
-          cd bootstrap
+          cd bootstrap/legend-pure-next-bootstrap
           mvn -B -e javadoc:javadoc -Psonar \
             -Dorg.slf4j.simpleLogger.showDateTime=true \
             -Dorg.slf4j.simpleLogger.dateTimeFormat="yyyy-MM-dd HH:mm:ss.SSSZ"

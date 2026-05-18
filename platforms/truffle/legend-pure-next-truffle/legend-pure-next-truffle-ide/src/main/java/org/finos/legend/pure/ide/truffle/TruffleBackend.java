@@ -236,11 +236,22 @@ public final class TruffleBackend implements PureBackend
                     Object compileResult = runtime.execute(
                             compileDirFn, sourceFolder.toAbsolutePath().toString(), Boolean.FALSE);
                     lastCompileResult = compileResult;
-                    collectStrings(PureObj.read(compileResult, "errors"), compileErrors);
+                    List<String> thisCompileErrors = new ArrayList<>();
+                    collectStrings(PureObj.read(compileResult, "errors"), thisCompileErrors);
+                    compileErrors.addAll(thisCompileErrors);
 
-                    // Replace any previous in-memory registration for this
-                    // module so the resolver always serves the freshest
-                    // compile (subsequent Runs after an edit see new code).
+                    // Only swap the in-memory registration when this compile
+                    // succeeded. A failed compile (parse or resolver error)
+                    // would otherwise unregister the previous good module
+                    // and register either nothing or a partial elements list,
+                    // making the NEXT F9 fail with a wall of "function X
+                    // can't be found" errors that have nothing to do with
+                    // the actual fix. Keeping the prior state lets the user
+                    // see the real error and re-run after fixing it.
+                    if (!thisCompileErrors.isEmpty())
+                    {
+                        continue;
+                    }
                     String memModuleName = module.getName() + "-mem";
                     if (registry.module(memModuleName) != null)
                     {

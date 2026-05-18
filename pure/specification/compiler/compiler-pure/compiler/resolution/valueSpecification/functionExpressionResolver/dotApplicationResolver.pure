@@ -30,6 +30,7 @@ import meta::pure::compiler::helper::relationType::*;
 import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::pointer::*;
+import meta::pure::compiler::helper::type::*;
 import meta::pure::metamodel::pointer::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::*;
@@ -59,7 +60,12 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     value = ^$dot(parametersValues = $resolvedParams->cast(@ValueSpecification)),
                     context = ^$ctx1(errors += 'Can\'t resolve property \'' + $functionName + '\' on unresolved receiver' + $siCtx)
                 ),
-              | let ownerType = $receiver.genericType->toOne()->cast(@GenericTypeValue).type->toOne();
+              | // Deref pointer first so Class/Enumeration/RelationType match arms catch it.
+                // When chained dot like `$w.inner.value` runs, the receiver's genericType.type
+                // may carry a ClassPointer (because Wrapper's typeArguments got pointer-wrapped
+                // at parse time by compileGenericType). Without deref, this falls through to
+                // the silent Any arm and downstream emits "Can't resolve the function 'X'".
+                let ownerType = $receiver.genericType->toOne()->cast(@GenericTypeValue).type->toOne()->derefTypeIfPointer($ctx1)->toOne();
                 // Handle Enumeration value access: check if the receiver's value IS an Enumeration
                 let maybeEnumeration = $receiver->match([
                     av:AtomicValue[1] |

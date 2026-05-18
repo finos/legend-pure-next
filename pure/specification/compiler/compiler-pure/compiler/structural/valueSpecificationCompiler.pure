@@ -536,7 +536,11 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::getGeneri
         gtv:GenericTypeValue[1] |
             if($gtv.type->isEmpty(), | [],
                 | $gtv.type->toOne()->match([
-                    pe:PackageableElement[1] | $pe.name,
+                    // Pointers carry `path` + `element` but no `name` slot —
+                    // derive the simple-name segment from `elementToPath()`.
+                    // Works uniformly for both concrete PDOs and pointer
+                    // subclasses (ClassPointer / PrimitiveTypePointer / etc.).
+                    pe:PackageableElement[1] | $pe->meta::pure::functions::meta::elementToPath()->split('::')->last(),
                     a:Any[1] | []
                 ])
             ),

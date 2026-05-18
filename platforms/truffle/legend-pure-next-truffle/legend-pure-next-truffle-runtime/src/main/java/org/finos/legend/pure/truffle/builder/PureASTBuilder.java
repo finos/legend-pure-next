@@ -244,8 +244,126 @@ public final class PureASTBuilder
         Object funcObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNC);
         if (funcObj == null)
         {
+            // Diagnostic: walk the parent chain to identify WHERE this
+            // unresolved FE lives — typically a constraint lambda on a
+            // class. Without the parent path, the user only sees `or` /
+            // sourceInfo=null and has no way to find the broken element.
+            Object funcByName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "func");
             Object fnNameDbg = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNCTION_NAME);
-            throw new RuntimeException("_func() returned null for: " + fnNameDbg + " [" + fe.getClass().getName() + "]");
+            if (fnNameDbg == null)
+            {
+                fnNameDbg = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "functionName");
+            }
+            // Metamodel FE uses `sourceInformation`; the `p_sourceInformation`
+            // prefix is the protocol-side variant. Read both for completeness.
+            Object srcInfo = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "sourceInformation");
+            String srcStr;
+            if (srcInfo == null)
+            {
+                srcStr = "null";
+            }
+            else
+            {
+                Object sid = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(srcInfo, "sourceId");
+                Object sl = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(srcInfo, "startLine");
+                Object sc = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(srcInfo, "startColumn");
+                Object el = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(srcInfo, "endLine");
+                Object ec = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(srcInfo, "endColumn");
+                srcStr = sid + ":" + sl + "c" + sc + "-" + el + "c" + ec;
+            }
+            StringBuilder parents = new StringBuilder();
+            Object cur = fe;
+            int depth = 0;
+            java.util.IdentityHashMap<Object, Boolean> visited = new java.util.IdentityHashMap<>();
+            while (cur != null && depth < 12 && visited.put(cur, Boolean.TRUE) == null)
+            {
+                String t = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(cur);
+                Object nm = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(cur, "name");
+                Object fn = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(cur, "functionName");
+                parents.append("\n      ").append(depth).append(": ")
+                        .append(t == null ? cur.getClass().getName() : t)
+                        .append(" name=").append(nm)
+                        .append(" functionName=").append(fn);
+                Object next = cur instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo ? pdo.parent : null;
+                if (next == null)
+                {
+                    next = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(cur, "owner");
+                }
+                cur = next;
+                depth++;
+            }
+            // Full slot dump: print every property this FE's class declares
+            // and its value. Lets us see what state IS set so we can identify
+            // where this orphan PDO was synthesized.
+            StringBuilder slots = new StringBuilder();
+            if (fe instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo)
+            {
+                String[] names = pdo.classInfo.nameBySlot();
+                for (int s = 0; s < names.length; s++)
+                {
+                    String name = names[s];
+                    if (name == null) continue;
+                    Object v;
+                    try { v = pdo.readSlot(s); } catch (Throwable t) { v = "<err:" + t + ">"; }
+                    String vs;
+                    if (v == null) vs = "null";
+                    else if (v instanceof String) vs = "\"" + v + "\"";
+                    else if (v instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject vp) vs = vp.classInfo.purePath + "@" + System.identityHashCode(vp);
+                    else if (v instanceof org.finos.legend.pure.truffle.types.PureSequence vq) vs = "Seq[" + vq.size() + "]";
+                    else vs = v.getClass().getName() + "@" + System.identityHashCode(v);
+                    slots.append("\n      ").append(s).append(":").append(name).append("=").append(vs);
+                }
+            }
+            // Look up Field from the live resolver. Compare the FE we got
+            // here (from the runtime call chain) with the FE that the
+            // resolver-registered Field's constraint actually contains.
+            // Different identity → some other path is producing this FE,
+            // typically a pass-2 captured reference.
+            StringBuilder registryView = new StringBuilder();
+            try
+            {
+                org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess r =
+                        org.finos.legend.pure.truffle.PureLanguage.get(null).resolver();
+                Object regField = r.getElement("meta::external::language::java::metamodel::Field");
+                if (regField != null)
+                {
+                    registryView.append("\n  registry Field@").append(System.identityHashCode(regField));
+                    Object cs = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(regField, "constraints");
+                    if (cs instanceof org.finos.legend.pure.truffle.types.PureSequence csSeq && csSeq.size() > 0)
+                    {
+                        Object c0 = csSeq.getBoxed(0);
+                        registryView.append("\n  registry Field.constraints[0]@").append(System.identityHashCode(c0));
+                        Object lam = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(c0, "functionDefinition");
+                        registryView.append("\n  registry .functionDefinition@").append(System.identityHashCode(lam));
+                        Object es = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lam, "expressionSequence");
+                        if (es instanceof org.finos.legend.pure.truffle.types.PureSequence esSeq && esSeq.size() > 0)
+                        {
+                            Object regFe = esSeq.getBoxed(0);
+                            Object regFunc = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(regFe, "func");
+                            registryView.append("\n  registry .expressionSequence[0]@").append(System.identityHashCode(regFe))
+                                    .append(" func=").append(regFunc == null ? "null" : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(regFunc));
+                            registryView.append("\n  SAME as failing FE? ").append(regFe == fe);
+                        }
+                    }
+                }
+                else
+                {
+                    registryView.append("\n  registry has no Field");
+                }
+            }
+            catch (Throwable t)
+            {
+                registryView.append("\n  registry lookup failed: ").append(t);
+            }
+            throw new RuntimeException("_func() returned null for: " + fnNameDbg
+                    + " [" + fe.getClass().getName() + "]"
+                    + " (SLOT_FUNC=" + SLOT_FUNC + ")"
+                    + " (read-by-name func=" + (funcByName == null ? "null" : funcByName.getClass().getName()) + ")"
+                    + " (sourceInfo=" + srcStr + ")"
+                    + " (identityHash=" + System.identityHashCode(fe) + ")"
+                    + " slots:" + slots
+                    + " parents:" + parents
+                    + " registry-view:" + registryView);
         }
         Object func = funcObj;
         // Pointer dereference: compile-pure emits TempCompilerPointer-typed funcs
@@ -504,6 +622,10 @@ public final class PureASTBuilder
             {
                 return null;
             }
+            // paramType may be a TempCompilerPointer (post compiler pointer-
+            // wrap). `_Type.subtypeOf` is pointer-aware (derefs both sides),
+            // so we can store the pointer here without an explicit deref —
+            // the dispatch path will resolve via the registry at use time.
             branchTypeElements[i] = paramType;
         }
         // Lower the args normally — the value, the branch-list (still

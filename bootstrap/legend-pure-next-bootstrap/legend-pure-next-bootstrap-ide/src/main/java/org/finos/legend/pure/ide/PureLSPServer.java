@@ -98,6 +98,12 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         // Full text sync — client sends entire document on each change
         capabilities.setTextDocumentSync(TextDocumentSyncKind.Full);
 
+        // Go-to-definition (Ctrl+B / F12 / right-click → Go to Definition).
+        // The cursor's position is mapped to an AST node via the compiled graph;
+        // the node's `.func` / `.genericType.type` / etc. is resolved to a
+        // PackageableElement whose `sourceInformation` we return as a Location.
+        capabilities.setDefinitionProvider(true);
+
         // Execute command support for pure/execute
         ExecuteCommandOptions execOptions = new ExecuteCommandOptions(
                 List.of("pure/execute", "pure/packageTree", "pure/fileTree", "pure/jumpToElement", "pure/openFile", "pure/saveFile", "pure/getPCTAdapters", "pure/discoverTests", "pure/runTests", "pure/search"));
@@ -215,6 +221,450 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 }
             }
         }
+    }
+
+    /**
+     * textDocument/definition — Ctrl+B / F12 / right-click → Go to Definition.
+     *
+     * <p>Maps the cursor position to an AST node in the compiled graph
+     * ({@code lastModel}), then resolves that node's reference to a
+     * PackageableElement's source location:
+     * <ul>
+     *   <li>{@code FunctionExpression} ({@code FunctionApplication},
+     *       {@code FunctionInvocation}, {@code DotApplication}) → {@code _func()}
+     *       — the resolved function or property declaration.</li>
+     *   <li>{@code GenericTypeValue} (type annotation) → {@code _type()} — the
+     *       referenced class / enumeration / primitive type.</li>
+     *   <li>{@code VariableExpression} → traverse the enclosing function's
+     *       parameters and {@code let} bindings for a matching {@code _name()}.</li>
+     * </ul>
+     *
+     * <p>If the resolved target lives in a base PDB (e.g. {@code core.pdb},
+     * {@code compiler.pdb}), we show an info message rather than open the
+     * compiled module — same boundary as {@code pure/jumpToElement}.
+     */
+    @Override
+    public java.util.concurrent.CompletableFuture<org.eclipse.lsp4j.jsonrpc.messages.Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params)
+    {
+        return java.util.concurrent.CompletableFuture.supplyAsync(() -> resolveDefinition(params));
+    }
+
+    private org.eclipse.lsp4j.jsonrpc.messages.Either<List<? extends Location>, List<? extends LocationLink>> resolveDefinition(DefinitionParams params)
+    {
+        if (lastModel == null)
+        {
+            // First definition request before any didChange / F9 — trigger a
+            // compile so we have a model to navigate against. Skips the save
+            // (the didOpen handler intentionally avoided that to prevent
+            // wiping welcome.pure with an empty initial buffer).
+            try { compileCurrentSource(); } catch (Exception ignored) {}
+            if (lastModel == null)
+            {
+                return org.eclipse.lsp4j.jsonrpc.messages.Either.forLeft(java.util.Collections.emptyList());
+            }
+        }
+        String uri = params.getTextDocument().getUri();
+        String sourceId = uri.startsWith("file:///") ? uri.substring(8) : uri;
+        // LSP positions are 0-based; Pure SourceInformation is 1-based.
+        int line = params.getPosition().getLine() + 1;
+        int col = params.getPosition().getCharacter() + 1;
+
+        Object exprAtCursor = findExpressionAt(sourceId, line, col);
+        if (exprAtCursor == null)
+        {
+            return org.eclipse.lsp4j.jsonrpc.messages.Either.forLeft(java.util.Collections.emptyList());
+        }
+
+        TargetLocation target = resolveTarget(exprAtCursor);
+        if (target == null)
+        {
+            return org.eclipse.lsp4j.jsonrpc.messages.Either.forLeft(java.util.Collections.emptyList());
+        }
+        if (findModuleForSource(target.sourceId) == null)
+        {
+            if (client != null)
+            {
+                client.showMessage(new MessageParams(MessageType.Info,
+                        "Cannot navigate: definition is in a compiled module (" + target.sourceId + ")"));
+            }
+            return org.eclipse.lsp4j.jsonrpc.messages.Either.forLeft(java.util.Collections.emptyList());
+        }
+
+        String targetUri = "file:///" + target.sourceId;
+        int startLine = Math.max(0, target.startLine - 1);
+        int startCol = Math.max(0, target.startColumn - 1);
+        int endLine = Math.max(startLine, target.endLine - 1);
+        int endCol = Math.max(startCol, target.endColumn);
+        Location loc = new Location(targetUri, new Range(
+                new Position(startLine, startCol),
+                new Position(endLine, endCol)));
+        return org.eclipse.lsp4j.jsonrpc.messages.Either.forLeft(List.of(loc));
+    }
+
+    /** Resolved navigation target: file + 1-based line/column range. */
+    private record TargetLocation(String sourceId, int startLine, int startColumn, int endLine, int endColumn) {}
+
+    /**
+     * Find the smallest expression (or PackageableElement) in {@link #lastModel}
+     * whose {@code sourceInformation} contains the (sourceId, line, column)
+     * cursor position. Returns the deepest match — e.g. for {@code foo(bar())}
+     * with the cursor on {@code bar}, returns the inner FE rather than the outer.
+     */
+    private Object findExpressionAt(String sourceId, int line, int col)
+    {
+        if (lastModel == null) return null;
+        Object[] best = new Object[]{null};
+        long[] bestSize = new long[]{Long.MAX_VALUE};
+        for (Module mod : lastModel.modules())
+        {
+            for (String elementPath : mod.elementPaths())
+            {
+                meta.pure.metamodel.PackageableElement el =
+                        (meta.pure.metamodel.PackageableElement) mod.getElement(elementPath);
+                if (el == null) continue;
+                meta.pure.metamodel.SourceInformation si = el._sourceInformation();
+                if (!siContains(si, sourceId, line, col)) continue;
+                walkForCursor(el, sourceId, line, col, best, bestSize);
+            }
+        }
+        return best[0];
+    }
+
+    /** Recursively descend into a node looking for the smallest SI containing the cursor. */
+    private void walkForCursor(Object node, String sourceId, int line, int col, Object[] best, long[] bestSize)
+    {
+        if (node == null) return;
+        if (node instanceof Iterable<?> iter)
+        {
+            for (Object child : iter) walkForCursor(child, sourceId, line, col, best, bestSize);
+            return;
+        }
+        if (!(node instanceof meta.pure.metamodel.type.Any any))
+        {
+            return;
+        }
+        meta.pure.metamodel.SourceInformation si = nodeSI(any);
+        if (si != null)
+        {
+            if (!siContains(si, sourceId, line, col)) return;  // skip subtrees outside cursor
+            long size = siSize(si);
+            if (size < bestSize[0])
+            {
+                bestSize[0] = size;
+                best[0] = any;
+            }
+        }
+        // Recurse into AST-shaped child slots. Only descend into slots that
+        // hold sub-expressions / sub-nodes; do NOT follow references like
+        // `func`, `type`, `owner`, `general` — those point at other elements
+        // and would explode the walk.
+        if (any instanceof meta.pure.metamodel.function.FunctionDefinition fd)
+        {
+            walkForCursor(fd._expressionSequence(), sourceId, line, col, best, bestSize);
+            walkForCursor(fd._parameters(), sourceId, line, col, best, bestSize);
+        }
+        if (any instanceof meta.pure.metamodel.valuespecification.FunctionExpression fe)
+        {
+            walkForCursor(fe._parametersValues(), sourceId, line, col, best, bestSize);
+        }
+        if (any instanceof meta.pure.metamodel.valuespecification.Collection c)
+        {
+            walkForCursor(c._values(), sourceId, line, col, best, bestSize);
+        }
+        if (any instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
+        {
+            // AtomicValue.value can hold a lambda — descend into it
+            Object v = av._value();
+            if (v instanceof meta.pure.metamodel.function.LambdaFunction lf)
+            {
+                walkForCursor(lf._expressionSequence(), sourceId, line, col, best, bestSize);
+                walkForCursor(lf._parameters(), sourceId, line, col, best, bestSize);
+            }
+        }
+        // Class properties / qualified properties are top-level: their bodies
+        // become FunctionDefinition-shaped (default values, constraints, QP
+        // expressionSequence). Walk those.
+        if (any instanceof meta.pure.metamodel.type.Class cls)
+        {
+            for (Object pObj : cls._properties())
+            {
+                meta.pure.metamodel.function.property.Property p =
+                        (meta.pure.metamodel.function.property.Property) pObj;
+                walkForCursor(p, sourceId, line, col, best, bestSize);
+                if (p._defaultValue() != null)
+                {
+                    walkForCursor(p._defaultValue()._expressionSequence(), sourceId, line, col, best, bestSize);
+                }
+            }
+            for (Object qpObj : cls._qualifiedProperties())
+            {
+                meta.pure.metamodel.function.property.QualifiedProperty qp =
+                        (meta.pure.metamodel.function.property.QualifiedProperty) qpObj;
+                walkForCursor(qp, sourceId, line, col, best, bestSize);
+                walkForCursor(qp._expressionSequence(), sourceId, line, col, best, bestSize);
+                walkForCursor(qp._parameters(), sourceId, line, col, best, bestSize);
+            }
+        }
+    }
+
+    /** Source info for a node, or null. SourceInformation lives at the
+     *  ValueSpecification level and on PackageableElement subtypes. */
+    private static meta.pure.metamodel.SourceInformation nodeSI(meta.pure.metamodel.type.Any node)
+    {
+        if (node instanceof meta.pure.metamodel.PackageableElement pe) return pe._sourceInformation();
+        if (node instanceof meta.pure.metamodel.valuespecification.ValueSpecification vs) return vs._sourceInformation();
+        if (node instanceof meta.pure.metamodel.function.property.AbstractProperty p) return p._sourceInformation();
+        return null;
+    }
+
+    /** Does {@code si} contain the cursor position (sourceId, line, col, 1-based)? */
+    private static boolean siContains(meta.pure.metamodel.SourceInformation si, String sourceId, int line, int col)
+    {
+        if (si == null) return false;
+        String siSource = si._sourceId();
+        // null sourceId on the SI means "inherits from the enclosing element" —
+        // we treat any sub-expression as in the same file as its top-level
+        // PackageableElement, so don't reject on null here.
+        if (siSource != null && !siSource.equals(sourceId)) return false;
+        int sl = si._startLine().intValue();
+        int sc = si._startColumn().intValue();
+        int el = si._endLine().intValue();
+        int ec = si._endColumn().intValue();
+        if (line < sl || line > el) return false;
+        if (line == sl && col < sc) return false;
+        if (line == el && col > ec) return false;
+        return true;
+    }
+
+    /** Approximate area of a SourceInformation range — used to pick the
+     *  smallest containing match. Lines weighted heavily so a 3-line
+     *  range never beats a 1-line one regardless of column span. */
+    private static long siSize(meta.pure.metamodel.SourceInformation si)
+    {
+        long lines = si._endLine().longValue() - si._startLine().longValue();
+        long cols = si._endColumn().longValue() - si._startColumn().longValue();
+        return lines * 10000L + Math.max(cols, 0);
+    }
+
+    /** Resolve the target of an AST node — what it references — to a
+     *  {@link TargetLocation} (file + range). */
+    private TargetLocation resolveTarget(Object node)
+    {
+        if (node == null) return null;
+        // FunctionExpression: jump to its resolved function (or property for
+        // DotApplication, since the compiler stores the resolved Property
+        // in the func slot too).
+        if (node instanceof meta.pure.metamodel.valuespecification.FunctionExpression fe)
+        {
+            meta.pure.metamodel.function.Function func = fe._func();
+            if (func == null) return null;
+            Object live = derefPointer(func);
+            return targetFor(live);
+        }
+        // GenericTypeValue: jump to the type the cursor is on.
+        if (node instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+        {
+            meta.pure.metamodel.type.Type t = gtv._type();
+            if (t == null) return null;
+            return targetFor(derefPointer(t));
+        }
+        // VariableExpression: walk enclosing function/lambda to find a
+        // parameter or `let` binding with the same name.
+        if (node instanceof meta.pure.metamodel.valuespecification.VariableExpression ve)
+        {
+            meta.pure.metamodel.SourceInformation si = resolveVariableSourceInfo(ve);
+            return si == null ? null : siToTarget(si, null);
+        }
+        // PackageableElement itself (top-level reference like `extends Foo`).
+        if (node instanceof meta.pure.metamodel.PackageableElement pe)
+        {
+            return targetFor(pe);
+        }
+        return null;
+    }
+
+    /** Build a TargetLocation from a live element's SourceInformation,
+     *  falling back to {@link LocalModule#getSourceIdForElement} when the
+     *  SI's {@code _sourceId()} is null (the compiler omits it on most
+     *  per-element SIs — only the enclosing file SI carries it). */
+    private TargetLocation targetFor(Object live)
+    {
+        if (!(live instanceof meta.pure.metamodel.PackageableElement pe)) return null;
+        meta.pure.metamodel.SourceInformation si = pe._sourceInformation();
+        if (si == null) return null;
+        return siToTarget(si, qualifiedPath(pe));
+    }
+
+    /** SourceInformation + optional element path → TargetLocation. If
+     *  {@code si._sourceId()} is null, look it up via
+     *  {@code module.getSourceIdForElement(elementPath)}. */
+    private TargetLocation siToTarget(meta.pure.metamodel.SourceInformation si, String elementPath)
+    {
+        String sourceId = si._sourceId();
+        if (sourceId == null && elementPath != null)
+        {
+            for (LocalModule mod : editableModules)
+            {
+                String sid = mod.getSourceIdForElement(elementPath);
+                if (sid != null)
+                {
+                    sourceId = sid;
+                    break;
+                }
+            }
+        }
+        if (sourceId == null) return null;
+        return new TargetLocation(
+                sourceId,
+                si._startLine().intValue(),
+                si._startColumn().intValue(),
+                si._endLine().intValue(),
+                si._endColumn().intValue());
+    }
+
+    /** Compose {@code pkg::pkg::Name} from a PackageableElement using the
+     *  shared compiler helper (handles empty/root package edge cases that
+     *  a naive `while (pkg._name() != null)` loop gets wrong — was producing
+     *  `::::meta::…` paths previously). */
+    private static String qualifiedPath(meta.pure.metamodel.PackageableElement pe)
+    {
+        return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
+    }
+
+    /** Dereference a pointer-like value to its live target. Handles two kinds:
+     *  <ul>
+     *    <li>{@code FunctionIndexEntry} — Java-direct compiler's lazy proxy
+     *        for PackageableFunction; carries {@code fullPath()}.</li>
+     *    <li>{@code TempCompilerPointer} — compile-pure's pointer with
+     *        {@code _path()}.</li>
+     *  </ul>
+     *  Returns input unchanged for non-pointer values or when lookup fails. */
+    private Object derefPointer(Object obj)
+    {
+        if (obj == null || lastModel == null) return obj;
+        // Java-direct FunctionIndexEntry (UserDefinedFunctionIndexEntry,
+        // NativeFunctionIndexEntry, ...): its own SourceInformation has null
+        // sourceId because the entry is a synthetic proxy. Resolve via fullPath()
+        // to the live PackageableFunction.
+        if (obj instanceof org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry fie)
+        {
+            String path = fie.fullPath();
+            if (path != null && !path.isEmpty())
+            {
+                for (Module mod : lastModel.modules())
+                {
+                    meta.pure.metamodel.PackageableElement el = mod.getElement(path);
+                    if (el != null && el != obj) return el;
+                }
+            }
+        }
+        // compile-pure TempCompilerPointer (Class_Pointer / PropertyPointer / etc.)
+        try
+        {
+            Class<?> tcpClass = Class.forName("meta.pure.metamodel.pointer.TempCompilerPointer");
+            if (tcpClass.isInstance(obj))
+            {
+                java.lang.reflect.Method pathM = obj.getClass().getMethod("_path");
+                Object pathObj = pathM.invoke(obj);
+                if (pathObj instanceof String path && !path.isEmpty())
+                {
+                    for (Module mod : lastModel.modules())
+                    {
+                        meta.pure.metamodel.PackageableElement el = mod.getElement(path);
+                        if (el != null) return el;
+                    }
+                }
+            }
+        }
+        catch (ReflectiveOperationException | RuntimeException ignored)
+        {
+            // Fallthrough — return obj as-is
+        }
+        return obj;
+    }
+
+
+    /** Walk top-level elements in lastModel looking for the enclosing function
+     *  containing {@code ve}; return the SI of a matching parameter or let
+     *  binding. */
+    private meta.pure.metamodel.SourceInformation resolveVariableSourceInfo(meta.pure.metamodel.valuespecification.VariableExpression ve)
+    {
+        if (lastModel == null || ve._name() == null) return null;
+        String varName = ve._name();
+        meta.pure.metamodel.SourceInformation veSI = ve._sourceInformation();
+        if (veSI == null) return null;
+        // Find the enclosing FunctionDefinition by source containment.
+        for (Module mod : lastModel.modules())
+        {
+            for (String elementPath : mod.elementPaths())
+            {
+                Object el = mod.getElement(elementPath);
+                if (!(el instanceof meta.pure.metamodel.function.FunctionDefinition fd)) continue;
+                meta.pure.metamodel.SourceInformation fdSI =
+                        ((meta.pure.metamodel.PackageableElement) fd)._sourceInformation();
+                if (!siEncloses(fdSI, veSI)) continue;
+                meta.pure.metamodel.SourceInformation found = findVarInScope(fd, varName, veSI);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    /** Returns SI of the parameter / let-binder for {@code varName} within
+     *  {@code fd}'s body, or null if not found. Prefers the nearest enclosing
+     *  binding to the reference site. */
+    private static meta.pure.metamodel.SourceInformation findVarInScope(
+            meta.pure.metamodel.function.FunctionDefinition fd,
+            String varName,
+            meta.pure.metamodel.SourceInformation refSI)
+    {
+        for (meta.pure.metamodel.valuespecification.VariableExpression p : fd._parameters())
+        {
+            if (varName.equals(p._name())) return p._sourceInformation();
+        }
+        // `let x = ...` compiles to a letFunction(AtomicValue("x"), ...) call.
+        // Find one whose first argument's value is the name AND that is
+        // lexically before the reference site.
+        meta.pure.metamodel.SourceInformation best = null;
+        long bestLine = -1;
+        for (meta.pure.metamodel.valuespecification.ValueSpecification stmt : fd._expressionSequence())
+        {
+            if (!(stmt instanceof meta.pure.metamodel.valuespecification.FunctionExpression fe)) continue;
+            String fnName = fe._functionName();
+            if (fnName == null || !fnName.startsWith("letFunction")) continue;
+            if (fe._parametersValues() == null || fe._parametersValues().isEmpty()) continue;
+            meta.pure.metamodel.valuespecification.ValueSpecification nameVS = fe._parametersValues().get(0);
+            if (!(nameVS instanceof meta.pure.metamodel.valuespecification.AtomicValue av)) continue;
+            if (!(av._value() instanceof String name) || !varName.equals(name)) continue;
+            meta.pure.metamodel.SourceInformation letSI = fe._sourceInformation();
+            if (letSI == null) continue;
+            // Lexical scoping: prefer the latest let before refSI.
+            long letLine = letSI._startLine().longValue();
+            long refLine = refSI._startLine().longValue();
+            if (letLine > refLine) continue;
+            if (letLine > bestLine)
+            {
+                bestLine = letLine;
+                best = letSI;
+            }
+        }
+        return best;
+    }
+
+    /** Does {@code outer} fully enclose {@code inner}? */
+    private static boolean siEncloses(meta.pure.metamodel.SourceInformation outer,
+                                      meta.pure.metamodel.SourceInformation inner)
+    {
+        if (outer == null || inner == null) return false;
+        if (outer._sourceId() != null && inner._sourceId() != null
+                && !outer._sourceId().equals(inner._sourceId())) return false;
+        if (inner._startLine().longValue() < outer._startLine().longValue()) return false;
+        if (inner._endLine().longValue() > outer._endLine().longValue()) return false;
+        if (inner._startLine().longValue() == outer._startLine().longValue()
+                && inner._startColumn().longValue() < outer._startColumn().longValue()) return false;
+        if (inner._endLine().longValue() == outer._endLine().longValue()
+                && inner._endColumn().longValue() > outer._endColumn().longValue()) return false;
+        return true;
     }
 
     // =========================================================================
@@ -519,6 +969,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 sendExecuteResult(sb.toString(), true);
                 return;
             }
+
+            // Make this successful model available to other LSP features
+            // (textDocument/definition). Without this, Ctrl+B is broken after
+            // an F9 run that succeeded but before any subsequent didChange.
+            this.lastModel = model;
 
             // Find and execute go():Any[*]
             Module welcomeMod = model.getModule("welcome");

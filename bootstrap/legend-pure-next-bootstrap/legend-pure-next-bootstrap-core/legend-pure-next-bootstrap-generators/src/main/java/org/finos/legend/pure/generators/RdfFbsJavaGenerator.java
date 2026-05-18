@@ -199,6 +199,22 @@ public class RdfFbsJavaGenerator
             }
             priorBranch = true;
         }
+        // Terminal else: any value reaching this point isn't covered by ANY
+        // schema-declared union arm — typically a PureDynamicObject that
+        // doesn't implement the typed Pure interface, or a synthesized PDO
+        // whose class isn't part of this union. Silently dropping leaves
+        // a 0-typed FlatBuffer slot that downstream readers interpret as
+        // "absent", which propagates as null at lazy walk and crashes far
+        // from the actual mistake. NEVER silent-fail — throw with javaClass
+        // and source context so the writer pins the bug at its origin.
+        if (priorBranch)
+        {
+            sb.append("            else\n");
+            sb.append("            {\n");
+            sb.append("                Object _v = obj._").append(prop.name).append("();\n");
+            sb.append("                throw new IllegalStateException(\"PDB writer: '").append(prop.name).append("' on '").append(className).append("' got a value not handled by any FBS union arm: javaClass=\" + _v.getClass().getName() + \" pureType=\" + pureTypeOf(_v) + \", path=\" + pointerPath(obj) + sourceInfo(obj));\n");
+            sb.append("            }\n");
+        }
         sb.append("        }\n");
     }
 
@@ -257,6 +273,18 @@ public class RdfFbsJavaGenerator
                 sb.append("                }\n");
             }
             priorBranch = true;
+        }
+        // Terminal else: see single-union version for rationale. Silent fall-
+        // through here would leave Offsets[i]=0 + Types[i]=0, which readers
+        // treat as "absent", and the missing entry surfaces as a null FE at
+        // some unrelated lazy-walk site later. NEVER silent-fail — throw at
+        // the origin instead.
+        if (priorBranch)
+        {
+            sb.append("                else\n");
+            sb.append("                {\n");
+            sb.append("                    throw new IllegalStateException(\"PDB writer: list '").append(prop.name).append("' on '").append(className).append("' got element[\" + i + \"] not handled by any FBS union arm: javaClass=\" + _item.getClass().getName() + \" pureType=\" + pureTypeOf(_item) + \", path=\" + pointerPath(obj) + sourceInfo(obj));\n");
+            sb.append("                }\n");
         }
         sb.append("            }\n");
         sb.append("        }\n");
@@ -1155,6 +1183,24 @@ public class RdfFbsJavaGenerator
         sb.append("        if (obj instanceof Tag t && t._profile() != null) { return _PackageableElement.path(t._profile()) + \"#\" + t._value(); }\n");
         sb.append("        return String.valueOf(obj);\n");
         sb.append("    }\n\n");
+        // Reflective Pure-type-path lookup — used by the union-dispatcher's
+        // fail-loud terminal `else` (which fires when none of the typed
+        // `instanceof` arms matched, typically because the value is a
+        // truffle `PureDynamicObject`). Returns null for plain Java objects.
+        sb.append("    private static String pureTypeOf(Object obj)\n");
+        sb.append("    {\n");
+        sb.append("        if (obj == null) return null;\n");
+        sb.append("        try {\n");
+        sb.append("            java.lang.reflect.Field cif = obj.getClass().getField(\"classInfo\");\n");
+        sb.append("            Object ci = cif.get(obj);\n");
+        sb.append("            if (ci == null) return null;\n");
+        sb.append("            java.lang.reflect.Field pp = ci.getClass().getField(\"purePath\");\n");
+        sb.append("            Object v = pp.get(ci);\n");
+        sb.append("            return v == null ? null : v.toString();\n");
+        sb.append("        } catch (NoSuchFieldException | IllegalAccessException ignore) {\n");
+        sb.append("            return null;\n");
+        sb.append("        }\n");
+        sb.append("    }\n\n");
         // writePointerRef: typed pointer for union PointerRef fields.
         //
         // TempCompilerPointer arms come FIRST. Concrete pointer subtypes
@@ -1283,6 +1329,21 @@ public class RdfFbsJavaGenerator
                     sb.append("        if (obj._").append(prop.name).append("() == null || obj._").append(prop.name).append("().isEmpty()) { throw new IllegalArgumentException(\"Validation error: Property '").append(prop.name).append("' on '").append(classInfo.name).append("' has multiplicity [1..*] but is null or empty: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
                 }
             });
+
+            // FunctionExpression hierarchy: `func` is multiplicity [0..1] on the
+            // abstract base (a freshly-parsed FE has it null), but a RESOLVED FE
+            // written to PDB must have it set — a null `func` here means
+            // compile-pure left an unresolved call (typically an operator like
+            // `or`/`||` whose resolver path silently dropped through), and
+            // downstream Truffle lazy-walks crash with the un-actionable
+            // `_func() returned null for: X` runtime error. Catch it at write
+            // time so the failure surfaces during the compile that produced
+            // the PDB, not at the first F9 that happens to construct an
+            // instance whose constraint exercises this branch.
+            if (extendsFunctionExpression(classInfo.name))
+            {
+                sb.append("        if (obj._func() == null) { throw new IllegalArgumentException(\"Validation error: Property 'func' on resolved '").append(classInfo.name).append("' is null (functionName='\" + obj._functionName() + \"') — compile-pure left an unresolved call: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
+            }
 
 
             // Pre-create string and nested offsets
@@ -1627,6 +1688,27 @@ public class RdfFbsJavaGenerator
      * Order subtypes so that most-specific (leaf) types come first in instanceof chains.
      * A type is "more specific" if it transitively extends another type in the list.
      */
+    private boolean extendsFunctionExpression(String className)
+    {
+        if ("FunctionExpression".equals(className))
+        {
+            return true;
+        }
+        ClassInfo ci = m3Model.classInfoMap().get(className);
+        if (ci == null)
+        {
+            return false;
+        }
+        for (String gen : ci.generalizations)
+        {
+            if (extendsFunctionExpression(gen))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private MutableList<String> orderMostSpecificFirst(MutableList<String> subtypes)
     {
         return subtypes.toSortedListBy(name ->
