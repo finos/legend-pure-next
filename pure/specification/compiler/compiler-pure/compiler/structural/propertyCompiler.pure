@@ -74,7 +74,7 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
               multiplicity = $mMult,
               stereotypes = $stereoResult.values,
               taggedValues = $tvResult.values,
-              sourceInformation = compileSourceInformation($protocolProperty.p_sourceInformation)
+              sourceInformation = compileSourceInformation($protocolProperty.p_sourceInformation, $context)
           );
           let finalProp = if($protocolProperty.defaultValue->isEmpty(),
               | $builtProp,
@@ -218,7 +218,7 @@ function meta::pure::compiler::structural::propertyCompiler::compileEnumProperty
                 )
             ]
         ),
-        sourceInformation = compileSourceInformation($p.p_sourceInformation)
+        sourceInformation = compileSourceInformation($p.p_sourceInformation, $context)
     );
 }
 

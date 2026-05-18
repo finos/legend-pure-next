@@ -86,7 +86,7 @@ function meta::pure::compiler::structural::constraintCompiler::compileConstraint
                   enforcementLevel = $pc.enforcementLevel,
                   functionDefinition = $compiledLambda,
                   messageFunction = $msgResult.value->cast(@FunctionDefinition<Any>),
-                  sourceInformation = compileSourceInformation($pc.p_sourceInformation)
+                  sourceInformation = compileSourceInformation($pc.p_sourceInformation, $context)
               ),
               context = $ctx2
           );

@@ -103,7 +103,7 @@ public final class QualifiedPropertyCompiler
                 ._taggedValues(grammarQP._taggedValues()
                         .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                         .select(Objects::nonNull))
-                ._sourceInformation(SourceInformationCompiler.compile(grammarQP._p_sourceInformation(), model));;
+                ._sourceInformation(SourceInformationCompiler.compile(grammarQP._p_sourceInformation(), context.getSourceId(), model));;
 
         if (owner != null)
         {

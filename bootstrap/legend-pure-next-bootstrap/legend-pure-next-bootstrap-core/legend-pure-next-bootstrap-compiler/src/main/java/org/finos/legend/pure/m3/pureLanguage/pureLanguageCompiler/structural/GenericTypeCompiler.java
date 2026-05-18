@@ -169,7 +169,7 @@ public final class GenericTypeCompiler
         String pointerValue = pointer._value();
 
         int checkpoint = context.currentErrorCount();
-        SourceInformation sourceInfo = SourceInformationCompiler.compile(pointer._p_sourceInformation(), model);
+        SourceInformation sourceInfo = SourceInformationCompiler.compile(pointer._p_sourceInformation(), context.getSourceId(), model);
         PackageableElement element = _PackageableElement.findElementOrReportError(pointerValue, imports, model, context, sourceInfo);
         if (element instanceof Type type)
         {

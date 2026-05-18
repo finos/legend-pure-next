@@ -415,7 +415,7 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
                 package = $pkgRes.value->toOne(),
                 typeParameters = $typeParams,
                 multiplicityParameters = $mulParams,
-                sourceInformation = compileSourceInformation($c.p_sourceInformation)
+                sourceInformation = compileSourceInformation($c.p_sourceInformation, $ctx)
             );
             putElementUnderPackage($pkgRes.context, $className, $packagePath, $skeleton);,
         a:meta::pure::protocol::grammar::relationship::Association[1] |
@@ -425,7 +425,7 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
             let assocSkeleton = ^Association(
                 name = $a.name,
                 package = $pkgRes.value->toOne(),
-                sourceInformation = compileSourceInformation($a.p_sourceInformation)
+                sourceInformation = compileSourceInformation($a.p_sourceInformation, $ctx)
             );
             putElementUnderPackage($pkgRes.context, $aName, $packagePath, $assocSkeleton);,
         en:meta::pure::protocol::grammar::type::Enumeration[1] |
@@ -448,7 +448,7 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
             let primSkeleton = ^PrimitiveType(
                 name = $p.name,
                 package = $pkgRes.value->toOne(),
-                sourceInformation = compileSourceInformation($p.p_sourceInformation)
+                sourceInformation = compileSourceInformation($p.p_sourceInformation, $ctx)
             );
             putElementUnderPackage($pkgRes.context, $pName, $packagePath, $primSkeleton);,
         a:meta::pure::protocol::grammar::PackageableElement[1] | $ctx

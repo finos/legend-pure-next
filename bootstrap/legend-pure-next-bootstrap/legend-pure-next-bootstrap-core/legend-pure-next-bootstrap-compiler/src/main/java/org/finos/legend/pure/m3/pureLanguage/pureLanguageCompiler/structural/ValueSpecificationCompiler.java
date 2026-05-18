@@ -45,7 +45,7 @@ public final class ValueSpecificationCompiler
             case meta.pure.protocol.grammar.valuespecification.ArrowInvocationImpl arrow ->
                     compileArrowInvocation(arrow, imports, model, context);
             case meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl var ->
-                    compileVariableExpression(var, model);
+                    compileVariableExpression(var, model, context);
             case meta.pure.protocol.grammar.valuespecification.AtomicValueImpl av ->
                     compileAtomicValue(av, imports, model, context);
             case meta.pure.protocol.grammar.valuespecification.CollectionImpl col ->
@@ -268,7 +268,7 @@ public final class ValueSpecificationCompiler
     }
 
     private static VariableExpressionImpl compileVariableExpression(
-            meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl var, MetadataAccess model)
+            meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl var, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
     {
         VariableExpressionImpl result = _VariableExpression.newVariableExpression(model)
                 ._name(var._name() != null ? var._name() : "")
@@ -276,7 +276,7 @@ public final class ValueSpecificationCompiler
                 ._multiplicity(new CompilerNotSetMultiplicityImpl());
         if (var._p_sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(var._p_sourceInformation(), model));
+            result._sourceInformation(SourceInformationCompiler.compile(var._p_sourceInformation(), context.getSourceId(), model));
         }
         return result;
     }

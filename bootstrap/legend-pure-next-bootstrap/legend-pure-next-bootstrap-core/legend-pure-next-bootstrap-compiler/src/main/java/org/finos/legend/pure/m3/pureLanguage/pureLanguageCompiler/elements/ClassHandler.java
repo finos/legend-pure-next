@@ -53,7 +53,7 @@ public final class ClassHandler
     {
     }
 
-    public static meta.pure.metamodel.type.Class firstPass(meta.pure.protocol.grammar.type.Class grammar, MetadataAccess model)
+    public static meta.pure.metamodel.type.Class firstPass(meta.pure.protocol.grammar.type.Class grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
     {
         return new ClassImpl() // the classifierGenericType is set in the secondPass
                    ._name(grammar._name());
@@ -125,7 +125,7 @@ public final class ClassHandler
                 ._classifierGenericType(
                         _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::Class"), model)
                                 ._typeArguments(Lists.mutable.with(ownerGenericType)))
-                ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), model));
+                ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model));
 
         // Compile type variables (e.g., Class Foo(x:Integer[1]))
         if (grammar._typeVariables() != null && grammar._typeVariables().notEmpty())
@@ -138,7 +138,7 @@ public final class ClassHandler
         // Create constraint shells (name, owner, source info) without expression sequences
         if (grammar._constraints() != null && grammar._constraints().notEmpty())
         {
-            result._constraints(grammar._constraints().collect(gc -> ConstraintCompiler.compileShell(gc, model)));
+            result._constraints(grammar._constraints().collect(gc -> ConstraintCompiler.compileShell(gc, model, context)));
         }
 
         context.enrichCurrentErrors("class '" + _G_PackageableElement.fullPath(grammar) + "'");

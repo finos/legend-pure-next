@@ -82,7 +82,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
                   name = $p.name,
                   genericType = $pmGenType,
                   multiplicity = $pmMult,
-                  sourceInformation = compileSourceInformation($p.p_sourceInformation)
+                  sourceInformation = compileSourceInformation($p.p_sourceInformation, $ctx)
               )->cast(@VariableExpression);
           );
 
@@ -126,7 +126,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
               expressionSequence = $compiledSequence.specs,
               openVariables = $openVariables,
               classifierGenericType = $lambdaCGT,
-              sourceInformation = compileSourceInformationWithFallback($l.p_sourceInformation, $ctx)
+              sourceInformation = compileSourceInformation($l.p_sourceInformation, $ctx)
           );
 
           let wrappedLambda = ^AtomicValue(

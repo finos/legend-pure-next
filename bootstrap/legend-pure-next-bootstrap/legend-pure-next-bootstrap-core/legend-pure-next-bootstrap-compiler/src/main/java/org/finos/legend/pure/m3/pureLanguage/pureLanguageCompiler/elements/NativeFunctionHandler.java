@@ -34,7 +34,7 @@ public final class NativeFunctionHandler
     {
     }
 
-    public static NativeFunction firstPass(meta.pure.protocol.grammar.function.NativeFunction grammar, MetadataAccess model)
+    public static NativeFunction firstPass(meta.pure.protocol.grammar.function.NativeFunction grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
     {
         return new NativeFunctionImpl()
                 ._name(grammar._name())

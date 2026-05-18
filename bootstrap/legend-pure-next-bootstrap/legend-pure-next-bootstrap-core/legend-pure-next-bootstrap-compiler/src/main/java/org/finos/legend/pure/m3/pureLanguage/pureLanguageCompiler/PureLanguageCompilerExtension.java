@@ -65,17 +65,17 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
     }
 
     @Override
-    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model)
+    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context)
     {
         PackageableElement element = switch (grammar)
         {
-            case meta.pure.protocol.grammar.type.Class c -> ClassHandler.firstPass(c, model);
-            case meta.pure.protocol.grammar.type.Enumeration e -> EnumerationHandler.firstPass(e, model);
-            case meta.pure.protocol.grammar.function.NativeFunction f -> NativeFunctionHandler.firstPass(f, model);
-            case meta.pure.protocol.grammar.function.UserDefinedFunction f -> UserDefinedFunctionHandler.firstPass(f, model);
-            case meta.pure.protocol.grammar.extension.Profile p -> ProfileHandler.firstPass(p, model);
-            case meta.pure.protocol.grammar.relationship.Association a -> AssociationHandler.firstPass(a, model);
-            case meta.pure.protocol.grammar.type.PrimitiveType p -> PrimitiveTypeHandler.firstPass(p, model);
+            case meta.pure.protocol.grammar.type.Class c -> ClassHandler.firstPass(c, model, context);
+            case meta.pure.protocol.grammar.type.Enumeration e -> EnumerationHandler.firstPass(e, model, context);
+            case meta.pure.protocol.grammar.function.NativeFunction f -> NativeFunctionHandler.firstPass(f, model, context);
+            case meta.pure.protocol.grammar.function.UserDefinedFunction f -> UserDefinedFunctionHandler.firstPass(f, model, context);
+            case meta.pure.protocol.grammar.extension.Profile p -> ProfileHandler.firstPass(p, model, context);
+            case meta.pure.protocol.grammar.relationship.Association a -> AssociationHandler.firstPass(a, model, context);
+            case meta.pure.protocol.grammar.type.PrimitiveType p -> PrimitiveTypeHandler.firstPass(p, model, context);
             default -> null;
         };
         elements.add(element);

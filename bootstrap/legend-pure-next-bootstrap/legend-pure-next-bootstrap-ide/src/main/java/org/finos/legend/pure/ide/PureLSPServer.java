@@ -67,6 +67,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     private PureModel lastModel;
     private final ScheduledExecutorService debounceExecutor = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> pendingCompile;
+    /** Set by {@code pure/cancelTests}; read by the {@code pure/runTests}
+     *  loop between tests to stop running further tests. Doesn't interrupt
+     *  the currently-running test (Truffle doesn't expose a clean cancel
+     *  hook for in-flight evaluation), but stops the queue mid-batch. */
+    private final java.util.concurrent.atomic.AtomicBoolean testsCancelled = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     public PureLSPServer(MutableList<PDBModule> pdbModules, MutableList<LocalModule> editableModules, PureBackend backend)
     {
@@ -106,7 +111,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
         // Execute command support for pure/execute
         ExecuteCommandOptions execOptions = new ExecuteCommandOptions(
-                List.of("pure/execute", "pure/packageTree", "pure/fileTree", "pure/jumpToElement", "pure/openFile", "pure/saveFile", "pure/getPCTAdapters", "pure/discoverTests", "pure/runTests", "pure/search"));
+                List.of("pure/execute", "pure/packageTree", "pure/fileTree", "pure/jumpToElement", "pure/openFile", "pure/saveFile", "pure/getPCTAdapters", "pure/discoverTests", "pure/runTests", "pure/cancelTests", "pure/search"));
         capabilities.setExecuteCommandProvider(execOptions);
 
         return CompletableFuture.completedFuture(new InitializeResult(capabilities));
@@ -268,12 +273,42 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         // LSP positions are 0-based; Pure SourceInformation is 1-based.
         int line = params.getPosition().getLine() + 1;
         int col = params.getPosition().getCharacter() + 1;
+        System.err.println("[LSP/def] uri=" + uri + " sourceId=" + sourceId + " line=" + line + " col=" + col);
 
         Object exprAtCursor = findExpressionAt(sourceId, line, col);
         if (exprAtCursor == null)
         {
+            System.err.println("[LSP/def] no expression at cursor.");
+            System.err.println("[LSP/def]   lastModel modules:");
+            for (Module mod : lastModel.modules())
+            {
+                System.err.println("[LSP/def]     " + mod.getClass().getSimpleName() + " " + mod.getName() + " elementCount=" + mod.elementPaths().size());
+            }
+            // Sample the unique sourceIds seen on top-level element SIs.
+            java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+            int distinctCount = 0;
+            for (Module mod : lastModel.modules())
+            {
+                for (String elementPath : mod.elementPaths())
+                {
+                    meta.pure.metamodel.PackageableElement el = mod.getElement(elementPath);
+                    if (el == null) continue;
+                    meta.pure.metamodel.SourceInformation si = el._sourceInformation();
+                    if (si == null) continue;
+                    String sid = si._sourceId();
+                    if (seen.add(sid == null ? "<null>" : sid))
+                    {
+                        if (distinctCount++ < 20)
+                        {
+                            System.err.println("[LSP/def]     sourceId: " + sid + "  (e.g. " + elementPath + ")");
+                        }
+                    }
+                }
+            }
+            System.err.println("[LSP/def]   distinct sourceIds: " + seen.size());
             return org.eclipse.lsp4j.jsonrpc.messages.Either.forLeft(java.util.Collections.emptyList());
         }
+        System.err.println("[LSP/def] expr at cursor: " + exprAtCursor.getClass().getName());
 
         TargetLocation target = resolveTarget(exprAtCursor);
         if (target == null)
@@ -317,13 +352,35 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         long[] bestSize = new long[]{Long.MAX_VALUE};
         for (Module mod : lastModel.modules())
         {
+            // Build elementPath → sourceId map for this module. Per-element SIs
+            // have null _sourceId() (Java-direct compiler tracks the file in
+            // the module's element index, not on each element's SI). Use the
+            // index as the authoritative file identity for top-level entry.
+            java.util.function.Function<String, String> sourceIdOf;
+            if (mod instanceof LocalModule lm)
+            {
+                sourceIdOf = lm::getSourceIdForElement;
+            }
+            else
+            {
+                sourceIdOf = p -> null;  // PDB modules — never match user files
+            }
             for (String elementPath : mod.elementPaths())
             {
+                String elSourceId = sourceIdOf.apply(elementPath);
+                if (elSourceId == null || !elSourceId.equals(sourceId)) continue;
+
                 meta.pure.metamodel.PackageableElement el =
                         (meta.pure.metamodel.PackageableElement) mod.getElement(elementPath);
                 if (el == null) continue;
                 meta.pure.metamodel.SourceInformation si = el._sourceInformation();
-                if (!siContains(si, sourceId, line, col)) continue;
+                if (si == null) continue;
+                // Line/column range check still applies — only line+col within
+                // the element's range can be a hit. SourceId is already known
+                // from the index lookup above, so don't re-check it on the SI.
+                if (line < si._startLine().intValue() || line > si._endLine().intValue()) continue;
+                if (line == si._startLine().intValue() && col < si._startColumn().intValue()) continue;
+                if (line == si._endLine().intValue() && col > si._endColumn().intValue()) continue;
                 walkForCursor(el, sourceId, line, col, best, bestSize);
             }
         }
@@ -739,24 +796,49 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             });
             case "pure/runTests" -> CompletableFuture.supplyAsync(() ->
             {
-                if (params.getArguments() != null && params.getArguments().size() >= 3)
+                // Outer guard: any uncaught error here would propagate up to
+                // CompletableFuture and reach the client as an LSP error
+                // response (no test results at all). Catch + return a single
+                // synthesized failure so the IDE can at least render a
+                // toplevel "test runner crashed" message instead of leaving
+                // the test tree blank.
+                try
                 {
-                    String mode = getArgString(params.getArguments().get(0));
-                    String adapter = getArgString(params.getArguments().get(1));
-                    Object testsObj = params.getArguments().get(2);
-                    List<String> tests = new ArrayList<>();
-                    if (testsObj instanceof com.google.gson.JsonArray arr) {
-                        for (com.google.gson.JsonElement e : arr) {
-                            tests.add(e.getAsString());
+                    if (params.getArguments() != null && params.getArguments().size() >= 3)
+                    {
+                        String mode = getArgString(params.getArguments().get(0));
+                        String adapter = getArgString(params.getArguments().get(1));
+                        Object testsObj = params.getArguments().get(2);
+                        List<String> tests = new ArrayList<>();
+                        if (testsObj instanceof com.google.gson.JsonArray arr) {
+                            for (com.google.gson.JsonElement e : arr) {
+                                tests.add(e.getAsString());
+                            }
+                        } else if (testsObj instanceof List<?> ls) {
+                            for (Object o : ls) {
+                                tests.add(String.valueOf(o));
+                            }
                         }
-                    } else if (testsObj instanceof List<?> ls) {
-                        for (Object o : ls) {
-                            tests.add(String.valueOf(o));
-                        }
+                        return handleRunTests(mode, adapter, tests);
                     }
-                    return handleRunTests(mode, adapter, tests);
+                    return List.of();
                 }
-                return List.of();
+                catch (Throwable t)
+                {
+                    System.err.println("[LSP/runTests] hard crash in test runner: " + t);
+                    t.printStackTrace(System.err);
+                    Map<String, String> crash = new LinkedHashMap<>();
+                    crash.put("test", "<runner>");
+                    crash.put("status", "failed");
+                    crash.put("error", "Test runner crashed: " + (t.getMessage() != null ? t.getMessage() : t.getClass().getName()));
+                    return List.of(crash);
+                }
+            });
+            case "pure/cancelTests" -> CompletableFuture.supplyAsync(() ->
+            {
+                System.err.println("[LSP/cancelTests] received");
+                testsCancelled.set(true);
+                return null;
             });
             case "pure/saveFile" -> CompletableFuture.supplyAsync(() ->
             {
@@ -1105,14 +1187,36 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
     private Object handleRunTests(String mode, String adapterPath, List<String> testPaths)
     {
+        System.err.println("[LSP/runTests] mode=" + mode + " adapter=" + adapterPath + " tests=" + testPaths.size());
+        // Reset cancel flag at the start of every new batch — a previous
+        // batch's cancel must not bleed into the next.
+        testsCancelled.set(false);
         List<Map<String, String>> results = new ArrayList<>();
         if (lastModel == null)
         {
-            try { compileCurrentSource(); } catch (Exception e) {
-                return results; // cannot compile
+            try { compileCurrentSource(); }
+            catch (Exception e)
+            {
+                System.err.println("[LSP/runTests] compileCurrentSource threw: " + e);
             }
         }
-        
+        if (lastModel == null)
+        {
+            // Compile failed (either threw, or produced errors so lastModel
+            // stayed null). Synthesize a failed entry for every requested
+            // test so the IDE's test tree shows red instead of spinning.
+            for (String testPath : testPaths)
+            {
+                Map<String, String> result = new LinkedHashMap<>();
+                result.put("test", testPath);
+                result.put("status", "failed");
+                result.put("error", "Cannot run: source did not compile cleanly (lastModel is null). Fix compile errors and re-run.");
+                streamTestResult(result);
+                results.add(result);
+            }
+            return results;
+        }
+
         ValueSpecification adapterArg = null;
         if ("pct".equals(mode) && adapterPath != null && !adapterPath.isEmpty())
         {
@@ -1128,9 +1232,33 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
         for (String testPath : testPaths)
         {
+            if (testsCancelled.get())
+            {
+                System.err.println("[LSP/runTests] cancelled; remaining " + (testPaths.size() - results.size()) + " tests");
+                for (int i = results.size(); i < testPaths.size(); i++)
+                {
+                    String remaining = testPaths.get(i);
+                    Map<String, String> r = new LinkedHashMap<>();
+                    r.put("test", remaining);
+                    r.put("status", "cancelled");
+                    r.put("error", "Cancelled by user");
+                    streamTestResult(r);
+                    results.add(r);
+                }
+                break;
+            }
+            // Notify the IDE that this test is about to start so its row can
+            // light up as "running" — the user sees which test the runner
+            // is currently on rather than every spinner looking identical.
+            {
+                Map<String, String> running = new LinkedHashMap<>();
+                running.put("test", testPath);
+                running.put("status", "running");
+                streamTestResult(running);
+            }
             Map<String, String> result = new LinkedHashMap<>();
             result.put("test", testPath);
-            
+
             meta.pure.metamodel.PackageableElement testElem = null;
             for (Module m : lastModel.modules()) {
                 if ((testElem = m.getElement(testPath)) != null) break;
@@ -1141,32 +1269,86 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 // Tests reuse the previously-compiled model, so no fresh
                 // CompilationResult to pass through — test output focuses on
                 // pass/fail, not compile stats.
-                PureBackend.ExecutionResult execResult = "pct".equals(mode) && adapterArg != null
-                        ? backend.execute(editableModules, lastModel, null, fd, adapterArg)
-                        : backend.execute(editableModules, lastModel, null, fd);
-                if (execResult.ok())
+                // Hard-crash safety: a test that throws inside the Truffle
+                // runtime (e.g. unmatched `match` arms, NPE in a native, …)
+                // must NOT abort the loop — otherwise the IDE's test tree
+                // gets zero feedback for every subsequent test. Catch every
+                // Throwable here and record a failed entry per test.
+                try
                 {
-                    result.put("status", "passed");
+                    PureBackend.ExecutionResult execResult = "pct".equals(mode) && adapterArg != null
+                            ? backend.execute(editableModules, lastModel, null, fd, adapterArg)
+                            : backend.execute(editableModules, lastModel, null, fd);
+                    if (execResult.ok())
+                    {
+                        result.put("status", "passed");
+                    }
+                    else
+                    {
+                        Throwable err = execResult.error();
+                        result.put("status", "failed");
+                        result.put("error", formatTestError(err));
+                    }
+                    result.put("output", execResult.capturedStdout());
                 }
-                else
+                catch (Throwable t)
                 {
-                    Throwable err = execResult.error();
                     result.put("status", "failed");
-                    result.put("error",
-                            err instanceof org.finos.legend.pure.execution.PureAssertionError
-                                    ? "Assertion Failed: " + err.getMessage()
-                                    : "Error: " + err.getMessage());
+                    result.put("error", formatTestError(t));
+                    // Per-test crash log so the user can correlate stderr to a
+                    // specific test row without scrolling through stacks.
+                    System.err.println("[LSP/runTests] test crashed: " + testPath + " — " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 }
-                result.put("output", execResult.capturedStdout());
             }
             else
             {
                 result.put("status", "failed");
                 result.put("error", "Test function not found.");
             }
+            // Stream this test's result so the IDE can update its row icon
+            // immediately — don't wait for the whole batch to complete.
+            streamTestResult(result);
             results.add(result);
         }
+        System.err.println("[LSP/runTests] returning " + results.size() + " results");
         return results;
+    }
+
+    /** Send a {@code pure/testResult} notification to the IDE for live
+     *  per-test feedback. Safe to call from any thread; the LSP4J launcher
+     *  serializes outbound messages. */
+    private void streamTestResult(Map<String, String> result)
+    {
+        if (!(client instanceof PureLanguageClient pureClient)) return;
+        try
+        {
+            pureClient.testResult(new TestResultParams(
+                    result.get("test"),
+                    result.get("status"),
+                    result.get("error"),
+                    result.get("output")));
+        }
+        catch (Throwable t)
+        {
+            System.err.println("[LSP/runTests] streamTestResult send failed: " + t);
+        }
+    }
+
+    /** Render a test failure error consistently. PureAssertionError is the
+     *  expected "test failed an assertion" case; everything else is treated
+     *  as a hard error and the stack-tail is captured so the IDE can show
+     *  WHY the test crashed without the user needing the LSP server logs. */
+    private static String formatTestError(Throwable err)
+    {
+        if (err == null) return "Error: <unknown>";
+        if (err instanceof org.finos.legend.pure.execution.PureAssertionError)
+        {
+            return "Assertion Failed: " + err.getMessage();
+        }
+        String msg = err.getMessage() != null ? err.getMessage() : err.getClass().getName();
+        // Include the Pure stack frames if present in the message — those are
+        // far more useful to the user than the Java stack.
+        return "Error: " + msg;
     }
 
 
@@ -1649,10 +1831,19 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
         @org.eclipse.lsp4j.jsonrpc.services.JsonNotification("pure/openFile")
         void openFile(OpenFileParams params);
+
+        /** Streamed per-test result so the IDE can update icons live as each
+         *  test finishes, instead of waiting for the whole batch. The IDE
+         *  also receives the full list as the {@code pure/runTests} response
+         *  for compatibility, but the streaming notification is the source
+         *  of truth for incremental UI updates. */
+        @org.eclipse.lsp4j.jsonrpc.services.JsonNotification("pure/testResult")
+        void testResult(TestResultParams params);
     }
 
     public record ExecuteResultParams(String result, boolean error, PureBackend.CompileStats compileStats) {}
     public record TreeDataParams(String treeId, String json) {}
+    public record TestResultParams(String test, String status, String error, String output) {}
 
     public record OpenFileParams(String sourceId, String content, Integer line, Integer column)
     {

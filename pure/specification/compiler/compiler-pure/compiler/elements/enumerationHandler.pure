@@ -49,7 +49,7 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
             | let pp = $protocolProp->head()->toOne();
               let stereoResult = compilePropertyStereotypes($pp, $ctx0, $ownerCtx);
               let tvResult = compilePropertyTaggedValues($pp, $ctx0, $ownerCtx);
-              let si = compileSourceInformation($pp.p_sourceInformation);
+              let si = compileSourceInformation($pp.p_sourceInformation, $context);
               ^$prop(
                   stereotypes = $stereoResult.values,
                   taggedValues = $tvResult.values,
@@ -66,7 +66,7 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
                                 compileTaggedValue($t, $acc, $ownerCtx);
                             }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));
 
-    let si = compileSourceInformation($protocolEnum->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation);
+    let si = compileSourceInformation($protocolEnum->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation, $context);
     ^CompilerResult<Enumeration<Any>>(
         value = ^$skeleton(
             stereotypes = $stereoAccum.values,

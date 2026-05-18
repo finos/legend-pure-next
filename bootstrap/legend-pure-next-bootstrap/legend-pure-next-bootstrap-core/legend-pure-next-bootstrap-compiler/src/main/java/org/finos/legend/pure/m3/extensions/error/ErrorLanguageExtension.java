@@ -55,7 +55,7 @@ public final class ErrorLanguageExtension implements LanguageExtension
     }
 
     @Override
-    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model)
+    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
     {
         if (grammar instanceof Error e)
         {

@@ -43,7 +43,7 @@ function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pur
         name = $mangledName,
         functionName = if($fn.functionName->isEmpty(), | $fn.name, | $fn.functionName->toOne()),
         package = $pkgRes.value->toOne(),
-        sourceInformation = compileSourceInformation($fn.p_sourceInformation)
+        sourceInformation = compileSourceInformation($fn.p_sourceInformation, $ctx)
     );
 
     putElementUnderPackage($pkgRes.context, $fName, $packagePath, $skeleton);

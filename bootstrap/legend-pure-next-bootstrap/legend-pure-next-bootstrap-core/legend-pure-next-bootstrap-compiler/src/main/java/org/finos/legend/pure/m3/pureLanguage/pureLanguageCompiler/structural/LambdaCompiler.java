@@ -60,7 +60,7 @@ public final class LambdaCompiler
         VariableExpressionImpl cp = _VariableExpression.newVariableExpression(model)._name(gp._name() != null ? gp._name() : "");
         if (gp._p_sourceInformation() != null)
         {
-            cp._sourceInformation(SourceInformationCompiler.compile(gp._p_sourceInformation(), model));
+            cp._sourceInformation(SourceInformationCompiler.compile(gp._p_sourceInformation(), context.getSourceId(), model));
         }
         cp._genericType(gp._genericType() != null
                 ? GenericTypeCompiler.compile(gp._genericType(), imports, model, context)

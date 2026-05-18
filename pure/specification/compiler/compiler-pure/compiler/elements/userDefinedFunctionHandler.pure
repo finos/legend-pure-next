@@ -48,7 +48,7 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass1(fn:meta
         name = $mangledName,
         functionName = if($fn.functionName->isEmpty(), | $fn.name, | $fn.functionName->toOne()),
         package = $pkgRes.value->toOne(),
-        sourceInformation = compileSourceInformation($fn.p_sourceInformation)
+        sourceInformation = compileSourceInformation($fn.p_sourceInformation, $ctx)
     );
 
     putElementUnderPackage($pkgRes.context, $fName, $packagePath, $skeleton);

@@ -34,7 +34,7 @@ function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::prot
         p_tags = $pr.p_tags->map(t |
             ^Tag(value = $t.value, profile = ~.~);
         ),
-        sourceInformation = compileSourceInformation($pr.p_sourceInformation)
+        sourceInformation = compileSourceInformation($pr.p_sourceInformation, $ctx)
     );
 
     // ^Profile(...) above already sets classifierGenericType to the canonical

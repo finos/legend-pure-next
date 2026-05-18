@@ -34,7 +34,7 @@ public final class ProfileHandler
     {
     }
 
-    public static Profile firstPass(meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model)
+    public static Profile firstPass(meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
     {
         ProfileImpl result = new ProfileImpl(model)
                                 ._name(grammar._name());
@@ -48,7 +48,7 @@ public final class ProfileHandler
                         new TagImpl(model)
                                 ._value(t._value())
                                 ._profile(result)))
-                ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), model));
+                ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model));
     }
 
     public static Profile secondPass(ProfileImpl result, meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model)

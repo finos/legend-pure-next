@@ -160,7 +160,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                       values = [^$wrappedLambda(
                           genericType = $inferredGT,
                           multiplicity = if($mMult->isEmpty(), | PureOne, | $mMult->toOne()),
-                          sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+                          sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
                       )],
                       openVariables = $lambdaResult.openVariables,
                       context = $lambdaResult.context
@@ -181,7 +181,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                           value = $pp,
                           genericType = ^CompilerNotSetGenericType(),
                           multiplicity = ^CompilerNotSetMultiplicity(),
-                          sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+                          sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
                       )],
                       openVariables = []
                   );,
@@ -196,7 +196,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                           value = $element,
                           genericType = $elementGT,
                           multiplicity = PureOne,
-                          sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+                          sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
                       )],
                       openVariables = []
                   );
@@ -245,7 +245,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                     value = $processedValue,
                     genericType = $finalGT,
                     multiplicity = if($mMult->isEmpty(), | PureOne, | $mMult->toOne()),
-                    sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+                    sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
                 )],
                 openVariables = []
             );
@@ -265,7 +265,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
                   name = $v.name,
                   genericType = ^CompilerNotSetGenericType(),
                   multiplicity = PureOne,
-                  sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+                  sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
               )],
               openVariables = []
           ),
@@ -276,7 +276,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
                   name = $v.name,
                   genericType = asInferredGenericType($varGT),
                   multiplicity = asInferredMultiplicity($varMul),
-                  sourceInformation = compileSourceInformation($vs.p_sourceInformation)
+                  sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
               )],
               openVariables = []
           );
@@ -321,7 +321,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileFu
                         parametersValues = $paramValues->cast(@ValueSpecification),
                         genericType = ^CompilerNotSetGenericType(),
                         multiplicity = PureOne,
-                        sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+                        sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
                     )],
                     openVariables = $openVars
                 )
@@ -355,7 +355,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::tryFoldUn
               value = $negated,
               genericType = $avOne.genericType,
               multiplicity = $avOne.multiplicity,
-              sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+              sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
           );
           $folded;,
         | []
@@ -427,7 +427,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAr
                   parametersValues = $paramValues->cast(@ValueSpecification),
                   genericType = ^CompilerNotSetGenericType(),
                   multiplicity = PureOne,
-                  sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+                  sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
               )],
               openVariables = $openVars
           );
@@ -451,7 +451,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileDo
             parametersValues = $compiledParams.values,
             genericType = ^CompilerNotSetGenericType(),
             multiplicity = PureOne,
-            sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+            sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
         )],
         openVariables = $paramResults->map(r | $r.openVariables),
         context = $updatedCtx
@@ -479,7 +479,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileCo
                   values = $compiledValues.values,
                   genericType = $collGenType,
                   multiplicity = $collMult,
-                  sourceInformation = compileSourceInformationWithFallback($c.p_sourceInformation, $ctx)
+                  sourceInformation = compileSourceInformation($c.p_sourceInformation, $ctx)
               )],
               openVariables = []
           );
@@ -502,7 +502,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
           let holderWithProps = ^$holder(
               genericType = ^CompilerNotSetGenericType(),
               multiplicity = PureOne,
-              sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+              sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
           );
           ^ValueCompileResult(values = [$holderWithProps], openVariables = []);,
         | // User-defined TypeHolder — compile held type (matches Java lines 120-140)
@@ -520,7 +520,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
           let holderWithProps = ^$holder(
               genericType = $classifierGT,
               multiplicity = PureOne,
-              sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+              sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
           );
           ^ValueCompileResult(values = [$holderWithProps], openVariables = []);
     );

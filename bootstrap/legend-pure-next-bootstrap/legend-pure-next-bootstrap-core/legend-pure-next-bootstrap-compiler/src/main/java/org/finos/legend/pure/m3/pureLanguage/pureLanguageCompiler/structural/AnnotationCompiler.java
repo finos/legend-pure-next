@@ -52,12 +52,12 @@ public final class AnnotationCompiler
         String profilePath = pointer._value();
         if (pointer._extraPointerValues() == null || pointer._extraPointerValues().isEmpty())
         {
-            context.addError(new CompilationError("Invalid stereotype reference '" + profilePath + "'", SourceInformationCompiler.compile(pointer._p_sourceInformation(), model)));
+            context.addError(new CompilationError("Invalid stereotype reference '" + profilePath + "'", SourceInformationCompiler.compile(pointer._p_sourceInformation(), context.getSourceId(), model)));
             return null;
         }
         String stereotypeName = pointer._extraPointerValues().getFirst()._value();
 
-        Profile profile = resolveProfile(profilePath, imports, model, context, SourceInformationCompiler.compile(pointer._p_sourceInformation(), model));
+        Profile profile = resolveProfile(profilePath, imports, model, context, SourceInformationCompiler.compile(pointer._p_sourceInformation(), context.getSourceId(), model));
         if (profile == null)
         {
             return null;
@@ -67,7 +67,7 @@ public final class AnnotationCompiler
         if (found == null)
         {
             context.addError(new CompilationError(
-                    "The stereotype '" + stereotypeName + "' can't be found in profile '" + profilePath + "'", SourceInformationCompiler.compile(pointer._extraPointerValues().getFirst()._p_sourceInformation(), model)));
+                    "The stereotype '" + stereotypeName + "' can't be found in profile '" + profilePath + "'", SourceInformationCompiler.compile(pointer._extraPointerValues().getFirst()._p_sourceInformation(), context.getSourceId(), model)));
             return null;
         }
         return found;
@@ -87,12 +87,12 @@ public final class AnnotationCompiler
         String profilePath = tagPointer._value();
         if (tagPointer._extraPointerValues() == null || tagPointer._extraPointerValues().isEmpty())
         {
-            context.addError(new CompilationError("Invalid tag reference '" + profilePath + "'", SourceInformationCompiler.compile(tagPointer._p_sourceInformation(), model)));
+            context.addError(new CompilationError("Invalid tag reference '" + profilePath + "'", SourceInformationCompiler.compile(tagPointer._p_sourceInformation(), context.getSourceId(), model)));
             return null;
         }
         String tagName = tagPointer._extraPointerValues().getFirst()._value();
 
-        Profile profile = resolveProfile(profilePath, imports, model, context, SourceInformationCompiler.compile(tagPointer._p_sourceInformation(), model));
+        Profile profile = resolveProfile(profilePath, imports, model, context, SourceInformationCompiler.compile(tagPointer._p_sourceInformation(), context.getSourceId(), model));
         if (profile == null)
         {
             return null;
@@ -102,7 +102,7 @@ public final class AnnotationCompiler
         if (found == null)
         {
             context.addError(new CompilationError(
-                    "The tag '" + tagName + "' can't be found in profile '" + profilePath + "'", SourceInformationCompiler.compile(tagPointer._extraPointerValues().getFirst()._p_sourceInformation(), model)));
+                    "The tag '" + tagName + "' can't be found in profile '" + profilePath + "'", SourceInformationCompiler.compile(tagPointer._extraPointerValues().getFirst()._p_sourceInformation(), context.getSourceId(), model)));
             return null;
         }
         return new TaggedValueImpl(model)
