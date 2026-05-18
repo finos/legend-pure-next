@@ -278,8 +278,12 @@ function meta::pure::compiler::helper::functionType::compareFunctionTypes(f1:Fun
     let count = if($params1->size() < $params2->size(), | $params1->size(), | $params2->size());
     range(0, $count)->fold({i, cmp |
         if($cmp != 0, | $cmp,
-            | let t1 = $params1->at($i).genericType->toOne()->genericTypeRawType();
-              let t2 = $params2->at($i).genericType->toOne()->genericTypeRawType();
+            | // Deref the raw type ONCE if it's a Class_Pointer etc. so the
+              // `.name` read below sees a concrete Class rather than a pointer
+              // subclass (which has no `name` slot). Single registry lookup,
+              // no tree walk.
+              let t1 = $params1->at($i).genericType->toOne()->genericTypeRawType()->derefTypeIfPointer($context);
+              let t2 = $params2->at($i).genericType->toOne()->genericTypeRawType()->derefTypeIfPointer($context);
               let t1IsTP = if($t1->isEmpty(), | false, | $t1->toOne()->instanceOf(TypeParameter));
               let t2IsTP = if($t2->isEmpty(), | false, | $t2->toOne()->instanceOf(TypeParameter));
               let typeCmp = if([

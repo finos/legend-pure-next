@@ -96,8 +96,10 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
           let ctx2 = $tvAccum.context;
 
           // Compile qualified properties — owner is the type of the second property
-          // (the class that "owns" the first property, i.e. where QPs are accessible)
-          let qpOwnerClass = $mGenType2->genericTypeRawType()->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
+          // (the class that "owns" the first property, i.e. where QPs are accessible).
+          // Deref pointer first so downstream `.name` / `.typeParameters` reads work
+          // (Class_Pointer carries only path+element).
+          let qpOwnerClass = $mGenType2->genericTypeRawType()->meta::pure::compiler::helper::type::derefTypeIfPointer($ctx2)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
           let qpAccum = $protocolAssoc.qualifiedProperties->fold({qp, acc |
               let result = $qp->compileQualifiedProperty($acc.context, $packagePath, $qpOwnerClass);
               ^$acc(values += $result.value, context = $result.context);

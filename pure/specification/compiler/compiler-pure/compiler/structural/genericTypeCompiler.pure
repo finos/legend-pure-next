@@ -105,8 +105,16 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                                   value = buildUserDefinedGenericType(Any),
                                   context = ^$context(errors += $errorMsg)
                               );,
-                            | ^CompilerResult<GenericType>(
-                                  value = buildUserDefinedGenericType($resolvedOptWithPackage->toOne()->cast(@Type)),
+                            | // Wrap the resolved Type as a Pointer (Class→ClassPointer,
+                              // Enumeration→EnumerationPointer, PrimitiveType→PrimitiveTypePointer)
+                              // so the GenericType captures an indirect reference that
+                              // dereferences via the registry at runtime — instead of a
+                              // direct PDO ref to the pass-2 version of the class.
+                              // Use the canonical-anchor variant so built-in types like
+                              // String/Any/Integer keep their `GenericType_<Name>` UDPGT-PE
+                              // identity (the test-output `@String@` marker).
+                              ^CompilerResult<GenericType>(
+                                  value = buildCanonicalOrUserDefinedGenericType($resolvedOptWithPackage->toOne()->cast(@Type)->meta::pure::compiler::helper::pointer::toTypePointer(), $context),
                                   context = $context
                               )
                         );
@@ -218,10 +226,16 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                         context = $typeArgResult.context
                     ),
                 resultValue : GenericTypeValue[1] |
+                    // resultGT here is a canonical UDPGT-PE (returned by
+                    // `buildCanonicalOrUserDefinedGenericType` at the leaf
+                    // step). UDPGTs are static graph elements — never
+                    // mutate them by appending typeArgs. Build a fresh UDGT
+                    // wrapping the same rawType, with the computed typeArgs.
+                    let freshUDGT = buildUserDefinedGenericType($resultValue.type->toOne());
                     ^CompilerResult<GenericType>(
-                        value = ^$resultValue(typeArguments = $typeArgResult.values, multiplicityArguments = $mulArgs),
+                        value = ^$freshUDGT(typeArguments = $typeArgResult.values, multiplicityArguments = $mulArgs, typeVariableValues = $typeVarValues),
                         context = $typeArgResult.context
-                    ),
+                    );,
                 a : Any[1] |
                     // UndefinedGenericType or other non-GenericTypeValue — return as-is
                     ^CompilerResult<GenericType>(

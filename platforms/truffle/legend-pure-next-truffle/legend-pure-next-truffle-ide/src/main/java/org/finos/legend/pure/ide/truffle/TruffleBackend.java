@@ -236,11 +236,22 @@ public final class TruffleBackend implements PureBackend
                     Object compileResult = runtime.execute(
                             compileDirFn, sourceFolder.toAbsolutePath().toString(), Boolean.FALSE);
                     lastCompileResult = compileResult;
-                    collectStrings(PureObj.read(compileResult, "errors"), compileErrors);
+                    List<String> thisCompileErrors = new ArrayList<>();
+                    collectStrings(PureObj.read(compileResult, "errors"), thisCompileErrors);
+                    compileErrors.addAll(thisCompileErrors);
 
-                    // Replace any previous in-memory registration for this
-                    // module so the resolver always serves the freshest
-                    // compile (subsequent Runs after an edit see new code).
+                    // Only swap the in-memory registration when this compile
+                    // succeeded. A failed compile (parse or resolver error)
+                    // would otherwise unregister the previous good module
+                    // and register either nothing or a partial elements list,
+                    // making the NEXT F9 fail with a wall of "function X
+                    // can't be found" errors that have nothing to do with
+                    // the actual fix. Keeping the prior state lets the user
+                    // see the real error and re-run after fixing it.
+                    if (!thisCompileErrors.isEmpty())
+                    {
+                        continue;
+                    }
                     String memModuleName = module.getName() + "-mem";
                     if (registry.module(memModuleName) != null)
                     {
@@ -249,6 +260,22 @@ public final class TruffleBackend implements PureBackend
                     Object elementsField = PureObj.read(compileResult, "elements");
                     if (elementsField instanceof PureSequence elements)
                     {
+                        // Diagnostic: walk every element's transitive children
+                        // looking for FunctionApplication/Invocation nodes
+                        // whose `func` slot is null. If any exist, the
+                        // compileDir output is broken — surface it BEFORE
+                        // registration so the runtime walk's cryptic
+                        // `_func() returned null for: or` is replaced with
+                        // a concrete path + classifier the user can act on.
+                        List<String> brokenFuncs = findUnresolvedFuncs(elements);
+                        if (!brokenFuncs.isEmpty())
+                        {
+                            for (String b : brokenFuncs)
+                            {
+                                compileErrors.add(b);
+                            }
+                            continue;
+                        }
                         // Depend on every already-registered module so the
                         // user's elements can reference core / compiler /
                         // any other base PDB without cycle errors.
@@ -268,6 +295,37 @@ public final class TruffleBackend implements PureBackend
             {
                 compileStats = readCompileStats(lastCompileResult);
             }
+
+            // POST-EVERYTHING validation: collect identityHashes of every FE
+            // reachable from the registered elements. At runtime, if the
+            // failing FE's identityHash isn't in this set, the runtime is
+            // reading from a different object than what compileDir put in
+            // module-mem. That'd narrow down where the alternate FE lives.
+            java.util.Set<Integer> knownFeHashes = new java.util.HashSet<>();
+            for (org.finos.legend.pure.truffle.runtime.TruffleModule mod : registry.modules())
+            {
+                if (!(mod instanceof TruffleInMemoryModule)) continue;
+                for (String p : mod.elementPaths())
+                {
+                    Object el = mod.getElement(p);
+                    if (el == null) continue;
+                    collectFEHashes(el, knownFeHashes, new java.util.IdentityHashMap<>());
+                    try
+                    {
+                        com.google.flatbuffers.FlatBufferBuilder b =
+                                new com.google.flatbuffers.FlatBufferBuilder(1024);
+                        org.finos.legend.pure.truffle.pdb.codec.GeneratedFlatBufferWriter w =
+                                new org.finos.legend.pure.truffle.pdb.codec.GeneratedFlatBufferWriter(b, true);
+                        w.dispatchWrite(el);
+                    }
+                    catch (IllegalArgumentException | IllegalStateException ex)
+                    {
+                        throw new RuntimeException("[post-compile " + mod.name() + "/" + p + "] " + ex.getMessage());
+                    }
+                }
+            }
+            org.finos.legend.pure.truffle.builder.PureASTBuilder.KNOWN_FE_HASHES = knownFeHashes;
+            System.err.println("[diag] tracked " + knownFeHashes.size() + " FE identityHashes from module-mem");
 
             String targetPath = ((meta.pure.metamodel.PackageableElement) function)._package() != null
                     ? qualifiedPath((meta.pure.metamodel.PackageableElement) function)
@@ -466,6 +524,41 @@ public final class TruffleBackend implements PureBackend
         return sb.toString();
     }
 
+    private static void collectFEHashes(Object node,
+                                         java.util.Set<Integer> sink,
+                                         java.util.IdentityHashMap<Object, Boolean> seen)
+    {
+        if (!(node instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo)) return;
+        if (seen.put(pdo, Boolean.TRUE) != null) return;
+        String t = pdo.classInfo.purePath;
+        if (t != null && (t.endsWith("Application") || t.endsWith("Invocation")))
+        {
+            sink.add(System.identityHashCode(pdo));
+        }
+        String[] names = pdo.classInfo.nameBySlot();
+        for (int slot = 0; slot < names.length; slot++)
+        {
+            if (names[slot] == null) continue;
+            Object val;
+            try { val = pdo.readSlot(slot); } catch (Throwable ignore) { continue; }
+            if (val instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject child)
+            {
+                collectFEHashes(child, sink, seen);
+            }
+            else if (val instanceof PureSequence seq)
+            {
+                for (int i = 0, n = seq.size(); i < n; i++)
+                {
+                    Object item = seq.getBoxed(i);
+                    if (item instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject child)
+                    {
+                        collectFEHashes(child, sink, seen);
+                    }
+                }
+            }
+        }
+    }
+
     private static void collectStrings(Object maybeSeq, List<String> sink)
     {
         if (!(maybeSeq instanceof PureSequence seq))
@@ -477,5 +570,42 @@ public final class TruffleBackend implements PureBackend
             Object s = seq.getBoxed(i);
             sink.add(s == null ? "" : s.toString());
         }
+    }
+
+    // Walk every element transitively and look for FunctionApplication-like
+    // nodes whose `func` slot is null after compile. compileDir is supposed
+    // to resolve every call site to a PackageableFunctionPointer (or similar)
+    // and set the `func` slot — a null here means the resolver dropped it,
+    // and the downstream Truffle lazy-walk will crash with an opaque
+    // `_func() returned null` error long after compile reported success.
+    //
+    // We pre-flight by reusing the actual PDB writer's validation. Writing
+    // to a discarded in-memory FlatBuffer (not a file) exercises every
+    // multiplicity-[1]/[1..*] check + the FunctionExpression `func` check
+    // the writer codegen emits, on the same accessor path that the
+    // serializer uses. Ground truth — if the writer accepts the elements,
+    // they're valid; if it rejects, we get an actionable error message
+    // that pinpoints the broken element + property + source location.
+    private static List<String> findUnresolvedFuncs(PureSequence elements)
+    {
+        List<String> errors = new ArrayList<>();
+        for (int i = 0, n = elements.size(); i < n; i++)
+        {
+            Object el = elements.getBoxed(i);
+            if (el == null) continue;
+            try
+            {
+                com.google.flatbuffers.FlatBufferBuilder b =
+                        new com.google.flatbuffers.FlatBufferBuilder(1024);
+                org.finos.legend.pure.truffle.pdb.codec.GeneratedFlatBufferWriter w =
+                        new org.finos.legend.pure.truffle.pdb.codec.GeneratedFlatBufferWriter(b, true);
+                w.dispatchWrite(el);
+            }
+            catch (IllegalArgumentException | IllegalStateException ex)
+            {
+                errors.add(ex.getMessage());
+            }
+        }
+        return errors;
     }
 }

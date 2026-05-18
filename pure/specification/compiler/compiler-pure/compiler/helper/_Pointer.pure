@@ -130,55 +130,6 @@ function meta::pure::compiler::helper::pointer::toEnumPointer(e:Enum[1]):EnumPoi
     );
 }
 
-// Recursive walk that replaces every TempCompilerPointer found in `gt.type`
-// (and, recursively, in each typeArgument's `.type`, plus the nested
-// GenericTypes inside any FunctionType — its `parameters[].genericType` and
-// `returnType`) with its dereferenced live target. Preserves the runtime
-// subtype of every GT node via `^$node(...)` so UDGT/IGT distinctions survive.
-// Used at the `new(...)` boundary, but useful anywhere a live-typed GenericType
-// tree is required.
-function meta::pure::compiler::helper::pointer::derefGenericType(gt:GenericType[1], context:meta::pure::compiler::CompilerContext[1]):GenericType[1]
-{
-    let derefArgs = $gt->match([
-        gtv:GenericTypeValue[1] | $gtv.typeArguments->map(arg | $arg->derefGenericType($context)),
-        a:GenericType[1] | []->cast(@GenericType)
-    ]);
-    $gt->match([
-        gtv:GenericTypeValue[1] |
-            let raw = $gtv.type;
-            let derefRaw = if($raw->isEmpty(),
-                | $raw,
-                | let rawT = $raw->toOne();
-                  if($rawT->instanceOf(TempCompilerPointer),
-                      | $rawT->cast(@TempCompilerPointer)->dereferencePointer($context)->cast(@Type),
-                      | if($rawT->instanceOf(FunctionType),
-                            | $rawT->cast(@FunctionType)->derefFunctionType($context)->cast(@Type),
-                            | $rawT
-                      )
-                  );
-            );
-            ^$gtv(type = $derefRaw, typeArguments = $derefArgs)->cast(@GenericType);,
-        a:GenericType[1] | $gt
-    ]);
-}
-
-// Recurse through a FunctionType's parameter and return-type GenericTypes,
-// dereferencing pointer .type slots in each. Mirrors derefGenericType but for
-// the FunctionType structural shape (parameters[].genericType + returnType).
-// Returns a fresh FunctionType — the platform `new` native uses the structure
-// directly and won't accept lingering pointer .type slots inside.
-function meta::pure::compiler::helper::pointer::derefFunctionType(ft:FunctionType[1], context:meta::pure::compiler::CompilerContext[1]):FunctionType[1]
-{
-    let derefParams = $ft.parameters->cast(@VariableExpression)->map(p |
-        ^$p(genericType = $p.genericType->toOne()->derefGenericType($context))
-    );
-    let derefReturn = if($ft.returnType->isEmpty(),
-        | $ft.returnType,
-        | $ft.returnType->toOne()->derefGenericType($context)
-    );
-    ^$ft(parameters = $derefParams, returnType = $derefReturn);
-}
-
 
 // Dispatcher used at GenericType.type assignment sites. Wraps the three PE-typed
 // Type variants (Class / Enumeration / PrimitiveType) in their respective

@@ -263,8 +263,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                               // Type check — resolve property type through class bindings (e.g., Z → String)
                                               if($p.genericType->isNotEmpty() && $keyValueVS.genericType->isNotEmpty(),
                                                   | let resolvedPropGT = makeAsConcreteAsPossible($p.genericType->toOne(), $classBindings, $context);
-                                                    let propType = $resolvedPropGT->genericTypeRawType();
-                                                    let valType = $keyValueVS.genericType->toOne()->genericTypeRawType();
+                                                    // Pull the raw type, then deref ONCE if it's a pointer —
+                                                    // `.name` (read below) lives on the live target, not on
+                                                    // the Class_Pointer / PrimitiveTypePointer / etc.
+                                                    let propType = $resolvedPropGT->genericTypeRawType()->derefTypeIfPointer($context);
+                                                    let valType = $keyValueVS.genericType->toOne()->genericTypeRawType()->derefTypeIfPointer($context);
                                                     if($propType->isNotEmpty() && $valType->isNotEmpty(),
                                                         | let pName = $propType->toOne()->cast(@PackageableElement).name->toOne();
                                                           let vName = $valType->toOne()->cast(@PackageableElement).name->toOne();
