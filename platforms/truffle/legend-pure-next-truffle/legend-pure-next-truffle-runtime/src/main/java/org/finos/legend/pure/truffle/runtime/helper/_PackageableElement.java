@@ -51,6 +51,21 @@ public final class _PackageableElement
         {
             return null;
         }
+        // TempCompilerPointer carries its canonical path directly in the `.path`
+        // slot; its inherited `.name`/`.package` slots are intentionally unset
+        // (pointers are opaque). Short-circuit to that slot before consulting
+        // the resolver or walking the package chain — otherwise the walk reads
+        // null name/package and returns "" or NPEs.
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(
+                pe, "meta::pure::metamodel::pointer::TempCompilerPointer", resolver))
+        {
+            Object ptrPath = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(
+                    pe, SLOT_POINTER_PATH);
+            if (ptrPath instanceof String s && !s.isEmpty())
+            {
+                return s;
+            }
+        }
         // Fast path: resolver knows the canonical path from the PDB index
         if (resolver != null)
         {
@@ -73,6 +88,9 @@ public final class _PackageableElement
         }
         return result;
     }
+
+    private static final int SLOT_POINTER_PATH =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("path");
 
     private static void putPathCache(Object pe, String result)
     {

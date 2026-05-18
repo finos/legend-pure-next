@@ -1699,8 +1699,52 @@
                 insertSpaces: true,
             });
 
+            // Go-to-definition (Ctrl/Cmd+B, F12, right-click → Go to Definition).
+            // Calls our LSP server's textDocument/definition; on a non-empty
+            // Location response, opens the target file via pure/openFile and
+            // positions the cursor at the target line/column.
+            monaco.languages.registerDefinitionProvider('pure', {
+                provideDefinition: async (model, position) => {
+                    if (!initialized || !ws || ws.readyState !== WebSocket.OPEN) return null;
+                    try {
+                        const locations = await sendRequest('textDocument/definition', {
+                            textDocument: { uri: model.uri.toString() },
+                            position: { line: position.lineNumber - 1, character: position.column - 1 }
+                        });
+                        if (!locations || locations.length === 0) return null;
+                        const loc = Array.isArray(locations) ? locations[0] : locations;
+                        if (!loc || !loc.uri || !loc.range) return null;
+                        const targetUri = loc.uri;
+                        const targetSourceId = targetUri.startsWith('file:///')
+                            ? targetUri.substring(8) : targetUri;
+                        // LSP positions are 0-based; Monaco lineNumber/column are 1-based.
+                        pendingJumpLine = loc.range.start.line + 1;
+                        pendingJumpCol = loc.range.start.character + 1;
+                        sendRequest('workspace/executeCommand', {
+                            command: 'pure/openFile',
+                            arguments: [targetSourceId]
+                        }).catch(console.error);
+                        // Returning null tells Monaco we've handled navigation ourselves —
+                        // otherwise Monaco's default openCodeEditor tries to load the
+                        // target URI as a model that may not exist yet.
+                        return null;
+                    } catch (err) {
+                        console.error('go-to-definition failed:', err);
+                        return null;
+                    }
+                }
+            });
+
             // F9 keybinding (editor-scoped)
             editor.addCommand(monaco.KeyCode.F9, executeCode);
+
+            // Ctrl/Cmd+B → Go to Definition (IntelliJ binding). Monaco's
+            // default for Ctrl+B is cursorLeft; we override here so the
+            // DefinitionProvider registered above fires on this shortcut
+            // in addition to the standard F12.
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, () => {
+                editor.getAction('editor.action.revealDefinition').run();
+            });
 
             // Option+/ (Alt+/) → toggle line comment on selection
             editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.Slash, () => {

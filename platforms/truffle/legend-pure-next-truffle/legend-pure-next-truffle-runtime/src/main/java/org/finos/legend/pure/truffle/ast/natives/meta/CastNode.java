@@ -86,6 +86,11 @@ public final class CastNode extends PureNode
                 // type-variable bindings (e.g. {x: 8} for `cast(@P(8))`).
                 targetGT = rawTargetGT;
                 targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(rawTargetGT);
+                // After the compiler pointer-wrap, `gt.type` may be a
+                // TempCompilerPointer. Deref it via the resolver so the
+                // subtypeOf / ancestors lookup below (keyed on the live class
+                // instance) matches — pointers aren't in the ancestors set.
+                targetType = derefIfPointer(targetType, resolver);
             }
         }
 
@@ -379,5 +384,27 @@ public final class CastNode extends PureNode
                 throw new RuntimeException(message);
             }
         }
+    }
+
+    /**
+     * If {@code type} is a {@code TempCompilerPointer}, resolve via the
+     * registry to the live target. Otherwise return as-is. Used to bridge
+     * compiler-emitted pointer-wrapped type slots into the runtime's
+     * identity-based type ops (subtypeOf / ancestors / linearize) which
+     * are keyed on live class instances.
+     */
+    private static Object derefIfPointer(Object type, TruffleMetadataAccess resolver)
+    {
+        if (type == null || resolver == null) return type;
+        if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(
+                type, "meta::pure::metamodel::pointer::TempCompilerPointer", resolver))
+        {
+            return type;
+        }
+        Object pathVal = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(
+                type, org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("path"));
+        if (!(pathVal instanceof String path) || path.isEmpty()) return type;
+        Object el = resolver.getElement(path);
+        return el != null ? el : type;
     }
 }

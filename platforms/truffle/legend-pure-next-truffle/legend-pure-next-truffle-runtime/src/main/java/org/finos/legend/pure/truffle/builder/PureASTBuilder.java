@@ -239,12 +239,6 @@ public final class PureASTBuilder
                 "meta::pure::metamodel::type::Enumeration");
     }
 
-    /** Set by TruffleBackend before execution — identityHashes of every
-     *  FunctionApplication/Invocation/DotApplication reachable from the
-     *  registered module-mem. If the failing FE's hash is NOT in this set,
-     *  the runtime is reading an object that compileDir didn't produce. */
-    public static java.util.Set<Integer> KNOWN_FE_HASHES;
-
     private PureNode lowerFunctionExpression(Object fe)
     {
         Object funcObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNC);
@@ -367,7 +361,6 @@ public final class PureASTBuilder
                     + " (read-by-name func=" + (funcByName == null ? "null" : funcByName.getClass().getName()) + ")"
                     + " (sourceInfo=" + srcStr + ")"
                     + " (identityHash=" + System.identityHashCode(fe) + ")"
-                    + " (inModuleMem=" + (KNOWN_FE_HASHES != null && KNOWN_FE_HASHES.contains(System.identityHashCode(fe))) + ")"
                     + " slots:" + slots
                     + " parents:" + parents
                     + " registry-view:" + registryView);
@@ -629,6 +622,10 @@ public final class PureASTBuilder
             {
                 return null;
             }
+            // paramType may be a TempCompilerPointer (post compiler pointer-
+            // wrap). `_Type.subtypeOf` is pointer-aware (derefs both sides),
+            // so we can store the pointer here without an explicit deref —
+            // the dispatch path will resolve via the registry at use time.
             branchTypeElements[i] = paramType;
         }
         // Lower the args normally — the value, the branch-list (still

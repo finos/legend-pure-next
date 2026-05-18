@@ -33,6 +33,21 @@ public final class _Type
         {
             return false;
         }
+        // Pointer-aware: the compiler wraps cross-element type refs as
+        // TempCompilerPointer (ClassPointer / PrimitiveTypePointer / etc.).
+        // Pointers carry only `.path`; identity-based ops (ancestors set,
+        // TypeCache) are keyed on live class instances. Resolve via the
+        // registry before consulting the cache.
+        sub = derefIfPointer(sub, resolver);
+        sup = derefIfPointer(sup, resolver);
+        if (sub == sup)
+        {
+            return true;
+        }
+        if (sub == null || sup == null)
+        {
+            return false;
+        }
         if (isTopType(sup, resolver))
         {
             return true;
@@ -42,6 +57,25 @@ public final class _Type
         // identified as the dominant subtypeOf hot path (~7% of warm CPU
         // on the metamodel_factories.pure self-host).
         return ((java.util.Set<Object>) resolver.typeCache().ancestors(sub)).contains(sup);
+    }
+
+    private static Object derefIfPointer(Object type, TruffleMetadataAccess resolver)
+    {
+        if (type == null || resolver == null) return type;
+        // Don't use PureObj.isType here — it calls back into subtypeOf,
+        // causing infinite recursion. Detect pointer class by its pure path
+        // prefix instead (TempCompilerPointer subclasses all live under
+        // `meta::pure::metamodel::pointer::`).
+        String typePath = PureObj.pureTypeOf(type);
+        if (typePath == null || !typePath.startsWith("meta::pure::metamodel::pointer::"))
+        {
+            return type;
+        }
+        Object pathVal = PureObj.readBySlot(type,
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("path"));
+        if (!(pathVal instanceof String path) || path.isEmpty()) return type;
+        Object el = resolver.getElement(path);
+        return el != null ? el : type;
     }
 
     public static Object findCommonType(List<?> types, boolean contravariant, TruffleMetadataAccess resolver)
