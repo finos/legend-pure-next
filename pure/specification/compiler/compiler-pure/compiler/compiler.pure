@@ -29,21 +29,35 @@ import meta::pure::functions::lang::*;
 import meta::pure::functions::date::*;
 import meta::pure::ui::progress::*;
 
-// Per-file work bundle threaded across the three compile passes. Mirrors Java's
-// LocalModule per-file structure: parse once, then run pass 1 over all files,
-// pass 2 over all files, pass 3 over all files — so forward references between
-// files (function in file A calling function in file B compiled later) resolve
-// the same way Java does.
-Class meta::pure::compiler::FileWorkItem
+// Per-grammar-element entry threaded across the three compile passes. Mirrors
+// Java's {@code TopLevelCompiler.IndexEntry}: one per declared element in the
+// input, carrying the grammar form (input) plus the file context (sourceId,
+// imports) needed to set up per-element scope before each pass. The compiled
+// element itself lives in {@code CompilerContext.elementMap} keyed by
+// {@code fullPath}; this entry list is only the walk order for the passes.
+//
+// Pass 2 iterates the entries with `sourceId`/`imports` re-applied before
+// each call, so cross-file forward references resolve the same way Java does
+// (pass 1 over all entries first, then pass 2, then pass 3).
+Class meta::pure::compiler::IndexEntry
 {
+    fullPath : String[1];
+    grammarElement : meta::pure::protocol::grammar::PackageableElement[1];
     sourceId : String[1];
     imports : String[*];
-    grammarElements : meta::pure::protocol::grammar::PackageableElement[*];
-    // Populated after pass 2 — the compiled (non-resolved) elements for this file,
-    // in source order. Pass 3 iterates this list per file so each element gets
-    // its own file's sourceId + imports applied to the context before resolution.
-    compiledElements : meta::pure::metamodel::PackageableElement[*];
 }
+
+// Derive an element's qualified path ({@code pack::sub::Name} or just
+// {@code Name} when the grammar element is at the root) from its grammar
+// form. Mirrors the inline {@code packagePath + '::' + name} construction
+// each pass-1 / pass-2 match arm does — factored out so {@link IndexEntry}
+// can be built once per grammar element instead of by every pass arm.
+function meta::pure::compiler::elementPathFromGrammar(g:meta::pure::protocol::grammar::PackageableElement[1]):String[1]
+{
+    let pkg = if($g.package->isEmpty(), | '', | $g.package->toOne().value);
+    if($pkg == '', | $g.name, | $pkg + '::' + $g.name);
+}
+
 
 // Default imports applied to every file (mirrors Java's default-import set).
 function meta::pure::compiler::defaultFileImports():String[*]
@@ -456,23 +470,30 @@ function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], 
 function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], inputCtx:CompilerContext[1], debugMode:Boolean[1], silent:Boolean[1]):CompilationResult[1]
 {
     let compileStart = currentTimeMillis();
-    let total = $files->size();
-    let dirLabel = $total->toString() + ' files';
 
-    let workItems = range(0, $total)->map({i |
-        let f = $files->at($i);
-        ^FileWorkItem(
-            // {@code PureFile.sourceId} is declared {@code String[0..1]}; in
-            // practice both parser and test-constructed PureFiles always
-            // populate it, so {@code toOne()} is safe and lets
-            // {@code FileWorkItem.sourceId} stay {@code String[1]}.
-            sourceId = $f.sourceId->toOne(),
-            imports = computeAllImports($f),
-            grammarElements = $f.sections.elements,
-            compiledElements = []->cast(@meta::pure::metamodel::PackageableElement)
-        );
-    });
+    // Build the local index — one IndexEntry per grammar element across all
+    // files, in source declaration order. Mirrors Java's
+    // {@code TopLevelCompiler.elementIndex} shape: each entry carries the
+    // grammar form + its file context (sourceId, imports) so the 3 passes
+    // iterate a flat list and re-apply per-entry scope on the way in.
+    let entries = $files->fold({f, acc |
+        let fileImports = computeAllImports($f);
+        // {@code PureFile.sourceId} is declared {@code String[0..1]}; in
+        // practice both parser and test-constructed PureFiles always populate
+        // it, so {@code toOne()} is safe and lets {@code IndexEntry.sourceId}
+        // stay {@code String[1]}.
+        let fileSourceId = $f.sourceId->toOne();
+        let fileEntries = $f.sections.elements->map(g | ^IndexEntry(
+            fullPath = elementPathFromGrammar($g),
+            grammarElement = $g,
+            sourceId = $fileSourceId,
+            imports = $fileImports
+        ));
+        $acc->concatenate($fileEntries);
+    }, []->cast(@IndexEntry));
 
+    let total = $entries->size();
+    let label = $total->toString() + ' elements';
     let debugState = ^DebugState(debug = $debugMode, space = '');
 
     // 3-line live status (header / bar / current item) covers all three
@@ -481,14 +502,14 @@ function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], 
     if($silent, | true, | startProgress3(); true;);
 
     // ============================================================================
-    // Pass 1 across all files (skeleton building)
+    // Pass 1 across all entries (skeleton building)
     // ============================================================================
     let pass1Start = currentTimeMillis();
     let pass1Ctx = range(0, $total)->fold({i, ctx |
-        let fileItem = $workItems->at($i);
-        if($silent, | true, | tickProgress3('  Pass 1/3 — Skeletons [1/3]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId));
-        let fileCtx = ^$ctx(debugState = $debugState, sourceId = $fileItem.sourceId, imports = $fileItem.imports);
-        $fileItem.grammarElements->fold({e, c | runCompilePass1($e, $c)}, $fileCtx);
+        let e = $entries->at($i);
+        if($silent, | true, | tickProgress3('  Pass 1/3 — Skeletons [1/3]: ' + $label, $i + 1, $total, $e.fullPath));
+        let elemCtx = ^$ctx(debugState = $debugState, sourceId = $e.sourceId, imports = $e.imports);
+        runCompilePass1($e.grammarElement, $elemCtx);
     }, $inputCtx);
     let pass1Millis = currentTimeMillis() - $pass1Start;
 
@@ -497,21 +518,16 @@ function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], 
     let pass2StartCtx = $pass1Ctx->buildLinearizationCache()->buildLocalFunctionIndex();
 
     // ============================================================================
-    // Pass 2 across all files (compile element bodies)
+    // Pass 2 across all entries (compile element bodies)
     // ============================================================================
     let pass2Start = currentTimeMillis();
     let pass2Result = range(0, $total)->fold({i, acc |
-        let fileItem = $workItems->at($i);
-        if($silent, | true, | tickProgress3('  Pass 2/3 — Bodies [2/3]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId));
+        let e = $entries->at($i);
+        if($silent, | true, | tickProgress3('  Pass 2/3 — Bodies [2/3]: ' + $label, $i + 1, $total, $e.fullPath));
         let priorCtx = $acc.context;
-        let fileCtx = ^$priorCtx(sourceId = $fileItem.sourceId, imports = $fileItem.imports);
-        let perFileResult = $fileItem.grammarElements->fold({e, fAcc | runCompilePass2($e, $fAcc)}, ^CompilerListResult<meta::pure::metamodel::PackageableElement>(context = $fileCtx, values = []->cast(@meta::pure::metamodel::PackageableElement)));
-        let updatedFile = ^$fileItem(compiledElements = $perFileResult.values);
-        ^CompilerListResult<FileWorkItem>(
-            context = $perFileResult.context,
-            values = $acc.values->concatenate($updatedFile)
-        );
-    }, ^CompilerListResult<FileWorkItem>(context = $pass2StartCtx, values = []->cast(@FileWorkItem)));
+        let elemCtx = ^$priorCtx(sourceId = $e.sourceId, imports = $e.imports);
+        runCompilePass2($e.grammarElement, ^$acc(context = $elemCtx));
+    }, ^CompilerListResult<meta::pure::metamodel::PackageableElement>(context = $pass2StartCtx, values = []->cast(@meta::pure::metamodel::PackageableElement)));
     let pass2Millis = currentTimeMillis() - $pass2Start;
 
     // Refresh linearization cache + local function index between pass 2 and
@@ -524,17 +540,23 @@ function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], 
     // total error count by the number of usage sites (e.g. ~300 cascade errors per
     // unresolved local function on the language/java compile).
     let pass3StartCtx = $pass2Result.context->buildLinearizationCache()->buildLocalFunctionIndex();
-    let pass2Files = $pass2Result.values;
 
     // ============================================================================
-    // Pass 3 across all files (resolution)
+    // Pass 3 across all entries (resolution) — look up each entry's compiled
+    // element from {@code elementMap} (pass 2 populated it) before resolving.
+    // Some grammar element types (test-fixture markers like ###CompiledGraph)
+    // don't produce a metamodel element and are silently skipped.
     // ============================================================================
     let pass3Start = currentTimeMillis();
     let pass3RawCtx = range(0, $total)->fold({i, ctx |
-        let fileItem = $pass2Files->at($i);
-        if($silent, | true, | tickProgress3('  Pass 3/3 — Resolution [3/3]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId));
-        let fileCtx = ^$ctx(sourceId = $fileItem.sourceId, imports = $fileItem.imports);
-        $fileItem.compiledElements->fold({elem, c | runCompilePass3($elem, $c)}, $fileCtx);
+        let e = $entries->at($i);
+        if($silent, | true, | tickProgress3('  Pass 3/3 — Resolution [3/3]: ' + $label, $i + 1, $total, $e.fullPath));
+        let elemOpt = $ctx.elementMap->get($e.fullPath);
+        if($elemOpt->isEmpty(), | $ctx,
+            | let elem = $elemOpt->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+              let elemCtx = ^$ctx(sourceId = $e.sourceId, imports = $e.imports);
+              runCompilePass3($elem, $elemCtx);
+        );
     }, $pass3StartCtx);
     // Derive function-reference edges from the compiled AST. Replaces the
     // in-flight function-/dot-application resolver recording hooks which were
