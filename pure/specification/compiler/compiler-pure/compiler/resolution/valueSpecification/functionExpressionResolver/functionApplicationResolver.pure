@@ -464,6 +464,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               buildResolvedMultiplicityParameter($k, $vals->at(0));
           );
 
+          // Function-reference recording is deferred to the post-compile AST
+          // walk in {@link extractFunctionRefsInto}.
           ^CompilerResult<ValueSpecification>(
               value = ^$cleanFI(
                   func = $entryPointer,

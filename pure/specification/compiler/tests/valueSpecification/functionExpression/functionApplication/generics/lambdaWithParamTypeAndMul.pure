@@ -24,3 +24,9 @@ function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
       ArrowInvocation test::sw_Integer_1__String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @9:31-9:40
         Variable x :#Integer##[1]#  ~@VariableExpression@  @9:29-9:30
         AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @9:36-9:39
+
+###ReverseIndex
+test::fl_T_MANY__Function_1__T_MANY_:
+  test::tst__Any_MANY_
+test::sw_Integer_1__String_1__Boolean_1_:
+  test::tst__Any_MANY_

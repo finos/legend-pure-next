@@ -123,8 +123,15 @@ public class TopLevelCompiler
      */
     public boolean compile(LocalModule localModule, MutableList<PureFile> files, String packagePattern, MetadataAccess model, CompilationContext context)
     {
+        // Every cross-element lookup during compilation funnels through the
+        // recording wrapper so the resulting (caller, target) pairs land in
+        // the CompilationContext's reverse index. The index becomes a
+        // first-class artifact (queried by validators, IDE features, etc.)
+        // and is persisted to the produced PDB.
+        MetadataAccess recordingModel = new org.finos.legend.pure.m3.module.RecordingMetadataAccess(model, context);
+
         long t0 = System.nanoTime();
-        firstPass(files, model, context);
+        firstPass(files, recordingModel, context);
         this.firstPassDurationNanos = System.nanoTime() - t0;
 
         validatePathForModulePattern(packagePattern, context);
@@ -134,7 +141,7 @@ public class TopLevelCompiler
         }
 
         t0 = System.nanoTime();
-        secondPass(model, context);
+        secondPass(recordingModel, context);
         this.secondPassDurationNanos = System.nanoTime() - t0;
 
         if (context.errors().notEmpty())
@@ -142,10 +149,10 @@ public class TopLevelCompiler
             return false;
         }
 
-        updatePackageTree(model);
+        updatePackageTree(recordingModel);
 
         t0 = System.nanoTime();
-        thirdPass(localModule, model, context);
+        thirdPass(localModule, recordingModel, context);
         this.thirdPassDurationNanos = System.nanoTime() - t0;
 
         return context.errors().isEmpty();
@@ -296,7 +303,16 @@ public class TopLevelCompiler
                     context.setImports(resolveImports(entry.section()));
                 }
                 long t0 = System.nanoTime();
-                PackageableElement updated = secondPassEntry(entry, model, context);
+                context.setCurrentElement(entry.element(), fullPath);
+                PackageableElement updated;
+                try
+                {
+                    updated = secondPassEntry(entry, model, context);
+                }
+                finally
+                {
+                    context.setCurrentElement(null, null);
+                }
                 long elapsed = System.nanoTime() - t0;
                 elementTimings.computeIfAbsent(fullPath, k -> new long[5])[1] = elapsed;
                 context.flushCurrentErrors();
@@ -346,7 +362,16 @@ public class TopLevelCompiler
             int rollbacksBefore = context.inferenceRollbackCount();
             int candidatesBefore = context.candidateEvaluationCount();
             long t0 = System.nanoTime();
-            PackageableElement updated = thirdPassEntry(entry, model, context);
+            context.setCurrentElement(entry.element(), fullPath);
+            PackageableElement updated;
+            try
+            {
+                updated = thirdPassEntry(entry, model, context);
+            }
+            finally
+            {
+                context.setCurrentElement(null, null);
+            }
             long elapsed = System.nanoTime() - t0;
             long[] timings = elementTimings.computeIfAbsent(fullPath, k -> new long[5]);
             timings[2] = elapsed;

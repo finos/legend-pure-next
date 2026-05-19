@@ -25,6 +25,10 @@ test: build
     @{{banner}} '[typescript]' 'pnpm run test'
     cd {{ts_root}} && pnpm run test
 
+# No self-host or runtime-PCT suites on the TypeScript side yet.
+# Alias of `test` for parity with bootstrap/truffle `test-all`.
+test-all: test
+
 # Remove dist/ and node_modules/.
 clean:
     @{{banner}} '[typescript clean]' 'remove dist/ and node_modules/'

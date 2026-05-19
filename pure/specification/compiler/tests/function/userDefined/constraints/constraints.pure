@@ -29,3 +29,9 @@ function protocol::constrained_Integer_1__Integer_1_(x:@Integer@[1]):@Integer@[1
   FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @9:5-9:10
     Variable x :#Integer##[1]#  ~@VariableExpression@  @9:5-9:6
     AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @9:10-9:10
+
+###ReverseIndex
+meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
+  protocol::constrained_Integer_1__Integer_1_
+meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  protocol::constrained_Integer_1__Integer_1_

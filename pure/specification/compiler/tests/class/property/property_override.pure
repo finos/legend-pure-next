@@ -36,3 +36,17 @@ function test::myFunc__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
           AtomicValue  'a string' :@String@[1]  ~@AtomicValue@  @15:34-15:43
   DotApplication test::SubClass.demo :#String##[1]#  ~@DotApplication@  @16:7-16:11
     Variable x :#test::SubClass##[1]#  ~@VariableExpression@  @16:5-16:6
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::myFunc__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::myFunc__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::myFunc__Any_MANY_
+test::SubClass:
+  test::myFunc__Any_MANY_
+test::SubClass.demo:
+  test::myFunc__Any_MANY_
+test::SuperClass:
+  test::SubClass

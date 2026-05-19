@@ -31,3 +31,14 @@ function x::testF__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}
     FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#x::B##[1]#  ~@FunctionInvocation@  @14:18-14:21
       typeParam T -> x::B
       TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<x::B|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<x::B|1>  @14:18-14:21
+
+###ReverseIndex
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_:
+  x::testF__String_1_
+x::A:
+  x::testF__String_1_
+x::B:
+  x::A
+  x::testF__String_1_
+x::myFunc_T_1__T_1__String_1_:
+  x::testF__String_1_

@@ -70,6 +70,19 @@ public final class TrufflePdbWriter
     public static void write(Iterable<?> elements, ModuleManifest manifest,
                              Path outputPath, boolean validateRequired) throws IOException
     {
+        write(elements, manifest, outputPath, validateRequired, java.util.List.of());
+    }
+
+    /**
+     * Same as {@link #write(Iterable, ModuleManifest, Path, boolean)} but also
+     * writes the given extra sections (e.g. reverse reference index). Each
+     * section becomes one ZIP entry named by {@link
+     * org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection#name}.
+     */
+    public static void write(Iterable<?> elements, ModuleManifest manifest,
+                             Path outputPath, boolean validateRequired,
+                             java.util.List<org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection> extraSections) throws IOException
+    {
         if (outputPath.getParent() != null)
         {
             Files.createDirectories(outputPath.getParent());
@@ -113,6 +126,14 @@ public final class TrufflePdbWriter
             writeElementIndex(zos, indexEntries);
             writeManifest(zos, manifest);
             writeFunctionIndex(zos, functionEntries, validateRequired);
+            for (org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection section : extraSections)
+            {
+                if (section == null) continue;
+                ZipEntry entry = new ZipEntry(section.name());
+                zos.putNextEntry(entry);
+                zos.write(section.data());
+                zos.closeEntry();
+            }
         }
     }
 

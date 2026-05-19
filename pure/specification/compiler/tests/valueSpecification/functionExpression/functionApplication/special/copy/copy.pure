@@ -80,3 +80,21 @@ class test::new::support::MyClass extends Any  ~Class<test::new::support::MyClas
   property name :@String@[1]  ~Property<test::new::support::MyClass, @String@|1>
   property value :@Integer@[0..1]  ~Property<test::new::support::MyClass, @Integer@|0..1>
   property names :@String@[*]  ~Property<test::new::support::MyClass, @String@|*>
+
+###ReverseIndex
+meta::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+  test::new::testNew__Any_MANY_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_:
+  test::new::testNew__Any_MANY_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::new::testNew__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::new::testNew__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::new::testNew__Any_MANY_
+meta::pure::functions::meta::creation::newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_:
+  test::new::testNew__Any_MANY_
+test::new::support::MyClass:
+  test::new::testNew__Any_MANY_
+test::new::support::MyClass.name:
+  test::new::testNew__Any_MANY_

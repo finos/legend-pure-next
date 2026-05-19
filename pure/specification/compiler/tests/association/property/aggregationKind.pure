@@ -21,3 +21,9 @@ association protocol::MyAssociation  ~@Association@  @2:1-6:1
 class protocol::support::ClassA extends Any  ~Class<protocol::support::ClassA>  @8:1-10:1
 
 class protocol::support::ClassB extends Any  ~Class<protocol::support::ClassB>  @12:1-14:1
+
+###ReverseIndex
+protocol::support::ClassA:
+  protocol::MyAssociation.a
+protocol::support::ClassB:
+  protocol::MyAssociation.b

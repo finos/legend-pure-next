@@ -121,18 +121,28 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
     $qualifiedProperties->fold({qp, acc |
         if($qp.expressionSequence->isEmpty(),
             | ^$acc(values += $qp),
-            | let resolveResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+            | // Push sub-element caller path so refs resolved inside the QP
+              // body attribute to {@code Owner.qpName} in the reverse index.
+              // Mirrors Java QualifiedPropertyCompiler.resolveAndValidate
+              // withCallerSubElement wrapping.
+              let savedCaller = $acc.context.currentElementPath;
+              let qpName = $qp.name->toOne();
+              let scopedCtx = $acc.context->setCurrentElement(
+                  if($savedCaller->isEmpty(), | $qpName, | $savedCaller->toOne() + '.' + $qpName));
+              let resolveResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
                   $qp.expressionSequence,
                   $qp.parameters->concatenate($extraScope),
-                  $acc.context
+                  $scopedCtx
               );
-              let ctx1 = $resolveResult.context;
+              let ctx1Raw = $resolveResult.context;
+              // Restore the caller path before yielding back to the outer fold —
+              // sub-element scope only covers THIS QP's body resolution.
+              let ctx1 = ^$ctx1Raw(currentElementPath = $savedCaller);
               let resolvedQP = ^$qp(expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification));
               // Validate return type and multiplicity (only if resolution produced no new errors)
               if($ctx1.errors->size() > $acc.context.errors->size() || $resolveResult.resolvedSpecs->isEmpty(),
                   | ^$acc(values += $resolvedQP, context = $ctx1),
                   | let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);
-                    let qpName = $qp.name->toOne();
                     let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($lastExpr.sourceInformation, $ctx1);
                     // Type validation
                     let ctx2 = if([pair(| $lastExpr.genericType->isEmpty() || $qp.genericType->isEmpty()

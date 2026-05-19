@@ -97,6 +97,7 @@ public class TruffleCompileToPdbTest
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
+                        new TruffleReverseIndexLanguageExtension(),
                         new TruffleErrorLanguageExtension()))
                 .build();
 

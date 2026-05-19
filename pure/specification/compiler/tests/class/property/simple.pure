@@ -19,3 +19,7 @@ class pack::MyClass extends Any  ~Class<pack::MyClass>  @4:1-8:1
 
 class pack::OtherClass extends Any  ~Class<pack::OtherClass>  @10:1-13:1
   property value :@Integer@[1]  ~Property<pack::OtherClass, @Integer@|1>
+
+###ReverseIndex
+pack::OtherClass:
+  pack::MyClass.other

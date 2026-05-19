@@ -23,3 +23,15 @@ profile protocol::support::AProfile  ~@Profile@  @9:1-13:1
   stereotype newFlag  ~@Stereotype@
   tag tag1  ~@Tag@
   tag tag2  ~@Tag@
+
+###ReverseIndex
+protocol::support::AProfile:
+  protocol::myFunc_Integer_1__Integer_1_
+protocol::support::AProfile.flag:
+  protocol::myFunc_Integer_1__Integer_1_
+protocol::support::AProfile.newFlag:
+  protocol::myFunc_Integer_1__Integer_1_
+protocol::support::AProfile.tag1:
+  protocol::myFunc_Integer_1__Integer_1_
+protocol::support::AProfile.tag2:
+  protocol::myFunc_Integer_1__Integer_1_

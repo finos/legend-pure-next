@@ -205,12 +205,26 @@ function meta::pure::compiler::compileDir(dir:String[1], debug:Boolean[1]):Compi
     // Phase 4 — pass 3 across all files (resolution)
     // ============================================================================
     let pass3Start = currentTimeMillis();
-    let pass3Ctx = range(0, $total)->fold({i, ctx |
+    let pass3RawCtx = range(0, $total)->fold({i, ctx |
         let fileItem = $pass2Files->at($i);
         tickProgress3('  Pass 3/3 — Resolution [4/4]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId);
         let fileCtx = ^$ctx(sourceId = $fileItem.sourceId, imports = $fileItem.imports);
         $fileItem.compiledElements->fold({elem, c | runCompilePass3($elem, $c)}, $fileCtx);
     }, $pass3StartCtx);
+    // Derive function-reference edges from the compiled AST. Replaces the
+    // in-flight function-/dot-application resolver recording hooks which were
+    // prone to multi-candidate trial pollution (cached lambda outcomes from a
+    // failed trial could leak deltas into the index when a later winning
+    // trial reused the cache). Walking the final {@code func} slots is
+    // structurally exact — recorded edges match what the PDB serialises.
+    // Mirrors Java's {@code FunctionRefExtractor}. The walk runs over
+    // {@code elementMap}'s values, which is the same source the PDB write
+    // path uses, so the recorded edges are aligned with the serialised graph.
+    let pass3CtxWithFuncRefs = extractFunctionRefsInto($pass3RawCtx, $pass3RawCtx.elementMap->values());
+
+    // Lean-references validator (mirrors single-file compile path).
+    let leanRefViolations = validateLeanReferences($pass3CtxWithFuncRefs);
+    let pass3Ctx = ^$pass3CtxWithFuncRefs(errors = $pass3CtxWithFuncRefs.errors->concatenate($leanRefViolations));
     let pass3Millis = currentTimeMillis() - $pass3Start;
     finishProgress3();
 
@@ -390,7 +404,8 @@ function meta::pure::compiler::newCompilerContext(debugMode:Boolean[1]):Compiler
         lambdaFailureCache = newMap([]->cast(@Pair<String, Boolean>)),
         inferenceRollbacks = 0,
         candidateEvaluations = 0,
-        rollbackSites = newMap([]->cast(@Pair<String, Integer>))
+        rollbackSites = newMap([]->cast(@Pair<String, Integer>)),
+        referencedBy = newMap([]->cast(@Pair<String, List<String>>))
     );
 }
 
@@ -462,58 +477,68 @@ function meta::pure::compiler::runCompilePass2(e:meta::pure::protocol::grammar::
     let beforeRb = $beforeCtx.inferenceRollbacks;
     let beforeCa = $beforeCtx.candidateEvaluations;
     let prevSize = $acc.values->size();
+    // Establish caller scope for reverse-index recording. Each match arm
+    // computes its own (packagePath, name) for elementMap insertion and
+    // reuses the path as the caller. Mirrors Java TopLevelCompiler.pass2
+    // setCurrentElement / clearCurrentElement.
     let newAcc = $e->match([
         c:meta::pure::protocol::grammar::type::Class[1] |
-            let r = $c->compileClass($acc.context);
-            let compiledClass = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().value);
             let className = if($packagePath == '', | $c.name, | $packagePath + '::' + $c.name);
-            let ctx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($className);
+            let r = $c->compileClass($scopedCtx);
+            let compiledClass = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let ctx = $r.context->clearCurrentElement();
             let newMap = $ctx.elementMap->put($className, $compiledClass);
             let updatedCtx = ^$ctx(elementMap = $newMap);
             ^$acc(values += $compiledClass, context = $updatedCtx);,
         p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
-            let r = $p->compilePrimitive($acc.context);
-            let compiledPrim = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let primPackagePath = if($p.package->isEmpty(), | '', | $p.package->toOne().value);
             let primName = if($primPackagePath == '', | $p.name, | $primPackagePath + '::' + $p.name);
-            let primRCtx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($primName);
+            let r = $p->compilePrimitive($scopedCtx);
+            let compiledPrim = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let primRCtx = $r.context->clearCurrentElement();
             let primNewMap = $primRCtx.elementMap->put($primName, $compiledPrim);
             let primCtx = ^$primRCtx(elementMap = $primNewMap);
             ^$acc(values += $compiledPrim, context = $primCtx);,
         assoc:meta::pure::protocol::grammar::relationship::Association[1] |
-            let r = $assoc->compileAssociation($acc.context);
-            let compiledAssoc = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let assocPackagePath = if($assoc.package->isEmpty(), | '', | $assoc.package->toOne().value);
             let assocName = if($assocPackagePath == '', | $assoc.name, | $assocPackagePath + '::' + $assoc.name);
-            let assocRCtx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($assocName);
+            let r = $assoc->compileAssociation($scopedCtx);
+            let compiledAssoc = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let assocRCtx = $r.context->clearCurrentElement();
             let assocNewMap = $assocRCtx.elementMap->put($assocName, $compiledAssoc);
             let assocCtx = ^$assocRCtx(elementMap = $assocNewMap);
             ^$acc(values += $compiledAssoc, context = $assocCtx);,
         en:meta::pure::protocol::grammar::type::Enumeration[1] |
-            let r = $en->compileEnumeration($acc.context);
-            let compiledEnum = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let enumPackagePath = if($en.package->isEmpty(), | '', | $en.package->toOne().value);
             let enumName = if($enumPackagePath == '', | $en.name, | $enumPackagePath + '::' + $en.name);
-            let enumRCtx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($enumName);
+            let r = $en->compileEnumeration($scopedCtx);
+            let compiledEnum = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let enumRCtx = $r.context->clearCurrentElement();
             let enumNewMap = $enumRCtx.elementMap->put($enumName, $compiledEnum);
             let enumCtx = ^$enumRCtx(elementMap = $enumNewMap);
             ^$acc(values += $compiledEnum, context = $enumCtx);,
         fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
-            let r = $fn->compileNativeFunctionPass2($acc.context);
-            let compiledFn = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let fnPackagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().value);
             let fnName = if($fnPackagePath == '', | $fn.name, | $fnPackagePath + '::' + $fn.name);
-            let fnRCtx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($fnName);
+            let r = $fn->compileNativeFunctionPass2($scopedCtx);
+            let compiledFn = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let fnRCtx = $r.context->clearCurrentElement();
             let fnNewMap = $fnRCtx.elementMap->put($fnName, $compiledFn);
             let fnCtx = ^$fnRCtx(elementMap = $fnNewMap);
             ^$acc(values += $compiledFn, context = $fnCtx);,
         fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
-            let r = $fd->compileUserDefinedFunctionPass2($acc.context);
-            let compiledFd = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let fdPackagePath = if($fd.package->isEmpty(), | '', | $fd.package->toOne().value);
             let fdName = if($fdPackagePath == '', | $fd.name, | $fdPackagePath + '::' + $fd.name);
-            let fdRCtx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($fdName);
+            let r = $fd->compileUserDefinedFunctionPass2($scopedCtx);
+            let compiledFd = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let fdRCtx = $r.context->clearCurrentElement();
             let fdNewMap = $fdRCtx.elementMap->put($fdName, $compiledFd);
             let fdCtx = ^$fdRCtx(elementMap = $fdNewMap);
             ^$acc(values += $compiledFd, context = $fdCtx);,
@@ -546,17 +571,22 @@ function meta::pure::compiler::runCompilePass3(elem:meta::pure::metamodel::Packa
     let beforeT = currentTimeMillis();
     let beforeRb = $ctx.inferenceRollbacks;
     let beforeCa = $ctx.candidateEvaluations;
+    // Establish the caller scope for reverse-index recording. Mirrors Java
+    // TopLevelCompiler.pass3 setCurrentElement / clearCurrentElement around
+    // each element's resolution — every {@code recordReference} call that
+    // fires inside the resolve* chain attributes back to this element.
+    let scopedCtx = $ctx->setCurrentElement($elem->elementToPath());
     let newCtx = $elem->match([
         fn:UserDefinedFunction<Any>[1] |
-            resolveFunctionDefinition($fn, $ctx);,
+            resolveFunctionDefinition($fn, $scopedCtx);,
         cls:Class<Any>[1] |
-            resolveClass($cls, $ctx);,
+            resolveClass($cls, $scopedCtx);,
         assoc:Association[1] |
-            resolveAssociation($assoc, $ctx);,
+            resolveAssociation($assoc, $scopedCtx);,
         pt:PrimitiveType[1] |
-            resolvePrimitive($pt, $ctx);,
-        a:Any[1] | $ctx
-    ]);
+            resolvePrimitive($pt, $scopedCtx);,
+        a:Any[1] | $scopedCtx
+    ])->clearCurrentElement();
     let elapsed = currentTimeMillis() - $beforeT;
     let stat = ^ElementStatistics(
         elementPath = $elem->elementToPath(),
@@ -618,7 +648,16 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], i
     // rather than full elementMap.values() walks.
     let pass3StartCtx = $pass2.context->buildLocalFunctionIndex()->buildLinearizationCache();
     let pass3Start = currentTimeMillis();
-    let pass3Ctx = $pass2.values->fold({elem, ctx | runCompilePass3($elem, $ctx)}, $pass3StartCtx);
+    let pass3WalkCtx = $pass2.values->fold({elem, ctx | runCompilePass3($elem, $ctx)}, $pass3StartCtx);
+    // Derive function-reference edges from the compiled AST (mirrors
+    // compileDir + Java's FunctionRefExtractor). See that path for rationale.
+    let pass3RawCtx = extractFunctionRefsInto($pass3WalkCtx, $pass3WalkCtx.elementMap->values());
+    // Lean-references validator: scan the reverse index for any non-test
+    // element that references a test-only element. Mirrors Java
+    // LocalModule.compile lean-refs hook. Violations are appended to the
+    // compile errors and formatted with the caller element's source info.
+    let leanRefViolations = validateLeanReferences($pass3RawCtx);
+    let pass3Ctx = ^$pass3RawCtx(errors = $pass3RawCtx.errors->concatenate($leanRefViolations));
     let pass3Millis = currentTimeMillis() - $pass3Start;
 
     $pass3Ctx->debug({| 'compile: pass 3 done (' + $pass3Ctx.errors->size()->toString() + ' errors)'});

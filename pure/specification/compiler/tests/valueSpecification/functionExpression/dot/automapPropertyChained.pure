@@ -23,8 +23,77 @@ function test::testChainedAutomap():Any[*]
     [$p1, $p2].address.name;
 }
 
-###CompilerStats
-inferenceRollbacks: 11
-candidateEvaluations: 19
-rollbackSites:
-  MULTI_CANDIDATE_PRE_RESOLVE = 3
+###CompiledGraph
+class test::CMP_Person extends Any  ~Class<test::CMP_Person>  @4:1-9:1
+  property firstName :@String@[1]  ~Property<test::CMP_Person, @String@|1>
+  property lastName :@String@[1]  ~Property<test::CMP_Person, @String@|1>
+  property address :test::CMP_Address[0..1]  ~Property<test::CMP_Person, test::CMP_Address|0..1>
+
+class test::CMP_Address extends Any  ~Class<test::CMP_Address>  @11:1-14:1
+  property name :@String@[1]  ~Property<test::CMP_Address, @String@|1>
+
+function test::testChainedAutomap__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CMP_Person##[1]#  ~@FunctionInvocation@  @21:5-21:53
+    typeParam T -> #test::CMP_Person#
+    mulParam m -> #[1]#
+    AtomicValue  'p1' :@String@[1]  ~@AtomicValue@  @21:9-21:10
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::CMP_Person##[1]#  ~@FunctionInvocation@  @21:14-21:53
+      typeParam T -> test::CMP_Person
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::CMP_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::CMP_Person|1>  @21:14-21:53
+      Collection :#KeyExpression#[2]  ~@Collection@  @21:14-21:53
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:26-21:38
+          AtomicValue  'firstName' :@String@[1]  ~@AtomicValue@  @21:26-21:38
+          AtomicValue  'A' :@String@[1]  ~@AtomicValue@  @21:36-21:38
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:41-21:52
+          AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @21:41-21:52
+          AtomicValue  'A' :@String@[1]  ~@AtomicValue@  @21:50-21:52
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CMP_Person##[1]#  ~@FunctionInvocation@  @22:5-22:53
+    typeParam T -> #test::CMP_Person#
+    mulParam m -> #[1]#
+    AtomicValue  'p2' :@String@[1]  ~@AtomicValue@  @22:9-22:10
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::CMP_Person##[1]#  ~@FunctionInvocation@  @22:14-22:53
+      typeParam T -> test::CMP_Person
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::CMP_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::CMP_Person|1>  @22:14-22:53
+      Collection :#KeyExpression#[2]  ~@Collection@  @22:14-22:53
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:26-22:38
+          AtomicValue  'firstName' :@String@[1]  ~@AtomicValue@  @22:26-22:38
+          AtomicValue  'B' :@String@[1]  ~@AtomicValue@  @22:36-22:38
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:41-22:52
+          AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @22:41-22:52
+          AtomicValue  'B' :@String@[1]  ~@AtomicValue@  @22:50-22:52
+  FunctionInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@FunctionInvocation@  @23:23-23:27
+    typeParam T -> #test::CMP_Address#
+    typeParam V -> #String#
+    mulParam m -> #[*]#
+    FunctionInvocation map_T_MANY__Function_1__V_MANY_ :#test::CMP_Address##[*]#  ~@FunctionInvocation@  @23:15-23:22
+      typeParam T -> #test::CMP_Person#
+      typeParam V -> #test::CMP_Address#
+      Collection :#test::CMP_Person#[2]  ~@Collection@  @23:5-23:14
+        Variable p1 :#test::CMP_Person##[1]#  ~@VariableExpression@  @23:6-23:8
+        Variable p2 :#test::CMP_Person##[1]#  ~@VariableExpression@  @23:11-23:13
+      Lambda(v_automap:#test::CMP_Person#[1]) :#LambdaFunction<#{#test::CMP_Person#[1]->#test::CMP_Address##[0..1]#}#>#[1]  ~@AtomicValue@
+        DotApplication test::CMP_Person.address :#test::CMP_Address##[0..1]#  ~@DotApplication@  @23:15-23:22
+          Variable v_automap :#test::CMP_Person##[1]#  ~@VariableExpression@
+    Lambda(v_automap:#test::CMP_Address#[1]) :#LambdaFunction<#{#test::CMP_Address#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
+      DotApplication test::CMP_Address.name :#String##[1]#  ~@DotApplication@  @23:23-23:27
+        Variable v_automap :#test::CMP_Address##[1]#  ~@VariableExpression@
+
+###ReverseIndex
+meta::pure::functions::collection::map_T_MANY__Function_1__V_MANY_:
+  test::testChainedAutomap__Any_MANY_
+meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::testChainedAutomap__Any_MANY_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::testChainedAutomap__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::testChainedAutomap__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::testChainedAutomap__Any_MANY_
+test::CMP_Address:
+  test::CMP_Person.address
+test::CMP_Address.name:
+  test::testChainedAutomap__Any_MANY_
+test::CMP_Person:
+  test::testChainedAutomap__Any_MANY_
+test::CMP_Person.address:
+  test::testChainedAutomap__Any_MANY_

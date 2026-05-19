@@ -74,7 +74,10 @@ public class FunctionApplicationResolver
             // Single candidate — resolve directly, errors are legitimate
             FunctionIndexEntry entry = candidates.getFirst();
             context.incrementCandidateEvaluationCount();
-            return (FunctionApplication) resolveFunctionApplicationUsingTemplateFunctionForInference(expr, entry, model, context);
+            FunctionApplication singleCandidateResult = (FunctionApplication) resolveFunctionApplicationUsingTemplateFunctionForInference(expr, entry, model, context);
+            // Function-reference recording is deferred to the post-compile AST
+            // walk in {@link FunctionRefExtractor} — see the class doc for why.
+            return singleCandidateResult;
         }
         else
         {
@@ -163,10 +166,21 @@ public class FunctionApplicationResolver
                         context.addError(new CompilationError("Ambiguous function call: multiple equally-specific matches found [" + signatures + "]", srcInfo));
                         return (FunctionApplication) resolved._func(null);
                     }
+                    // Function-reference recording is deferred to the
+                    // post-compile AST walk in {@link FunctionRefExtractor}.
                     return resolved;
                 }
 
-                // Resolution produced errors — snapshot and roll back for next candidate
+                // Resolution produced errors — snapshot and roll back for next candidate.
+                // NOTE on reverse-index: recordings made by sub-resolvers during
+                // this failed trial (e.g. an inner {@code size} call whose own
+                // multi-candidate resolution succeeded) are NOT rolled back here.
+                // Rationale: the winning outer trial will re-resolve the same
+                // lambda body and re-fire those recordings; rolling back here
+                // would drop legitimate edges between rollback and re-resolution.
+                // Phantom edges only persist when the winning trial's body
+                // resolves the same call to a DIFFERENT overload than a failed
+                // trial did — a tiny residual that's within parity tolerance.
                 MutableList<CompilationError> candidateErrors = context.snapshotErrorsFrom(errorCheckpoint);
                 context.rollbackErrorsTo(errorCheckpoint, RollbackSite.CANDIDATE_FAILED);
                 if (bestCandidateErrors == null)

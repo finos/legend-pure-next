@@ -9,3 +9,5 @@ Enum protocol::AnEnum
 enumeration protocol::AnEnum extends Enum  ~Enumeration<protocol::AnEnum>  @2:1-6:1
   property Val  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum|1>  = ^protocol::AnEnum(name='Val')  ~lambda:#LambdaFunction<#{->protocol::AnEnum[1]}#>#  @4:3-4:5
   property Val2  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum|1>  = ^protocol::AnEnum(name='Val2')  ~lambda:#LambdaFunction<#{->protocol::AnEnum[1]}#>#  @5:3-5:6
+
+###ReverseIndex

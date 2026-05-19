@@ -128,3 +128,28 @@ function test::testChainedAutomap_Function_1__Boolean_1_(f:Function<{Function<{-
           Lambda(v_automap:#test::CA_Address#[1]) :#LambdaFunction<#{#test::CA_Address#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
             DotApplication test::CA_Address.name :#String##[1]#  ~@DotApplication@  @30:79-30:83
               Variable v_automap :#test::CA_Address##[1]#  ~@VariableExpression@
+
+###ReverseIndex
+meta::pure::functions::collection::map_T_MANY__Function_1__V_MANY_:
+  test::testChainedAutomap_Function_1__Boolean_1_
+meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::testChainedAutomap_Function_1__Boolean_1_
+meta::pure::functions::lang::eval_Function_1__T_n__V_m_:
+  test::testChainedAutomap_Function_1__Boolean_1_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::testChainedAutomap_Function_1__Boolean_1_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::testChainedAutomap_Function_1__Boolean_1_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::testChainedAutomap_Function_1__Boolean_1_
+test::CA_Address:
+  test::CA_Person.address
+  test::testChainedAutomap_Function_1__Boolean_1_
+test::CA_Address.name:
+  test::testChainedAutomap_Function_1__Boolean_1_
+test::CA_Person:
+  test::testChainedAutomap_Function_1__Boolean_1_
+test::CA_Person.address:
+  test::testChainedAutomap_Function_1__Boolean_1_
+test::myCheck_Any_MANY__Any_MANY__Boolean_1_:
+  test::testChainedAutomap_Function_1__Boolean_1_

@@ -52,9 +52,13 @@ class TrufflePureTestRunner
     private static PureContext context;
     private static org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry resolver;
     private static org.finos.legend.pure.truffle.runtime.TrufflePdbLoader coreLoader;
+    private static org.finos.legend.pure.truffle.runtime.TrufflePdbLoader coreTestsLoader;
     private static org.finos.legend.pure.truffle.runtime.TrufflePdbLoader compilerLoader;
+    private static org.finos.legend.pure.truffle.runtime.TrufflePdbLoader compilerTestsLoader;
     private static PDBModule coreModule;
+    private static PDBModule coreTestsModule;
     private static PDBModule compilerModule;
+    private static PDBModule compilerTestsModule;
     private static Object pctAdapter;
 
     // Captures the polyglot Engine's err stream (where TraceCompilation writes
@@ -72,21 +76,30 @@ class TrufflePureTestRunner
             return;
         }
         Path corePdb = Path.of("../../../../shared/core.pdb");
+        Path coreTestsPdb = Path.of("../../../../shared/core-tests.pdb");
         Path compilerPdb = Path.of("../../../../shared/compiler.pdb");
+        Path compilerTestsPdb = Path.of("../../../../shared/compiler-tests.pdb");
 
         // Use truffle PDB loader — reads FlatBuffer directly into truffle-namespaced wrappers
         coreLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(corePdb);
+        coreTestsLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(coreTestsPdb);
         compilerLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(compilerPdb);
+        compilerTestsLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(compilerTestsPdb);
 
         // Module registry replaces the previous anonymous-class composite resolver.
-        // Registration order is dependency-first: core, then compiler.
+        // Registration order is dependency-first: core, core-tests, compiler,
+        // compiler-tests (each tests pdb depends on its lean pair).
         resolver = new org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry();
         resolver.register(coreLoader);
+        resolver.register(coreTestsLoader);
         resolver.register(compilerLoader);
+        resolver.register(compilerTestsLoader);
 
         // Wire composite resolver into each loader for cross-module FBW resolution
         coreLoader.setResolver(resolver);
+        coreTestsLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
+        compilerTestsLoader.setResolver(resolver);
 
         PureLanguage.configure(resolver, NativeNodeRegistry.createDefault());
         // Build the Engine with err redirected to a buffer + TraceCompilation
@@ -120,8 +133,11 @@ class TrufflePureTestRunner
 
         // Keep bootstrap PDB modules for element path discovery
         coreModule = new PDBModule(corePdb, PDBModule.Mode.EXECUTION);
+        coreTestsModule = new PDBModule(coreTestsPdb, PDBModule.Mode.EXECUTION);
         compilerModule = new PDBModule(compilerPdb, PDBModule.Mode.EXECUTION);
-        PureModel model = PureModel.withModules(Lists.mutable.with(coreModule, compilerModule))
+        compilerTestsModule = new PDBModule(compilerTestsPdb, PDBModule.Mode.EXECUTION);
+        PureModel model = PureModel.withModules(
+                        Lists.mutable.with(coreModule, coreTestsModule, compilerModule, compilerTestsModule))
                 .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
                 .build();
         model.compile();
@@ -132,10 +148,10 @@ class TrufflePureTestRunner
                 .resolver(resolver)
                 .build());
 
-        // Find PCT adapter via truffle loader
-        for (String path : coreLoader.elementPaths())
+        // Find PCT adapter — lives in core-tests.pdb now (test profile).
+        for (String path : coreTestsLoader.elementPaths())
         {
-            Object element = coreLoader.getElement(path);
+            Object element = coreTestsLoader.getElement(path);
             if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
                     "meta::pure::metamodel::function::FunctionDefinition", resolver)
                     && isPCTAdapter(element))
@@ -220,9 +236,10 @@ class TrufflePureTestRunner
         ensureSetup();
         List<DynamicTest> tests = new ArrayList<>();
 
-        for (String path : coreLoader.elementPaths())
+        // <<test.Test>> functions live in core-tests.pdb (the test companion).
+        for (String path : coreTestsLoader.elementPaths())
         {
-            Object element = coreLoader.getElement(path);
+            Object element = coreTestsLoader.getElement(path);
             if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
                     "meta::pure::metamodel::function::FunctionDefinition", resolver)
                     && isTestStereotype(element) && isZeroArg(element))
@@ -230,10 +247,11 @@ class TrufflePureTestRunner
                 tests.add(createTest(path, element, null));
             }
         }
-        // Also scan compiler.pdb for test functions
-        for (String path : compilerLoader.elementPaths())
+        // Also scan compiler-tests.pdb for test functions (compiler-pure has its
+        // own <<test.Test>> functions that ship inside its tests companion).
+        for (String path : compilerTestsLoader.elementPaths())
         {
-            Object element = compilerLoader.getElement(path);
+            Object element = compilerTestsLoader.getElement(path);
             if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
                     "meta::pure::metamodel::function::FunctionDefinition", resolver)
                     && isTestStereotype(element) && isZeroArg(element))
@@ -252,9 +270,11 @@ class TrufflePureTestRunner
         ensureSetup();
         List<DynamicTest> tests = new ArrayList<>();
 
-        for (String path : coreLoader.elementPaths())
+        // <<PCT.test>> functions also live in core-tests.pdb — the
+        // TestElementFilter classifies PCT.test/adapter as test-only.
+        for (String path : coreTestsLoader.elementPaths())
         {
-            Object element = coreLoader.getElement(path);
+            Object element = coreTestsLoader.getElement(path);
             if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
                     "meta::pure::metamodel::function::FunctionDefinition", resolver)
                     && isPCTTest(element))

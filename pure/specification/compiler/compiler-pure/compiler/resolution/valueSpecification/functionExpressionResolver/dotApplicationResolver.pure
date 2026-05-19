@@ -78,7 +78,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                 if($maybeEnumeration->isNotEmpty(),
                     | let enumeration = $maybeEnumeration->toOne();
                       let enumPath = $enumeration->elementToPath();
-                      let resolvedEnum = $context->resolveElement($enumPath);
+                      let resolvedEnum = $ctx1->resolveElement($enumPath);
+                      let ctxR = if($resolvedEnum->isEmpty(), | $ctx1, | $ctx1->recordReference($resolvedEnum->toOne()->elementToPath()));
                       let enumOwner = if($resolvedEnum->isNotEmpty(),
                           | $resolvedEnum->toOne()->match([
                                 re:Enumeration<Any>[1] | $re,
@@ -90,7 +91,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                       if($matchedProp->isEmpty(),
                           | ^CompilerResult<ValueSpecification>(
                                 value = ^$dot(parametersValues = $resolvedParams->cast(@ValueSpecification)),
-                                context = ^$ctx1(errors += 'Can\'t find enum value \'' + $functionName + '\' in enumeration \'' + $enumPath + '\'' + $siCtx)
+                                context = ^$ctxR(errors += 'Can\'t find enum value \'' + $functionName + '\' in enumeration \'' + $enumPath + '\'' + $siCtx)
                             ),
                           | debug($context, | '  enum property found: ' + $matchedProp->at(0).name->toOne());
                             let enumGT = buildInferredGenericType($enumeration);
@@ -101,7 +102,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                     multiplicity = PureOne,
                                     parametersValues = $resolvedParams->cast(@ValueSpecification)
                                 ),
-                                context = $ctx1
+                                context = $ctxR
                             );
                       );,
                     | // Column access on a RelationType — mirrors Java DotApplicationResolver lines 305-148
@@ -145,7 +146,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             // no fallback to $cls; if the class isn't in the context, that's a
                             // structural bug worth surfacing.
                             let path = $cls->cast(@PackageableElement)->elementToPath();
-                            let resolvedOwner = $context->resolveElement($path)->toOne()->cast(@Class<Any>);
+                            let resolvedOwner = $ctx1->resolveElement($path)->toOne()->cast(@Class<Any>);
+                            let ctxR = $ctx1->recordReference($resolvedOwner->cast(@PackageableElement)->elementToPath());
                             // Look up property or qualified property on the owner type (mirrors Java DotApplicationResolver.lookupFunction)
                             let paramCount = $resolvedParams->size();
                             // Try simple property first (only when no additional params)
@@ -229,7 +231,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                       qp:QualifiedProperty<Any>[1] | $qp->toQualifiedPropertyPointer()->cast(@AbstractProperty<Any>),
                                       p:Property<Nil,Any|*>[1] | $p->toPropertyPointer()->cast(@AbstractProperty<Any>)
                                   ]);
-                                  // Check if automap needed: receiver multiplicity is NOT [1]
+                                  // Function-reference recording (the
+                                  // {@code Owner.propName} edge for the matched
+                                  // property) is deferred to the post-compile
+                                  // AST walk in {@link extractFunctionRefsInto}.
                                   if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
                                       | // Direct access — receiver is [1]
                                         debug($context, | '  direct access [1]');
@@ -258,6 +263,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             // Path-keyed lookup is authoritative — no fallback to $en.
                             let path = $en->cast(@PackageableElement)->elementToPath();
                             let resolvedOwner = $context->resolveElement($path)->toOne()->cast(@Enumeration<Any>);
+                            let ctxR = $context->recordReference($resolvedOwner->cast(@PackageableElement)->elementToPath());
                             let foundProp = findProperty($resolvedOwner, $functionName, $context);
                             if($foundProp->isEmpty(),
                                 | ^CompilerResult<ValueSpecification>(
@@ -269,6 +275,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                   let propMul = $resolvedProp.multiplicity->toOne();
                                   let receiverMul = $receiver.multiplicity;
                                   let resolvedPropPointer = $resolvedProp->toPropertyPointer();
+                                  // Function-reference recording deferred to AST walk.
                                   if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
                                       | ^CompilerResult<ValueSpecification>(
                                             value = ^$dot(

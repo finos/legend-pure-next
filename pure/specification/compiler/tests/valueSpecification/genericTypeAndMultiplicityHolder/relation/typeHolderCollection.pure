@@ -20,3 +20,7 @@ function test__Relation_MANY_():Relation<(name:@Number@[0..1])>[*]  ~UserDefined
       mulParam m -> [1]
       AtomicValue  '' :@String@[1]  ~@AtomicValue@  @6:9-6:10
       TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(name:Float[1])>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Relation<(name:Float[1])>|?>  @6:18-6:43
+
+###ReverseIndex
+meta::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+  test__Relation_MANY_

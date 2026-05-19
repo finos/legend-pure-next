@@ -59,3 +59,22 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
           AtomicValue  'Alice' :@String@[1]  ~@AtomicValue@  @28:31-28:37
   DotApplication test::GrandParentTag.tag :#test::Tag##[0..1]#  ~@DotApplication@  @29:7-29:10
     Variable c :#test::Child##[1]#  ~@VariableExpression@  @29:5-29:6
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::use__Any_MANY_
+test::Child:
+  test::use__Any_MANY_
+test::GrandParent:
+  test::GrandParentTag.gp
+  test::Parent
+test::GrandParentTag.tag:
+  test::use__Any_MANY_
+test::Parent:
+  test::Child
+test::Tag:
+  test::GrandParentTag.tag

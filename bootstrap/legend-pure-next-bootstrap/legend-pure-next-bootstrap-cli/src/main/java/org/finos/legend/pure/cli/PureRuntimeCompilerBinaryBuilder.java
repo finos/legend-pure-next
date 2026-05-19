@@ -25,6 +25,7 @@ import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
+import org.finos.legend.pure.m3.module.TestElementFilter;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveWriter;
 import org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection;
@@ -83,16 +84,19 @@ public final class PureRuntimeCompilerBinaryBuilder
 
     /**
      * Compile {@code sourceDir} against the given base PDBs (typically
-     * {@code core.pdb} + {@code compiler.pdb}) and write the result to
-     * {@code outputFile}. Each {@code .pure} file under {@code sourceDir}
-     * is parsed into a {@code PureFile} and passed through
+     * {@code core.pdb} + {@code compiler.pdb}) and write the result into
+     * {@code outputDir}, with filename derived from the module manifest's
+     * {@code name}. Each {@code .pure} file under {@code sourceDir} is
+     * parsed into a {@code PureFile} and passed through
      * {@code meta::pure::compiler::compile} via the bootstrap
-     * {@link PureExecution} runtime; the resulting elements are aggregated
-     * and serialized via {@link CompressedArchiveWriter}.
+     * {@link PureExecution} runtime; the resulting elements are aggregated,
+     * optionally partitioned by test-stereotype, and serialized via
+     * {@link CompressedArchiveWriter}.
      */
-    public static void compile(List<Path> basePdbs, Path sourceDir, Path outputFile) throws IOException
+    public static void compile(List<Path> basePdbs, Path sourceDir, Path outputDir, TestElementFilter.Mode mode) throws IOException
     {
         ModuleManifest manifest = ModuleManifest.locate(sourceDir);
+        Path outputFile = outputDir.resolve(manifest.name() + ".pdb");
         if (basePdbs.isEmpty())
         {
             throw new IllegalArgumentException("At least one --base-pdb is required (need core.pdb plus an existing compiler.pdb to host the compile function).");
@@ -110,7 +114,8 @@ public final class PureRuntimeCompilerBinaryBuilder
         {
             System.out.println("          " + p);
         }
-        System.out.println("  Output: " + outputFile);
+        System.out.println("  Output dir: " + outputDir);
+        System.out.println("  Tests mode: " + mode);
 
         // 1. Load base PDBs — each carries its identity in its embedded manifest.
         MutableList<Module> modules = Lists.mutable.empty();
@@ -241,7 +246,6 @@ public final class PureRuntimeCompilerBinaryBuilder
         compilerExt.buildFunctionIndex(elements, resolver)
                 .forEachValue(byArity -> byArity.forEachValue(functionEntries::addAllIterable));
         PureLanguageExtension pureLangExt = (PureLanguageExtension) extensions.get(0);
-        List<PDBArchiveSection> additionalSections = pureLangExt.archiveSections(functionEntries);
         System.out.println("  Function index: " + functionEntries.size() + " entries");
 
         // 5. Serialize. CompressedArchiveWriter wants a Module to satisfy
@@ -252,8 +256,121 @@ public final class PureRuntimeCompilerBinaryBuilder
         {
             Files.createDirectories(outputFile.getParent());
         }
-        new CompressedArchiveWriter().write(elements, extensions, lastModule, manifest, additionalSections, outputFile);
-        System.out.println("    Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
+        // Extract the reverse reference index from the Pure
+        // {@code CompilationResult.context.referencedBy} — a PureMap
+        // keyed by target path with List<String> caller-path values.
+        // Mirrors the Java side's `result.referencedBy()` so both
+        // compilers produce structurally identical PDBs.
+        java.util.Map<String, java.util.Set<String>> referencedBy =
+                extractReferencedBy(compResult);
+        writeFiltered(elements, extensions, lastModule, manifest, functionEntries, pureLangExt, outputFile, mode,
+                referencedBy);
+    }
+
+    private static void writeFiltered(
+            MutableList<PackageableElement> elements,
+            MutableList<LanguageExtension> extensions,
+            Module lastModule,
+            ModuleManifest manifest,
+            MutableList<FunctionIndexEntry> functionEntries,
+            PureLanguageExtension pureLangExt,
+            Path outputFile,
+            TestElementFilter.Mode mode,
+            java.util.Map<String, java.util.Set<String>> referencedBy) throws IOException
+    {
+        switch (mode)
+        {
+            case WITH ->
+                    writePdb("full", elements, extensions, lastModule, manifest,
+                            pureLangExt.archiveSections(functionEntries),
+                            TestElementFilter.withTestsPath(outputFile), referencedBy);
+            case NONE ->
+            {
+                MutableList<PackageableElement> lean = elements.reject(TestElementFilter::isTestElement);
+                java.util.Set<String> leanPaths = pathSet(lean);
+                writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
+                        lean, extensions, lastModule, manifest,
+                        pureLangExt.archiveSections(filterEntries(functionEntries, leanPaths)),
+                        outputFile,
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains));
+            }
+            case ONLY ->
+            {
+                MutableList<PackageableElement> tests = elements.select(TestElementFilter::isTestElement);
+                java.util.Set<String> testPaths = pathSet(tests);
+                writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
+                        tests, extensions, lastModule, TestElementFilter.testsManifest(manifest),
+                        pureLangExt.archiveSections(filterEntries(functionEntries, testPaths)),
+                        TestElementFilter.testsOnlyPath(outputFile),
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains));
+            }
+            case SPLIT ->
+            {
+                MutableList<PackageableElement> lean = elements.reject(TestElementFilter::isTestElement);
+                MutableList<PackageableElement> tests = elements.select(TestElementFilter::isTestElement);
+                java.util.Set<String> leanPaths = pathSet(lean);
+                java.util.Set<String> testPaths = pathSet(tests);
+                writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
+                        lean, extensions, lastModule, manifest,
+                        pureLangExt.archiveSections(filterEntries(functionEntries, leanPaths)),
+                        outputFile,
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains));
+                writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
+                        tests, extensions, lastModule, TestElementFilter.testsManifest(manifest),
+                        pureLangExt.archiveSections(filterEntries(functionEntries, testPaths)),
+                        TestElementFilter.testsOnlyPath(outputFile),
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains));
+            }
+        }
+    }
+
+    /**
+     * Keep only function-index entries whose full path is in
+     * {@code keepPaths}. Used to scope the function index per PDB so a
+     * lean PDB doesn't carry test-only function entries.
+     */
+    private static List<FunctionIndexEntry> filterEntries(
+            MutableList<FunctionIndexEntry> all, java.util.Set<String> keepPaths)
+    {
+        List<FunctionIndexEntry> out = new java.util.ArrayList<>();
+        for (FunctionIndexEntry e : all)
+        {
+            if (keepPaths.contains(e.fullPath()))
+            {
+                out.add(e);
+            }
+        }
+        return out;
+    }
+
+    private static java.util.Set<String> pathSet(MutableList<PackageableElement> elements)
+    {
+        java.util.Set<String> set = new java.util.HashSet<>();
+        for (PackageableElement e : elements)
+        {
+            String p = elementPath(e);
+            if (p != null) set.add(p);
+        }
+        return set;
+    }
+
+    private static void writePdb(
+            String label,
+            MutableList<PackageableElement> elements,
+            MutableList<LanguageExtension> extensions,
+            Module lastModule,
+            ModuleManifest manifest,
+            List<PDBArchiveSection> additionalSections,
+            Path target,
+            java.util.Map<String, java.util.Set<String>> referencedBy) throws IOException
+    {
+        List<PDBArchiveSection> sections = new java.util.ArrayList<>(additionalSections);
+        PDBArchiveSection riSection =
+                org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.serialize(referencedBy);
+        if (riSection != null) sections.add(riSection);
+        new CompressedArchiveWriter().write(elements, extensions, lastModule, manifest, sections, target);
+        System.out.println("    Written: " + target + " [" + label + ", " + Files.size(target) + " bytes, "
+                + (referencedBy == null ? 0 : referencedBy.size()) + " ref targets]");
     }
 
     private static void verifyDependencies(ModuleManifest manifest, List<String> availableNames)
@@ -278,5 +395,56 @@ public final class PureRuntimeCompilerBinaryBuilder
     {
         String fileName = pdbPath.getFileName().toString();
         return fileName.endsWith(".pdb") ? fileName.substring(0, fileName.length() - 4) : fileName;
+    }
+
+    /**
+     * Extract the reverse reference index from the Pure
+     * {@code CompilationResult.context.referencedBy}. The Pure value is a
+     * {@code PureMap<String, List<String>>} where each value is a
+     * {@code DynamicInstance} of {@code meta::pure::functions::collection::List}
+     * with a {@code values: String[*]} field. Returns an empty map on any
+     * shape mismatch so a missing index doesn't fail the PDB write.
+     */
+    private static java.util.Map<String, java.util.Set<String>> extractReferencedBy(DynamicInstance compResult)
+    {
+        java.util.LinkedHashMap<String, java.util.Set<String>> out = new java.util.LinkedHashMap<>();
+        Object ctxObj = compResult.get("context");
+        if (!(ctxObj instanceof DynamicInstance ctx))
+        {
+            return out;
+        }
+        Object refObj = ctx.get("referencedBy");
+        if (!(refObj instanceof org.finos.legend.pure.execution.PureMap pm))
+        {
+            return out;
+        }
+        for (java.util.Map.Entry<meta.pure.metamodel.valuespecification.ValueSpecification,
+                meta.pure.metamodel.valuespecification.ValueSpecification> entry : pm.getMap().entrySet())
+        {
+            Object key = org.finos.legend.pure.execution._E_ValueSpecification.unwrap(entry.getKey());
+            Object val = org.finos.legend.pure.execution._E_ValueSpecification.unwrap(entry.getValue());
+            if (!(key instanceof String targetPath) || !(val instanceof DynamicInstance listDi))
+            {
+                continue;
+            }
+            Object valuesObj = listDi.get("values");
+            java.util.LinkedHashSet<String> callers = new java.util.LinkedHashSet<>();
+            if (valuesObj instanceof List<?> vs)
+            {
+                for (Object v : vs)
+                {
+                    if (v instanceof String s)
+                    {
+                        callers.add(s);
+                    }
+                }
+            }
+            else if (valuesObj instanceof String s)
+            {
+                callers.add(s);
+            }
+            out.put(targetPath, callers);
+        }
+        return out;
     }
 }

@@ -65,30 +65,39 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
 
     if($ctx3.errors->size() > $ctx.errors->size(),
         | ^ValueCompileResult(values = [], openVariables = [], context = $ctx3),
-        | // Compile params — match Java LambdaCompiler.compileParameter: only set genericType if present
-          let compiledParams = $l.parameters->map(p |
+        | // Compile params — match Java LambdaCompiler.compileParameter: only set genericType if present.
+          // Thread the recording-aware context across param compilations so
+          // match-pattern types (e.g. {@code m:Foo[1] | ...}) record their
+          // type references to the enclosing function's reverse index.
+          let paramAccum = $l.parameters->fold({p, acc |
+              let accCtx = $acc.context->toOne();
               let hasType = $p.genericType->isNotEmpty() && $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->isNotEmpty();
-              let pmGenType = if($hasType,
-                  | $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx3, '', []).value->toOne(),
-                  | ^CompilerNotSetGenericType()
+              let gtR = if($hasType,
+                  | $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($accCtx, '', []),
+                  | ^CompilerResult<GenericType>(value = ^CompilerNotSetGenericType(), context = $accCtx)
               );
+              let pmGenType = $gtR.value->toOne();
+              let nextCtx = $gtR.context;
               // For untyped lambda params, use CompilerNotSetMultiplicity (matching Java null).
               // setMissingLambdaParameterInformation will fill the actual multiplicity from bindings.
               let pmMult = if($p.multiplicity->isEmpty(),
                   | ^CompilerNotSetMultiplicity(),
                   | $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity()
               );
-              ^VariableExpression(
+              let v = ^VariableExpression(
                   name = $p.name,
                   genericType = $pmGenType,
                   multiplicity = $pmMult,
                   sourceInformation = compileSourceInformation($p.p_sourceInformation, $ctx)
               )->cast(@VariableExpression);
-          );
+              ^$acc(values += $v, context = $nextCtx);
+          }, ^CompilerListResult<VariableExpression>(values = [], context = $ctx3));
+          let compiledParams = $paramAccum.values;
+          let ctxAfterParams = $paramAccum.context;
 
           let innerScope = $scope->concatenate($compiledParams);
-          let compiledSequence = compileExpressionSequence($l.expressionSequence, $ctx3, $innerScope);
-          let ctx4 = if($compiledSequence.context->isNotEmpty(), | $compiledSequence.context->toOne(), | $ctx3);
+          let compiledSequence = compileExpressionSequence($l.expressionSequence, $ctxAfterParams, $innerScope);
+          let ctx4 = if($compiledSequence.context->isNotEmpty(), | $compiledSequence.context->toOne(), | $ctxAfterParams);
 
           let openVariables = $compiledSequence.openVariables->filter(var |
               $innerScope->filter(s | $s.name == $var.name)->isEmpty()

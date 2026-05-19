@@ -9,3 +9,7 @@ function test::new::testNew(): Any[*]
 ###CompiledGraph
 function test::new::testNew__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
   AtomicValue  meta::pure :#Package#[1]  ~@AtomicValue@  @6:3-6:12
+
+###ReverseIndex
+meta::pure:
+  test::new::testNew__Any_MANY_

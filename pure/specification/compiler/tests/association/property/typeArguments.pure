@@ -33,3 +33,12 @@ class pack::Dog extends pack::Animal  ~Class<pack::Dog>  @14:1-16:1
 association pack::AnimalPairLink  ~@Association@  @18:1-22:1
   property owner :pack::Animal[1]  ~Property<pack::XPair<pack::Dog, @String@>, pack::Animal|1>
   property pets :pack::XPair<pack::Dog, @String@>[*]  ~Property<pack::Animal, pack::XPair<pack::Dog, @String@>|*>
+
+###ReverseIndex
+pack::Animal:
+  pack::AnimalPairLink.owner
+  pack::Dog
+pack::Dog:
+  pack::AnimalPairLink.pets
+pack::XPair:
+  pack::AnimalPairLink.pets

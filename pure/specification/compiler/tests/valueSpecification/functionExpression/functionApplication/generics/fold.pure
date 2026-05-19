@@ -18,3 +18,9 @@ function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
         Variable acc :#Integer##[1]#  ~@VariableExpression@  @4:30-4:33
         Variable val :#Integer##[1]#  ~@VariableExpression@  @4:37-4:40
     AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @4:44-4:44
+
+###ReverseIndex
+meta::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_:
+  test::tst__Any_MANY_
+meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  test::tst__Any_MANY_

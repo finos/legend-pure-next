@@ -27,3 +27,15 @@ class protocol::MyClass extends Any  ~Class<protocol::MyClass>  @4:1-8:1
 profile protocol::support::AProfile  ~@Profile@  @10:1-14:1
   stereotype flag  ~@Stereotype@
   tag tag1  ~@Tag@
+
+###ReverseIndex
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  protocol::MyClass.displayName
+protocol::MyClass.name:
+  protocol::MyClass.displayName
+protocol::support::AProfile:
+  protocol::MyClass.displayName
+protocol::support::AProfile.flag:
+  protocol::MyClass.displayName
+protocol::support::AProfile.tag1:
+  protocol::MyClass.displayName

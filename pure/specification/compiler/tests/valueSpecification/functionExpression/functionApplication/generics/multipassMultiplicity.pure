@@ -30,3 +30,11 @@ function test::tst__Boolean_1_():@Boolean@[1]  ~UserDefinedFunction<{->@Boolean@
       ArrowInvocation test::toNum_String_1__Integer_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @12:32-12:40
         Variable x :#String##[1]#  ~@VariableExpression@  @12:30-12:31
     AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @12:43-12:49
+
+###ReverseIndex
+test::isPositive_Integer_MANY__Boolean_1_:
+  test::tst__Boolean_1_
+test::mp_Function_1__Function_1__String_m__Boolean_1_:
+  test::tst__Boolean_1_
+test::toNum_String_1__Integer_MANY_:
+  test::tst__Boolean_1_

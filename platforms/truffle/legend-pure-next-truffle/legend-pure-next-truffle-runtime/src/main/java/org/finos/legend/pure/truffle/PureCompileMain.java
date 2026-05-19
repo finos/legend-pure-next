@@ -79,7 +79,7 @@ public final class PureCompileMain
         System.err.println("Usage: pure-truffle <command> [options]");
         System.err.println();
         System.err.println("Commands:");
-        System.err.println("  compile --base-pdb <file>... --source <dir> --output <file>   Compile Pure sources against base PDB(s)");
+        System.err.println("  compile --base-pdb <file>... --source <dir> --output-dir <dir> [--tests <mode>]   Compile Pure sources against base PDB(s)");
         System.err.println("  execute --pdb <file>... --function <path> [--args <arg>...]   Execute a Pure function");
         System.err.println();
         System.err.println("Profiling options (work for both commands):");
@@ -184,7 +184,9 @@ public final class PureCompileMain
 
         List<String> basePdbPaths = new ArrayList<>();
         String source = null;
-        String output = null;
+        String outputDir = null;
+        org.finos.legend.pure.m3.module.TestElementFilter.Mode mode =
+                org.finos.legend.pure.m3.module.TestElementFilter.Mode.NONE;
 
         for (int i = 0; i < args.length; i++)
         {
@@ -192,14 +194,16 @@ public final class PureCompileMain
             {
                 case "--base-pdb" -> basePdbPaths.add(args[++i]);
                 case "--source" -> source = args[++i];
-                case "--output" -> output = args[++i];
+                case "--output-dir" -> outputDir = args[++i];
+                case "--tests" -> mode = org.finos.legend.pure.m3.module.TestElementFilter.Mode.parse(args[++i]);
                 default -> throw new IllegalArgumentException("Unknown option: " + args[i]);
             }
         }
 
-        if (basePdbPaths.isEmpty() || source == null || output == null)
+        if (basePdbPaths.isEmpty() || source == null || outputDir == null)
         {
-            System.err.println("Usage: pure-truffle compile --base-pdb <file>... --source <dir> --output <file>");
+            System.err.println("Usage: pure-truffle compile --base-pdb <file>... --source <dir> --output-dir <dir> [--tests {none|with|only|split}]");
+            System.err.println("  Output filename comes from the module manifest 'name' field.");
             System.exit(1);
         }
 
@@ -216,7 +220,7 @@ public final class PureCompileMain
             basePdbs.add(Path.of(p));
         }
         org.finos.legend.pure.truffle.runtime.TruffleCompilerBinaryBuilder.compile(
-                basePdbs, Path.of(source), Path.of(output), profiling::apply);
+                basePdbs, Path.of(source), Path.of(outputDir), mode, profiling::apply);
     }
 
     private static void execute(String[] args) throws Exception
@@ -286,6 +290,7 @@ public final class PureCompileMain
                 .withParserExtensions(List.of(
                         new org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension(),
                         new org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension(),
+                        new org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension(),
                         new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()));
         profiling.apply(runtimeBuilder);
         PureTruffleRuntime runtime = runtimeBuilder.build();

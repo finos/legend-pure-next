@@ -123,15 +123,17 @@ public class CompilerCompiledGraphPdbRoundTripTest
 
         CompiledGraphLanguageExtension cgExt = new CompiledGraphLanguageExtension();
         CompilerStatsLanguageExtension csExt = new CompilerStatsLanguageExtension();
+        org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndexLanguageExtension riExt =
+                new org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndexLanguageExtension();
         PureLanguageExtension pureExt = new PureLanguageExtension();
-        PureParser parser = PureParser.builder().withExtensions(Lists.mutable.with(cgExt, csExt, pureExt)).build();
+        PureParser parser = PureParser.builder().withExtensions(Lists.mutable.with(cgExt, csExt, riExt, pureExt)).build();
 
         // --- Step 1: Compile in memory ---
         PDBModule baseModule = new PDBModule(BootstrapModule.locateCorePdb(), PDBModule.Mode.COMPILATION);
         PureModel model = PureModel.withModules(
                         Lists.mutable.with(new LocalModule("test", "*", Lists.mutable.with(baseModule.getName()),
                                 Lists.mutable.with(new PureContent(content, testName))), baseModule))
-                .withExtensions(Lists.mutable.with(cgExt, csExt, pureExt))
+                .withExtensions(Lists.mutable.with(cgExt, csExt, riExt, pureExt))
                 .build();
         CompilationResult result = model.compile();
 
@@ -209,7 +211,9 @@ public class CompilerCompiledGraphPdbRoundTripTest
         pureFile._sections().forEach(section ->
                 section._elements().forEach(grammarElement ->
                 {
-                    if (grammarElement instanceof CompiledGraph)
+                    if (grammarElement instanceof CompiledGraph
+                            || grammarElement instanceof org.finos.legend.pure.m3.extensions.compilerstats.CompilerStats
+                            || grammarElement instanceof org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndex)
                     {
                         return;
                     }

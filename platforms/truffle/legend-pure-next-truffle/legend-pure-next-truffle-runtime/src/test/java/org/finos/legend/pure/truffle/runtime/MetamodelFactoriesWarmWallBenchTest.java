@@ -68,6 +68,7 @@ public class MetamodelFactoriesWarmWallBenchTest
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
+                        new TruffleReverseIndexLanguageExtension(),
                         new TruffleErrorLanguageExtension()))
                 .withCompileImmediately(false);
         if (Boolean.getBoolean("pure.bench.profiler"))

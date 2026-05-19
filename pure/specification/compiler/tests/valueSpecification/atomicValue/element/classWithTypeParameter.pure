@@ -23,3 +23,11 @@ function test__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
   ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @10:18-10:25
     DotApplication meta::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @10:7-10:17
       Variable g :#Class<#a::G<?>#>##[1]#  ~@VariableExpression@  @10:5-10:6
+
+###ReverseIndex
+a::G:
+  test__Integer_1_
+meta::pure::functions::collection::size_Any_MANY__Integer_1_:
+  test__Integer_1_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test__Integer_1_

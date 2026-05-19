@@ -19,6 +19,7 @@ import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
+import org.finos.legend.pure.m3.module.ModelMetadataAccess;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
@@ -107,10 +108,25 @@ public class PDBModule implements Module
     @Override
     public void setPureModel(PureModel model)
     {
-        ScopedMetadataAccess scope = new ScopedMetadataAccess(this, model);
-        this.loader.setResolver(scope);
+        // EXECUTION mode loads PDBs for runtime queries against the full
+        // graph (e.g. `Package.children` walks for test discovery). The
+        // serialised Package.children pointers reference test elements that
+        // live in companion {@code -tests} PDBs which the lean PDB's manifest
+        // never declares as a direct dependency, so a ScopedMetadataAccess
+        // chained off this module would silently drop those pointers when
+        // resolving them. Use a registry-wide resolver instead so any loaded
+        // module can satisfy a pointer dereference.
+        //
+        // COMPILATION mode keeps the scoped resolver — the compiler enforces
+        // module isolation by design (a module can only reference its
+        // declared dependencies, mirroring how the source code is compiled
+        // in isolation).
+        MetadataAccess access = mode == Mode.EXECUTION
+                ? new ModelMetadataAccess(model)
+                : new ScopedMetadataAccess(this, model);
+        this.loader.setResolver(access);
         this.loader.setExtensions(model.extensions());
-        this.resolver = scope;
+        this.resolver = access;
         this.metadataAccessExtensions = model.extensions().collect(e -> e.buildMetadataExtensionForModule(this)).select(Objects::nonNull);
     }
 

@@ -13,3 +13,9 @@ class test::ClassWithQualifiedProperty extends Any  ~Class<test::ClassWithQualif
       Variable s :#String##[1]#  ~@VariableExpression@  @5:31-5:32
       DotApplication test::ClassWithQualifiedProperty.name :#String##[1]#  ~@DotApplication@  @5:41-5:45
         Variable this :#test::ClassWithQualifiedProperty##[1]#  ~@VariableExpression@  @5:36-5:40
+
+###ReverseIndex
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  test::ClassWithQualifiedProperty.qualifiedProp
+test::ClassWithQualifiedProperty.name:
+  test::ClassWithQualifiedProperty.qualifiedProp

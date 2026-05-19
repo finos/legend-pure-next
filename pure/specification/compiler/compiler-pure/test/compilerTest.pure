@@ -75,7 +75,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraph
     assertCompiledGraph($content, $sourceId);
 }
 
-function meta::pure::compiler::test::assertCompilationErrorOnResult(content:String[1], result:meta::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::compiler::test::assertCompilationErrorOnResult(content:String[1], result:meta::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]
 {
     let errorSection = $content->substring($content->indexOf('###' + 'Error') + 8);
     // Mirrors Java: each compiler error is a single (possibly multi-line) message.
@@ -90,7 +90,7 @@ function meta::pure::compiler::test::assertCompilationErrorOnResult(content:Stri
     assertEquals($expectedText, $actualText);
 }
 
-function meta::pure::compiler::test::assertCompiledGraphOnResult(parsedFile:meta::pure::protocol::PureFile[1], result:meta::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraphOnResult(parsedFile:meta::pure::protocol::PureFile[1], result:meta::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]
 {
     // Compilation must produce zero errors when ###CompiledGraph is asserted.
     // A compiler bug that still emits partial elements would otherwise pass
@@ -112,7 +112,7 @@ function meta::pure::compiler::test::assertCompiledGraphOnResult(parsedFile:meta
     );
 }
 
-function meta::pure::compiler::test::assertCompilerStatsOnResult(parsedFile:meta::pure::protocol::PureFile[1], result:meta::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::compiler::test::assertCompilerStatsOnResult(parsedFile:meta::pure::protocol::PureFile[1], result:meta::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]
 {
     // Pull expected text from the parsed ###CompilerStats element. Routed
     // through the registered parser extension (CompilerStatsLanguageExtension
@@ -183,7 +183,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::dumpAllCompilerStat
 // rollback-site histogram, but not wall-clock timings — so a Java run and a
 // Pure run on the same source can be string-compared. Sites are emitted in
 // descending count order; ties broken by site name for determinism.
-function meta::pure::compiler::test::printCompilerStatsForTest(stats:meta::pure::compiler::CompilationStatistics[1]):String[1]
+function <<test.TestDependency>> meta::pure::compiler::test::printCompilerStatsForTest(stats:meta::pure::compiler::CompilationStatistics[1]):String[1]
 {
     let header = 'inferenceRollbacks: ' + $stats.inferenceRollbackCount->toString() + '\n'
                + 'candidateEvaluations: ' + $stats.candidateEvaluationCount->toString();

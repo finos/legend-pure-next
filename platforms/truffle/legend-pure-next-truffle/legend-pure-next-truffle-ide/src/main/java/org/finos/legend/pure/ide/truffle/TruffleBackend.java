@@ -130,6 +130,7 @@ public final class TruffleBackend implements PureBackend
                         .withParserExtensions(List.of(
                                 new TruffleCompiledGraphLanguageExtension(),
                                 new TruffleCompilerStatsLanguageExtension(),
+                                new org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension(),
                                 new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()))
                         .withCompileImmediately(false)
                         .build();

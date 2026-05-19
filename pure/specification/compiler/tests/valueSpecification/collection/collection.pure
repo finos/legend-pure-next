@@ -72,3 +72,20 @@ class a::C extends Any  ~Class<a::C>  @24:1-26:1
 
 class a::X extends Any  ~Class<a::X>  @28:1-31:1
   property property :@Integer@[1]  ~Property<a::X, @Integer@|1>
+
+###ReverseIndex
+a::A:
+  protocol::f_X_1__Any_MANY_
+a::B:
+  protocol::f_X_1__Any_MANY_
+a::C:
+  a::A
+  a::B
+a::X:
+  protocol::f_X_1__Any_MANY_
+a::X.property:
+  protocol::f_X_1__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_:
+  protocol::f_X_1__Any_MANY_
+meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  protocol::f_X_1__Any_MANY_

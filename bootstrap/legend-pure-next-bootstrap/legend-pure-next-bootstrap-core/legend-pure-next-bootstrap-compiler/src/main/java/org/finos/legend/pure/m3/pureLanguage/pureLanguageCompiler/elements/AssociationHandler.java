@@ -61,9 +61,12 @@ public final class AssociationHandler
 
         result._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model));
 
-        // Compile both properties without classifierGenericType first
+        // Compile both properties without classifierGenericType first.
+        // Push sub-element caller path so references in each property's
+        // type attribute to {@code Assoc.propName} in the reverse index.
         MutableList<Property> compiled = grammar._properties()
-                .collect(p -> PropertyCompiler.compile(p, null, imports, model, context))
+                .collect(p -> context.withCallerSubElement(p._name(),
+                        () -> PropertyCompiler.compile(p, null, imports, model, context)))
                 .select(Objects::nonNull);
         compiled.forEach(p -> ((PropertyImpl) p)._owner(result));
         result._properties(compiled);
@@ -80,7 +83,8 @@ public final class AssociationHandler
         // which is the second property's type (the class that "owns" the first property)
         GenericType qpOwner = compiled.size() == 2 ? compiled.get(1)._genericType() : null;
         MutableList<QualifiedProperty> compiledQPs = grammar._qualifiedProperties()
-                .collect(qp -> QualifiedPropertyCompiler.compile(qp, qpOwner, imports, model, context))
+                .collect(qp -> context.withCallerSubElement(qp._name(),
+                        () -> QualifiedPropertyCompiler.compile(qp, qpOwner, imports, model, context)))
                 .select(Objects::nonNull);
         compiledQPs.forEach(qp -> ((meta.pure.metamodel.function.property.QualifiedPropertyImpl) qp)._owner(result));
         result._qualifiedProperties(compiledQPs);

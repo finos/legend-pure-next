@@ -506,23 +506,32 @@ public final class NewWithKeysNode extends PureNode
     }
 
     /**
-     * Reverse association index: maps propertyName → list of (otherPropName, targetClassPath) pairs.
-     * Built lazily on first access, then O(1) lookup per property.
+     * Look up the reverse association property name for {@code propName} when
+     * setting it on an instance of {@code classPath}. Returns the other-side
+     * property name (e.g. {@code "employees"} when binding {@code firm} on a
+     * {@code Person}), or {@code null} if no association involves this name.
+     *
+     * <p>Delegates the index to the resolver — see
+     * {@link org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry#reverseAssociationCandidates}.
+     * Pre-existing static cache on this class was invalid as soon as a JVM
+     * saw more than one resolver (e.g. a surefire fork where one test
+     * class loaded core+core-tests and another loaded only core), so the
+     * cache moved onto the registry and is invalidated on register/unregister.</p>
      */
-    private static volatile java.util.Map<String, java.util.List<String[]>> reverseAssocIndex;
-
     static String findReverseAssociationProperty(String propName, String classPath,
                                                           org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        java.util.Map<String, java.util.List<String[]>> index = reverseAssocIndex;
-        if (index == null)
+        if (!(resolver instanceof org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry registry))
         {
-            index = buildReverseAssocIndex(resolver);
-            reverseAssocIndex = index;
+            throw new IllegalStateException(
+                    "Reverse-association lookup requires a TruffleModuleRegistry resolver, got "
+                            + (resolver == null ? "null" : resolver.getClass().getName())
+                            + ". The reverse-association index lives on the registry so it can be"
+                            + " invalidated on register/unregister; bare TruffleMetadataAccess impls"
+                            + " can't host that lifecycle.");
         }
-
-        java.util.List<String[]> candidates = index.get(propName);
-        if (candidates == null)
+        java.util.List<String[]> candidates = registry.reverseAssociationCandidates(propName);
+        if (candidates.isEmpty())
         {
             return null;
         }
@@ -551,60 +560,6 @@ public final class NewWithKeysNode extends PureNode
             }
         }
         return null;
-    }
-
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static java.util.Map<String, java.util.List<String[]>> buildReverseAssocIndex(
-            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
-    {
-        java.util.Map<String, java.util.List<String[]>> index = new java.util.HashMap<>();
-        for (String path : resolver.elementPaths())
-        {
-            Object element = resolver.getElement(path);
-            if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
-                    "meta::pure::metamodel::relationship::Association", resolver))
-            {
-                continue;
-            }
-            Object propsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(element, SLOT_PROPERTIES);
-            if (!(propsObj instanceof PureSequence props) || props.size() != 2)
-            {
-                continue;
-            }
-            Object p0 = props.getBoxed(0);
-            Object p1 = props.getBoxed(1);
-            if (p0 != null && p1 != null)
-            {
-                addAssocEntry(index, p0, p1, resolver);
-                addAssocEntry(index, p1, p0, resolver);
-            }
-        }
-        return index;
-    }
-
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static void addAssocEntry(java.util.Map<String, java.util.List<String[]>> index,
-                                       Object matchProp, Object otherProp,
-                                       org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
-    {
-        Object propNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(matchProp, SLOT_NAME);
-        if (!(propNameObj instanceof String propName)) return;
-        Object otherGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(otherProp, SLOT_GENERIC_TYPE);
-        if (otherGT == null) return;
-        Object targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(otherGT);
-        if (targetType != null)
-        {
-            String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(targetType, resolver);
-            if (targetPath != null)
-            {
-                Object otherNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(otherProp, SLOT_NAME);
-                if (otherNameObj instanceof String otherName)
-                {
-                    index.computeIfAbsent(propName, k -> new java.util.ArrayList<>(2))
-                            .add(new String[]{otherName, targetPath});
-                }
-            }
-        }
     }
 
     // @TruffleBoundary — walks target.getClass().getMethods() to detect

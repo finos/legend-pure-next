@@ -19,6 +19,7 @@ import meta.pure.metamodel.extension.Stereotype;
 import meta.pure.metamodel.function.FunctionDefinition;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
@@ -50,24 +51,40 @@ class TestPCT
     @TestFactory
     Collection<DynamicTest> pctTests() throws IOException
     {
+        // Load core.pdb (lean) and core-tests.pdb (test elements + their
+        // <<test.TestDependency>> model classes) side-by-side. PCT tests live
+        // in core.pdb (stereotype <<PCT.test>> on the PCT profile), but their
+        // model classes are <<test.TestDependency>> on the test profile and
+        // thus live in core-tests.pdb. Both modules must be resolved for the
+        // PCT test bodies to find their referenced classes.
         PDBModule coreModule = new PDBModule(
                 BootstrapModule.locateCorePdb(),
                 PDBModule.Mode.COMPILATION);
+        PDBModule coreTestsModule = new PDBModule(
+                BootstrapModule.locateCoreTestsPdb(),
+                PDBModule.Mode.COMPILATION);
 
-        PureModel.withModules(Lists.mutable.with(coreModule))
+        PureModel model = PureModel.withModules(Lists.mutable.with(coreModule, coreTestsModule))
                 .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
-                .build()
-                .compile();
+                .build();
+        model.compile();
 
-        PureExecution execution = new PureExecution(coreModule);
+        // Execute through the tests module, which has core as a declared
+        // dependency in its manifest — so ScopedMetadataAccess resolves
+        // <<PCT.adapter>> (in core) and <<test.TestDependency>> (in tests)
+        // both transparently.
+        PureExecution execution = new PureExecution(new ScopedMetadataAccess(coreTestsModule, model));
 
-        // Find the in-memory PCT adapter by scanning for <<PCT.adapter>> stereotype
+        // Both <<PCT.adapter>> and <<PCT.test>> functions live in core-tests.pdb
+        // (the TestElementFilter sends the PCT test/adapter stereotypes plus
+        // all <<test.*>>-annotated model classes to the tests companion;
+        // <<PCT.function>> natives like map/filter stay in lean core.pdb).
         FunctionDefinition adapterFd = null;
         List<DynamicTest> tests = new ArrayList<>();
 
-        for (String path : coreModule.elementPaths())
+        for (String path : coreTestsModule.elementPaths())
         {
-            PackageableElement element = coreModule.getElement(path);
+            PackageableElement element = coreTestsModule.getElement(path);
             if (element instanceof FunctionDefinition fd)
             {
                 if (isPCTAdapter(element))
@@ -77,12 +94,12 @@ class TestPCT
             }
         }
 
-        assertNotNull(adapterFd, "Should find a <<PCT.adapter>> function in core.pdb");
+        assertNotNull(adapterFd, "Should find a <<PCT.adapter>> function in core-tests.pdb");
         FunctionDefinition adapter = adapterFd;
 
-        for (String path : coreModule.elementPaths())
+        for (String path : coreTestsModule.elementPaths())
         {
-            PackageableElement element = coreModule.getElement(path);
+            PackageableElement element = coreTestsModule.getElement(path);
             if (element instanceof FunctionDefinition fd && isPCTTest(element))
             {
                 tests.add(DynamicTest.dynamicTest(path, () ->

@@ -34,3 +34,17 @@ class test::new::support::MyTarget extends Any  ~Class<test::new::support::MyTar
 class test::new::support::MyPointer extends test::new::support::MyTarget  ~Class<test::new::support::MyPointer>  @15:1-18:1
   <<meta::pure::profiles::compiler.pointer>>
   property path :@String@[1]  ~Property<test::new::support::MyPointer, @String@|1>
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::new::testPointerStereotype__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::new::testPointerStereotype__Any_MANY_
+meta::pure::profiles::compiler:
+  test::new::support::MyPointer
+meta::pure::profiles::compiler.pointer:
+  test::new::support::MyPointer
+test::new::support::MyPointer:
+  test::new::testPointerStereotype__Any_MANY_
+test::new::support::MyTarget:
+  test::new::support::MyPointer

@@ -42,3 +42,16 @@ class test::MyClass extends Any  ~Class<test::MyClass>  @9:1-13:1
       DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @12:28-12:32
         Variable this :#test::MyClass##[1]#  ~@VariableExpression@  @12:23-12:27
       Variable s :#String##[1]#  ~@VariableExpression@  @12:36-12:37
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::tst__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::tst__Any_MANY_
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  test::MyClass.name
+  test::tst__Any_MANY_
+test::MyClass:
+  test::tst__Any_MANY_
+test::MyClass.name:
+  test::tst__Any_MANY_

@@ -62,3 +62,23 @@ function test::testTypeParamResolution_Function_1__Boolean_1_(f:Function<{Functi
       Lambda(v_automap:#test::TPR_Person#[1]) :#LambdaFunction<#{#test::TPR_Person#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
         DotApplication test::TPR_Person.lastName :#String##[1]#  ~@DotApplication@  @21:22-21:30
           Variable v_automap :#test::TPR_Person##[1]#  ~@VariableExpression@
+
+###ReverseIndex
+meta::pure::functions::collection::head_T_MANY__T_$0_1$_:
+  test::testTypeParamResolution_Function_1__Boolean_1_
+meta::pure::functions::collection::map_T_$0_1$__Function_1__V_$0_1$_:
+  test::testTypeParamResolution_Function_1__Boolean_1_
+meta::pure::functions::lang::eval_Function_1__T_n__V_m_:
+  test::testTypeParamResolution_Function_1__Boolean_1_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::testTypeParamResolution_Function_1__Boolean_1_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::testTypeParamResolution_Function_1__Boolean_1_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::testTypeParamResolution_Function_1__Boolean_1_
+test::TPR_Person:
+  test::testTypeParamResolution_Function_1__Boolean_1_
+test::TPR_Person.lastName:
+  test::testTypeParamResolution_Function_1__Boolean_1_
+test::myCheck_Any_MANY__Any_MANY__Boolean_1_:
+  test::testTypeParamResolution_Function_1__Boolean_1_

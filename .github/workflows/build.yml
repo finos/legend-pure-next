@@ -316,16 +316,14 @@ jobs:
       # tests) and then the Pure compiler-graph spec suite on Truffle.
       # `truffle::test-pure-self-host` then compiles compiler-pure on
       # Truffle and diffs the output against shared/compiler.pdb (Java direct).
-      # NB: each recipe invokes mvn separately (`_mvn "with-tests"` vs
-      # `_mvn "skip-tests"`) so just dedup doesn't kick in — the second
-      # mvn run is fast since deps are already cached / installed.
+      # `test-pure-self-host` has no Maven dep — it reuses the fat jar
+      # produced by `truffle::test`'s `_mvn "with-tests"` invocation.
       - name: Truffle test
         run: just truffle::test
 
-      # Upload surefire XMLs *before* `Truffle self-host`: the self-host
-      # recipe re-invokes `_mvn "skip-tests"` which runs `mvn clean install`,
-      # wiping `target/surefire-reports/` before the end-of-job upload could
-      # see them. `if: always()` so test failures still produce reports.
+      - name: Truffle self-host
+        run: just truffle::test-pure-self-host
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v7
@@ -333,9 +331,6 @@ jobs:
           name: test-results-truffle
           path: |
             ${{ github.workspace }}/platforms/truffle/**/target/surefire-reports/*.xml
-
-      - name: Truffle self-host
-        run: just truffle::test-pure-self-host
 
   truffle-native-self-host:
     name: Truffle native build + self-host (compile-via-pure on AOT binary vs Java direct)

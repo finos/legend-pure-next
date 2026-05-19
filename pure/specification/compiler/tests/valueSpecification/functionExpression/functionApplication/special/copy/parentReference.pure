@@ -43,3 +43,18 @@ function test::copy::parentRef::testCopySelfReference__Any_MANY_():@Any@[*]  ~Us
 class test::copy::parentRef::Node extends Any  ~Class<test::copy::parentRef::Node>  @10:1-14:1
   property value :@Integer@[1]  ~Property<test::copy::parentRef::Node, @Integer@|1>
   property next :test::copy::parentRef::Node[0..1]  ~Property<test::copy::parentRef::Node, test::copy::parentRef::Node|0..1>
+
+###ReverseIndex
+meta::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+  test::copy::parentRef::testCopySelfReference__Any_MANY_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::copy::parentRef::testCopySelfReference__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::copy::parentRef::testCopySelfReference__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::copy::parentRef::testCopySelfReference__Any_MANY_
+meta::pure::functions::lang::parentReference_Integer_1__String_1__Any_1_:
+  test::copy::parentRef::testCopySelfReference__Any_MANY_
+test::copy::parentRef::Node:
+  test::copy::parentRef::Node.next
+  test::copy::parentRef::testCopySelfReference__Any_MANY_

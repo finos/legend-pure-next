@@ -27,3 +27,9 @@ function test::tst__Boolean_1_():@Boolean@[1]  ~UserDefinedFunction<{->@Boolean@
         Variable x :#String##[1]#  ~@VariableExpression@  @10:22-10:23
         AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @10:29-10:32
   AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @11:5-11:8
+
+###ReverseIndex
+test::fl_T_MANY__Function_1__T_MANY_:
+  test::tst__Boolean_1_
+test::sw_String_1__String_1__Boolean_1_:
+  test::tst__Boolean_1_

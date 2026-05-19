@@ -27,3 +27,20 @@ profile protocol::support::AProfile  ~@Profile@  @10:1-14:1
   stereotype newFlag  ~@Stereotype@
   tag tag1  ~@Tag@
   tag tag2  ~@Tag@
+
+###ReverseIndex
+protocol::support::AProfile:
+  protocol::AnEnum
+  protocol::AnEnum.Val2
+protocol::support::AProfile.flag:
+  protocol::AnEnum
+  protocol::AnEnum.Val2
+protocol::support::AProfile.newFlag:
+  protocol::AnEnum
+  protocol::AnEnum.Val2
+protocol::support::AProfile.tag1:
+  protocol::AnEnum
+  protocol::AnEnum.Val2
+protocol::support::AProfile.tag2:
+  protocol::AnEnum
+  protocol::AnEnum.Val2

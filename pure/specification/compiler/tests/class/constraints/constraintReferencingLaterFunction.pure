@@ -29,3 +29,13 @@ function test::isValid_String_1__Boolean_1_(s:@String@[1]):@Boolean@[1]  ~UserDe
     ArrowInvocation length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @12:5-12:14
       Variable s :#String##[1]#  ~@VariableExpression@  @12:3-12:4
     AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @12:18-12:18
+
+###ReverseIndex
+meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
+  test::isValid_String_1__Boolean_1_
+meta::pure::functions::string::length_String_1__Integer_1_:
+  test::isValid_String_1__Boolean_1_
+test::MyClass.name:
+  test::MyClass.c1
+test::isValid_String_1__Boolean_1_:
+  test::MyClass.c1

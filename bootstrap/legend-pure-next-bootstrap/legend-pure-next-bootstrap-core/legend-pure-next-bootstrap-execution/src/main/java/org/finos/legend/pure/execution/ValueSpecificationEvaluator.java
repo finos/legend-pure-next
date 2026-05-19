@@ -284,6 +284,13 @@ public class ValueSpecificationEvaluator
         try
         {
             meta.pure.metamodel.function.Function func = fe._func();
+            if (func == null)
+            {
+                meta.pure.metamodel.SourceInformation si = fe._sourceInformation();
+                throw new RuntimeException("FunctionExpression._func() returned null at "
+                        + (si == null ? "?" : si._sourceId() + ":" + si._startLine() + "c" + si._startColumn())
+                        + " (call stack: " + getCallStackTrace() + ")");
+            }
             return switch (func)
             {
                 case meta.pure.metamodel.function.property.AbstractProperty prop ->

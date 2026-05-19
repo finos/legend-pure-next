@@ -46,22 +46,32 @@ class TestPureExecution
     @TestFactory
     Collection<DynamicTest> pureTestsFromCorePdb() throws IOException
     {
+        // <<test.Test>> functions live in core-tests.pdb (its companion), not
+        // core.pdb (lean). Load both so the resolver sees the test elements
+        // alongside their non-test dependencies.
         PDBModule coreModule = new PDBModule(
                 BootstrapModule.locateCorePdb(),
                 PDBModule.Mode.COMPILATION);
+        PDBModule coreTestsModule = new PDBModule(
+                BootstrapModule.locateCoreTestsPdb(),
+                PDBModule.Mode.COMPILATION);
 
         // Build model to initialize the resolver (required for getElement to work)
-        PureModel.withModules(Lists.mutable.with(coreModule))
+        org.finos.legend.pure.m3.PureModel model = PureModel.withModules(
+                        Lists.mutable.with(coreModule, coreTestsModule))
                 .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
-                .build()
-                .compile();
+                .build();
+        model.compile();
 
-        PureExecution execution = new PureExecution(coreModule);
+        // Resolve through the tests module (it declares core as a dependency
+        // in its manifest) so both pdbs are visible during execution.
+        PureExecution execution = new PureExecution(
+                new org.finos.legend.pure.m3.module.ScopedMetadataAccess(coreTestsModule, model));
 
         List<DynamicTest> tests = new ArrayList<>();
-        for (String path : coreModule.elementPaths())
+        for (String path : coreTestsModule.elementPaths())
         {
-            PackageableElement element = coreModule.getElement(path);
+            PackageableElement element = coreTestsModule.getElement(path);
             if (element instanceof FunctionDefinition fd && isTestFunction(element))
             {
                 tests.add(DynamicTest.dynamicTest(path, () ->

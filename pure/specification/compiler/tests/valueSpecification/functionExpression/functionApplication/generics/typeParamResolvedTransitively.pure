@@ -39,3 +39,15 @@ function test::testTypeParamResolution_Function_1__Any_MANY_(f:Function<{Functio
             FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @15:42-15:53
               AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @15:42-15:53
               AtomicValue  'B' :@String@[1]  ~@AtomicValue@  @15:51-15:53
+
+###ReverseIndex
+meta::pure::functions::lang::eval_Function_1__T_n__V_m_:
+  test::testTypeParamResolution_Function_1__Any_MANY_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::testTypeParamResolution_Function_1__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::testTypeParamResolution_Function_1__Any_MANY_
+test::TPR_Person:
+  test::testTypeParamResolution_Function_1__Any_MANY_
+test::TPR_Person.lastName:
+  test::testTypeParamResolution_Function_1__Any_MANY_

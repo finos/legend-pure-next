@@ -70,6 +70,17 @@ public final class AnnotationCompiler
                     "The stereotype '" + stereotypeName + "' can't be found in profile '" + profilePath + "'", SourceInformationCompiler.compile(pointer._extraPointerValues().getFirst()._p_sourceInformation(), context.getSourceId(), model)));
             return null;
         }
+        // Record the sub-element reference: profilePath.stereotypeName.
+        // Profile itself is already recorded via getElement in resolveProfile.
+        // Use the path recorded by the resolution wrapper (captures the
+        // canonical full path used to look up the Profile via
+        // model.getElement). _PackageableElement.path returns just the name
+        // here because pass 2 runs before updatePackageTree.
+        String fullProfilePath = context.getResolvedPath(profile);
+        if (fullProfilePath != null)
+        {
+            context.recordReference(fullProfilePath + "." + stereotypeName);
+        }
         return found;
     }
 
@@ -104,6 +115,16 @@ public final class AnnotationCompiler
             context.addError(new CompilationError(
                     "The tag '" + tagName + "' can't be found in profile '" + profilePath + "'", SourceInformationCompiler.compile(tagPointer._extraPointerValues().getFirst()._p_sourceInformation(), context.getSourceId(), model)));
             return null;
+        }
+        // Record the sub-element reference: profilePath.tagName.
+        // Use the path recorded by the resolution wrapper (captures the
+        // canonical full path used to look up the Profile via
+        // model.getElement). _PackageableElement.path returns just the name
+        // here because pass 2 runs before updatePackageTree.
+        String fullProfilePath = context.getResolvedPath(profile);
+        if (fullProfilePath != null)
+        {
+            context.recordReference(fullProfilePath + "." + tagName);
         }
         return new TaggedValueImpl(model)
                 ._tag(found)

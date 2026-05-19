@@ -15,10 +15,26 @@
 package org.finos.legend.pure.m3.module;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * Result of compilation: the list of errors collected and compilation statistics.
+ * Result of compilation: errors collected, compilation statistics, and the
+ * reverse reference index built during compile.
+ *
+ * <p>The {@code referencedBy} map records every cross-element lookup that
+ * occurred during compilation as {@code (targetPath, callerPaths)}: a key is
+ * the path of an element that was looked up; its value is the set of paths
+ * of elements that referenced it. The map is built as a side-effect by
+ * {@code RecordingMetadataAccess} and serialized into the produced PDB
+ * alongside the elements. Consumers include validators (e.g. lean→test
+ * reference enforcement), IDE features (find-references), and any tooling
+ * that needs to navigate the call/use graph without re-walking the
+ * metamodel.</p>
  */
-public record CompilationResult(List<CompilationError> errors, CompilationStatistics statistics)
+public record CompilationResult(
+        List<CompilationError> errors,
+        CompilationStatistics statistics,
+        Map<String, Set<String>> referencedBy)
 {
 }

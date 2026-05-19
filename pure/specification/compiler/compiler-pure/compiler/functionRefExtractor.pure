@@ -1,0 +1,213 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::constraint::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::metamodel::pointer::*;
+import meta::pure::functions::lang::*;
+
+// Derives the function-reference half of the reverse index by walking the
+// compiled AST. For every {@code FunctionExpression}/{@code DotApplication}/{@code
+// FunctionApplication} whose {@code func} slot is set, emits a
+// {@code (target, caller)} edge — target is the resolved function's path
+// (or {@code Owner.propName} for properties) and caller is the enclosing
+// top-level or sub-element compilation scope.
+//
+// Replaces the in-flight {@code recordFunctionReference} hooks at the
+// function-/dot-application resolver success sites. Those hooks were prone
+// to multi-candidate trial pollution (cached lambda outcomes from a failed
+// trial could leak their recordings into the final index when a later
+// winning trial reused the cache). Deriving from compiled {@code func}
+// slots is structurally exact — the recorded edges match what the PDB
+// serialises.
+//
+// Other recording categories (type refs via genericTypeCompiler, stereotype/
+// tag refs via annotationCompiler, sub-element caller scoping) are immune
+// to candidate-trial pollution and stay recorded as in-flight side-effects.
+function meta::pure::compiler::extractFunctionRefsInto(context:CompilerContext[1], elements:PackageableElement[*]):CompilerContext[1]
+{
+    $elements->fold({el, ctx |
+        let elementPath = $el->elementToPath();
+        $el->extractFromElement($elementPath, $ctx);
+    }, $context);
+}
+
+function meta::pure::compiler::extractFromElement(element:PackageableElement[1], elementPath:String[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    $element->match([
+        fn:UserDefinedFunction<Any>[1] |
+            let c1 = $fn.expressionSequence->fold({vs, c | $vs->walkVS($elementPath, $c)}, $context);
+            let c2 = $fn.preConstraints->fold({con, c | $con->walkConstraint($elementPath, $c)}, $c1);
+            $fn.postConstraints->fold({con, c | $con->walkConstraint($elementPath, $c)}, $c2);,
+        cls:Class<Any>[1] |
+            // Qualified properties — caller is {@code Class.qpName}
+            let c1 = $cls.qualifiedProperties->fold({qp, c |
+                $qp.expressionSequence->fold({vs, cc |
+                    $vs->walkVS($elementPath + '.' + $qp.name->toOne(), $cc)
+                }, $c)
+            }, $context);
+            // Constraints — caller is {@code Class.constraintName}
+            let c2 = $cls.constraints->fold({con, c |
+                let cName = if($con.name->isEmpty(), | $elementPath, | $elementPath + '.' + $con.name->toOne());
+                $con->walkConstraint($cName, $c);
+            }, $c1);
+            // Property defaultValue lambdas — caller is {@code Class.propName}
+            $cls.properties->fold({p, c |
+                if($p.defaultValue->isEmpty(),
+                    | $c,
+                    | $p.defaultValue->toOne().expressionSequence->fold({vs, cc |
+                        $vs->walkVS($elementPath + '.' + $p.name->toOne(), $cc)
+                    }, $c)
+                );
+            }, $c2);,
+        assoc:Association[1] |
+            // Same shape as Class (no constraints)
+            let c1 = $assoc.qualifiedProperties->fold({qp, c |
+                $qp.expressionSequence->fold({vs, cc |
+                    $vs->walkVS($elementPath + '.' + $qp.name->toOne(), $cc)
+                }, $c)
+            }, $context);
+            $assoc.properties->fold({p, c |
+                if($p.defaultValue->isEmpty(),
+                    | $c,
+                    | $p.defaultValue->toOne().expressionSequence->fold({vs, cc |
+                        $vs->walkVS($elementPath + '.' + $p.name->toOne(), $cc)
+                    }, $c)
+                );
+            }, $c1);,
+        pt:PrimitiveType[1] |
+            $pt.constraints->fold({con, c |
+                let cName = if($con.name->isEmpty(), | $elementPath, | $elementPath + '.' + $con.name->toOne());
+                $con->walkConstraint($cName, $c);
+            }, $context);,
+        en:Enumeration<Any>[1] |
+            // Enum-value defaultValue lambdas have no function refs (just an
+            // AtomicValue of the Enum instance), but walk them anyway for
+            // future-proofing if value expressions ever land.
+            $en.properties->fold({p, c |
+                if($p.defaultValue->isEmpty(),
+                    | $c,
+                    | $p.defaultValue->toOne().expressionSequence->fold({vs, cc |
+                        $vs->walkVS($elementPath + '.' + $p.name->toOne(), $cc)
+                    }, $c)
+                );
+            }, $context);,
+        a:PackageableElement[1] | $context
+    ])
+}
+
+function meta::pure::compiler::walkConstraint(con:Constraint[1], caller:String[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    let c1 = if($con.functionDefinition->isEmpty(),
+        | $context,
+        | $con.functionDefinition->toOne()->cast(@LambdaFunction<Any>).expressionSequence->fold({vs, c |
+            $vs->walkVS($caller, $c)
+        }, $context)
+    );
+    if($con.messageFunction->isEmpty(),
+        | $c1,
+        | $con.messageFunction->toOne()->cast(@LambdaFunction<Any>).expressionSequence->fold({vs, c |
+            $vs->walkVS($caller, $c)
+        }, $c1)
+    );
+}
+
+function meta::pure::compiler::walkVS(vs:ValueSpecification[1], caller:String[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    $vs->match([
+        fe:FunctionExpression[1] |
+            // FunctionExpression covers DotApplication + FunctionApplication
+            // (and its ArrowInvocation/FunctionInvocation children). Record the
+            // func target, then recurse into arg values.
+            let c1 = if($fe.func->isEmpty(),
+                | $context,
+                | $context->recordFuncEdge($fe.func->toOne(), $caller)
+            );
+            $fe.parametersValues->fold({arg, c | $arg->walkVS($caller, $c)}, $c1);,
+        av:AtomicValue[1] |
+            // Inline lambdas inherit the surrounding caller — no separate
+            // named scope to attribute their references to.
+            if($av.value->isEmpty(),
+                | $context,
+                | $av.value->toOne()->match([
+                      lambda:LambdaFunction<Any>[1] |
+                          $lambda.expressionSequence->fold({inner, c | $inner->walkVS($caller, $c)}, $context),
+                      other:Any[1] | $context
+                  ])
+            );,
+        col:Collection[1] |
+            $col.values->fold({v, c | $v->walkVS($caller, $c)}, $context);,
+        any:ValueSpecification[1] | $context
+    ])
+}
+
+// Convert a {@link Function} ref to the index target path. In compiled Pure
+// the {@code func} slot is wrapped as a {@code TempCompilerPointer} for path
+// stability across passes, so we read {@code .path}/{@code .element} from the
+// pointer rather than {@code .owner}/{@code .name} from the raw property.
+//   PropertyPointer / QualifiedPropertyPointer → {@code OwnerPath.element}
+//   PackageableFunctionPointer                 → {@code .path}
+//   Raw AbstractProperty (no pointer wrap)     → {@code OwnerPath.propName}
+//   Raw PackageableElement                     → its full path
+//   Inline lambdas / other Function subtypes   → no record
+function meta::pure::compiler::recordFuncEdge(context:CompilerContext[1], fn:Function<Any>[1], caller:String[1]):CompilerContext[1]
+{
+    let targetPath = if($fn->instanceOf(PropertyPointer),
+        | let pp = $fn->cast(@PropertyPointer<Nil, Any|*>);
+          $pp.path + '.' + $pp.element;,
+        | if($fn->instanceOf(QualifiedPropertyPointer),
+              | let qpp = $fn->cast(@QualifiedPropertyPointer<Any>);
+                $qpp.path + '.' + $qpp.element;,
+              | if($fn->instanceOf(PackageableFunctionPointer),
+                    | $fn->cast(@PackageableFunctionPointer<Any>).path,
+                    | if($fn->instanceOf(meta::pure::metamodel::function::property::AbstractProperty),
+                          | let prop = $fn->cast(@meta::pure::metamodel::function::property::AbstractProperty<Any>);
+                            if($prop.owner->isEmpty(),
+                                | []->cast(@String),
+                                | $prop.owner->toOne()->cast(@PackageableElement)->elementToPath() + '.' + $prop.name->toOne();
+                            );,
+                          | if($fn->instanceOf(PackageableElement),
+                                | $fn->cast(@PackageableElement)->elementToPath(),
+                                | []->cast(@String)
+                            )
+                    )
+              )
+          )
+    );
+    if($targetPath->isEmpty()
+            || $targetPath->toOne()->startsWith('meta::pure::metamodel::')
+            || $targetPath->toOne() == $caller,
+        | $context,
+        | let target = $targetPath->toOne();
+          let existing = $context.referencedBy->get($target);
+          let callers = if($existing->isEmpty(),
+              | ^List<String>(values = [$caller]),
+              | if($existing->toOne().values->contains($caller),
+                  | $existing->toOne(),
+                  | ^List<String>(values = $existing->toOne().values->concatenate($caller))
+              )
+          );
+          ^$context(referencedBy = $context.referencedBy->put($target, $callers));
+    );
+}
+
+// Variant of recordFuncEdge that takes a String target directly (caller-supplied path).
+// Note: not currently used; the entry point recordFuncEdge above does the
+// Function → path mapping inline.

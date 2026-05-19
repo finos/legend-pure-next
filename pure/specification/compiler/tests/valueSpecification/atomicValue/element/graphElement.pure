@@ -31,3 +31,11 @@ function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
     AtomicValue  a::A :#Class<a::A>#[1]  ~@AtomicValue@  @13:9-13:12
     AtomicValue  x::b::f__Any_1_ :#NativeFunction<{->@Any@[1]}>#[1]  ~@AtomicValue@  @14:9-14:23
     AtomicValue  z::AProfile :#Profile#[1]  ~@AtomicValue@  @15:9-15:19
+
+###ReverseIndex
+a::A:
+  test__Any_MANY_
+x::b::f__Any_1_:
+  test__Any_MANY_
+z::AProfile:
+  test__Any_MANY_

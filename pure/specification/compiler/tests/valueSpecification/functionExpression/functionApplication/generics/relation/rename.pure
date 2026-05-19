@@ -43,3 +43,9 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:@String@[1], other:@Integer@[
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(newOther:@Integer@[0..1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
 
 native function rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_(r:Relation<T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1], old:ColSpec<Z~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_=(?:K~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_[m])⊆T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1], new:ColSpec<V~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_=(?:K~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_[m])>[1]):Relation<T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_-Z~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_+V~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1]  ~NativeFunction<{Relation<T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1], ColSpec<Z~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_=(?:K~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_[m])⊆T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1], ColSpec<V~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_=(?:K~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_[m])>[1]->Relation<T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_-Z~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_+V~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1]}>
+
+###ReverseIndex
+meta::pure::functions::relation::colSpec_String_1__GenericTypeAndMultiplicityHolder_1__ColSpec_1_:
+  f_Relation_1__Any_MANY_
+rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_:
+  f_Relation_1__Any_MANY_

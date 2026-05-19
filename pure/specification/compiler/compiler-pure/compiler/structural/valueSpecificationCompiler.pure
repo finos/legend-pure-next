@@ -108,33 +108,37 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileEx
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileValueSpecification(vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]): ValueCompileResult[1]
 {
-    let mGenType = if($vs.genericType->isEmpty(), | [], | match($vs.genericType->toOne(), [g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] | $g->compileGenericType($ctx, '', []).value, a:Any[1] | []]));
+    // Compile genericType (when present) and capture the recording-updated
+    // context so cast/type-arg references inside this value spec propagate.
+    let gtCompileR = if($vs.genericType->isEmpty(), | [], | match($vs.genericType->toOne(), [g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] | $g->compileGenericType($ctx, '', []), a:Any[1] | []]));
+    let mGenType = if($gtCompileR->isEmpty(), | []->cast(@GenericType), | $gtCompileR->toOne().value);
+    let ctxGT = if($gtCompileR->isEmpty(), | $ctx, | $gtCompileR->toOne().context);
     let mMult = if($vs.multiplicity->isEmpty(), | [], | $vs.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity());
 
     match($vs, [
         a:meta::pure::protocol::grammar::valuespecification::AtomicValue[1] |
-            compileAtomicValue($a, $vs, $ctx, $scope, $mGenType, $mMult),
+            compileAtomicValue($a, $vs, $ctxGT, $scope, $mGenType, $mMult),
 
         v:meta::pure::protocol::grammar::valuespecification::VariableExpression[1] |
-            compileVariableExpression($v, $vs, $ctx, $scope),
+            compileVariableExpression($v, $vs, $ctxGT, $scope),
 
         fi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
-            compileFunctionInvocation($fi, $vs, $ctx, $scope),
+            compileFunctionInvocation($fi, $vs, $ctxGT, $scope),
 
         l:meta::pure::protocol::grammar::function::LambdaFunction[1] |
-            $l->compileLambda($ctx, $scope, $mGenType, $mMult),
+            $l->compileLambda($ctxGT, $scope, $mGenType, $mMult),
 
         c:meta::pure::protocol::grammar::valuespecification::Collection[1] |
-            compileCollection($c, $ctx, $scope),
+            compileCollection($c, $ctxGT, $scope),
 
         arrow:meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1] |
-            compileArrowInvocation($arrow, $vs, $ctx, $scope),
+            compileArrowInvocation($arrow, $vs, $ctxGT, $scope),
 
         dot:meta::pure::protocol::grammar::valuespecification::DotApplication[1] |
-            compileDotApplication($dot, $vs, $ctx, $scope),
+            compileDotApplication($dot, $vs, $ctxGT, $scope),
 
         gmh:meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1] |
-            compileGenericTypeAndMultiplicityHolder($gmh, $vs, $ctx),
+            compileGenericTypeAndMultiplicityHolder($gmh, $vs, $ctxGT),
 
         any:Any[1] |
             ^ValueCompileResult(values = [], openVariables = [])
@@ -167,7 +171,9 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                   );
             );,
         pp:meta::pure::protocol::grammar::Package_Pointer[1] |
-            let resolved = $ctx->resolveElement($pp.value);
+            let resolvedR = $ctx->resolveElementR($pp.value);
+            let resolved = $resolvedR.value;
+            let ctxR = $resolvedR.context;
             if($resolved->isEmpty(),
                 | // Defer the "element can't be found" error to pass 3 (atomicValueResolver).
                   // Mirrors Java: pass 2 keeps the Package_Pointer as the AtomicValue's value
@@ -183,7 +189,8 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                           multiplicity = ^CompilerNotSetMultiplicity(),
                           sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
                       )],
-                      openVariables = []
+                      openVariables = [],
+                      context = $ctxR
                   );,
                 | let element = $resolved->toOne();
                   // Use classifierGenericType if available (includes FunctionType type args for functions)
@@ -198,12 +205,14 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                           multiplicity = PureOne,
                           sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
                       )],
-                      openVariables = []
+                      openVariables = [],
+                      context = $ctxR
                   );
             );,
         any:Any[1] |
             let parserGT = $a.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
             let compiledGT = $parserGT->compileGenericType($ctx, '', []);
+            let ctxAfterGT = $compiledGT.context;
             let inferredGT = if($compiledGT.value->isEmpty() || $compiledGT.value->toOne()->instanceOf(UndefinedGenericType),
                 | if($mGenType->isEmpty(), | ^CompilerNotSetGenericType(), | $mGenType->toOne()),
                 | $compiledGT.value->toOne()
@@ -247,7 +256,8 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                     multiplicity = if($mMult->isEmpty(), | PureOne, | $mMult->toOne()),
                     sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
                 )],
-                openVariables = []
+                openVariables = [],
+                context = $ctxAfterGT
             );
     ]);
 }
@@ -289,13 +299,25 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileFunctionInvocation(fi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
 {
-    // Structural compilation only — function resolution happens in pass 3
-    let paramsCompilation = $fi.parametersValues->map(p | $p->compileValueSpecification($ctx, $scope));
-    let errorContexts = $paramsCompilation.context->filter(c | $c.errors->size() > $ctx.errors->size());
-    if($errorContexts->isNotEmpty(),
-        | ^ValueCompileResult(values = [], openVariables = [], context = $errorContexts->at($errorContexts->size() - 1)),
-        | let paramValues = $paramsCompilation.values;
-          let openVars = $paramsCompilation.openVariables->removeDuplicatesBy({ov| $ov.name->toOne()});
+    // Structural compilation only — function resolution happens in pass 3.
+    // Thread the recording-aware context through each param compilation so
+    // type references inside the params propagate to the enclosing function's
+    // reverse-index entry. Without this, casts/constructors inside arguments
+    // silently drop their target recordings.
+    let paramsAcc = $fi.parametersValues->fold({p, acc |
+        let r = $p->compileValueSpecification($acc.context->toOne(), $scope);
+        let nextCtx = if($r.context->isNotEmpty(), | $r.context->toOne(), | $acc.context->toOne());
+        ^$acc(
+            values += $r.values,
+            openVariables += $r.openVariables,
+            context = $nextCtx
+        );
+    }, ^ValueCompileResult(values = [], openVariables = [], context = $ctx));
+    let ctxAfterParams = $paramsAcc.context->toOne();
+    if($ctxAfterParams.errors->size() > $ctx.errors->size(),
+        | ^ValueCompileResult(values = [], openVariables = [], context = $ctxAfterParams),
+        | let paramValues = $paramsAcc.values;
+          let openVars = $paramsAcc.openVariables->removeDuplicatesBy({ov| $ov.name->toOne()});
           // Constant-fold unary minus on a numeric literal:
           //   minus(AtomicValue(N)) → AtomicValue(-N), preserving generic type/multiplicity.
           // Mirrors the symmetric fold in the Java ValueSpecificationCompiler. The
@@ -313,7 +335,8 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileFu
           if($folded->isNotEmpty(),
               | ^ValueCompileResult(
                     values = $folded->cast(@ValueSpecification),
-                    openVariables = $openVars
+                    openVariables = $openVars,
+                    context = $ctxAfterParams
                 ),
               | ^ValueCompileResult(
                     values = [^FunctionInvocation(
@@ -323,7 +346,8 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileFu
                         multiplicity = PureOne,
                         sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
                     )],
-                    openVariables = $openVars
+                    openVariables = $openVars,
+                    context = $ctxAfterParams
                 )
           );
     );
@@ -414,22 +438,33 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::firstColl
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileArrowInvocation(arrow:meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
 {
-    // Structural compilation only — function resolution happens in pass 3
-    let paramsCompilation = $arrow.parametersValues->map(p | $p->compileValueSpecification($ctx, $scope));
-    let errorContexts = $paramsCompilation.context->filter(c | $c.errors->size() > $ctx.errors->size());
-    if($errorContexts->isNotEmpty(),
-        | ^ValueCompileResult(values = [], openVariables = [], context = $errorContexts->at($errorContexts->size() - 1)),
-        | let paramValues = $paramsCompilation.values;
-          let openVars = $paramsCompilation.openVariables->removeDuplicatesBy({ov| $ov.name->toOne()});
+    // Structural compilation only — function resolution happens in pass 3.
+    // Thread the recording-aware context through each param compilation so
+    // cast/type-arg references inside arrow params (e.g. {@code []->cast(@Foo)})
+    // propagate to the enclosing function's reverse-index entry.
+    let paramsAcc = $arrow.parametersValues->fold({p, acc |
+        let r = $p->compileValueSpecification($acc.context->toOne(), $scope);
+        let nextCtx = if($r.context->isNotEmpty(), | $r.context->toOne(), | $acc.context->toOne());
+        ^$acc(
+            values += $r.values,
+            openVariables += $r.openVariables,
+            context = $nextCtx
+        );
+    }, ^ValueCompileResult(values = [], openVariables = [], context = $ctx));
+    let ctxAfterParams = $paramsAcc.context->toOne();
+    if($ctxAfterParams.errors->size() > $ctx.errors->size(),
+        | ^ValueCompileResult(values = [], openVariables = [], context = $ctxAfterParams),
+        | let openVars = $paramsAcc.openVariables->removeDuplicatesBy({ov| $ov.name->toOne()});
           ^ValueCompileResult(
               values = [^ArrowInvocation(
                   functionName = $arrow.functionName,
-                  parametersValues = $paramValues->cast(@ValueSpecification),
+                  parametersValues = $paramsAcc.values->cast(@ValueSpecification),
                   genericType = ^CompilerNotSetGenericType(),
                   multiplicity = PureOne,
                   sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
               )],
-              openVariables = $openVars
+              openVariables = $openVars,
+              context = $ctxAfterParams
           );
     );
 }
@@ -440,21 +475,29 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAr
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileDotApplication(dot:meta::pure::protocol::grammar::valuespecification::DotApplication[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
 {
-    let paramResults = $dot.parametersValues->map(p | $p->compileValueSpecification($ctx, $scope));
-    let compiledParams = $paramResults->filter(r | $r.values->isNotEmpty())->map(r | $r.values->at(0))->cast(@ValueSpecification)->list();
-    let newErrors = $paramResults.context->map(ec | $ec.errors)->filter(e | !$ctx.errors->contains($e));
-    let updatedCtx = if($newErrors->isNotEmpty(), | ^$ctx(errors += $newErrors), | $ctx);
+    // Thread the recording-aware context through each param compilation so
+    // type references inside the receiver / additional params propagate to
+    // the enclosing function's reverse-index entry.
+    let paramsAcc = $dot.parametersValues->fold({p, acc |
+        let r = $p->compileValueSpecification($acc.context->toOne(), $scope);
+        let nextCtx = if($r.context->isNotEmpty(), | $r.context->toOne(), | $acc.context->toOne());
+        ^$acc(
+            values += $r.values,
+            openVariables += $r.openVariables,
+            context = $nextCtx
+        );
+    }, ^ValueCompileResult(values = [], openVariables = [], context = $ctx));
 
     ^ValueCompileResult(
         values = [^DotApplication(
             functionName = $dot.functionName,
-            parametersValues = $compiledParams.values,
+            parametersValues = $paramsAcc.values->cast(@ValueSpecification),
             genericType = ^CompilerNotSetGenericType(),
             multiplicity = PureOne,
             sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
         )],
-        openVariables = $paramResults->map(r | $r.openVariables),
-        context = $updatedCtx
+        openVariables = $paramsAcc.openVariables,
+        context = $paramsAcc.context
     );
 }
 
@@ -464,24 +507,37 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileDo
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileCollection(c:meta::pure::protocol::grammar::valuespecification::Collection[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
 {
-    let elemResults = $c.values->map(v | $v->compileValueSpecification($ctx, $scope));
-    let newErrors = $elemResults.context->map(ec | $ec.errors)->filter(e | !$ctx.errors->contains($e));
-    if($newErrors->isNotEmpty(),
-        | ^ValueCompileResult(values = [], openVariables = [], context = ^$ctx(errors += $newErrors)),
+    // Thread the recording-aware context through each element compilation +
+    // collection genericType compilation so type references inside collection
+    // members propagate to the enclosing function's reverse-index entry.
+    let elemAcc = $c.values->fold({v, acc |
+        let r = $v->compileValueSpecification($acc.context->toOne(), $scope);
+        let nextCtx = if($r.context->isNotEmpty(), | $r.context->toOne(), | $acc.context->toOne());
+        ^$acc(
+            values += $r.values,
+            openVariables += $r.openVariables,
+            context = $nextCtx
+        );
+    }, ^ValueCompileResult(values = [], openVariables = [], context = $ctx));
+    let ctxAfterElems = $elemAcc.context->toOne();
+    if($ctxAfterElems.errors->size() > $ctx.errors->size(),
+        | ^ValueCompileResult(values = [], openVariables = [], context = $ctxAfterElems),
         | let collMult = $c.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
-          let collGenType = if($c.genericType->isNotEmpty(),
-              | $c.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx, '', []).value->toOne(),
-              | ^CompilerNotSetGenericType()
+          let collGenTypeR = if($c.genericType->isNotEmpty(),
+              | $c.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctxAfterElems, '', []),
+              | ^CompilerResult<GenericType>(value = ^CompilerNotSetGenericType(), context = $ctxAfterElems)
           );
-          let compiledValues = $elemResults->filter(r | $r.values->isNotEmpty())->map(r | $r.values->at(0))->cast(@ValueSpecification)->list();
+          let collGenType = $collGenTypeR.value->toOne();
+          let ctxFinal = $collGenTypeR.context;
           ^ValueCompileResult(
               values = [^Collection(
-                  values = $compiledValues.values,
+                  values = $elemAcc.values->cast(@ValueSpecification),
                   genericType = $collGenType,
                   multiplicity = $collMult,
                   sourceInformation = compileSourceInformation($c.p_sourceInformation, $ctx)
               )],
-              openVariables = []
+              openVariables = [],
+              context = $ctxFinal
           );
     );
 }
@@ -505,12 +561,23 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
               sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
           );
           ^ValueCompileResult(values = [$holderWithProps], openVariables = []);,
-        | // User-defined TypeHolder — compile held type (matches Java lines 120-140)
-          let heldGT = if($gmh.genericType->isEmpty(), | []->cast(@GenericType), | match($gmh.genericType->toOne(), [
-              g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] | $g->compileGenericType($ctx, '', []).value->toOne(),
-              u:meta::pure::protocol::grammar::type::generics::UndefinedGenericType[1] | ^UndefinedGenericType(),
-              a:Any[1] | []->cast(@GenericType)
-          ]));
+        | // User-defined TypeHolder — compile held type (matches Java lines 120-140).
+          // Thread recording-aware context from compileGenericType so type
+          // references inside the GMH (e.g. {@code @Pair<String, Foo>}) propagate
+          // to the enclosing function's reverse-index entry.
+          let gtCompileR = if($gmh.genericType->isEmpty(),
+              | ^CompilerResult<GenericType>(value = []->cast(@GenericType), context = $ctx),
+              | match($gmh.genericType->toOne(), [
+                  g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] |
+                      $g->compileGenericType($ctx, '', []),
+                  u:meta::pure::protocol::grammar::type::generics::UndefinedGenericType[1] |
+                      ^CompilerResult<GenericType>(value = ^UndefinedGenericType()->cast(@GenericType), context = $ctx),
+                  a:Any[1] |
+                      ^CompilerResult<GenericType>(value = []->cast(@GenericType), context = $ctx)
+              ])
+          );
+          let heldGT = $gtCompileR.value;
+          let ctxAfterGT = $gtCompileR.context;
           let heldMul = if($gmh.multiplicity->isNotEmpty(),
               | $gmh.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(),
               | []->cast(@Multiplicity)
@@ -522,7 +589,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
               multiplicity = PureOne,
               sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)
           );
-          ^ValueCompileResult(values = [$holderWithProps], openVariables = []);
+          ^ValueCompileResult(values = [$holderWithProps], openVariables = [], context = $ctxAfterGT);
     );
 }
 

@@ -23,8 +23,10 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::annotationCompiler::compileStereotype(s:meta::pure::protocol::grammar::extension::Stereotype_Pointer[1], acc:CompilerListResult<Stereotype>[1], ownerCtx:String[1]):CompilerListResult<Stereotype>[1]
 {
-    let ctx = $acc.context;
-    let profileOpt = $ctx->resolveElement($s.value);
+    let ctx0 = $acc.context;
+    let profileR = $ctx0->resolveElementR($s.value);
+    let profileOpt = $profileR.value;
+    let ctx = $profileR.context;
     if($profileOpt->isEmpty(),
         | let siCtx = formatSourceInfo($s->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation, $ctx);
           let newCtx = ^$ctx(errors += 'The profile \'' + $s.value + '\' can\'t be found in ' + $ownerCtx + $siCtx);
@@ -36,7 +38,11 @@ function meta::pure::compiler::structural::annotationCompiler::compileStereotype
               | let siCtx = formatSourceInfo($s.extraPointerValues->at(0).p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx);
                 let newCtx = ^$ctx(errors += 'The stereotype \'' + $stereotypeName + '\' can\'t be found in profile \'' + $s.value + '\' in ' + $ownerCtx + $siCtx);
                 ^$acc(context = $newCtx);,
-              | ^$acc(values += $matched->toOne())
+              | // Record sub-element reference: {@code Profile.stereotypeName}.
+                // Mirrors Java AnnotationCompiler stereotype recording.
+                let profilePath = $profile->elementToPath();
+                let recordedCtx = $ctx->recordReference($profilePath + '.' + $stereotypeName);
+                ^$acc(values += $matched->toOne(), context = $recordedCtx);
           );
     );
 }
@@ -59,8 +65,10 @@ function meta::pure::compiler::structural::annotationCompiler::compilePropertyTa
 
 function meta::pure::compiler::structural::annotationCompiler::compileTaggedValue(t:meta::pure::protocol::grammar::extension::TaggedValue[1], acc:CompilerListResult<TaggedValue>[1], ownerCtx:String[1]):CompilerListResult<TaggedValue>[1]
 {
-    let ctx = $acc.context;
-    let profileOpt = $ctx->resolveElement($t.tag.value);
+    let ctx0 = $acc.context;
+    let profileR = $ctx0->resolveElementR($t.tag.value);
+    let profileOpt = $profileR.value;
+    let ctx = $profileR.context;
     if($profileOpt->isEmpty(),
         | $acc,
         | let profile = $profileOpt->toOne()->cast(@Profile);
@@ -70,9 +78,13 @@ function meta::pure::compiler::structural::annotationCompiler::compileTaggedValu
               | let siCtx = formatSourceInfo($t.tag.extraPointerValues->at(0).p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx);
                 let newCtx = ^$ctx(errors += 'The tag \'' + $tagName + '\' can\'t be found in profile \'' + $t.tag.value + '\' in ' + $ownerCtx + $siCtx);
                 ^$acc(context = $newCtx);,
-              | let tvGT = ^UserDefinedGenericType(type = TaggedValue);
+              | // Record sub-element reference: {@code Profile.tagName}.
+                // Mirrors Java AnnotationCompiler tag recording.
+                let profilePath = $profile->elementToPath();
+                let recordedCtx = $ctx->recordReference($profilePath + '.' + $tagName);
+                let tvGT = ^UserDefinedGenericType(type = TaggedValue);
                 let inst = new($tvGT)->cast(@TaggedValue);
-                ^$acc(values += ^$inst(tag = $matched->toOne(), value = $t.value));
+                ^$acc(values += ^$inst(tag = $matched->toOne(), value = $t.value), context = $recordedCtx);
           );
     );
 }

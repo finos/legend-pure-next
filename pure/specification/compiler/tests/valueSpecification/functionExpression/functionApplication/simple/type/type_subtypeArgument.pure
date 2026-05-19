@@ -16,3 +16,7 @@ function test::process_Any_1__String_1_(x:@Any@[1]):@String@[1]  ~UserDefinedFun
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
   FunctionInvocation test::process_Any_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @9:3-9:24
     AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @9:17-9:23
+
+###ReverseIndex
+test::process_Any_1__String_1_:
+  test::use__Any_MANY_

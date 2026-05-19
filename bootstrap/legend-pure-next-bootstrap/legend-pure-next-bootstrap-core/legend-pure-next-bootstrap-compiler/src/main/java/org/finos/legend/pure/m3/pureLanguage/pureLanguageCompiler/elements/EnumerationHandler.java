@@ -74,8 +74,11 @@ public final class EnumerationHandler
                         "Duplicate enum value '" + name + "'",
                         SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model))));
 
-        // Create one Property per enum value, each with a defaultValue containing the Enum instance
+        // Create one Property per enum value, each with a defaultValue containing the Enum instance.
+        // Push sub-element caller path so stereotype/tag refs on each value
+        // attribute to {@code EnumName.VALUE} in the reverse index.
         var properties = grammar._properties().collect(grammarProp ->
+                context.withCallerSubElement(grammarProp._name(), () ->
         {
             // Create the Enum instance
             EnumImpl enumInstance = new EnumImpl()  // the classifierGenericType is set below
@@ -125,7 +128,7 @@ public final class EnumerationHandler
                                  .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                                  .select(Objects::nonNull))
                          ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), context.getSourceId(), model));
-        });
+        }));
 
         org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.function.property.Property> props =
                 (org.eclipse.collections.api.list.MutableList) properties;

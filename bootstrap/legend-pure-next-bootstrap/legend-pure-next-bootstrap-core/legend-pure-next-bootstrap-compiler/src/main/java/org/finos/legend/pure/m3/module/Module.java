@@ -43,7 +43,7 @@ public interface Module extends ModuleDefinition, MetadataAccess
      */
     default CompilationResult compile()
     {
-        return new CompilationResult(List.of(), CompilationStatistics.EMPTY);
+        return new CompilationResult(List.of(), CompilationStatistics.EMPTY, java.util.Map.of());
     }
 
     /**

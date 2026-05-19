@@ -121,28 +121,36 @@ function meta::pure::compiler::structural::constraintCompiler::resolveConstraint
     $constraints->fold({constraint, acc |
         if($constraint.functionDefinition->isEmpty(),
             | ^$acc(values += $constraint),
-            | let lambda = $constraint.functionDefinition->toOne()->cast(@LambdaFunction<Any>);
-              let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
-                  $lambda.expressionSequence,
-                  $lambda.parameters->cast(@VariableExpression),
-                  $acc.context
-              );
-              let resolvedLambda = meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$lambda(expressionSequence = $result.resolvedSpecs->cast(@ValueSpecification)));
-              let resolvedMsgFn = if($constraint.messageFunction->isEmpty(),
-                  | [],
-                  | let msgLambda = $constraint.messageFunction->toOne()->cast(@LambdaFunction<Any>);
-                    let msgResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
-                        $msgLambda.expressionSequence,
-                        $msgLambda.parameters->cast(@VariableExpression),
-                        $result.context
-                    );
-                    meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$msgLambda(expressionSequence = $msgResult.resolvedSpecs->cast(@ValueSpecification)));
-              );
-              let resolvedConstraint = ^$constraint(
-                  functionDefinition = $resolvedLambda,
-                  messageFunction = $resolvedMsgFn
-              );
-              ^$acc(values += $resolvedConstraint, context = $result.context);
+            | // Push sub-element caller path so refs resolved inside the
+              // constraint body attribute to {@code Owner.constraintName}.
+              // Mirrors Java ConstraintCompiler.resolveConstraints
+              // withCallerSubElement wrapping.
+              let cname = if($constraint.name->isEmpty(), | '_unnamed_constraint', | $constraint.name->toOne());
+              let resolved = $acc.context->withCallerSubElement($cname, {ctx |
+                  let lambda = $constraint.functionDefinition->toOne()->cast(@LambdaFunction<Any>);
+                  let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                      $lambda.expressionSequence,
+                      $lambda.parameters->cast(@VariableExpression),
+                      $ctx
+                  );
+                  let resolvedLambda = meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$lambda(expressionSequence = $result.resolvedSpecs->cast(@ValueSpecification)));
+                  let resolvedMsgFn = if($constraint.messageFunction->isEmpty(),
+                      | [],
+                      | let msgLambda = $constraint.messageFunction->toOne()->cast(@LambdaFunction<Any>);
+                        let msgResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                            $msgLambda.expressionSequence,
+                            $msgLambda.parameters->cast(@VariableExpression),
+                            $result.context
+                        );
+                        meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$msgLambda(expressionSequence = $msgResult.resolvedSpecs->cast(@ValueSpecification)));
+                  );
+                  let resolvedConstraint = ^$constraint(
+                      functionDefinition = $resolvedLambda,
+                      messageFunction = $resolvedMsgFn
+                  );
+                  ^CompilerResult<Constraint>(value = $resolvedConstraint, context = $result.context);
+              });
+              ^$acc(values += $resolved.value, context = $resolved.context);
         );
     }, ^CompilerListResult<Constraint>(context = $context));
 }

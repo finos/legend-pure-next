@@ -47,3 +47,13 @@ function pack::testOverloadNumber_String_1__String_1_(n:@String@[1]):@String@[1]
 function pack::testOverloadString_String_MANY__String_1_(s:@String@[*]):@String@[1]  ~UserDefinedFunction<{@String@[*]->@String@[1]}>
   ArrowInvocation pack::doStuff_String_MANY__String_1_ :#String##[1]#  ~@ArrowInvocation@  @24:5-24:15
     Variable s :#String##[*]#  ~@VariableExpression@  @24:3-24:4
+
+###ReverseIndex
+pack::doStuff_String_1__String_1_:
+  pack::compute_String_MANY__String_1_
+  pack::testOverloadNumber_String_1__String_1_
+pack::doStuff_String_MANY__String_1_:
+  pack::compute_String_MANY__String_1_
+  pack::testOverloadString_String_MANY__String_1_
+pack::global_String_MANY__String_1_:
+  pack::computeSubsumes_String_1__String_1_

@@ -34,3 +34,19 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
     DotApplication test::Box.get() :#String##[1]#  ~@DotApplication@  @11:5-11:10
       Variable b :#test::Box<@String@>##[1]#  ~@VariableExpression@  @11:3-11:4
     AtomicValue  ' world' :@String@[1]  ~@AtomicValue@  @11:14-11:21
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::use__Any_MANY_
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  test::use__Any_MANY_
+test::Box:
+  test::use__Any_MANY_
+test::Box.get:
+  test::use__Any_MANY_
+test::Box.value:
+  test::Box.get

@@ -26,3 +26,9 @@ function pack::testCollectionLookup_Integer_MANY__Integer_1_(c:@Integer@[*]):@In
     typeParam T -> #Integer#
     Variable c :#Integer##[*]#  ~@VariableExpression@  @11:3-11:4
     AtomicValue  5 :@Integer@[1]  ~@AtomicValue@  @11:14-11:14
+
+###ReverseIndex
+pack::lookup_String_1__String_1__Integer_1_:
+  pack::testStringLookup_String_1__Integer_1_
+pack::lookup_T_MANY__T_1__Integer_1_:
+  pack::testCollectionLookup_Integer_MANY__Integer_1_

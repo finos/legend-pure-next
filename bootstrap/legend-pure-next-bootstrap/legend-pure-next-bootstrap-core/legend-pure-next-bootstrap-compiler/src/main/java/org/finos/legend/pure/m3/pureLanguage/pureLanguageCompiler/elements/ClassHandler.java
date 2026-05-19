@@ -97,13 +97,18 @@ public final class ClassHandler
                     multiplicityParameters.collect(mp -> mp));
         }
 
+        // Per-property compile attributes references to the sub-element path
+        // (e.g. {@code MyClass.bar}) rather than the enclosing Class, so the
+        // reverse index shows which property uses each referenced type.
         MutableList<meta.pure.metamodel.function.property.Property> properties = grammar._properties()
-                .collect(p -> PropertyCompiler.compile(p, ownerGenericType, imports, model, context))
+                .collect(p -> context.withCallerSubElement(p._name(),
+                        () -> PropertyCompiler.compile(p, ownerGenericType, imports, model, context)))
                 .select(Objects::nonNull);
         properties.forEach(p -> ((meta.pure.metamodel.function.property.PropertyImpl) p)._owner(result));
 
         MutableList<meta.pure.metamodel.function.property.QualifiedProperty> qualifiedProperties = grammar._qualifiedProperties()
-                .collect(qp -> QualifiedPropertyCompiler.compile(qp, ownerGenericType, imports, model, context))
+                .collect(qp -> context.withCallerSubElement(qp._name(),
+                        () -> QualifiedPropertyCompiler.compile(qp, ownerGenericType, imports, model, context)))
                 .select(Objects::nonNull);
         qualifiedProperties.forEach(qp -> ((meta.pure.metamodel.function.property.QualifiedPropertyImpl) qp)._owner(result));
 

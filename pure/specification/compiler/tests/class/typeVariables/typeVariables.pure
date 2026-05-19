@@ -48,3 +48,17 @@ class meta::pure::test::MyClassWithTypeVariables extends Any  ~Class<meta::pure:
             AtomicValue  ' >= ' :@String@[1]  ~@AtomicValue@  @4:90-4:95
           ArrowInvocation toString_Any_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @4:99-4:110
             Variable x :#Integer##[1]#  ~@VariableExpression@  @4:97-4:98
+
+###ReverseIndex
+meta::pure::functions::boolean::lessThan_Number_1__Number_1__Boolean_1_:
+  meta::pure::test::MyClassWithTypeVariables.wx
+meta::pure::functions::collection::size_Any_MANY__Integer_1_:
+  meta::pure::test::MyClassWithTypeVariables.wx
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  meta::pure::test::MyClassWithTypeVariables.res
+  meta::pure::test::MyClassWithTypeVariables.wx
+meta::pure::functions::string::toString_Any_1__String_1_:
+  meta::pure::test::MyClassWithTypeVariables.res
+  meta::pure::test::MyClassWithTypeVariables.wx
+meta::pure::test::MyClassWithTypeVariables.text:
+  meta::pure::test::MyClassWithTypeVariables.wx

@@ -66,3 +66,22 @@ native function _length_String_1__Integer_1_(str:@String@[1]):@Integer@[1]  ~Nat
 native function _startsWith_String_1__String_1__Boolean_1_(source:@String@[1], val:@String@[1]):@Boolean@[1]  ~NativeFunction<{@String@[1], @String@[1]->@Boolean@[1]}>
 
 native function _endsWith_String_1__String_1__Boolean_1_(source:@String@[1], val:@String@[1]):@Boolean@[1]  ~NativeFunction<{@String@[1], @String@[1]->@Boolean@[1]}>
+
+###ReverseIndex
+_endsWith_String_1__String_1__Boolean_1_:
+  test::Class.id
+_length_String_1__Integer_1_:
+  test::Class.other
+  test::Class.other2
+_startsWith_String_1__String_1__Boolean_1_:
+  test::Class
+meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
+  test::Class.other
+meta::pure::functions::boolean::lessThan_Number_1__Number_1__Boolean_1_:
+  test::Class.other2
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  test::Class.other
+test::Class.other:
+  test::Class
+  test::Class.id
+  test::Class.other2

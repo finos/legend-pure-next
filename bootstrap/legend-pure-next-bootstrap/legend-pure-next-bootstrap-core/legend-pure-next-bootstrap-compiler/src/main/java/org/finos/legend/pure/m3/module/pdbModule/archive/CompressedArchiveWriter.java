@@ -71,6 +71,11 @@ public class CompressedArchiveWriter
             zos.setLevel(Deflater.BEST_COMPRESSION);
 
             List<String[]> elementEntries = new ArrayList<>();
+            // Collect the path-set of elements actually written so we can
+            // restrict the extension-contributed sections (e.g. function
+            // index) to the same scope. Without this, lean PDBs pick up
+            // test-only function entries from the module's full metadata.
+            java.util.Set<String> writtenPaths = new java.util.HashSet<>();
 
             for (PackageableElement element : elements)
             {
@@ -95,6 +100,7 @@ public class CompressedArchiveWriter
                 }
 
                 elementEntries.add(new String[]{path, typeName});
+                writtenPaths.add(path);
 
                 // Entry name format: "elements/meta/pure/metamodel/type/ElementName.TypeName"
                 String entryPath = "elements/" + path.replace("::", "/") + "." + typeName;
@@ -111,10 +117,12 @@ public class CompressedArchiveWriter
             // open instead of guessing from filename or constructor args.
             writeManifest(zos, manifest);
 
-            // Write extension-contributed archive sections
+            // Write extension-contributed archive sections, restricted to the
+            // paths actually written above (so lean PDBs don't carry test
+            // function-index entries from the module's full metadata).
             for (PDBExtension ext : extensions)
             {
-                for (PDBArchiveSection section : ext.archiveSections(module))
+                for (PDBArchiveSection section : ext.archiveSections(module, writtenPaths))
                 {
                     writeSection(zos, section);
                 }

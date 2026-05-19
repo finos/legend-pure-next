@@ -53,7 +53,13 @@ build: _check-pdbs _check-graalvm
     cp {{truffle_runtime}}/target/pure-truffle-native {{truffle_native}}
 
 # Run all native tests (compiler-graph spec + runTests + PCT).
-test: test-pure-compiler test-pure-testFunctions test-pure-PCTs
+test: test-pure-compiler test-pure-runtime
+
+# `test` plus native self-host. (`test-pure-runtime` is already part of `test` here.)
+test-all: test test-pure-self-host test-pure-runtime
+
+# Run both runtime test suites (runTests + PCT) via the native binary.
+test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
 
 # Run compiler-graph spec tests via the native binary.
 test-pure-compiler: build
@@ -65,40 +71,50 @@ test-pure-compiler: build
         --args "{{spec}}/compiler/tests" {{err_filter}}
 
 # Run Pure runTests over meta::pure::functions via the native binary.
-test-pure-testFunctions: build
+test-pure-runtime-testFunctions: build
     @{{banner}} '[pure→native]' 'runTests'
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
 
 # Run Pure PCT tests over meta::pure::functions via the native binary.
-test-pure-PCTs: build
+test-pure-runtime-PCTs: build
     @{{banner}} '[pure→native]' 'runPCTTests'
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
         --function "meta::pure::test::runPCTTests_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
 
+# Output goes to {{truffle_out}}/native/ so it doesn't collide with the JVM-truffle self-host
+# output in {{truffle_out}}/ when both run (e.g. under `truffle::test-all`).
 # Self-host: compile compiler-pure on the native binary, run compiler tests, then PDB-diff vs Java direct.
 test-pure-self-host: build
-    @{{banner}} '[self-host-native]' 'compiler-pure → compiler_truffle_native.pdb (native), then run compiler tests'
+    @{{banner}} '[self-host-native]' 'compiler-pure → {{truffle_out}}/native/compiler.pdb (native), then run compiler tests'
     {{truffle_native}} compile \
         --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
         --base-pdb {{shared_out}}/compiler.pdb \
         --source {{compiler_src}} \
-        --output {{truffle_out}}/compiler_truffle_native.pdb {{err_filter}}
+        --output-dir {{truffle_out}}/native \
+        --tests split {{err_filter}}
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
-        --pdb {{truffle_out}}/compiler_truffle_native.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{truffle_out}}/native/compiler.pdb \
+        --pdb {{truffle_out}}/native/compiler-tests.pdb \
         --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
-    @{{banner}} '[self-host-native]' 'diff compiler.pdb (Java compiler) ↔ compiler_truffle_native.pdb (native compiler)'
+    @{{banner}} '[self-host-native]' 'diff shared/compiler.pdb (Java compiler) ↔ {{truffle_out}}/native/compiler.pdb (native compiler)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
         {{shared_out}}/compiler.pdb \
-        {{truffle_out}}/compiler_truffle_native.pdb {{err_filter}}
+        {{truffle_out}}/native/compiler.pdb {{err_filter}}
 
 # Internal: fail loudly if shared/core.pdb or shared/compiler.pdb is missing.
 _check-pdbs:

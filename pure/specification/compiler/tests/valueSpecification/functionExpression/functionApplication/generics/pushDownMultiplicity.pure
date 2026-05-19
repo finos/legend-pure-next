@@ -27,3 +27,11 @@ function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
       Lambda(t:#String##[2]#) :#LambdaFunction<#{#String##[2]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @7:20-7:32
         ArrowInvocation check_String_MANY__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @7:24-7:32
           Variable t :#String##[2]#  ~@VariableExpression@  @7:22-7:23
+
+###ReverseIndex
+check_String_MANY__Boolean_1_:
+  test__Any_MANY_
+f_String_m__String_m__String_1_:
+  test__Any_MANY_
+g_Function_1__String_m_:
+  test__Any_MANY_

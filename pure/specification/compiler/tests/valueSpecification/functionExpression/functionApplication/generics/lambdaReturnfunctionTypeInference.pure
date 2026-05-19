@@ -23,3 +23,11 @@ function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
       Lambda :#LambdaFunction<#{->@String@[1]}#>#[1]  ~@AtomicValue@  @7:7-7:10
         AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @7:8-7:10
     AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @7:13-7:15
+
+###ReverseIndex
+f_Function_1__T_1_:
+  test__Any_MANY_
+meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  test__Any_MANY_
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  test__Any_MANY_

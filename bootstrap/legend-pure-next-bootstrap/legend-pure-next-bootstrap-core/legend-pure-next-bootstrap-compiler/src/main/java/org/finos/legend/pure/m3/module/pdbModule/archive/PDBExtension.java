@@ -23,7 +23,20 @@ public interface PDBExtension
      */
     default List<PDBArchiveSection> archiveSections(Module module)
     {
-        return List.of();
+        return archiveSections(module, null);
+    }
+
+    /**
+     * Restricted variant: include only entries whose element-paths are in
+     * {@code keepPaths}. Called by writers that filter the element list
+     * (lean / tests-only splits) so the embedded extension sections
+     * (e.g. function index) match the elements actually written, not the
+     * full module metadata. The default ignores the filter; extensions
+     * that build path-keyed sections override.
+     */
+    default List<PDBArchiveSection> archiveSections(Module module, java.util.Set<String> keepPaths)
+    {
+        return archiveSections(module);
     }
 
     /**

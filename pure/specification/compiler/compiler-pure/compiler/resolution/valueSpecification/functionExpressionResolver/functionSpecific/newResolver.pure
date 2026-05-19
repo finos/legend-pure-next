@@ -36,18 +36,21 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | extractClassFromGTMH($fi.parametersValues->at(0)),
         | extractClassFromGenericType($fi.genericType)
     );
-    let cls = if($skeletonCls->isNotEmpty(),
-        | let path = $skeletonCls->toOne()->fullPath();
-          let resolved = $context->resolveElement($path);
-          if($resolved->isNotEmpty(),
-              | $resolved->toOne()->match([
-                    c:Class<Any>[1] | $c,
-                    a:Any[1] | $skeletonCls
-                ]),
-              | $skeletonCls
-          );,
+    // Use the recording variant so `^Foo(...)` records {@code Foo} as a
+    // target on the current caller. Mirrors Java's
+    // RecordingMetadataAccess.getElement which records every lookup.
+    let resolvedR = if($skeletonCls->isNotEmpty(),
+        | $context->resolveElementR($skeletonCls->toOne()->fullPath()),
+        | ^CompilerResult<PackageableElement>(value = [], context = $context)
+    );
+    let cls = if($resolvedR.value->isNotEmpty(),
+        | $resolvedR.value->toOne()->match([
+              c:Class<Any>[1] | $c,
+              a:Any[1] | $skeletonCls
+          ]),
         | $skeletonCls
     );
+    let ctxAfterClassRecord = $resolvedR.context;
     // Extract provided property names from key expressions (second param is a Collection of keyExpression FIs)
     let providedNames = if($fi.parametersValues->size() >= 2,
         | $fi.parametersValues->at(1)->match([
@@ -69,7 +72,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           ]),
         | []->cast(@String)
     );
-    validateNew($fi, $cls, $providedNames, $context);
+    validateNew($fi, $cls, $providedNames, $ctxAfterClassRecord);
 }
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGTMH(vs:ValueSpecification[1]):Class<Any>[0..1]

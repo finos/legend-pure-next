@@ -21,3 +21,7 @@ function protocol::f__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
     AtomicValue  x::f_Float_1__Float_1_ :#NativeFunction<{Float[1]->Float[1]}>#[1]  ~@AtomicValue@  @9:9-9:30
 
 native function x::f_Float_1__Float_1_(x:Float[1]):Float[1]  ~NativeFunction<{Float[1]->Float[1]}>
+
+###ReverseIndex
+x::f_Float_1__Float_1_:
+  protocol::f__Any_MANY_

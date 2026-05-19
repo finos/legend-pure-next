@@ -35,3 +35,8 @@ function test::withTypeParam_T_1__Any_1_(x:T~test::withTypeParam_T_1__Any_1_[1])
     typeParam T -> #Any#
     AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:17-20:17
     AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @20:20-20:26
+
+###ReverseIndex
+test::first_T_1__T_1__T_1_:
+  test::baselineNoTypeParam__Any_1_
+  test::withTypeParam_T_1__Any_1_
