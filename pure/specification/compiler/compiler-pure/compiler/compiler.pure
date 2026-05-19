@@ -29,36 +29,6 @@ import meta::pure::functions::lang::*;
 import meta::pure::functions::date::*;
 import meta::pure::ui::progress::*;
 
-// Convenience entry for callers that have a (sourceId, content) pair rather
-// than a pre-parsed PureFile. Wraps `parse` + `compile` so the parsing
-// happens through the runtime-registered Pure parser (the test harness in
-// compilerTest.pure follows the same pattern).
-function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1]):CompilationResult[1]
-{
-    meta::pure::compiler::compileSource($sourceId, $content, false);
-}
-
-function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1], debug:Boolean[1]):CompilationResult[1]
-{
-    meta::pure::compiler::compileSource($sourceId, $content, newCompilerContext($debug), $debug);
-}
-
-function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1], inputCtx:CompilerContext[1], debug:Boolean[1]):CompilationResult[1]
-{
-    let parseStart = currentTimeMillis();
-    let parsed = meta::pure::functions::meta::parse($sourceId, $content);
-    let parseMillis = currentTimeMillis() - $parseStart;
-    let result = meta::pure::compiler::compile($parsed, $inputCtx, $debug);
-    if($result.statistics->isEmpty(),
-        | $result,
-        | let s = $result.statistics->toOne();
-          ^$result(statistics = ^$s(
-              parsingMillis = $parseMillis,
-              totalMillis = $s.totalMillis + $parseMillis
-          ));
-    );
-}
-
 // Per-file work bundle threaded across the three compile passes. Mirrors Java's
 // LocalModule per-file structure: parse once, then run pass 1 over all files,
 // pass 2 over all files, pass 3 over all files — so forward references between
@@ -111,170 +81,22 @@ function meta::pure::compiler::computeAllImports(file:meta::pure::protocol::Pure
     defaultFileImports()->concatenate($fileImports)->removeDuplicates();
 }
 
-// One-shot directory compile: walk every `.pure` under `dir`, parse all files,
-// then run pass 1 / pass 2 / pass 3 across all files in sequence (mirrors Java's
-// LocalModule.compile orchestration). Used by self-host CLI orchestrators
-// (`pure-bootstrap compile-via-pure`, `pure-truffle compile`) — the Java side
-// just calls this and serializes the resulting elements to a `.pdb`.
-function meta::pure::compiler::compileDir(dir:String[1]):CompilationResult[1]
+// Walk every `.pure` under `dir`, read and parse each, return the list of
+// parsed PureFiles. Companion to {@link compile} for self-host CLI
+// orchestrators (`pure-bootstrap compile-via-pure`, `pure-truffle compile`):
+// Java side calls `parseDir($dir)` then `compile($files, $debug)`.
+//
+// Parses silently (no progress display) — typically completes in under a
+// second even for the full compiler-pure tree, so the live readout would
+// be more flicker than information. The compile phase that follows owns
+// the progress bar.
+function meta::pure::compiler::parseDir(dir:String[1]):meta::pure::protocol::PureFile[*]
 {
-    meta::pure::compiler::compileDir($dir, false);
-}
-
-function meta::pure::compiler::compileDir(dir:String[1], debug:Boolean[1]):CompilationResult[1]
-{
-    let dirStart = currentTimeMillis();
     let files = directoryTree($dir)->filter(f | $f->endsWith('.pure'));
-    let total = $files->size();
     let prefixLen = $dir->length() + 1;
-    let names = $files->map(f | substring($f, $prefixLen, $f->length()));
-
-    // 3-line live status (header / bar / current item) covers all four phases.
-    // Header changes per phase so the user sees the bar reset and a new label
-    // for parse / pass 1 / pass 2 / pass 3 instead of going dark mid-compile.
-    let dirLabel = $total->toString() + ' files under ' + $dir;
-    startProgress3();
-
-    // ============================================================================
-    // Phase 1 — parse all files
-    // ============================================================================
-    let parseStart = currentTimeMillis();
-    let parsedFiles = range(0, $total)->map({i |
-        let name = $names->at($i);
-        tickProgress3('  Parse [1/4]: ' + $dirLabel, $i + 1, $total, $name);
-        let parsed = meta::pure::functions::meta::parse($name, readFile($files->at($i)));
-        ^FileWorkItem(
-            sourceId = $name,
-            imports = computeAllImports($parsed),
-            grammarElements = $parsed.sections.elements,
-            compiledElements = []->cast(@meta::pure::metamodel::PackageableElement)
-        );
-    });
-    let parseMillis = currentTimeMillis() - $parseStart;
-
-    let initialCtx = newCompilerContext($debug);
-    let debugState = ^DebugState(debug = $debug, space = '');
-
-    // ============================================================================
-    // Phase 2 — pass 1 across all files (skeleton building)
-    // ============================================================================
-    let pass1Start = currentTimeMillis();
-    let pass1Ctx = range(0, $total)->fold({i, ctx |
-        let fileItem = $parsedFiles->at($i);
-        tickProgress3('  Pass 1/3 — Skeletons [2/4]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId);
-        let fileCtx = ^$ctx(debugState = $debugState, sourceId = $fileItem.sourceId, imports = $fileItem.imports);
-        $fileItem.grammarElements->fold({e, c | runCompilePass1($e, $c)}, $fileCtx);
-    }, $initialCtx);
-    let pass1Millis = currentTimeMillis() - $pass1Start;
-
-    // Build linearization cache + local function index between pass 1 and pass 2 so
-    // pass 2 body compilation has hits on universe types and pass-1 skeletons.
-    let pass2StartCtx = $pass1Ctx->buildLinearizationCache()->buildLocalFunctionIndex();
-
-    // ============================================================================
-    // Phase 3 — pass 2 across all files (compile element bodies)
-    // ============================================================================
-    let pass2Start = currentTimeMillis();
-    let pass2Result = range(0, $total)->fold({i, acc |
-        let fileItem = $parsedFiles->at($i);
-        tickProgress3('  Pass 2/3 — Bodies [3/4]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId);
-        let priorCtx = $acc.context;
-        let fileCtx = ^$priorCtx(sourceId = $fileItem.sourceId, imports = $fileItem.imports);
-        let perFileResult = $fileItem.grammarElements->fold({e, fAcc | runCompilePass2($e, $fAcc)}, ^CompilerListResult<meta::pure::metamodel::PackageableElement>(context = $fileCtx, values = []->cast(@meta::pure::metamodel::PackageableElement)));
-        let updatedFile = ^$fileItem(compiledElements = $perFileResult.values);
-        ^CompilerListResult<FileWorkItem>(
-            context = $perFileResult.context,
-            values = $acc.values->concatenate($updatedFile)
-        );
-    }, ^CompilerListResult<FileWorkItem>(context = $pass2StartCtx, values = []->cast(@FileWorkItem)));
-    let pass2Millis = currentTimeMillis() - $pass2Start;
-
-    // Refresh linearization cache + local function index between pass 2 and
-    // pass 3 — pass 2 fills in parameters/returnType on each FunctionDefinition,
-    // and {@link buildLocalFunctionIndex} indexes by name from elementMap. Without
-    // this rebuild, pass 3's `findAllFunctionsByNameAndArity` lookups still see
-    // pass-1 skeletons (empty `parameters` list), so the `parameters.size() == arity`
-    // filter rejects every locally-defined overload — every call site of a function
-    // defined in the source then errors with "function not found", inflating the
-    // total error count by the number of usage sites (e.g. ~300 cascade errors per
-    // unresolved local function on the language/java compile).
-    let pass3StartCtx = $pass2Result.context->buildLinearizationCache()->buildLocalFunctionIndex();
-    let pass2Files = $pass2Result.values;
-
-    // ============================================================================
-    // Phase 4 — pass 3 across all files (resolution)
-    // ============================================================================
-    let pass3Start = currentTimeMillis();
-    let pass3RawCtx = range(0, $total)->fold({i, ctx |
-        let fileItem = $pass2Files->at($i);
-        tickProgress3('  Pass 3/3 — Resolution [4/4]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId);
-        let fileCtx = ^$ctx(sourceId = $fileItem.sourceId, imports = $fileItem.imports);
-        $fileItem.compiledElements->fold({elem, c | runCompilePass3($elem, $c)}, $fileCtx);
-    }, $pass3StartCtx);
-    // Derive function-reference edges from the compiled AST. Replaces the
-    // in-flight function-/dot-application resolver recording hooks which were
-    // prone to multi-candidate trial pollution (cached lambda outcomes from a
-    // failed trial could leak deltas into the index when a later winning
-    // trial reused the cache). Walking the final {@code func} slots is
-    // structurally exact — recorded edges match what the PDB serialises.
-    // Mirrors Java's {@code FunctionRefExtractor}. The walk runs over
-    // {@code elementMap}'s values, which is the same source the PDB write
-    // path uses, so the recorded edges are aligned with the serialised graph.
-    let pass3CtxWithFuncRefs = extractFunctionRefsInto($pass3RawCtx, $pass3RawCtx.elementMap->values());
-
-    // Lean-references validator (mirrors single-file compile path).
-    let leanRefViolations = validateLeanReferences($pass3CtxWithFuncRefs);
-    let pass3Ctx = ^$pass3CtxWithFuncRefs(errors = $pass3CtxWithFuncRefs.errors->concatenate($leanRefViolations));
-    let pass3Millis = currentTimeMillis() - $pass3Start;
-    finishProgress3();
-
-    // Pull all resolved elements from the final elementMap. This includes Package
-    // elements (which aren't in any file's compiledElements list) so the output
-    // PDB has the full graph — matches the OLD compileDir's elementMap->values()
-    // and Java's LocalModule.compile which also collects from elementMap.
-    let resolvedElements = $pass3Ctx.elementMap->values();
-
-    // Print errors directly to stdout (before the stats summary) so they appear
-    // in a single integrated output stream. Java callers also print errors to
-    // stderr after compileDir returns; surfacing them here keeps the live
-    // terminal output visually contiguous with the progress display the user
-    // was just watching, rather than getting buffered/reordered through
-    // stderr-via-pipe paths (`just`'s err_filter, etc.).
-    let errorCount = $pass3Ctx.errors->size();
-    if($errorCount > 0,
-        | println('');
-          println('  Compilation errors (' + $errorCount->toString() + ')');
-          $pass3Ctx.errors->map(e | println('    ' + $e));,
-        | true
-    );
-
-    let totalMillis = currentTimeMillis() - $dirStart;
-    let stats = ^CompilationStatistics(
-        totalMillis = $totalMillis,
-        parsingMillis = $parseMillis,
-        firstPassMillis = $pass1Millis,
-        secondPassMillis = $pass2Millis,
-        thirdPassMillis = $pass3Millis,
-        elementCount = $resolvedElements->size(),
-        sourceFileCount = $total,
-        inferenceRollbackCount = $pass3Ctx.inferenceRollbacks,
-        candidateEvaluationCount = $pass3Ctx.candidateEvaluations,
-        // Pass 2 and pass 3 each append a per-element ElementStatistics entry
-        // (compiler.pure:505 and compiler.pure:535), so the raw list has the
-        // same elementPath twice. Aggregate per path so the final stats and
-        // every downstream consumer (CLI summary, IDE Compile tab) sees one
-        // row per element with cumulative timing — matches Java-direct's
-        // map-keyed-with-per-pass-fields shape.
-        elementStatistics = $pass3Ctx.elementStatistics->aggregateElementStatistics(),
-        rollbackSites = $pass3Ctx.rollbackSites
-    );
-    println(printCompilationStatisticsSummary($stats));
-
-    ^CompilationResult(
-        elements = $resolvedElements,
-        errors   = $pass3Ctx.errors,
-        statistics = $stats,
-        context  = $pass3Ctx
+    $files->map(f |
+        let name = substring($f, $prefixLen, $f->length());
+        meta::pure::functions::meta::parse($name, readFile($f));
     );
 }
 
@@ -410,9 +232,9 @@ function meta::pure::compiler::newCompilerContext(debugMode:Boolean[1]):Compiler
 }
 
 // ============================================================================
-// Per-element pass dispatch — extracted from compile() so compileDir can run
-// pass 1 across all files, pass 2 across all files, pass 3 across all files
-// (matching Java's LocalModule orchestration).
+// Per-element pass dispatch — used by compile() to run pass 1 across all
+// files, then pass 2 across all files, then pass 3 across all files (matching
+// Java's LocalModule orchestration).
 // ============================================================================
 
 function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::PackageableElement[1], ctx:CompilerContext[1]):CompilerContext[1]
@@ -598,74 +420,158 @@ function meta::pure::compiler::runCompilePass3(elem:meta::pure::metamodel::Packa
     ^$newCtx(elementStatistics = $newCtx.elementStatistics->concatenate($stat));
 }
 
-function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):CompilationResult[1]
+function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*]):CompilationResult[1]
 {
-    meta::pure::compiler::compile($file, false);
+    meta::pure::compiler::compile($files, false);
 }
 
-function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], debugMode:Boolean[1]):CompilationResult[1]
+// Default 2-arg form is verbose (CLI-friendly): live 3-line progress bar
+// during the three passes, error lines printed before stats, then a stats
+// summary. Tests/IDEs that want a clean stdout should call the 4-arg form
+// with {@code silent=true}.
+function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], debugMode:Boolean[1]):CompilationResult[1]
 {
-    meta::pure::compiler::compile($file, newCompilerContext($debugMode), $debugMode);
+    meta::pure::compiler::compile($files, newCompilerContext($debugMode), $debugMode, false);
 }
 
-function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], inputCtx:CompilerContext[1], debugMode:Boolean[1]):CompilationResult[1]
+// Silent variant: same compile, no stdout side-effects. For programmatic
+// callers (test harnesses, IDE compile-on-save) that pull structured
+// statistics off {@link CompilationResult} rather than parsing stdout.
+function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], debugMode:Boolean[1], silent:Boolean[1]):CompilationResult[1]
 {
-    let debug = ^DebugState(debug = $debugMode, space = '');
+    meta::pure::compiler::compile($files, newCompilerContext($debugMode), $debugMode, $silent);
+}
+
+// Three-pass compile across a list of pre-parsed files. Mirrors Java's
+// LocalModule.compile orchestration: pass 1 (skeletons), pass 2 (bodies),
+// pass 3 (resolution), with the linearization cache + local-function index
+// rebuilt between passes. Each file's grammar elements are processed under
+// that file's sourceId + imports so forward references between files
+// resolve the same way Java does.
+//
+// {@code silent} controls whether the function writes anything to stdout
+// (progress bar, error lines, stats summary). Pass {@code false} for CLI
+// orchestrators that want the live readout; pass {@code true} when calling
+// programmatically and pulling structured statistics off the result.
+function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], inputCtx:CompilerContext[1], debugMode:Boolean[1], silent:Boolean[1]):CompilationResult[1]
+{
     let compileStart = currentTimeMillis();
+    let total = $files->size();
+    let dirLabel = $total->toString() + ' files';
 
-    let allElements = $file.sections.elements;
-    let allImports = computeAllImports($file);
+    let workItems = range(0, $total)->map({i |
+        let f = $files->at($i);
+        ^FileWorkItem(
+            // {@code PureFile.sourceId} is declared {@code String[0..1]}; in
+            // practice both parser and test-constructed PureFiles always
+            // populate it, so {@code toOne()} is safe and lets
+            // {@code FileWorkItem.sourceId} stay {@code String[1]}.
+            sourceId = $f.sourceId->toOne(),
+            imports = computeAllImports($f),
+            grammarElements = $f.sections.elements,
+            compiledElements = []->cast(@meta::pure::metamodel::PackageableElement)
+        );
+    });
 
-    // Pass 1: Build structural scaffolding
+    let debugState = ^DebugState(debug = $debugMode, space = '');
+
+    // 3-line live status (header / bar / current item) covers all three
+    // passes. Header changes per phase so the user sees the bar reset and a
+    // new label for pass 1 / 2 / 3 instead of going dark mid-compile.
+    if($silent, | true, | startProgress3(); true;);
+
+    // ============================================================================
+    // Pass 1 across all files (skeleton building)
+    // ============================================================================
     let pass1Start = currentTimeMillis();
-    let pass1Context = $allElements->fold({e, ctx | runCompilePass1($e, $ctx)}, ^$inputCtx(debugState = $debug, sourceId = $file.sourceId, imports = $allImports));
+    let pass1Ctx = range(0, $total)->fold({i, ctx |
+        let fileItem = $workItems->at($i);
+        if($silent, | true, | tickProgress3('  Pass 1/3 — Skeletons [1/3]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId));
+        let fileCtx = ^$ctx(debugState = $debugState, sourceId = $fileItem.sourceId, imports = $fileItem.imports);
+        $fileItem.grammarElements->fold({e, c | runCompilePass1($e, $c)}, $fileCtx);
+    }, $inputCtx);
     let pass1Millis = currentTimeMillis() - $pass1Start;
 
-    $pass1Context->debug({| 'compile: pass 1 done (' + $pass1Context.elementMap->keys()->size()->toString() + ' skeletons), starting pass 2'});
+    // Build linearization cache + local function index between pass 1 and pass 2 so
+    // pass 2 body compilation has hits on universe types and pass-1 skeletons.
+    let pass2StartCtx = $pass1Ctx->buildLinearizationCache()->buildLocalFunctionIndex();
 
-    // Pass 2: Compile elements (threading context for error collection).
-    // Per-element timing wraps each match dispatch — snapshot time + counter
-    // values before, capture deltas after, append an ElementStatistics entry
-    // when the element was actually added (the catch-all PackageableElement
-    // arm yields the unchanged acc and contributes no entry).
-    // Build the linearization cache in two stages: once between pass 1 and
-    //   pass 2 (universe + skeletons from pass 1) so pass 2 body compilation
-    //   has hits, and again between pass 2 and pass 3 so any types refined
-    //   during pass 2 (e.g. compiled bodies that change generalizations or
-    //   add new types) get refreshed entries before pass 3 resolution.
-    let pass2StartCtx = $pass1Context->buildLinearizationCache()->buildLocalFunctionIndex();
+    // ============================================================================
+    // Pass 2 across all files (compile element bodies)
+    // ============================================================================
     let pass2Start = currentTimeMillis();
-    let pass2 = $allElements->fold({e, acc | runCompilePass2($e, $acc)}, ^CompilerListResult<meta::pure::metamodel::PackageableElement>(context = $pass2StartCtx, values = []->cast(@meta::pure::metamodel::PackageableElement)));
+    let pass2Result = range(0, $total)->fold({i, acc |
+        let fileItem = $workItems->at($i);
+        if($silent, | true, | tickProgress3('  Pass 2/3 — Bodies [2/3]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId));
+        let priorCtx = $acc.context;
+        let fileCtx = ^$priorCtx(sourceId = $fileItem.sourceId, imports = $fileItem.imports);
+        let perFileResult = $fileItem.grammarElements->fold({e, fAcc | runCompilePass2($e, $fAcc)}, ^CompilerListResult<meta::pure::metamodel::PackageableElement>(context = $fileCtx, values = []->cast(@meta::pure::metamodel::PackageableElement)));
+        let updatedFile = ^$fileItem(compiledElements = $perFileResult.values);
+        ^CompilerListResult<FileWorkItem>(
+            context = $perFileResult.context,
+            values = $acc.values->concatenate($updatedFile)
+        );
+    }, ^CompilerListResult<FileWorkItem>(context = $pass2StartCtx, values = []->cast(@FileWorkItem)));
     let pass2Millis = currentTimeMillis() - $pass2Start;
 
-    $pass2.context->debug({| 'compile: pass 2 done (' + $pass2.values->size()->toString() + ' elements compiled), starting pass 3'});
+    // Refresh linearization cache + local function index between pass 2 and
+    // pass 3 — pass 2 fills in parameters/returnType on each FunctionDefinition,
+    // and {@link buildLocalFunctionIndex} indexes by name from elementMap. Without
+    // this rebuild, pass 3's `findAllFunctionsByNameAndArity` lookups still see
+    // pass-1 skeletons (empty `parameters` list), so the `parameters.size() == arity`
+    // filter rejects every locally-defined overload — every call site of a function
+    // defined in the source then errors with "function not found", inflating the
+    // total error count by the number of usage sites (e.g. ~300 cascade errors per
+    // unresolved local function on the language/java compile).
+    let pass3StartCtx = $pass2Result.context->buildLinearizationCache()->buildLocalFunctionIndex();
+    let pass2Files = $pass2Result.values;
 
-    // Pass 3: Resolution — resolve expression sequences, constraints, qualified properties.
-    // Per-element timing mirrors pass 2: append an ElementStatistics entry for
-    // each element so compileDir can merge by path across passes.
-    // Build the local-function index once before resolution so the 13K
-    // findAllFunctionsByNameAndArityUnfiltered calls become O(1) lookups
-    // rather than full elementMap.values() walks.
-    let pass3StartCtx = $pass2.context->buildLocalFunctionIndex()->buildLinearizationCache();
+    // ============================================================================
+    // Pass 3 across all files (resolution)
+    // ============================================================================
     let pass3Start = currentTimeMillis();
-    let pass3WalkCtx = $pass2.values->fold({elem, ctx | runCompilePass3($elem, $ctx)}, $pass3StartCtx);
-    // Derive function-reference edges from the compiled AST (mirrors
-    // compileDir + Java's FunctionRefExtractor). See that path for rationale.
-    let pass3RawCtx = extractFunctionRefsInto($pass3WalkCtx, $pass3WalkCtx.elementMap->values());
-    // Lean-references validator: scan the reverse index for any non-test
-    // element that references a test-only element. Mirrors Java
-    // LocalModule.compile lean-refs hook. Violations are appended to the
-    // compile errors and formatted with the caller element's source info.
-    let leanRefViolations = validateLeanReferences($pass3RawCtx);
-    let pass3Ctx = ^$pass3RawCtx(errors = $pass3RawCtx.errors->concatenate($leanRefViolations));
+    let pass3RawCtx = range(0, $total)->fold({i, ctx |
+        let fileItem = $pass2Files->at($i);
+        if($silent, | true, | tickProgress3('  Pass 3/3 — Resolution [3/3]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId));
+        let fileCtx = ^$ctx(sourceId = $fileItem.sourceId, imports = $fileItem.imports);
+        $fileItem.compiledElements->fold({elem, c | runCompilePass3($elem, $c)}, $fileCtx);
+    }, $pass3StartCtx);
+    // Derive function-reference edges from the compiled AST. Replaces the
+    // in-flight function-/dot-application resolver recording hooks which were
+    // prone to multi-candidate trial pollution (cached lambda outcomes from a
+    // failed trial could leak deltas into the index when a later winning
+    // trial reused the cache). Walking the final {@code func} slots is
+    // structurally exact — recorded edges match what the PDB serialises.
+    // Mirrors Java's {@code FunctionRefExtractor}. The walk runs over
+    // {@code elementMap}'s values, which is the same source the PDB write
+    // path uses, so the recorded edges are aligned with the serialised graph.
+    let pass3CtxWithFuncRefs = extractFunctionRefsInto($pass3RawCtx, $pass3RawCtx.elementMap->values());
+
+    // Lean-references validator (mirrors single-file compile path).
+    let leanRefViolations = validateLeanReferences($pass3CtxWithFuncRefs);
+    let pass3Ctx = ^$pass3CtxWithFuncRefs(errors = $pass3CtxWithFuncRefs.errors->concatenate($leanRefViolations));
     let pass3Millis = currentTimeMillis() - $pass3Start;
+    if($silent, | true, | finishProgress3(); true;);
 
-    $pass3Ctx->debug({| 'compile: pass 3 done (' + $pass3Ctx.errors->size()->toString() + ' errors)'});
+    // Pull all resolved elements from the final elementMap. Includes Packages
+    // (which aren't in any file's compiledElements list) so the output PDB
+    // has the full graph — matches Java's LocalModule.compile. Order is
+    // elementMap iteration; the test printer sorts by sourceInfo for a
+    // deterministic textual diff. The PDB write path doesn't care about list
+    // order (diff-pdb compares path-set + per-element hash).
+    let resolvedElements = $pass3Ctx.elementMap->values();
 
-    // Pull the compiled (resolved) source elements out of the map, in
-    // pass2 source order. Packages live in $pass3Ctx.elementMap too — they
-    // surface to the caller via the returned context, not through this list.
-    let resolvedElements = $pass2.values->map(e | let fromMap = $pass3Ctx.elementMap->get($e->elementToPath()); if($fromMap->isEmpty(), | $e, | $fromMap->toOne()->cast(@PackageableElement)););
+    // Print errors directly to stdout (before the stats summary) so they
+    // appear in a single integrated output stream. Suppressed when {@code
+    // silent} is true — callers extract errors structurally off the result.
+    let errorCount = $pass3Ctx.errors->size();
+    if($silent || $errorCount == 0, | true,
+        | println('');
+          println('  Compilation errors (' + $errorCount->toString() + ')');
+          $pass3Ctx.errors->map(e | println('    ' + $e));
+          true;
+    );
+
     let totalMillis = currentTimeMillis() - $compileStart;
     let stats = ^CompilationStatistics(
         totalMillis = $totalMillis,
@@ -674,20 +580,27 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], i
         secondPassMillis = $pass2Millis,
         thirdPassMillis = $pass3Millis,
         elementCount = $resolvedElements->size(),
-        sourceFileCount = 1,
-        // Per-file stats report this file's CONTRIBUTION (delta), not cumulative
-        // counters. compileDir's aggregate sums per-file contributions to arrive at
-        // total compile rollback/candidate counts. Reporting cumulative caused
-        // quadratic over-counting on multi-file builds (each subsequent file's
-        // cumulative was added to the running sum, which already included its prior
-        // files' work). For self-host on compiler-pure (58 files), this inflated
-        // the inferenceRollbackCount from ~10K actual events to ~120K reported.
+        sourceFileCount = $total,
+        // Per-file stats are a CONTRIBUTION (delta), not cumulative — see
+        // [[per_file_stat_delta_not_cumulative]] memory for the quadratic
+        // over-counting bug that motivated this.
         inferenceRollbackCount = $pass3Ctx.inferenceRollbacks - $inputCtx.inferenceRollbacks,
         candidateEvaluationCount = $pass3Ctx.candidateEvaluations - $inputCtx.candidateEvaluations,
-        elementStatistics = $pass3Ctx.elementStatistics,
+        // Pass 2 and pass 3 each append a per-element ElementStatistics entry
+        // so the raw list has the same elementPath twice. Aggregate per path
+        // so the final stats and every downstream consumer (CLI summary, IDE
+        // Compile tab) sees one row per element with cumulative timing.
+        elementStatistics = $pass3Ctx.elementStatistics->aggregateElementStatistics(),
         rollbackSites = $pass3Ctx.rollbackSites
     );
-    ^CompilationResult(elements = $resolvedElements, errors = $pass3Ctx.errors, statistics = $stats, context = $pass3Ctx);
+    if($silent, | true, | println(printCompilationStatisticsSummary($stats)); true;);
+
+    ^CompilationResult(
+        elements = $resolvedElements,
+        errors   = $pass3Ctx.errors,
+        statistics = $stats,
+        context  = $pass3Ctx
+    );
 }
 
 // Extract a short element-type label (e.g. "UserDefinedFunction", "Class") from an

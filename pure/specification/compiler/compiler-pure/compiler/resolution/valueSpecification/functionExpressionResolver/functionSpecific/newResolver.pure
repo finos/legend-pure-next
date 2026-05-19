@@ -253,7 +253,12 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                 $keyNameVS->match([
                                     keyNameAV:AtomicValue[1] |
                                         let propName = $keyNameAV.value->toOne()->toString();
-                                        let prop = findPropertyOnClass($cls, $propName);
+                                        // Context-aware findProperty so cross-file inherited
+                                        // association properties (Organization.parent attached
+                                        // by SubOrganization's pass 2, accessed via Department's
+                                        // pre-association generalization reference) still
+                                        // resolve here. Mirrors the deep-path lookup below.
+                                        let prop = $cls->findProperty($propName, $ctx);
                                         if($prop->isEmpty(),
                                             | $ctx, // unknown — already reported above
                                             | let p = $prop->toOne();
@@ -300,34 +305,6 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-// Find property on class including association properties and inherited properties
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::findPropertyOnClass(cls:Class<Any>[1], name:String[1]):Property<Nil,Any|*>[0..1]
-{
-    let direct = $cls.properties->filter(p | $p.name == $name)->head();
-    if($direct->isNotEmpty(),
-        | $direct,
-        | let assoc = $cls.propertiesFromAssociations->filter(p | $p.name == $name)->head();
-          if($assoc->isNotEmpty(),
-              | $assoc,
-              | // Check inherited
-                let supertypes = $cls.generalizations->map(g |
-                    $g.general->match([
-                        gtv:GenericTypeValue[1] |
-                            if($gtv.type->isNotEmpty(),
-                                | $gtv.type->toOne()->match([
-                                      c:Class<Any>[1] | $c,
-                                      a:Any[1] | []
-                                  ]),
-                                | []
-                            );,
-                        a:Any[1] | []
-                    ])
-                );
-                $supertypes->map(st | findPropertyOnClass($st, $name))->head();
-          );
-    );
-}
-
 // Validate deep property path like 'address.name' by traversing each segment
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateDeepPropertyPath(cls:Class<Any>[1], fullPath:String[1], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
 {
@@ -349,7 +326,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               | $canonical->toOne()->cast(@Class<Any>),
               | $currentType
           );
-          let prop = findPropertyOnClass($resolvedType, $segment);
+          // Use the context-aware findProperty so each generalization is
+          // re-resolved through elementMap. With the local findPropertyOnClass,
+          // a multi-file compile where the Association declaring an inherited
+          // property is processed AFTER the function file would leave the
+          // generalization's stored superclass reference frozen at its
+          // pre-association state — the association-attached properties would
+          // be on the canonical superclass in elementMap but invisible through
+          // the stale reference.
+          let prop = $resolvedType->findProperty($segment, $context);
           if([pair(| $prop->isEmpty(), | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
                 ^$context(errors += 'Unknown deep property path \'' + $fullPath + '\' in class \'' + $rootCls->fullPath() + '\': property \'' + $segment + '\' not found in class \'' + $resolvedType->fullPath() + '\'' + $siCtx);),
               pair(| $index < $segments->size() - 1 && $prop->toOne().genericType->isNotEmpty(), | let nextType = $prop->toOne().genericType->toOne()->genericTypeRawType();

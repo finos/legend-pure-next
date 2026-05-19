@@ -37,12 +37,15 @@ function <<test.TestDependency>> meta::pure::test::hasPctTestStereotype(el:Packa
 
 function <<test.TestDependency>> meta::pure::test::collectPCTTests(pkg:Package[1]):UserDefinedFunction<Any>[*]
 {
-    let directTests = $pkg.children
+    // See {@link meta::pure::test::resolveChild} — derefs in-memory pointer
+    // children to canonical elements; non-pointer children pass through.
+    let resolvedChildren = $pkg.children->map(c | meta::pure::test::resolveChild($c));
+    let directTests = $resolvedChildren
         ->filter(e | $e->instanceOf(UserDefinedFunction)
                      && meta::pure::test::hasPctTestStereotype($e))
         ->cast(@UserDefinedFunction<Any>);
 
-    let subPackages = $pkg.children
+    let subPackages = $resolvedChildren
         ->filter(e | $e->instanceOf(Package))
         ->cast(@Package);
     let subTests = $subPackages->map(p | meta::pure::test::collectPCTTests($p));

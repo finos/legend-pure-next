@@ -40,13 +40,16 @@ import java.util.function.Consumer;
  */
 public final class TruffleCompilerBinaryBuilder
 {
-    // Mirror bootstrap: hand the entire orchestration (directory walk,
-    // parse, per-file compile, package emission) to compile-pure's
-    // `compileDir`. Keeping the platforms structurally identical is what
-    // makes the output PDBs comparable — the only platform-specific code
-    // is the runtime hosting the same Pure entry point.
-    private static final String COMPILE_DIR_FN_PATH =
-            "meta::pure::compiler::compileDir_String_1__Boolean_1__CompilationResult_1_";
+    // Mirror bootstrap: hand the entire orchestration to compile-pure as a
+    // two-step chain — `parseDir` walks/reads/parses the directory and
+    // returns `PureFile[*]`, then `compile` runs the three passes over those
+    // pre-parsed files. Keeping the platforms structurally identical is what
+    // makes the output PDBs comparable — the only platform-specific code is
+    // the runtime hosting the same Pure entry points.
+    private static final String PARSE_DIR_FN_PATH =
+            "meta::pure::compiler::parseDir_String_1__PureFile_MANY_";
+    private static final String COMPILE_FN_PATH =
+            "meta::pure::compiler::compile_PureFile_MANY__Boolean_1__CompilationResult_1_";
 
     private TruffleCompilerBinaryBuilder()
     {
@@ -120,38 +123,44 @@ public final class TruffleCompilerBinaryBuilder
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
+                        new TruffleTestFileLanguageExtension(),
                         new TruffleReverseIndexLanguageExtension(),
                         new TruffleErrorLanguageExtension()));
         runtimeCustomizer.accept(runtimeBuilder);
         PureTruffleRuntime runtime = runtimeBuilder.build();
 
         // Post-loader-flip the resolver may return a PureDynamicObject for
-        // the compile function; runtime.execute accepts Object.
-        Object compileDirFn = resolver.getElement(COMPILE_DIR_FN_PATH);
-        if (compileDirFn == null
-                || !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(compileDirFn,
+        // these functions; runtime.execute accepts Object.
+        Object parseDirFn = resolver.getElement(PARSE_DIR_FN_PATH);
+        Object compileFn = resolver.getElement(COMPILE_FN_PATH);
+        if (parseDirFn == null || compileFn == null
+                || !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(parseDirFn,
+                        "meta::pure::metamodel::function::FunctionDefinition", resolver)
+                || !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(compileFn,
                         "meta::pure::metamodel::function::FunctionDefinition", resolver))
         {
-            throw new RuntimeException("compileDir FunctionDefinition not resolvable: "
-                    + (compileDirFn == null ? "null" : compileDirFn.getClass().getName()));
+            throw new RuntimeException("parseDir/compile FunctionDefinition not resolvable: "
+                    + "parseDir=" + (parseDirFn == null ? "null" : parseDirFn.getClass().getName())
+                    + ", compile=" + (compileFn == null ? "null" : compileFn.getClass().getName()));
         }
 
         try
         {
-            // 3. Hand the whole walk-parse-compile-aggregate pipeline to
-            // compile-pure's `compileDir` — same entry point the bootstrap
-            // orchestrator uses. Keeps the platforms structurally identical:
-            // every byte of orchestration logic lives in Pure, only the runtime
-            // changes. Returns a `CompilationResult` whose `elements` already
-            // includes the hierarchical Package set built by `buildPackages`.
+            // 3. Chain compile-pure's `parseDir` + `compile` — same entry
+            // points the bootstrap orchestrator uses. Keeps the platforms
+            // structurally identical: every byte of orchestration logic lives
+            // in Pure, only the runtime changes. Returns a `CompilationResult`
+            // whose `elements` already includes the hierarchical Package set
+            // built by `buildPackages`.
             Object result;
             try
             {
-                result = runtime.execute(compileDirFn, sourceDir.toAbsolutePath().toString(), Boolean.getBoolean("legend.pure.compileDebug"));
+                Object parsedFiles = runtime.execute(parseDirFn, sourceDir.toAbsolutePath().toString());
+                result = runtime.execute(compileFn, parsedFiles, Boolean.getBoolean("legend.pure.compileDebug"));
             }
             catch (Throwable t)
             {
-                // compileDir's 3-line progress display parks the cursor on
+                // compile's 3-line progress display parks the cursor on
                 // line 1 (header) after each tickProgress3. When pass 1/2/3
                 // throws (e.g. unguarded ->toOne() in a resolver) the Pure
                 // side never reaches finishProgress3, so without intervention
@@ -178,7 +187,7 @@ public final class TruffleCompilerBinaryBuilder
             }
             if (result == null)
             {
-                throw new RuntimeException("compileDir returned null");
+                throw new RuntimeException("compile returned null");
             }
 
             List<String> allErrors = new ArrayList<>();

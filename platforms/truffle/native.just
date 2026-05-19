@@ -66,7 +66,9 @@ test-pure-compiler: build
     @{{banner}} '[pure→native]' 'runCompiledGraphTests'
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
         --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
 

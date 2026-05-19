@@ -131,6 +131,33 @@ function meta::pure::compiler::helper::pointer::toEnumPointer(e:Enum[1]):EnumPoi
 }
 
 
+// Wrap any PackageableElement as the matching TempCompilerPointer subtype.
+// Use case: Package.children entries. Pass 1 puts skeleton elements in
+// children; pass 2/3 update elementMap but Package.children isn't refreshed,
+// leaving stale skeletons that callers see when they walk children. Storing a
+// pointer here decouples Package.children from the live element instance —
+// the pointer's path remains valid and consumers dereference (via
+// pathToElement at runtime, or dereferencePointer inside compile-pure) to
+// reach the current pass-3 entry.
+//
+// Pointers passed in are returned unchanged. Element kinds without a
+// dedicated pointer subclass (none today, but future PackageableElement
+// additions) fall through to the catch-all and stay raw.
+function meta::pure::compiler::helper::pointer::toElementPointer(el:meta::pure::metamodel::PackageableElement[1]):meta::pure::metamodel::PackageableElement[1]
+{
+    $el->match([
+        ptr:TempCompilerPointer[1] | $ptr->cast(@meta::pure::metamodel::PackageableElement),
+        fn:PackageableFunction<Any>[1] | $fn->toPackageableFunctionPointer()->cast(@meta::pure::metamodel::PackageableElement),
+        cls:Class<Any>[1] | $cls->toClassPointer()->cast(@meta::pure::metamodel::PackageableElement),
+        en:Enumeration<Any>[1] | $en->toEnumerationPointer()->cast(@meta::pure::metamodel::PackageableElement),
+        pt:PrimitiveType[1] | $pt->toPrimitiveTypePointer()->cast(@meta::pure::metamodel::PackageableElement),
+        a:Association[1] | $a->toAssociationPointer()->cast(@meta::pure::metamodel::PackageableElement),
+        pr:Profile[1] | $pr->toProfilePointer()->cast(@meta::pure::metamodel::PackageableElement),
+        pkg:meta::pure::metamodel::Package[1] | $pkg->toPackagePointer()->cast(@meta::pure::metamodel::PackageableElement),
+        any:meta::pure::metamodel::PackageableElement[1] | $any
+    ])
+}
+
 // Dispatcher used at GenericType.type assignment sites. Wraps the three PE-typed
 // Type variants (Class / Enumeration / PrimitiveType) in their respective
 // pointers so cross-element references through GenericType stay identity-stable

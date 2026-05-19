@@ -22,6 +22,7 @@ import org.finos.legend.pure.truffle.PureTruffleRuntime;
 import org.finos.legend.pure.truffle.runtime.TrufflePdbLoader;
 import org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension;
 import org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension;
+import org.finos.legend.pure.truffle.runtime.TruffleTestFileLanguageExtension;
 import org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry;
 import org.graalvm.nativeimage.IsolateThread;
 import org.graalvm.nativeimage.c.function.CEntryPoint;
@@ -199,6 +200,7 @@ public final class PureNativeLib
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
+                        new TruffleTestFileLanguageExtension(),
                         new org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension(),
                         new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()))
                 .build();

@@ -67,16 +67,14 @@ import java.util.stream.Stream;
  */
 public final class PureRuntimeCompilerBinaryBuilder
 {
-    // The whole walk-read-parse-compile-aggregate pipeline lives in Pure
-    // (see {@code meta::pure::compiler::compileDir}) — uses the native
-    // {@code directoryTree} and {@code readFile}, then per-file
-    // {@code parse} + {@code compile}, then aggregates into a single
-    // {@code CompilationResult}. Java just invokes this one function and
-    // serializes the resulting elements. We resolve the 2-arg overload so
-    // we can pass the debug flag (matching Truffle's path); pass {@code false}
-    // for normal runs and flip to {@code true} when debugging compiler-pure.
-    private static final String COMPILE_DIR_FN_PATH =
-            "meta::pure::compiler::compileDir_String_1__Boolean_1__CompilationResult_1_";
+    // Two-step compile: Pure walks/reads/parses the directory via
+    // {@code parseDir} (returns {@code PureFile[*]}), then {@code compile}
+    // runs the three passes over those pre-parsed files. Java just chains
+    // the two calls and serializes the resulting elements.
+    private static final String PARSE_DIR_FN_PATH =
+            "meta::pure::compiler::parseDir_String_1__PureFile_MANY_";
+    private static final String COMPILE_FN_PATH =
+            "meta::pure::compiler::compile_PureFile_MANY__Boolean_1__CompilationResult_1_";
 
     private PureRuntimeCompilerBinaryBuilder()
     {
@@ -144,27 +142,27 @@ public final class PureRuntimeCompilerBinaryBuilder
                 .withParserExtensions(List.of(
                         new org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension(),
                         new org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension(),
+                        new org.finos.legend.pure.m3.extensions.testfile.TestFileLanguageExtension(),
                         new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
                 .build();
 
-        FunctionWithParameters compileDirFn = (FunctionWithParameters) resolver.getElement(COMPILE_DIR_FN_PATH);
-        if (compileDirFn == null)
+        FunctionWithParameters parseDirFn = (FunctionWithParameters) resolver.getElement(PARSE_DIR_FN_PATH);
+        FunctionWithParameters compileFn = (FunctionWithParameters) resolver.getElement(COMPILE_FN_PATH);
+        if (parseDirFn == null || compileFn == null)
         {
-            throw new RuntimeException(COMPILE_DIR_FN_PATH + " not found. "
-                    + "Pass an up-to-date compiler.pdb (one that includes the compileDir helper) "
-                    + "as --base-pdb.");
+            throw new RuntimeException(PARSE_DIR_FN_PATH + " or " + COMPILE_FN_PATH + " not found. "
+                    + "Pass an up-to-date compiler.pdb as --base-pdb.");
         }
 
-        // 3. Pure does the full walk-read-parse-compile-aggregate via the
-        // `directoryTree` and `readFile` natives. Java just hands it the
-        // source dir and gets a single CompilationResult back.
-        long t0 = System.currentTimeMillis();
-        System.out.println("  Calling compileDir on " + sourceDir.toAbsolutePath() + " ...");
-        Object result = execution.execute(compileDirFn, sourceDir.toAbsolutePath().toString(), false);
-        System.out.println("  compileDir done in " + (System.currentTimeMillis() - t0) + " ms");
+        // 3. Pure walks + reads + parses via `parseDir`, then compiles via
+        // `compile(PureFile[*])`. Both run through the bootstrap Java runtime;
+        // Java just chains the two calls and gets a CompilationResult back.
+        // parseDir is silent; compile prints its own progress + stats summary.
+        Object parsedFiles = execution.execute(parseDirFn, sourceDir.toAbsolutePath().toString());
+        Object result = execution.execute(compileFn, parsedFiles, false);
         if (!(result instanceof DynamicInstance compResult))
         {
-            throw new RuntimeException("compileDir did not return a CompilationResult (got "
+            throw new RuntimeException("compile did not return a CompilationResult (got "
                     + (result == null ? "null" : result.getClass().getName()) + ")");
         }
 
@@ -186,7 +184,7 @@ public final class PureRuntimeCompilerBinaryBuilder
             // serializer rejects with `null _func()` IllegalStateException,
             // masking the real compile diagnostic.
             //
-            // Each error has already been reported live by compileDir's
+            // Each error has already been reported live by compile's
             // per-file `println` chain; this is the abort step.
             throw new RuntimeException("Pure compilation failed with " + allErrors.size() + " error(s)");
         }

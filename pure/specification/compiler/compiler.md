@@ -158,5 +158,4 @@ which runs on both compilers.
 - `org.finos.legend.pure.m3.module.LeanReferencesValidator` —
   the post-compile validator.
 - `pure/specification/compiler/compiler-pure/compiler/leanReferencesValidator.pure` —
-  the Pure mirror of the validator, wired into both `compile` and
-  `compileDir` at the end of pass 3.
+  the Pure mirror of the validator, wired into `compile` at the end of pass 3.

@@ -21,6 +21,7 @@ import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.SpecificationBinaryBuilder;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension;
 import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
+import org.finos.legend.pure.m3.extensions.testfile.TestFileLanguageExtension;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.ModelMetadataAccess;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
@@ -451,6 +452,7 @@ public class PureCLI
                 .withParserExtensions(List.of(
                         new CompiledGraphLanguageExtension(),
                         new CompilerStatsLanguageExtension(),
+                        new TestFileLanguageExtension(),
                         new org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndexLanguageExtension()))
                 .build();
 

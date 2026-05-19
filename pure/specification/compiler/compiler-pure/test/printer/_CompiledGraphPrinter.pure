@@ -40,19 +40,49 @@ import meta::pure::compiler::test::printer::primitive::*;
 
 function <<test.TestDependency>> meta::pure::compiler::test::printer::printCompiledGraph(elements:PackageableElement[*], context:CompilerContext[1]):String[1]
 {
-    // Skip the test-section elements themselves — ###CompiledGraph and
-    // ###CompilerStats parse into PackageableElements that show up in the
-    // compiled output but aren't part of the resolved-graph snapshot we're
-    // asserting against. Without this filter the printer would emit
-    // `// unsupported: CompiledGraph ...` / `// unsupported: CompilerStats ...`
-    // lines that don't appear in any test's expected ###CompiledGraph block.
+    // Skip test-framework elements (###CompiledGraph, ###CompilerStats,
+    // ###File markers) and synthetic Packages — they parse into
+    // PackageableElements that show up in the compiled output but aren't
+    // part of the resolved-graph snapshot we're asserting against.
+    //
+    // Sort by source info (startLine) so the printed order matches source
+    // declaration regardless of how `compile` shipped the elements — the
+    // underlying elementMap is hash-ordered, so without this sort the
+    // textual diff would be non-deterministic.
     //
     // CompilerContext is threaded through so the printer can dereference
     // TempCompilerPointer values (e.g. resolving a QualifiedPropertyPointer to
     // its live QualifiedProperty for parameter-signature display). Pointer
     // dereference goes through `dereferencePointer(ptr, context)`.
     $elements
-        ->filter(e | !$e->instanceOf(meta::pure::compiler::test::CompiledGraph) && !$e->instanceOf(meta::pure::compiler::test::CompilerStats))
+        ->filter(e | !$e->instanceOf(meta::pure::compiler::test::CompiledGraph)
+                  && !$e->instanceOf(meta::pure::compiler::test::CompilerStats)
+                  && !$e->instanceOf(meta::pure::compiler::test::TestFile)
+                  && !$e->instanceOf(meta::pure::metamodel::Package))
+        ->sort({a, b |
+            let aSi = $a.sourceInformation;
+            let bSi = $b.sourceInformation;
+            if([
+                pair(| $aSi->isEmpty() && $bSi->isEmpty(), | 0),
+                pair(| $aSi->isEmpty(), | 1),
+                pair(| $bSi->isEmpty(), | -1)
+            ], | // Sort by (sourceId, startLine). Multi-file ###File fixtures put
+                 // their primary file's sourceId (the test path) alphabetically
+                 // before their ###File chunks (e.g. "model.pure"), so this also
+                 // groups by file in declaration order. Within a file, line order
+                 // matches source declaration order.
+                 let aSrc = $aSi->toOne().sourceId;
+                 let bSrc = $bSi->toOne().sourceId;
+                 if([
+                     pair(| $aSrc->isEmpty() && $bSrc->isEmpty(), | 0),
+                     pair(| $aSrc->isEmpty(), | -1),
+                     pair(| $bSrc->isEmpty(), | 1)
+                 ], | let cmp = $aSrc->toOne()->compare($bSrc->toOne());
+                      if($cmp != 0, | $cmp,
+                         | $aSi->toOne().startLine->toOne() - $bSi->toOne().startLine->toOne());
+                 );
+            );
+        })
         ->map(e | $e->printElement($context)->stripTrailingNewlines())
         ->joinStrings('\n\n')
 }

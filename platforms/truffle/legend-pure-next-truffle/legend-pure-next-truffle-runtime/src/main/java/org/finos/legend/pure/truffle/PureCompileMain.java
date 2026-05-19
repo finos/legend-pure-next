@@ -290,6 +290,7 @@ public final class PureCompileMain
                 .withParserExtensions(List.of(
                         new org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension(),
                         new org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension(),
+                        new org.finos.legend.pure.truffle.runtime.TruffleTestFileLanguageExtension(),
                         new org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension(),
                         new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()));
         profiling.apply(runtimeBuilder);

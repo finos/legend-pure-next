@@ -17,6 +17,7 @@ import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
 import org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension;
 import org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension;
+import org.finos.legend.pure.truffle.runtime.TruffleInMemoryModule;
 import org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry;
 import org.finos.legend.pure.truffle.runtime.TrufflePdbLoader;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
@@ -40,8 +41,8 @@ import java.util.concurrent.Executors;
  * call:</p>
  * <ol>
  *   <li>Each editable module's source dir is compiled via
- *       {@code meta::pure::compiler::compileDir} invoked through
- *       {@link PureTruffleRuntime#execute}. The runtime's resolver
+ *       {@code meta::pure::compiler::parseDir} + {@code meta::pure::compiler::compile}
+ *       invoked through {@link PureTruffleRuntime#execute}. The runtime's resolver
  *       (preloaded with {@code core.pdb} + {@code compiler.pdb}) supplies
  *       cross-references.</li>
  *   <li>The aggregated {@code CompilationResult.elements} is searched for a
@@ -64,12 +65,14 @@ import java.util.concurrent.Executors;
  */
 public final class TruffleBackend implements PureBackend
 {
-    private static final String COMPILE_DIR_FN_PATH =
-            "meta::pure::compiler::compileDir_String_1__Boolean_1__CompilationResult_1_";
+    private static final String PARSE_DIR_FN_PATH =
+            "meta::pure::compiler::parseDir_String_1__PureFile_MANY_";
+    private static final String COMPILE_FN_PATH =
+            "meta::pure::compiler::compile_PureFile_MANY__Boolean_1__CompilationResult_1_";
 
     /**
-     * Discard sink for compileDir's 3-line progress-bar stdout. compileDir
-     * is a CLI-facing entry point and always prints; rather than capture and
+     * Discard sink for parseDir + compile 3-line progress-bar stdout. These
+     * are CLI-facing entry points and always print; rather than capture and
      * filter the output, we route it to /dev/null and pull the structured
      * {@code CompilationResult.statistics} below.
      */
@@ -88,9 +91,9 @@ public final class TruffleBackend implements PureBackend
 
     /**
      * Build the Truffle backend's own compilation graph (core.pdb +
-     * compiler.pdb), independent of the IDE's edit graph. compileDir is
-     * always available in this runtime, regardless of which module the user
-     * is editing.
+     * compiler.pdb), independent of the IDE's edit graph. parseDir + compile
+     * are always available in this runtime, regardless of which module the
+     * user is editing.
      */
     public TruffleBackend(Path pdbDir) throws IOException
     {
@@ -163,8 +166,8 @@ public final class TruffleBackend implements PureBackend
                                    ValueSpecification... args)
     {
         // compileResult is the Java-direct stats hand-off from the LSP layer.
-        // Truffle doesn't use it: it runs its own compileDir and pulls stats
-        // out of the Truffle-side CompilationResult.statistics field below.
+        // Truffle doesn't use it: it runs its own parseDir + compile and pulls
+        // stats out of the Truffle-side CompilationResult.statistics field below.
         try
         {
             return executor.submit(() -> doExecute(editableModules, function, args)).get();
@@ -185,7 +188,7 @@ public final class TruffleBackend implements PureBackend
                                       FunctionDefinition function,
                                       ValueSpecification... args)
     {
-        // compileDir prints a 3-line progress bar via tickProgress3 — useful
+        // compile prints a 3-line progress bar via tickProgress3 — useful
         // on a CLI, noise in an IDE. Discard the compile-phase stdout entirely
         // and pull statistics structurally from CompilationResult.statistics
         // (PureSequence + PureDynamicObject fields), which is what the user
@@ -200,11 +203,12 @@ public final class TruffleBackend implements PureBackend
         CompileStats compileStats = null;
         try
         {
-            Object compileDirFn = registry.getElement(COMPILE_DIR_FN_PATH);
-            if (compileDirFn == null)
+            Object parseDirFn = registry.getElement(PARSE_DIR_FN_PATH);
+            Object compileFn = registry.getElement(COMPILE_FN_PATH);
+            if (parseDirFn == null || compileFn == null)
             {
                 throw new IllegalStateException(
-                        "Truffle resolver missing " + COMPILE_DIR_FN_PATH
+                        "Truffle resolver missing " + PARSE_DIR_FN_PATH + " or " + COMPILE_FN_PATH
                                 + " — was compiler.pdb loaded?");
             }
 
@@ -234,8 +238,8 @@ public final class TruffleBackend implements PureBackend
                 }
                 for (Path sourceFolder : module.sourceFolders())
                 {
-                    Object compileResult = runtime.execute(
-                            compileDirFn, sourceFolder.toAbsolutePath().toString(), Boolean.FALSE);
+                    Object parsedFiles = runtime.execute(parseDirFn, sourceFolder.toAbsolutePath().toString());
+                    Object compileResult = runtime.execute(compileFn, parsedFiles, Boolean.FALSE);
                     lastCompileResult = compileResult;
                     List<String> thisCompileErrors = new ArrayList<>();
                     collectStrings(PureObj.read(compileResult, "errors"), thisCompileErrors);
@@ -274,8 +278,8 @@ public final class TruffleBackend implements PureBackend
                 }
             }
             // Pull structured stats off the CompilationResult — much cleaner
-            // than parsing the progress-bar/stats output that compileDir
-            // emits unconditionally for CLI users.
+            // than parsing the progress-bar/stats output that compile emits
+            // unconditionally for CLI users.
             if (lastCompileResult != null)
             {
                 compileStats = readCompileStats(lastCompileResult);
@@ -298,7 +302,7 @@ public final class TruffleBackend implements PureBackend
             else
             {
                 // Switch to the run-phase buffer so go()'s println output is
-                // captured separately from the compileDir progress + stats.
+                // captured separately from the compile progress + stats.
                 // autoFlush=true so each println lands in runBuf at the
                 // newline — otherwise an exception mid-execution leaves the
                 // last println(s) trapped in the PrintStream's internal buffer

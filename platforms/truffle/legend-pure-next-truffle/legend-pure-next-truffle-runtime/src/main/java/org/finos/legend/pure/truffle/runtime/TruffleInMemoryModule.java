@@ -5,11 +5,15 @@
 // You may obtain a copy of the License at
 //
 //      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-package org.finos.legend.pure.ide.truffle;
+package org.finos.legend.pure.truffle.runtime;
 
-import org.finos.legend.pure.truffle.runtime.TruffleModule;
-import org.finos.legend.pure.truffle.runtime.TruffleTypeCache;
 import org.finos.legend.pure.truffle.runtime.helper.TypeCache;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -25,16 +29,15 @@ import java.util.Set;
  * A {@link TruffleModule} backed by an in-memory {@code CompilationResult.elements}
  * sequence rather than a {@code .pdb} file.
  *
- * <p>Pure-IDE Run flow uses this to make user-compiled elements addressable
- * through the resolver immediately after a {@code compileDir} call, without
- * the PDB-write-then-load roundtrip. Once registered the runtime's AST
- * builder can resolve {@code welcome::go} (and any user types) by path, so
- * cross-module edges (e.g. {@code Integer} → {@code core}) automatically
- * route to canonical resolver objects.</p>
+ * <p>Use this to make freshly-compiled elements addressable through a
+ * {@link TruffleModuleRegistry} without the PDB-write-then-load round-trip.
+ * Once registered the runtime's AST builder can resolve any user type by
+ * path, so cross-module edges (e.g. references to {@code Integer} in core)
+ * automatically route to canonical resolver objects.</p>
  *
  * <p>Each element's qualified path is computed once at construction via the
  * package-chain walker in {@link _PackageableElement#path}. No additional
- * canonicalisation pass is needed because {@code compileDir} already runs
+ * canonicalisation pass is needed because {@code compile} already runs
  * with the resolver in scope — references to types in dependency modules
  * (e.g. {@code Integer}) are bound to the resolver's canonical objects
  * during pass 3.</p>
@@ -59,7 +62,7 @@ public final class TruffleInMemoryModule implements TruffleModule
             if (el == null) { continue; }
             String path = _PackageableElement.path(el);
             if (path == null || path.isEmpty()) { continue; }
-            // compileDir can emit multiple revisions of the same path
+            // compile can emit multiple revisions of the same path
             // across passes; the writer dedups by name and keeps the last.
             // Mirror that: later entries win.
             byPath.put(path, el);

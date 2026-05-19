@@ -29,10 +29,10 @@ import org.finos.legend.pure.m3.module.localModule.LocalModule;
  *   <li>Truffle ignores the Java-direct model + function (function
  *       representations are incompatible — Truffle's resolver only knows
  *       {@code PureDynamicObject}s). It re-compiles the editable modules via
- *       {@code meta::pure::compiler::compileSource} invoked through
- *       {@code PureTruffleRuntime}, then finds the target function in the
- *       resulting {@code CompilationResult.elements} by matching on
- *       {@code function._name()}.</li>
+ *       {@code meta::pure::compiler::parseDir} + {@code meta::pure::compiler::compile}
+ *       invoked through {@code PureTruffleRuntime}, then finds the target
+ *       function in the resulting {@code CompilationResult.elements} by matching
+ *       on {@code function._name()}.</li>
  * </ul>
  */
 public interface PureBackend
@@ -72,7 +72,7 @@ public interface PureBackend
      *       executing function. Goes to the IDE Output tab.</li>
      *   <li>{@code compileStats} — structured compile metrics (Truffle only)
      *       pulled directly from {@code CompilationResult.statistics},
-     *       sidestepping {@code compileDir}'s progress-bar stdout. Goes to
+     *       sidestepping {@code compile}'s progress-bar stdout. Goes to
      *       the IDE Compile tab. {@code null} for backends that don't run a
      *       compile phase (Java-direct re-uses {@code lastModel}).</li>
      *   <li>{@code error} — thrown exception, or {@code null} on success.</li>

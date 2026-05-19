@@ -98,7 +98,7 @@ Class meta::pure::compiler::CompilerContext
 
     // Per-element timing collected across pass 2 and pass 3. Each element compile
     // appends an ElementStatistics with wall time (millis) and the rollback /
-    // candidate deltas for that element. compileDir aggregates entries with the
+    // candidate deltas for that element. compile() aggregates entries with the
     // same elementPath across passes when building the final summary.
     elementStatistics : ElementStatistics[*];
 

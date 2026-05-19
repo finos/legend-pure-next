@@ -20,7 +20,22 @@ import meta::pure::functions::meta::*;
 import meta::pure::functions::string::*;
 import meta::pure::metamodel::extension::*;
 import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::pointer::*;
 import meta::pure::ui::progress::*;
+
+// Package.children entries are stored as TempCompilerPointer subtypes by the
+// in-memory compile path (so cross-pass updates to elementMap don't leave
+// stale skeletons in children). pathToElement looks up the live element from
+// the runtime resolver, which gives us the canonical pass-3 entry. Non-pointer
+// children (the case for PDB-load paths, which deref at load time) pass
+// through unchanged.
+function <<test.TestDependency>> meta::pure::test::resolveChild(c:meta::pure::metamodel::PackageableElement[1]):meta::pure::metamodel::PackageableElement[1]
+{
+    if($c->instanceOf(TempCompilerPointer),
+        | pathToElement($c->cast(@TempCompilerPointer).path),
+        | $c
+    )
+}
 
 // ---------------------------------------------------------------------------
 // Pure-native runner for <<test.Test>> functions.
@@ -41,13 +56,14 @@ import meta::pure::ui::progress::*;
 // Recursively collect zero-arg <<test.Test>> functions under a package.
 function <<test.TestDependency>> meta::pure::test::collectFunctionTests(pkg:Package[1]):UserDefinedFunction<Any>[*]
 {
-    let directTests = $pkg.children
+    let resolvedChildren = $pkg.children->map(c | meta::pure::test::resolveChild($c));
+    let directTests = $resolvedChildren
         ->filter(e | $e->instanceOf(UserDefinedFunction)
                      && meta::pure::test::hasTestStereotype($e)
                      && meta::pure::test::isZeroArg($e->cast(@UserDefinedFunction<Any>)))
         ->cast(@UserDefinedFunction<Any>);
 
-    let subPackages = $pkg.children
+    let subPackages = $resolvedChildren
         ->filter(e | $e->instanceOf(Package))
         ->cast(@Package);
     let subTests = $subPackages->map(p | meta::pure::test::collectFunctionTests($p));

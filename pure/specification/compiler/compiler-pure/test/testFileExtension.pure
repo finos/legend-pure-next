@@ -1,0 +1,78 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::protocol::*;
+
+// Pure-side type for the ###File test section. Each ###File chunk in a
+// compiler-test source declares an additional in-memory file the test
+// harness compiles alongside the primary ###Pure section — used to
+// reproduce cross-file ordering bugs in {@code compile(PureFile[*])}. The
+// first non-empty line of the section body is the file's sourceId; the
+// rest is raw ###Pure-grammar content compiled under that sourceId.
+Class meta::pure::compiler::test::TestFile extends meta::pure::protocol::grammar::PackageableElement
+{
+    value : String[1];
+}
+
+// Splits a parsed compiler-test source into one PureFile per logical file
+// by scanning {@code parsedFile.sections}: the primary ###Pure section is
+// returned under {@code parsedFile.sourceId}, plus one PureFile per ###File
+// section (each parsed once via the top-parser). No string-level slicing —
+// the typed Section model is authoritative.
+//
+// Each returned PureFile carries:
+//   - the sourceId from {@code parsedFile} for the primary; each ###File
+//     chunk uses the synthetic sourceId declared on its body's first
+//     non-empty line
+//   - the ###Pure section whose {@code elements} are ready for the
+//     compiler's pass 1 / pass 2 / pass 3
+//
+// Assertion-only sections (###CompiledGraph, ###CompilerStats, ###Error)
+// of the test source are NOT included in the output — the harness extracts
+// expected values from the original parsed source separately.
+function meta::pure::compiler::test::manageFileSections(parsedFile:meta::pure::protocol::PureFile[1]):meta::pure::protocol::PureFile[*]
+{
+    // Keep ALL ###Pure sections as the primary file's sections. The parser
+    // prepends a synthetic `###Pure` header when the source doesn't start
+    // with one, so a test that has blanked-out ###Error lines before its
+    // real ###Pure header ends up with two Pure sections (synthetic empty +
+    // real). Both need to flow through compile() so the real elements are
+    // seen.
+    let primarySections = $parsedFile.sections->filter(s | $s.parserName == 'Pure');
+    let primaryFile = ^meta::pure::protocol::PureFile(
+        sourceId = $parsedFile.sourceId,
+        sections = $primarySections
+    );
+    let extraFiles = $parsedFile.sections
+        ->filter(s | $s.parserName == 'File')
+        ->map(s | meta::pure::compiler::test::parseTestFileChunk($s));
+    $primaryFile->concatenate($extraFiles);
+}
+
+// Parses one ###File section's TestFile body into a standalone PureFile.
+// The first non-empty line is the synthetic sourceId; the rest is the
+// ###Pure-grammar body.
+function meta::pure::compiler::test::parseTestFileChunk(section:meta::pure::protocol::Section[1]):meta::pure::protocol::PureFile[1]
+{
+    let testFile = $section.elements
+        ->filter(e | $e->instanceOf(meta::pure::compiler::test::TestFile))
+        ->head()
+        ->toOne()
+        ->cast(@meta::pure::compiler::test::TestFile);
+    let raw = $testFile.value->trim();
+    let nlIdx = $raw->indexOf('\n');
+    let name = if($nlIdx < 0, | $raw, | $raw->substring(0, $nlIdx)->trim());
+    let body = if($nlIdx < 0, | '', | $raw->substring($nlIdx + 1, $raw->length()));
+    meta::pure::functions::meta::parse($name, '###Pure\n' + $body);
+}

@@ -21,6 +21,7 @@ import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraph;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension;
 import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
+import org.finos.legend.pure.m3.extensions.testfile.TestFileLanguageExtension;
 import org.finos.legend.pure.m3.module.CompilationError;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
@@ -109,6 +110,8 @@ public class CompilerCompiledGraphPdbRoundTripTest
         return tests;
     }
 
+    private static final SpecTestRuntime RUNTIME = new SpecTestRuntime();
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("discoverTests")
     public void testPdbRoundTrip(String testName, String resourcePath) throws Exception
@@ -121,29 +124,14 @@ public class CompilerCompiledGraphPdbRoundTripTest
             return;
         }
 
-        CompiledGraphLanguageExtension cgExt = new CompiledGraphLanguageExtension();
-        CompilerStatsLanguageExtension csExt = new CompilerStatsLanguageExtension();
-        org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndexLanguageExtension riExt =
-                new org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndexLanguageExtension();
-        PureLanguageExtension pureExt = new PureLanguageExtension();
-        PureParser parser = PureParser.builder().withExtensions(Lists.mutable.with(cgExt, csExt, riExt, pureExt)).build();
-
         // --- Step 1: Compile in memory ---
-        PDBModule baseModule = new PDBModule(BootstrapModule.locateCorePdb(), PDBModule.Mode.COMPILATION);
-        PureModel model = PureModel.withModules(
-                        Lists.mutable.with(new LocalModule("test", "*", Lists.mutable.with(baseModule.getName()),
-                                Lists.mutable.with(new PureContent(content, testName))), baseModule))
-                .withExtensions(Lists.mutable.with(cgExt, csExt, riExt, pureExt))
-                .build();
-        CompilationResult result = model.compile();
+        CompiledSpec spec = RUNTIME.compileSpec(content, testName);
 
-        List<String> errors = result.errors().stream().map(CompilationError::message).toList();
+        List<String> errors = spec.result().errors().stream().map(CompilationError::message).toList();
         Assertions.assertTrue(errors.isEmpty(), "Compilation errors: " + String.join("\n", errors));
 
-        // Collect compiled elements and print the compiled graph (before PDB round-trip)
-        PureFile pureFile = parser.parse(testName, content);
-        Module testModule = model.getModule("test");
-        List<PackageableElement> compiledElements = collectCompiledElements(pureFile, testModule);
+        Module testModule = spec.testModule();
+        List<PackageableElement> compiledElements = spec.compiledElementsInDeclarationOrder();
         String expectedGraph = CompiledGraphPrinter.print(compiledElements).stripTrailing();
 
         // --- Step 2: Write to PDB ---
@@ -176,8 +164,8 @@ public class CompilerCompiledGraphPdbRoundTripTest
 
             // --- Step 3: Read back from PDB ---
             PDBModule roundTripModule = new PDBModule(tempPdb, PDBModule.Mode.EXECUTION);
-            PureModel model2 = PureModel.withModules(Lists.mutable.with(roundTripModule, baseModule))
-                    .withExtensions(Lists.mutable.with(pureExt))
+            PureModel model2 = PureModel.withModules(Lists.mutable.with(roundTripModule, RUNTIME.coreModule()))
+                    .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
                     .build();
             model2.compile();
 
@@ -205,31 +193,4 @@ public class CompilerCompiledGraphPdbRoundTripTest
         }
     }
 
-    private List<PackageableElement> collectCompiledElements(PureFile pureFile, Module testModule)
-    {
-        List<PackageableElement> elements = new ArrayList<>();
-        pureFile._sections().forEach(section ->
-                section._elements().forEach(grammarElement ->
-                {
-                    if (grammarElement instanceof CompiledGraph
-                            || grammarElement instanceof org.finos.legend.pure.m3.extensions.compilerstats.CompilerStats
-                            || grammarElement instanceof org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndex)
-                    {
-                        return;
-                    }
-                    String name = grammarElement._name();
-                    String packagePath = grammarElement._package() != null
-                            ? grammarElement._package()._value()
-                            : null;
-                    String fullPath = packagePath != null
-                            ? packagePath + "::" + name
-                            : name;
-                    PackageableElement resolved = testModule.getElement(fullPath);
-                    if (resolved != null)
-                    {
-                        elements.add(resolved);
-                    }
-                }));
-        return elements;
-    }
 }

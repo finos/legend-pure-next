@@ -22,6 +22,7 @@ import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraph;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphImpl;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension;
 import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
+import org.finos.legend.pure.m3.extensions.testfile.TestFileLanguageExtension;
 import org.finos.legend.pure.m3.module.CompilationError;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
@@ -46,6 +47,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -183,6 +185,8 @@ public class CompilerCompiledGraphTest
         return tests;
     }
 
+    private static final SpecTestRuntime RUNTIME = new SpecTestRuntime();
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("discoverTests")
     public void testCompiledGraph(String testName, String resourcePath) throws Exception
@@ -190,18 +194,10 @@ public class CompilerCompiledGraphTest
         ClassLoader cl = getClass().getClassLoader();
         String content = loadResource(cl, resourcePath);
 
-        // Parse for assertion extraction (with CompiledGraph + CompilerStats + ReverseIndex section support)
-        CompiledGraphLanguageExtension cgExt = new CompiledGraphLanguageExtension();
-        CompilerStatsLanguageExtension csExt = new CompilerStatsLanguageExtension();
-        org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndexLanguageExtension riExt =
-                new org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndexLanguageExtension();
-        PureLanguageExtension pureExt = new PureLanguageExtension();
-
-        PureParser parser = PureParser.builder().withExtensions(Lists.mutable.with(cgExt, csExt, riExt, pureExt)).build();
-        PureFile pureFile = parser.parse(testName, content);
+        CompiledSpec spec = RUNTIME.compileSpec(content, testName);
 
         // Extract expected compiled graph from parsed CompiledGraph elements
-        String expectedGraph = pureFile._sections().flatCollect(s -> s._elements())
+        String expectedGraph = spec.primary()._sections().flatCollect(s -> s._elements())
                 .selectInstancesOf(CompiledGraph.class)
                 .collect(CompiledGraph::_value)
                 .getFirst();
@@ -216,59 +212,21 @@ public class CompilerCompiledGraphTest
         }
         expectedGraph = expectedGraph.stripTrailing();
 
-        // Compile (LocalModule parses internally, cgExt provides both grammar + compiler)
-        PDBModule module =
-                new PDBModule(BootstrapModule.locateCorePdb(),
-                        PDBModule.Mode.COMPILATION);
-
-        PureModel model = PureModel.withModules(
-                        Lists.mutable.with(new LocalModule("test", "*", Lists.mutable.with(module.getName()),
-                                Lists.mutable.with(new PureContent(content, testName))), module))
-                .withExtensions(Lists.mutable.with(cgExt, csExt, riExt, pureExt))
-                .build();
-        CompilationResult result = model.compile();
-
         // Assert no compilation errors
-        List<String> errors = result.errors().stream()
+        List<String> errors = spec.result().errors().stream()
                 .map(CompilationError::message)
                 .toList();
         Assertions.assertTrue(errors.isEmpty(),
                 "Compilation errors for " + testName + ":\n" + String.join("\n", errors));
 
-        // Collect compiled elements in source order
-        List<PackageableElement> compiledElements = new ArrayList<>();
-        Module testModule = model.getModule("test");
-        pureFile._sections().forEach(section ->
-                section._elements().forEach(grammarElement ->
-                {
-                    if (grammarElement instanceof CompiledGraph
-                            || grammarElement instanceof org.finos.legend.pure.m3.extensions.compilerstats.CompilerStats
-                            || grammarElement instanceof org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndex)
-                    {
-                        return; // Skip test-fixture sections — they're not part of the graph under test
-                    }
-                    String name = grammarElement._name();
-                    String packagePath = grammarElement._package() != null
-                            ? grammarElement._package()._value()
-                            : null;
-                    String fullPath = packagePath != null
-                            ? packagePath + "::" + name
-                            : name;
-                    PackageableElement resolved = testModule.getElement(fullPath);
-                    if (resolved != null)
-                    {
-                        compiledElements.add(resolved);
-                    }
-                }));
-
         // Print and compare
-        String actualGraph = CompiledGraphPrinter.print(compiledElements).stripTrailing();
+        String actualGraph = CompiledGraphPrinter.print(spec.compiledElementsInDeclarationOrder()).stripTrailing();
 
         // Baseline generation mode: write actual output back to source file.
         // Always also emits a ###ReverseIndex section so every success test
         // carries the recorded reverse index alongside its compiled graph —
         // makes the test the canonical fixture for both signals.
-        String actualReverseIndex = formatReverseIndex(result.referencedBy());
+        String actualReverseIndex = formatReverseIndex(spec.result().referencedBy());
         if (Boolean.getBoolean("legend.pure.generateBaselines"))
         {
             writeBaseline(resourcePath, actualGraph, actualReverseIndex);
@@ -287,17 +245,17 @@ public class CompilerCompiledGraphTest
         // produces zero elements for an empty content body, so detect
         // section presence via {@code Section._parserName()} instead of
         // looking for a parsed {@code ReverseIndex} element.
-        boolean hasReverseIndexSection = pureFile._sections()
+        boolean hasReverseIndexSection = spec.primary()._sections()
                 .anySatisfy(s -> "ReverseIndex".equals(s._parserName()));
         Assertions.assertTrue(hasReverseIndexSection,
                 "Test file must contain a ###ReverseIndex section: " + testName
                         + " (run with -Dlegend.pure.generateBaselines=true to backfill)");
-        String expectedRevIndex = pureFile._sections().flatCollect(s -> s._elements())
+        String expectedRevIndex = spec.primary()._sections().flatCollect(s -> s._elements())
                 .selectInstancesOf(org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndex.class)
                 .collect(org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndex::_value)
                 .getFirst();
         if (expectedRevIndex == null) expectedRevIndex = ""; // empty section
-        String actualRevIndex = formatReverseIndex(result.referencedBy());
+        String actualRevIndex = formatReverseIndex(spec.result().referencedBy());
         String normalizedExpected = normalizeReverseIndex(expectedRevIndex);
         Assertions.assertEquals(normalizedExpected, actualRevIndex,
                 "ReverseIndex mismatch for " + testName

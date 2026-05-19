@@ -46,7 +46,14 @@ function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraph
               | $content
           );
           let parsedFile = meta::pure::functions::meta::parse($sourceId, $preparedContent);
-          let result = meta::pure::compiler::compile($parsedFile);
+          // {@code manageFileSections} turns one test-source PureFile into
+          // one PureFile per logical file (primary ###Pure + each ###File
+          // chunk). Single-file specs collapse to a 1-element list, so the
+          // same call path covers both shapes.
+          // silent=true — tests pull errors/stats structurally off the
+          // result; the CLI progress bar + stats summary would flood the
+          // 247-test run with noise.
+          let result = meta::pure::compiler::compile(manageFileSections($parsedFile), false, true);
 
           let errorCheck = if(contains($content, '###' + 'Error'),
                               | assertCompilationErrorOnResult($content, $result, $sourceId);,
@@ -167,7 +174,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::dumpAllCompilerStat
               let prefix = $raw->substring(0, $pureStart)->split('\n')->map(l | '')->joinStrings('\n');
               let toCompile = $prefix + $raw->substring($pureStart);
               let parsedFile = meta::pure::functions::meta::parse($name, $toCompile);
-              let result = meta::pure::compiler::compile($parsedFile);
+              let result = meta::pure::compiler::compile($parsedFile, false, true);
               let stats = if($result.statistics->isEmpty(),
                   | 'inferenceRollbacks: 0\ncandidateEvaluations: 0',
                   | printCompilerStatsForTest($result.statistics->toOne())
