@@ -85,10 +85,10 @@ function meta::pure::compiler::helper::pointer::toAssociationPointer(a:Associati
     ^AssociationPointer(path = $a->elementToPath());
 }
 
-// A parentless Package is the synthetic root (`^Package(name='Root')` from
-// `getOrCreatePackagePath` for empty packagePath). Its `elementToPath` is
-// the synthetic name ("Root"), but conventionally the root contributes
-// the empty path to a child element's full path — see
+// A parentless Package is the synthetic root (`^Package(name='::')` from
+// `getOrCreatePackagePath` for empty packagePath — see `compiler.pure`).
+// Its `elementToPath` would return its name ("::"), but conventionally the
+// root contributes the empty path to a child element's full path — see
 // `meta::pure::functions::meta::tests::elementToPath::testEphemeralPackageableElements`.
 // Force the pointer's `.path` to '' in that case so the wrapped root behaves
 // the same as the unwrapped one when composed into a child class's path.

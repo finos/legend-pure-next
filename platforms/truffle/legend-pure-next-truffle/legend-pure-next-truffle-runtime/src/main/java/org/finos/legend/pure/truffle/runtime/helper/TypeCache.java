@@ -258,13 +258,6 @@ public final class TypeCache implements TruffleTypeCache
                 if (gen != null)
                 {
                     Object superType = _GenericType.type(PureObj.readBySlot(gen, SLOT_GENERAL));
-                    // Deref TempCompilerPointer (ClassPointer etc.) emitted by
-                    // compile-pure for cross-element type refs — without this
-                    // the ancestors set keys on the pointer wrapper instead of
-                    // the canonical Class, and identity-based subtypeOf misses
-                    // (witnessed by testInstanceOfInstance: a CC_Address
-                    // instance failing instanceOf(CC_GeographicEntity)).
-                    superType = _PackageableElement.derefPointer(superType, resolver);
                     linearizeInto(superType, out, resolver);
                 }
             }

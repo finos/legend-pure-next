@@ -436,7 +436,10 @@ public class PureValuePrinter
             return name != null ? name : "?";
         }
         String parent = buildPath(pe._package());
-        return "Root".equals(parent) ? name : parent + "::" + name;
+        // The canonical root marker is "::" (m3.ttl convention and now
+        // compiler-pure's synthetic root too). Skip prepending the parent's
+        // path when the parent IS the root.
+        return "::".equals(parent) ? name : parent + "::" + name;
     }
 
     private static String shortSegment(String path)

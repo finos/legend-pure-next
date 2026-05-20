@@ -54,8 +54,8 @@ public final class IsNode extends PureNode
     public boolean executeBoolean(VirtualFrame frame)
     {
         var resolver = getResolver();
-        Object rawA = _PackageableElement.derefPointer(normalize(left.executeGeneric(frame)), resolver);
-        Object rawB = _PackageableElement.derefPointer(normalize(right.executeGeneric(frame)), resolver);
+        Object rawA = normalize(left.executeGeneric(frame));
+        Object rawB = normalize(right.executeGeneric(frame));
         if (rawA == rawB)
         {
             return true;

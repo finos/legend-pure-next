@@ -223,13 +223,16 @@ public final class PureClassRegistry
             if (g == null) continue;
             Object general = readField(g, "general");
             Object parent = general != null ? readField(general, "type") : null;
-            // `general.type` may be a TempCompilerPointer (Class_Pointer /
-            // PrimitiveTypePointer / EnumerationPointer) since the compiler
-            // wraps cross-element type refs as pointers. Pointers have no
-            // `generalizations` slot, so walking through them truncates the
-            // hierarchy — the leaf class loses inherited slots like
-            // `classifierGenericType` from Any. Deref via the resolver before
-            // recursing.
+            // Class-info population can fire DURING compile-pure execution
+            // (lazy on first PDO construction), before TruffleInMemoryModule
+            // post-processing resolves pointers in the result graph. At that
+            // moment `parent` may still be a TempCompilerPointer (the
+            // compiler wraps cross-element type refs as pointers — see
+            // [_Pointer.pure]). Pointers have no `generalizations` slot, so
+            // walking through them truncates the hierarchy and the leaf class
+            // loses inherited slots like `classifierGenericType` from Any.
+            // Deref ONCE during the walk — purely a hierarchy query, not a
+            // runtime read deref.
             parent = derefIfPointer(parent, resolver);
             if (parent != null) collectHierarchy(parent, sink, seen, resolver);
         }
@@ -238,11 +241,6 @@ public final class PureClassRegistry
     private static Object derefIfPointer(Object obj, TruffleMetadataAccess resolver)
     {
         if (obj == null || resolver == null) return obj;
-        // Structural pointer detection: TempCompilerPointer subclasses carry
-        // only `path` (set) with `name` and `package` unset. A live PE has
-        // `name` (non-empty) and may not even have `path` exposed via
-        // readField in this lightweight reader. Codegen can't depend on
-        // runtime's PureObj.isType, so we use this structural test.
         Object pathVal = readField(obj, "path");
         if (!(pathVal instanceof String path) || path.isEmpty()) return obj;
         Object nameVal = readField(obj, "name");

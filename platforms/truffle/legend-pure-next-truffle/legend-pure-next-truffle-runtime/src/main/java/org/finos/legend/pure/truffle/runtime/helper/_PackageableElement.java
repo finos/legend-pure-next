@@ -78,48 +78,17 @@ public final class _PackageableElement
      * If {@code v} is a {@code TempCompilerPointer} subtype, return its
      * {@code .path} slot value; otherwise return {@code null}.
      *
-     * <p>Pointer detection uses the {@code pureTypeOf} prefix check rather
-     * than {@link PureObj#isType} to avoid a subtype walk through the
-     * resolver — the prefix is precise (every pointer Pure class lives
-     * under {@code meta::pure::metamodel::pointer::}) and the
-     * {@code pureTypeOf} cache keeps the check at a single map lookup.
-     * That avoids the {@code subtypeOf → derefPointer → subtypeOf} recursion
-     * that would arise from an {@code isType}-based check.</p>
-     *
-     * <p>The string-returning shape lets the three pointer-aware paths
-     * ({@link #path}, {@link #derefPointer}, {@link #derefPackagePath})
-     * share this single check and differ only in what they do with the
-     * extracted path.</p>
+     * <p>Used by {@link #path} and {@link #derefPackagePath} to short-circuit
+     * the package-chain walk when the value is a pointer — pointer's
+     * {@code .path} carries the canonical path directly.</p>
      */
-    static String pointerPath(Object v)
+    public static String pointerPath(Object v)
     {
         if (v == null) return null;
         String typePath = PureObj.pureTypeOf(v);
         if (typePath == null || !typePath.startsWith(POINTER_TYPE_PREFIX)) return null;
         Object slotPath = PureObj.readBySlot(v, SLOT_POINTER_PATH);
         return slotPath instanceof String s && !s.isEmpty() ? s : null;
-    }
-
-    /**
-     * If {@code v} is a {@code TempCompilerPointer} subtype, resolve it to its
-     * live target element via the resolver. Non-pointer values pass through
-     * unchanged. Compile-pure embeds Class / PackageableFunction references
-     * as path-only pointers to avoid freezing pass-1 skeletons into compiled
-     * output; consumers that need the live element (identity comparison,
-     * property access, type walks) call this to dereference.
-     *
-     * <p>Returns {@code v} unchanged if the resolver is {@code null}, the
-     * value isn't a pointer, the pointer's {@code path} slot is empty, or
-     * the resolver can't locate the target — degrading gracefully rather
-     * than throwing keeps pointer dereference cheap to call on any value.</p>
-     */
-    @TruffleBoundary
-    public static Object derefPointer(Object v, TruffleMetadataAccess resolver)
-    {
-        String path = pointerPath(v);
-        if (path == null || resolver == null) return v;
-        Object resolved = resolver.getElement(path);
-        return resolved != null ? resolved : v;
     }
 
     private static void putPathCache(Object pe, String result)

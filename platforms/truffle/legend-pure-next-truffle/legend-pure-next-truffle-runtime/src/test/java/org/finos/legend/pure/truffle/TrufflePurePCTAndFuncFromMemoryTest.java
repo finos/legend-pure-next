@@ -23,7 +23,6 @@ import org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry;
 import org.finos.legend.pure.truffle.runtime.TrufflePdbLoader;
 import org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
-import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.PureSequence;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -34,33 +33,25 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import org.junit.jupiter.api.Disabled;
-
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration test: load only core.pdb + compiler.pdb (no -tests companions),
- * compile a small custom test corpus alongside the standard runners
- * ({@code meta::pure::test::runTests}, {@code runPCTTests}, the in-memory
- * PCT adapter) freshly from {@code pure/specification/runtime/}, register
- * the resulting in-memory CompilationResult as a second module on top of
- * core.pdb, then drive both runners against the live image.
+ * freshly compile {@code pure/specification/runtime/} via compile-pure-on-truffle,
+ * keep only test-tagged elements (mirroring {@code TestElementFilter.isTestElement}'s
+ * core.pdb/core-tests.pdb split) and register them as an in-memory module on
+ * top of core. Drives both runners ({@code runTests}, {@code runPCTTests}) and
+ * asserts no <<test.Test>> / <<PCT.test>> failure — i.e. the freshly compiled
+ * test elements behave identically to their core-tests.pdb equivalents.
  *
- * <p>"Local module" = in-memory, no PDB on disk. The runner sources and the
- * test functions are compiled together so the test exercises the full
- * runner-discovery path end-to-end without the core-tests.pdb companion.
- *
- * <p>Disabled temporarily: the {@code testAdapterForInMemoryExecution}
- * function compiled fresh by compile-pure ends up with a null
- * {@code expressionSequence} slot at runtime, causing a NPE in
- * {@code PureASTBuilder.lowerBody}. The PDB-loaded path
- * ({@code just truffle test-pure-runtime-PCTs}) works (426/426), so the
- * divergence is between raw compile-pure output and what survives the PDB
- * write/read round-trip. Separate bug; tracking elsewhere.
+ * <p>"In-memory module" = no PDB on disk. The full test corpus is compiled
+ * end-to-end through the same pipeline a regular {@code test-pure-runtime}
+ * run would exercise, with the post-pass-3 pointer/identity canonicalization
+ * happening at {@link TruffleInMemoryModule} construction (via
+ * {@link org.finos.legend.pure.truffle.runtime.helper.PointerGraphResolver}).
  */
-@Disabled("PCT adapter compile NPE — testAdapterForInMemoryExecution has null expressionSequence in-memory; PDB path works")
-public class InMemoryRuntimeTestsTest
+public class TrufflePurePCTAndFuncFromMemoryTest
 {
     // Multi-root parseDir: stamps sourceIds relative to each input root so
     // {@code runtime/functions/asserts/assertError.pure} gets sourceId
@@ -125,9 +116,17 @@ public class InMemoryRuntimeTestsTest
         // PCT in-memory adapter — exactly what the user-facing test-pure-runtime
         // recipe exercises, but compiled fresh against core.pdb rather than
         // loaded from core-tests.pdb.
-        // Mirror SpecificationBinaryBuilder's split of the runtime corpus into
-        // multiple source roots. Each file's sourceId is relative to its own
-        // root, matching the path convention encoded in core.pdb / core-tests.pdb.
+        // Compile-pure needs the full runtime corpus to type-check (test
+        // functions reference helper classes defined in featureTests/ and
+        // library functions in functions/ — without those in scope, type
+        // inference fails). After compile, we'll filter result.elements to
+        // ONLY the {@code <<test.Test>>} / {@code <<PCT.test>>} elements
+        // before constructing the in-memory module; the discarded library +
+        // helper elements come from core.pdb via the resolver, so the
+        // registry's uniqueness invariant is preserved. Slot refs from the
+        // kept test functions to discarded helpers are canonicalized to
+        // core.pdb's instances by PointerGraphResolver during module
+        // construction.
         Path runtimeSrc = locateRuntimeSrc();
         java.util.List<String> sourceRoots = java.util.List.of(
                 runtimeSrc.resolve("functions").toAbsolutePath().toString(),
@@ -177,33 +176,32 @@ public class InMemoryRuntimeTestsTest
             throw new IllegalStateException("compile.elements is empty");
         }
 
-        // Register the entire CompilationResult as an in-memory module. Mirrors
-        // the IDE's TruffleBackend.execute pattern (the dep list contains every
-        // module already in the registry so user elements can reference core
-        // and compiler without cycle errors).
+        // Keep only test-tagged elements (mirrors functionTestRunner.pure +
+        // pctTestRunner.pure): {@code <<test.Test>>} (profile.name == 'test' &&
+        // stereotype.value == 'Test') or {@code <<PCT.test>>}
+        // (profile.name == 'PCT' && stereotype.value == 'test'). Everything
+        // else (helpers, profiles, library) comes from core.pdb via the
+        // resolver — the registry's uniqueness invariant enforces no overlap.
+        PureSequence testElements = filterTestStereotyped(elementsSeq);
+        if (testElements.size() == 0)
+        {
+            throw new IllegalStateException("no test-tagged elements after filtering compile result");
+        }
+
+        // Register the filtered test elements as an in-memory module. The
+        // dep list contains every module already in the registry so test
+        // elements can reference core/compiler without cycle errors.
         java.util.List<String> deps = new java.util.ArrayList<>();
         for (org.finos.legend.pure.truffle.runtime.TruffleModule existing : registry.modules())
         {
             deps.add(existing.name());
         }
-        registry.register(new TruffleInMemoryModule("inmem-runtime-tests", deps, elementsSeq, registry));
+        registry.register(new TruffleInMemoryModule("inmem-runtime-tests", deps, testElements, registry));
 
         runTestsFn = registry.getElement("meta::pure::test::runTests_String_1__String_1_");
         runPctTestsFn = registry.getElement("meta::pure::test::runPCTTests_String_1__String_1_");
-        assertNotNull(runTestsFn, "runTests should be in the freshly compiled in-memory module");
-        assertNotNull(runPctTestsFn, "runPCTTests should be in the freshly compiled in-memory module");
-
-        Object adapter = registry.getElement("meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_");
-        System.err.println("[diag] testAdapter class = " + (adapter == null ? "null" : adapter.getClass().getName()));
-        System.err.println("[diag] testAdapter pureType = "
-                + (adapter == null ? "null" : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(adapter)));
-        if (adapter != null)
-        {
-            Object exprSeq = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(adapter, "expressionSequence");
-            System.err.println("[diag] expressionSequence = "
-                    + (exprSeq == null ? "null" : exprSeq.getClass().getName() + " size="
-                            + (exprSeq instanceof PureSequence ps ? ps.size() : "n/a")));
-        }
+        assertNotNull(runTestsFn, "runTests not resolvable through registry");
+        assertNotNull(runPctTestsFn, "runPCTTests not resolvable through registry");
     }
 
     @AfterAll
@@ -231,6 +229,72 @@ public class InMemoryRuntimeTestsTest
         String line = String.valueOf(output);
         assertTrue(line.startsWith("OK:") && line.contains("<<PCT.test>> tests passed"),
                 () -> "runPCTTests should report OK; got: " + line);
+    }
+
+    /**
+     * Mirror of {@code TestElementFilter.isTestElement} (the bootstrap's
+     * split rule for core.pdb vs core-tests.pdb): an element is test-related
+     * if it carries any stereotype on {@code meta::pure::profiles::test}
+     * (Test, TestDependency, BeforePackage, AfterPackage, ToFix) OR the
+     * {@code test} / {@code adapter} stereotype on
+     * {@code meta::pure::test::pct::PCT}. Everything else is library code
+     * — bootstrap puts it in core.pdb, so the in-memory module must NOT
+     * re-declare it.
+     */
+    private static final String TEST_PROFILE_PATH = "meta::pure::profiles::test";
+    private static final String PCT_PROFILE_PATH = "meta::pure::test::pct::PCT";
+    private static final java.util.Set<String> PCT_TEST_STEREOTYPES = java.util.Set.of("test", "adapter");
+
+    private static PureSequence filterTestStereotyped(PureSequence elements)
+    {
+        java.util.List<Object> kept = new java.util.ArrayList<>();
+        for (int i = 0; i < elements.size(); i++)
+        {
+            Object el = elements.getBoxed(i);
+            if (el != null && isTestElement(el))
+            {
+                kept.add(el);
+            }
+        }
+        return new org.finos.legend.pure.truffle.types.ObjectSequence(kept.toArray());
+    }
+
+    private static boolean isTestElement(Object element)
+    {
+        Object stereos = PureObj.read(element, "stereotypes");
+        if (!(stereos instanceof PureSequence seq)) return false;
+        for (int i = 0; i < seq.size(); i++)
+        {
+            Object s = seq.getBoxed(i);
+            if (s == null) continue;
+            String profilePath;
+            String stereoName;
+            String ptrPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.pointerPath(s);
+            if (ptrPath != null)
+            {
+                profilePath = ptrPath;
+                Object name = PureObj.read(s, "element");
+                stereoName = name instanceof String str ? str : null;
+            }
+            else
+            {
+                Object profile = PureObj.read(s, "profile");
+                profilePath = profile != null
+                        ? org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(profile, registry)
+                        : null;
+                Object value = PureObj.read(s, "value");
+                stereoName = value instanceof String str ? str : null;
+            }
+            if (TEST_PROFILE_PATH.equals(profilePath))
+            {
+                return true;
+            }
+            if (PCT_PROFILE_PATH.equals(profilePath) && PCT_TEST_STEREOTYPES.contains(stereoName))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Path locateRuntimeSrc()

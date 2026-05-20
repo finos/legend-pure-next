@@ -86,11 +86,6 @@ public final class CastNode extends PureNode
                 // type-variable bindings (e.g. {x: 8} for `cast(@P(8))`).
                 targetGT = rawTargetGT;
                 targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(rawTargetGT);
-                // After the compiler pointer-wrap, `gt.type` may be a
-                // TempCompilerPointer. Deref it via the resolver so the
-                // subtypeOf / ancestors lookup below (keyed on the live class
-                // instance) matches — pointers aren't in the ancestors set.
-                targetType = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.derefPointer(targetType, resolver);
             }
         }
 

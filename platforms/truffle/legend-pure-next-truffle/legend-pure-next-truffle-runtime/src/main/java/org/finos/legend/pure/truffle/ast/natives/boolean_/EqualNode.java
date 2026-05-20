@@ -126,8 +126,8 @@ public final class EqualNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean slowEqualsStatic(Object a, Object b, TruffleMetadataAccess resolver)
     {
-        Object rawA = _PackageableElement.derefPointer(normalizeForEquals(a), resolver);
-        Object rawB = _PackageableElement.derefPointer(normalizeForEquals(b), resolver);
+        Object rawA = normalizeForEquals(a);
+        Object rawB = normalizeForEquals(b);
         if (rawA == rawB) return true;
         return callPureEquals(rawA, rawB, resolver);
     }

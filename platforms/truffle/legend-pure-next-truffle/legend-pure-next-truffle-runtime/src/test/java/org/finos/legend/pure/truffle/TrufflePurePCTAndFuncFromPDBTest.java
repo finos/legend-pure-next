@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Run with: {@code mvn test -Dtest=TrufflePureTestRunner}</p>
  */
-class TrufflePureTestRunner
+class TrufflePurePCTAndFuncFromPDBTest
 {
     private static PureContext context;
     private static org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry resolver;

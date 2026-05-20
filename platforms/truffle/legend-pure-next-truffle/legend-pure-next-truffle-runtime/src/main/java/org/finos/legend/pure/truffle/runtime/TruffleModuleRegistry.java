@@ -104,9 +104,51 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
                     "Module '" + module.name() + "' is already registered. "
                             + "Call unregister(name) before re-registering.");
         }
+        // Uniqueness check: a module may not declare a path that an already-
+        // registered module already declares. A path collision means we'd
+        // have two Java instances representing the same Pure element, which
+        // breaks identity comparisons (`is`) and corrupts the type cache.
+        // Compile-pure should never emit a top-level element at a path that
+        // already exists in a dep PDB — if this fires, the compile result has
+        // a duplicate of a core/compiler element and we want to find the bug,
+        // not silently dedup.
+        java.util.List<String> collisions = new java.util.ArrayList<>();
+        java.util.List<String> collisionOwners = new java.util.ArrayList<>();
+        for (String path : module.elementPaths())
+        {
+            for (TruffleModule existing : modules.values())
+            {
+                if (existing.hasElement(path))
+                {
+                    collisions.add(path);
+                    collisionOwners.add(existing.name());
+                    if (collisions.size() >= 10) break;
+                }
+            }
+            if (collisions.size() >= 10) break;
+        }
+        if (!collisions.isEmpty())
+        {
+            StringBuilder sb = new StringBuilder("Module '").append(module.name())
+                    .append("' declares paths already present in registered module(s): ");
+            for (int i = 0; i < collisions.size(); i++)
+            {
+                sb.append("\n  ").append(collisions.get(i))
+                        .append("  (owned by '").append(collisionOwners.get(i)).append("')");
+            }
+            throw new IllegalStateException(sb.toString());
+        }
         modules.put(module.name(), module);
         functionsByNameArity = null;
         reverseAssocIndex = null;
+        // Drop the element cache. Without this, any path the new module owns
+        // that some earlier lookup tried (and missed, caching {@link #ABSENT_PATH})
+        // would keep returning null forever — including class-info population
+        // for the new module's user classes. Compile-pure execution routinely
+        // calls {@link #getElement} for not-yet-registered user paths during
+        // its compile, so this staleness manifests as silent class-info
+        // population failures (writeProperty: ... has no property ...).
+        elementCache.clear();
     }
 
     /**

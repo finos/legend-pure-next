@@ -66,22 +66,27 @@ public final class ElementPathNode extends PureNode
     @TruffleBoundary
     private static void collectAncestors(Object pe, List<Object> path, TruffleMetadataAccess resolver)
     {
-        // Deref pointer ancestors — compile-pure wraps Class.package and Package
-        // children as pointers, but the walk needs the live element's
-        // name/package slots which are intentionally unset on a pointer.
-        Object live = _PackageableElement.derefPointer(pe, resolver);
-        Object parent = PureObj.readBySlot(live, SLOT_PACKAGE);
+        Object parent = PureObj.readBySlot(pe, SLOT_PACKAGE);
         if (parent != null)
         {
             collectAncestors(parent, path, resolver);
         }
-        Object nameObj = PureObj.readBySlot(live, SLOT_NAME);
+        Object nameObj = PureObj.readBySlot(pe, SLOT_NAME);
         if (nameObj instanceof String name && !name.isEmpty())
         {
-            String elPath = _PackageableElement.path(live, resolver);
-            if (!"::".equals(elPath))
+            String elPath = _PackageableElement.path(pe, resolver);
+            // Skip the canonical root only. Two forms manifest:
+            //   - elPath == "::" from computePath when a parentless Package
+            //     carries the m3.ttl convention name "::". Compile-pure's
+            //     synthetic root (compiler.pure) also uses this name now.
+            //   - elPath == "" from resolver.pathOf when the live root is
+            //     indexed at the empty path.
+            // Ephemeral packages with arbitrary names (e.g. an `^Package(
+            // name='X')` constructed by user code) are real path entries —
+            // they get added; only the canonical root short-circuits.
+            if (elPath != null && !elPath.isEmpty() && !"::".equals(elPath))
             {
-                path.add(live);
+                path.add(pe);
             }
         }
     }

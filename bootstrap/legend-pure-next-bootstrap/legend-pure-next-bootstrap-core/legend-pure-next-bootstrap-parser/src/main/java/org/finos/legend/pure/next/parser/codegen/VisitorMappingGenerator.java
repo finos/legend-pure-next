@@ -53,6 +53,8 @@ import java.util.Map;
  *   $loc           → buildSourceInfo(ctx)
  *   parseLong(e)   → Long.parseLong(e)
  *   parseDouble(e) → Double.parseDouble(e)
+ *   parseDecimal(e)→ new java.math.BigDecimal(e)
+ *   parseDecimal(sign, e) → sign != null ? new java.math.BigDecimal("-" + e) : new java.math.BigDecimal(e)
  *   parseBoolean(e)→ Boolean.parseBoolean(e)
  *   stripQuotes(e) → e.substring(1, e.length() - 1)            (with caching)
  *   stripPercent(e)→ e.startsWith("%") ? e.substring(1) : e    (with caching)
@@ -1570,6 +1572,7 @@ public final class VisitorMappingGenerator
             case "joinStripped": emitJoinStripped(out, args); return;
             case "parseLong": emitParse(out, args, "Long", cachedTextToken, inFoldBody); return;
             case "parseDouble": emitParse(out, args, "Double", cachedTextToken, inFoldBody); return;
+            case "parseDecimal": emitParseDecimal(out, args, cachedTextToken, inFoldBody); return;
             case "parseBoolean": emitParse(out, args, "Boolean", cachedTextToken, inFoldBody); return;
             case "stripQuotes": emitStripQuotes(out, args, cachedTextToken, inFoldBody); return;
             case "stripTripleQuotes": emitStripTripleQuotes(out, args, cachedTextToken, inFoldBody); return;
@@ -1769,6 +1772,49 @@ public final class VisitorMappingGenerator
         out.append(boxed).append(".parse").append(boxed).append('(');
         emitExprInto(out, args.get(0).expression(), cachedTextToken, inFoldBody);
         out.append(')');
+    }
+
+    /**
+     * Emit Java for {@code parseDecimal(text)} (unsigned) or
+     * {@code parseDecimal(signToken, text)} (signed). Both forms strip the
+     * trailing {@code d}/{@code D} suffix from the lexer's DECIMAL text
+     * (e.g. {@code "19.905d"} → {@code "19.905"}) before constructing the
+     * {@code BigDecimal} — Java's {@code BigDecimal} constructor rejects the
+     * suffix that ANTLR's DECIMAL token preserves. The signed form prefixes
+     * {@code "-"} to the stripped text when the sign token is present;
+     * {@code BigDecimal} has no unary minus operator in Java, so we route
+     * through string concatenation rather than a Java expression negation.
+     */
+    private static void emitParseDecimal(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
+    {
+        if (args.size() == 1)
+        {
+            out.append("new java.math.BigDecimal(");
+            emitDecimalTextStripSuffix(out, args.get(0).expression(), cachedTextToken, inFoldBody);
+            out.append(')');
+            return;
+        }
+        // Signed: parseDecimal(signToken, textExpr)
+        out.append("(");
+        emitExprInto(out, args.get(0).expression(), cachedTextToken, inFoldBody);
+        out.append(" != null ? new java.math.BigDecimal(\"-\" + ");
+        emitDecimalTextStripSuffix(out, args.get(1).expression(), cachedTextToken, inFoldBody);
+        out.append(") : new java.math.BigDecimal(");
+        emitDecimalTextStripSuffix(out, args.get(1).expression(), cachedTextToken, inFoldBody);
+        out.append("))");
+    }
+
+    /**
+     * Emit {@code <textExpr>.substring(0, <textExpr>.length() - 1)} to strip
+     * the trailing decimal-suffix character. Inlines the expression twice
+     * (matches the existing pattern in {@code stripQuotes} / {@code emitParse}).
+     */
+    private static void emitDecimalTextStripSuffix(StringBuilder out, VisitorMappingParser.ExpressionContext expr, String cachedTextToken, boolean inFoldBody)
+    {
+        emitExprInto(out, expr, cachedTextToken, inFoldBody);
+        out.append(".substring(0, ");
+        emitExprInto(out, expr, cachedTextToken, inFoldBody);
+        out.append(".length() - 1)");
     }
 
     private static void emitStripQuotes(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)

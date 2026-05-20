@@ -231,7 +231,7 @@ public final class TruffleValuePrinter
         Object name = pdo.readProperty("name");
         String simpleName = unwrapString(name);
         String pkgPath = walkPackage(pkg);
-        if (pkgPath == null || pkgPath.isEmpty() || "Root".equals(pkgPath))
+        if (pkgPath == null || pkgPath.isEmpty() || "::".equals(pkgPath))
         {
             return simpleName == null ? "?" : simpleName;
         }
@@ -248,7 +248,7 @@ public final class TruffleValuePrinter
         }
         if (!(pkg instanceof PureDynamicObject p)) { return null; }
         String name = unwrapString(p.readProperty("name"));
-        if (name == null || "Root".equals(name) || "::".equals(name))
+        if (name == null || "::".equals(name))
         {
             return null;
         }

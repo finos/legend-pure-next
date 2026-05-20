@@ -64,24 +64,13 @@ public final class PropertyReadNode extends Node
      */
     public Object execute(Object target, String propName)
     {
-        // Lazy TempCompilerPointer dereference on the way out: compile-pure
-        // embeds Class / PackageableFunction references in element slots as
-        // path-only pointers to avoid freezing pass-1 skeletons; consumers
-        // (properties(), pathToElement(), instanceOf, …) expect live elements.
-        // Per-read deref keeps it lazy — pay only when a pointer surfaces.
-        var resolver = PureLanguage.get(null).resolver();
         if (boundName != null && target instanceof PureDynamicObject pdo)
         {
             Object v = pdo.readSlot(boundSlot);
-            if (v == null) return PureSequence.EMPTY;
-            return _PackageableElement.derefPointer(v, resolver);
+            return v == null ? PureSequence.EMPTY : v;
         }
         Object result = executeOrAbsent(target, propName);
-        if (result == ABSENT || result == null)
-        {
-            return PureSequence.EMPTY;
-        }
-        return _PackageableElement.derefPointer(result, resolver);
+        return result == ABSENT || result == null ? PureSequence.EMPTY : result;
     }
 
     /**

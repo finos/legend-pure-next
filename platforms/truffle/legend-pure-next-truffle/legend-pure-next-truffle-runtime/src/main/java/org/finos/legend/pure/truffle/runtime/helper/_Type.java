@@ -33,13 +33,6 @@ public final class _Type
         {
             return false;
         }
-        // Pointer-aware: the compiler wraps cross-element type refs as
-        // TempCompilerPointer (ClassPointer / PrimitiveTypePointer / etc.).
-        // Pointers carry only `.path`; identity-based ops (ancestors set,
-        // TypeCache) are keyed on live class instances. Resolve via the
-        // registry before consulting the cache.
-        sub = _PackageableElement.derefPointer(sub, resolver);
-        sup = _PackageableElement.derefPointer(sup, resolver);
         if (sub == sup)
         {
             return true;

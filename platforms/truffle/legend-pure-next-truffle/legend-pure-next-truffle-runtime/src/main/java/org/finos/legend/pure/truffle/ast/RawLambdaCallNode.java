@@ -167,17 +167,6 @@ public final class RawLambdaCallNode extends Node
     private Object dispatchByPureType(Object lambdaOrClosure, Object[] args)
     {
         // {@link TempCompilerPointer} dereference. compile-pure embeds
-        // function references as {@link PackageableFunctionPointer}
-        // (path-only carrier) to avoid freezing pass-1 skeletons in a
-        // caller's compiled body — the pointer itself isn't directly
-        // callable, but its target is. We arrive here on cache miss
-        // ({@code getCallTarget} returned null because the pointer is
-        // neither {@code RawClosure} nor {@code LambdaFunction}), so deref
-        // once and continue with the canonical target through the
-        // type-keyed branches below. Subsequent calls hit the
-        // identity-cache in {@code dispatch} and skip this method entirely.
-        lambdaOrClosure = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.derefPointer(
-                lambdaOrClosure, getContext().resolver());
         if (lambdaOrClosure instanceof RawClosure rc)
         {
             // Get or compile CallTarget, then call

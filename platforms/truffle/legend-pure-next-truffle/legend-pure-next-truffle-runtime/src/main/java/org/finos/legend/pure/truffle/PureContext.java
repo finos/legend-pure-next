@@ -636,7 +636,12 @@ public final class PureContext
                 if (pkg != null)
                 {
                     String pkgPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pkg, this.resolver);
-                    return (pkgPath == null || pkgPath.isEmpty() || "Root".equals(pkgPath))
+                    // Root pkg shows up two ways depending on which module
+                    // it came from: live m3.ttl root resolves to "" via the
+                    // resolver's pathOf cache; compile-pure's synthetic root
+                    // (which now also names itself "::") resolves to "::" via
+                    // computePath when the resolver doesn't index it.
+                    return (pkgPath == null || pkgPath.isEmpty() || "::".equals(pkgPath))
                             ? fnName
                             : pkgPath + "::" + fnName;
                 }

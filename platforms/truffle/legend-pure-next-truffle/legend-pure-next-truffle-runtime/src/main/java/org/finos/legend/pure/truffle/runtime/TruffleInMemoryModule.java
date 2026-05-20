@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
+import org.finos.legend.pure.truffle.runtime.helper.PointerGraphResolver;
 import org.finos.legend.pure.truffle.runtime.helper.TypeCache;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -68,6 +69,17 @@ public final class TruffleInMemoryModule implements TruffleModule
             byPath.put(path, el);
             pathByElement.put(el, path);
         }
+        // Compile-pure leaves TempCompilerPointer refs throughout the result
+        // graph (Class.package, generalizations[].general.type, etc.) so
+        // cross-element refs stay identity-stable across the three compile
+        // passes. Resolve them now — analogous to FbsResolverHelper.resolvePointerRef
+        // at PDB load — so downstream readers (Truffle AST builder, runtime
+        // property reads, type walks) never see pointers.
+        long t0 = System.nanoTime();
+        PointerGraphResolver.resolveAll(byPath, resolver);
+        long elapsedMs = (System.nanoTime() - t0) / 1_000_000;
+        System.err.println("[TruffleInMemoryModule] " + name + ": resolved pointer graph for "
+                + byPath.size() + " elements in " + elapsedMs + " ms");
     }
 
     @Override

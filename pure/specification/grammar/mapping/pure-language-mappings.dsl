@@ -114,9 +114,12 @@ rule instanceLiteralToken {
                    genericType = primitiveType("Float"))
   }
   alt when $ctx.DECIMAL {
+    # DECIMAL literals are Pure `Decimal` (arbitrary-precision). parseDecimal
+    # emits `new java.math.BigDecimal(text)`; parseDouble would route through
+    # IEEE 754 and lose precision (e.g. 19.905d → 19.904999999999998d).
     return newImpl(AtomicValue,
                    sourceInformation = buildSourceInfo($ctx),
-                   value = parseDouble($ctx.DECIMAL.text),
+                   value = parseDecimal($ctx.DECIMAL.text),
                    genericType = primitiveType("Decimal"))
   }
   alt when $ctx.BOOLEAN {
@@ -1317,9 +1320,11 @@ rule instanceLiteral as AtomicValueImpl {
                    genericType = primitiveType("Float"))
   }
   alt when $ctx.DECIMAL {
+    # Signed Decimal literal — parseDecimal(MINUS, text) handles the sign
+    # via string-prefix (BigDecimal has no unary minus operator in Java).
     return newImpl(AtomicValue,
                    sourceInformation = buildSourceInfo($ctx),
-                   value = ifPresent($ctx.MINUS, -parseDouble($ctx.DECIMAL.text), parseDouble($ctx.DECIMAL.text)),
+                   value = parseDecimal($ctx.MINUS, $ctx.DECIMAL.text),
                    genericType = primitiveType("Decimal"))
   }
   else error("Unsupported literal")

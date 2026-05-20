@@ -72,7 +72,7 @@ public final class ElementToPathNode extends PureNode
         if (element != null && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(element) != null)
         {
             String path = _PackageableElement.path(element, resolver);
-            if (path == null || path.isEmpty() || "Root".equals(path) || "::".equals(path))
+            if (path == null || path.isEmpty() || "::".equals(path))
             {
                 return "";
             }

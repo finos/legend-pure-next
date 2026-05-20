@@ -209,7 +209,11 @@ function meta::pure::compiler::repeatString(s:String[1], n:Integer[1]):String[1]
 
 function meta::pure::compiler::getOrCreatePackagePath(ctx:CompilerContext[1], packagePath:String[1]):CompilerResult<Package>[1]
 {
-    let rootPkg = ^Package(name = 'Root');
+    // Synthetic root for the compile output. Matches m3.ttl's live root
+    // (which uses `:name "::"`); using "::" here means downstream code
+    // paths — the FBS writer, elementPath, all the path walkers in the
+    // platform — see exactly one root convention.
+    let rootPkg = ^Package(name = '::');
     let parts = if($packagePath == '', | []->cast(@String), | $packagePath->split('::'));
     let walked = $parts->fold({part, acc |
         let curCtx = $acc.first;

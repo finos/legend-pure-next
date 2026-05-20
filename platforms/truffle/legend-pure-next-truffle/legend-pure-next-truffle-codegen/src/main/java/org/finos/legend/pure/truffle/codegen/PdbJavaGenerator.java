@@ -1093,10 +1093,11 @@ public class PdbJavaGenerator
         // pathOf — recursive ::-separated path of a PackageableElement,
         // inlined here so the generated writer is self-contained within codegen.
         // Mirrors the bootstrap _PackageableElement.path() / packagePath()
-        // pair: the *root anchor* is detected by `_package() == null`, not by
-        // matching its name against "Root". Bootstrap creates the root with
-        // name `"::"` (BootstrapModule), so a name-based check leaks `::::`
-        // into every path that walks through it.
+        // pair: the *root anchor* is detected by `_package() == null`, not
+        // by matching a sentinel name. Bootstrap creates the root with name
+        // `"::"` (m3.ttl convention); compile-pure's synthetic root uses
+        // the same name. A name-based check would leak `::::` into every
+        // path that walks through it.
         //
         // Pointer short-circuit: a TempCompilerPointer carries its canonical
         // path directly in `.path` and leaves the inherited `.name`/`.package`
