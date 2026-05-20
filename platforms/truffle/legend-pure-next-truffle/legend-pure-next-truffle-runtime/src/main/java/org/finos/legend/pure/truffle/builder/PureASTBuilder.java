@@ -1224,6 +1224,17 @@ public final class PureASTBuilder
     private PureNode lowerAtomicValue(Object av)
     {
         Object value = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(av, SLOT_VALUE);
+        // {@link TempCompilerPointer} dereference at AST-build time.
+        // compile-pure emits PackageableFunctionPointer / ClassPointer for
+        // function and class references to avoid freezing pass-1 skeletons
+        // into the consumer's body (witnessed by InMemoryRuntimeTestsTest).
+        // By the time Truffle builds this AST node the in-memory module is
+        // registered, so resolver.getElement returns the canonical
+        // post-pass-3 element — substitute it for the pointer so the runtime
+        // never sees a pointer wrapper. One-time cost at AST-build, no
+        // per-call overhead.
+        value = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.derefPointer(value,
+                org.finos.legend.pure.truffle.PureLanguage.get(null).resolver());
         // Widened from `instanceof LambdaFunction` so PDO lambdas
         // (post-loader-flip resolver returns) take the same path.
         if (value != null && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(value,

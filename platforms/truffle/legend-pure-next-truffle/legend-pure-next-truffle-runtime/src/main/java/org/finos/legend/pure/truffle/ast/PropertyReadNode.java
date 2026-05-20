@@ -10,10 +10,13 @@ package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.nodes.Node;
+import org.finos.legend.pure.truffle.PureLanguage;
 import org.finos.legend.pure.truffle.runtime.PropertyAccessor;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureFbDecoder;
+import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * Helper for dynamic-name property reads ({@code execute(target, propName)} —
@@ -61,17 +64,24 @@ public final class PropertyReadNode extends Node
      */
     public Object execute(Object target, String propName)
     {
+        // Lazy TempCompilerPointer dereference on the way out: compile-pure
+        // embeds Class / PackageableFunction references in element slots as
+        // path-only pointers to avoid freezing pass-1 skeletons; consumers
+        // (properties(), pathToElement(), instanceOf, …) expect live elements.
+        // Per-read deref keeps it lazy — pay only when a pointer surfaces.
+        var resolver = PureLanguage.get(null).resolver();
         if (boundName != null && target instanceof PureDynamicObject pdo)
         {
             Object v = pdo.readSlot(boundSlot);
-            return v == null ? org.finos.legend.pure.truffle.types.PureSequence.EMPTY : v;
+            if (v == null) return PureSequence.EMPTY;
+            return _PackageableElement.derefPointer(v, resolver);
         }
         Object result = executeOrAbsent(target, propName);
         if (result == ABSENT || result == null)
         {
-            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
+            return PureSequence.EMPTY;
         }
-        return result;
+        return _PackageableElement.derefPointer(result, resolver);
     }
 
     /**

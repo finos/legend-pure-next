@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::*;
 import meta::pure::compiler::elements::*;
 import meta::pure::compiler::helper::genericType::*;
@@ -114,6 +115,20 @@ function meta::pure::compiler::parseDir(dir:String[1]):meta::pure::protocol::Pur
     );
 }
 
+// Multi-root variant of {@link parseDir}. Each file's sourceId is the path
+// relative to whichever input root contains it. Mirrors the bootstrap
+// {@code SpecificationBinaryBuilder} setup, which builds core.pdb from
+// several source folders (e.g. {@code runtime/functions},
+// {@code runtime/test}) and stamps sourceIds relative to each — so a file at
+// {@code runtime/functions/asserts/assertError.pure} has sourceId
+// {@code asserts/assertError.pure}, not {@code functions/asserts/...}.
+// Callers that want the same stack-trace / error-path conventions as the PDB
+// build (notably the in-memory test harness) should use this entry point.
+function meta::pure::compiler::parseDirs(dirs:String[*]):meta::pure::protocol::PureFile[*]
+{
+    $dirs->map(d | meta::pure::compiler::parseDir($d))->cast(@meta::pure::protocol::PureFile);
+}
+
 // Collapse per-pass duplicates into one row per element. Pass 2 and pass 3
 // each append an ElementStatistics for the same elementPath; this rolls them
 // up: totalMillis, inferenceRollbacks, candidateEvaluations are summed,
@@ -207,7 +222,12 @@ function meta::pure::compiler::getOrCreatePackagePath(ctx:CompilerContext[1], pa
             | let newPkg = ^Package(name = $part, package = $parentPkg);
               let newMap = if($parentPath == '',
                   | $curCtx.elementMap->put($curPath, $newPkg),
-                  | let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($newPkg));
+                  | // Children entries are always wrapped as pointers — the live
+                    // element lives in elementMap, and pass 2/3 rebuild it via
+                    // `^$skeleton(...)`. A hard ref here would freeze pass-1
+                    // skeletons in children and surface them as stale duplicates
+                    // when consumers walk the package subtree.
+                    let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($newPkg->toElementPointer()));
                     $curCtx.elementMap->put($parentPath, $updatedParent)->put($curPath, $newPkg);
               );
               pair(^$curCtx(elementMap = $newMap), pair($newPkg, $curPath));
@@ -223,7 +243,9 @@ function meta::pure::compiler::putElementUnderPackage(ctx:CompilerContext[1], el
     let ctxWithPkg = $pkgRes.context;
     if($packagePath == '',
         | ^$ctxWithPkg(elementMap = $ctxWithPkg.elementMap->put($elementPath, $element)),
-        | let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($element));
+        | // Children entries are always wrapped as pointers — see
+          // {@link getOrCreatePackagePath} for the rationale.
+          let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($element->toElementPointer()));
           ^$ctxWithPkg(elementMap = $ctxWithPkg.elementMap->put($packagePath, $updatedParent)->put($elementPath, $element));
     );
 }
@@ -261,9 +283,15 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
             let typeParams = $c.typeParameters->map(tp | buildTypeParameter($tp.name, false));
             let mulParams = $c.multiplicityParameters->map(mp | buildUserDefinedMultiplicityParameter($mp.name)->cast(@MultiplicityParameter));
             let emptyClass = meta::pure::functions::meta::creation::newClass($typeParams, $mulParams);
+            // Wrap parent Package as PackagePointer: each {@code
+            // putElementUnderPackage} rebuilds the parent Package
+            // ({@code ^$pkg(children = ...)}), so the parent reference captured at
+            // skeleton-creation time goes stale as siblings are compiled. The
+            // pointer carries only the path; runtime deref via the resolver
+            // lands on the latest version.
             let skeleton = ^$emptyClass(
                 name = $c.name,
-                package = $pkgRes.value->toOne(),
+                package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package),
                 typeParameters = $typeParams,
                 multiplicityParameters = $mulParams,
                 sourceInformation = compileSourceInformation($c.p_sourceInformation, $ctx)

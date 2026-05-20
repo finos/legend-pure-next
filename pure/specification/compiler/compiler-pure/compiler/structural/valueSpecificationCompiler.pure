@@ -23,6 +23,7 @@ import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::compiler::helper::pointer::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::helper::function::*;
 import meta::pure::compiler::helper::relationType::*;
 import meta::pure::compiler::helper::column::*;
@@ -198,9 +199,37 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                   // and pass-3 resolveAtomicValue refreshes it from the map
                   let elementCGT = $element->cast(@Any).classifierGenericType;
                   let elementGT = if($elementCGT->isNotEmpty(), | asInferredGenericType($elementCGT->toOne()), | buildInferredGenericType($element->type()));
+                  // For PackageableFunction references: embed a
+                  // {@link PackageableFunctionPointer} instead of the live UDF.
+                  // The resolved element here may still be a pass-1 skeleton
+                  // when the target is compiled later in the file order; the
+                  // embedded instance would freeze that stale snapshot in the
+                  // consumer's compiled body (witnessed by
+                  // {@code InMemoryRuntimeTestsTest}'s null
+                  // {@code expressionSequence} on
+                  // {@code testAdapterForInMemoryExecution}). A pointer carries
+                  // only the path — every read dereferences through the
+                  // resolver and lands on the canonical post-pass2/post-pass3
+                  // element. Mirrors the {@code func} slot pattern used by
+                  // functionApplicationResolver.
+                  //
+                  // Class refs have a similar dual-instance problem in the
+                  // in-memory compile path, but wrapping them as pointers
+                  // breaks identity-based comparisons like
+                  // {@code assertIs(LA_Person, $x.classifierGenericType.type)}
+                  // — the source-ref pointer wouldn't match the runtime-
+                  // instantiated Class. Left as a known gap; tracked in
+                  // memory.
+                  let embeddedValue = if($element->instanceOf(PackageableFunction),
+                      | $element->cast(@PackageableFunction<Any>)->toPackageableFunctionPointer()->cast(@meta::pure::metamodel::PackageableElement),
+                      | if($element->instanceOf(Class),
+                          | $element->cast(@Class<Any>)->toClassPointer()->cast(@meta::pure::metamodel::PackageableElement),
+                          | $element
+                      )
+                  );
                   ^ValueCompileResult(
                       values = [^AtomicValue(
-                          value = $element,
+                          value = $embeddedValue,
                           genericType = $elementGT,
                           multiplicity = PureOne,
                           sourceInformation = compileSourceInformation($vs.p_sourceInformation, $ctx)

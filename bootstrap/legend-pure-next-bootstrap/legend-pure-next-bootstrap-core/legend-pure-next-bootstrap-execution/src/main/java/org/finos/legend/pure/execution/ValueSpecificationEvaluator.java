@@ -760,14 +760,34 @@ public class ValueSpecificationEvaluator
             return "";
         }
         StringBuilder sb = new StringBuilder("\nPure stack trace:");
+        for (String frame : getCallStackFrames())
+        {
+            sb.append("\n    at ").append(frame);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Same as {@link #getCallStackTrace()} but returns the frames as a list —
+     * one entry per frame, formatted as
+     * {@code "<fnName> (<sourceId>:<line>c<col>)"}. Innermost-first.
+     *
+     * <p>Used by {@code tryEval} to populate {@code Error.stack} as
+     * {@code String[*]} so callers can iterate frames without re-parsing.</p>
+     */
+    public java.util.List<String> getCallStackFrames()
+    {
+        if (callStack.isEmpty())
+        {
+            return java.util.List.of();
+        }
+        java.util.List<String> frames = new java.util.ArrayList<>(callStack.size());
         java.util.Iterator<FunctionExpression> feIt = callStack.iterator();
         java.util.Iterator<meta.pure.metamodel.function.FunctionDefinition> fnIt = executingFnStack.iterator();
         while (feIt.hasNext() && fnIt.hasNext())
         {
-            FunctionExpression fe = feIt.next();
-            meta.pure.metamodel.function.FunctionDefinition fn = fnIt.next();
-            sb.append("\n    at ").append(formatSourceFrame(fe, fn));
+            frames.add(formatSourceFrame(feIt.next(), fnIt.next()));
         }
-        return sb.toString();
+        return frames;
     }
 }

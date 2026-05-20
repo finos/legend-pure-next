@@ -164,7 +164,7 @@ public final class CopyWithKeysNode extends PureNode
                 var subType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(subCgt);
                 if (subType != null)
                 {
-                    String subPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(subType);
+                    String subPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(subType, eval.resolver());
                     java.util.List<java.util.Map.Entry<String, Object>> subKvs = new java.util.ArrayList<>();
                     addCopiedAssociationProps(subCopy, subPath, new java.util.HashSet<>(), subKvs, eval);
                     NewWithKeysNode.setReverseAssociationPointers(subCopy, subPath, subKvs, eval, appendReader, appendWriter);
@@ -192,7 +192,7 @@ public final class CopyWithKeysNode extends PureNode
         String classPath = classPathFromInstance(original);
         if ((classPath == null || classPath.isEmpty()) && cgt != null)
         {
-            classPath = resolveClassPathFromCGT(cgt);
+            classPath = resolveClassPathFromCGT(cgt, eval.resolver());
         }
 
         // Post-flip: original is always a PureDynamicObject. The typed
@@ -256,12 +256,12 @@ public final class CopyWithKeysNode extends PureNode
      * Resolve a class path from a truffle GenericTypeValue.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static String resolveClassPathFromCGT(Object cgt)
+    private static String resolveClassPathFromCGT(Object cgt, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         Object rawType = _GenericType.type(cgt);
         if (rawType != null)
         {
-            String path = _PackageableElement.path(rawType);
+            String path = _PackageableElement.path(rawType, resolver);
             if (path != null && !path.isEmpty())
             {
                 return path;
@@ -296,7 +296,7 @@ public final class CopyWithKeysNode extends PureNode
      * every copy was wasted work.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static java.util.List<String> collectAllPropertyNames(Object type)
+    private static java.util.List<String> collectAllPropertyNames(Object type, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         java.util.List<String> cached = PROPERTY_NAMES_CACHE.get(type);
         if (cached != null)
@@ -306,7 +306,7 @@ public final class CopyWithKeysNode extends PureNode
         java.util.List<String> names = new java.util.ArrayList<>();
         java.util.Set<String> seen = new java.util.LinkedHashSet<>();
         java.util.Set<String> visited = new java.util.HashSet<>();
-        collectPropertyNamesRecursive(type, names, seen, visited);
+        collectPropertyNamesRecursive(type, names, seen, visited, resolver);
         java.util.List<String> result = java.util.List.copyOf(names);
         synchronized (PROPERTY_NAMES_CACHE_LOCK)
         {
@@ -335,10 +335,11 @@ public final class CopyWithKeysNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void collectPropertyNamesRecursive(Object type, java.util.List<String> names,
                                                        java.util.Set<String> seen,
-                                                       java.util.Set<String> visited)
+                                                       java.util.Set<String> visited,
+                                                       org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         String typeId = type != null
-                ? _PackageableElement.path(type)
+                ? _PackageableElement.path(type, resolver)
                 : null;
         if (typeId == null) typeId = String.valueOf(System.identityHashCode(type));
         if (!visited.add(typeId))
@@ -361,7 +362,7 @@ public final class CopyWithKeysNode extends PureNode
                     Object superType = _GenericType.type(general);
                     if (superType != null)
                     {
-                        collectPropertyNamesRecursive(superType, names, seen, visited);
+                        collectPropertyNamesRecursive(superType, names, seen, visited, resolver);
                     }
                 }
             }
@@ -630,7 +631,7 @@ public final class CopyWithKeysNode extends PureNode
         {
             return cached;
         }
-        java.util.List<String> propertyNames = collectAllPropertyNames(type);
+        java.util.List<String> propertyNames = collectAllPropertyNames(type, resolver);
         java.util.List<String> result = new java.util.ArrayList<>();
         for (String propName : propertyNames)
         {

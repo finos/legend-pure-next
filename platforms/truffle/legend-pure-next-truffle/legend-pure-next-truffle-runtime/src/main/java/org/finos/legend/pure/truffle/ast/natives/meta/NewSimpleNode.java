@@ -67,7 +67,7 @@ public final class NewSimpleNode extends PureNode
             Object heldType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(heldGTObj);
             if (heldType != null)
             {
-                classPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(heldType);
+                classPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(heldType, resolver);
                 if (classPath == null || classPath.isEmpty())
                 {
                     Object n = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(heldType, SLOT_NAME);

@@ -68,20 +68,22 @@ public final class TrufflePdbWriter
      * gaps.</p>
      */
     public static void write(Iterable<?> elements, ModuleManifest manifest,
-                             Path outputPath, boolean validateRequired) throws IOException
+                             Path outputPath, boolean validateRequired,
+                             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver) throws IOException
     {
-        write(elements, manifest, outputPath, validateRequired, java.util.List.of());
+        write(elements, manifest, outputPath, validateRequired, java.util.List.of(), resolver);
     }
 
     /**
-     * Same as {@link #write(Iterable, ModuleManifest, Path, boolean)} but also
-     * writes the given extra sections (e.g. reverse reference index). Each
-     * section becomes one ZIP entry named by {@link
+     * Same as {@link #write(Iterable, ModuleManifest, Path, boolean, TruffleMetadataAccess)}
+     * but also writes the given extra sections (e.g. reverse reference index).
+     * Each section becomes one ZIP entry named by {@link
      * org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection#name}.
      */
     public static void write(Iterable<?> elements, ModuleManifest manifest,
                              Path outputPath, boolean validateRequired,
-                             java.util.List<org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection> extraSections) throws IOException
+                             java.util.List<org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection> extraSections,
+                             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver) throws IOException
     {
         if (outputPath.getParent() != null)
         {
@@ -101,7 +103,7 @@ public final class TrufflePdbWriter
                 {
                     continue; // not an FBS-table type — skip
                 }
-                String path = _PackageableElement.path(element);
+                String path = _PackageableElement.path(element, resolver);
 
                 FlatBufferBuilder builder = new FlatBufferBuilder(1024);
                 GeneratedFlatBufferWriter writer = new GeneratedFlatBufferWriter(builder, validateRequired);
@@ -125,7 +127,7 @@ public final class TrufflePdbWriter
 
             writeElementIndex(zos, indexEntries);
             writeManifest(zos, manifest);
-            writeFunctionIndex(zos, functionEntries, validateRequired);
+            writeFunctionIndex(zos, functionEntries, validateRequired, resolver);
             for (org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection section : extraSections)
             {
                 if (section == null) continue;
@@ -180,7 +182,8 @@ public final class TrufflePdbWriter
      * Truffle PDB diverges from Java direct's {@code compiler.pdb} structurally
      * (sections-only-in-A would flag one extra section in the diff).
      */
-    private static void writeFunctionIndex(ZipOutputStream zos, List<Object> entries, boolean validateRequired) throws IOException
+    private static void writeFunctionIndex(ZipOutputStream zos, List<Object> entries, boolean validateRequired,
+                                            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver) throws IOException
     {
         if (entries.isEmpty())
         {
@@ -192,7 +195,7 @@ public final class TrufflePdbWriter
         for (int i = 0; i < entries.size(); i++)
         {
             Object fn = entries.get(i);
-            int fullPathOffset = builder.createString(_PackageableElement.path(fn));
+            int fullPathOffset = builder.createString(_PackageableElement.path(fn, resolver));
             int functionNameOffset = builder.createString(
                     (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fn, SLOT_FUNCTION_NAME));
             int functionTypeOffset = writeFunctionTypeOf(writer, fn);

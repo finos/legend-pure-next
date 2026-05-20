@@ -129,7 +129,7 @@ public final class NewWithKeysNode extends PureNode
                     // a chance to compare against the system-set classifier,
                     // making validation a no-op.
                     Object propValue = assignments[i].evaluateValue(frame);
-                    validateClassifierOverride(propValue, instance);
+                    validateClassifierOverride(propValue, instance, eval.resolver());
                     // Widened to non-null check: post-loader-flip propValue may
                     // be a PureDynamicObject (pureType=GenericTypeValue) rather
                     // than the typed XPDBHelper. Validation above already enforces
@@ -369,7 +369,7 @@ public final class NewWithKeysNode extends PureNode
      * matches the system one is allowed (this is what the
      * {@code RelationTypeCompiler} self-classifier wiring relies on).
      */
-    private static void validateClassifierOverride(Object proposed, Object instance)
+    private static void validateClassifierOverride(Object proposed, Object instance, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         Object currentCgt = instance != null
                 ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(instance, SLOT_CLASSIFIER_GENERIC_TYPE) : null;
@@ -377,26 +377,26 @@ public final class NewWithKeysNode extends PureNode
         // _GenericType.type is Object-tolerant (reads `type` via PureObj.read)
         // so it handles both typed GenericTypeValue and PDO uniformly.
         Object proposedType = proposed != null ? _GenericType.type(proposed) : null;
-        if (expected != null && proposedType != null && samePackageableElement(expected, proposedType))
+        if (expected != null && proposedType != null && samePackageableElement(expected, proposedType, resolver))
         {
             return;
         }
-        String expectedName = expected != null ? _PackageableElement.path(expected) : "<unknown>";
-        String proposedName = proposedType != null ? _PackageableElement.path(proposedType) : "<unknown>";
+        String expectedName = expected != null ? _PackageableElement.path(expected, resolver) : "<unknown>";
+        String proposedName = proposedType != null ? _PackageableElement.path(proposedType, resolver) : "<unknown>";
         throw new RuntimeException("Cannot change classifierGenericType.type from '" + expectedName + "' to '" + proposedName
                 + "'. The classifier's raw type is system-managed (derived from the instance's metaclass)"
                 + " — only typeArguments, multiplicityArguments and typeVariableValues are user-customizable."
                 + " Use meta::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
     }
 
-    private static boolean samePackageableElement(Object a, Object b)
+    private static boolean samePackageableElement(Object a, Object b, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (a == b)
         {
             return true;
         }
-        String pathA = _PackageableElement.path(a);
-        String pathB = _PackageableElement.path(b);
+        String pathA = _PackageableElement.path(a, resolver);
+        String pathB = _PackageableElement.path(b, resolver);
         return pathA != null && pathA.equals(pathB);
     }
 

@@ -225,7 +225,7 @@ public final class TruffleCompilerBinaryBuilder
                     if (el == null) continue;
                     String pureType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(el);
                     if (pureType == null) continue;
-                    String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(el);
+                    String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(el, resolver);
                     boolean isPkg = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(el,
                             "meta::pure::metamodel::Package");
                     if (isPkg && anchor != null && anchor.hasElement(path))
@@ -249,7 +249,7 @@ public final class TruffleCompilerBinaryBuilder
             {
                 Files.createDirectories(outputFile.getParent());
             }
-            writeFiltered(new ArrayList<>(elementsByPath.values()), manifest, outputFile, mode, referencedBy);
+            writeFiltered(new ArrayList<>(elementsByPath.values()), manifest, outputFile, mode, referencedBy, resolver);
         }
         finally
         {
@@ -321,7 +321,7 @@ public final class TruffleCompilerBinaryBuilder
      *         {@link TestElementFilter#PCT_PROFILE_PATH}. Other PCT
      *         stereotypes (e.g. {@code <<PCT.function>>}) stay in lean.
      */
-    private static boolean isTestElement(Object element)
+    private static boolean isTestElement(Object element, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         Object stereotypes = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(element, "stereotypes");
         if (stereotypes == null)
@@ -352,7 +352,7 @@ public final class TruffleCompilerBinaryBuilder
             if (s == null) continue;
             Object profile = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(s, "profile");
             if (profile == null) continue;
-            String profilePath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(profile);
+            String profilePath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(profile, resolver);
             if (TestElementFilter.TEST_PROFILE_PATH.equals(profilePath))
             {
                 return true;
@@ -374,31 +374,34 @@ public final class TruffleCompilerBinaryBuilder
             ModuleManifest manifest,
             Path outputFile,
             TestElementFilter.Mode mode,
-            java.util.Map<String, java.util.Set<String>> referencedBy) throws IOException
+            java.util.Map<String, java.util.Set<String>> referencedBy,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver) throws IOException
     {
         switch (mode)
         {
-            case WITH -> writePdb("full", elements, manifest, TestElementFilter.withTestsPath(outputFile), referencedBy);
+            case WITH -> writePdb("full", elements, manifest, TestElementFilter.withTestsPath(outputFile), referencedBy, resolver);
             case NONE ->
             {
                 List<Object> lean = elements.stream()
-                        .filter(e -> !isTestElement(e))
+                        .filter(e -> !isTestElement(e, resolver))
                         .toList();
-                java.util.Set<String> leanPaths = elementPaths(lean);
+                java.util.Set<String> leanPaths = elementPaths(lean, resolver);
                 writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
                         lean, manifest, outputFile,
-                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains));
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains),
+                        resolver);
             }
             case ONLY ->
             {
                 List<Object> tests = elements.stream()
-                        .filter(TruffleCompilerBinaryBuilder::isTestElement)
+                        .filter(e -> isTestElement(e, resolver))
                         .toList();
-                java.util.Set<String> testPaths = elementPaths(tests);
+                java.util.Set<String> testPaths = elementPaths(tests, resolver);
                 writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
                         tests, TestElementFilter.testsManifest(manifest),
                         TestElementFilter.testsOnlyPath(outputFile),
-                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains));
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains),
+                        resolver);
             }
             case SPLIT ->
             {
@@ -406,27 +409,29 @@ public final class TruffleCompilerBinaryBuilder
                 List<Object> tests = new ArrayList<>();
                 for (Object e : elements)
                 {
-                    (isTestElement(e) ? tests : lean).add(e);
+                    (isTestElement(e, resolver) ? tests : lean).add(e);
                 }
-                java.util.Set<String> leanPaths = elementPaths(lean);
-                java.util.Set<String> testPaths = elementPaths(tests);
+                java.util.Set<String> leanPaths = elementPaths(lean, resolver);
+                java.util.Set<String> testPaths = elementPaths(tests, resolver);
                 writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
                         lean, manifest, outputFile,
-                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains));
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains),
+                        resolver);
                 writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
                         tests, TestElementFilter.testsManifest(manifest),
                         TestElementFilter.testsOnlyPath(outputFile),
-                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains));
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains),
+                        resolver);
             }
         }
     }
 
-    private static java.util.Set<String> elementPaths(List<Object> elements)
+    private static java.util.Set<String> elementPaths(List<Object> elements, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
         for (Object e : elements)
         {
-            String p = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(e);
+            String p = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(e, resolver);
             if (p != null)
             {
                 out.add(p);
@@ -436,7 +441,8 @@ public final class TruffleCompilerBinaryBuilder
     }
 
     private static void writePdb(String label, List<Object> elements, ModuleManifest manifest, Path target,
-                                 java.util.Map<String, java.util.Set<String>> referencedBy) throws IOException
+                                 java.util.Map<String, java.util.Set<String>> referencedBy,
+                                 org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver) throws IOException
     {
         java.util.List<org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection> extraSections = new ArrayList<>();
         org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection riSection =
@@ -445,7 +451,7 @@ public final class TruffleCompilerBinaryBuilder
         {
             extraSections.add(riSection);
         }
-        TrufflePdbWriter.write(elements, manifest, target, true, extraSections);
+        TrufflePdbWriter.write(elements, manifest, target, true, extraSections, resolver);
         System.out.println("Written: " + target + " [" + label + ", " + Files.size(target) + " bytes, "
                 + (referencedBy == null ? 0 : referencedBy.size()) + " ref targets]");
     }

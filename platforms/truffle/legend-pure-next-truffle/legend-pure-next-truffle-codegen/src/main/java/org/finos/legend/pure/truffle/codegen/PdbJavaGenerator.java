@@ -1097,10 +1097,23 @@ public class PdbJavaGenerator
         // matching its name against "Root". Bootstrap creates the root with
         // name `"::"` (BootstrapModule), so a name-based check leaks `::::`
         // into every path that walks through it.
-        // pathOf — recursive ::-separated path of a PackageableElement.
-        // Reads via readProp so it works for both typed XPDBHelper and PDO.
+        //
+        // Pointer short-circuit: a TempCompilerPointer carries its canonical
+        // path directly in `.path` and leaves the inherited `.name`/`.package`
+        // fields unset. Without this short-circuit, a Pure-compiler skeleton
+        // whose `.package` is a `PackagePointer` (pass-1 wrap that keeps parent
+        // refs identity-stable) would walk into the pointer, see null name/package,
+        // and collapse to a BARE element name (e.g. "IndexEntry" instead of
+        // "meta::pure::compiler::IndexEntry") — manifesting as `[PTR-FAIL]`
+        // logs at PDB load time. Mirrors bootstrap `_PackageableElement.path`.
         sb.append("    private static String pathOf(Object pe)\n    {\n");
         sb.append("        if (pe == null) { return null; }\n");
+        sb.append("        String _ptype = pureTypeOf(pe);\n");
+        sb.append("        if (_ptype != null && _ptype.startsWith(\"meta::pure::metamodel::pointer::\"))\n");
+        sb.append("        {\n");
+        sb.append("            Object _p = readProp(pe, \"path\");\n");
+        sb.append("            if (_p instanceof String _ps) { return _ps; }\n");
+        sb.append("        }\n");
         sb.append("        Object nameObj = readProp(pe, \"name\");\n");
         sb.append("        String name = nameObj instanceof String _ns ? _ns : null;\n");
         sb.append("        Object pkg = readProp(pe, \"package\");\n");
@@ -1110,6 +1123,12 @@ public class PdbJavaGenerator
         sb.append("    }\n\n");
         sb.append("    private static String pathOfPkg(Object pkg)\n    {\n");
         sb.append("        if (pkg == null) { return \"\"; }\n");
+        sb.append("        String _ptype = pureTypeOf(pkg);\n");
+        sb.append("        if (_ptype != null && _ptype.startsWith(\"meta::pure::metamodel::pointer::\"))\n");
+        sb.append("        {\n");
+        sb.append("            Object _p = readProp(pkg, \"path\");\n");
+        sb.append("            if (_p instanceof String _ps) { return _ps; }\n");
+        sb.append("        }\n");
         sb.append("        Object grandparent = readProp(pkg, \"package\");\n");
         sb.append("        Object nameObj = readProp(pkg, \"name\");\n");
         sb.append("        String name = nameObj instanceof String _ns ? _ns : null;\n");

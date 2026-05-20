@@ -62,10 +62,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Disabled("PCT adapter compile NPE — testAdapterForInMemoryExecution has null expressionSequence in-memory; PDB path works")
 public class InMemoryRuntimeTestsTest
 {
-    private static final String PARSE_DIR_FN_PATH =
-            "meta::pure::compiler::parseDir_String_1__PureFile_MANY_";
+    // Multi-root parseDir: stamps sourceIds relative to each input root so
+    // {@code runtime/functions/asserts/assertError.pure} gets sourceId
+    // {@code asserts/assertError.pure} — matching the PDB build convention
+    // (SpecificationBinaryBuilder splits the runtime corpus into
+    // functions/, test/, etc.). Without this, stack-trace assertions
+    // hardcoded to the short form (e.g. testFullPureStackTrace) fail.
+    private static final String PARSE_DIRS_FN_PATH =
+            "meta::pure::compiler::parseDirs_String_MANY__PureFile_MANY_";
+    // 3-arg silent variant — tests pull errors/stats structurally off the
+    // result; the live progress bar + stats summary would flood surefire output.
     private static final String COMPILE_FN_PATH =
-            "meta::pure::compiler::compile_PureFile_MANY__Boolean_1__CompilationResult_1_";
+            "meta::pure::compiler::compile_PureFile_MANY__Boolean_1__Boolean_1__CompilationResult_1_";
 
     private static PureTruffleRuntime runtime;
     private static TruffleModuleRegistry registry;
@@ -100,14 +108,14 @@ public class InMemoryRuntimeTestsTest
                         new TruffleErrorLanguageExtension()))
                 .build();
 
-        Object parseDirFn = registry.getElement(PARSE_DIR_FN_PATH);
+        Object parseDirsFn = registry.getElement(PARSE_DIRS_FN_PATH);
         Object compileFn = registry.getElement(COMPILE_FN_PATH);
-        if (parseDirFn == null || compileFn == null
-                || !PureObj.isType(parseDirFn, "meta::pure::metamodel::function::FunctionDefinition", registry)
+        if (parseDirsFn == null || compileFn == null
+                || !PureObj.isType(parseDirsFn, "meta::pure::metamodel::function::FunctionDefinition", registry)
                 || !PureObj.isType(compileFn, "meta::pure::metamodel::function::FunctionDefinition", registry))
         {
-            throw new IllegalStateException("parseDir/compile FunctionDefinition not resolvable: "
-                    + "parseDir=" + (parseDirFn == null ? "null" : parseDirFn.getClass().getName())
+            throw new IllegalStateException("parseDirs/compile FunctionDefinition not resolvable: "
+                    + "parseDirs=" + (parseDirsFn == null ? "null" : parseDirsFn.getClass().getName())
                     + ", compile=" + (compileFn == null ? "null" : compileFn.getClass().getName()));
         }
 
@@ -117,12 +125,22 @@ public class InMemoryRuntimeTestsTest
         // PCT in-memory adapter — exactly what the user-facing test-pure-runtime
         // recipe exercises, but compiled fresh against core.pdb rather than
         // loaded from core-tests.pdb.
+        // Mirror SpecificationBinaryBuilder's split of the runtime corpus into
+        // multiple source roots. Each file's sourceId is relative to its own
+        // root, matching the path convention encoded in core.pdb / core-tests.pdb.
         Path runtimeSrc = locateRuntimeSrc();
+        java.util.List<String> sourceRoots = java.util.List.of(
+                runtimeSrc.resolve("functions").toAbsolutePath().toString(),
+                runtimeSrc.resolve("featureTests").toAbsolutePath().toString(),
+                runtimeSrc.resolve("ui").toAbsolutePath().toString(),
+                runtimeSrc.resolve("test").toAbsolutePath().toString()
+        );
         Object result;
         try
         {
-            Object parsedFiles = runtime.execute(parseDirFn, runtimeSrc.toAbsolutePath().toString());
-            result = runtime.execute(compileFn, parsedFiles, Boolean.FALSE);
+            Object parsedFiles = runtime.execute(parseDirsFn, sourceRoots);
+            // debug=false, silent=true
+            result = runtime.execute(compileFn, parsedFiles, Boolean.FALSE, Boolean.TRUE);
         }
         catch (Throwable t)
         {
@@ -168,12 +186,24 @@ public class InMemoryRuntimeTestsTest
         {
             deps.add(existing.name());
         }
-        registry.register(new TruffleInMemoryModule("inmem-runtime-tests", deps, elementsSeq));
+        registry.register(new TruffleInMemoryModule("inmem-runtime-tests", deps, elementsSeq, registry));
 
         runTestsFn = registry.getElement("meta::pure::test::runTests_String_1__String_1_");
         runPctTestsFn = registry.getElement("meta::pure::test::runPCTTests_String_1__String_1_");
         assertNotNull(runTestsFn, "runTests should be in the freshly compiled in-memory module");
         assertNotNull(runPctTestsFn, "runPCTTests should be in the freshly compiled in-memory module");
+
+        Object adapter = registry.getElement("meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_");
+        System.err.println("[diag] testAdapter class = " + (adapter == null ? "null" : adapter.getClass().getName()));
+        System.err.println("[diag] testAdapter pureType = "
+                + (adapter == null ? "null" : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(adapter)));
+        if (adapter != null)
+        {
+            Object exprSeq = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(adapter, "expressionSequence");
+            System.err.println("[diag] expressionSequence = "
+                    + (exprSeq == null ? "null" : exprSeq.getClass().getName() + " size="
+                            + (exprSeq instanceof PureSequence ps ? ps.size() : "n/a")));
+        }
     }
 
     @AfterAll

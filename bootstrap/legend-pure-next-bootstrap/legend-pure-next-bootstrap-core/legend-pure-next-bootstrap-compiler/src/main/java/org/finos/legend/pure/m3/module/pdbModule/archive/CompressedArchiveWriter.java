@@ -183,23 +183,15 @@ public class CompressedArchiveWriter
         zos.closeEntry();
     }
 
+    // Delegates to the central pointer-aware helper. Pure-compiler skeletons
+    // wrap their {@code package} field as a {@code PackagePointer} (see
+    // {@code compiler.pure}'s pass-1 wrap), so a local walk via
+    // {@code _name()} / {@code _package()} alone collapses the parent chain
+    // to "" and yields a bare element name — producing duplicate
+    // {@code elements/<bare>.<type>} zip entries for any two elements with
+    // the same simple name in different packages.
     private String elementPath(PackageableElement element)
     {
-        if (element._package() != null)
-        {
-            String parentPath = packagePath(element._package());
-            return parentPath.isEmpty() ? element._name() : parentPath + "::" + element._name();
-        }
-        return element._name();
-    }
-
-    private String packagePath(meta.pure.metamodel.Package pkg)
-    {
-        if (pkg._package() != null && pkg._name() != null && !pkg._name().isEmpty())
-        {
-            String parentPath = packagePath(pkg._package());
-            return parentPath.isEmpty() ? pkg._name() : parentPath + "::" + pkg._name();
-        }
-        return "";
+        return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(element);
     }
 }

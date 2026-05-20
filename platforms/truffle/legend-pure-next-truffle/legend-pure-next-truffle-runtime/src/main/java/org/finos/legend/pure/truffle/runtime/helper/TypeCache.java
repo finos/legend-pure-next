@@ -205,13 +205,19 @@ public final class TypeCache implements TruffleTypeCache
 
     private static Entry compute(Object type)
     {
+        // Resolver is pulled per-compute rather than stored on TypeCache to
+        // keep TypeCache's no-arg construction in place. Linearization needs
+        // the resolver to dereference {@link
+        // meta.pure.metamodel.pointer.TempCompilerPointer} subtypes that
+        // compile-pure emits in {@code generalizations.general.type}.
+        var resolver = org.finos.legend.pure.truffle.PureLanguage.get(null).resolver();
         List<Object> lin = new ArrayList<>();
-        linearizeInto(type, lin);
+        linearizeInto(type, lin, resolver);
         Set<String> keys = new LinkedHashSet<>();
         // Type IS-A SimplePropertyOwner in Pure (Class, Association, etc.) —
         // PureObj.read returns null for the absent slot when this isn't true,
         // and collectEqualityKeysInto gracefully no-ops on a null _properties.
-        collectEqualityKeysInto(type, keys, new LinkedHashSet<>(), 0);
+        collectEqualityKeysInto(type, keys, new LinkedHashSet<>(), 0, resolver);
         // Identity-keyed set of ancestors for O(1) subtypeOf check. We can't
         // use HashSet (Type's structural equals/hashCode recurse through
         // generalisations and blow the stack on cyclic shapes); identity is
@@ -227,7 +233,8 @@ public final class TypeCache implements TruffleTypeCache
 
     // --- linearization ------------------------------------------------------
 
-    private static void linearizeInto(Object type, List<Object> out)
+    private static void linearizeInto(Object type, List<Object> out,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (type == null)
         {
@@ -251,7 +258,14 @@ public final class TypeCache implements TruffleTypeCache
                 if (gen != null)
                 {
                     Object superType = _GenericType.type(PureObj.readBySlot(gen, SLOT_GENERAL));
-                    linearizeInto(superType, out);
+                    // Deref TempCompilerPointer (ClassPointer etc.) emitted by
+                    // compile-pure for cross-element type refs — without this
+                    // the ancestors set keys on the pointer wrapper instead of
+                    // the canonical Class, and identity-based subtypeOf misses
+                    // (witnessed by testInstanceOfInstance: a CC_Address
+                    // instance failing instanceOf(CC_GeographicEntity)).
+                    superType = _PackageableElement.derefPointer(superType, resolver);
+                    linearizeInto(superType, out, resolver);
                 }
             }
         }
@@ -260,7 +274,8 @@ public final class TypeCache implements TruffleTypeCache
     // --- equality keys ------------------------------------------------------
 
     private static void collectEqualityKeysInto(Object owner, Set<String> keys,
-            Set<String> seenPropNames, int depth)
+            Set<String> seenPropNames, int depth,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         // Cycle/runaway guard — generalization chains are usually shallow but
         // FlatBuffer wrappers can produce duplicate-but-non-identical property
@@ -283,7 +298,7 @@ public final class TypeCache implements TruffleTypeCache
                 {
                     continue;
                 }
-                if (hasEqualityKeyStereotype(prop))
+                if (hasEqualityKeyStereotype(prop, resolver))
                 {
                     keys.add(propName);
                 }
@@ -306,13 +321,13 @@ public final class TypeCache implements TruffleTypeCache
                 Object superType = _GenericType.type(general);
                 if (superType != null)
                 {
-                    collectEqualityKeysInto(superType, keys, seenPropNames, depth + 1);
+                    collectEqualityKeysInto(superType, keys, seenPropNames, depth + 1, resolver);
                 }
             }
         }
     }
 
-    private static boolean hasEqualityKeyStereotype(Object prop)
+    private static boolean hasEqualityKeyStereotype(Object prop, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         Object stereotypesObj = PureObj.readBySlot(prop, SLOT_STEREOTYPES);
         if (!(stereotypesObj instanceof PureSequence stereotypes))
@@ -330,7 +345,7 @@ public final class TypeCache implements TruffleTypeCache
                 continue;
             }
             Object profile = PureObj.readBySlot(ster, SLOT_PROFILE);
-            if (profile != null && EQUALITY_PROFILE_PATH.equals(_PackageableElement.path(profile)))
+            if (profile != null && EQUALITY_PROFILE_PATH.equals(_PackageableElement.path(profile, resolver)))
             {
                 return true;
             }

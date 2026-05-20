@@ -291,7 +291,7 @@ public final class PureContext
         {
             return null;
         }
-        String enumPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(en);
+        String enumPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(en, this.resolver);
         if (enumPath == null)
         {
             return null;
@@ -617,7 +617,7 @@ public final class PureContext
         return cf;
     }
 
-    private static String getFunctionName(Object fd)
+    private String getFunctionName(Object fd)
     {
         // Prefer the unmangled name = package::functionName. fd._name() is
         // the mangled identifier (`assertError_Function_1__String_1__...`);
@@ -635,7 +635,7 @@ public final class PureContext
                         fd, org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("package"));
                 if (pkg != null)
                 {
-                    String pkgPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pkg);
+                    String pkgPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pkg, this.resolver);
                     return (pkgPath == null || pkgPath.isEmpty() || "Root".equals(pkgPath))
                             ? fnName
                             : pkgPath + "::" + fnName;
@@ -644,7 +644,7 @@ public final class PureContext
             }
             // Fallback to mangled path for fd types without `functionName`
             // (lambdas, native function placeholders).
-            String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(fd);
+            String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(fd, this.resolver);
             if (path != null) return path;
         }
         catch (RuntimeException ignored) {}

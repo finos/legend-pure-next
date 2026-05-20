@@ -50,7 +50,7 @@ public final class TruffleInMemoryModule implements TruffleModule
     private final IdentityHashMap<Object, String> pathByElement;
     private final TruffleTypeCache typeCache = new TypeCache();
 
-    public TruffleInMemoryModule(String name, List<String> dependencies, PureSequence elements)
+    public TruffleInMemoryModule(String name, List<String> dependencies, PureSequence elements, TruffleMetadataAccess resolver)
     {
         this.name = name;
         this.dependencies = List.copyOf(dependencies);
@@ -60,7 +60,7 @@ public final class TruffleInMemoryModule implements TruffleModule
         {
             Object el = elements.getBoxed(i);
             if (el == null) { continue; }
-            String path = _PackageableElement.path(el);
+            String path = _PackageableElement.path(el, resolver);
             if (path == null || path.isEmpty()) { continue; }
             // compile can emit multiple revisions of the same path
             // across passes; the writer dedups by name and keeps the last.

@@ -38,8 +38,8 @@ public final class _Type
         // Pointers carry only `.path`; identity-based ops (ancestors set,
         // TypeCache) are keyed on live class instances. Resolve via the
         // registry before consulting the cache.
-        sub = derefIfPointer(sub, resolver);
-        sup = derefIfPointer(sup, resolver);
+        sub = _PackageableElement.derefPointer(sub, resolver);
+        sup = _PackageableElement.derefPointer(sup, resolver);
         if (sub == sup)
         {
             return true;
@@ -59,24 +59,6 @@ public final class _Type
         return ((java.util.Set<Object>) resolver.typeCache().ancestors(sub)).contains(sup);
     }
 
-    private static Object derefIfPointer(Object type, TruffleMetadataAccess resolver)
-    {
-        if (type == null || resolver == null) return type;
-        // Don't use PureObj.isType here — it calls back into subtypeOf,
-        // causing infinite recursion. Detect pointer class by its pure path
-        // prefix instead (TempCompilerPointer subclasses all live under
-        // `meta::pure::metamodel::pointer::`).
-        String typePath = PureObj.pureTypeOf(type);
-        if (typePath == null || !typePath.startsWith("meta::pure::metamodel::pointer::"))
-        {
-            return type;
-        }
-        Object pathVal = PureObj.readBySlot(type,
-                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("path"));
-        if (!(pathVal instanceof String path) || path.isEmpty()) return type;
-        Object el = resolver.getElement(path);
-        return el != null ? el : type;
-    }
 
     public static Object findCommonType(List<?> types, boolean contravariant, TruffleMetadataAccess resolver)
     {

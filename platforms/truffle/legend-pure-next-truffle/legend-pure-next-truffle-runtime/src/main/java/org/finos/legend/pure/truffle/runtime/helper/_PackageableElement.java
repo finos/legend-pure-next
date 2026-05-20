@@ -9,18 +9,6 @@ public final class _PackageableElement
     private _PackageableElement() {}
 
     /**
-     * Return the canonical Pure path for a PackageableElement.
-     *
-     * <p>Prefers the resolver's {@code pathOf()} reverse lookup (O(1) from
-     * the PDB index) over walking the FlatBuffer package chain, which is
-     * order-dependent and can produce inconsistent results.</p>
-     */
-    public static String path(Object pe)
-    {
-        return path(pe, null);
-    }
-
-    /**
      * Identity-keyed cache for PEs whose path the resolver doesn't know
      * (i.e. PEs created during compilation, not loaded from a PDB). Once
      * a PE has a path it's invariant — paths are derived from the
@@ -56,16 +44,8 @@ public final class _PackageableElement
         // (pointers are opaque). Short-circuit to that slot before consulting
         // the resolver or walking the package chain — otherwise the walk reads
         // null name/package and returns "" or NPEs.
-        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(
-                pe, "meta::pure::metamodel::pointer::TempCompilerPointer", resolver))
-        {
-            Object ptrPath = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(
-                    pe, SLOT_POINTER_PATH);
-            if (ptrPath instanceof String s && !s.isEmpty())
-            {
-                return s;
-            }
-        }
+        String ptrPath = pointerPath(pe);
+        if (ptrPath != null) return ptrPath;
         // Fast path: resolver knows the canonical path from the PDB index
         if (resolver != null)
         {
@@ -91,6 +71,56 @@ public final class _PackageableElement
 
     private static final int SLOT_POINTER_PATH =
             org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("path");
+
+    private static final String POINTER_TYPE_PREFIX = "meta::pure::metamodel::pointer::";
+
+    /**
+     * If {@code v} is a {@code TempCompilerPointer} subtype, return its
+     * {@code .path} slot value; otherwise return {@code null}.
+     *
+     * <p>Pointer detection uses the {@code pureTypeOf} prefix check rather
+     * than {@link PureObj#isType} to avoid a subtype walk through the
+     * resolver — the prefix is precise (every pointer Pure class lives
+     * under {@code meta::pure::metamodel::pointer::}) and the
+     * {@code pureTypeOf} cache keeps the check at a single map lookup.
+     * That avoids the {@code subtypeOf → derefPointer → subtypeOf} recursion
+     * that would arise from an {@code isType}-based check.</p>
+     *
+     * <p>The string-returning shape lets the three pointer-aware paths
+     * ({@link #path}, {@link #derefPointer}, {@link #derefPackagePath})
+     * share this single check and differ only in what they do with the
+     * extracted path.</p>
+     */
+    static String pointerPath(Object v)
+    {
+        if (v == null) return null;
+        String typePath = PureObj.pureTypeOf(v);
+        if (typePath == null || !typePath.startsWith(POINTER_TYPE_PREFIX)) return null;
+        Object slotPath = PureObj.readBySlot(v, SLOT_POINTER_PATH);
+        return slotPath instanceof String s && !s.isEmpty() ? s : null;
+    }
+
+    /**
+     * If {@code v} is a {@code TempCompilerPointer} subtype, resolve it to its
+     * live target element via the resolver. Non-pointer values pass through
+     * unchanged. Compile-pure embeds Class / PackageableFunction references
+     * as path-only pointers to avoid freezing pass-1 skeletons into compiled
+     * output; consumers that need the live element (identity comparison,
+     * property access, type walks) call this to dereference.
+     *
+     * <p>Returns {@code v} unchanged if the resolver is {@code null}, the
+     * value isn't a pointer, the pointer's {@code path} slot is empty, or
+     * the resolver can't locate the target — degrading gracefully rather
+     * than throwing keeps pointer dereference cheap to call on any value.</p>
+     */
+    @TruffleBoundary
+    public static Object derefPointer(Object v, TruffleMetadataAccess resolver)
+    {
+        String path = pointerPath(v);
+        if (path == null || resolver == null) return v;
+        Object resolved = resolver.getElement(path);
+        return resolved != null ? resolved : v;
+    }
 
     private static void putPathCache(Object pe, String result)
     {
@@ -139,8 +169,18 @@ public final class _PackageableElement
         {
             return "";
         }
-        String pkgPath = packagePath(pkg);
+        // Package field may itself be a {@link PackagePointer} (compile-pure
+        // wraps Class.package so the parent ref doesn't go stale across
+        // pass-2 ^$pkg(children=...) rebuilds). Its {@code path} slot carries
+        // the parent's full path directly — short-circuit the chain walk.
+        String pkgPath = derefPackagePath(pkg);
         return pkgPath.isEmpty() ? name : pkgPath + "::" + name;
+    }
+
+    private static String derefPackagePath(Object pkg)
+    {
+        String ptrPath = pointerPath(pkg);
+        return ptrPath != null ? ptrPath : packagePath(pkg);
     }
 
     private static String packagePath(Object pkg)

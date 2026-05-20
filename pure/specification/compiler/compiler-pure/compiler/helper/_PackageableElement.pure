@@ -30,7 +30,15 @@ function meta::pure::compiler::helper::packageableElement::fullPath(element:Pack
             let name = $pe.name->toOne();
             if($pkg->isEmpty(),
                 | $name,
-                | let pkgPath = $pkg->toOne()->packagePath();
+                | // Package may itself be a {@link PackagePointer} (compile-pure
+                  // wraps parent Package refs as pointers so children's stale
+                  // skeletons don't propagate). The pointer's {@code path}
+                  // field carries the parent's full path directly — use it.
+                  let p = $pkg->toOne();
+                  let pkgPath = if($p->instanceOf(TempCompilerPointer),
+                      | $p->cast(@TempCompilerPointer).path,
+                      | $p->packagePath()
+                  );
                   if($pkgPath == '',
                       | $name,
                       | $pkgPath + '::' + $name
@@ -41,12 +49,15 @@ function meta::pure::compiler::helper::packageableElement::fullPath(element:Pack
 
 function meta::pure::compiler::helper::packageableElement::packagePath(pkg:Package[1]):String[1]
 {
-    if($pkg.package->isEmpty() || $pkg.name->isEmpty(),
-        | '',
-        | let parentPath = $pkg.package->toOne()->packagePath();
-          if($parentPath == '',
-              | $pkg.name->toOne(),
-              | $parentPath + '::' + $pkg.name->toOne()
+    if($pkg->instanceOf(TempCompilerPointer),
+        | $pkg->cast(@TempCompilerPointer).path,
+        | if($pkg.package->isEmpty() || $pkg.name->isEmpty(),
+              | '',
+              | let parentPath = $pkg.package->toOne()->packagePath();
+                if($parentPath == '',
+                    | $pkg.name->toOne(),
+                    | $parentPath + '::' + $pkg.name->toOne()
+                );
           );
     );
 }

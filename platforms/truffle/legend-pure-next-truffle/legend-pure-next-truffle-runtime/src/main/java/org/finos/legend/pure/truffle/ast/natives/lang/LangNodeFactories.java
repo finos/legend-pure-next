@@ -79,6 +79,10 @@ public final class LangNodeFactories
         registry.register("eval_Function_1__T_n__U_p__W_q__V_m_",
                 (args, gt, mul, fe) -> new EvalNode(args));
 
+        // tryEval — run closure, return TryResult<V|m> (value or Error).
+        registry.register("tryEval_Function_1__TryResult_1_",
+                (args, gt, mul, fe) -> new TryEvalNode(args[0]));
+
         // and/or — short-circuit boolean. Registry check now preempts
         // the isLazy check in PureASTBuilder, so these get wired.
         registry.register("and_Boolean_1__Boolean_1__Boolean_1_",

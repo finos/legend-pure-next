@@ -202,7 +202,7 @@ public final class RawPropertyAccessNode extends PureNode
                         }
                     }
                 }
-                String enPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(target);
+                String enPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(target, getResolver());
                 throw new RuntimeException("No property or enum value '" + propName + "' on enumeration '"
                         + (enPath != null ? enPath : target.toString()) + "'");
             }

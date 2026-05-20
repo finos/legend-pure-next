@@ -90,6 +90,46 @@ public class LangNatives
             eval.executeFunction(args.get(0), args.subList(1, args.size()))
         );
 
+        // tryEval(Function<{->V[m]}>[1]) : TryResult<V|m>[1]
+        // Run the closure catching any exception. On success: TryResult.value
+        // is the closure's return; failure is empty. On failure: TryResult.value
+        // unset, failure carries an Error(message, stack).
+        natives.put("tryEval_Function_1__TryResult_1_", (args, eval, genericType, multiplicity) ->
+        {
+            DynamicInstance tryResult = new DynamicInstance("meta::pure::functions::lang::TryResult");
+            // genericType is the TryResult<V|m> classifier from the call site —
+            // cast preserves V's GT and m bindings.
+            if (genericType instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+            {
+                tryResult.setClassifierGenericType(gtv);
+            }
+            try
+            {
+                ValueSpecification value = eval.executeFunction(args.get(0), List.of());
+                tryResult.put("value", value);
+            }
+            catch (Exception e)
+            {
+                String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
+                // Strip any "\nPure stack trace:..." suffix — we now expose
+                // frames as Error.stack and don't want the message to duplicate.
+                int stackHeaderIdx = msg.indexOf("\nPure stack trace:");
+                if (stackHeaderIdx >= 0)
+                {
+                    msg = msg.substring(0, stackHeaderIdx);
+                }
+                DynamicInstance error = new DynamicInstance("meta::pure::functions::lang::Error");
+                meta.pure.metamodel.type.Type errorType =
+                        (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::functions::lang::Error");
+                error.setClassifierGenericType(
+                        new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver)._type(errorType));
+                error.put("message", _E_ValueSpecification.wrap(msg, null, null, resolver));
+                error.put("stack", _E_ValueSpecification.wrap(eval.getCallStackFrames(), null, null, resolver));
+                tryResult.put("failure", _E_ValueSpecification.wrap(error, null, null, resolver));
+            }
+            return _E_ValueSpecification.wrap(tryResult, genericType, multiplicity, resolver);
+        });
+
         // evaluate(Function[1], List[*]) : Any[*]
         natives.put("evaluate_Function_1__List_MANY__Any_MANY_", (args, eval, genericType, multiplicity) ->
         {

@@ -23,6 +23,17 @@ import meta::pure::metamodel::function::*;
 import meta::pure::metamodel::pointer::*;
 import meta::pure::ui::progress::*;
 
+// Per-test outcome carried by runTests / runPCTTests. {@code error} is empty
+// on success; on failure it holds the (already-formatted, Pure-stack-included)
+// exception message from {@link tryEval}. Built as a class because Pure's
+// {@code pair} requires both members to be {@code [1]} and we want {@code [0..1]}
+// for the error so successes don't carry a sentinel.
+Class meta::pure::test::TestResult
+{
+    name : String[1];
+    error : meta::pure::functions::lang::Error[0..1];
+}
+
 // Package.children entries are stored as TempCompilerPointer subtypes by the
 // in-memory compile path (so cross-pass updates to elementMap don't leave
 // stale skeletons in children). pathToElement looks up the live element from
@@ -95,22 +106,34 @@ function <<test.TestDependency>> meta::pure::test::runTests(rootPackagePath:Stri
 
     let start = currentTimeMillis();
 
-    range(0, $total)->map(i |
+    // For each test, run via tryEval so a single assertion failure doesn't
+    // abort the whole run. Collect (testPath, errorOrEmpty) pairs.
+    // withSilencedPrint suppresses the stdout side effect of `print`/`println`
+    // calls inside test bodies; tickProgress prints stay visible because
+    // they run outside the closure.
+    let results = range(0, $total)->map(i |
         let fn = $tests->at($i);
         let name = $fn->elementToPath();
         tickProgress($i + 1, $total, $name);
-        // Each zero-arg <<test.Test>> returns Boolean[1]. An assertion failure
-        // throws, unwinding the whole run — the progress display already shows
-        // which test was executing.
-        //
-        // withSilencedPrint suppresses the stdout side effect of `print`/
-        // `println` calls inside the test body (assertions on their return
-        // values keep working). The runner's tickProgress prints stay
-        // visible because they run outside the closure.
-        withSilencedPrint(| $fn->evaluate([]));
+        let result = tryEval(| withSilencedPrint(| $fn->evaluate([])));
+        ^meta::pure::test::TestResult(name = $name, error = $result.failure);
     );
 
     let elapsedMs = currentTimeMillis() - $start;
     finishProgress();
-    'OK: ' + $total->toString() + ' / ' + $total->toString() + ' <<test.Test>> tests passed in ' + $elapsedMs->toString() + ' ms';
+
+    let failures = $results->filter(r | $r.error->isNotEmpty());
+    let failed = $failures->size();
+    let passed = $total - $failed;
+
+    if($failed > 0,
+        | $failures->map(r |
+              let err = $r.error->toOne();
+              println('  FAIL: ' + $r.name);
+              println('    ' + $err.message);
+              $err.stack->map(frame | println('      at ' + $frame));
+          );
+          'FAIL: ' + $passed->toString() + ' / ' + $total->toString() + ' <<test.Test>> tests passed (' + $failed->toString() + ' failed) in ' + $elapsedMs->toString() + ' ms';,
+        | 'OK: ' + $total->toString() + ' / ' + $total->toString() + ' <<test.Test>> tests passed in ' + $elapsedMs->toString() + ' ms'
+    );
 }

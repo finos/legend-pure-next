@@ -58,7 +58,7 @@ public final class NewGenericTypeNode extends PureNode
         String classPath = "Unknown";
         if (rawType != null)
         {
-            classPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(rawType);
+            classPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(rawType, resolver);
             if (classPath == null || classPath.isEmpty())
             {
                 Object n = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawType, SLOT_NAME);

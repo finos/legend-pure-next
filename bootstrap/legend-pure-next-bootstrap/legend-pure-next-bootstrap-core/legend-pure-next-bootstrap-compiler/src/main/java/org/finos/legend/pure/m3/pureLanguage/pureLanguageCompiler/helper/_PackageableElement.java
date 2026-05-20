@@ -17,6 +17,7 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.SourceInformation;
+import meta.pure.metamodel.pointer.TempCompilerPointer;
 import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -111,9 +112,22 @@ public class _PackageableElement
      * Return the fully-qualified path of a packageable element,
      * e.g. {@code "my::package::MyClass"}.
      * Returns the element name alone if it is in the root package.
+     *
+     * <p>Pointer-aware: a {@link TempCompilerPointer} carries its canonical
+     * path in {@code _path()} and leaves the inherited {@code _name} /
+     * {@code _package} fields unset; same for any {@code PackagePointer}
+     * encountered while walking the parent chain. Without this short-circuit,
+     * Pure-compiler skeletons whose {@code package} is a {@code PackagePointer}
+     * (the pass-1 wrap that keeps parent refs identity-stable) would resolve
+     * to the bare element name and corrupt every downstream
+     * {@code toClassPointer(...)} site.</p>
      */
     public static String path(PackageableElement element)
     {
+        if (element instanceof TempCompilerPointer p)
+        {
+            return p._path();
+        }
         Package pkg = element._package();
         String name = element._name();
         if (pkg == null || name == null)
@@ -173,6 +187,10 @@ public class _PackageableElement
 
     private static String computePackagePath(Package pkg)
     {
+        if (pkg instanceof TempCompilerPointer p)
+        {
+            return p._path();
+        }
         if (pkg._package() == null || pkg._name() == null)
         {
             return "";

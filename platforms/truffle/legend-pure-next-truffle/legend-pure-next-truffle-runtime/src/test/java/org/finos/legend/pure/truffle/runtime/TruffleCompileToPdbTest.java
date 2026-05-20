@@ -301,13 +301,13 @@ public class TruffleCompileToPdbTest
                     {
                         TrufflePdbWriter.write(elements,
                                 new org.finos.legend.pure.m3.module.ModuleManifest("roundtrip", "*", java.util.List.of()),
-                                tmpPdb, /*validateRequired=*/ false);
+                                tmpPdb, /*validateRequired=*/ false, resolver);
                         if (Files.size(tmpPdb) == 0) issues.add("Round-tripped PDB is empty");
                         TrufflePdbLoader rt = new TrufflePdbLoader(tmpPdb);
                         int matched = 0;
                         for (Object original : elements)
                         {
-                            String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(original);
+                            String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(original, resolver);
                             Object reloaded = rt.getElement(path);
                             if (reloaded == null)
                             {

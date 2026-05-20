@@ -273,7 +273,7 @@ public final class TruffleBackend implements PureBackend
                         {
                             deps.add(existing.name());
                         }
-                        registry.register(new TruffleInMemoryModule(memModuleName, deps, elements));
+                        registry.register(new TruffleInMemoryModule(memModuleName, deps, elements, registry));
                     }
                 }
             }
