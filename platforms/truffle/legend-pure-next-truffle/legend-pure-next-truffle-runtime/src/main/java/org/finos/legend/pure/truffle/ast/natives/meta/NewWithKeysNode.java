@@ -441,14 +441,24 @@ public final class NewWithKeysNode extends PureNode
         {
             return cached;
         }
-        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawType, SLOT_NAME);
-        String simpleName = nameObj instanceof String s ? s : null;
-        if (simpleName == null || simpleName.isEmpty())
+        // The canonical anchor key encodes the type's FULL Pure path so user
+        // modules whose simple names collide with platform types (e.g. a user
+        // module declaring its own `Package` class) don't pick up the wrong
+        // anchor and end up classified as the platform type. The pre-built
+        // anchors in core.pdb live at
+        //   meta::pure::metamodel::type::generics::optimization::GenericType_<path>
+        // with `::` in `<path>` replaced by `_`. Only types that have such
+        // an anchor (most Pure-platform classes; none from user modules) ever
+        // resolve to a non-null canonical here.
+        String typePath = _PackageableElement.path(rawType, resolver);
+        if (typePath == null || typePath.isEmpty())
         {
             CANONICAL_ANCHOR_CACHE.put(rawType, ABSENT_GTV);
             return gtv;
         }
-        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + simpleName);
+        String canonicalKey = "meta::pure::metamodel::type::generics::optimization::GenericType_"
+                + typePath.replace("::", "_");
+        Object canonical = resolver.getElement(canonicalKey);
         // Treat any non-null resolved element as the canonical anchor — the
         // typed `instanceof GenericTypeValue` guard fails post-loader-flip
         // because resolver.getElement now returns PureDynamicObject. The

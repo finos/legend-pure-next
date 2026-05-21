@@ -325,9 +325,10 @@ public class PureModel
     {
         if (pkg instanceof PackageImpl pi && pi._classifierGenericType() == null)
         {
-            // Anchor at canonical GenericType_Package (UDPGT) so the chain matches
-            // Pure's `^Package(...)` (platform fix in MetaNatives.new substitutes canonical).
-            Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_Package");
+            // Anchor at canonical GenericType_<fullPath> (UDPGT) so the chain
+            // matches Pure's `^Package(...)` (platform fix in MetaNatives.new
+            // substitutes canonical). Full path encoded with `::` -> `_`.
+            Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_Package");
             if (canonical instanceof meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT)
             {
                 pi._classifierGenericType(canonicalGT);

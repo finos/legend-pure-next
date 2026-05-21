@@ -409,7 +409,13 @@ public class RdfJavaGenerator
                 sb.append("    public ").append(classInfo.name).append("Impl(org.finos.legend.pure.m3.module.MetadataAccess model)\n");
                 sb.append("    {\n");
                 sb.append("        this._classifierGenericType(\n");
-                sb.append("            (meta.pure.metamodel.type.generics.GenericTypeValue) model.getElement(\"meta::pure::metamodel::type::generics::optimization::GenericType_").append(classInfo.name).append("\"));\n");
+                // Anchor key encodes the type's full Pure path (`::` -> `_`) so
+                // user modules whose simple names collide with platform types
+                // don't pick up the wrong anchor and end up classified as a
+                // platform type.
+                sb.append("            (meta.pure.metamodel.type.generics.GenericTypeValue) model.getElement(\"meta::pure::metamodel::type::generics::optimization::GenericType_")
+                        .append((classInfo.packagePath == null ? "" : classInfo.packagePath.replace("::", "_") + "_"))
+                        .append(classInfo.name).append("\"));\n");
             }
             else
             {

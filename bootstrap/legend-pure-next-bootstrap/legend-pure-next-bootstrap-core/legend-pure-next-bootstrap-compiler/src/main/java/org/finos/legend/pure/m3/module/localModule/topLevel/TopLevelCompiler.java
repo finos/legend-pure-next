@@ -416,7 +416,7 @@ public class TopLevelCompiler
                 // chain matches Pure's `^Package(...)` (platform fix in MetaNatives.new substitutes canonical).
                 meta.pure.metamodel.type.generics.GenericTypeValue packageCanonical =
                         (meta.pure.metamodel.type.generics.GenericTypeValue) model.getElement(
-                                "meta::pure::metamodel::type::generics::optimization::GenericType_Package");
+                                "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_Package");
                 Package parent = packagePath != null
                         ? getOrCreatePackage(root, packagePath,
                                 packageCanonical != null

@@ -187,21 +187,20 @@ public class MetaNatives
             {
                 // No type arguments — set classifier from resolved class path.
                 // Mirror Java direct's `new XxxImpl(model)` ctor pattern: prefer
-                // the canonical `GenericType_<ClassName>` UDPGT-PE from core.pdb
-                // when one exists. Falls through to a fresh UDGT wrapping the
-                // class when no canonical anchor exists.
+                // the canonical `GenericType_<fullPath>` UDPGT-PE from core.pdb
+                // when one exists (full path encoded with `::` -> `_`, so user
+                // modules whose simple names collide with platform types don't
+                // pick up the wrong anchor). Falls through to a fresh UDGT
+                // wrapping the class when no canonical anchor exists.
                 Object typeElement = resolver.getElement(classPath);
                 if (typeElement instanceof meta.pure.metamodel.type.Type t && t instanceof meta.pure.metamodel.PackageableElement pe)
                 {
-                    String className = pe._name();
-                    if (className != null && !className.isEmpty())
+                    Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                            + classPath.replace("::", "_"));
+                    if (canonical instanceof GenericTypeValue canonicalGT)
                     {
-                        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + className);
-                        if (canonical instanceof GenericTypeValue canonicalGT)
-                        {
-                            any._classifierGenericType(canonicalGT);
-                            return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
-                        }
+                        any._classifierGenericType(canonicalGT);
+                        return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
                     }
                     any._classifierGenericType(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType(t, resolver));
                 }
@@ -312,20 +311,17 @@ public class MetaNatives
                 else if (instance instanceof Any any && !"Unknown".equals(classPath))
                 {
                     // Same as the simple-new-helper above: prefer canonical
-                    // GenericType_<ClassName> UDPGT-PE when one exists.
+                    // GenericType_<fullPath> UDPGT-PE when one exists.
                     Object typeElement = resolver.getElement(classPath);
                     if (typeElement instanceof meta.pure.metamodel.type.Type t && t instanceof meta.pure.metamodel.PackageableElement pe)
                     {
-                        String className = pe._name();
                         boolean setClassifier = false;
-                        if (className != null && !className.isEmpty())
+                        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                                + classPath.replace("::", "_"));
+                        if (canonical instanceof GenericTypeValue canonicalGT)
                         {
-                            Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + className);
-                            if (canonical instanceof GenericTypeValue canonicalGT)
-                            {
-                                any._classifierGenericType(canonicalGT);
-                                setClassifier = true;
-                            }
+                            any._classifierGenericType(canonicalGT);
+                            setClassifier = true;
                         }
                         if (!setClassifier)
                         {
@@ -1242,12 +1238,17 @@ public class MetaNatives
         {
             return cgt;
         }
-        String simpleName = pe._name();
-        if (simpleName == null || simpleName.isEmpty())
+        // Encode the type's full Pure path in the anchor key so user modules
+        // whose simple names collide with platform types (e.g. a user
+        // `Package` class) don't fall through to the platform anchor and end
+        // up classified as the platform type.
+        String typePath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
+        if (typePath == null || typePath.isEmpty())
         {
             return cgt;
         }
-        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + simpleName);
+        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                + typePath.replace("::", "_"));
         if (canonical instanceof meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT)
         {
             return canonicalGT;

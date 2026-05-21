@@ -692,7 +692,7 @@ public class CollectionNatives
         meta.pure.metamodel.type.generics.GenericType gt = elementTypes.notEmpty()
                 ? _GenericType.findCommonGenericType(elementTypes, resolver)
                 : (meta.pure.metamodel.type.generics.GenericType) resolver.getElement(
-                        "meta::pure::metamodel::type::generics::optimization::GenericType_Nil");
+                        "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_Nil");
         int size = vs.size();
         return new CollectionImpl(resolver)
                 ._values(vs)

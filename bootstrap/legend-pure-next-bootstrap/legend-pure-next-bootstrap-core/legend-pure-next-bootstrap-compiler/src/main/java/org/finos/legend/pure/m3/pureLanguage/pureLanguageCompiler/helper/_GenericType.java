@@ -79,7 +79,7 @@ public class _GenericType
             gt._type(rawType);
         }
         gt._classifierGenericType((meta.pure.metamodel.type.generics.GenericTypeValue)
-                model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_UserDefinedGenericType"));
+                model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType"));
         return gt;
     }
 
@@ -95,7 +95,7 @@ public class _GenericType
             gt._type(rawType);
         }
         gt._classifierGenericType((meta.pure.metamodel.type.generics.GenericTypeValue)
-                model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_InferredGenericType"));
+                model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_generics_InferredGenericType"));
         return gt;
     }
 
@@ -1220,13 +1220,17 @@ public class _GenericType
                     && (reconciledArgs == null || reconciledArgs.isEmpty())
                     && (reconciledMulArgs == null || reconciledMulArgs.isEmpty())
                     && (actualV._typeVariableValues() == null || actualV._typeVariableValues().isEmpty())
-                    && newType instanceof PackageableElement pe
-                    && pe._name() != null && !pe._name().isEmpty())
+                    && newType instanceof PackageableElement pe)
             {
-                Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + pe._name());
-                if (canonical instanceof GenericTypeValue canonicalGT && canonicalGT._type() == newType)
+                String typePath = _PackageableElement.path(pe);
+                if (typePath != null && !typePath.isEmpty())
                 {
-                    return canonicalGT;
+                    Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                            + typePath.replace("::", "_"));
+                    if (canonical instanceof GenericTypeValue canonicalGT && canonicalGT._type() == newType)
+                    {
+                        return canonicalGT;
+                    }
                 }
             }
             GenericTypeValue base = actual instanceof Inferred

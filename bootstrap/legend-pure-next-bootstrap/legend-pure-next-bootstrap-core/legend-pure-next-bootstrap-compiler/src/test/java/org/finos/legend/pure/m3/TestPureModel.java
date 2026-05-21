@@ -119,18 +119,21 @@ class TestPureModel
         assertTrue(bootstrap.elementPaths().stream().anyMatch(p -> p.endsWith("::Any")),
                 "Bootstrap should contain an Any type");
 
-        // Verify PackageableGenericType entries are bootstrapped
-        assertTrue(bootstrap.elementPaths().stream().anyMatch(p -> p.endsWith("::GenericType_SourceInformation")),
-                "Bootstrap should contain GenericType_SourceInformation");
-        assertNotNull(bootstrap.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_SourceInformation"),
-                "GenericType_SourceInformation should be resolvable by full path");
+        // Verify PackageableGenericType anchors are bootstrapped. The anchor name
+        // now encodes the type's full Pure path (`::` -> `_`) so collisions
+        // between user modules and platform types can't pick the wrong anchor.
+        String siAnchor = "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_SourceInformation";
+        assertTrue(bootstrap.elementPaths().stream().anyMatch(p -> p.equals(siAnchor)),
+                "Bootstrap should contain " + siAnchor);
+        assertNotNull(bootstrap.getElement(siAnchor),
+                siAnchor + " should be resolvable by full path");
         assertInstanceOf(meta.pure.metamodel.type.generics.PackageableGenericType.class,
-                bootstrap.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_SourceInformation"),
-                "GenericType_SourceInformation should be a PackageableGenericType");
+                bootstrap.getElement(siAnchor),
+                siAnchor + " should be a PackageableGenericType");
         meta.pure.metamodel.type.generics.PackageableGenericType sourceInfoGT =
-                (meta.pure.metamodel.type.generics.PackageableGenericType) bootstrap.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_SourceInformation");
-        assertNotNull(sourceInfoGT._type(), "GenericType_SourceInformation should have its type wired");
-        assertEquals("SourceInformation", ((meta.pure.metamodel.PackageableElement) sourceInfoGT._type())._name(), "GenericType_SourceInformation should point to SourceInformation type");
+                (meta.pure.metamodel.type.generics.PackageableGenericType) bootstrap.getElement(siAnchor);
+        assertNotNull(sourceInfoGT._type(), siAnchor + " should have its type wired");
+        assertEquals("SourceInformation", ((meta.pure.metamodel.PackageableElement) sourceInfoGT._type())._name(), siAnchor + " should point to SourceInformation type");
     }
 
     @Test

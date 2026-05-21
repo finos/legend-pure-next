@@ -212,7 +212,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewAnchorsAt
     );
     // The path must be GenericType_<TypeName>
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_FunctionType',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
         $cgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
     );
 }
@@ -232,7 +232,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewGenericTy
         'Expected new(GenericType) result classifier to be canonical UDPGT-PE'
     );
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_VariableExpression',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_valuespecification_VariableExpression',
         $cgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
     );
 }
@@ -263,7 +263,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNilLambdaPre
         'Expected | Nil lambda inner Nil_GT to be canonical UDPGT-PE'
     );
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_Nil',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_Nil',
         $nilGT->cast(@PackageableElement)->elementToPath()
     );
 }
@@ -281,7 +281,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testAnyLambdaPre
         'Expected | Any lambda inner Any_GT to be canonical UDPGT-PE'
     );
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_Any',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_Any',
         $anyGT->cast(@PackageableElement)->elementToPath()
     );
 }
@@ -295,7 +295,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewHolderNoK
         'Expected new(holder) result classifier to be canonical UDPGT-PE'
     );
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_VariableExpression',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_valuespecification_VariableExpression',
         $cgt->cast(@PackageableElement)->elementToPath()
     );
 }

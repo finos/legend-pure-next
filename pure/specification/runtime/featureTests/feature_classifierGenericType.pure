@@ -1,0 +1,94 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// ----------------------------------------------------------------------------
+// classifierGenericType (CGT) anchor lookup must be package-sensitive.
+//
+// The runtime keeps a pre-built UDPGT per Pure-platform Class at
+// {@code meta::pure::metamodel::type::generics::optimization::GenericType_<Name>}
+// so that {@code ^X(...)} construction reuses one canonical CGT instead of
+// allocating a fresh UDGT per call. The anchor lookup is keyed by simple
+// name, which means a user-defined class whose simple name collides with a
+// Pure-platform class (e.g. {@code Package}, {@code Class}, {@code Function})
+// would silently pick up the platform anchor and end up classified as the
+// platform type. Downstream match-dispatch on the user type then has no
+// matching branch and fails opaquely. Java-side construction never trips
+// this — JVM types are distinct.
+//
+// These tests pin the invariant: a freshly-constructed user class with a
+// platform-colliding simple name keeps its OWN classifierGenericType.
+// ----------------------------------------------------------------------------
+
+Class <<test.TestDependency>> meta::pure::functions::tests::cgtCollision::Package
+{
+    label : String[1];
+}
+
+Class <<test.TestDependency>> meta::pure::functions::tests::cgtCollision::Class
+{
+    label : String[1];
+}
+
+// ----------------------------------------------------------------------------
+// 1. Constructed user-type PDO's classifierGenericType.type must be the
+//    user type itself, not the platform type that shares the simple name.
+// ----------------------------------------------------------------------------
+
+function <<test.Test>> meta::pure::functions::tests::cgtCollision::testCGTPointsToUserPackage():Boolean[1]
+{
+    let p = ^meta::pure::functions::tests::cgtCollision::Package(label='userPackage');
+    let cgtType = $p.classifierGenericType->toOne().type->toOne();
+    assertEquals('meta::pure::functions::tests::cgtCollision::Package',
+                 $cgtType->elementToPath());
+}
+
+function <<test.Test>> meta::pure::functions::tests::cgtCollision::testCGTPointsToUserClass():Boolean[1]
+{
+    let c = ^meta::pure::functions::tests::cgtCollision::Class(label='userClass');
+    let cgtType = $c.classifierGenericType->toOne().type->toOne();
+    assertEquals('meta::pure::functions::tests::cgtCollision::Class',
+                 $cgtType->elementToPath());
+}
+
+// ----------------------------------------------------------------------------
+// 2. instanceOf must distinguish the user type from the platform type.
+//    Without the package-sensitive anchor, a user Package PDO would
+//    instanceOf-match meta::pure::metamodel::Package — silently lying about
+//    its type and breaking any downstream pattern dispatch.
+// ----------------------------------------------------------------------------
+
+function <<test.Test>> meta::pure::functions::tests::cgtCollision::testInstanceOfDiscriminatesUserVsPlatform():Boolean[1]
+{
+    let userPkg = ^meta::pure::functions::tests::cgtCollision::Package(label='u');
+    assert($userPkg->instanceOf(meta::pure::functions::tests::cgtCollision::Package), |'user Package PDO should match its own type');
+    assert(!$userPkg->instanceOf(meta::pure::metamodel::Package), |'user Package PDO must NOT match the platform meta::pure::metamodel::Package');
+}
+
+// ----------------------------------------------------------------------------
+// 3. Match dispatch on the user type must reach the user-typed branch.
+//    Java-side serialization uses this pattern heavily (packageToString,
+//    doType, etc.); when the CGT is wrong the match falls through every
+//    branch and fails with "No match function matched the value".
+// ----------------------------------------------------------------------------
+
+function <<test.Test>> meta::pure::functions::tests::cgtCollision::testMatchDispatchOnUserType():Boolean[1]
+{
+    let userPkg = ^meta::pure::functions::tests::cgtCollision::Package(label='u');
+    let result = $userPkg->match([
+        p : meta::pure::functions::tests::cgtCollision::Package[1] | 'user',
+        p : meta::pure::metamodel::Package[1]                      | 'platform',
+        a : Any[1]                                                 | 'any'
+    ]);
+    assertEquals('user', $result);
+}

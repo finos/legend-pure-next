@@ -440,7 +440,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreserv
         'Expected copy classifierGenericType to remain canonical UDPGT-PE after ^$expr(...)'
     );
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_FunctionType',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
         $copyCgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
     );
 }
@@ -458,7 +458,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyNoKeysP
         'Expected copy() (no keys) classifierGenericType to remain canonical UDPGT-PE'
     );
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_FunctionType',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
         $copyCgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
     );
 }
@@ -479,7 +479,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testChainedCopi
         'Expected chained-copy classifierGenericType to remain canonical UDPGT-PE'
     );
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_FunctionType',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
         $cgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
     );
 }

@@ -132,7 +132,7 @@ public class _E_ValueSpecification
                     ._values(org.eclipse.collections.api.factory.Lists.mutable.empty())
                     ._genericType(genericType != null ? genericType
                             : (meta.pure.metamodel.type.generics.GenericType) resolver.getElement(
-                                    "meta::pure::metamodel::type::generics::optimization::GenericType_Nil"))
+                                    "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_Nil"))
                     ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity)
                             resolver.getElement("meta::pure::metamodel::multiplicity::PureZero"));
         }
