@@ -43,8 +43,10 @@ function meta::pure::compiler::elements::buildEnumerationSkeleton(name:String[1]
 {
     // Step 1 — enumeration shell. Path-affecting slots (name, package) are
     // set now so {@code elementToPath} on the next line returns the canonical
-    // path the pointer will carry.
-    let shell = ^Enumeration<Any>(name = $name, package = $pkg);
+    // path the pointer will carry. Package is wrapped as PackagePointer because
+    // each {@code putElementUnderPackage} rebuilds the parent Package, so a
+    // direct ref captured at skeleton creation goes stale as siblings land.
+    let shell = ^Enumeration<Any>(name = $name, package = $pkg->toPackagePointer()->cast(@meta::pure::metamodel::Package));
     let enumPtr = $shell->toEnumerationPointer();
 
     // Step 2 — self-referencing classifierGenericType: Enumeration<self>.

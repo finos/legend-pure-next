@@ -223,7 +223,13 @@ function meta::pure::compiler::getOrCreatePackagePath(ctx:CompilerContext[1], pa
         let existing = $curCtx.elementMap->get($curPath);
         if($existing->isNotEmpty(),
             | pair($curCtx, pair($existing->toOne()->cast(@Package), $curPath)),
-            | let newPkg = ^Package(name = $part, package = $parentPkg);
+            | // Parent back-ref is a PackagePointer: each putElementUnderPackage
+              // call rebuilds parentPkg via `^$parentPkg(children = ...)`, so a
+              // direct PDO ref captured here would orphan after the first
+              // sibling lands. PointerGraphResolver swaps the path-pointer for
+              // the byPath winner at module construction.
+              let parentPkgRef = ^meta::pure::metamodel::pointer::PackagePointer(path = $parentPath)->cast(@meta::pure::metamodel::Package);
+              let newPkg = ^Package(name = $part, package = $parentPkgRef);
               let newMap = if($parentPath == '',
                   | $curCtx.elementMap->put($curPath, $newPkg),
                   | // Children entries are always wrapped as pointers — the live
@@ -329,7 +335,7 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
             let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
             let assocSkeleton = ^Association(
                 name = $a.name,
-                package = $pkgRes.value->toOne(),
+                package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package),
                 sourceInformation = compileSourceInformation($a.p_sourceInformation, $ctx)
             );
             putElementUnderPackage($pkgRes.context, $aName, $packagePath, $assocSkeleton);,
@@ -356,7 +362,7 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
             let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
             let primSkeleton = ^PrimitiveType(
                 name = $p.name,
-                package = $pkgRes.value->toOne(),
+                package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package),
                 sourceInformation = compileSourceInformation($p.p_sourceInformation, $ctx)
             );
             putElementUnderPackage($pkgRes.context, $pName, $packagePath, $primSkeleton);,

@@ -15,6 +15,7 @@
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::*;
 import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::metamodel::*;
 import meta::pure::metamodel::type::generics::*;
 import meta::pure::metamodel::extension::*;
@@ -27,7 +28,7 @@ function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::prot
     let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
     let profileSkeletonInt = ^Profile(
         name = $pr.name,
-        package = $pkgRes.value->toOne(),
+        package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package),
         p_stereotypes = $pr.p_stereotypes->map(s |
             ^Stereotype(value = $s.value, profile = ~.~);
         ),
