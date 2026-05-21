@@ -24,7 +24,10 @@ function meta::pure::compiler::helper::packageableElement::fullPath(element:Pack
 {
     $element->match([
         // TempCompilerPointer carries its canonical path directly; package/name are unset.
-        ptr : TempCompilerPointer[1] | $ptr.path,
+        // PackagePointer for the root carries {@code path=''} (per toPackagePointer's
+        // parentless special case which keeps child-path composition clean). For display
+        // purposes the root's full path is '::', matching the live root Package's name.
+        ptr : TempCompilerPointer[1] | if($ptr.path == '', | '::', | $ptr.path),
         pe  : PackageableElement[1] |
             let pkg = $pe.package;
             let name = $pe.name->toOne();

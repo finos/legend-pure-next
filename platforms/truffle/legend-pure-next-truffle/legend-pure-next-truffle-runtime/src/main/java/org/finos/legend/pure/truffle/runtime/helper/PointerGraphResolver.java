@@ -103,7 +103,9 @@ public final class PointerGraphResolver
         for (Map.Entry<String, Object> e : byPath.entrySet())
         {
             long t0 = System.nanoTime();
-            walk(e.getValue(), byPath, resolver, visited);
+            java.util.Deque<String> trail = new java.util.ArrayDeque<>();
+            trail.push("<" + e.getKey() + ">");
+            walk(e.getValue(), byPath, resolver, visited, trail);
             elapsedNs[done] = System.nanoTime() - t0;
             paths[done] = e.getKey();
             done++;
@@ -150,25 +152,38 @@ public final class PointerGraphResolver
     private static void walk(Object value, Map<String, Object> byPath, TruffleMetadataAccess resolver,
                              IdentityHashMap<Object, Boolean> visited)
     {
+        walk(value, byPath, resolver, visited, new java.util.ArrayDeque<>());
+    }
+
+    private static void walk(Object value, Map<String, Object> byPath, TruffleMetadataAccess resolver,
+                             IdentityHashMap<Object, Boolean> visited, java.util.Deque<String> trail)
+    {
         if (value == null) return;
         if (visited.put(value, Boolean.TRUE) != null) return;
         if (value instanceof PureDynamicObject pdo)
         {
-            // Sweep every slot; for each slot value, deref if pointer,
-            // recurse otherwise.
+            String pureType = PureObj.pureTypeOf(pdo);
             String[] names = pdo.classInfo.nameBySlot();
             for (int i = 0; i < names.length; i++)
             {
                 if (names[i] == null) continue;
                 Object slotVal = pdo.readSlot(i);
                 if (slotVal == null) continue;
-                Object resolved = resolveOrRecurse(slotVal, byPath, resolver, visited);
-                if (resolved != slotVal)
+                trail.push(pureType + "." + names[i]);
+                try
                 {
-                    // Direct slot write — bypass writeProperty's coercion,
-                    // since pointer→live is structurally compatible
-                    // (pointer extends target class).
-                    pdo.writeSlot(pdo.classInfo.slotIndex(names[i]), resolved);
+                    Object resolved = resolveOrRecurse(slotVal, byPath, resolver, visited, trail);
+                    if (resolved != slotVal)
+                    {
+                        // Direct slot write — bypass writeProperty's coercion,
+                        // since pointer→live is structurally compatible
+                        // (pointer extends target class).
+                        pdo.writeSlot(pdo.classInfo.slotIndex(names[i]), resolved);
+                    }
+                }
+                finally
+                {
+                    trail.pop();
                 }
             }
         }
@@ -176,14 +191,23 @@ public final class PointerGraphResolver
         {
             for (int i = 0; i < seq.size(); i++)
             {
-                walk(seq.getBoxed(i), byPath, resolver, visited);
+                trail.push("[" + i + "]");
+                try
+                {
+                    walk(seq.getBoxed(i), byPath, resolver, visited, trail);
+                }
+                finally
+                {
+                    trail.pop();
+                }
             }
         }
     }
 
     private static Object resolveOrRecurse(Object value, Map<String, Object> byPath,
                                            TruffleMetadataAccess resolver,
-                                           IdentityHashMap<Object, Boolean> visited)
+                                           IdentityHashMap<Object, Boolean> visited,
+                                           java.util.Deque<String> trail)
     {
         if (value == null) return null;
         String ptrPath = _PackageableElement.pointerPath(value);
@@ -199,7 +223,16 @@ public final class PointerGraphResolver
             for (int i = 0; i < n; i++)
             {
                 Object orig = seq.getBoxed(i);
-                Object r = resolveOrRecurse(orig, byPath, resolver, visited);
+                trail.push("[" + i + "]");
+                Object r;
+                try
+                {
+                    r = resolveOrRecurse(orig, byPath, resolver, visited, trail);
+                }
+                finally
+                {
+                    trail.pop();
+                }
                 if (r != orig)
                 {
                     if (resolved == null)
@@ -217,10 +250,10 @@ public final class PointerGraphResolver
             if (resolved != null)
             {
                 ObjectSequence rebuilt = new ObjectSequence(resolved);
-                walk(rebuilt, byPath, resolver, visited);
+                walk(rebuilt, byPath, resolver, visited, trail);
                 return rebuilt;
             }
-            walk(seq, byPath, resolver, visited);
+            walk(seq, byPath, resolver, visited, trail);
             return seq;
         }
         if (value instanceof PureDynamicObject pdo)
@@ -247,10 +280,39 @@ public final class PointerGraphResolver
                     {
                         Object canonical = resolver.getElement(pdoPath);
                         if (canonical != null && canonical != pdo) return canonical;
+                        // In-module duplicate guard. byPath is keyed by path
+                        // and holds the winner for each path (compile-pure
+                        // emits multiple revisions across passes; later
+                        // entries win). Compile-pure's contract is that every
+                        // cross-element reference goes through a
+                        // {@code TempCompilerPointer} — the post-processor
+                        // here swaps pointers for live elements. A non-pointer
+                        // PDO whose path matches a byPath key but which isn't
+                        // the winner means a producer skipped that pointer
+                        // wrap and stored a direct PDO ref to a stale
+                        // revision. Fail hard so the producing path surfaces.
+                        Object winner = byPath.get(pdoPath);
+                        if (winner != null && winner != pdo)
+                        {
+                            java.util.List<String> hops = new java.util.ArrayList<>(trail);
+                            java.util.Collections.reverse(hops);
+                            throw new IllegalStateException(
+                                    "Duplicate PDO for path '" + pdoPath + "'"
+                                            + " — winner in byPath identityHashCode="
+                                            + System.identityHashCode(winner)
+                                            + " (" + PureObj.pureTypeOf(winner) + "),"
+                                            + " stale walked identityHashCode="
+                                            + System.identityHashCode(pdo)
+                                            + " (" + PureObj.pureTypeOf(pdo) + ")."
+                                            + " Reached via: " + String.join(" / ", hops)
+                                            + ". A producer stored a direct PDO ref instead"
+                                            + " of wrapping the cross-element reference as a"
+                                            + " TempCompilerPointer.");
+                        }
                     }
                 }
             }
-            walk(pdo, byPath, resolver, visited);
+            walk(pdo, byPath, resolver, visited, trail);
             return pdo;
         }
         return value;
@@ -313,6 +375,15 @@ public final class PointerGraphResolver
         }
         Object live = byPath.get(path);
         if (live == null && resolver != null) live = resolver.getElement(path);
+        // PackagePointer to the root Package carries {@code path=''} (per
+        // {@code toPackagePointer}'s parentless-Package special-case). The
+        // registry doesn't index the root at '' — try the alternate '::'
+        // key as a fallback so root references resolve to the live core
+        // Package. Mirrors {@code PathToElementNode}'s empty-path branch.
+        if (live == null && resolver != null && path.isEmpty())
+        {
+            live = resolver.getElement("::");
+        }
         return live;
     }
 

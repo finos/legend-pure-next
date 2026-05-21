@@ -84,30 +84,23 @@ public final class _Type
     }
 
     /**
-     * Identity-compare against the cached canonical "Any" type instead of
-     * walking string equality every call. JFR identified ~19 samples on
-     * the {@code "Any".equals(pe._name())} path before this caching.
-     * The volatile field is initialised once on first call; subsequent
-     * calls hit the cached reference directly.
+     * Identity-compare against the resolver's canonical "Any" element. The
+     * resolver's {@code getElement} is itself a {@link
+     * java.util.concurrent.ConcurrentHashMap} lookup (see {@code
+     * TruffleModuleRegistry.elementCache}), so the cost is one hash + reference
+     * compare per call. Avoid static caching here: each test/process can run
+     * against a different registry instance, and a JVM-static Any reference
+     * would identity-mismatch the new registry's Any and break the {@code
+     * subtypeOf(_, Any)} fast path silently.
      */
-    private static volatile Object anyTypeRef;
-
     private static boolean isTopType(Object type, TruffleMetadataAccess resolver)
     {
         if (type == null) return false;
-        Object any = anyTypeRef;
-        if (any != null)
-        {
-            return type == any;
-        }
-        // First call: resolve and cache. Volatile write publishes the
-        // reference for subsequent unsynchronised reads.
         if (resolver != null)
         {
             Object resolved = resolver.getElement("meta::pure::metamodel::type::Any");
             if (resolved != null)
             {
-                anyTypeRef = resolved;
                 return type == resolved;
             }
         }

@@ -197,7 +197,12 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                                 | $av.genericType,
                                 | asInferredGenericType(withUndefinedTypeParams($resolvedCGT->toOne()))
                             );
-                            ^CompilerResult<ValueSpecification>(value = ^$av(value = $resolved, genericType = $updatedGT->toOne()), context = $ctxR);,
+                            // Keep the pass-2 pointer in .value; only refresh .genericType
+                            // from the resolved element's CGT. PointerGraphResolver
+                            // swaps the pointer for the byPath winner at module
+                            // construction. Writing $resolved here would freeze
+                            // whichever revision elementMap held at pass-3 time.
+                            ^CompilerResult<ValueSpecification>(value = ^$av(genericType = $updatedGT->toOne()), context = $ctxR);,
                           | ^CompilerResult<ValueSpecification>(value = $av, context = $ctxR)
                       );,
                     | // Unresolved Package_Pointer: Pass-2 (valueSpecificationCompiler) keeps the
@@ -223,7 +228,12 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                                       | $av.genericType,
                                       | asInferredGenericType(withUndefinedTypeParams($resolvedCGT->toOne()))
                                   );
-                                  ^CompilerResult<ValueSpecification>(value = ^$av(value = $resolved, genericType = $updatedGT->toOne()), context = $retryCtx);,
+                                  // Retry path: pass-2 may have left the AtomicValue with
+                                  // a grammar Package_Pointer ({@code value = $pp}). Now
+                                  // that we've resolved it, write a TempCompilerPointer
+                                  // so PointerGraphResolver can canonicalise to the byPath
+                                  // winner at module construction.
+                                  ^CompilerResult<ValueSpecification>(value = ^$av(value = meta::pure::compiler::helper::pointer::toElementPointer($resolved), genericType = $updatedGT->toOne()), context = $retryCtx);,
                                 | let siCtx = formatMetamodelSourceInfo($av.sourceInformation, $context);
                                   ^CompilerResult<ValueSpecification>(
                                       value = $av,

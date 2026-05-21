@@ -643,7 +643,14 @@ function meta::pure::compiler::helper::genericType::resolveForTarget_GenericType
 {
     if($src.type->isEmpty(),
         | [],
-        | let sourceType = $src.type->toOne();
+        | // Dereference pointer types so structural reads below
+          // ({@code cls.typeParameters}, {@code .generalizations}) hit the
+          // live element. {@link buildInferredGenericType} /
+          // {@link buildUserDefinedGenericType} wrap the raw type as a
+          // {@code TempCompilerPointer} at construction; pointers carry only
+          // {@code .path}, so reading interior slots through them returns
+          // empty.
+          let sourceType = $src.type->toOne()->meta::pure::compiler::helper::type::derefTypeIfPointer($context)->toOne();
           if(typeEquals($sourceType, $targetType),
               | $src,
               | let initialBindings = newPlainParametersBinding();

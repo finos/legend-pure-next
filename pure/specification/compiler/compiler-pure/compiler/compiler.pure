@@ -286,19 +286,41 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
             let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
             let typeParams = $c.typeParameters->map(tp | buildTypeParameter($tp.name, false));
             let mulParams = $c.multiplicityParameters->map(mp | buildUserDefinedMultiplicityParameter($mp.name)->cast(@MultiplicityParameter));
-            let emptyClass = meta::pure::functions::meta::creation::newClass($typeParams, $mulParams);
-            // Wrap parent Package as PackagePointer: each {@code
-            // putElementUnderPackage} rebuilds the parent Package
-            // ({@code ^$pkg(children = ...)}), so the parent reference captured at
-            // skeleton-creation time goes stale as siblings are compiled. The
-            // pointer carries only the path; runtime deref via the resolver
-            // lands on the latest version.
-            let skeleton = ^$emptyClass(
+            // Pass-1 class skeleton built with a {@link ClassPointer} self-ref
+            // for {@code classifierGenericType.typeArguments[0].type} — avoids
+            // the {@code newEnumeration}-style pass-1-vs-pass-2 PDO drift,
+            // where {@code newClass}'s direct-PDO self-ref freezes the
+            // pass-1 emptyClass identity into every property's classifierGT
+            // (Property<owner, value>) that's built off this class.
+            // Package wrap rationale: each {@code putElementUnderPackage}
+            // rebuilds the parent Package ({@code ^$pkg(children = ...)}),
+            // so the parent ref captured at skeleton-creation time goes stale
+            // as siblings are compiled. PackagePointer carries only the path;
+            // runtime deref via the resolver lands on the latest version.
+            let shell = ^Class<Any>(
                 name = $c.name,
                 package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package),
-                typeParameters = $typeParams,
-                multiplicityParameters = $mulParams,
                 sourceInformation = compileSourceInformation($c.p_sourceInformation, $ctx)
+            );
+            let classPtr = $shell->toClassPointer();
+            // Back-reference each TypeParameter / MultiplicityParameter to the
+            // class as a {@link ClassPointer} — matches what the {@code newClass}
+            // Java native used to do via {@code tp.owner = cls}, but path-stable
+            // across pass-2/3 rebuilds of the class. PointerGraphResolver swaps
+            // the pointer for the live class at module construction.
+            let owningPtr = $classPtr->cast(@meta::pure::metamodel::type::generics::TypeAndMultiplicityParametersOwner);
+            let typeParamsBuilt = $typeParams->map(tp | ^$tp(owner = $owningPtr));
+            let mulParamsBuilt = $mulParams->map(mp | ^$mp(owner = $owningPtr))->cast(@MultiplicityParameter);
+            let selfGT = ^UserDefinedGenericType(
+                type = $classPtr->cast(@Type),
+                typeArguments = $typeParamsBuilt->map(tp | buildUserDefinedGenericType($tp))->cast(@meta::pure::metamodel::type::generics::GenericType),
+                multiplicityArguments = $mulParamsBuilt->cast(@meta::pure::metamodel::multiplicity::Multiplicity)
+            );
+            let cgt = ^UserDefinedGenericType(type = Class, typeArguments = [$selfGT]);
+            let skeleton = ^$shell(
+                typeParameters = $typeParamsBuilt,
+                multiplicityParameters = $mulParamsBuilt,
+                classifierGenericType = $cgt
             );
             putElementUnderPackage($pkgRes.context, $className, $packagePath, $skeleton);,
         a:meta::pure::protocol::grammar::relationship::Association[1] |
@@ -316,7 +338,11 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
             let enName = $packagePath + '::' + $en.name;
             let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
             let valueNames = $en.properties->map(p | $p.name);
-            let enumSkeleton = meta::pure::functions::meta::creation::newEnumeration($en.name, $pkgRes.value->toOne(), $valueNames);
+            // Use the pointer-anchored Pure-side skeleton builder rather than
+            // the {@code newEnumeration} native — see
+            // {@link buildEnumerationSkeleton} for rationale (pass-1 vs pass-2
+            // PDO drift on the native's direct-PDO self-refs).
+            let enumSkeleton = meta::pure::compiler::elements::buildEnumerationSkeleton($en.name, $pkgRes.value->toOne(), $valueNames);
             putElementUnderPackage($pkgRes.context, $enName, $packagePath, $enumSkeleton);,
         pr:meta::pure::protocol::grammar::extension::Profile[1] |
             $pr->compileProfilePass1($ctx);,
@@ -738,11 +764,16 @@ function meta::pure::compiler::resolveClass(cls:Class<Any>[1], context:CompilerC
     let constraintResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($currentCls.constraints, $ctx2);
     let propResult = meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($currentCls.properties, $constraintResult.context);
     let ctx5 = meta::pure::compiler::structural::propertyCompiler::validatePropertyOverrides($currentCls, $propResult.context);
-    // Store resolved class back into the map (preserving propertiesFromAssociations from currentCls)
+    // Store resolved class back into the map (preserving propertiesFromAssociations from currentCls).
+    // Also rebuild generalizations so each Generalization.specific points at
+    // the pass-3 class — without this, generalizations carried over from
+    // pass-2 still embed the pass-2 PDO, which becomes the byPath loser
+    // once this pass-3 emission overwrites the map entry.
     let resolvedCls = ^$currentCls(
         qualifiedProperties = $qpResult.values->map(qp | ^$qp(owner = ~.~)),
         constraints = $constraintResult.values,
-        properties = $propResult.values->map(p | ^$p(owner = ~.~))
+        properties = $propResult.values->map(p | ^$p(owner = ~.~)),
+        generalizations = $currentCls.generalizations->map(g | ^$g(specific = ~.~))
     );
     let updatedCtx = ^$ctx5(elementMap = $ctx5.elementMap->put($clsPath, $resolvedCls));
     // Clear ownerTypeParams/ownerMulParams — matches Java clearEnclosingOwner

@@ -210,9 +210,16 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printEnume
     let enumFullName = $en->cast(@PackageableElement)->fullPath();
     let defaultStr = if($p2.defaultValue->isEmpty(), | '',
         | let expr = $p2.defaultValue->toOne()->cast(@LambdaFunction<Any>).expressionSequence->at(0);
-          let val = $expr->match([a:AtomicValue[1] | $a.value->toOne()->cast(@Enum), e:Enum[1] | $e]);
+          // Enum-value defaultValue lambdas wrap an {@code ^Enum(name='...')}
+          // instance. The instance's {@code .name} may not be readable from the
+          // bootstrap's in-memory representation (pointer-anchored classifier),
+          // but the value's name always equals the surrounding property's name
+          // — they're built in lockstep by {@code buildEnumerationSkeleton}.
+          // Fall back to the property name so the printed form stays correct
+          // without depending on the Enum instance's slot accessibility.
+          let valName = $p2.name->toOne();
           let lambdaCgt = $p2.defaultValue->toOne()->cast(@Any).classifierGenericType;
-          '  = ^' + $enumFullName + '(name=\'' + $val.name->toOne() + '\')' + if($lambdaCgt->isEmpty(), | '', | '  ~lambda:' + $lambdaCgt->toOne()->printType());
+          '  = ^' + $enumFullName + '(name=\'' + $valName + '\')' + if($lambdaCgt->isEmpty(), | '', | '  ~lambda:' + $lambdaCgt->toOne()->printType());
     );
     '  property ' + $p2.name->toOne() + $propCGT + $defaultStr + $p2.sourceInformation->printSourceInfo() + '\n' +
     $p2->printAnnotations('    ');

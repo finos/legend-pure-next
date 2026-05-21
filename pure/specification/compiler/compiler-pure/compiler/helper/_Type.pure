@@ -21,29 +21,36 @@ function meta::pure::compiler::helper::type::typeEquals(t1:Type[1], t2:Type[1]):
     );
 }
 
+// Compare by path so pointer-wrapped Anys still register as the top type.
+// {@code pe.name} reads the local name slot — empty on TempCompilerPointer —
+// and would falsely return {@code false} for {@code ClassPointer(Any)}.
 function meta::pure::compiler::helper::type::isTopType(t:Type[1]):Boolean[1]
 {
     $t->match(
         [
-            pe : PackageableElement[1] | $pe.name == 'Any',
+            pe : PackageableElement[1] | $pe->elementToPath() == 'meta::pure::metamodel::type::Any',
             a  : Any[1] | false
         ]
     )
 }
 
+// See {@link isTopType} — path-based to handle pointer-wrapped Nil.
 function meta::pure::compiler::helper::type::isBottomType(t:Type[1]):Boolean[1]
 {
     $t->match(
         [
-            pe : PackageableElement[1] | $pe.name == 'Nil',
+            pe : PackageableElement[1] | $pe->elementToPath() == 'meta::pure::metamodel::type::Nil',
             a  : Any[1] | false
         ]
     )
 }
 
-function meta::pure::compiler::helper::type::directSupertypes(t:Type[1]):Type[*]
+// Pointers carry only {@code .path} — {@code .generalizations} reads empty
+// on them. Deref to the live element before walking ancestors so a
+// pointer-wrapped type still reports its parent chain.
+function meta::pure::compiler::helper::type::directSupertypes(t:Type[1], context:meta::pure::compiler::CompilerContext[1]):Type[*]
 {
-    $t.generalizations->map(g | $g.general->genericTypeRawType())
+    $t->derefTypeIfPointer($context)->toOne().generalizations->map(g | $g.general->genericTypeRawType())
 }
 
 function meta::pure::compiler::helper::type::genericTypeRawType(gt:GenericType[1]):Type[0..1]
@@ -123,7 +130,7 @@ function meta::pure::compiler::helper::type::linearizeWalk(t:Type[1], context:me
           // recursing so the linearization captures the full ancestor chain
           // (otherwise CodeParameter's linearization would stop at Code
           // without picking up Code's ancestors).
-          let parents = $t->directSupertypes()->map(p | $p->derefTypeIfPointer($context))->filter(p | $p->isNotEmpty())->map(p | $p->toOne());
+          let parents = $t->directSupertypes($context)->map(p | $p->derefTypeIfPointer($context))->filter(p | $p->isNotEmpty())->map(p | $p->toOne());
           if($parents->isEmpty(),
               | $resolvedPath,
               | let parentLins = $parents->map(p | $p->linearizeWalk($context)->list());
@@ -227,7 +234,7 @@ function meta::pure::compiler::helper::type::findTypeByPath(t:Type[1], path:Stri
     ]);
     if($live->instanceOf(PackageableElement) && $live->cast(@PackageableElement)->elementToPath() == $path,
         | $live,
-        | $live->directSupertypes()->map(p | findTypeByPath($p, $path, $context))->head();
+        | $live->directSupertypes($context)->map(p | findTypeByPath($p, $path, $context))->head();
     );
 }
 

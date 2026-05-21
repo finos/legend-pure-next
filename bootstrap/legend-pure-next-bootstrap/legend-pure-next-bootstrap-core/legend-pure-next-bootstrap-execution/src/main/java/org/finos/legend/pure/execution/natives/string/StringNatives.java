@@ -393,6 +393,99 @@ public class StringNatives
             return _E_ValueSpecification.wrap((long) s.indexOf(search, from), genericType, multiplicity, resolver);
         });
 
+        // matches(String[1], String[1]) : Boolean[1] — full-string regex match
+        natives.put("matches_String_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        {
+            String s = (String) _E_ValueSpecification.unwrap(args.get(0));
+            String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
+            return _E_ValueSpecification.wrap(Pattern.matches(regex, s), genericType, multiplicity, resolver);
+        });
+
+        // regexpLike(String[1], String[1], RegexpParameter[1..*]) : Boolean[1] — contains-match
+        natives.put("regexpLike_String_1__String_1__RegexpParameter_$1_MANY$__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        {
+            String s = (String) _E_ValueSpecification.unwrap(args.get(0));
+            String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
+            int flags = regexpFlags(args.get(2), resolver);
+            return _E_ValueSpecification.wrap(Pattern.compile(regex, flags).matcher(s).find(),
+                    genericType, multiplicity, resolver);
+        });
+
+        // regexpCount(String[1], String[1], RegexpParameter[1..*]) : Integer[1]
+        natives.put("regexpCount_String_1__String_1__RegexpParameter_$1_MANY$__Integer_1_", (args, eval, genericType, multiplicity) ->
+        {
+            String s = (String) _E_ValueSpecification.unwrap(args.get(0));
+            String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
+            int flags = regexpFlags(args.get(2), resolver);
+            java.util.regex.Matcher m = Pattern.compile(regex, flags).matcher(s);
+            long c = 0;
+            while (m.find()) { c++; }
+            return _E_ValueSpecification.wrap(c, genericType, multiplicity, resolver);
+        });
+
+        // regexpIndexOf(String[1], String[1], Integer[1], RegexpParameter[1..*]) : Integer[1]
+        natives.put("regexpIndexOf_String_1__String_1__Integer_1__RegexpParameter_$1_MANY$__Integer_1_", (args, eval, genericType, multiplicity) ->
+        {
+            String s = (String) _E_ValueSpecification.unwrap(args.get(0));
+            String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
+            int group = ((Number) _E_ValueSpecification.unwrap(args.get(2))).intValue();
+            int flags = regexpFlags(args.get(3), resolver);
+            java.util.regex.Matcher m = Pattern.compile(regex, flags).matcher(s);
+            long pos = m.find() ? m.start(group) : -1L;
+            return _E_ValueSpecification.wrap(pos, genericType, multiplicity, resolver);
+        });
+
+        // regexpReplace(String[1], String[1], String[1], Boolean[1], RegexpParameter[1..*]) : String[1]
+        natives.put("regexpReplace_String_1__String_1__String_1__Boolean_1__RegexpParameter_$1_MANY$__String_1_", (args, eval, genericType, multiplicity) ->
+        {
+            String s = (String) _E_ValueSpecification.unwrap(args.get(0));
+            String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
+            String replacement = (String) _E_ValueSpecification.unwrap(args.get(2));
+            boolean replaceAll = (Boolean) _E_ValueSpecification.unwrap(args.get(3));
+            int flags = regexpFlags(args.get(4), resolver);
+            java.util.regex.Matcher m = Pattern.compile(regex, flags).matcher(s);
+            return _E_ValueSpecification.wrap(replaceAll ? m.replaceAll(replacement) : m.replaceFirst(replacement),
+                    genericType, multiplicity, resolver);
+        });
+
+        // regexpExtract(String[1], String[1], Boolean[1], Integer[1], RegexpParameter[1..*]) : String[*]
+        natives.put("regexpExtract_String_1__String_1__Boolean_1__Integer_1__RegexpParameter_$1_MANY$__String_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            String s = (String) _E_ValueSpecification.unwrap(args.get(0));
+            String regex = (String) _E_ValueSpecification.unwrap(args.get(1));
+            boolean extractAll = (Boolean) _E_ValueSpecification.unwrap(args.get(2));
+            int group = ((Number) _E_ValueSpecification.unwrap(args.get(3))).intValue();
+            int flags = regexpFlags(args.get(4), resolver);
+            java.util.regex.Matcher m = Pattern.compile(regex, flags).matcher(s);
+            List<String> found = new ArrayList<>();
+            if (extractAll)
+            {
+                while (m.find())
+                {
+                    String g = m.group(group);
+                    if (g != null) { found.add(g); }
+                }
+            }
+            else if (m.find())
+            {
+                String g = m.group(group);
+                if (g != null) { found.add(g); }
+            }
+            List<ValueSpecification> result = new ArrayList<>(found.size());
+            meta.pure.metamodel.type.generics.GenericType stringGT = null;
+            for (String g : found)
+            {
+                ValueSpecification vs = _E_ValueSpecification.wrap(g, genericType, null, resolver);
+                result.add(vs);
+                if (stringGT == null) { stringGT = vs._genericType(); }
+            }
+            int size = result.size();
+            return new meta.pure.metamodel.valuespecification.CollectionImpl(resolver)
+                    ._values(org.eclipse.collections.api.factory.Lists.mutable.withAll(result))
+                    ._genericType(stringGT)
+                    ._multiplicity(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(size, size, resolver));
+        });
+
         // parseInteger(String[1]) : Integer[1]
         natives.put("parseInteger_String_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Long.parseLong(((String) _E_ValueSpecification.unwrap(args.get(0))).trim()), genericType, multiplicity, resolver));
@@ -448,6 +541,39 @@ public class StringNatives
     static boolean isPureDateString(String s)
     {
         return PURE_DATE_PATTERN.matcher(s).matches();
+    }
+
+    /**
+     * Translate a Pure-side {@code RegexpParameter[1..*]} arg (a value spec
+     * wrapping a list of {@code RegexpParameter} enum values) into JDK
+     * {@link Pattern} flag bits. Mirrors the Truffle-side {@code RegexpHelper}.
+     *
+     * <ul>
+     *   <li>{@code CASE_SENSITIVE}        — no flag (clears CASE_INSENSITIVE).</li>
+     *   <li>{@code CASE_INSENSITIVE}      — {@link Pattern#CASE_INSENSITIVE}.</li>
+     *   <li>{@code MULTILINE}             — {@link Pattern#MULTILINE}.</li>
+     *   <li>{@code NON_NEWLINE_SENSITIVE} — {@link Pattern#DOTALL}.</li>
+     * </ul>
+     */
+    private static int regexpFlags(ValueSpecification arg, MetadataAccess resolver)
+    {
+        if (arg == null) return 0;
+        List<? extends ValueSpecification> items = _E_ValueSpecification.toCollection(arg, resolver)._values();
+        int flags = 0;
+        for (ValueSpecification item : items)
+        {
+            Object v = _E_ValueSpecification.unwrap(item);
+            String name = (v instanceof meta.pure.metamodel.type.Enum e) ? e._name() : (v == null ? null : v.toString());
+            if (name == null) continue;
+            switch (name)
+            {
+                case "CASE_INSENSITIVE"      -> flags |= Pattern.CASE_INSENSITIVE;
+                case "MULTILINE"             -> flags |= Pattern.MULTILINE;
+                case "NON_NEWLINE_SENSITIVE" -> flags |= Pattern.DOTALL;
+                default                      -> { /* CASE_SENSITIVE — no flag */ }
+            }
+        }
+        return flags;
     }
 
     /**

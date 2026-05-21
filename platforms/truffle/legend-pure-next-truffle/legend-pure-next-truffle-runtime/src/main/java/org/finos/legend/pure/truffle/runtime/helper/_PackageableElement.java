@@ -90,7 +90,11 @@ public final class _PackageableElement
         String typePath = PureObj.pureTypeOf(v);
         if (typePath == null || !typePath.startsWith(POINTER_TYPE_PREFIX)) return null;
         Object slotPath = PureObj.readBySlot(v, SLOT_POINTER_PATH);
-        return slotPath instanceof String s && !s.isEmpty() ? s : null;
+        // Empty path is a legal pointer value — {@code toPackagePointer}
+        // produces it for parentless Packages (the root). Return the empty
+        // string so callers reach the resolver; treating it as "no path" here
+        // would leave a {@code PackagePointer(path='')} unresolved.
+        return slotPath instanceof String s ? s : null;
     }
 
     private static void putPathCache(Object pe, String result)

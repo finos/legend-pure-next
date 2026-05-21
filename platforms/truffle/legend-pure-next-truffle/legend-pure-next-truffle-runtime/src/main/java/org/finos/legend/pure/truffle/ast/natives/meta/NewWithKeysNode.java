@@ -381,6 +381,38 @@ public final class NewWithKeysNode extends PureNode
         {
             return;
         }
+        // Allow proposed to be a *subtype* of expected — covers the
+        // enum-value pattern, where an {@code ^Enum(...)} instance is
+        // intentionally re-classified as a specific user enumeration
+        // (e.g. {@code ^Enum(classifierGenericType = MyEnum<self>)}). The
+        // safety invariant — preventing arbitrary metaclass swaps like
+        // {@code ^LA_Person(classifierGenericType = ^...(type = Any))} —
+        // still holds since {@code Any} is a supertype of LA_Person, not a
+        // subtype, and the supertype path remains rejected.
+        //
+        // We can't go through {@link _Type#subtypeOf}: it queries the resolver's
+        // {@code TypeCache} which is populated lazily and doesn't see freshly
+        // constructed types (compile-pure pass-1 emits enums whose ancestors
+        // set hasn't been computed yet). Walk {@code .generalizations}
+        // directly, dereferencing pointer types as we go — the chain is short
+        // (user enum → Enum → PackageableElement → …) so the walk is cheap.
+        if (expected != null && proposedType != null && isSubtypeViaGeneralizations(proposedType, expected, resolver))
+        {
+            return;
+        }
+        // Compile-pure pass-1 pattern: the proposed classifier's type is a
+        // {@link TempCompilerPointer} whose target is being built right now
+        // and isn't yet in the resolver (e.g. {@code buildEnumerationSkeleton}
+        // wires an enum value's classifier as a pointer to the enum it's
+        // about to register). The pointer carries the path the producer
+        // intends, and {@code PointerGraphResolver} canonicalises it at
+        // module construction. Accept — a pointer is by construction
+        // compile-pure-internal, not a user-supplied raw type swap.
+        if (proposedType != null
+                && org.finos.legend.pure.truffle.runtime.helper._PackageableElement.pointerPath(proposedType) != null)
+        {
+            return;
+        }
         String expectedName = expected != null ? _PackageableElement.path(expected, resolver) : "<unknown>";
         String proposedName = proposedType != null ? _PackageableElement.path(proposedType, resolver) : "<unknown>";
         throw new RuntimeException("Cannot change classifierGenericType.type from '" + expectedName + "' to '" + proposedName
@@ -398,6 +430,48 @@ public final class NewWithKeysNode extends PureNode
         String pathA = _PackageableElement.path(a, resolver);
         String pathB = _PackageableElement.path(b, resolver);
         return pathA != null && pathA.equals(pathB);
+    }
+
+    private static final int SLOT_GENERAL = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("general");
+    private static final int SLOT_GENERALIZATIONS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("generalizations");
+
+    /**
+     * Walk {@code sub}'s generalization chain (dereferencing pointer types
+     * along the way) and return true when {@code sup} is reached by path
+     * comparison. Bounded by a max depth so a pathological cycle in the
+     * graph terminates cleanly rather than spinning.
+     */
+    private static boolean isSubtypeViaGeneralizations(Object sub, Object sup, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        if (samePackageableElement(sub, sup, resolver))
+        {
+            return true;
+        }
+        Object current = sub;
+        for (int depth = 0; depth < 32 && current != null; depth++)
+        {
+            // Pointer → live before reading .generalizations (pointers carry only .path)
+            String ptrPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.pointerPath(current);
+            if (ptrPath != null && resolver != null)
+            {
+                Object live = resolver.getElement(ptrPath);
+                if (live != null) current = live;
+            }
+            Object gens = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(current, SLOT_GENERALIZATIONS);
+            if (!(gens instanceof PureSequence seq) || seq.size() == 0) return false;
+            Object next = null;
+            for (int i = 0; i < seq.size(); i++)
+            {
+                Object g = seq.getBoxed(i);
+                Object generalGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(g, SLOT_GENERAL);
+                Object parent = generalGT != null ? _GenericType.type(generalGT) : null;
+                if (parent == null) continue;
+                if (samePackageableElement(parent, sup, resolver)) return true;
+                if (next == null) next = parent;
+            }
+            current = next;
+        }
+        return false;
     }
 
     /**

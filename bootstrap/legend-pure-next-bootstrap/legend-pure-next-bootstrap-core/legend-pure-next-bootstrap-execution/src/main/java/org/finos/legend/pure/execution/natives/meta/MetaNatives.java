@@ -1533,6 +1533,27 @@ public class MetaNatives
         {
             return;
         }
+        // Allow proposed to be a *subtype* of expected — covers the enum-value
+        // pattern where {@code ^Enum(...)} is intentionally re-classified as a
+        // specific user enumeration. Walks generalizations directly; safer than
+        // a {@code TypeCache} lookup since freshly-built types may not be in
+        // the cache yet. Mirrors {@code NewWithKeysNode.isSubtypeViaGeneralizations}
+        // on the Truffle side.
+        if (expected != null && proposedType != null && isSubtypeViaGeneralizations(proposedType, expected))
+        {
+            return;
+        }
+        // Compile-pure pass-1 pattern: proposedType is a {@link TempCompilerPointer}
+        // whose target is being built right now and isn't yet in the elementMap
+        // (e.g. {@code buildEnumerationSkeleton} wires an enum value's classifier
+        // as a pointer to the enum it's about to register). The pointer carries
+        // the path the producer intends; the post-processor canonicalises it at
+        // module construction. Accept — a pointer is compile-pure-internal, not
+        // a user-supplied raw type swap.
+        if (proposedType instanceof meta.pure.metamodel.pointer.TempCompilerPointer)
+        {
+            return;
+        }
         String expectedName = expected instanceof meta.pure.metamodel.PackageableElement peE
                 ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peE) : "<unknown>";
         String proposedName = proposedType instanceof meta.pure.metamodel.PackageableElement peP
@@ -1553,6 +1574,34 @@ public class MetaNatives
         {
             return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peA).equals(
                     org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peB));
+        }
+        return false;
+    }
+
+    /**
+     * Walk {@code sub}'s generalization chain looking for {@code sup} by path.
+     * Bounded depth so a pathological cycle terminates. Used by
+     * {@link #validateClassifierOverride} to allow {@code ^Enum(...)} to be
+     * re-classified as a specific user enumeration (subtype of Enum).
+     */
+    private static boolean isSubtypeViaGeneralizations(meta.pure.metamodel.type.Type sub, meta.pure.metamodel.type.Type sup)
+    {
+        if (samePackageableElement(sub, sup)) return true;
+        meta.pure.metamodel.type.Type current = sub;
+        for (int depth = 0; depth < 32 && current != null; depth++)
+        {
+            org.eclipse.collections.api.RichIterable<? extends meta.pure.metamodel.relationship.Generalization> gens = current._generalizations();
+            if (gens == null || gens.isEmpty()) return false;
+            meta.pure.metamodel.type.Type next = null;
+            for (meta.pure.metamodel.relationship.Generalization g : gens)
+            {
+                meta.pure.metamodel.type.generics.GenericType generalGT = g._general();
+                meta.pure.metamodel.type.Type parent = generalGT != null ? _GenericType.type(generalGT) : null;
+                if (parent == null) continue;
+                if (samePackageableElement(parent, sup)) return true;
+                if (next == null) next = parent;
+            }
+            current = next;
         }
         return false;
     }
