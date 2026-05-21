@@ -86,7 +86,8 @@ public abstract class TrufflePdoEmitterTarget implements EmitterTarget
         out.append("PureObjBuilder.of(\"").append(purePath).append("\", resolver)");
         for (String[] kv : kvs)
         {
-            out.append(".put(\"").append(propertyNameFor(kv[0])).append("\", ").append(kv[1]).append(')');
+            out.append(".put(\"").append(propertyNameFor(kv[0])).append("\", ")
+                    .append(wrapForSlotAssignment(kv[1])).append(')');
         }
         out.append(".build()");
         return out.toString();
@@ -96,7 +97,8 @@ public abstract class TrufflePdoEmitterTarget implements EmitterTarget
     public void emitSetterStatement(StringBuilder sb, String indent, String receiver, String fieldName, String valueExpr)
     {
         sb.append(indent).append("PureObj.write(").append(receiver).append(", \"")
-                .append(propertyNameFor(fieldName)).append("\", ").append(valueExpr).append(");\n");
+                .append(propertyNameFor(fieldName)).append("\", ")
+                .append(wrapForSlotAssignment(valueExpr)).append(");\n");
     }
 
     @Override
@@ -105,7 +107,7 @@ public abstract class TrufflePdoEmitterTarget implements EmitterTarget
     {
         sb.append(indent).append("if (").append(predJava).append(") PureObj.write(")
                 .append(receiver).append(", \"").append(propertyNameFor(fieldName)).append("\", ")
-                .append(valueExpr).append(");\n");
+                .append(wrapForSlotAssignment(valueExpr)).append(");\n");
     }
 
     @Override
@@ -116,6 +118,36 @@ public abstract class TrufflePdoEmitterTarget implements EmitterTarget
         // Any-collision) should leave the `p_` prefix intact; do NOT strip it here.
         String prop = getterName.startsWith("_") ? getterName.substring(1) : getterName;
         return "PureObj.read(" + receiverExpr + ", \"" + prop + "\")";
+    }
+
+    @Override
+    public String listExpressionEmpty()
+    {
+        // PDO multi-valued slots hold a {@link org.finos.legend.pure.truffle.types.PureSequence}.
+        // The parser must emit PureSequence directly so downstream consumers
+        // (println, auto-map, native iteration) see a uniform sequence shape;
+        // a {@code MutableList} stored in a slot leaks through to Java's
+        // {@code List.toString()} on print and trips identity checks elsewhere.
+        return "org.finos.legend.pure.truffle.types.PureSequence.EMPTY";
+    }
+
+    @Override
+    public String listExpressionOpen()
+    {
+        return "new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[]{";
+    }
+
+    @Override
+    public String listExpressionClose()
+    {
+        return "})";
+    }
+
+    @Override
+    public String wrapForSlotAssignment(String valueExpr)
+    {
+        return "org.finos.legend.pure.truffle.parser.shared.ParserSlotValue.wrap("
+                + valueExpr + ")";
     }
 
     // -------------------- subclass extension points --------------------
@@ -153,6 +185,16 @@ public abstract class TrufflePdoEmitterTarget implements EmitterTarget
         {
             String outer = t.substring(0, lt);
             String inner = t.substring(lt + 1, t.length() - 1);
+            // List-shaped DSL types collapse to {@code Object} for Truffle: PDO
+            // multi-valued slots hold {@link org.finos.legend.pure.truffle.types.PureSequence},
+            // not Eclipse Collections {@code MutableList}, so propagating the
+            // {@code MutableList<X>} declaration into the generated Java code
+            // would type-clash with the {@code ObjectSequence} the value
+            // expressions actually produce.
+            if ("MutableList".equals(outer) || "List".equals(outer) || "RichIterable".equals(outer))
+            {
+                return "Object";
+            }
             return outer + "<" + mapDeclType(inner) + ">";
         }
         if (t.contains(","))

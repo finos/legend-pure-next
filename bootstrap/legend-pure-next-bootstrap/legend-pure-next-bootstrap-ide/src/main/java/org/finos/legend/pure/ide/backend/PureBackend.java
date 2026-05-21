@@ -60,10 +60,43 @@ public interface PureBackend
                             PureModel model,
                             CompilationResult compileResult,
                             FunctionDefinition function,
+                            ProgressSink progress,
                             ValueSpecification... args);
 
     /** Release resources (Truffle polyglot context, etc.). Idempotent. */
     default void close() {}
+
+    /**
+     * Receiver for fine-grained progress events emitted by the backend during
+     * {@link #execute}. The IDE plugs in a sink that forwards each event to
+     * the browser as a {@code pure/executeProgress} LSP notification so the
+     * user sees stage + bar updates live instead of staring at a spinner.
+     *
+     * <p>Implementations must be thread-safe; events fire from whichever
+     * thread the backend uses for compile/execute (Truffle uses its own
+     * single-threaded executor, Java-direct uses the caller's thread).</p>
+     */
+    @FunctionalInterface
+    interface ProgressSink
+    {
+        ProgressSink NOOP = e -> {};
+
+        void post(ProgressEvent event);
+    }
+
+    /**
+     * Single progress tick.
+     * <ul>
+     *   <li>{@code stage} — coarse phase name shown as the caption
+     *       (e.g. {@code "Parsing"}, {@code "Compile pass 1/3 — Skeletons"},
+     *       {@code "Executing"}).</li>
+     *   <li>{@code done}/{@code total} — granular counter for a progress bar;
+     *       {@code total == 0} means indeterminate (just show the stage).</li>
+     *   <li>{@code detail} — what's currently being processed
+     *       (e.g. the element being compiled). May be {@code null}.</li>
+     * </ul>
+     */
+    record ProgressEvent(String stage, int done, int total, String detail) {}
 
     /**
      * Result of an execute call.

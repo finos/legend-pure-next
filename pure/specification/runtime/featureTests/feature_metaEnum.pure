@@ -1,0 +1,115 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// ----------------------------------------------------------------------------
+// Metamodel introspection of Enums: name, values, stereotypes, tagged values.
+//
+// Captures the round-trip from PDB into the runtime. The bootstrap PDB
+// writer encodes Enum instances embedded in AtomicValue.value as path
+// strings ("OwnerEnum.ValueName"); the Truffle reader must reconstruct an
+// Enum PDO with `_name` set and the correct classifierGenericType so
+// downstream Pure code can read the value's name back. The Java-direct
+// reader does this in AtomicValueFlatBufferWrapper#_value — Truffle's
+// PDBHelper currently returns the raw String, which makes
+// `properties[i].defaultValue.expressionSequence[0].value.name` empty.
+// ----------------------------------------------------------------------------
+
+Profile <<test.TestDependency>> meta::pure::functions::tests::metaEnum::FlavorProfile
+{
+    stereotypes : [primary, deprecated];
+    tags        : [doc, sortKey];
+}
+
+Enum <<test.TestDependency>> meta::pure::functions::tests::metaEnum::Flavor
+{
+    Vanilla,
+    <<meta::pure::functions::tests::metaEnum::FlavorProfile.primary>>
+    {meta::pure::functions::tests::metaEnum::FlavorProfile.doc = 'classic',
+     meta::pure::functions::tests::metaEnum::FlavorProfile.sortKey = '1'}
+    Chocolate,
+    <<meta::pure::functions::tests::metaEnum::FlavorProfile.deprecated>>
+    {meta::pure::functions::tests::metaEnum::FlavorProfile.doc = 'limited run'}
+    Pistachio
+}
+
+// ----------------------------------------------------------------------------
+// 1. Enumeration name.
+// ----------------------------------------------------------------------------
+
+function <<test.Test>> meta::pure::functions::tests::metaEnum::testEnumName():Boolean[1]
+{
+    let e = meta::pure::functions::tests::metaEnum::Flavor;
+    assertEquals('Flavor', $e.name->toOne());
+}
+
+// ----------------------------------------------------------------------------
+// 2. Enum values via `Enumeration.properties[i].defaultValue` navigation —
+//    same shape as the java module's `enumValues()` platform stub. The
+//    inner Enum PDO must carry its `_name` so consumers can do
+//    `.name->toLower() == 'chocolate'` (a common filter pattern).
+// ----------------------------------------------------------------------------
+
+function <<test.Test>> meta::pure::functions::tests::metaEnum::testEnumValueNames():Boolean[1]
+{
+    let e = meta::pure::functions::tests::metaEnum::Flavor;
+    let names = $e.properties->map(p |
+        $p.defaultValue->toOne().expressionSequence->at(0)
+            ->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value
+            ->toOne()->cast(@meta::pure::metamodel::type::Enum).name->toOne());
+    assertEquals(['Vanilla', 'Chocolate', 'Pistachio'], $names);
+}
+
+// ----------------------------------------------------------------------------
+// 3. Stereotypes on enum values — applied to the wrapping Property by the
+//    compiler (see EnumerationHandler), so we read them off properties[].
+// ----------------------------------------------------------------------------
+
+function <<test.Test>> meta::pure::functions::tests::metaEnum::testEnumValueStereotypes():Boolean[1]
+{
+    let e = meta::pure::functions::tests::metaEnum::Flavor;
+    let chocolateProp = $e.properties->filter(p | $p.name->toOne() == 'Chocolate')->toOne();
+    let stereos = $chocolateProp.stereotypes;
+    assertEquals(1, $stereos->size());
+    assertEquals('primary', $stereos->toOne().value);
+
+    let pistachioProp = $e.properties->filter(p | $p.name->toOne() == 'Pistachio')->toOne();
+    assertEquals(['deprecated'], $pistachioProp.stereotypes.value);
+
+    let vanillaProp = $e.properties->filter(p | $p.name->toOne() == 'Vanilla')->toOne();
+    assertEquals(0, $vanillaProp.stereotypes->size());
+}
+
+// ----------------------------------------------------------------------------
+// 4. Tagged values on enum values — same storage as stereotypes; carry both
+//    the tag identifier and the literal string value the author supplied.
+// ----------------------------------------------------------------------------
+
+function <<test.Test>> meta::pure::functions::tests::metaEnum::testEnumValueTaggedValues():Boolean[1]
+{
+    let e = meta::pure::functions::tests::metaEnum::Flavor;
+    let chocolateProp = $e.properties->filter(p | $p.name->toOne() == 'Chocolate')->toOne();
+    let tvs = $chocolateProp.taggedValues;
+    assertEquals(2, $tvs->size());
+    assertEquals(['doc', 'sortKey'], $tvs.tag.value);
+    assertEquals(['classic', '1'], $tvs.value);
+
+    let pistachioProp = $e.properties->filter(p | $p.name->toOne() == 'Pistachio')->toOne();
+    let pTvs = $pistachioProp.taggedValues;
+    assertEquals(1, $pTvs->size());
+    assertEquals('doc', $pTvs->toOne().tag.value);
+    assertEquals('limited run', $pTvs->toOne().value);
+
+    let vanillaProp = $e.properties->filter(p | $p.name->toOne() == 'Vanilla')->toOne();
+    assertEquals(0, $vanillaProp.taggedValues->size());
+}

@@ -2238,7 +2238,7 @@ public class PdbJavaGenerator
         {
             for (int idx = 0; idx < members.size(); idx++)
             {
-                generateUnionCase(sb, idx + 1, members.get(idx), camelName, true);
+                generateUnionCase(sb, idx + 1, members.get(idx), camelName, true, unionName);
             }
         }
         sb.append("                default: break;\n");
@@ -2261,7 +2261,7 @@ public class PdbJavaGenerator
         {
             for (int idx = 0; idx < members.size(); idx++)
             {
-                generateUnionCase(sb, idx + 1, members.get(idx), camelName, false);
+                generateUnionCase(sb, idx + 1, members.get(idx), camelName, false, unionName);
             }
         }
         sb.append("            default: __raw = null; break;\n");
@@ -2269,7 +2269,7 @@ public class PdbJavaGenerator
     }
 
     private void generateUnionCase(StringBuilder sb, int discriminator, String defName,
-                                   String camelName, boolean isVector)
+                                   String camelName, boolean isVector, String unionName)
     {
         String target = isVector ? "arr[i]" : "__raw";
         if (FbsSchema.isSpecialRef(defName))
@@ -2323,7 +2323,27 @@ public class PdbJavaGenerator
         }
         else if ("StringValueDef".equals(defName))
         {
-            sb.append("if (d != null) ").append(target).append(" = d.val(); ");
+            if (ATOMIC_VALUE_CONTENT_UNION.equals(unionName))
+            {
+                // AtomicValue.value can hold an Enum instance. The bootstrap
+                // writer (RdfFbsJavaGenerator emit for AtomicValue.value)
+                // flattens such values into a StringValueDef containing the
+                // enum-value path "OwnerEnum.ValueName" — there's no dedicated
+                // EnumValueDef union member, and Enum PDOs are too small to
+                // pay the table overhead. Mirror Java-direct's
+                // AtomicValueFlatBufferWrapper: when the AtomicValue's
+                // genericType.rawType is an Enumeration, rebuild a
+                // PureDynamicObject for the enum value with `name` set so
+                // downstream Pure code (enumValues(), .name->toLower(),
+                // match dispatch) sees a proper Enum PDO instead of a raw
+                // String. Plain-string AtomicValues fall through untouched.
+                sb.append("if (d != null) ").append(target)
+                  .append(" = org.finos.legend.pure.truffle.runtime.dynobj.AtomicValueEnumReconstructor.reconstruct(d.val(), readProperty(\"genericType\"), resolver); ");
+            }
+            else
+            {
+                sb.append("if (d != null) ").append(target).append(" = d.val(); ");
+            }
         }
         else if ("DecimalValueDef".equals(defName))
         {

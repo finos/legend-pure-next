@@ -16,16 +16,18 @@ public final class _PackageableElement
      * {@code packagePath} (StringBuilder.insert chain) at ~5% of self-
      * compile CPU before this cache.
      */
-    // Volatile copy-on-write IdentityHashMap. Reads (cache hits — the hot
-    // path) are unsynchronized via the volatile reference. Writes take a
-    // monitor on PATH_CACHE_LOCK, copy the full map, and atomically
-    // install the new snapshot. Same pattern as TypeCache.entries; the
-    // synchronizedMap wrapper showed up at ~1% of warm CPU on this site
-    // alone before this change because path() is on the hot path of every
-    // type/element comparison and metaprogramming operation.
-    private static volatile java.util.IdentityHashMap<Object, String> PATH_CACHE =
-            new java.util.IdentityHashMap<>();
-    private static final Object PATH_CACHE_LOCK = new Object();
+    // Synchronized IdentityHashMap. An earlier copy-on-write variant pinned
+    // reads to a volatile snapshot for lock-free cache hits — a win on the
+    // self-compile bench (fixed PDO set, many repeat reads) but pathological
+    // for the IDE F9 cycle: each round inserts thousands of fresh
+    // in-memory-compile PDOs that never hit the cache, every put copied
+    // the full map, and the cache itself accumulated across F9s. Result was
+    // quadratic in cache size — observed: F9#1=368ms, F9#2=1591ms,
+    // F9#3=3092ms, F9#4=8381ms for the same element. The synchronized
+    // wrapper costs ~1% extra warm CPU on read paths; that's far cheaper
+    // than the quadratic blow-up.
+    private static final java.util.Map<Object, String> PATH_CACHE =
+            java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
 
     // @TruffleBoundary — the fallback walks the package chain via
     // StringBuilder.insert(0, ...), which Graal's PE follows into
@@ -93,16 +95,7 @@ public final class _PackageableElement
 
     private static void putPathCache(Object pe, String result)
     {
-        synchronized (PATH_CACHE_LOCK)
-        {
-            if (PATH_CACHE.containsKey(pe))
-            {
-                return;
-            }
-            java.util.IdentityHashMap<Object, String> next = new java.util.IdentityHashMap<>(PATH_CACHE);
-            next.put(pe, result);
-            PATH_CACHE = next;
-        }
+        PATH_CACHE.putIfAbsent(pe, result);
     }
 
     private static final String PACKAGE_PURE_PATH = "meta::pure::metamodel::Package";

@@ -68,8 +68,24 @@ public final class LeanReferencesValidator
         for (Map.Entry<String, Set<String>> entry : referencedBy.entrySet())
         {
             String targetPath = entry.getKey();
+            if (targetPath == null)
+            {
+                // recordReference / FunctionRefExtractor both guard against
+                // null targets at emission; a null key here means an upstream
+                // producer leaked one (most likely two concurrent compiles
+                // racing on the same refIndex). Throw with the offending
+                // value count so the producer can be traced — silent skip
+                // would hide a real concurrency bug.
+                throw new IllegalStateException("LeanReferencesValidator: null target path in referencedBy (callers="
+                        + entry.getValue() + "). Likely cause: concurrent compile mutating refIndex.");
+            }
             for (String callerPath : entry.getValue())
             {
+                if (callerPath == null)
+                {
+                    throw new IllegalStateException("LeanReferencesValidator: null caller path for target '"
+                            + targetPath + "'. Likely cause: concurrent compile mutating refIndex.");
+                }
                 pairs.add(new String[]{callerPath, targetPath});
             }
         }

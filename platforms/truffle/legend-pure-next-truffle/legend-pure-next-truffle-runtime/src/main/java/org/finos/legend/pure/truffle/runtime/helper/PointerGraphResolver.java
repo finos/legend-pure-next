@@ -57,6 +57,20 @@ public final class PointerGraphResolver
     private PointerGraphResolver() {}
 
     /**
+     * Per-top-level-element callback fired during {@link #resolveAll}. The IDE
+     * wires this to forward a structured progress event to the browser so
+     * the F9 progress bar fills during the resolve (which is otherwise an
+     * opaque multi-second blackout). Tests pass {@link #NOOP}.
+     */
+    @FunctionalInterface
+    public interface ResolveProgress
+    {
+        ResolveProgress NOOP = (d, t, p) -> {};
+
+        void tick(int done, int total, String path);
+    }
+
+    /**
      * Resolve every {@code TempCompilerPointer} in the values of
      * {@code elementMap} (or in the values' reachable graph) to its live
      * target. Mutates element PDOs in place.
@@ -67,15 +81,69 @@ public final class PointerGraphResolver
      * @param resolver    the cross-module resolver, used to look up pointers
      *                    whose target lives in another module (e.g. references
      *                    to {@code core.pdb} elements like {@code Integer}).
+     * @param progress    fires once per top-level element after its graph has
+     *                    been walked. Pass {@link ResolveProgress#NOOP} when
+     *                    no caller-side reporting is needed.
      */
     @TruffleBoundary
-    public static void resolveAll(Map<String, Object> byPath, TruffleMetadataAccess resolver)
+    public static void resolveAll(Map<String, Object> byPath, TruffleMetadataAccess resolver,
+                                  ResolveProgress progress)
     {
         if (byPath == null || byPath.isEmpty()) return;
         IdentityHashMap<Object, Boolean> visited = new IdentityHashMap<>();
-        for (Object element : byPath.values())
+        int total = byPath.size();
+        int done = 0;
+        // Track the slowest elements so we can dump a top-5 at the end. The
+        // resolve is a black box from the outside — at 0.04ms/el (memory
+        // baseline) the whole pass is invisible, but at 100ms+/el the user
+        // is staring at a frozen screen and needs to know which element
+        // is eating the budget. Cheap nanoTime() per top-level entry.
+        long[] elapsedNs = new long[total];
+        String[] paths = new String[total];
+        for (Map.Entry<String, Object> e : byPath.entrySet())
         {
-            walk(element, byPath, resolver, visited);
+            long t0 = System.nanoTime();
+            walk(e.getValue(), byPath, resolver, visited);
+            elapsedNs[done] = System.nanoTime() - t0;
+            paths[done] = e.getKey();
+            done++;
+            progress.tick(done, total, e.getKey());
+        }
+        logSlowest(elapsedNs, paths);
+    }
+
+    private static void logSlowest(long[] elapsedNs, String[] paths)
+    {
+        // Stderr-only — diagnostic, not data the IDE needs. Pick the 5 most
+        // expensive entries by walking the array once and threading a tiny
+        // bubble of size 5; sorting the whole array would be O(n log n) for
+        // a result we only inspect when something's wrong.
+        int k = Math.min(5, elapsedNs.length);
+        if (k == 0) return;
+        long[] topNs = new long[k];
+        String[] topPaths = new String[k];
+        for (int i = 0; i < elapsedNs.length; i++)
+        {
+            long ns = elapsedNs[i];
+            int j = k - 1;
+            if (ns <= topNs[j]) continue;
+            while (j > 0 && ns > topNs[j - 1])
+            {
+                topNs[j] = topNs[j - 1];
+                topPaths[j] = topPaths[j - 1];
+                j--;
+            }
+            topNs[j] = ns;
+            topPaths[j] = paths[i];
+        }
+        long totalNs = 0;
+        for (long ns : elapsedNs) totalNs += ns;
+        if (totalNs / 1_000_000 < 200) return; // below 200ms total — not worth noisy logs
+        System.err.println("[PointerGraphResolver] slowest top-" + k
+                + " (total " + (totalNs / 1_000_000) + " ms across " + elapsedNs.length + " elements):");
+        for (int i = 0; i < k && topNs[i] > 0; i++)
+        {
+            System.err.println("  " + (topNs[i] / 1_000_000) + " ms  " + topPaths[i]);
         }
     }
 

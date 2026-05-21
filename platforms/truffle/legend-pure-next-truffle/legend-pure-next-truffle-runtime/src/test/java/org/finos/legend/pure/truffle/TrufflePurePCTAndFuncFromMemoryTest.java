@@ -196,7 +196,8 @@ public class TrufflePurePCTAndFuncFromMemoryTest
         {
             deps.add(existing.name());
         }
-        registry.register(new TruffleInMemoryModule("inmem-runtime-tests", deps, testElements, registry));
+        registry.register(new TruffleInMemoryModule("inmem-runtime-tests", deps, testElements, registry,
+                org.finos.legend.pure.truffle.runtime.helper.PointerGraphResolver.ResolveProgress.NOOP));
 
         runTestsFn = registry.getElement("meta::pure::test::runTests_String_1__String_1_");
         runPctTestsFn = registry.getElement("meta::pure::test::runPCTTests_String_1__String_1_");

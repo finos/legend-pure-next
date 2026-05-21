@@ -1084,7 +1084,8 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             // Route execution through the selected backend (java-direct or
             // truffle). The backend captures stdout so Pure print()/println()
             // output flows back to the IDE terminal.
-            PureBackend.ExecutionResult execResult = backend.execute(editableModules, model, result, goFunc);
+            PureBackend.ExecutionResult execResult = backend.execute(
+                    editableModules, model, result, goFunc, executeProgressSink());
             if (execResult.ok())
             {
                 sendExecuteResult(execResult.capturedStdout(), false, execResult.compileStats());
@@ -1277,8 +1278,8 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 try
                 {
                     PureBackend.ExecutionResult execResult = "pct".equals(mode) && adapterArg != null
-                            ? backend.execute(editableModules, lastModel, null, fd, adapterArg)
-                            : backend.execute(editableModules, lastModel, null, fd);
+                            ? backend.execute(editableModules, lastModel, null, fd, PureBackend.ProgressSink.NOOP, adapterArg)
+                            : backend.execute(editableModules, lastModel, null, fd, PureBackend.ProgressSink.NOOP);
                     if (execResult.ok())
                     {
                         result.put("status", "passed");
@@ -1399,6 +1400,21 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         {
             pureClient.executeResult(new ExecuteResultParams(result, isError, compileStats));
         }
+    }
+
+    /** ProgressSink that forwards every backend stage/tick to the browser as
+     *  a {@code pure/executeProgress} notification. The LSP4J launcher serializes
+     *  outbound messages, so emitting from the Truffle executor thread is safe.
+     *  When the client hasn't connected (shouldn't happen during F9) every
+     *  post is dropped silently. */
+    private PureBackend.ProgressSink executeProgressSink()
+    {
+        if (!(client instanceof PureLanguageClient pureClient))
+        {
+            return PureBackend.ProgressSink.NOOP;
+        }
+        return event -> pureClient.executeProgress(new ExecuteProgressParams(
+                event.stage(), event.done(), event.total(), event.detail()));
     }
 
     // =========================================================================
@@ -1839,9 +1855,16 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
          *  of truth for incremental UI updates. */
         @org.eclipse.lsp4j.jsonrpc.services.JsonNotification("pure/testResult")
         void testResult(TestResultParams params);
+
+        /** Stage + per-element ticks emitted by the backend during F9 so the
+         *  IDE can show a live progress bar instead of a blank spinner during
+         *  Truffle's multi-second parse/compile/execute pipeline. */
+        @org.eclipse.lsp4j.jsonrpc.services.JsonNotification("pure/executeProgress")
+        void executeProgress(ExecuteProgressParams params);
     }
 
     public record ExecuteResultParams(String result, boolean error, PureBackend.CompileStats compileStats) {}
+    public record ExecuteProgressParams(String stage, int done, int total, String detail) {}
     public record TreeDataParams(String treeId, String json) {}
     public record TestResultParams(String test, String status, String error, String output) {}
 

@@ -613,6 +613,53 @@
             animation: spin 0.8s linear infinite;
         }
 
+        /* F9 progress display: stage caption + bar + current item. Fed by
+           pure/executeProgress notifications during compile+execute. */
+        .exec-progress {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 12px;
+            max-width: 640px;
+        }
+        .exec-progress-stage {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+        }
+        .exec-progress-bar {
+            position: relative;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .exec-progress-bar > .fill {
+            position: absolute;
+            inset: 0 auto 0 0;
+            background: var(--accent);
+            transition: width 0.12s linear;
+        }
+        .exec-progress-bar.indeterminate > .fill {
+            width: 40%;
+            animation: exec-progress-indet 1.4s ease-in-out infinite;
+        }
+        @keyframes exec-progress-indet {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(250%); }
+        }
+        .exec-progress-detail {
+            font-family: monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
 
         .diagram-container {
             flex: 1;
@@ -2040,6 +2087,9 @@
             else if (msg.method === 'pure/testResult') {
                 handleStreamingTestResult(msg.params);
             }
+            else if (msg.method === 'pure/executeProgress') {
+                handleExecuteProgress(msg.params);
+            }
             else if (msg.method === 'window/showMessage') {
                 if (msg.params && msg.params.message) {
                     alert(msg.params.message);
@@ -2221,13 +2271,22 @@
             return Promise.all(savePromises);
         }
 
+        let executeRunning = false;
         function executeCode() {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 showResult('Not connected to LSP server', true);
                 return;
             }
+            // Latch against double-fire: F9 pressed inside the editor goes through
+            // Monaco's addCommand but the keydown still bubbles to the document
+            // listener, so executeCode would run twice. Two concurrent pure/execute
+            // commands race on the per-module refIndex during LocalModule.compile()
+            // and crash sorting in LeanReferencesValidator with an NPE on a null
+            // entry. Pure-side, the second compile-pure invocation also fights for
+            // the registry mutation. Cleared in finally so the next F9 is free.
+            if (executeRunning) { return; }
+            executeRunning = true;
 
-            // Show spinner
             const content = document.getElementById('resultContent');
             content.className = 'result-content';
             content.innerHTML = '<span class="spinner"></span> Saving and executing...';
@@ -2235,23 +2294,48 @@
             const badge = document.getElementById('resultBadge');
             badge.style.display = 'none';
 
-            saveAllOpenFiles().then(() => {
-                sendRequest('workspace/executeCommand', {
-                    command: 'pure/execute',
-                    arguments: []
-                }).then(() => {
-                    // Result comes via pure/executeResult notification
-                }).catch(err => {
-                    showResult('Command failed: ' + (err.message || JSON.stringify(err)), true);
-                });
-            }).catch(e => {
-                showResult('Save failed: ' + e, true);
+            saveAllOpenFiles().then(() => sendRequest('workspace/executeCommand', {
+                command: 'pure/execute',
+                arguments: []
+            })).catch(err => {
+                showResult('Command failed: ' + (err && err.message ? err.message : JSON.stringify(err)), true);
+            }).finally(() => {
+                executeRunning = false;
             });
         }
 
         function handleExecuteResult(params) {
             showResult(params.result, params.isError || params.error);
             renderCompileStats(params.compileStats);
+        }
+
+        // pure/executeProgress: stage + bar + current item, streamed by the
+        // backend during F9 compile/execute so the user sees movement instead
+        // of an opaque spinner. total === 0 → indeterminate bar (the stage is
+        // a coarse boundary with no per-element counter, e.g. "Parsing").
+        function handleExecuteProgress(params) {
+            if (!params) return;
+            const content = document.getElementById('resultContent');
+            if (!content) return;
+            const total = params.total | 0;
+            const done = params.done | 0;
+            const pct = total > 0 ? Math.max(0, Math.min(100, Math.round(done * 100 / total))) : 0;
+            const indet = total <= 0;
+            const counter = indet ? '' : ` (${done}/${total})`;
+            content.className = 'result-content';
+            content.innerHTML = ''
+                + '<div class="exec-progress">'
+                +   '<div class="exec-progress-stage">'
+                +     '<span class="spinner"></span>'
+                +     '<span>' + escapeHtml(params.stage || 'Working') + counter + '</span>'
+                +   '</div>'
+                +   '<div class="exec-progress-bar' + (indet ? ' indeterminate' : '') + '">'
+                +     '<div class="fill" style="width:' + (indet ? '40%' : pct + '%') + '"></div>'
+                +   '</div>'
+                +   (params.detail
+                        ? '<div class="exec-progress-detail">' + escapeHtml(params.detail) + '</div>'
+                        : '')
+                + '</div>';
         }
 
         function renderCompileStats(stats) {

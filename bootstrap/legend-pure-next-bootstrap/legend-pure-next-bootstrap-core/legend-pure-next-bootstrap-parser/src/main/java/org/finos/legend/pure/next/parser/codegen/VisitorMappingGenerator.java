@@ -1690,17 +1690,17 @@ public final class VisitorMappingGenerator
     {
         if (args.isEmpty())
         {
-            out.append("Lists.mutable.empty()");
+            out.append(target.listExpressionEmpty());
             return;
         }
-        out.append("Lists.mutable.with(");
+        out.append(target.listExpressionOpen());
         for (int j = 0; j < args.size(); j++)
         {
             if (j > 0) out.append(", ");
             VisitorMappingParser.ArgContext a = args.get(j);
             emitExprInto(out, a.expression(), cachedTextToken, inFoldBody);
         }
-        out.append(')');
+        out.append(target.listExpressionClose());
     }
 
     private static void emitMapList(StringBuilder out, List<VisitorMappingParser.ArgContext> args, String cachedTextToken, boolean inFoldBody)
