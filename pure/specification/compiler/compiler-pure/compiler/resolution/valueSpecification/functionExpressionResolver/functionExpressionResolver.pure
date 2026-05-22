@@ -39,18 +39,23 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     debug($context, | 'resolveFunctionExpression: ' + $fi.functionName->toOne() + ' (' + $fi->type()->toOne()->elementToPath() + ')');
     let deepCtx = $context->debugSpaceInc();
     let checkpoint = $context.errors->size();
+    // Topo-sort `new`/`copy` key expressions so a producer is built before any
+    // `~.foo` reader. Detects circular dependencies and emits a compile error.
+    let reorderResult = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::reorderKeyExpressionsForParentReferences($fi, $deepCtx);
+    let reorderedFi = $reorderResult.first;
+    let postReorderCtx = $reorderResult.second;
     // Parent-reference (`~`) typing: when resolving `^X(...)` or `^$x(...)`,
     // push the construction's GenericType so any `~` VariableExpression that
     // appears inside the key expressions resolves against the right enclosing
     // type. The push is into the CompilerContext (immutable, threaded). Skipped
     // when the type can't be extracted yet — the fixpoint resolver will catch
     // it on a later pass.
-    let ctorGT = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractConstructionType($fi, $scope, $deepCtx);
+    let ctorGT = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractConstructionType($reorderedFi, $scope, $postReorderCtx);
     let pushedCtx = if($ctorGT->isNotEmpty(),
-        | ^$deepCtx(constructionTypeStack = $deepCtx.constructionTypeStack->concatenate($ctorGT->toOne())),
-        | $deepCtx
+        | ^$postReorderCtx(constructionTypeStack = $postReorderCtx.constructionTypeStack->concatenate($ctorGT->toOne())),
+        | $postReorderCtx
     );
-    let result = match($fi, [
+    let result = match($reorderedFi, [
         dot:DotApplication[1] |
             if($dot.parametersValues->isNotEmpty(),
                 | resolveDotApplication($dot, $scope, $pushedCtx),
@@ -126,6 +131,149 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               );
           );
     );
+}
+
+// Topo-sort `new(GTMH, [keyExprs])` / `copy(T, [keyExprs])` key expressions
+// so a producer is built before any `~.foo` reader of that slot. Returns the
+// reordered FunctionExpression and the updated CompilerContext (with a
+// compilation error appended if a circular dependency was detected). Mirrors
+// Java FunctionExpressionResolver.reorderKeyExpressionsForParentReferences.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::reorderKeyExpressionsForParentReferences(fi:FunctionExpression[1], context:CompilerContext[1]):Pair<FunctionExpression, CompilerContext>[1]
+{
+    if($fi.functionName->isEmpty() || $fi.parametersValues->size() < 2,
+        | pair($fi, $context),
+        | let fname = $fi.functionName->toOne();
+          if($fname != 'new' && $fname != 'copy',
+              | pair($fi, $context),
+              | let arg1 = $fi.parametersValues->at(1);
+                $arg1->match([
+                    col:Collection[1] |
+                        let items = $col.values;
+                        if($items->size() <= 1,
+                            | pair($fi, $context),
+                            | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::topoSortKeyExpressions($fi, $col, $items, $context)
+                        );,
+                    a:Any[1] | pair($fi, $context)
+                ]);
+          );
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::topoSortKeyExpressions(fi:FunctionExpression[1], col:Collection[1], items:ValueSpecification[*], context:CompilerContext[1]):Pair<FunctionExpression, CompilerContext>[1]
+{
+    let names = $items->map(it | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractKeyExpressionName($it));
+    let depLists = $items->map(it | ^List<Integer>(values = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractSiblingDeps($it, $names)));
+    let anyDep = $depLists->exists(d | $d.values->isNotEmpty());
+    if(!$anyDep,
+        | pair($fi, $context),
+        | let n = $items->size();
+          let initialOrder = range(0, $n);
+          let sortResult = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::topoSortIndices($initialOrder, $depLists);
+          if($sortResult.second,
+              | // Circular dependency — keep original order, add error. Append
+                // the first name again at the end so the cycle is closed in the
+                // rendered chain (matches the Java compiler's format).
+                let cycleNames = $sortResult.first.values->map(i | if($names->at($i)->isNotEmpty(), | '\'' + $names->at($i)->toOne() + '\'', | '?'));
+                let closedCycle = if($cycleNames->isNotEmpty(),
+                    | $cycleNames->concatenate([$cycleNames->at(0)]),
+                    | $cycleNames
+                );
+                let cycleMsg = $closedCycle->joinStrings(' -> ');
+                let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($fi.sourceInformation, $context);
+                pair($fi, ^$context(errors += 'Circular parent-reference dependency in key expressions: ' + $cycleMsg + $siCtx));,
+              | let order = $sortResult.first.values;
+                if($order == $initialOrder,
+                    | pair($fi, $context),
+                    | let sorted = $order->map(i | $items->at($i));
+                      let newCol = ^$col(values = $sorted);
+                      let newParams = [$fi.parametersValues->at(0)]->concatenate([$newCol->cast(@ValueSpecification)])->concatenate($fi.parametersValues->drop(2));
+                      pair(^$fi(parametersValues = $newParams), $context);
+                );
+          );
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractKeyExpressionName(ke:ValueSpecification[1]):String[0..1]
+{
+    $ke->match([
+        fi:FunctionApplication[1] |
+            if($fi.functionName == 'keyExpression' && $fi.parametersValues->isNotEmpty(),
+                | $fi.parametersValues->at(0)->match([
+                      av:AtomicValue[1] | if($av.value->isNotEmpty() && $av.value->toOne()->instanceOf(String), | $av.value->toOne()->cast(@String), | []->cast(@String)),
+                      a:Any[1] | []->cast(@String)
+                  ]),
+                | []->cast(@String)
+            ),
+        a:Any[1] | []->cast(@String)
+    ]);
+}
+
+// Returns the SET of sibling indices that this keyExpression's value reads via
+// `~.foo` at the current construction level (depth 0). `~.~.foo` is a parent
+// reference and not a sibling dep.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractSiblingDeps(ke:ValueSpecification[1], names:String[*]):Integer[*]
+{
+    $ke->match([
+        fi:FunctionApplication[1] |
+            if($fi.functionName == 'keyExpression' && $fi.parametersValues->size() >= 2,
+                | let depNames = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::collectSiblingNames($fi.parametersValues->at(1), 0);
+                  $depNames->map(n | $names->indexOf($n))->filter(i | $i >= 0 && $i < $names->size());,
+                | []->cast(@Integer)
+            ),
+        a:Any[1] | []->cast(@Integer)
+    ]);
+}
+
+// Walk a value spec, collecting property names accessed via `~.<name>` at the
+// given construction depth (0 = current `^X(...)`). Crossing into a nested
+// `^Y(...)` or `^$x(...)` bumps the depth.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::collectSiblingNames(vs:ValueSpecification[1], ctorDepth:Integer[1]):String[*]
+{
+    $vs->match([
+        da:DotApplication[1] |
+            let here = if($ctorDepth == 0 && $da.parametersValues->isNotEmpty(),
+                | $da.parametersValues->at(0)->match([
+                      ve:VariableExpression[1] |
+                          if(meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::parentReferenceTildeCount($ve.name) == 1,
+                              | [$da.functionName->toOne()]->cast(@String),
+                              | []->cast(@String)
+                          );,
+                      a:Any[1] | []->cast(@String)
+                  ]),
+                | []->cast(@String)
+            );
+            $here->concatenate($da.parametersValues->map(p | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::collectSiblingNames($p, $ctorDepth)));,
+        fi:FunctionApplication[1] |
+            let childDepth = if($fi.functionName == 'new' || $fi.functionName == 'copy', | $ctorDepth + 1, | $ctorDepth);
+            $fi.parametersValues->map(p | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::collectSiblingNames($p, $childDepth));,
+        col:Collection[1] |
+            $col.values->map(p | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::collectSiblingNames($p, $ctorDepth));,
+        a:Any[1] | []->cast(@String)
+    ]);
+}
+
+// Iterative (Kahn-style) topo sort. Each iteration moves all indices whose
+// remaining deps are all already resolved. Returns the resulting order and a
+// `cycle` flag — true when no progress can be made but unresolved indices
+// remain (the remaining set is a cycle, returned as the order so the caller
+// can render the cycle path).
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::topoSortIndices(indices:Integer[*], depLists:List<Integer>[*]):Pair<List<Integer>, Boolean>[1]
+{
+    $indices->fold({_idx, acc |
+        let resolved = $acc.first.values;
+        if($acc.second,
+            | $acc,
+            | let unresolved = $indices->filter(i | !$resolved->contains($i));
+              if($unresolved->isEmpty(),
+                  | $acc,
+                  | let progress = $unresolved->filter(i | $depLists->at($i).values->forAll(d | $resolved->contains($d)));
+                    if($progress->isEmpty(),
+                        | pair(^List<Integer>(values = $unresolved), true),
+                        | pair(^List<Integer>(values = $resolved->concatenate($progress)), false)
+                    );
+              );
+        );
+    }, pair(^List<Integer>(values = []->cast(@Integer)), false));
 }
 
 // Mirrors Java FunctionExpressionResolver.finalizeFunctionExpression (lines 87-124)

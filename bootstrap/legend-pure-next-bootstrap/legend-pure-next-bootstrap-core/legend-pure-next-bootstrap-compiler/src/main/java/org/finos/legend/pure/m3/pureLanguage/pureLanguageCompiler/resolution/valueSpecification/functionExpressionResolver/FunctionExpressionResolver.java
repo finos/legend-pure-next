@@ -66,6 +66,11 @@ public final class FunctionExpressionResolver
     {
         context.debug("resolveFunctionExpression: %s (%s)", expr._functionName(), expr.getClass().getSimpleName());
         context.debugDepthInc();
+        // Topo-sort `new()`/`copy()` key expressions when one slot reads another
+        // via `~.foo`: the runtime sets each slot value as it walks the
+        // collection, so a `~.foo` reader must be ordered AFTER its `foo`
+        // producer. Detects cycles and adds a compilation error.
+        expr = reorderKeyExpressionsForParentReferences(expr, context);
         // Parent-reference (`~`) typing: when resolving `^X(...)` (new) or
         // `^$x(...)` (copy), push the construction's GenericType so any `~`
         // VariableExpression that appears inside the key expressions resolves
@@ -161,6 +166,195 @@ public final class FunctionExpressionResolver
             return null;
         }
         return null;
+    }
+
+    /**
+     * For `new(GTMH, [keyExpression('a', valA), keyExpression('b', valB), …])`
+     * (and the same for `copy`), reorder the key-expression collection so any
+     * `~.foo` access in a value lands AFTER its producer in the iteration
+     * order — the runtime sets each slot as it walks. Detects circular
+     * dependencies (`a = ~.b, b = ~.a`) and emits a compilation error.
+     */
+    private static FunctionExpression reorderKeyExpressionsForParentReferences(FunctionExpression expr, CompilationContext context)
+    {
+        if (expr._functionName() == null) return expr;
+        if (!"new".equals(expr._functionName()) && !"copy".equals(expr._functionName())) return expr;
+        if (expr._parametersValues() == null || expr._parametersValues().size() < 2) return expr;
+        ValueSpecification keyExprsArg = expr._parametersValues().get(1);
+        if (!(keyExprsArg instanceof meta.pure.metamodel.valuespecification.Collection col)) return expr;
+        org.eclipse.collections.api.list.MutableList<ValueSpecification> items = col._values();
+        if (items == null || items.size() <= 1) return expr;
+
+        int n = items.size();
+        String[] names = new String[n];
+        for (int i = 0; i < n; i++)
+        {
+            names[i] = extractKeyExpressionName(items.get(i));
+        }
+
+        java.util.Map<String, Integer> nameToIdx = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < n; i++)
+        {
+            if (names[i] != null && !nameToIdx.containsKey(names[i])) nameToIdx.put(names[i], i);
+        }
+
+        java.util.List<java.util.Set<Integer>> deps = new java.util.ArrayList<>(n);
+        for (int i = 0; i < n; i++) deps.add(new java.util.LinkedHashSet<>());
+        boolean anyDep = false;
+        for (int i = 0; i < n; i++)
+        {
+            ValueSpecification keVS = items.get(i);
+            if (!(keVS instanceof FunctionApplication fi)) continue;
+            if (fi._parametersValues() == null || fi._parametersValues().size() < 2) continue;
+            java.util.Set<String> siblingDeps = new java.util.LinkedHashSet<>();
+            collectParentReferenceSiblings(fi._parametersValues().get(1), 0, siblingDeps);
+            for (String name : siblingDeps)
+            {
+                Integer depIdx = nameToIdx.get(name);
+                if (depIdx != null && depIdx != i)
+                {
+                    deps.get(i).add(depIdx);
+                    anyDep = true;
+                }
+            }
+        }
+        if (!anyDep) return expr;
+
+        int[] state = new int[n];
+        java.util.List<Integer> order = new java.util.ArrayList<>(n);
+        java.util.List<Integer> path = new java.util.ArrayList<>();
+        for (int i = 0; i < n; i++)
+        {
+            if (state[i] == 0 && !topoVisit(i, deps, state, order, path, names, expr, context))
+            {
+                return expr;
+            }
+        }
+        if (order.size() != n)
+        {
+            return expr;
+        }
+
+        org.eclipse.collections.api.list.MutableList<ValueSpecification> sorted =
+                org.eclipse.collections.api.factory.Lists.mutable.empty();
+        for (int idx : order) sorted.add(items.get(idx));
+
+        meta.pure.metamodel.valuespecification.Collection newCol =
+                (meta.pure.metamodel.valuespecification.Collection) ((meta.pure.metamodel.valuespecification.Collection) col)._copy();
+        ((meta.pure.metamodel.valuespecification.CollectionImpl) newCol)._values(sorted);
+
+        org.eclipse.collections.api.list.MutableList<ValueSpecification> newParams =
+                org.eclipse.collections.api.factory.Lists.mutable.empty();
+        newParams.add(expr._parametersValues().get(0));
+        newParams.add((ValueSpecification) newCol);
+        for (int i = 2; i < expr._parametersValues().size(); i++)
+        {
+            newParams.add(expr._parametersValues().get(i));
+        }
+        return (FunctionExpression) ((FunctionExpression) expr._copy())._parametersValues(newParams);
+    }
+
+    private static String extractKeyExpressionName(ValueSpecification keVS)
+    {
+        if (!(keVS instanceof FunctionApplication fi)) return null;
+        if (!"keyExpression".equals(fi._functionName())) return null;
+        if (fi._parametersValues() == null || fi._parametersValues().isEmpty()) return null;
+        ValueSpecification nameVS = fi._parametersValues().getFirst();
+        if (nameVS instanceof meta.pure.metamodel.valuespecification.AtomicValue av
+                && av._value() instanceof String s) return s;
+        return null;
+    }
+
+    /**
+     * Walk {@code vs} collecting every property name accessed as {@code ~.foo}
+     * at the SAME construction level (i.e. inside the current `^X(...)`, not
+     * inside a nested `^Y(...)`). Tracks the construction-nesting depth and
+     * the tilde count of each VariableExpression — only {@code ~} at the
+     * current construction (1 tilde, depth 0) counts as a sibling
+     * dependency. {@code ~.~.foo} (2 tildes) references a parent and is
+     * skipped.
+     */
+    private static void collectParentReferenceSiblings(ValueSpecification vs, int constructionDepth, java.util.Set<String> out)
+    {
+        if (vs == null) return;
+        if (vs instanceof meta.pure.metamodel.valuespecification.DotApplication da
+                && da._parametersValues() != null && !da._parametersValues().isEmpty())
+        {
+            ValueSpecification receiver = da._parametersValues().getFirst();
+            if (receiver instanceof meta.pure.metamodel.valuespecification.VariableExpression ve
+                    && ve._name() != null
+                    && org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext.parentReferenceTildeCount(ve._name()) == 1
+                    && constructionDepth == 0)
+            {
+                out.add(da._functionName());
+            }
+            for (ValueSpecification arg : da._parametersValues())
+            {
+                collectParentReferenceSiblings(arg, constructionDepth, out);
+            }
+            return;
+        }
+        if (vs instanceof FunctionApplication fi)
+        {
+            int childDepth = constructionDepth
+                    + (("new".equals(fi._functionName()) || "copy".equals(fi._functionName())) ? 1 : 0);
+            if (fi._parametersValues() != null)
+            {
+                for (ValueSpecification arg : fi._parametersValues())
+                {
+                    collectParentReferenceSiblings(arg, childDepth, out);
+                }
+            }
+            return;
+        }
+        if (vs instanceof meta.pure.metamodel.valuespecification.Collection col && col._values() != null)
+        {
+            for (ValueSpecification item : col._values())
+            {
+                collectParentReferenceSiblings(item, constructionDepth, out);
+            }
+        }
+    }
+
+    /** DFS topological visit. Returns false on cycle (and reports the cycle as a compilation error). */
+    private static boolean topoVisit(int i,
+                                     java.util.List<java.util.Set<Integer>> deps,
+                                     int[] state,
+                                     java.util.List<Integer> order,
+                                     java.util.List<Integer> path,
+                                     String[] names,
+                                     FunctionExpression expr,
+                                     CompilationContext context)
+    {
+        if (state[i] == 1)
+        {
+            // Cycle: chain from where i first appears on the path through to
+            // the current head, then back to i. `path` is the visit stack in
+            // chronological order (path.get(0) was visited first).
+            int startIdx = path.indexOf(i);
+            StringBuilder cycle = new StringBuilder();
+            for (int j = startIdx; j < path.size(); j++)
+            {
+                if (cycle.length() > 0) cycle.append(" -> ");
+                cycle.append(names[path.get(j)] != null ? "'" + names[path.get(j)] + "'" : "?");
+            }
+            cycle.append(" -> ").append(names[i] != null ? "'" + names[i] + "'" : "?");
+            context.addError(new CompilationError(
+                    "Circular parent-reference dependency in key expressions: " + cycle,
+                    expr._sourceInformation()));
+            return false;
+        }
+        if (state[i] == 2) return true;
+        state[i] = 1;
+        path.add(i);
+        for (int dep : deps.get(i))
+        {
+            if (!topoVisit(dep, deps, state, order, path, names, expr, context)) return false;
+        }
+        path.remove(path.size() - 1);
+        state[i] = 2;
+        order.add(i);
+        return true;
     }
 
     public static FunctionExpression finalizeFunctionExpression(FunctionExpression resolved, int errorCheckpoint, MetadataAccess model, CompilationContext context)

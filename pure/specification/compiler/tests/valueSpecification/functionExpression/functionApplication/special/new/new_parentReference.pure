@@ -21,6 +21,14 @@ function test::new::parentRef::testNewPropertyArrow(): Any[*]
   ^Container(name='outer', items=['a', 'b'], echoed=~.items->map(s|$s));
 }
 
+// `echoed = ~.items` is declared BEFORE `items = ...` in source order. The
+// compiler topo-sorts the key expressions so `items` is built first, then
+// `echoed` reads the populated `items`.
+function test::new::parentRef::testNewKeyExpressionReorder(): Any[*]
+{
+  ^Container(name='outer', echoed=~.items, items=['a', 'b']);
+}
+
 Class test::new::parentRef::Node
 {
   value: Integer[1];
@@ -110,11 +118,29 @@ function test::new::parentRef::testNewPropertyArrow__Any_MANY_():@Any@[*]  ~User
           Lambda(s:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @21:66-21:69
             Variable s :#String##[1]#  ~@VariableExpression@  @21:68-21:69
 
-class test::new::parentRef::Node extends Any  ~Class<test::new::parentRef::Node>  @24:1-28:1
+function test::new::parentRef::testNewKeyExpressionReorder__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Container##[1]#  ~@FunctionInvocation@  @29:3-29:60
+    typeParam T -> test::new::parentRef::Container
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>  @29:3-29:60
+    Collection :#KeyExpression#[3]  ~@Collection@  @29:3-29:60
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @29:14-29:25
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @29:14-29:25
+        AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @29:19-29:25
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @29:44-29:59
+        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @29:44-29:59
+        Collection :#String#[2]  ~@Collection@  @29:50-29:59
+          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @29:51-29:53
+          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @29:56-29:58
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @29:28-29:41
+        AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @29:28-29:41
+        DotApplication test::new::parentRef::Container.items :#String##[*]#  ~@DotApplication@  @29:35-29:41
+          Variable ~ :#test::new::parentRef::Container##[1]#  ~@VariableExpression@  @29:35-29:41
+
+class test::new::parentRef::Node extends Any  ~Class<test::new::parentRef::Node>  @32:1-36:1
   property value :@Integer@[1]  ~Property<test::new::parentRef::Node, @Integer@|1>
   property next :test::new::parentRef::Node[0..1]  ~Property<test::new::parentRef::Node, test::new::parentRef::Node|0..1>
 
-class test::new::parentRef::Container extends Any  ~Class<test::new::parentRef::Container>  @30:1-35:1
+class test::new::parentRef::Container extends Any  ~Class<test::new::parentRef::Container>  @38:1-43:1
   property name :@String@[1]  ~Property<test::new::parentRef::Container, @String@|1>
   property items :@String@[*]  ~Property<test::new::parentRef::Container, @String@|*>
   property echoed :@String@[*]  ~Property<test::new::parentRef::Container, @String@|*>
@@ -123,19 +149,23 @@ class test::new::parentRef::Container extends Any  ~Class<test::new::parentRef::
 meta::pure::functions::collection::map_T_m__Function_1__V_m_:
   test::new::parentRef::testNewPropertyArrow__Any_MANY_
 meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::new::parentRef::testNewKeyExpressionReorder__Any_MANY_
   test::new::parentRef::testNewNestedParentReference__Any_MANY_
   test::new::parentRef::testNewPropertyAccess__Any_MANY_
   test::new::parentRef::testNewPropertyArrow__Any_MANY_
   test::new::parentRef::testNewSelfReference__Any_MANY_
 meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::new::parentRef::testNewKeyExpressionReorder__Any_MANY_
   test::new::parentRef::testNewNestedParentReference__Any_MANY_
   test::new::parentRef::testNewPropertyAccess__Any_MANY_
   test::new::parentRef::testNewPropertyArrow__Any_MANY_
   test::new::parentRef::testNewSelfReference__Any_MANY_
 test::new::parentRef::Container:
+  test::new::parentRef::testNewKeyExpressionReorder__Any_MANY_
   test::new::parentRef::testNewPropertyAccess__Any_MANY_
   test::new::parentRef::testNewPropertyArrow__Any_MANY_
 test::new::parentRef::Container.items:
+  test::new::parentRef::testNewKeyExpressionReorder__Any_MANY_
   test::new::parentRef::testNewPropertyAccess__Any_MANY_
   test::new::parentRef::testNewPropertyArrow__Any_MANY_
 test::new::parentRef::Node:
