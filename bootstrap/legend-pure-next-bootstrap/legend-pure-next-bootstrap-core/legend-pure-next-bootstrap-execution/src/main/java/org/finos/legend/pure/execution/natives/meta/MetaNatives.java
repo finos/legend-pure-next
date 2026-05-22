@@ -330,25 +330,46 @@ public class MetaNatives
                     }
                 }
 
-                // Step 3: Push onto construction stack, then evaluate key expressions
+                // Step 3: Push onto construction stack, then evaluate and apply key
+                // expressions ONE AT A TIME so that each slot value can read
+                // already-set slots via `~.<prop>` (parent reference with property
+                // path). If we batch-evaluated paramSpecs.get(1) up front,
+                // `~.typeParameters` inside a later slot would read the instance
+                // BEFORE typeParameters has been written.
                 eval.pushConstruction(instance);
                 try
                 {
-                    ValueSpecification keyExprsVS = eval.evaluate(paramSpecs.get(1));
-
-                    // Step 4: Process key expressions
                     List<Map.Entry<String, Object>> keyValues = new ArrayList<>();
-                    Object keyExprsRaw = _E_ValueSpecification.unwrap(keyExprsVS);
-                    if (keyExprsRaw instanceof List<?> keyExprs)
+                    ValueSpecification keyExprsParam = paramSpecs.get(1);
+                    if (keyExprsParam instanceof meta.pure.metamodel.valuespecification.Collection col)
                     {
-                        for (Object ke : keyExprs)
+                        // Inline `^X(slot=value, slot=value)` form: items are
+                        // unevaluated keyExpression FunctionInvocations.
+                        // Evaluate + apply each in source order.
+                        for (ValueSpecification item : col._values())
                         {
+                            Object ke = _E_ValueSpecification.unwrap(eval.evaluate(item));
                             processKeyExpression(ke, instance, keyValues, resolver);
                         }
                     }
                     else
                     {
-                        processKeyExpression(keyExprsRaw, instance, keyValues, resolver);
+                        // Non-inline form (e.g. `^X($alreadyBuiltKeys)`): the
+                        // KeyExpression list is already constructed, slot values
+                        // already resolved — no `~` references possible inside.
+                        ValueSpecification keyExprsVS = eval.evaluate(keyExprsParam);
+                        Object keyExprsRaw = _E_ValueSpecification.unwrap(keyExprsVS);
+                        if (keyExprsRaw instanceof List<?> keyExprs)
+                        {
+                            for (Object ke : keyExprs)
+                            {
+                                processKeyExpression(ke, instance, keyValues, resolver);
+                            }
+                        }
+                        else
+                        {
+                            processKeyExpression(keyExprsRaw, instance, keyValues, resolver);
+                        }
                     }
 
                     // Set reverse association pointers
@@ -396,22 +417,6 @@ public class MetaNatives
         };
         natives.put("keyExpression_String_1__Any_MANY__KeyExpression_1_", keyExprFn);
         natives.put("keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_", keyExprFn);
-
-        // parentReference — returns a sentinel that resolves to a parent instance during new/copy construction
-        natives.put("parentReference_Integer_1__String_1__Any_1_", (args, eval, genericType, multiplicity) ->
-        {
-            int depth = ((Number) _E_ValueSpecification.unwrap(args.get(0))).intValue();
-            String propPath = (String) _E_ValueSpecification.unwrap(args.get(1));
-            // Look up the construction stack: depth 0 = self (top), depth 1 = parent, etc.
-            Object target = eval.peekConstruction(depth);
-            if (target == null)
-            {
-                throw new RuntimeException("Parent reference ~ at depth " + depth
-                        + " is out of bounds (construction stack size: unknown). "
-                        + "Ensure ~ is used inside a ^Type(...) expression.");
-            }
-            return _E_ValueSpecification.wrap(target, genericType, multiplicity, resolver);
-        });
 
         // copy(T[1]) : T[1] — simple copy with no overrides
         natives.put("copy_T_1__T_1_", (args, eval, genericType, multiplicity) ->

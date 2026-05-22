@@ -296,7 +296,7 @@ rule functionVariableExpression {
 # -----------------------------------------------------------------------
 
 # Grammar: atomicExpression: variable | instanceLiteralToken | anyLambda | instanceReference
-#                          | expressionInstance | dsl | columnBuilders | AT ...
+#                          | expressionInstance | dsl | columnBuilders | parentReference | AT ...
 # A multi-way dispatcher: simple delegates for most sub-rules, an inline DSL block
 # alternative, and AT (TypeRef) and columnBuilders dispatched to their own rules.
 rule atomicExpression as ValueSpecification {
@@ -324,10 +324,31 @@ rule atomicExpression as ValueSpecification {
   alt when $ctx.columnBuilders {
     return buildColumnBuilders($ctx.columnBuilders)
   }
+  alt when $ctx.parentReference {
+    return buildParentReference($ctx.parentReference)
+  }
   alt when $ctx.AT {
     return buildAtomicTypeRef($ctx)
   }
   else error("Unsupported atomicExpression")
+}
+
+# Build a VariableExpression-style AST for `~`, `~.~`, `~.foo`, `~.~.foo.bar`, etc.
+# The tilde-only prefix becomes a VariableExpression whose name is the literal
+# tilde sequence ("~", "~.~", …) — the compiler binds these names in the
+# enclosing `^X(...)` scope so they carry the correct static type.
+# Each propertyName after the tildes is wrapped as a DotApplication around the
+# growing receiver, mirroring how `$x.foo.bar` parses.
+rule parentReference as ValueSpecification {
+  chain_fold from newImpl(VariableExpression,
+                          sourceInformation=buildSourceInfo($ctx),
+                          name=joinTextWith($ctx.TILDE, "."))
+                over $ctx.propertyName {
+    else step newImpl(DotApplication,
+                       sourceInformation=buildSourceInfo($ctx),
+                       functionName=$it.text,
+                       parametersValues=listOf(acc))
+  }
 }
 
 # Grammar: `@Type[mul]` / `@Type|mul` / `@Type` / `@|mul` / `@[mul]` — a "TypeHolder"
@@ -672,24 +693,11 @@ rule expressionInstanceParserPropertyAssignment {
 
 # Grammar: expressionInstanceRightSide: expressionInstanceAtomicRightSide
 # expressionInstanceAtomicRightSide:
-#     parentReference | combinedExpression | expressionInstance | qualifiedName
-# parentReference is `~.~.~...propertyName.propertyName`: count of TILDEs gives
-# the "depth", DOT-joined propertyNames give the "path".
+#     combinedExpression | expressionInstance | qualifiedName
+# parentReference (`~`, `~.~`, `~.foo`, `~.foo->arrow(...)`) is now an
+# `atomicExpression` alternative, so the combinedExpression branch covers it
+# — including chained arrow invocations after the parent-reference target.
 rule expressionInstanceRightSide as ValueSpecification {
-  alt when $ctx.expressionInstanceAtomicRightSide.parentReference {
-    return newImpl(FunctionInvocation,
-                   sourceInformation=buildSourceInfo($ctx.expressionInstanceAtomicRightSide.parentReference),
-                   functionName="parentReference",
-                   parametersValues=listOf(
-                     newImpl(AtomicValue,
-                             sourceInformation=buildSourceInfo($ctx.expressionInstanceAtomicRightSide.parentReference),
-                             genericType=primitiveType("Integer"),
-                             value=(long)($ctx.expressionInstanceAtomicRightSide.parentReference.TILDE.size - 1)),
-                     newImpl(AtomicValue,
-                             sourceInformation=buildSourceInfo($ctx.expressionInstanceAtomicRightSide.parentReference),
-                             genericType=primitiveType("String"),
-                             value=joinTextWith($ctx.expressionInstanceAtomicRightSide.parentReference.propertyName, "."))))
-  }
   alt when $ctx.expressionInstanceAtomicRightSide.combinedExpression {
     return buildCombinedExpression($ctx.expressionInstanceAtomicRightSide.combinedExpression)
   }

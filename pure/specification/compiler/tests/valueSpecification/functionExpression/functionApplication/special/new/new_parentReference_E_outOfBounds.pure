@@ -1,0 +1,25 @@
+###Error
+Parent reference '~' is out of bounds: only 0 enclosing `^X(...)` construction(s) are visible here. (at valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_outOfBounds:12c3-12c3)
+Parent reference '~.~' is out of bounds: only 1 enclosing `^X(...)` construction(s) are visible here. (at valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_outOfBounds:18c23-18c25)
+
+###Pure
+import test::new::parentRefError::*;
+
+function test::new::parentRefError::testParentRefOutOfBounds(): Any[*]
+{
+  // `~` here is outside any `^X(...)` — there is no enclosing construction
+  // for the parent-reference to bind to.
+  ~
+}
+
+function test::new::parentRefError::testParentRefDepthTooDeep(): Any[*]
+{
+  // Only one enclosing `^Node(...)`, so `~.~` (depth 1) is out of bounds.
+  ^Node(value=1, next=~.~);
+}
+
+Class test::new::parentRefError::Node
+{
+  value: Integer[1];
+  next:  Node[0..1];
+}

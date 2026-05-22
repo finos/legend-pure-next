@@ -66,6 +66,20 @@ public final class FunctionExpressionResolver
     {
         context.debug("resolveFunctionExpression: %s (%s)", expr._functionName(), expr.getClass().getSimpleName());
         context.debugDepthInc();
+        // Parent-reference (`~`) typing: when resolving `^X(...)` (new) or
+        // `^$x(...)` (copy), push the construction's GenericType so any `~`
+        // VariableExpression that appears inside the key expressions resolves
+        // against the right enclosing type. Pop after the call's args have
+        // been walked. Skipped (push null) when the type can't be extracted
+        // at this point — fixpoint will catch it on a later iteration.
+        PureLanguageCompilerContext plctx = context.compilerContextExtensions(PureLanguageCompilerContext.class);
+        GenericType ctorType = extractConstructionType(expr, plctx);
+        boolean pushed = false;
+        if (ctorType != null)
+        {
+            plctx.pushConstructionType(ctorType);
+            pushed = true;
+        }
         try
         {
             if (expr instanceof DotApplication dotApplication && expr._parametersValues().notEmpty())
@@ -88,8 +102,65 @@ public final class FunctionExpressionResolver
         }
         finally
         {
+            if (pushed)
+            {
+                plctx.popConstructionType();
+            }
             context.debugDepthDec();
         }
+    }
+
+    /**
+     * For `new(GTMH, KeyExpression[*])` or `copy(T, KeyExpression[*])`, return
+     * the GenericType of the instance being constructed. Used to push a
+     * scope for `~` VariableExpression resolution. Returns null when the
+     * type can't yet be read off the call's first argument (the fixpoint
+     * resolver will pick it up on a later pass).
+     */
+    private static GenericType extractConstructionType(FunctionExpression expr, PureLanguageCompilerContext plctx)
+    {
+        if (expr._functionName() == null || expr._parametersValues() == null || expr._parametersValues().isEmpty())
+        {
+            return null;
+        }
+        if ("new".equals(expr._functionName()))
+        {
+            ValueSpecification firstArg = expr._parametersValues().getFirst();
+            if (firstArg instanceof meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder gtmh
+                    && gtmh._genericType() != null)
+            {
+                GenericType gt = gtmh._genericType();
+                org.eclipse.collections.api.list.MutableList<? extends GenericType> typeArgs = _GenericType.typeArguments(gt);
+                if (typeArgs != null && !typeArgs.isEmpty())
+                {
+                    return typeArgs.getFirst();
+                }
+            }
+            return null;
+        }
+        if ("copy".equals(expr._functionName()))
+        {
+            ValueSpecification firstArg = expr._parametersValues().getFirst();
+            // The receiver's type is what we want, but it may not be set yet
+            // until after the first resolver pass — return null and let the
+            // fixpoint try again.
+            if (firstArg._genericType() != null && !(firstArg._genericType() instanceof CompilerNotSetGenericType))
+            {
+                return firstArg._genericType();
+            }
+            // Best effort for `^$x(...)`: look the variable up in scope by name.
+            if (firstArg instanceof meta.pure.metamodel.valuespecification.VariableExpression ve)
+            {
+                meta.pure.metamodel.valuespecification.VariableExpression match = plctx.resolveVariable(ve._name());
+                if (match != null && match._genericType() != null
+                        && !(match._genericType() instanceof CompilerNotSetGenericType))
+                {
+                    return match._genericType();
+                }
+            }
+            return null;
+        }
+        return null;
     }
 
     public static FunctionExpression finalizeFunctionExpression(FunctionExpression resolved, int errorCheckpoint, MetadataAccess model, CompilationContext context)

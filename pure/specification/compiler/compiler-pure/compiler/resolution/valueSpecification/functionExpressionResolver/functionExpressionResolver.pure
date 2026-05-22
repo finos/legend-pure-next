@@ -39,22 +39,92 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     debug($context, | 'resolveFunctionExpression: ' + $fi.functionName->toOne() + ' (' + $fi->type()->toOne()->elementToPath() + ')');
     let deepCtx = $context->debugSpaceInc();
     let checkpoint = $context.errors->size();
+    // Parent-reference (`~`) typing: when resolving `^X(...)` or `^$x(...)`,
+    // push the construction's GenericType so any `~` VariableExpression that
+    // appears inside the key expressions resolves against the right enclosing
+    // type. The push is into the CompilerContext (immutable, threaded). Skipped
+    // when the type can't be extracted yet — the fixpoint resolver will catch
+    // it on a later pass.
+    let ctorGT = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractConstructionType($fi, $scope, $deepCtx);
+    let pushedCtx = if($ctorGT->isNotEmpty(),
+        | ^$deepCtx(constructionTypeStack = $deepCtx.constructionTypeStack->concatenate($ctorGT->toOne())),
+        | $deepCtx
+    );
     let result = match($fi, [
         dot:DotApplication[1] |
             if($dot.parametersValues->isNotEmpty(),
-                | resolveDotApplication($dot, $scope, $deepCtx),
-                | resolveFunctionApplication($dot->cast(@FunctionInvocation), $scope, $deepCtx)
+                | resolveDotApplication($dot, $scope, $pushedCtx),
+                | resolveFunctionApplication($dot->cast(@FunctionInvocation), $scope, $pushedCtx)
             );,
         inv:FunctionApplication[1] |
-            resolveFunctionApplication($inv, $scope, $deepCtx)
+            resolveFunctionApplication($inv, $scope, $pushedCtx)
     ]);
-    // Finalize all FunctionExpressions (mirrors Java FunctionExpressionResolver.finalizeFunctionExpression)
-    if($result.value->isNotEmpty(),
-        | match($result.value->toOne(), [
-              fe:FunctionExpression[1] | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($fe, $checkpoint, $result.context),
-              a:Any[1] | $result
-          ]),
+    // Pop the construction type back off the threaded context before finalising.
+    // The pushed/popped scope only matters for the inner key-expression walk.
+    let poppedCtx = if($ctorGT->isNotEmpty(),
+        | let resultCtx = $result.context;
+          let stackSize = $resultCtx.constructionTypeStack->size();
+          let truncated = $resultCtx.constructionTypeStack->take($stackSize - 1);
+          let newCtx = ^$resultCtx(constructionTypeStack = $truncated);
+          ^$result(context = $newCtx);,
         | $result
+    );
+    // Finalize all FunctionExpressions (mirrors Java FunctionExpressionResolver.finalizeFunctionExpression)
+    if($poppedCtx.value->isNotEmpty(),
+        | match($poppedCtx.value->toOne(), [
+              fe:FunctionExpression[1] | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($fe, $checkpoint, $poppedCtx.context),
+              a:Any[1] | $poppedCtx
+          ]),
+        | $poppedCtx
+    );
+}
+
+// For `new(GTMH, KeyExpression[*])` or `copy(T, KeyExpression[*])`, return the
+// GenericType of the instance being constructed. Used to push a scope for `~`
+// VariableExpression resolution. Returns empty when the type can't yet be read
+// off the call's first argument (the fixpoint resolver will pick it up on a
+// later pass).
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractConstructionType(fi:FunctionExpression[1], scope:VariableExpression[*], context:CompilerContext[1]):meta::pure::metamodel::type::generics::GenericType[0..1]
+{
+    if($fi.functionName->isEmpty() || $fi.parametersValues->isEmpty(),
+        | []->cast(@meta::pure::metamodel::type::generics::GenericType),
+        | let fname = $fi.functionName->toOne();
+          if($fname == 'new',
+              | let firstArg = $fi.parametersValues->at(0);
+                $firstArg->match([
+                    gtmh:meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder[1] |
+                        if($gtmh.genericType->isEmpty(),
+                            | []->cast(@meta::pure::metamodel::type::generics::GenericType),
+                            | let gt = $gtmh.genericType->toOne();
+                              let typeArgs = $gt->genericTypeTypeArguments();
+                              if($typeArgs->isEmpty(),
+                                  | []->cast(@meta::pure::metamodel::type::generics::GenericType),
+                                  | $typeArgs->at(0)
+                              );
+                        );,
+                    a:Any[1] | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+                ]);,
+              | if($fname == 'copy',
+                    | let firstArg2 = $fi.parametersValues->at(0);
+                      if($firstArg2.genericType->isNotEmpty()
+                              && !$firstArg2.genericType->toOne()->instanceOf(CompilerNotSetGenericType),
+                          | $firstArg2.genericType->toOne(),
+                          | // Best effort: look the variable up in scope.
+                            $firstArg2->match([
+                                ve:VariableExpression[1] |
+                                    let match = $scope->filter(s | $s.name == $ve.name);
+                                    if($match->isNotEmpty()
+                                            && $match->at(0).genericType->isNotEmpty()
+                                            && !$match->at(0).genericType->toOne()->instanceOf(CompilerNotSetGenericType),
+                                        | $match->at(0).genericType->toOne(),
+                                        | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+                                    );,
+                                a:Any[1] | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+                            ]);
+                      );,
+                    | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+              );
+          );
     );
 }
 

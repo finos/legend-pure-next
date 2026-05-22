@@ -273,7 +273,8 @@ function meta::pure::compiler::newCompilerContext(debugMode:Boolean[1]):Compiler
         inferenceRollbacks = 0,
         candidateEvaluations = 0,
         rollbackSites = newMap([]->cast(@Pair<String, Integer>)),
-        referencedBy = newMap([]->cast(@Pair<String, List<String>>))
+        referencedBy = newMap([]->cast(@Pair<String, List<String>>)),
+        constructionTypeStack = []->cast(@meta::pure::metamodel::type::generics::GenericType)
     );
 }
 

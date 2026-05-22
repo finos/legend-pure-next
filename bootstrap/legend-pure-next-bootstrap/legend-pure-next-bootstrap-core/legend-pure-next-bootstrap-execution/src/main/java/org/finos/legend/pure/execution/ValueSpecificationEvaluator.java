@@ -124,6 +124,31 @@ public class ValueSpecificationEvaluator
     }
 
     /**
+     * Count the leading tilde sequence of a variable name. Returns N for names
+     * matching the pattern `~(.~){N-1}` (so {@code "~"} → 1, {@code "~.~"} → 2,
+     * …); returns 0 for any name that isn't a parent reference. Mirrors
+     * {@code PureLanguageCompilerContext.parentReferenceTildeCount}.
+     */
+    public static int parentReferenceTildeCount(String name)
+    {
+        if (name == null || name.isEmpty() || name.charAt(0) != '~')
+        {
+            return 0;
+        }
+        int count = 1;
+        int n = name.length();
+        for (int i = 1; i + 1 < n; i += 2)
+        {
+            if (name.charAt(i) != '.' || name.charAt(i + 1) != '~')
+            {
+                return 0;
+            }
+            count++;
+        }
+        return name.charAt(n - 1) == '~' ? count : 0;
+    }
+
+    /**
      * Push an instance onto the construction stack.
      * Used by {@code new} and {@code copy} natives to track the instance hierarchy
      * during construction, enabling parent-reference ({@code ~}) resolution.
@@ -176,6 +201,25 @@ public class ValueSpecificationEvaluator
             {
                 Scope cur = varStack.peek();
                 String name = ve._name();
+                // Parent-reference variable (`~`, `~.~`, …): not a regular scope
+                // variable — its value is the in-progress `^X(...)` construction
+                // {@code depth} levels out, sourced from the construction stack
+                // maintained by the new()/copy() lazy natives. Same construct
+                // the compiler's VariableExpressionResolver types via
+                // {@code lookupParentReference} at compile time.
+                int tildeDepth = parentReferenceTildeCount(name);
+                if (tildeDepth > 0)
+                {
+                    Object target = peekConstruction(tildeDepth - 1);
+                    if (target == null)
+                    {
+                        throw new RuntimeException("Parent reference '" + name
+                                + "' is out of bounds — no enclosing `^X(...)` construction at depth "
+                                + (tildeDepth - 1) + ".");
+                    }
+                    yield _E_ValueSpecification.wrap(target, ve._genericType(), ve._multiplicity(),
+                            this.natives.resolver());
+                }
                 // Inline cache fast path: if the cached slot still holds
                 // the same name, return its value directly (one array
                 // index + one equality check).

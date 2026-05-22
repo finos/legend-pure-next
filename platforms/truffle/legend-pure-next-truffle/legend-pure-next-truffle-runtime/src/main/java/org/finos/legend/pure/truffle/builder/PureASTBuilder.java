@@ -1087,12 +1087,40 @@ public final class PureASTBuilder
     {
         Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(ve, SLOT_NAME);
         String veName = nameObj instanceof String s ? s : null;
+        // Parent-reference variable: name is a tilde sequence (`~`, `~.~`, …).
+        // Doesn't live in a frame slot — peek the PureLanguage construction
+        // stack instead. Depth = (tilde count - 1).
+        int tildeDepth = parentReferenceTildeCount(veName);
+        if (tildeDepth > 0)
+        {
+            return new org.finos.legend.pure.truffle.ast.ParentReferenceReadNode(tildeDepth - 1, veName);
+        }
         Integer slot = resolveSlot(veName);
         if (slot != null)
         {
             return new FrameVariableReadNode(slot, veName);
         }
         return new FrameVariableReadNode(-1, veName);
+    }
+
+    /** Tilde-pattern count: {@code "~"} → 1, {@code "~.~"} → 2, …; 0 for non-parent-ref names. */
+    private static int parentReferenceTildeCount(String name)
+    {
+        if (name == null || name.isEmpty() || name.charAt(0) != '~')
+        {
+            return 0;
+        }
+        int count = 1;
+        int n = name.length();
+        for (int i = 1; i + 1 < n; i += 2)
+        {
+            if (name.charAt(i) != '.' || name.charAt(i + 1) != '~')
+            {
+                return 0;
+            }
+            count++;
+        }
+        return name.charAt(n - 1) == '~' ? count : 0;
     }
 
     private PureNode lowerFrameLet(Object fe)

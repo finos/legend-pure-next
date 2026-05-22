@@ -1426,9 +1426,12 @@ public final class VisitorMappingGenerator
             return;
         }
         VisitorMappingParser.ChainSegmentContext last = chain.get(chain.size() - 1);
+        // `$it.text` (chain size 1) is allowed in addition to `$it.X.text` —
+        // when the loop variable is itself a ParserRuleContext, `.text` reads
+        // its source text via ParserRuleContext#getText().
         boolean endsInText = (last instanceof VisitorMappingParser.PathSegContext)
                 && "text".equals(((VisitorMappingParser.PathSegContext) last).member.getText())
-                && chain.size() >= 2;
+                && chain.size() >= 1;
         out.append("it");
         int upto = endsInText ? chain.size() - 1 : chain.size();
         for (int i = 0; i < upto; i++)

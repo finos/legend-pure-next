@@ -229,6 +229,7 @@ atomicExpression:
                  | expressionInstance
                  | variable
                  | columnBuilders
+                 | parentReference
                  | (AT (type? (PIPE multiplicityArgument)? | multiplicity))
                  | anyLambda
                  | instanceReference
@@ -290,7 +291,10 @@ expressionInstanceRightSide: expressionInstanceAtomicRightSide
 parentReference: TILDE (DOT TILDE)* (DOT propertyName (DOT propertyName)*)?
 ;
 
-expressionInstanceAtomicRightSide: parentReference | combinedExpression | expressionInstance | qualifiedName
+// parentReference is now an atomicExpression alternative so chains like
+// `~.foo->map(...)` parse naturally through combinedExpression. The plain
+// `~`, `~.~`, `~.foo` forms still parse, just via the combinedExpression branch.
+expressionInstanceAtomicRightSide: combinedExpression | expressionInstance | qualifiedName
 ;
 
 expressionInstanceParserPropertyAssignment: propertyName (DOT propertyName)* PLUS? EQUAL expressionInstanceRightSide

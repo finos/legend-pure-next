@@ -1,0 +1,154 @@
+###Pure
+import test::copy::parentRef::*;
+
+function test::copy::parentRef::testCopySelfReference(): Any[*]
+{
+  let n = ^Node(value=1);
+  let c = ^$n(next=~);
+}
+
+function test::copy::parentRef::testCopyPropertyAccess(): Any[*]
+{
+  let c = ^Container(name='outer', items=['a', 'b']);
+  ^$c(echoed=~.items);
+}
+
+function test::copy::parentRef::testCopyPropertyArrow(): Any[*]
+{
+  let c = ^Container(name='outer', items=['a', 'b']);
+  ^$c(echoed=~.items->map(s|$s));
+}
+
+Class test::copy::parentRef::Node
+{
+  value: Integer[1];
+  next: Node[0..1];
+}
+
+Class test::copy::parentRef::Container
+{
+  name:   String[1];
+  items:  String[*];
+  echoed: String[*];
+}
+
+###CompiledGraph
+function test::copy::parentRef::testCopySelfReference__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::parentRef::Node##[1]#  ~@FunctionInvocation@  @6:3-6:24
+    typeParam T -> #test::copy::parentRef::Node#
+    mulParam m -> #[1]#
+    AtomicValue  'n' :@String@[1]  ~@AtomicValue@  @6:7-6:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::parentRef::Node##[1]#  ~@FunctionInvocation@  @6:11-6:24
+      typeParam T -> test::copy::parentRef::Node
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRef::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRef::Node|1>  @6:11-6:24
+      Collection :#KeyExpression#[1]  ~@Collection@  @6:11-6:24
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:17-6:23
+          AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @6:17-6:23
+          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:23-6:23
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::parentRef::Node##[1]#  ~@FunctionInvocation@  @7:3-7:21
+    typeParam T -> #test::copy::parentRef::Node#
+    mulParam m -> #[1]#
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @7:7-7:7
+    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::parentRef::Node##[1]#  ~@FunctionInvocation@  @7:11-7:21
+      typeParam T -> #test::copy::parentRef::Node#
+      Variable n :#test::copy::parentRef::Node##[1]#  ~@VariableExpression@  @7:12-7:13
+      Collection :#KeyExpression#[1]  ~@Collection@  @7:11-7:21
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @7:15-7:20
+          AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @7:15-7:20
+          Variable ~ :#test::copy::parentRef::Node##[1]#  ~@VariableExpression@  @7:20-7:20
+
+function test::copy::parentRef::testCopyPropertyAccess__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::parentRef::Container##[1]#  ~@FunctionInvocation@  @12:3-12:52
+    typeParam T -> #test::copy::parentRef::Container#
+    mulParam m -> #[1]#
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @12:7-12:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::parentRef::Container##[1]#  ~@FunctionInvocation@  @12:11-12:52
+      typeParam T -> test::copy::parentRef::Container
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRef::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRef::Container|1>  @12:11-12:52
+      Collection :#KeyExpression#[2]  ~@Collection@  @12:11-12:52
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:22-12:33
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @12:22-12:33
+          AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @12:27-12:33
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:36-12:51
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @12:36-12:51
+          Collection :#String#[2]  ~@Collection@  @12:42-12:51
+            AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @12:43-12:45
+            AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @12:48-12:50
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::parentRef::Container##[1]#  ~@FunctionInvocation@  @13:3-13:21
+    typeParam T -> #test::copy::parentRef::Container#
+    Variable c :#test::copy::parentRef::Container##[1]#  ~@VariableExpression@  @13:4-13:5
+    Collection :#KeyExpression#[1]  ~@Collection@  @13:3-13:21
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @13:7-13:20
+        AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @13:7-13:20
+        DotApplication test::copy::parentRef::Container.items :#String##[*]#  ~@DotApplication@  @13:14-13:20
+          Variable ~ :#test::copy::parentRef::Container##[1]#  ~@VariableExpression@  @13:14-13:20
+
+function test::copy::parentRef::testCopyPropertyArrow__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::parentRef::Container##[1]#  ~@FunctionInvocation@  @18:3-18:52
+    typeParam T -> #test::copy::parentRef::Container#
+    mulParam m -> #[1]#
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @18:7-18:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::parentRef::Container##[1]#  ~@FunctionInvocation@  @18:11-18:52
+      typeParam T -> test::copy::parentRef::Container
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRef::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRef::Container|1>  @18:11-18:52
+      Collection :#KeyExpression#[2]  ~@Collection@  @18:11-18:52
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @18:22-18:33
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @18:22-18:33
+          AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @18:27-18:33
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @18:36-18:51
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @18:36-18:51
+          Collection :#String#[2]  ~@Collection@  @18:42-18:51
+            AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @18:43-18:45
+            AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @18:48-18:50
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::parentRef::Container##[1]#  ~@FunctionInvocation@  @19:3-19:32
+    typeParam T -> #test::copy::parentRef::Container#
+    Variable c :#test::copy::parentRef::Container##[1]#  ~@VariableExpression@  @19:4-19:5
+    Collection :#KeyExpression#[1]  ~@Collection@  @19:3-19:32
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @19:7-19:31
+        AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @19:7-19:31
+        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@ArrowInvocation@  @19:21-19:31
+          typeParam T -> #String#
+          typeParam V -> #String#
+          mulParam m -> #[*]#
+          DotApplication test::copy::parentRef::Container.items :#String##[*]#  ~@DotApplication@  @19:14-19:20
+            Variable ~ :#test::copy::parentRef::Container##[1]#  ~@VariableExpression@  @19:14-19:20
+          Lambda(s:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @19:27-19:30
+            Variable s :#String##[1]#  ~@VariableExpression@  @19:29-19:30
+
+class test::copy::parentRef::Node extends Any  ~Class<test::copy::parentRef::Node>  @22:1-26:1
+  property value :@Integer@[1]  ~Property<test::copy::parentRef::Node, @Integer@|1>
+  property next :test::copy::parentRef::Node[0..1]  ~Property<test::copy::parentRef::Node, test::copy::parentRef::Node|0..1>
+
+class test::copy::parentRef::Container extends Any  ~Class<test::copy::parentRef::Container>  @28:1-33:1
+  property name :@String@[1]  ~Property<test::copy::parentRef::Container, @String@|1>
+  property items :@String@[*]  ~Property<test::copy::parentRef::Container, @String@|*>
+  property echoed :@String@[*]  ~Property<test::copy::parentRef::Container, @String@|*>
+
+###ReverseIndex
+meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::copy::parentRef::testCopyPropertyArrow__Any_MANY_
+meta::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+  test::copy::parentRef::testCopyPropertyAccess__Any_MANY_
+  test::copy::parentRef::testCopyPropertyArrow__Any_MANY_
+  test::copy::parentRef::testCopySelfReference__Any_MANY_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::copy::parentRef::testCopyPropertyAccess__Any_MANY_
+  test::copy::parentRef::testCopyPropertyArrow__Any_MANY_
+  test::copy::parentRef::testCopySelfReference__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::copy::parentRef::testCopyPropertyAccess__Any_MANY_
+  test::copy::parentRef::testCopyPropertyArrow__Any_MANY_
+  test::copy::parentRef::testCopySelfReference__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::copy::parentRef::testCopyPropertyAccess__Any_MANY_
+  test::copy::parentRef::testCopyPropertyArrow__Any_MANY_
+  test::copy::parentRef::testCopySelfReference__Any_MANY_
+test::copy::parentRef::Container:
+  test::copy::parentRef::testCopyPropertyAccess__Any_MANY_
+  test::copy::parentRef::testCopyPropertyArrow__Any_MANY_
+test::copy::parentRef::Container.items:
+  test::copy::parentRef::testCopyPropertyAccess__Any_MANY_
+  test::copy::parentRef::testCopyPropertyArrow__Any_MANY_
+test::copy::parentRef::Node:
+  test::copy::parentRef::Node.next
+  test::copy::parentRef::testCopySelfReference__Any_MANY_

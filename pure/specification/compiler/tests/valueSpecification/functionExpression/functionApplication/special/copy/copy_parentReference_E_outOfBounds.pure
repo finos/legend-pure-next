@@ -1,0 +1,18 @@
+###Error
+Parent reference '~.~' is out of bounds: only 1 enclosing `^X(...)` construction(s) are visible here. (at valueSpecification/functionExpression/functionApplication/special/copy/copy_parentReference_E_outOfBounds:11c12-11c14)
+
+###Pure
+import test::copy::parentRefError::*;
+
+function test::copy::parentRefError::testCopyParentRefOutOfBounds(): Any[*]
+{
+  // `~.~` is depth 1 but only one `^$x(...)` is enclosing — out of bounds.
+  let n = ^Node(value=1);
+  ^$n(next=~.~);
+}
+
+Class test::copy::parentRefError::Node
+{
+  value: Integer[1];
+  next:  Node[0..1];
+}

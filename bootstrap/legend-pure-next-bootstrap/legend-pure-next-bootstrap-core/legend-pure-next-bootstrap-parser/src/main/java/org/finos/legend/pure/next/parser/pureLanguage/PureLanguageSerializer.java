@@ -455,7 +455,20 @@ public class PureLanguageSerializer
             case AtomicValue av -> serializeAtomicValue(sb, av);
             case DotApplication dot -> serializeDotApplication(sb, dot);
             case FunctionExpression sfe -> serializeFunctionExpression(sb, sfe);
-            case VariableExpression ve -> sb.append("$").append(ve._name());
+            case VariableExpression ve ->
+            {
+                String veName = ve._name();
+                // Parent-reference variables (`~`, `~.~`, …) are written without
+                // the `$` prefix — they're a built-in construct, not a user variable.
+                if (veName != null && !veName.isEmpty() && veName.charAt(0) == '~')
+                {
+                    sb.append(veName);
+                }
+                else
+                {
+                    sb.append("$").append(veName);
+                }
+            }
             default -> sb.append("/* unsupported expression */");
         }
     }

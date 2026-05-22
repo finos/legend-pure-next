@@ -81,10 +81,6 @@ public final class MetaNodeFactories
         registry.register("keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_",
                 (args, gt, mul, fe) -> new KeyExpressionNode(args, gt, mul));
 
-        // parentReference(Integer[1], String[1]) : Any[1]
-        registry.register("parentReference_Integer_1__String_1__Any_1_",
-                (args, gt, mul, fe) -> new ParentReferenceNode(args[0], args[1], gt, mul));
-
         // copy(T[1]) : T[1] — simple copy with no overrides
         registry.register("copy_T_1__T_1_",
                 (args, gt, mul, fe) -> new CopySimpleNode(args[0]));

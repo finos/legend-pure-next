@@ -131,6 +131,15 @@ Class meta::pure::compiler::CompilerContext
     // properties / constraints / enum values. Read by {@code recordReference}
     // to attribute the recorded reference to the current caller.
     currentElementPath : String[0..1];
+
+    // Stack of GenericTypes for every enclosing `^X(...)` whose key
+    // expressions we are currently resolving. Pushed before walking the
+    // KeyExpression collection of `new`/`copy`, popped after. Read by the
+    // VariableExpression resolver when the name is a parent reference
+    // (`~`, `~.~`, …) to assign the construction's type to that variable
+    // — mirrors {@code PureLanguageCompilerContext.constructionTypeStack} in
+    // the Java compiler. Top-of-stack = innermost construction (depth 0).
+    constructionTypeStack : meta::pure::metamodel::type::generics::GenericType[*];
 }
 
 Class meta::pure::compiler::CachedLambdaOutcome
