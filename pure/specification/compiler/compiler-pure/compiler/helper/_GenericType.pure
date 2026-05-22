@@ -976,11 +976,15 @@ function meta::pure::compiler::helper::genericType::asInferredGenericType(gt:Gen
     $gt->match([
         igt : InferredGenericType[1] | $igt,
         gtv : GenericTypeValue[1] |
+            let wrappedType = if($gtv.type->isEmpty(),
+                | $gtv.type,
+                | $gtv.type->toOne()->toTypePointer()
+            );
             ^InferredGenericType(
-                type = $gtv.type,
+                type = $wrappedType,
                 typeArguments = $gtv.typeArguments,
                 multiplicityArguments = $gtv.multiplicityArguments
-            ),
+            );,
         other : GenericType[1] | $gt
     ]);
 }
