@@ -1,0 +1,20 @@
+###Pure
+import protocol::support::*;
+function protocol::copyExpressions(node: MyClass[1]): Any[*]
+{
+  let a = ^buildOne()(name='a');
+  let b = ^$node.next(name='b');
+  let c = ^buildOne()->at(0)(name='c');
+  let d = ^^MyClass()(name='d');
+}
+
+function protocol::support::buildOne(): MyClass[1]
+{
+  ^MyClass(name='one')
+}
+
+Class protocol::support::MyClass
+{
+  name: String[1];
+  next: MyClass[0..1];
+}

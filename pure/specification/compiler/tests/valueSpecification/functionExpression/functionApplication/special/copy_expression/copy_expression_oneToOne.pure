@@ -1,0 +1,62 @@
+###Pure
+import test::copy::oneToOne::*;
+
+// Tests the new `^expr(keys)` form where the receiver expression has
+// multiplicity [1] — behaves identically to the variable-form `^$x(keys)`,
+// resolving `copy(receiver, [keys])` against the
+// `copy(T[1], KeyExpression[*]):T[1]` native.
+function test::copy::oneToOne::testCopyFromFunctionCall(): Any[*]
+{
+  let a = ^buildOne()(name='from-call');
+}
+
+function test::copy::oneToOne::buildOne(): Node[1]
+{
+  ^Node(name='seed');
+}
+
+Class test::copy::oneToOne::Node
+{
+  name: String[1];
+}
+
+###CompiledGraph
+function test::copy::oneToOne::testCopyFromFunctionCall__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @10:3-10:39
+    typeParam T -> #test::copy::oneToOne::Node#
+    mulParam m -> #[1]#
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @10:7-10:7
+    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @10:11-10:39
+      typeParam T -> #test::copy::oneToOne::Node#
+      FunctionInvocation test::copy::oneToOne::buildOne__Node_1_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @10:12-10:21
+      Collection :#KeyExpression#[1]  ~@Collection@  @10:11-10:39
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @10:23-10:38
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @10:23-10:38
+          AtomicValue  'from-call' :@String@[1]  ~@AtomicValue@  @10:28-10:38
+
+function test::copy::oneToOne::buildOne__Node_1_():test::copy::oneToOne::Node[1]  ~UserDefinedFunction<{->test::copy::oneToOne::Node[1]}>
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @15:3-15:20
+    typeParam T -> test::copy::oneToOne::Node
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::oneToOne::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::oneToOne::Node|1>  @15:3-15:20
+    Collection :#KeyExpression#[1]  ~@Collection@  @15:3-15:20
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @15:9-15:19
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @15:9-15:19
+        AtomicValue  'seed' :@String@[1]  ~@AtomicValue@  @15:14-15:19
+
+class test::copy::oneToOne::Node extends Any  ~Class<test::copy::oneToOne::Node>  @18:1-21:1
+  property name :@String@[1]  ~Property<test::copy::oneToOne::Node, @String@|1>
+
+###ReverseIndex
+meta::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+  test::copy::oneToOne::testCopyFromFunctionCall__Any_MANY_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::copy::oneToOne::buildOne__Node_1_
+  test::copy::oneToOne::testCopyFromFunctionCall__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::copy::oneToOne::testCopyFromFunctionCall__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::copy::oneToOne::buildOne__Node_1_
+test::copy::oneToOne::Node:
+  test::copy::oneToOne::buildOne__Node_1_
+test::copy::oneToOne::buildOne__Node_1_:
+  test::copy::oneToOne::testCopyFromFunctionCall__Any_MANY_

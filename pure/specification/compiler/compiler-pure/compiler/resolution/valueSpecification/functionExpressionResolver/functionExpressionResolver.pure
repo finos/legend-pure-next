@@ -16,6 +16,7 @@ import meta::pure::metamodel::valuespecification::*;
 import meta::pure::metamodel::type::generics::*;
 import meta::pure::metamodel::relation::*;
 import meta::pure::metamodel::function::*;
+import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
@@ -39,6 +40,22 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     debug($context, | 'resolveFunctionExpression: ' + $fi.functionName->toOne() + ' (' + $fi->type()->toOne()->elementToPath() + ')');
     let deepCtx = $context->debugSpaceInc();
     let checkpoint = $context.errors->size();
+    // Auto-map rewrite for collection-receiver copy: `^expr(keys)` where expr's
+    // multiplicity is not [1] is rewritten to `expr->map(_automap | ^$_automap(keys))`.
+    // The native `copy(T[1], KeyExpression[*])` signature requires a single-cardinality
+    // receiver, so without this rewrite the function resolver emits
+    // "No matching function 'copy' found for argument types (T[0..1], ...)".
+    let autoMapResult = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::maybeRewriteCopyForCollection($fi, $scope, $deepCtx);
+    if($autoMapResult->isNotEmpty(),
+        | $autoMapResult->toOne(),
+        | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::resolveFunctionExpressionStandard($fi, $scope, $context, $checkpoint, $deepCtx)
+    );
+}
+
+// Standard resolution path — extracted so the auto-map rewrite can short-circuit
+// without duplicating the rest of the pipeline. Same behavior as inline-prior.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::resolveFunctionExpressionStandard(fi:FunctionExpression[1], scope:VariableExpression[*], context:CompilerContext[1], checkpoint:Integer[1], deepCtx:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+{
     // Topo-sort `new`/`copy` key expressions so a producer is built before any
     // `~.foo` reader. Detects circular dependencies and emits a compile error.
     let reorderResult = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::reorderKeyExpressionsForParentReferences($fi, $deepCtx);
@@ -360,4 +377,90 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           );
           ^CompilerResult<ValueSpecification>(value = $updated, context = $ctx1);
     );
+}
+
+// If `fi` is a `copy(receiver, [keys])` call whose receiver's resolved multiplicity
+// is not exactly [1], rewrite it as `receiver->map(_automap | copy($_automap, [keys]))`
+// and return the resolved rewrite. Otherwise returns empty so the caller falls
+// through to standard resolution.
+//
+// The pre-resolution of the receiver here gets re-done by the standard path when
+// no rewrite fires — accepted as a small cost since the alternative (threading the
+// pre-resolved receiver through) would complicate every other code path.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::maybeRewriteCopyForCollection(fi:FunctionExpression[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[0..1]
+{
+    if($fi.functionName->isEmpty() || $fi.functionName->toOne() != 'copy' || $fi.parametersValues->isEmpty(),
+        | []->cast(@CompilerResult<ValueSpecification>),
+        | let receiver = $fi.parametersValues->at(0);
+          let receiverResult = resolveValueSpecification($receiver, $scope, $context);
+          if($receiverResult.value->isEmpty(),
+              | []->cast(@CompilerResult<ValueSpecification>),
+              | let resolvedReceiver = $receiverResult.value->toOne();
+                let receiverMul = $resolvedReceiver.multiplicity;
+                let isExactlyOne = $receiverMul->isNotEmpty()
+                                && !$receiverMul->toOne()->instanceOf(CompilerNotSetMultiplicity)
+                                && multiplicityLowerBound($receiverMul->toOne()) == 1
+                                && multiplicityUpperBound($receiverMul->toOne()) == 1;
+                if($isExactlyOne,
+                    | []->cast(@CompilerResult<ValueSpecification>),
+                    | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::buildCopyAutomap($fi, $resolvedReceiver, $scope, $receiverResult.context)
+                );
+          );
+    );
+}
+
+// Build `receiver->map({_automap:T[1] | copy($_automap, keys)})` and resolve it.
+// `keys` is the original Collection<KeyExpression> from the source `copy(...)` call;
+// we hand it to the inner copy verbatim so any `~`/`~.~` parent references in key
+// values still resolve against the element-level construction.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::buildCopyAutomap(fi:FunctionExpression[1], resolvedReceiver:ValueSpecification[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+{
+    let receiverGT = $resolvedReceiver.genericType->toOne();
+    // Lambda param: _automap : ReceiverElementType[1] — uses the receiver's element-
+    // level genericType so the inner copy's signature match resolves on `T[1]`.
+    let lambdaParam = ^VariableExpression(
+        name = '_automap',
+        genericType = $receiverGT,
+        multiplicity = PureOne
+    );
+    // Lambda body: copy($_automap, [keys]). The inner var ref is left unresolved
+    // (NotSet GT/mul) so the resolveFunctionExpression call below binds it via
+    // the lambda's introduced scope, matching how dotApplicationResolver's
+    // automap path constructs its body.
+    let varRef = ^VariableExpression(
+        name = '_automap',
+        genericType = ^CompilerNotSetGenericType(),
+        multiplicity = ^CompilerNotSetMultiplicity()
+    );
+    let keys = if($fi.parametersValues->size() >= 2,
+        | [$fi.parametersValues->at(1)],
+        | []->cast(@ValueSpecification)
+    );
+    let innerCopy = ^FunctionInvocation(
+        functionName = 'copy',
+        parametersValues = [$varRef->cast(@ValueSpecification)]->concatenate($keys),
+        genericType = ^CompilerNotSetGenericType(),
+        multiplicity = ^CompilerNotSetMultiplicity(),
+        sourceInformation = $fi.sourceInformation
+    );
+    let emptyLambda = meta::pure::functions::lang::new(
+        ^UserDefinedGenericType(type = LambdaFunction)
+    )->cast(@LambdaFunction<Any>);
+    let lambda = ^$emptyLambda(
+        parameters = [$lambdaParam],
+        expressionSequence = [$innerCopy->cast(@ValueSpecification)]
+    );
+    let lambdaAV = ^AtomicValue(
+        value = $lambda,
+        genericType = ^CompilerNotSetGenericType(),
+        multiplicity = PureOne
+    );
+    let mapFI = ^FunctionInvocation(
+        functionName = 'map',
+        parametersValues = [$resolvedReceiver, $lambdaAV->cast(@ValueSpecification)],
+        genericType = ^CompilerNotSetGenericType(),
+        multiplicity = ^CompilerNotSetMultiplicity(),
+        sourceInformation = $fi.sourceInformation
+    );
+    resolveValueSpecification($mapFI, $scope, $context);
 }

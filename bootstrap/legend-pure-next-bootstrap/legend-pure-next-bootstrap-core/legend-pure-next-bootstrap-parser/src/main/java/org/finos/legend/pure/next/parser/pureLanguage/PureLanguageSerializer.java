@@ -1493,12 +1493,22 @@ public class PureLanguageSerializer
             sb.append(")");
             return;
         }
-        // Handle copy: ^$variable(prop=value, ...) expression instances
+        // Handle copy: ^$variable(prop=value, ...) and ^expression(prop=value, ...) instances.
+        // First param is the receiver: a VariableExpression (`^$x(...)` form) or any other
+        // value specification (`^buildOne()(...)`, `^$x.next(...)`, `^~.foo(...)` forms).
         if ("copy".equals(funcName) && params != null
-                && params.size() >= 1
-                && params.get(0) instanceof VariableExpression varExpr)
+                && params.size() >= 1)
         {
-            sb.append("^$").append(varExpr._name());
+            ValueSpecification receiver = params.get(0);
+            sb.append("^");
+            if (receiver instanceof VariableExpression varExpr)
+            {
+                sb.append("$").append(varExpr._name());
+            }
+            else
+            {
+                serializeExpression(sb, receiver);
+            }
             sb.append("(");
 
             // Second param (index 1) is a Collection of keyExpression calls

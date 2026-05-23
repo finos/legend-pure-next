@@ -277,7 +277,7 @@ buildMilestoningVariableExpression: LATEST_DATE | DATE | variable
 ;
 
 expressionInstance: NEW_SYMBOL
-                          (variable | qualifiedName)
+                          (variable | qualifiedName | combinedExpression)
                           (LESSTHAN typeArguments? (PIPE multiplicityArguments)? GREATERTHAN)? (identifier)?
                           (typeVariableValues)?
                           GROUP_OPEN
@@ -380,7 +380,7 @@ type: ( qualifiedName (LESSTHAN (typeArguments? (PIPE multiplicityArguments)?) G
       )
 ;
 
-typeVariableValues: GROUP_OPEN (instanceLiteral (COMMA instanceLiteral)*)? GROUP_CLOSE
+typeVariableValues: GROUP_OPEN instanceLiteral (COMMA instanceLiteral)* GROUP_CLOSE
 ;
 
 columnType: mayColumnName COLON mayColumnType multiplicity?

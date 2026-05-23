@@ -621,11 +621,17 @@ rule instanceReference as ValueSpecification {
 # Grammar: propertyExpression: DOT propertyName functionExpressionParameters?
 # Property access on a `receiver`: `receiver.propName` or `receiver.propName(args)`.
 # Takes the receiver value-spec as an extra method parameter.
-# Grammar: expressionInstance: NEW (variable | qualifiedName) typeArguments? multiplicityArguments?
+# Grammar: expressionInstance: NEW (variable | qualifiedName | combinedExpression) typeArguments? multiplicityArguments?
 #                              typeVariableValues? GROUP_OPEN expressionInstanceParserPropertyAssignment*
 #                              GROUP_CLOSE
-# Two alts: `^$var(...)` (copy) and `^Type(...)` (new). Property assignments are
-# wrapped in a single Collection appended to the params list when non-empty.
+# Three alts:
+#   - `^$var(...)` (copy variable) — head is `variable`
+#   - `^Type(...)` (new) — head is `qualifiedName`
+#   - `^expr(...)` (copy expression result) — head is `combinedExpression`, used for
+#     `^buildOne()(name='a')`, `^$x.next(name='b')`, `^~.foo(name='c')` etc.
+# All three forms produce a `copy` or `new` FunctionInvocation whose first param
+# is the receiver (variable, type holder, or arbitrary value spec). Property
+# assignments are wrapped in a single Collection appended when non-empty.
 rule expressionInstance as ValueSpecification {
   alt when $ctx.variable {
     return newImpl(FunctionInvocation,
@@ -639,7 +645,7 @@ rule expressionInstance as ValueSpecification {
                                     multiplicity = multBounds(count($ctx.expressionInstanceParserPropertyAssignment), count($ctx.expressionInstanceParserPropertyAssignment)))),
                      listOf(newImpl(VariableExpression, name = $ctx.variable.identifier.text, sourceInformation = buildSourceInfo($ctx.variable)))))
   }
-  alt else {
+  alt when $ctx.qualifiedName {
     return newImpl(FunctionInvocation,
                    sourceInformation = buildSourceInfo($ctx),
                    functionName = "new",
@@ -650,6 +656,18 @@ rule expressionInstance as ValueSpecification {
                                     values = mapList($ctx.expressionInstanceParserPropertyAssignment, buildExpressionInstanceParserPropertyAssignment),
                                     multiplicity = multBounds(count($ctx.expressionInstanceParserPropertyAssignment), count($ctx.expressionInstanceParserPropertyAssignment)))),
                      listOf(buildExpressionInstanceNewHead($ctx))))
+  }
+  alt else {
+    return newImpl(FunctionInvocation,
+                   sourceInformation = buildSourceInfo($ctx),
+                   functionName = "copy",
+                   parametersValues = ifPresent(notEmpty($ctx.expressionInstanceParserPropertyAssignment),
+                     listOf(buildCombinedExpression($ctx.combinedExpression),
+                            newImpl(Collection,
+                                    sourceInformation = buildSourceInfo($ctx),
+                                    values = mapList($ctx.expressionInstanceParserPropertyAssignment, buildExpressionInstanceParserPropertyAssignment),
+                                    multiplicity = multBounds(count($ctx.expressionInstanceParserPropertyAssignment), count($ctx.expressionInstanceParserPropertyAssignment)))),
+                     listOf(buildCombinedExpression($ctx.combinedExpression))))
   }
 }
 

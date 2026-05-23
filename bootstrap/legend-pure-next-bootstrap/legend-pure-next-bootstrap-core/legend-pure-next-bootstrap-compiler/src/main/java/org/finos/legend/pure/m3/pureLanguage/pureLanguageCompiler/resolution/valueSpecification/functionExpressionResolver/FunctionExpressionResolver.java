@@ -25,7 +25,16 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Functi
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.ValueSpecificationResolver;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific.NewResolver;
+import meta.pure.metamodel.valuespecification.AtomicValueImpl;
+import meta.pure.metamodel.valuespecification.Collection;
+import meta.pure.metamodel.valuespecification.FunctionInvocationImpl;
+import meta.pure.metamodel.valuespecification.VariableExpression;
+import meta.pure.metamodel.function.LambdaFunctionImpl;
+import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.list.MutableList;
 
 import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
 import static org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific.LetResolver.registerLetVariable;
@@ -66,6 +75,17 @@ public final class FunctionExpressionResolver
     {
         context.debug("resolveFunctionExpression: %s (%s)", expr._functionName(), expr.getClass().getSimpleName());
         context.debugDepthInc();
+        // Auto-map rewrite for `^expr(keys)` when the receiver's resolved
+        // multiplicity is not [1]: convert to `expr->map(_automap | copy($_automap, [keys]))`
+        // so the native `copy(T[1], KeyExpression[*]):T[1]` signature applies
+        // per-element and the outer return type matches the receiver's
+        // multiplicity ([0..1] or [*]).
+        ValueSpecification autoMapResult = maybeRewriteCopyForCollection(expr, model, context);
+        if (autoMapResult != null)
+        {
+            context.debugDepthDec();
+            return autoMapResult;
+        }
         // Topo-sort `new()`/`copy()` key expressions when one slot reads another
         // via `~.foo`: the runtime sets each slot value as it walks the
         // collection, so a `~.foo` reader must be ordered AFTER its `foo`
@@ -113,6 +133,92 @@ public final class FunctionExpressionResolver
             }
             context.debugDepthDec();
         }
+    }
+
+    /**
+     * If {@code expr} is a {@code copy(receiver, [keys])} call whose receiver's
+     * resolved multiplicity is not exactly [1], rewrite it as
+     * {@code receiver->map(_automap | copy($_automap, [keys]))} and return the
+     * resolved rewrite. Otherwise returns {@code null} so the caller falls
+     * through to standard resolution.
+     *
+     * <p>The native {@code copy(T[1], KeyExpression[*]):T[1]} signature requires
+     * a single-cardinality receiver, so without this rewrite the function
+     * resolver would emit "No matching function 'copy' found for argument types
+     * (T[0..1], ...)".</p>
+     *
+     * <p>The pre-resolution of the receiver here gets re-done by the standard
+     * path when no rewrite fires — accepted as a small cost since the alternative
+     * (threading the pre-resolved receiver through) would complicate every
+     * other code path.</p>
+     */
+    private static ValueSpecification maybeRewriteCopyForCollection(FunctionExpression expr, MetadataAccess model, CompilationContext context)
+    {
+        if (!"copy".equals(expr._functionName())
+                || expr._parametersValues() == null
+                || expr._parametersValues().isEmpty())
+        {
+            return null;
+        }
+        ValueSpecification receiver = expr._parametersValues().getFirst();
+        ValueSpecification resolvedReceiver = ValueSpecificationResolver.resolve(receiver, model, context);
+        if (resolvedReceiver == null) return null;
+        Multiplicity mul = resolvedReceiver._multiplicity();
+        if (mul == null || mul instanceof CompilerNotSetMultiplicity) return null;
+        long lower = _Multiplicity.lowerBound(mul);
+        Long upper = _Multiplicity.upperBound(mul);
+        if (lower == 1L && upper != null && upper == 1L) return null;
+        return buildCopyAutomap(expr, resolvedReceiver, model, context);
+    }
+
+    /**
+     * Build {@code receiver->map({_automap:T[1] | copy($_automap, keys)})} and
+     * resolve it. {@code keys} is the original {@code Collection<KeyExpression>}
+     * from the source {@code copy(...)} call; we hand it to the inner copy
+     * verbatim so any {@code ~}/{@code ~.~} parent references in key values
+     * still resolve against the element-level construction.
+     */
+    private static ValueSpecification buildCopyAutomap(FunctionExpression expr, ValueSpecification resolvedReceiver, MetadataAccess model, CompilationContext context)
+    {
+        Multiplicity pureOne = (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne");
+        // Lambda param: _automap : ReceiverElementType[1] — uses the receiver's
+        // element-level genericType so the inner copy's signature match resolves on `T[1]`.
+        VariableExpression lambdaParam = _VariableExpression.newVariableExpression(model)
+                ._name("_automap")
+                ._genericType(resolvedReceiver._genericType())
+                ._multiplicity(pureOne);
+        // Lambda body: copy($_automap, [keys]). The inner var ref is left
+        // unresolved (no genericType/multiplicity) so the resolveFunctionExpression
+        // call below binds it via the lambda's introduced scope, matching how
+        // DotApplicationResolver's automap path constructs its body.
+        VariableExpression varRef = _VariableExpression.newVariableExpression(model)
+                ._name("_automap");
+        MutableList<ValueSpecification> innerParams = Lists.mutable.with((ValueSpecification) varRef);
+        if (expr._parametersValues().size() >= 2)
+        {
+            innerParams.add(expr._parametersValues().get(1));
+        }
+        FunctionInvocationImpl innerCopy = new FunctionInvocationImpl(model);
+        innerCopy._functionName("copy");
+        innerCopy._parametersValues(innerParams);
+        innerCopy._sourceInformation(expr._sourceInformation());
+        // Build lambda — classifierGenericType filled by later inference.
+        LambdaFunctionImpl lambda = new LambdaFunctionImpl();
+        lambda._classifierGenericType(_GenericType.buildUserDefinedGenericType(
+                (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"),
+                model));
+        lambda._parameters(Lists.mutable.with(lambdaParam));
+        lambda._expressionSequence(Lists.mutable.with(innerCopy));
+        // Wrap lambda in AtomicValue
+        AtomicValueImpl lambdaAV = new AtomicValueImpl(model);
+        lambdaAV._value(lambda);
+        lambdaAV._multiplicity(pureOne);
+        // Build map FunctionInvocation
+        FunctionInvocationImpl mapExpr = new FunctionInvocationImpl(model);
+        mapExpr._functionName("map");
+        mapExpr._parametersValues(Lists.mutable.with(resolvedReceiver, lambdaAV));
+        mapExpr._sourceInformation(expr._sourceInformation());
+        return ValueSpecificationResolver.resolve(mapExpr, model, context);
     }
 
     /**
