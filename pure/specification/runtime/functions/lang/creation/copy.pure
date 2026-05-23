@@ -251,6 +251,58 @@ function <<test.Test>>   meta::pure::functions::lang::tests::copy::testCopyWithA
 
 }
 
+function <<test.Test>> meta::pure::functions::lang::tests::copy::testFoldInsideCopyBuildsAssociationChain():Boolean[1]
+{
+    // Mirror of testFoldInsideNewBuildsAssociationChain but driving an outer
+    // copy expression: the fold's per-iteration ^...() registers into the
+    // outer copy's fresh scope, so `parent=$pack` composes legally without
+    // any inner copy wrappers. The receiver of the outer copy is itself a
+    // freshly-built leaf; the copy retains its name/parent and verifies the
+    // chain in both directions.
+    let leaf = ^LA_Organization(
+        name = 'd',
+        parent = ['b','c']->fold(
+            {cur, pack | ^LA_Organization(name=$cur, parent=$pack) },
+            ^LA_Organization(name='a')
+        )
+    );
+
+    // Copy with a new fold-built parent chain. The override drops the old
+    // parent and threads a fresh chain — all built inside the copy's scope.
+    let renamedLeaf = ^$leaf(
+        name = 'D',
+        parent = ['B','C']->fold(
+            {cur, pack | ^LA_Organization(name=$cur, parent=$pack) },
+            ^LA_Organization(name='A')
+        )
+    );
+
+    // Forward (parent chain): renamedLeaf → C → B → A → root.
+    assertEquals('D', $renamedLeaf.name);
+    assertEquals('C', $renamedLeaf.parent->toOne().name);
+    assertEquals('B', $renamedLeaf.parent->toOne().parent->toOne().name);
+    assertEquals('A', $renamedLeaf.parent->toOne().parent->toOne().parent->toOne().name);
+    assertEquals([], $renamedLeaf.parent->toOne().parent->toOne().parent->toOne().parent);
+
+    // Reverse (children chain): walking down from root must reach renamedLeaf
+    // by identity at every link.
+    let root = $renamedLeaf.parent->toOne().parent->toOne().parent->toOne();
+    let down1 = $root.children->toOne();
+    let down2 = $down1.children->toOne();
+    let down3 = $down2.children->toOne();
+    assertIs($renamedLeaf, $down3);
+    assertIs($renamedLeaf.parent->toOne(), $down2);
+    assertIs($renamedLeaf.parent->toOne().parent->toOne(), $down1);
+
+    // Original leaf untouched — its parent chain still has lowercase names
+    // and its tree is still well-formed in both directions.
+    assertEquals('d', $leaf.name);
+    assertEquals('c', $leaf.parent->toOne().name);
+    let origRoot = $leaf.parent->toOne().parent->toOne().parent->toOne();
+    assertEquals('a', $origRoot.name);
+    assertIs($leaf, $origRoot.children->toOne().children->toOne().children->toOne());
+}
+
 function <<test.Test>> meta::pure::functions::lang::tests::copy::testDeepCopyWithAssociation1():Boolean[1]
 {
     // Replaces the old `firm.employees=[], firm.address=^...` syntax with

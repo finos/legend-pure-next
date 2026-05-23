@@ -198,11 +198,23 @@ public final class PureContext
         }
     }
 
-    /** True iff {@code value} was created within the current new/copy expression. */
+    /**
+     * True iff {@code value} was created within any new/copy expression still
+     * active on the construction stack. Scanning the whole stack (not just the
+     * top) lets higher-order operators (fold/map/etc.) compose naturally
+     * inside an outer new/copy — each lambda iteration's own scope sits on top,
+     * but values constructed in (or registered into) the enclosing scope still
+     * count as fresh. The enclosing scope is the one that owns final bidir
+     * wiring, so this is the right "ownership" boundary.
+     */
     public boolean isFreshInCurrentScope(Object value)
     {
-        java.util.IdentityHashMap<Object, Boolean> top = freshScopeStack.peek();
-        return top != null && value != null && top.containsKey(value);
+        if (value == null) return false;
+        for (java.util.IdentityHashMap<Object, Boolean> scope : freshScopeStack)
+        {
+            if (scope.containsKey(value)) return true;
+        }
+        return false;
     }
 
     /** Register an instance directly into the current fresh scope (for deep-copied intermediates). */

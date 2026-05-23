@@ -201,14 +201,30 @@ public class ValueSpecificationEvaluator
     }
 
     /**
-     * True iff {@code value} was created within the current new/copy
-     * expression — i.e. it appears in the top fresh scope, or was registered
-     * into it by an inner new/copy that already completed.
+     * True iff {@code value} was created within any new/copy expression still
+     * active on the construction stack — i.e. it appears in any scope on the
+     * stack, or was registered into one by an inner new/copy that already
+     * completed. Scanning the whole stack (rather than just the top) lets
+     * higher-order operators (fold/map/etc.) compose naturally inside an outer
+     * new/copy: each lambda iteration's own scope sits on top, but values
+     * constructed in (or registered into) the enclosing scope still count as
+     * fresh. The enclosing scope owns final bidir wiring, so this is the
+     * right "ownership" boundary.
      */
     public boolean isFreshInCurrentScope(Object value)
     {
-        java.util.IdentityHashMap<Object, Boolean> top = freshScopeStack.peek();
-        return top != null && value != null && top.containsKey(value);
+        if (value == null)
+        {
+            return false;
+        }
+        for (java.util.IdentityHashMap<Object, Boolean> scope : freshScopeStack)
+        {
+            if (scope.containsKey(value))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
