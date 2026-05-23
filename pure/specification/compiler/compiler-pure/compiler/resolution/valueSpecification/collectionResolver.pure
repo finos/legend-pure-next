@@ -48,8 +48,13 @@ function meta::pure::compiler::resolution::valueSpecification::collectionResolve
         | asInferredGenericType($commonGTOpt->toOne())
     );
 
+    // Wrap any locally-compiled PE rawType in the common GT as a pointer so
+    // the Collection's `genericType` doesn't persist a stale direct Class PDO
+    // across compile passes (mirrors the wrap at `buildResolvedTypeParameter`).
+    let wrappedCommonGT = $commonGT->meta::pure::compiler::helper::genericType::wrapGenericTypeWithPointer($result.context);
+
     ^meta::pure::compiler::CompilerResult<ValueSpecification>(
-        value = ^$col(values = $result.values, genericType = $commonGT),
+        value = ^$col(values = $result.values, genericType = $wrappedCommonGT),
         context = $result.context
     );
 }
