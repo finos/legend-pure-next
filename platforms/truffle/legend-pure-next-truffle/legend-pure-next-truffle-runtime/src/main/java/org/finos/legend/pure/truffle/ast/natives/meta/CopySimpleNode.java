@@ -41,8 +41,22 @@ public final class CopySimpleNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object result = child.executeGeneric(frame);
-        return doCopy(result, getResolver());
+        // Simple copy has no keys, so no immutability check is needed — but
+        // it still participates in the fresh-scope stack so its product
+        // registers in the enclosing new/copy expression's scope.
+        var eval = org.finos.legend.pure.truffle.PureLanguage.get(this);
+        eval.pushFreshScope();
+        Object copyResult = null;
+        try
+        {
+            Object result = child.executeGeneric(frame);
+            copyResult = doCopy(result, getResolver());
+            return copyResult;
+        }
+        finally
+        {
+            eval.popFreshScopeAndRegister(copyResult);
+        }
     }
 
     private static Object doCopy(Object original, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)

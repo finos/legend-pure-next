@@ -73,6 +73,12 @@ public final class PureContext
 
     // Construction stack for new/copy parent references (~)
     private final ArrayDeque<Object> constructionStack = new ArrayDeque<>();
+    // Fresh-instance scope stack: each new/copy expression pushes a scope on
+    // entry and registers its product in the parent scope on exit. Used to
+    // enforce that association-property values are themselves products of
+    // the current expression (immutability rule — see Java's
+    // ValueSpecificationEvaluator.freshScopeStack for the mirror).
+    private final ArrayDeque<java.util.IdentityHashMap<Object, Boolean>> freshScopeStack = new ArrayDeque<>();
 
     // Per-module state holds caches whose entries reference wrappers from a
     // specific module. typePathCgts is keyed by Pure type path; the cached
@@ -178,6 +184,34 @@ public final class PureContext
 
     public void pushConstruction(Object instance) { constructionStack.push(instance); }
     public void popConstruction() { constructionStack.pop(); }
+
+    /** Push a fresh-instance scope at the start of a new/copy expression. */
+    public void pushFreshScope() { freshScopeStack.push(new java.util.IdentityHashMap<>()); }
+
+    /** Pop the fresh-scope and register {@code result} in the parent scope (if any). */
+    public void popFreshScopeAndRegister(Object result)
+    {
+        freshScopeStack.pop();
+        if (!freshScopeStack.isEmpty() && result != null)
+        {
+            freshScopeStack.peek().put(result, Boolean.TRUE);
+        }
+    }
+
+    /** True iff {@code value} was created within the current new/copy expression. */
+    public boolean isFreshInCurrentScope(Object value)
+    {
+        java.util.IdentityHashMap<Object, Boolean> top = freshScopeStack.peek();
+        return top != null && value != null && top.containsKey(value);
+    }
+
+    /** Register an instance directly into the current fresh scope (for deep-copied intermediates). */
+    public void registerFreshInCurrentScope(Object value)
+    {
+        if (value == null) return;
+        java.util.IdentityHashMap<Object, Boolean> top = freshScopeStack.peek();
+        if (top != null) top.put(value, Boolean.TRUE);
+    }
     public Object peekConstruction(int depth)
     {
         int i = 0;

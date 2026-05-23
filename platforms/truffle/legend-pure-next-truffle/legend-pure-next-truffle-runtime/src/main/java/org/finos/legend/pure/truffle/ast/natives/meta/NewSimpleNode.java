@@ -40,8 +40,22 @@ public final class NewSimpleNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object result = child.executeGeneric(frame);
-        return doNew(result, getResolver());
+        // Simple new (no keys, no bidir target) still participates in the
+        // fresh-scope stack so its product registers in the enclosing
+        // new/copy expression's scope.
+        var eval = org.finos.legend.pure.truffle.PureLanguage.get(this);
+        eval.pushFreshScope();
+        Object newResult = null;
+        try
+        {
+            Object result = child.executeGeneric(frame);
+            newResult = doNew(result, getResolver());
+            return newResult;
+        }
+        finally
+        {
+            eval.popFreshScopeAndRegister(newResult);
+        }
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary

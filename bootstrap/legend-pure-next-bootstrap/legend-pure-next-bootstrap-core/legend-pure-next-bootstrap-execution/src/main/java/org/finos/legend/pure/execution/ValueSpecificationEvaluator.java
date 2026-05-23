@@ -63,6 +63,16 @@ public class ValueSpecificationEvaluator
     private final Deque<meta.pure.metamodel.function.FunctionDefinition> fnEvalStack = new ArrayDeque<>();
     private final Deque<Scope> varStack = new ArrayDeque<>();
     private final Deque<Object> constructionStack = new ArrayDeque<>();
+    // Tracks instances created within the current new()/copy() expression.
+    // Used by copy() to enforce that values assigned to association properties
+    // were instantiated within the same copy expression — otherwise the copy
+    // would mutate the reverse-association property of an existing instance
+    // (e.g. `^$pierre(firm=$firmX)` would add bob to `firmX.employees`, breaking
+    // immutability of `$firmX`). Each new/copy invocation pushes a fresh scope
+    // on entry and registers its result in the parent scope on exit, so nested
+    // creations (`^$pierre(firm=^Firm())`) propagate correctly: the inner
+    // `^Firm()` registers in the outer copy's scope.
+    private final Deque<java.util.IdentityHashMap<Object, Boolean>> freshScopeStack = new ArrayDeque<>();
 
     // Inline cache for variable reads: maps each VariableExpression node to
     // the slot it last resolved to in the *current* frame. JFR found
@@ -164,6 +174,60 @@ public class ValueSpecificationEvaluator
     public void popConstruction()
     {
         constructionStack.pop();
+    }
+
+    /**
+     * Push a fresh-instance scope. Called on entry to new() / copy() so any
+     * inner instance created during this expression can be tracked as
+     * "freshly created within the current expression".
+     */
+    public void pushFreshScope()
+    {
+        freshScopeStack.push(new java.util.IdentityHashMap<>());
+    }
+
+    /**
+     * Pop the fresh-instance scope and register {@code result} (the new/copy's
+     * own product) into the PARENT scope, so an enclosing new/copy sees it as
+     * a fresh value too. Top-level expressions register into nothing.
+     */
+    public void popFreshScopeAndRegister(Object result)
+    {
+        freshScopeStack.pop();
+        if (!freshScopeStack.isEmpty() && result != null)
+        {
+            freshScopeStack.peek().put(result, Boolean.TRUE);
+        }
+    }
+
+    /**
+     * True iff {@code value} was created within the current new/copy
+     * expression — i.e. it appears in the top fresh scope, or was registered
+     * into it by an inner new/copy that already completed.
+     */
+    public boolean isFreshInCurrentScope(Object value)
+    {
+        java.util.IdentityHashMap<Object, Boolean> top = freshScopeStack.peek();
+        return top != null && value != null && top.containsKey(value);
+    }
+
+    /**
+     * Register an instance directly into the current fresh scope. Used by
+     * deep-path copy paths (e.g. `^$pierre(firm.address=...)`) where the
+     * intermediate deep-copy of firm isn't created via a new()/copy() native
+     * call but is still a fresh product of the surrounding copy expression.
+     */
+    public void registerFreshInCurrentScope(Object value)
+    {
+        if (value == null)
+        {
+            return;
+        }
+        java.util.IdentityHashMap<Object, Boolean> top = freshScopeStack.peek();
+        if (top != null)
+        {
+            top.put(value, Boolean.TRUE);
+        }
     }
 
     /**

@@ -153,6 +153,12 @@ public final class CopyWithKeysNode extends PureNode
         for (var kv : keyValues) keyPropNames.add(kv.getKey());
         addCopiedAssociationProps(copy, classPath, keyPropNames, keyValues, eval);
 
+        // Immutability check (mirrors Java copy native): every assoc-prop
+        // value on the copy must have been instantiated within this copy
+        // expression. Runs after deep-property paths have been resolved
+        // (and deep-copied intermediates registered as fresh).
+        NewWithKeysNode.verifyAssocPropsAreFresh(classPath, keyValues, eval);
+
         NewWithKeysNode.setReverseAssociationPointers(copy, classPath, keyValues, eval, appendReader, appendWriter);
 
         for (String topProp : topLevelDeepProps)
@@ -178,6 +184,14 @@ public final class CopyWithKeysNode extends PureNode
     private Object invoke(VirtualFrame frame)
     {
         org.finos.legend.pure.truffle.PureContext eval = getContext();
+        // Open fresh-instance scope (mirror Java MetaNatives copy lazy
+        // native). Inner new/copy results register here; the verify in
+        // finalizeCopy enforces that assoc-prop values originated within
+        // this expression.
+        eval.pushFreshScope();
+        Object copyResult = null;
+        try
+        {
 
         // Step 1: Evaluate the source object (first arg) — pre-compiled as child node
         Object original = sourceNode.executeGeneric(frame);
@@ -245,11 +259,17 @@ public final class CopyWithKeysNode extends PureNode
                 }
             }
 
+            copyResult = copy;
             return finalizeCopy(copy, classPath, keyValues, eval);
         }
         finally
         {
             ctx.popConstruction();
+        }
+        }
+        finally
+        {
+            eval.popFreshScopeAndRegister(copyResult);
         }
     }
 

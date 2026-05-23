@@ -101,22 +101,35 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewWithIdVar
 
 function <<test.Test>> meta::pure::functions::lang::tests::new::testNewWithAssociation():Boolean[1]
 {
+    // new() applies the same immutability rule as copy: an association-property
+    // value passed in keys must itself have been instantiated within this
+    // new/copy expression. Sharing an existing association target across
+    // multiple constructions is disallowed because the bidirectional binding
+    // would mutate the target's reverse-property.
     let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', firm=^LA_Firm(legalName='FirmX'));
     assertEquals('Pierre', $pierre.firstName);
     assertEquals('Doe', $pierre.lastName);
 
     let firmX = $pierre.firm->toOne();
     assertEquals('FirmX', $firmX.legalName);
-
     assertEquals($firmX, $pierre.firm);
     assertEquals($pierre, $firmX.employees);
 
-    let bob = ^LA_Person(firstName='Bob', lastName='Roe', firm=$firmX);
+    // Sharing $firmX between pierre and bob via `firm=$firmX` is rejected.
+    assertError(
+        |^LA_Person(firstName='Bob', lastName='Roe', firm=$firmX),
+        'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
+    );
+
+    // Bob with a fresh inline firm works. Each Person has its own firm, and
+    // $firmX is not mutated.
+    let bob = ^LA_Person(firstName='Bob', lastName='Roe', firm=^LA_Firm(legalName='FirmY'));
     assertEquals('Bob', $bob.firstName);
     assertEquals('Roe', $bob.lastName);
-
-    assertEquals($firmX, $bob.firm);
-    assertSameElements([$bob, $pierre], $firmX.employees);
+    assertEquals('FirmY', $bob.firm->toOne().legalName);
+    assertIsNot($firmX, $bob.firm->toOne());
+    // $firmX still has only $pierre — no mutation.
+    assertSameElements($pierre, $firmX.employees);
 }
 
 

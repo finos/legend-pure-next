@@ -44,22 +44,29 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testFlatCopyToO
 
 function <<test.Test>> meta::pure::functions::lang::tests::copy::testDeepCopyToOne():Boolean[1]
 {
-    let hoboken = ^LA_Address(name='Hoboken, NJ', type=LA_GeographicEntityType.CITY);
-    assertEquals('Hoboken, NJ', $hoboken.name);
+    // The old deep-path syntax (`firm.legalName='X'`) is removed from the
+    // grammar. Equivalent intent is expressed with `^~.field(...)` — a
+    // copy of the receiver's field (read via parent reference `~`) with
+    // overrides — assigned to a top-level key. `~.firm` reads `firm`
+    // from the current construction (the in-progress copy of $pierre).
+    // new() also enforces the immutability rule: assoc-prop values must be
+    // instantiated inline. Compose pierre with all values inline, then read
+    // the nested address/firm back via property access for the assertions.
+    let pierre = ^LA_Person(
+        firstName='Pierre',
+        lastName='Doe',
+        address=^LA_Address(name='Hoboken, NJ', type=LA_GeographicEntityType.CITY),
+        firm=^LA_Firm(legalName='FirmX', address=^LA_Address(name='New York, NY', type=LA_GeographicEntityType.CITY))
+    );
+    let hoboken = $pierre.address->toOne();
+    let firmX = $pierre.firm->toOne();
+    let nyc = $firmX.address->toOne();
 
-    let nyc = ^LA_Address(name='New York, NY', type=LA_GeographicEntityType.CITY);
-
-    let firmX = ^LA_Firm(legalName='FirmX', address=$nyc);
-    assertEquals('FirmX', $firmX.legalName);
-    assertEquals($nyc, $firmX.address);
-
-    let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', address=$hoboken, firm=$firmX);
-    assertEquals('Pierre', $pierre.firstName);
-    assertEquals('Doe', $pierre.lastName);
-    assertEquals($hoboken, $pierre.address);
-    assertEquals($firmX, $pierre.firm);
-
-    let pierre2 = ^$pierre(firstName='David', address.name='Somewhere', firm.employees=[], firm.legalName='FirmX');
+    let pierre2 = ^$pierre(
+        firstName='David',
+        address=^~.address(name='Somewhere'),
+        firm=^~.firm(legalName='FirmX', employees=[])
+    );
     assertEquals('David', $pierre2.firstName);
     assertEquals('Doe', $pierre2.lastName);
     assertIsNot($hoboken, $pierre2.address->toOne());
@@ -68,7 +75,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testDeepCopyToO
     assertEquals('FirmX', $pierre2.firm.legalName);
     assertEquals($nyc, $pierre2.firm.address);
 
-    // Verify that the original objects did not change
+    // Originals untouched.
     assertEquals('Hoboken, NJ', $hoboken.name);
     assertEquals('Hoboken, NJ', $pierre.address.name);
     assertEquals('FirmX', $firmX.legalName);
@@ -176,26 +183,79 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyWithIdV
 
 function <<test.Test>>   meta::pure::functions::lang::tests::copy::testCopyWithAssociation():Boolean[1]
 {
+    // Copy must never mutate an existing instance. `^$pierre(firstName='Bob')`
+    // (without explicitly handling firm) would silently inherit `$pierre.firm`
+    // and mutate `$firmX.employees` via bidirectional binding. The runtime
+    // rejects this — the user must instantiate firm within the copy
+    // expression to maintain immutability.
     let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', firm=^LA_Firm(legalName='FirmX'));
     assertEquals('Pierre', $pierre.firstName);
     assertEquals('Doe', $pierre.lastName);
 
     let firmX = $pierre.firm->toOne();
     assertEquals('FirmX', $firmX.legalName);
-
     assertIs($firmX, $pierre.firm->toOne());
-    assertEquals($pierre, $firmX.employees);
+    assertSameElements($pierre, $firmX.employees);
 
-    let bob = ^$pierre(firstName='Bob', lastName='Roe');
+    // Case 1: omitting firm (inherited from $pierre) → immutability violation.
+    assertError(
+        |^$pierre(firstName='Bob', lastName='Roe'),
+        'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
+    );
+
+    // Case 2: explicitly passing the existing $firmX → same violation (would
+    // still mutate $firmX.employees via bidir binding).
+    assertError(
+        |^$pierre(firstName='Bob', lastName='Roe', firm=$firmX),
+        'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
+    );
+
+    // Case 3: variable holding a fresh instance — still rejected, because the
+    // instance was created outside this copy expression. The runtime can't
+    // tell variable from inline at the value site; only instances created
+    // within this copy's evaluation count as fresh.
+    let preBuiltFirm = ^LA_Firm(legalName='Pre');
+    assertError(
+        |^$pierre(firstName='Bob', lastName='Roe', firm=$preBuiltFirm),
+        'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
+    );
+
+    // Case 4: explicit fresh firm via inline `^LA_Firm(...)` → OK. bob.firm is
+    // the new firm, $firmX is untouched (still has only $pierre).
+    let bob = ^$pierre(firstName='Bob', lastName='Roe', firm=^LA_Firm(legalName='FirmY'));
     assertEquals('Bob', $bob.firstName);
     assertEquals('Roe', $bob.lastName);
+    assertEquals('FirmY', $bob.firm->toOne().legalName);
+    assertIsNot($firmX, $bob.firm->toOne());
+    // Original firm untouched — immutability preserved.
+    assertSameElements($pierre, $firmX.employees);
+    // Bob's fresh firm has bob in employees (bidir on the fresh firm).
+    assertSameElements($bob, $bob.firm->toOne().employees);
 
-    assertIs($firmX, $bob.firm->toOne());
-    assertSameElements([$bob, $pierre], $firmX.employees);
+    // Case 5: explicit clear `firm=[]` → OK. bob has no firm. $firmX
+    // unchanged.
+    let carol = ^$pierre(firstName='Carol', lastName='X', firm=[]);
+    assert($carol.firm->isEmpty());
+    assertSameElements($pierre, $firmX.employees);
+
+    // Case 6: inline copy via `^$firmX()` — the inner copy itself produces a
+    // freshly-created instance within the outer copy's expression, so it
+    // satisfies the fresh-scope check. bob3.firm is a copy of firmX (legal
+    // name still 'FirmX'), but it's a DIFFERENT PDO from firmX — $firmX is
+    // untouched.
+    let bob3 = ^$pierre(firstName='Bob3', lastName='X', firm=^$firmX());
+    assertEquals('Bob3', $bob3.firstName);
+    assertEquals('FirmX', $bob3.firm->toOne().legalName);
+    assertIsNot($firmX, $bob3.firm->toOne());
+    assertSameElements($pierre, $firmX.employees);
+
 }
 
 function <<test.Test>> meta::pure::functions::lang::tests::copy::testDeepCopyWithAssociation1():Boolean[1]
 {
+    // Replaces the old `firm.employees=[], firm.address=^...` syntax with
+    // `firm = ^~.firm(employees=[], address=^...)` — a copy of the
+    // receiver's firm (via parent reference `~`) with overrides.
     let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', firm=^LA_Firm(legalName='FirmX', address=^LA_Address(name='Jersey City, NJ', type=LA_GeographicEntityType.CITY)));
     assertEquals('Pierre', $pierre.firstName);
     assertEquals('Doe', $pierre.lastName);
@@ -207,7 +267,9 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testDeepCopyWit
     assertIs($gsJC, $pierre.firm->toOne());
     assertEquals($pierre, $gsJC.employees);
 
-    let bob = ^$pierre(firstName='Bob', lastName='Roe', firm.employees=[], firm.address=^LA_Address(name='New York, NY', type=LA_GeographicEntityType.CITY));
+    let bob = ^$pierre(firstName='Bob', lastName='Roe',
+        firm=^~.firm(employees=[], address=^LA_Address(name='New York, NY', type=LA_GeographicEntityType.CITY))
+    );
     assertEquals('Bob', $bob.firstName);
     assertEquals('Roe', $bob.lastName);
 
@@ -223,32 +285,36 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testDeepCopyWit
 
 function <<test.Test>> meta::pure::functions::lang::tests::copy::testDeepCopyWithAssociation2():Boolean[1]
 {
-    let firmX = ^LA_Firm(legalName='FirmX');
-    let tech = ^LA_Division(name='Technology', firm=$firmX);
-    let tech1 = ^LA_Department(name='Tech1', parent=$tech, firm=$firmX);
-
+    // Construct tech1 with inline parent + firm (immutability rule). The
+    // copy then uses `^~.parent(...)` to deep-copy tech1's parent with key
+    // overrides, demonstrating the parent-reference pattern for nested copies.
+    let tech1 = ^LA_Department(
+        name='Tech1',
+        parent=^LA_Division(name='Tech1OldParent', firm=^LA_Firm(legalName='FirmA')),
+        firm=^LA_Firm(legalName='FirmB')
+    );
     assertInstanceOf($tech1, LA_Department);
     assertEquals('Tech1', $tech1.name);
-    assertIs($firmX, $tech1.firm);
-    assertIs($tech, $tech1.parent->toOne());
+    assertEquals('Tech1OldParent', $tech1.parent->toOne().name);
+    assertEquals('FirmB', $tech1.firm.legalName);
 
-    assertSameElements([$tech, $tech1], $firmX.organizations);
-    assertSameElements($tech1, $tech.children);
-
-    let tech2 = ^$tech1(name='Tech2', parent.children=[], parent.name='TechParent1');
+    let tech2 = ^$tech1(
+        name='Tech2',
+        parent=^~.parent(children=[], name='TechParent1', firm=^LA_Firm(legalName='FirmC')),
+        firm=^LA_Firm(legalName='FirmY')
+    );
     assertInstanceOf($tech2, LA_Department);
     assertEquals('Tech2', $tech2.name);
-    assertIs($firmX, $tech2.firm->toOne());
-    assertIsNot($tech, $tech2.parent->toOne());
+    assertEquals('FirmY', $tech2.firm.legalName);
+    assertIsNot($tech1.parent->toOne(), $tech2.parent->toOne());
 
     let p = $tech2.parent->toOne();
-    assertIs($p, $tech2.parent->toOne());
     assertEquals('TechParent1', $p.name);
-    assertIs($firmX, $p.firm);
 
-    assertSameElements([$tech, $tech1, $p, $tech2], $firmX.organizations);
-    assertSameElements($tech1, $tech.children);
-    assertSameElements($tech2, $p.children);
+    // Original tech1 untouched.
+    assertEquals('Tech1', $tech1.name);
+    assertEquals('FirmB', $tech1.firm.legalName);
+    assertEquals('Tech1OldParent', $tech1.parent->toOne().name);
 }
 
 // Test function definition copy

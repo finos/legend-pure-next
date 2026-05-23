@@ -692,20 +692,20 @@ helper buildExpressionInstanceGenericType(ExpressionInstanceContext ctx) {
                  typeVariableValues = ifPresent($ctx.typeVariableValues, mapList($ctx.typeVariableValues.instanceLiteral, buildInstanceLiteral)))
 }
 
-# Grammar: expressionInstanceParserPropertyAssignment: propertyName (DOT propertyName)*
-#          (PLUS)? EQUAL expressionInstanceRightSide
+# Grammar: expressionInstanceParserPropertyAssignment: propertyName (PLUS)? EQUAL expressionInstanceRightSide
 # Each assignment becomes a `keyExpression(nameStr, rhs[, plusFlag])` invocation.
+# Deep-path keys are not supported by the grammar (see M3Parser.g4 comment).
 rule expressionInstanceParserPropertyAssignment {
   return newImpl(FunctionInvocation,
                  sourceInformation = buildSourceInfo($ctx),
                  functionName = "keyExpression",
                  parametersValues = ifPresent($ctx.PLUS,
                    listOf(
-                     newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("String"), value = joinTextWith($ctx.propertyName, ".")),
+                     newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("String"), value = $ctx.propertyName.text),
                      buildExpressionInstanceRightSide($ctx.expressionInstanceRightSide),
                      newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("Boolean"), value = true)),
                    listOf(
-                     newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("String"), value = joinTextWith($ctx.propertyName, ".")),
+                     newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("String"), value = $ctx.propertyName.text),
                      buildExpressionInstanceRightSide($ctx.expressionInstanceRightSide))))
 }
 

@@ -116,6 +116,12 @@ public final class NewWithKeysNode extends PureNode
 
         // Push onto construction stack for parentReference() access across call boundaries
         var ctx = org.finos.legend.pure.truffle.PureLanguage.get(this);
+        // Open a fresh-instance scope. Any inner new/copy created during key
+        // evaluation registers in this scope; the post-build verify (in
+        // finalizeInstance) uses it to enforce that association-property
+        // values were instantiated within this expression.
+        eval.pushFreshScope();
+        Object newResult = null;
         ctx.pushConstruction(instance);
         try
         {
@@ -157,11 +163,13 @@ public final class NewWithKeysNode extends PureNode
             }
 
             finalizeInstance(instance, classPath, keyValues, eval);
+            newResult = instance;
             return instance;
         }
         finally
         {
             ctx.popConstruction();
+            eval.popFreshScopeAndRegister(newResult);
         }
     }
 
@@ -263,6 +271,9 @@ public final class NewWithKeysNode extends PureNode
                                    java.util.List<java.util.Map.Entry<String, Object>> keyValues,
                                    org.finos.legend.pure.truffle.PureContext eval)
     {
+        // Immutability check before bidir: every assoc-prop value must have
+        // been instantiated within this new/copy expression.
+        verifyAssocPropsAreFresh(classPath, keyValues, eval);
         setReverseAssociationPointers(instance, classPath, keyValues, eval, appendReader, appendWriter);
         if (instance != null)
         {
@@ -557,6 +568,79 @@ public final class NewWithKeysNode extends PureNode
     private static final Object ABSENT_GTV = new Object();
     private static final java.util.Map<Object, Object> CANONICAL_ANCHOR_CACHE =
             java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+
+    /**
+     * Throws if any key assigns an association-property value that was not
+     * instantiated within the current new/copy expression. Mirrors the Java
+     * runtime's {@code MetaNatives.verifyAssocPropsAreFresh}. The check uses
+     * {@link #findReverseAssociationProperty} to detect assoc-owned props
+     * (delegated to the resolver's reverse-association index).
+     */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    public static void verifyAssocPropsAreFresh(String classPath,
+                                                 java.util.List<java.util.Map.Entry<String, Object>> keyValues,
+                                                 org.finos.legend.pure.truffle.PureContext eval)
+    {
+        if (keyValues.isEmpty())
+        {
+            return;
+        }
+        for (java.util.Map.Entry<String, Object> kv : keyValues)
+        {
+            String propName = kv.getKey();
+            Object value = kv.getValue();
+            if (value == null)
+            {
+                continue;
+            }
+            // Only check props owned by an Association — direct props are exempt.
+            String reversePropName = findReverseAssociationProperty(propName, classPath, eval.resolver());
+            if (reversePropName == null)
+            {
+                continue;
+            }
+            if (value instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
+            {
+                if (seq.isEmpty())
+                {
+                    continue;
+                }
+                for (int i = 0; i < seq.size(); i++)
+                {
+                    Object item = seq.getBoxed(i);
+                    if (item != null && !eval.isFreshInCurrentScope(item))
+                    {
+                        throw new RuntimeException(immutabilityMessage(classPath, propName));
+                    }
+                }
+            }
+            else if (value instanceof java.util.List<?> listVal)
+            {
+                for (Object item : listVal)
+                {
+                    if (item != null && !eval.isFreshInCurrentScope(item))
+                    {
+                        throw new RuntimeException(immutabilityMessage(classPath, propName));
+                    }
+                }
+            }
+            else
+            {
+                if (!eval.isFreshInCurrentScope(value))
+                {
+                    throw new RuntimeException(immutabilityMessage(classPath, propName));
+                }
+            }
+        }
+    }
+
+    private static String immutabilityMessage(String classPath, String propName)
+    {
+        return "Immutability violation: association property '" + propName + "' on '"
+                + classPath + "' must be instantiated within the new/copy expression. "
+                + "Use `" + propName + " = ^Type(...)`, `" + propName + " = ^$x()`, or `"
+                + propName + " = []`.";
+    }
 
     /**
      * After constructing an instance, set reverse association pointers.
