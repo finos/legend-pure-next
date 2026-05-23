@@ -61,11 +61,15 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
     // Check for duplicate parameter names
     let ctx1 = validateDuplicateParameters($fn.parameters, $ctx, $ownerCtx, $siCtx);
 
-    // Compile type parameters — set owner to the function skeleton
-    let fnTypeParams = compileTypeParameters($fn.typeParameters)->map(tp | ^$tp(owner = $skeleton));
+    // Back-reference type/multiplicity parameters to the function via a
+    // {@link PackageableFunctionPointer} — see userDefinedFunctionHandler for
+    // the full rationale (pass-2 returns a fresh PDO via {@code ^$skeleton(...)},
+    // so a direct ref would be stale at PointerGraphResolver time).
+    let fnOwnerPtr = $skeleton->toPackageableFunctionPointer()->cast(@meta::pure::metamodel::type::generics::TypeAndMultiplicityParametersOwner);
+    let fnTypeParams = compileTypeParameters($fn.typeParameters)->map(tp | ^$tp(owner = $fnOwnerPtr));
 
-    // Compile multiplicity parameters — set owner to the function skeleton (mirrors Java PackageableFunctionCompiler.compileShared line 57-59)
-    let fnMulParams = $fn.multiplicityParameters->map(mp | buildUserDefinedMultiplicityParameter($mp.name, $skeleton)->cast(@MultiplicityParameter));
+    // Compile multiplicity parameters — set owner to the same pointer (mirrors Java PackageableFunctionCompiler.compileShared line 57-59)
+    let fnMulParams = $fn.multiplicityParameters->map(mp | buildUserDefinedMultiplicityParameter($mp.name, $fnOwnerPtr)->cast(@MultiplicityParameter));
 
     // Set ownerMulParams on context so compileGenericType can resolve multiplicity parameter references
     let ctx1b = ^$ctx1(ownerMulParams = $fnMulParams);

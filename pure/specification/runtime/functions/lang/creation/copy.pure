@@ -294,15 +294,16 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testSelfPointer
     let x = meta::pure::functions::meta::creation::newClass(^TypeParameter(contravariant=false, name='T'), []);
     let z = ^$x();
 
-    // classifierGenericType — auto-fixed to point to the copy
-    assertIsNot ($x, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).type->toOne());
-    assertIs ($z, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).type->toOne());
+    // copy() is a literal shallow copy: self-references in the source's slots
+    // (classifierGenericType, TypeParameter.owner, Property.owner, …) keep
+    // pointing to the SOURCE, not the copy. The runtime no longer rewires
+    // them implicitly — to wire the copy as the referent, the caller must
+    // do it explicitly with `~.~` (parent reference).
+    assertIs ($x, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).type->toOne());
+    assertIs ($x, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).typeArguments->toOne()->cast(@GenericTypeValue).type->cast(@TypeParameter).owner->toOne());
 
-    // Type Param owner — auto-fixed as part of classifierGenericType fix
-    assertIsNot ($x, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).typeArguments->toOne()->cast(@GenericTypeValue).type->cast(@TypeParameter).owner->toOne());
-    assertIs ($z, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).typeArguments->toOne()->cast(@GenericTypeValue).type->cast(@TypeParameter).owner->toOne());
-
-    // Properties — use ~.~ to wire the property's owner back to the copy
+    // Properties — use `~.~` to wire the property's owner back to the copy.
+    // (`~` would be the property value itself; `~.~` is the enclosing copy.)
     let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
         type = meta::pure::metamodel::function::property::Property,
         typeArguments = [
@@ -356,11 +357,14 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreserv
     let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
     let named = ^$cls(name='MyClass');
 
-    // The CGT on the copy should be Class<MyClass<T~MyClass>>
+    // copy() is a shallow copy — the self-referential CGT (`Class<cls<T~cls>>`)
+    // is preserved as-is and still points back at the ORIGINAL `$cls`. The
+    // copy's structure is intact (CGT.type = Class, typeArgs contain the
+    // TypeParameter), but the inner self-reference is to the source.
     let cgt = $named.classifierGenericType->toOne()->cast(@GenericTypeValue);
     assertIs(Class, $cgt.type->toOne());
     let selfGT = $cgt.typeArguments->at(0)->cast(@GenericTypeValue);
-    assertIs($named, $selfGT.type->toOne());
+    assertIs($cls, $selfGT.type->toOne());
 
     // The self-GT should carry the TypeParameter as a type argument
     assertEquals(1, $selfGT.typeArguments->size(), 'self-GT should have 1 type arg (the TypeParameter)');
@@ -375,11 +379,13 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreserv
     let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
     let named = ^$cls(name='MyClass');
 
-    // The TypeParameter from the COPIED class should have owner pointing to the copy
+    // The TypeParameter is shared with the original (shallow copy semantics)
+    // and its owner therefore stays pointing at `$cls`. Callers that need the
+    // owner to follow the copy must rebuild the TypeParameter explicitly via
+    // `~.~` in their copy expression.
     let copiedTp = $named.typeParameters->at(0);
     assert($copiedTp.owner->isNotEmpty(), 'TypeParameter owner should survive copy');
-    assertIs($named, $copiedTp.owner->toOne());
-    assertEquals('MyClass', $copiedTp.owner->toOne()->cast(@PackageableElement).name->toOne());
+    assertIs($cls, $copiedTp.owner->toOne());
 }
 
 function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreservesEnumPropertyOwnerAndCGT():Boolean[1]
@@ -387,16 +393,17 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreserv
     let en = meta::pure::functions::meta::creation::newEnumeration('TestEnum', ^Package(name='test', package=^Package(name='Root')), ['A', 'B']);
     let copied = ^$en(name='CopiedEnum');
 
-    // Properties should have owner pointing to the copy
+    // Shallow-copy semantics: the Properties (and the enum-value CGTs inside
+    // their default-value lambdas) keep pointing at the original `$en`. The
+    // copy isn't a deep clone — only the top-level Enumeration changes.
     let prop = $copied.properties->at(0);
-    assertIs($copied, $prop.owner->toOne());
+    assertIs($en, $prop.owner->toOne());
 
-    // Enum value inside defaultValue should have CGT pointing to the copy
     let lambda = $prop.defaultValue->toOne();
     let av = $lambda.expressionSequence->at(0)->cast(@AtomicValue);
     let enumVal = $av.value->toOne();
     let enumCGT = $enumVal->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
-    assertIs($copied, $enumCGT.type->toOne());
+    assertIs($en, $enumCGT.type->toOne());
 }
 
 function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyClearOptionalProperty():Boolean[1]

@@ -451,13 +451,16 @@ public class MetaNatives
             }
 
             Object copy = createInstanceByPath(classPath);
-            // First copy all properties (including classifierGenericType from original)
+            // Shallow copy all properties (including classifierGenericType from original).
+            // We do NOT rewrite self-references (classifierGenericType, TypeParameter.owner,
+            // Property.owner, etc.) to point to the copy — that would silently mutate
+            // graph identity. Users who want the copy to be referenced in such slots
+            // must explicitly write `~.~` (parent reference) in their copy expression.
             shallowCopyProperties(original, copy, cgt, resolver);
-            // Then fix and set the self-referential classifierGenericType to point to the copy
-            GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
             // Platform-level canonical anchor: if the copy's classifier could be
             // a canonical GenericType_<TypeName> UDPGT-PE, prefer it. Symmetric
             // to new() — preserves canonical references through copy operations.
+            GenericTypeValue copyCgt = cgt;
             if (copyCgt != null)
             {
                 copyCgt = (GenericTypeValue) preferCanonicalAnchor(copyCgt, resolver);
@@ -470,8 +473,6 @@ public class MetaNatives
             {
                 diC.setClassifierGenericType(copyCgt);
             }
-            fixTypeParameterOwners(original, copy);
-            fixPropertyOwners(original, copy, resolver);
             return _E_ValueSpecification.wrap(copy, genericType, multiplicity, resolver);
         });
 
@@ -512,12 +513,11 @@ public class MetaNatives
                 classPath = resolveClassPathFromCGT(cgt);
             }
 
-            // Step 2: Create the copy
+            // Step 2: Create the copy. No self-reference rewriting — see the
+            // copy(T[1]) variant above for the rationale.
             Object copy = createInstanceByPath(classPath);
             shallowCopyProperties(original, copy, cgt, resolver);
-            GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
-            // Platform-level canonical anchor: same as copy() above — preserve
-            // canonical GenericType_<TypeName> UDPGT-PE references through copy.
+            GenericTypeValue copyCgt = cgt;
             if (copyCgt != null)
             {
                 copyCgt = (GenericTypeValue) preferCanonicalAnchor(copyCgt, resolver);
@@ -530,7 +530,6 @@ public class MetaNatives
             {
                 diC.setClassifierGenericType(copyCgt);
             }
-            fixPropertyOwners(original, copy, resolver);
 
             // Step 3: Push onto construction stack, then evaluate key expressions
             eval.pushConstruction(copy);

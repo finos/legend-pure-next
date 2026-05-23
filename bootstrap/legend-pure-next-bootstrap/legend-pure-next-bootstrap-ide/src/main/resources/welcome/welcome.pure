@@ -1,4 +1,4 @@
 function go():Any[*]
 {
-   meta::external::language::java::test::testTransformAndSerialize();  
+   println(meta::pure::functions::meta::parse('a', 'function a():Any[*]{1}').sections.elements->cast(@UserDefinedFunction<Any>).expressionSequence);
 }

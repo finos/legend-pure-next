@@ -200,7 +200,12 @@ public final class CopyWithKeysNode extends PureNode
         // user-visible value is a typed XPDBHelper anymore.
         Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
         shallowCopyProperties(original, copy, cgt);
-        Object copyCgt = fixSelfReferentialCGT(cgt, original, copy, eval.resolver());
+        // No self-reference rewriting — copy is a literal shallow copy. Any slot
+        // that the user wants pointing at the copy (classifierGenericType,
+        // Property.owner, TypeParameter.owner, …) must be set explicitly via
+        // `~.~` in the copy expression. Letting the runtime do it implicitly
+        // would silently change graph identity in surprising ways.
+        Object copyCgt = cgt;
         // Platform-level canonical anchor: preserve canonical GenericType_<TypeName>
         // UDPGT-PE references through copy operations. Symmetric to NewWithKeysNode's
         // preferCanonicalAnchor — without this, copies of canonical-classified
@@ -210,10 +215,6 @@ public final class CopyWithKeysNode extends PureNode
             copyCgt = NewWithKeysNode.preferCanonicalAnchor(copyCgt, eval.resolver());
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(copy, "classifierGenericType", copyCgt);
         }
-        // Fix TypeParameter/MultiplicityParameter owners to point to the copy
-        fixTypeParameterOwners(copy);
-        // Fix property owners and nested enum value CGTs to point to the copy
-        fixPropertyOwners(original, copy, eval.resolver());
 
         // Step 3: Push onto construction stack, evaluate and set key properties
         var ctx = org.finos.legend.pure.truffle.PureLanguage.get(this);
