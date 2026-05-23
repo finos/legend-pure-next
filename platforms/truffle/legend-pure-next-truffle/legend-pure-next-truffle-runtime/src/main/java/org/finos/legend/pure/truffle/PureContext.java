@@ -79,6 +79,22 @@ public final class PureContext
     // the current expression (immutability rule — see Java's
     // ValueSpecificationEvaluator.freshScopeStack for the mirror).
     private final ArrayDeque<java.util.IdentityHashMap<Object, Boolean>> freshScopeStack = new ArrayDeque<>();
+    // Function-level type-variable bindings stack: one entry per active generic
+    // function call, mapping `<T>` parameter names → resolved Type (PDO or
+    // typed XHelper). Populated at function entry by walking the function's
+    // declared parameter types against the runtime argument CGTs (top-level
+    // T-in-parameter only — nested forms like List<T> are a follow-up).
+    // Read by CastNode when target is a TypeParameter, so `cast(@T)` resolves
+    // to the caller-bound type instead of skipping the subtype check. Mirrors
+    // the existing QP class-level type-var binding (bindQpTypeVariablesStatic)
+    // but at the function level for `<T>`-parameterized FunctionDefinitions.
+    private final ArrayDeque<java.util.Map<String, Object>> functionTypeVarStack = new ArrayDeque<>();
+    // Parallel stack for `<T|m>` multiplicity-parameter bindings: name → resolved
+    // Multiplicity PDO (PureOne, ZeroOne, PureMany, etc.). Built from the
+    // argument's runtime count at function entry. Read by CastNode when
+    // target multiplicity is a MultiplicityParameter so probe count can be
+    // validated against the bound bounds.
+    private final ArrayDeque<java.util.Map<String, Object>> functionMulVarStack = new ArrayDeque<>();
 
     // Per-module state holds caches whose entries reference wrappers from a
     // specific module. typePathCgts is keyed by Pure type path; the cached
@@ -223,6 +239,59 @@ public final class PureContext
         if (value == null) return;
         java.util.IdentityHashMap<Object, Boolean> top = freshScopeStack.peek();
         if (top != null) top.put(value, Boolean.TRUE);
+    }
+
+    /** Push a function's `<T>` type-variable bindings (may be empty). */
+    public void pushFunctionTypeVarBindings(java.util.Map<String, Object> bindings)
+    {
+        functionTypeVarStack.push(bindings);
+    }
+
+    /** Pop the top function's `<T>` type-variable bindings. */
+    public void popFunctionTypeVarBindings()
+    {
+        functionTypeVarStack.pop();
+    }
+
+    /**
+     * Look up T's resolved Type from the innermost active function call that
+     * bound it. Returns null if the name isn't bound in any active scope —
+     * caller falls back to whatever lax behavior it had before (e.g.
+     * CastNode skips subtype validation).
+     */
+    public Object lookupFunctionTypeVarBinding(String name)
+    {
+        if (name == null) return null;
+        for (java.util.Map<String, Object> scope : functionTypeVarStack)
+        {
+            Object v = scope.get(name);
+            if (v != null) return v;
+        }
+        return null;
+    }
+
+    /** Push a function's `<T|m>` multiplicity-variable bindings (may be empty). */
+    public void pushFunctionMulVarBindings(java.util.Map<String, Object> bindings)
+    {
+        functionMulVarStack.push(bindings);
+    }
+
+    /** Pop the top function's `<T|m>` multiplicity-variable bindings. */
+    public void popFunctionMulVarBindings()
+    {
+        functionMulVarStack.pop();
+    }
+
+    /** Look up m's resolved Multiplicity. Null if unbound — caller throws. */
+    public Object lookupFunctionMulVarBinding(String name)
+    {
+        if (name == null) return null;
+        for (java.util.Map<String, Object> scope : functionMulVarStack)
+        {
+            Object v = scope.get(name);
+            if (v != null) return v;
+        }
+        return null;
     }
     public Object peekConstruction(int depth)
     {
@@ -652,7 +721,15 @@ public final class PureContext
                 catch (Exception e) { throw new RuntimeException("Failed to set source information", e); }
                 boolean mayBindTypeVars = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fd,
                         "meta::pure::metamodel::function::property::QualifiedProperty");
-                PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body, rootSource, mayBindTypeVars);
+                // Function-level `<T>` binding plan: for each parameter whose
+                // declared type is a top-level TypeParameter, record its index
+                // and T's name. At call time, the corresponding argument's
+                // CGT type is read and bound. Empty arrays = no plan (most
+                // functions). Built once at compile time and held final.
+                FunctionTypeVarPlan plan = computeFunctionTypeVarPlan(fd);
+                PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body, rootSource,
+                        mayBindTypeVars, plan.paramIndices, plan.tvNames,
+                        plan.mulParamIndices, plan.mvNames);
                 cf.setCallTarget(root.getCallTarget());
             }
         }
@@ -661,6 +738,110 @@ public final class PureContext
             throw new RuntimeException("Failed to compile: " + getFunctionName(fd), e);
         }
         return cf;
+    }
+
+    /**
+     * Compile-time analysis: for `fd`'s declared parameters, find every one
+     * whose declared type is a top-level TypeParameter (e.g. `T`, not
+     * `List<T>`), AND every one whose declared multiplicity is a
+     * MultiplicityParameter (e.g. `T[m]`). Returns parallel arrays for both
+     * — used later at call entry to bind T from the argument's CGT and m
+     * from the argument's runtime count.
+     */
+    private FunctionTypeVarPlan computeFunctionTypeVarPlan(Object fd)
+    {
+        try
+        {
+            Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fd, SLOT_CLASSIFIER_GENERIC_TYPE);
+            if (cgt == null) return FunctionTypeVarPlan.EMPTY;
+            org.finos.legend.pure.truffle.types.PureSequence ta = org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(cgt);
+            if (ta == null || ta.size() == 0) return FunctionTypeVarPlan.EMPTY;
+            Object functionTypeGT = ta.getBoxed(0);
+            if (functionTypeGT == null) return FunctionTypeVarPlan.EMPTY;
+            Object functionType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(functionTypeGT,
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("type"));
+            if (functionType == null) return FunctionTypeVarPlan.EMPTY;
+            Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(functionType, SLOT_PARAMETERS);
+            if (!(paramsObj instanceof org.finos.legend.pure.truffle.types.PureSequence params) || params.isEmpty())
+            {
+                return FunctionTypeVarPlan.EMPTY;
+            }
+            java.util.ArrayList<Integer> tIdx = new java.util.ArrayList<>();
+            java.util.ArrayList<String> tNames = new java.util.ArrayList<>();
+            java.util.ArrayList<Integer> mIdx = new java.util.ArrayList<>();
+            java.util.ArrayList<String> mNames = new java.util.ArrayList<>();
+            int multiplicitySlot = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("multiplicity");
+            for (int i = 0; i < params.size(); i++)
+            {
+                Object param = params.getBoxed(i);
+                if (param == null) continue;
+                // Type-parameter side. Use isType (subtype-aware) — the
+                // runtime class can be UserDefined/Inferred/ResolvedTypeParameter,
+                // all subclasses of TypeParameter; pureTypeIs (exact-class)
+                // would miss them.
+                Object paramGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(param,
+                        org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("genericType"));
+                if (paramGT != null)
+                {
+                    Object paramType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(paramGT);
+                    if (paramType != null
+                            && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(paramType,
+                                    "meta::pure::metamodel::type::generics::TypeParameter", resolver))
+                    {
+                        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(paramType, SLOT_NAME);
+                        if (nameObj instanceof String s)
+                        {
+                            tIdx.add(i);
+                            tNames.add(s);
+                        }
+                    }
+                }
+                // Multiplicity-parameter side — same isType (subtype-aware).
+                Object paramMul = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(param, multiplicitySlot);
+                if (paramMul != null
+                        && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(paramMul,
+                                "meta::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
+                {
+                    Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(paramMul, SLOT_NAME);
+                    if (nameObj instanceof String s)
+                    {
+                        mIdx.add(i);
+                        mNames.add(s);
+                    }
+                }
+            }
+            if (tIdx.isEmpty() && mIdx.isEmpty()) return FunctionTypeVarPlan.EMPTY;
+            int[] tArr = new int[tIdx.size()];
+            for (int i = 0; i < tArr.length; i++) tArr[i] = tIdx.get(i);
+            int[] mArr = new int[mIdx.size()];
+            for (int i = 0; i < mArr.length; i++) mArr[i] = mIdx.get(i);
+            return new FunctionTypeVarPlan(tArr, tNames.toArray(new String[0]),
+                    mArr, mNames.toArray(new String[0]));
+        }
+        catch (RuntimeException e)
+        {
+            // A malformed FunctionType in compile cache shouldn't crash the
+            // compile — degrade to no binding (matches pre-fix behavior).
+            return FunctionTypeVarPlan.EMPTY;
+        }
+    }
+
+    /** Compile-time plan: which arg index supplies which `<T>`/`<T|m>` binding. */
+    public static final class FunctionTypeVarPlan
+    {
+        static final FunctionTypeVarPlan EMPTY = new FunctionTypeVarPlan(new int[0], new String[0], new int[0], new String[0]);
+        public final int[] paramIndices;
+        public final String[] tvNames;
+        public final int[] mulParamIndices;
+        public final String[] mvNames;
+        FunctionTypeVarPlan(int[] paramIndices, String[] tvNames,
+                            int[] mulParamIndices, String[] mvNames)
+        {
+            this.paramIndices = paramIndices;
+            this.tvNames = tvNames;
+            this.mulParamIndices = mulParamIndices;
+            this.mvNames = mvNames;
+        }
     }
 
     private String getFunctionName(Object fd)

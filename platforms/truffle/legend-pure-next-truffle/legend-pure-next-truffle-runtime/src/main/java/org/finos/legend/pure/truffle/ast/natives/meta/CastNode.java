@@ -72,6 +72,7 @@ public final class CastNode extends PureNode
         // across the three sites).
         Object targetGT = null;
         Object targetType = null;
+        Object targetMul = null;
         Object hoistedGT = targetResult != null
                 ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(targetResult, SLOT_GENERIC_TYPE) : null;
         if (hoistedGT != null)
@@ -87,12 +88,115 @@ public final class CastNode extends PureNode
                 targetGT = rawTargetGT;
                 targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(rawTargetGT);
             }
+            // multiplicityArguments[0] = m for cast(@T|m). Lives on the
+            // outer GT (the holder's classifierGenericType), not on the
+            // T-side GT. May be null when the holder didn't capture an m.
+            Object mulArgsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(hoistedGT,
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("multiplicityArguments"));
+            if (mulArgsObj instanceof org.finos.legend.pure.truffle.types.PureSequence mulArgs && mulArgs.size() > 0)
+            {
+                targetMul = mulArgs.getBoxed(0);
+            }
+        }
+
+        // Variant-driven validation, mirroring the three cast<T|m> native
+        // signatures:
+        //   cast<T|m>(source:Any[m], holder<T|?>):T[m]    — check T,  skip m (m from source)
+        //   cast<T|m>(source:T[*],   holder<?|m>):T[m]    — skip T,   check m
+        //   cast<T|m>(source:Any[*], holder<T|m>):T[m]    — check both
+        // The `?` markers are `UndefinedType` / `UndefinedMultiplicity` in
+        // the metamodel — explicit "this side is unconstrained" signals.
+        // Skipping them here lets the right validation fire per variant.
+        boolean targetTypeUndefined = targetGT != null
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(targetGT,
+                        "meta::pure::metamodel::type::generics::UndefinedGenericType");
+        boolean targetMulUndefined = targetMul != null
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(targetMul,
+                        "meta::pure::metamodel::multiplicity::UndefinedMultiplicity");
+
+        // If the target type is a TypeParameter (e.g. `cast(@T)` inside `f<T>(...)`),
+        // resolve T from the enclosing function's recorded `<T>`-bindings
+        // (see PureFunctionRootNode.buildFuncTypeVarBindings). Replace
+        // targetType with the resolved Type so the normal subtype check runs
+        // against the concrete type. If the lookup misses (no binding at all,
+        // or a binding that resolved to null — empty sequence arg, no PDO
+        // arg, etc.) throw rather than silently skipping: a `cast(@T)` whose
+        // T can't be resolved at runtime is a real runtime error.
+        // Use isType (subtype-aware), not pureTypeIs (exact-class) — runtime
+        // class may be ResolvedTypeParameter which extends TypeParameter;
+        // exact-class match would miss it. Matches the symmetric m-branch
+        // below and computeFunctionTypeVarPlan's walker.
+        org.finos.legend.pure.truffle.PureContext ctxForBindings = null;
+        if (!targetTypeUndefined
+                && targetType != null
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(targetType,
+                        "meta::pure::metamodel::type::generics::TypeParameter", resolver))
+        {
+            Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(targetType, SLOT_NAME);
+            String tvName = tvNameObj instanceof String s ? s : null;
+            ctxForBindings = org.finos.legend.pure.truffle.PureLanguage.get(null);
+            Object bound = tvName != null ? ctxForBindings.lookupFunctionTypeVarBinding(tvName) : null;
+            if (bound == null)
+            {
+                throw new RuntimeException("Cast exception: type parameter '" + tvName
+                        + "' could not be resolved at runtime. The enclosing generic function did"
+                        + " not bind it from any scalar T[1] argument or non-empty T[*] sequence.");
+            }
+            targetType = bound;
+        }
+
+        // Symmetric resolution for `<T|m>`: if target multiplicity is a
+        // MultiplicityParameter, resolve m from the recorded `<T|m>`
+        // bindings (see PureFunctionRootNode.buildFuncMulVarBindings).
+        // Validate the input value's count against m's bounds. Throw on
+        // unresolved m — same rule as T.
+        // NOTE: use isType (subtype-aware) not pureTypeIs (exact-class). The
+        // actual runtime class is usually UserDefinedMultiplicityParameter or
+        // ResolvedMultiplicityParameter — both extend MultiplicityParameter.
+        if (!targetMulUndefined
+                && targetMul != null
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(targetMul,
+                        "meta::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
+        {
+            Object mvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(targetMul, SLOT_NAME);
+            String mvName = mvNameObj instanceof String s ? s : null;
+            if (ctxForBindings == null) ctxForBindings = org.finos.legend.pure.truffle.PureLanguage.get(null);
+            Object bound = mvName != null ? ctxForBindings.lookupFunctionMulVarBinding(mvName) : null;
+            if (bound == null)
+            {
+                throw new RuntimeException("Cast exception: multiplicity parameter '" + mvName
+                        + "' could not be resolved at runtime. The enclosing generic function did"
+                        + " not bind it from any argument's actual multiplicity.");
+            }
+            targetMul = bound;
+        }
+        if (!targetMulUndefined
+                && targetMul != null
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(targetMul,
+                        "meta::pure::metamodel::multiplicity::ConcreteMultiplicity", resolver))
+        {
+            int count = inputCount(inputResult);
+            long[] bounds = multiplicityBounds(targetMul);
+            long lower = bounds[0];
+            long upper = bounds[1];
+            if (count < lower || (upper != -1 && count > upper))
+            {
+                String mulStr = upper == -1 ? "[" + lower + "..*]" : "[" + lower + ".." + upper + "]";
+                throw new RuntimeException("Cast exception: multiplicity violation — value count "
+                        + count + " does not fit " + mulStr);
+            }
         }
 
         // Validate type compatibility for scalar values.
-        // Skip collections (common element type is lossy), TypeParameters and MultiplicityParameters.
-        // Use pureTypeIs because post loader-flip these may be PDOs, not typed XImpls.
-        if (inputResult != null
+        // Skip when:
+        //   - target is UndefinedType (`<?|m>` variant — T inferred from source)
+        //   - input is a collection (per-element check is the caller's job)
+        //   - input is itself a TypeParameter/MultiplicityParameter (cast on
+        //     a type symbol passes through)
+        // targetType is guaranteed not to be a TypeParameter here — the
+        // resolution block above either bound it or threw.
+        if (!targetTypeUndefined
+                && inputResult != null
                 && !(inputResult instanceof org.finos.legend.pure.truffle.types.PureSequence)
                 && !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(inputResult,
                         "meta::pure::metamodel::type::generics::TypeParameter")
@@ -379,6 +483,39 @@ public final class CastNode extends PureNode
                 throw new RuntimeException(message);
             }
         }
+    }
+
+    private static int inputCount(Object value)
+    {
+        if (value == null) return 0;
+        if (value instanceof org.finos.legend.pure.truffle.types.PureSequence seq) return seq.size();
+        return 1;
+    }
+
+    /**
+     * Extract [lower, upper] from a ConcreteMultiplicity. Upper == -1
+     * encodes "unbounded" (matches the LangNatives.multiplicityAccepts
+     * convention).
+     */
+    private static long[] multiplicityBounds(Object concreteMul)
+    {
+        Object lowerBound = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(concreteMul,
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("lowerBound"));
+        Object upperBound = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(concreteMul,
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("upperBound"));
+        long lower = readValue(lowerBound, 0L);
+        long upper = upperBound != null ? readValue(upperBound, -1L) : -1L;
+        return new long[]{lower, upper};
+    }
+
+    private static long readValue(Object boundObj, long def)
+    {
+        if (boundObj == null) return def;
+        Object v = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(boundObj,
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value"));
+        if (v == null) return def;
+        if (v instanceof Number n) return n.longValue();
+        return def;
     }
 
 }

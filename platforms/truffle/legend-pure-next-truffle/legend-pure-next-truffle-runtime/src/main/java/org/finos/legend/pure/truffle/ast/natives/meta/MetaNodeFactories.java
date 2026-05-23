@@ -85,8 +85,16 @@ public final class MetaNodeFactories
         registry.register("copy_T_1__T_1_",
                 (args, gt, mul, fe) -> new CopySimpleNode(args[0]));
 
-        // cast(Any[m], GenericTypeAndMultiplicityHolder[1]) : T[m]
+        // cast variants — all three signatures share one CastNode
+        // implementation; they only differ on which dimension(s) of the
+        // holder are user-specified vs `?`. The runtime check is the same;
+        // CastNode skips T or m validation when its respective slot is
+        // UndefinedGenericType / UndefinedMultiplicity.
         registry.register("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_",
+                (args, gt, mul, fe) -> new CastNode(args[0], args[1]));
+        registry.register("cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_",
+                (args, gt, mul, fe) -> new CastNode(args[0], args[1]));
+        registry.register("cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_",
                 (args, gt, mul, fe) -> new CastNode(args[0], args[1]));
 
         // evaluateAndDeactivate — passthrough

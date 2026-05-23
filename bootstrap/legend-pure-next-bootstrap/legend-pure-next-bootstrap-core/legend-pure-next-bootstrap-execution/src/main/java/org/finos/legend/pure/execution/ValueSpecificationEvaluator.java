@@ -74,6 +74,22 @@ public class ValueSpecificationEvaluator
     // `^Firm()` registers in the outer copy's scope.
     private final Deque<java.util.IdentityHashMap<Object, Boolean>> freshScopeStack = new ArrayDeque<>();
 
+    // Function-level `<T>` type-variable bindings stack: one entry per active
+    // generic function call, mapping `<T>` parameter names → resolved Type
+    // PE. Populated at function entry by walking the function's declared
+    // parameter types against the runtime argument CGTs. Read by cast()
+    // when target is a TypeParameter, so `cast(@T)` resolves to the
+    // caller-bound type instead of skipping the subtype check. Mirrors the
+    // Truffle PureContext.functionTypeVarStack.
+    private final Deque<java.util.Map<String, Object>> functionTypeVarStack = new ArrayDeque<>();
+
+    // Parallel stack for `<T|m>` multiplicity-parameter bindings: name → resolved
+    // Multiplicity PE (PureOne, ZeroOne, PureMany, or a freshly-constructed
+    // ConcreteMultiplicity from the argument's actual count). Read by cast()
+    // when target multiplicity is a MultiplicityParameter so probe count can
+    // be validated against the caller-bound bounds.
+    private final Deque<java.util.Map<String, Object>> functionMulVarStack = new ArrayDeque<>();
+
     // Inline cache for variable reads: maps each VariableExpression node to
     // the slot it last resolved to in the *current* frame. JFR found
     // {@code Scope.get} at ~9% of self-compile CPU — most of that was the
@@ -225,6 +241,58 @@ public class ValueSpecificationEvaluator
             }
         }
         return false;
+    }
+
+    /** Push a function's `<T>` type-variable bindings (may be empty). */
+    public void pushFunctionTypeVarBindings(java.util.Map<String, Object> bindings)
+    {
+        functionTypeVarStack.push(bindings);
+    }
+
+    /** Pop the top function's `<T>` type-variable bindings. */
+    public void popFunctionTypeVarBindings()
+    {
+        functionTypeVarStack.pop();
+    }
+
+    /**
+     * Look up T's resolved Type from the innermost active function call that
+     * bound it. Returns null if the name isn't bound in any active scope —
+     * caller throws (cast on an unresolved T is a runtime error).
+     */
+    public Object lookupFunctionTypeVarBinding(String name)
+    {
+        if (name == null) return null;
+        for (java.util.Map<String, Object> scope : functionTypeVarStack)
+        {
+            Object v = scope.get(name);
+            if (v != null) return v;
+        }
+        return null;
+    }
+
+    /** Push a function's `<T|m>` multiplicity-variable bindings (may be empty). */
+    public void pushFunctionMulVarBindings(java.util.Map<String, Object> bindings)
+    {
+        functionMulVarStack.push(bindings);
+    }
+
+    /** Pop the top function's `<T|m>` multiplicity-variable bindings. */
+    public void popFunctionMulVarBindings()
+    {
+        functionMulVarStack.pop();
+    }
+
+    /** Look up m's resolved Multiplicity from the innermost active call. Null if unbound. */
+    public Object lookupFunctionMulVarBinding(String name)
+    {
+        if (name == null) return null;
+        for (java.util.Map<String, Object> scope : functionMulVarStack)
+        {
+            Object v = scope.get(name);
+            if (v != null) return v;
+        }
+        return null;
     }
 
     /**
@@ -762,6 +830,27 @@ public class ValueSpecificationEvaluator
             }
         }
 
+        // Function-level `<T>` and `<T|m>` bindings: for each parameter whose
+        // declared type is a top-level TypeParameter, bind T → the argument's
+        // resolved type (arg._genericType().type). For each parameter whose
+        // declared multiplicity is a MultiplicityParameter, bind m → the
+        // argument's resolved multiplicity. Read by cast() when target type
+        // or multiplicity is parametric.
+        java.util.Map<String, Object> tvBindings = buildFunctionTypeVarBindings(params, args);
+        java.util.Map<String, Object> mvBindings = buildFunctionMulVarBindings(params, args);
+        boolean pushedTvBindings = false;
+        boolean pushedMvBindings = false;
+        if (tvBindings != null && !tvBindings.isEmpty())
+        {
+            pushFunctionTypeVarBindings(tvBindings);
+            pushedTvBindings = true;
+        }
+        if (mvBindings != null && !mvBindings.isEmpty())
+        {
+            pushFunctionMulVarBindings(mvBindings);
+            pushedMvBindings = true;
+        }
+
         // Push child scope and evaluate expression sequence
         varStack.push(childVars);
         // Mark `fd` as the currently-executing function for any FE pushed
@@ -780,8 +869,76 @@ public class ValueSpecificationEvaluator
         {
             varStack.pop();
             fnEvalStack.pop();
+            if (pushedTvBindings)
+            {
+                popFunctionTypeVarBindings();
+            }
+            if (pushedMvBindings)
+            {
+                popFunctionMulVarBindings();
+            }
         }
         return result;
+    }
+
+    /**
+     * Build T → resolved-Type bindings by walking declared parameter types
+     * for top-level TypeParameter occurrences. Bootstrap has it easier than
+     * Truffle: each ValueSpecification arg already carries its inferred
+     * genericType (collections too), so we just read it.
+     */
+    private java.util.Map<String, Object> buildFunctionTypeVarBindings(
+            MutableList<VariableExpression> params, List<ValueSpecification> args)
+    {
+        if (params == null || params.isEmpty()) return null;
+        java.util.Map<String, Object> bindings = null;
+        int n = Math.min(params.size(), args.size());
+        for (int i = 0; i < n; i++)
+        {
+            VariableExpression p = params.get(i);
+            if (p == null || p._genericType() == null) continue;
+            meta.pure.metamodel.type.Type pType = _GenericType.type(p._genericType());
+            if (!(pType instanceof meta.pure.metamodel.type.generics.TypeParameter tp)) continue;
+            String tvName = tp._name();
+            if (tvName == null || tvName.isEmpty()) continue;
+            ValueSpecification a = args.get(i);
+            if (a == null || a._genericType() == null) continue;
+            meta.pure.metamodel.type.Type resolved = _GenericType.type(a._genericType());
+            if (resolved == null) continue;
+            if (bindings == null) bindings = new java.util.HashMap<>(n);
+            bindings.put(tvName, resolved);
+        }
+        return bindings;
+    }
+
+    /**
+     * Build m → resolved-Multiplicity bindings by walking declared parameter
+     * multiplicities for MultiplicityParameter occurrences. Source of m's
+     * binding: the argument's actual multiplicity. For literal sequences,
+     * the arg's _multiplicity reflects the inferred multiplicity at the
+     * call site (PureOne for scalars, ZeroMany / ZeroOne / specific bounds
+     * for sequences as the type-checker assigned).
+     */
+    private java.util.Map<String, Object> buildFunctionMulVarBindings(
+            MutableList<VariableExpression> params, List<ValueSpecification> args)
+    {
+        if (params == null || params.isEmpty()) return null;
+        java.util.Map<String, Object> bindings = null;
+        int n = Math.min(params.size(), args.size());
+        for (int i = 0; i < n; i++)
+        {
+            VariableExpression p = params.get(i);
+            if (p == null || p._multiplicity() == null) continue;
+            meta.pure.metamodel.multiplicity.Multiplicity pMul = p._multiplicity();
+            if (!(pMul instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)) continue;
+            String mvName = mp._name();
+            if (mvName == null || mvName.isEmpty()) continue;
+            ValueSpecification a = args.get(i);
+            if (a == null || a._multiplicity() == null) continue;
+            if (bindings == null) bindings = new java.util.HashMap<>(n);
+            bindings.put(mvName, a._multiplicity());
+        }
+        return bindings;
     }
 
     /**

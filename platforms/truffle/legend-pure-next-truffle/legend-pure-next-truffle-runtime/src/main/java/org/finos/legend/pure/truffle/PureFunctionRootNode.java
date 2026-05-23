@@ -65,23 +65,49 @@ public final class PureFunctionRootNode extends RootNode
     @CompilationFinal
     private final boolean mayBindTypeVars;
 
+    /**
+     * Parallel arrays computed at compile time: {@code funcTypeVarArgIdx[i]}
+     * is the parameter index whose declared type is the TypeParameter named
+     * {@code funcTypeVarNames[i]}. Empty when the function has no top-level
+     * `<T>`-parameter bindings (most cases). Held final so PE folds the
+     * branch out when empty.
+     */
+    @CompilationFinal(dimensions = 1)
+    private final int[] funcTypeVarArgIdx;
+    @CompilationFinal(dimensions = 1)
+    private final String[] funcTypeVarNames;
+    @CompilationFinal(dimensions = 1)
+    private final int[] funcMulVarArgIdx;
+    @CompilationFinal(dimensions = 1)
+    private final String[] funcMulVarNames;
+
     public PureFunctionRootNode(PureLanguage language, String name,
                                 FrameLayout layout, PureNode[] body)
     {
-        this(language, name, layout, body, null, false);
+        this(language, name, layout, body, null, false, EMPTY_INT, EMPTY_STR, EMPTY_INT, EMPTY_STR);
     }
 
     public PureFunctionRootNode(PureLanguage language, String name,
                                 FrameLayout layout, PureNode[] body,
                                 com.oracle.truffle.api.source.SourceSection sourceSection)
     {
-        this(language, name, layout, body, sourceSection, false);
+        this(language, name, layout, body, sourceSection, false, EMPTY_INT, EMPTY_STR, EMPTY_INT, EMPTY_STR);
     }
 
     public PureFunctionRootNode(PureLanguage language, String name,
                                 FrameLayout layout, PureNode[] body,
                                 com.oracle.truffle.api.source.SourceSection sourceSection,
                                 boolean mayBindTypeVars)
+    {
+        this(language, name, layout, body, sourceSection, mayBindTypeVars, EMPTY_INT, EMPTY_STR, EMPTY_INT, EMPTY_STR);
+    }
+
+    public PureFunctionRootNode(PureLanguage language, String name,
+                                FrameLayout layout, PureNode[] body,
+                                com.oracle.truffle.api.source.SourceSection sourceSection,
+                                boolean mayBindTypeVars,
+                                int[] funcTypeVarArgIdx, String[] funcTypeVarNames,
+                                int[] funcMulVarArgIdx, String[] funcMulVarNames)
     {
         super(language, layout.descriptor());
         this.name = name;
@@ -90,7 +116,14 @@ public final class PureFunctionRootNode extends RootNode
         this.body = java.util.Arrays.copyOf(body, body.length, Node[].class);
         this.rootSourceSection = sourceSection;
         this.mayBindTypeVars = mayBindTypeVars;
+        this.funcTypeVarArgIdx = funcTypeVarArgIdx != null ? funcTypeVarArgIdx : EMPTY_INT;
+        this.funcTypeVarNames = funcTypeVarNames != null ? funcTypeVarNames : EMPTY_STR;
+        this.funcMulVarArgIdx = funcMulVarArgIdx != null ? funcMulVarArgIdx : EMPTY_INT;
+        this.funcMulVarNames = funcMulVarNames != null ? funcMulVarNames : EMPTY_STR;
     }
+
+    private static final int[] EMPTY_INT = new int[0];
+    private static final String[] EMPTY_STR = new String[0];
 
     @Override
     public com.oracle.truffle.api.source.SourceSection getSourceSection()
@@ -125,14 +158,166 @@ public final class PureFunctionRootNode extends RootNode
             PureContext.bindQpTypeVariablesStatic(arguments[0], frame, layout);
         }
 
-        Object result = PureSequence.EMPTY;
-        for (int i = 0; i < body.length; i++)
+        // Function-level `<T>` and `<T|m>` bindings: build name→resolved-Type
+        // and name→resolved-Multiplicity maps from pre-planned arguments,
+        // push onto the context stacks for the body (so `cast(@T|m)` can
+        // resolve T and m), pop after. Empty-array branches fold out under
+        // PE for the common case (functions with no parametric `<T>`/`<T|m>`).
+        boolean hasFuncTypeVars = funcTypeVarArgIdx.length > 0;
+        boolean hasFuncMulVars = funcMulVarArgIdx.length > 0;
+        org.finos.legend.pure.truffle.PureContext ctx =
+                (hasFuncTypeVars || hasFuncMulVars) ? org.finos.legend.pure.truffle.PureLanguage.get(this) : null;
+        if (hasFuncTypeVars)
         {
-            result = ((PureNode) body[i]).executeGeneric(frame);
+            ctx.pushFunctionTypeVarBindings(buildFuncTypeVarBindings(arguments));
+        }
+        if (hasFuncMulVars)
+        {
+            ctx.pushFunctionMulVarBindings(buildFuncMulVarBindings(arguments, ctx));
+        }
+
+        Object result = PureSequence.EMPTY;
+        try
+        {
+            for (int i = 0; i < body.length; i++)
+            {
+                result = ((PureNode) body[i]).executeGeneric(frame);
+            }
+        }
+        finally
+        {
+            if (hasFuncMulVars)
+            {
+                ctx.popFunctionMulVarBindings();
+            }
+            if (hasFuncTypeVars)
+            {
+                ctx.popFunctionTypeVarBindings();
+            }
         }
 
         org.finos.legend.pure.truffle.profiler.PureProfiler.exit();
         return result;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private java.util.Map<String, Object> buildFuncTypeVarBindings(Object[] arguments)
+    {
+        java.util.Map<String, Object> bindings = new java.util.HashMap<>(funcTypeVarArgIdx.length);
+        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver =
+                org.finos.legend.pure.truffle.PureLanguage.get(this).resolver();
+        for (int i = 0; i < funcTypeVarArgIdx.length; i++)
+        {
+            int argIdx = funcTypeVarArgIdx[i];
+            if (argIdx >= arguments.length) continue;
+            Object arg = arguments[argIdx];
+            if (arg == null) continue;
+            Object resolvedType = resolveTypeFromArgument(arg, resolver);
+            if (resolvedType != null)
+            {
+                bindings.put(funcTypeVarNames[i], resolvedType);
+            }
+        }
+        return bindings;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private java.util.Map<String, Object> buildFuncMulVarBindings(Object[] arguments,
+                                                                   org.finos.legend.pure.truffle.PureContext ctx)
+    {
+        java.util.Map<String, Object> bindings = new java.util.HashMap<>(funcMulVarArgIdx.length);
+        for (int i = 0; i < funcMulVarArgIdx.length; i++)
+        {
+            int argIdx = funcMulVarArgIdx[i];
+            if (argIdx >= arguments.length) continue;
+            Object arg = arguments[argIdx];
+            int count = countOfArg(arg);
+            Object mul = standardMultiplicityForCount(count, ctx.resolver());
+            if (mul != null)
+            {
+                bindings.put(funcMulVarNames[i], mul);
+            }
+        }
+        return bindings;
+    }
+
+    private static int countOfArg(Object arg)
+    {
+        if (arg == null) return 0;
+        if (arg instanceof org.finos.legend.pure.truffle.types.PureSequence seq) return seq.size();
+        return 1;
+    }
+
+    /**
+     * Bind m to a canonical Multiplicity based on the arg's count:
+     *   0 → ZeroOne
+     *   1 → PureOne
+     *  >1 → PureMany ([1..*])
+     * Loses precision for specific counts (e.g. a 2-element witness binds
+     * PureMany rather than [2..2]), but matches Pure's own static
+     * multiplicity inference. Tighter bounds could be derived by
+     * constructing a fresh ConcreteMultiplicity, deferred until needed.
+     */
+    private static Object standardMultiplicityForCount(int count,
+                                                       org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        String path = switch (count)
+        {
+            case 0 -> "meta::pure::metamodel::multiplicity::PureZero";
+            case 1 -> "meta::pure::metamodel::multiplicity::PureOne";
+            default -> "meta::pure::metamodel::multiplicity::OneMany";
+        };
+        return resolver.getElement(path);
+    }
+
+    /**
+     * Derive T's binding from an argument value:
+     *  - scalar PDO  → arg.classifierGenericType.type
+     *  - PureSequence → common supertype of every non-null element's CGT type
+     *                   (homogeneous fast path; falls back to findCommonType)
+     *  - primitives / empty seq → null (caller will not bind, and CastNode
+     *                                    will throw at lookup time)
+     */
+    private static Object resolveTypeFromArgument(Object arg,
+                                                  org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        if (arg instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject)
+        {
+            Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(arg,
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType"));
+            return cgt != null ? org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt) : null;
+        }
+        if (arg instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
+        {
+            if (seq.isEmpty()) return null;
+            Object first = null;
+            java.util.ArrayList<Object> distinct = null;
+            for (int i = 0; i < seq.size(); i++)
+            {
+                Object e = seq.getBoxed(i);
+                if (e == null) continue;
+                Object t = resolveTypeFromArgument(e, resolver);
+                if (t == null) continue;
+                if (first == null)
+                {
+                    first = t;
+                }
+                else if (t != first)
+                {
+                    if (distinct == null)
+                    {
+                        distinct = new java.util.ArrayList<>();
+                        distinct.add(first);
+                    }
+                    if (!distinct.contains(t)) distinct.add(t);
+                }
+            }
+            if (first == null) return null;
+            if (distinct == null) return first;
+            return org.finos.legend.pure.truffle.runtime.helper._Type.findCommonType(distinct, false, resolver);
+        }
+        // Primitives: no useful CGT type for T-resolution.
+        return null;
     }
 
     @Override

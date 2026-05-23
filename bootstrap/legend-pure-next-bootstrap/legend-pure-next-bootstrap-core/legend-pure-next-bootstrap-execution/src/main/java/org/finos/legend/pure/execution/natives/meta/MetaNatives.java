@@ -695,6 +695,7 @@ public class MetaNatives
             // Resolve the target GenericType from the GenericTypeAndMultiplicityHolder
             meta.pure.metamodel.type.generics.GenericType targetGT = null;
             meta.pure.metamodel.type.Type targetType = null;
+            meta.pure.metamodel.multiplicity.Multiplicity targetMul = null;
             if (targetVs instanceof GenericTypeAndMultiplicityHolder gtmh
                     && gtmh._genericType() != null
                     && _GenericType.typeArguments(gtmh._genericType()) != null
@@ -702,6 +703,12 @@ public class MetaNatives
             {
                 targetGT = _GenericType.typeArguments(gtmh._genericType()).getFirst();
                 targetType = _GenericType.type(targetGT);
+                if (gtmh._genericType() instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv
+                        && gtv._multiplicityArguments() != null
+                        && gtv._multiplicityArguments().notEmpty())
+                {
+                    targetMul = gtv._multiplicityArguments().getFirst();
+                }
             }
             else if (targetVs._genericType() != null)
             {
@@ -709,10 +716,72 @@ public class MetaNatives
                 targetType = _GenericType.type(targetGT);
             }
 
+            // Variant-driven validation, mirroring the three cast<T|m> native
+            // signatures:
+            //   cast<T|m>(source:Any[m], holder<T|?>):T[m]    — check T,  skip m
+            //   cast<T|m>(source:T[*],   holder<?|m>):T[m]    — skip T,   check m
+            //   cast<T|m>(source:Any[*], holder<T|m>):T[m]    — check both
+            // The `?` markers materialize as UndefinedGenericType (at the GT
+            // level) and UndefinedMultiplicity in the metamodel — explicit
+            // "this side is unconstrained" signals.
+            boolean targetTypeUndefined = targetGT instanceof meta.pure.metamodel.type.generics.UndefinedGenericType;
+            boolean targetMulUndefined = targetMul instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity;
+
+            // If the target is a TypeParameter (e.g. `cast(@T)` inside `f<T>(...)`),
+            // resolve T from the enclosing function's recorded `<T>`-bindings
+            // (see ValueSpecificationEvaluator.buildFunctionTypeVarBindings). If we
+            // find a binding, replace targetType with the resolved Type so the
+            // normal subtype check runs against it. If unbound, throw — a
+            // `cast(@T)` whose T can't be resolved at runtime is a real
+            // runtime error, not a silent pass-through.
+            if (!targetTypeUndefined && targetType instanceof meta.pure.metamodel.type.generics.TypeParameter tp)
+            {
+                String tvName = tp._name();
+                Object bound = tvName != null ? eval.lookupFunctionTypeVarBinding(tvName) : null;
+                if (bound == null)
+                {
+                    throw new RuntimeException("Cast exception: type parameter '" + tvName
+                            + "' could not be resolved at runtime. The enclosing generic function did"
+                            + " not bind it from any scalar T[1] argument or non-empty T[*] sequence.");
+                }
+                targetType = (meta.pure.metamodel.type.Type) bound;
+            }
+
+            // Symmetric resolution for `<T|m>`: if the target multiplicity is
+            // a MultiplicityParameter, resolve m from the recorded `<T|m>`
+            // bindings and validate the input value's count against m's
+            // bounds. Throw on unresolved m (same rule as T).
+            if (!targetMulUndefined && targetMul instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
+            {
+                String mvName = mp._name();
+                Object boundMul = mvName != null ? eval.lookupFunctionMulVarBinding(mvName) : null;
+                if (boundMul == null)
+                {
+                    throw new RuntimeException("Cast exception: multiplicity parameter '" + mvName
+                            + "' could not be resolved at runtime. The enclosing generic function did"
+                            + " not bind it from any argument's actual multiplicity.");
+                }
+                targetMul = (meta.pure.metamodel.multiplicity.Multiplicity) boundMul;
+            }
+            if (!targetMulUndefined && targetMul instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
+            {
+                int count = inputCount(inputVs);
+                long lower = cm._lowerBound() != null && cm._lowerBound()._value() != null ? cm._lowerBound()._value() : 0;
+                long upper = cm._upperBound() != null && cm._upperBound()._value() != null ? cm._upperBound()._value() : -1;
+                if (count < lower || (upper != -1 && count > upper))
+                {
+                    String mulStr = upper == -1 ? "[" + lower + "..*]" : "[" + lower + ".." + upper + "]";
+                    throw new RuntimeException("Cast exception: multiplicity violation — value count "
+                            + count + " does not fit " + mulStr);
+                }
+            }
+
             // Validate type compatibility for scalar values.
             // Skip Collections — their common element type is lossy and cast is per-element.
+            // Skip when targetType is UndefinedType (variant 2: T inferred from source).
             Object value = _E_ValueSpecification.unwrap(inputVs);
-            if (value != null
+            if (!targetTypeUndefined
+                    && value != null
                     && !(inputVs instanceof meta.pure.metamodel.valuespecification.Collection)
                     && targetType instanceof PackageableElement targetPe
                     && !(value instanceof meta.pure.metamodel.type.generics.TypeParameter)
@@ -757,6 +826,16 @@ public class MetaNatives
             }
             return _E_ValueSpecification.wrap(value, targetGT, inputVs._multiplicity(), resolver);
         });
+
+        // Aliases for the other two cast variants — same implementation, the
+        // logic is shape-agnostic (reads typeGT / mul from holder, validates
+        // against source). Previously only `Any_m__…` was registered because
+        // the resolver always dispatched there even for `<T|m>` / `<?|m>`
+        // holders; now that subsumes() correctly rejects `?`-vs-real matches,
+        // sig 3 / sig 2 dispatches need an implementation too.
+        NativeImpl castImpl = natives.get("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_");
+        natives.put("cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_", castImpl);
+        natives.put("cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_", castImpl);
 
         // evaluateAndDeactivate — passthrough
         NativeImpl evalAndDeactivate = (args, eval, genericType, multiplicity) -> args.get(0);
@@ -2077,5 +2156,21 @@ public class MetaNatives
             }
             return;
         }
+    }
+
+    /**
+     * Count of values in a ValueSpecification — 0 for empty/null,
+     * collection size for Collection VSs, 1 for scalar VSs.
+     */
+    private static int inputCount(ValueSpecification vs)
+    {
+        if (vs == null) return 0;
+        if (vs instanceof meta.pure.metamodel.valuespecification.Collection col)
+        {
+            return col._values() != null ? col._values().size() : 0;
+        }
+        Object value = _E_ValueSpecification.unwrap(vs);
+        if (value == null) return 0;
+        return 1;
     }
 }
