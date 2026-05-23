@@ -455,7 +455,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   | let common = findCommonGenericType($vals, $context);
                     if($common->isEmpty(), | $vals->at(0), | $common->toOne());
               );
-              buildResolvedTypeParameter($k, $boundGT);
+              buildResolvedTypeParameter($k, $boundGT, $context);
           );
           let resolvedMulParams = $validatedBindings.multiplicityBindings->keys()
               ->filter(k | $ownMulParamNames->isEmpty() || $ownMulParamNames->contains($k))
@@ -970,7 +970,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
     let resolvedTypeParams = $bindings.typeBindings->keys()->map(k |
         let vals = $bindings.typeBindings->get($k)->toOne().values;
-        buildResolvedTypeParameter($k, asInferredGenericType($vals->at(0)));
+        buildResolvedTypeParameter($k, asInferredGenericType($vals->at(0)), $context);
     );
     let resolvedMulParams = $bindings.multiplicityBindings->keys()->map(k |
         let vals = $bindings.multiplicityBindings->get($k)->toOne().values;

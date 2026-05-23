@@ -86,9 +86,68 @@ function meta::pure::compiler::helper::genericType::buildMultiplicityValue(value
     ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $value);
 }
 
-function meta::pure::compiler::helper::genericType::buildResolvedTypeParameter(name:String[1], value:meta::pure::metamodel::type::generics::GenericType[1]):meta::pure::metamodel::type::generics::ResolvedTypeParameter[1]
+function meta::pure::compiler::helper::genericType::buildResolvedTypeParameter(name:String[1], value:meta::pure::metamodel::type::generics::GenericType[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::generics::ResolvedTypeParameter[1]
 {
-    ^meta::pure::metamodel::type::generics::ResolvedTypeParameter(name = $name, value = $value);
+    // Cross-element store: the receiving `value` slot may persist a Type ref
+    // that points anywhere in the graph. When the rawType is currently being
+    // compiled (`context.elementMap` holds it), wrap as a pointer so a later
+    // PointerGraphResolver walk doesn't trip on a duplicate PDO produced by
+    // multi-pass rebuild. Types loaded from a dep PDB (core, compiler) can't
+    // duplicate — leave them direct so downstream consumers reading the raw
+    // type (instanceOf, PDB writer, inference) keep working without per-site
+    // deref.
+    let wrapped = $value->meta::pure::compiler::helper::genericType::wrapGenericTypeWithPointer($context);
+    ^meta::pure::metamodel::type::generics::ResolvedTypeParameter(name = $name, value = $wrapped);
+}
+
+// Wrap a GenericType's PE rawType (Class/Enumeration/PrimitiveType) as a pointer
+// when that type is in the current compilation's element map — i.e. the
+// compiler may rebuild it across passes and a direct ref to an earlier
+// revision would later read as a duplicate PDO. Types absent from
+// `context.elementMap` are dep-loaded (core / compiler PDB) — single canonical
+// instance, no duplication risk, no wrap needed.
+function meta::pure::compiler::helper::genericType::wrapGenericTypeWithPointer(gt:meta::pure::metamodel::type::generics::GenericType[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::generics::GenericType[1]
+{
+    $gt->match([
+        igt : meta::pure::metamodel::type::generics::InferredGenericType[1] |
+            let currentType = $igt.type;
+            if($currentType->isEmpty() || !$currentType->toOne()->meta::pure::compiler::helper::genericType::isLocallyCompiledType($context),
+                | $igt,
+                | let wrappedType = $currentType->toOne()->meta::pure::compiler::helper::pointer::toTypePointer();
+                  if($wrappedType == $currentType->toOne(),
+                      | $igt,
+                      | ^$igt(type = $wrappedType)
+                  );
+            );,
+        gtv : meta::pure::metamodel::type::generics::GenericTypeValue[1] |
+            let currentType = $gtv.type;
+            if($currentType->isEmpty() || !$currentType->toOne()->meta::pure::compiler::helper::genericType::isLocallyCompiledType($context),
+                | $gtv,
+                | let wrappedType = $currentType->toOne()->meta::pure::compiler::helper::pointer::toTypePointer();
+                  if($wrappedType == $currentType->toOne(),
+                      | $gtv,
+                      | ^$gtv(type = $wrappedType)
+                  );
+            );,
+        other : meta::pure::metamodel::type::generics::GenericType[1] | $gt
+    ]);
+}
+
+// Returns true when `t` is in the current compilation's `elementMap` — i.e.
+// it's being produced/rebuilt by this compile pass and therefore at risk of
+// duplicate-PDO when persisted as a direct ref across element boundaries.
+// Already-wrapped (TempCompilerPointer) and non-PE Types (FunctionType,
+// RelationType, TypeParameter) short-circuit to false.
+function meta::pure::compiler::helper::genericType::isLocallyCompiledType(t:meta::pure::metamodel::type::Type[1], context:meta::pure::compiler::CompilerContext[1]):Boolean[1]
+{
+    if($t->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer),
+        | false,
+        | if(!$t->instanceOf(meta::pure::metamodel::type::Class) && !$t->instanceOf(meta::pure::metamodel::type::Enumeration) && !$t->instanceOf(meta::pure::metamodel::type::PrimitiveType),
+              | false,
+              | let path = $t->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath();
+                $context.elementMap->get($path)->isNotEmpty();
+        );
+    );
 }
 
 function meta::pure::compiler::helper::genericType::buildResolvedMultiplicityParameter(name:String[1], value:meta::pure::metamodel::multiplicity::Multiplicity[1]):meta::pure::metamodel::type::generics::ResolvedMultiplicityParameter[1]
@@ -976,15 +1035,11 @@ function meta::pure::compiler::helper::genericType::asInferredGenericType(gt:Gen
     $gt->match([
         igt : InferredGenericType[1] | $igt,
         gtv : GenericTypeValue[1] |
-            let wrappedType = if($gtv.type->isEmpty(),
-                | $gtv.type,
-                | $gtv.type->toOne()->toTypePointer()
-            );
             ^InferredGenericType(
-                type = $wrappedType,
+                type = $gtv.type,
                 typeArguments = $gtv.typeArguments,
                 multiplicityArguments = $gtv.multiplicityArguments
-            );,
+            ),
         other : GenericType[1] | $gt
     ]);
 }
