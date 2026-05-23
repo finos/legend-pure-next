@@ -75,7 +75,22 @@ public final class NewGenericTypeNode extends PureNode
             }
         }
 
-        Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, resolver);
+        // Resolve a class to use for the SHAPE of the instance. If the rawType
+        // isn't registered with the resolver (e.g. an in-progress
+        // newEnumeration()'s runtime Enumeration), fall back to walking its
+        // generalizations to find a registered ancestor — that ancestor's
+        // classInfo has the property slots we need. CGT below still points
+        // at the rawType requested by the caller.
+        String shapeClassPath = classPath;
+        if (rawType != null && resolver.getElement(classPath) == null)
+        {
+            String resolved = resolveShapeFromGeneralizations(rawType, resolver);
+            if (resolved != null)
+            {
+                shapeClassPath = resolved;
+            }
+        }
+        Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(shapeClassPath, resolver);
         if (instance != null)
         {
             // Platform-level canonical anchor: when the input GT has no type/mult args,
@@ -88,5 +103,47 @@ public final class NewGenericTypeNode extends PureNode
         }
 
         return instance;
+    }
+
+    /**
+     * Walk {@code rawType}'s generalizations until we find one whose path is
+     * registered in {@link org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry}.
+     * Used when the caller passes a runtime-constructed type (e.g. a Pure-level
+     * newEnumeration's in-progress Enumeration) — Truffle has no classInfo for
+     * such a type, so we need an ancestor's shape.
+     */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String resolveShapeFromGeneralizations(Object rawType,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        Object gens = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawType, "generalizations");
+        if (gens instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
+        {
+            for (int i = 0; i < seq.size(); i++)
+            {
+                Object gen = seq.getBoxed(i);
+                if (gen == null) continue;
+                Object general = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gen, "general");
+                Object generalType = general != null
+                        ? org.finos.legend.pure.truffle.runtime.helper._GenericType.type(general)
+                        : null;
+                if (generalType != null)
+                {
+                    String ancestorPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(generalType, resolver);
+                    if (ancestorPath != null && !ancestorPath.isEmpty()
+                            && resolver.getElement(ancestorPath) != null)
+                    {
+                        return ancestorPath;
+                    }
+                    // Recurse into the ancestor's generalizations
+                    String recursed = resolveShapeFromGeneralizations(generalType, resolver);
+                    if (recursed != null)
+                    {
+                        return recursed;
+                    }
+                }
+            }
+        }
+        return null;
     }
 }
