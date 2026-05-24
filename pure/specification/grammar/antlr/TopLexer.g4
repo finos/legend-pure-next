@@ -28,6 +28,15 @@ SEMICOLON
     : ';'
     ;
 
+// String-literal token — declared BEFORE the comment rules so longest-match
+// preserves `'/**...*/'` as a single STRING_CONTENT token rather than letting
+// `BLOCK_COMMENT` skip the `/**...*/` substring inside it (which would lose
+// that text from `contentToken.getText()` reassembly and feed an empty
+// string to the per-section M3Lexer).
+STRING_CONTENT
+    : '\'' ( '\\' . | ~['\r\n\\] )* '\''
+    ;
+
 LINE_COMMENT
     : '//' ~[\r\n]* -> skip
     ;
@@ -36,14 +45,24 @@ BLOCK_COMMENT
     : '/*' .*? '*/' -> skip
     ;
 
-// Any text (line) that does not start with ### or //
+// Any text (line) that does not start with ###, //, or a string literal.
+// `'` is excluded so the STRING_CONTENT rule above can start matching at
+// the opening quote — otherwise CONTENT_LINE would greedy-eat the `'` and
+// the lexer would never see the start of a string literal.
 CONTENT_LINE
-    : ~[;/\r\n#]+
+    : ~[;/\r\n#']+
     ;
 
 // A '/' that is not part of a comment
 SLASH
     : '/'
+    ;
+
+// A stray `'` that isn't paired into a STRING_CONTENT — keeps lexing from
+// erroring on malformed input; the inner M3Lexer will produce the real
+// diagnostic if the string isn't actually closed.
+QUOTE
+    : '\''
     ;
 
 // A '#' that is not part of '###Identifier'
