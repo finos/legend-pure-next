@@ -50,11 +50,20 @@ build: (_mvn "skip-tests")
 # Build + run Java unit tests (surefire) + run Pure compiler-graph spec tests.
 test: test-java test-pure-compiler
 
+# `test` plus Pure-on-Truffle self-host + standalone runtime test suites + native (AOT) suite.
+test-all: test test-pure-self-host test-pure-runtime native::test-all
+
 # NB: surefire runs the full JUnit suite, which includes TrufflePureTestRunner —
 # a dynamic-test factory that wraps both Pure runTests and PCT tests on the
-# Truffle context. So `test-java` already covers everything `test-pure-testFunctions`
-# and `test-pure-PCTs` run standalone. The `test-pure-compiler` recipe is run separately
-# as part of `test`.
+# Truffle context. So `test-java` already covers everything `test-pure-runtime-testFunctions`
+# and `test-pure-runtime-PCTs` run standalone. The `test-pure-compiler` recipe is run separately
+# as part of `test`. `test-pure-runtime` runs both runtime suites in one call.
+#
+# `test-pure-*` and `test-pure-self-host` are zero-Maven-dep "expert mode" recipes — they assume
+# `just build` (or `just test`) has produced the fat jar in `truffle/build/`. Run them
+# standalone for fast Pure-side iteration. In CI, `test-all` runs `test` first
+# (which depends on `_mvn "with-tests"`), so the jar is already in place by the time
+# the standalone recipes execute — no redundant Maven invocation.
 
 # Build with surefire-driven Java unit tests (covers Pure runTests / PCT too).
 test-java: (_mvn "with-tests")
@@ -64,12 +73,19 @@ test-java: (_mvn "with-tests")
 # thread-local around the body. Runner-side prints (tickProgress, etc.)
 # remain visible.
 
-# Standalone Pure runTests over meta::pure::functions (also covered by `test-java` via TrufflePureTestRunner).
-test-pure-testFunctions: (_mvn "skip-tests")
+# Run both runtime test suites (runTests + PCT) over meta::pure::functions.
+test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
+
+# Needs core-tests.pdb (runTests itself is <<test.TestDependency>> and is classified into the
+# tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
+# Standalone Pure runTests over meta::pure::functions (also covered by `test-java` via TrufflePureTestRunner; assumes `just build` was run).
+test-pure-runtime-testFunctions:
     @{{banner}} '[pure→truffle]' 'runTests'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
 
@@ -78,36 +94,47 @@ test-pure-compiler:
     @{{banner}} '[pure→truffle]' 'runCompiledGraphTests over pure/specification/compiler/tests'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
         --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
 
-# Standalone Pure PCT tests over meta::pure::functions (also covered by `test-java` via TrufflePureTestRunner).
-test-pure-PCTs: (_mvn "skip-tests")
+# Needs core-tests.pdb and compiler-tests.pdb for the same reason as test-pure-runtime-testFunctions.
+# Standalone Pure PCT tests over meta::pure::functions (also covered by `test-java` via TrufflePureTestRunner; assumes `just build` was run).
+test-pure-runtime-PCTs:
     @{{banner}} '[pure→truffle]' 'runPCTTests'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
         --function "meta::pure::test::runPCTTests_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
 
-# Self-host: compile compiler-pure on Truffle, run compiler tests, then diff PDB vs Java direct.
-test-pure-self-host: (_mvn "skip-tests")
-    @{{banner}} '[self-host-truffle]' 'compiler-pure → compiler_truffle.pdb (truffle), then run compiler tests'
+# Truffle-compiled compiler.pdb goes to {{truffle_out}}/ to keep it separate from the
+# Java-compiled shared/compiler.pdb (filename is derived from module manifest).
+# Self-host: compile compiler-pure on Truffle, run compiler tests, then diff PDB vs Java direct (assumes `just build` was run).
+test-pure-self-host:
+    @{{banner}} '[self-host-truffle]' 'compiler-pure → {{truffle_out}}/compiler.pdb (truffle), then run compiler tests'
     {{pure_truffle}} compile \
         --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
         --base-pdb {{shared_out}}/compiler.pdb \
         --source {{compiler_src}} \
-        --output {{truffle_out}}/compiler_truffle.pdb {{err_filter}}
+        --output-dir {{truffle_out}} \
+        --tests split {{err_filter}}
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
-        --pdb {{truffle_out}}/compiler_truffle.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{truffle_out}}/compiler.pdb \
+        --pdb {{truffle_out}}/compiler-tests.pdb \
         --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
-    @{{banner}} '[self-host-truffle]' 'diff compiler.pdb (Java compiler) ↔ compiler_truffle.pdb (Truffle compiler)'
+    @{{banner}} '[self-host-truffle]' 'diff shared/compiler.pdb (Java compiler) ↔ {{truffle_out}}/compiler.pdb (Truffle compiler)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
         {{shared_out}}/compiler.pdb \
-        {{truffle_out}}/compiler_truffle.pdb {{err_filter}}
+        {{truffle_out}}/compiler.pdb {{err_filter}}
 
 # Run the PureEvaluatorBenchmark.
 bench: (_mvn "skip-tests")

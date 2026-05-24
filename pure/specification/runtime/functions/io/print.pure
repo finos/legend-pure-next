@@ -119,6 +119,20 @@ function <<test.Test>> meta::pure::functions::io::tests::testPrintObject():Boole
         print($p));
 }
 
+function <<test.Test>> meta::pure::functions::io::tests::testPrintListObjects():Boolean[1]
+{
+    let p1 = ^meta::pure::functions::io::tests::TestPerson(name='Alice', age=30);
+    let p2 = ^meta::pure::functions::io::tests::TestPerson(name='Bob', age=25);
+    assertEquals(
+        'TestPerson\n' +
+        '  name: \'Alice\'\n' +
+        '  age: 30\n' +
+        'TestPerson\n' +
+        '  name: \'Bob\'\n' +
+        '  age: 25',
+        print([$p1, $p2]));
+}
+
 function <<test.Test>> meta::pure::functions::io::tests::testPrintNestedObject():Boolean[1]
 {
     let p = ^meta::pure::functions::io::tests::TestPerson(name='Bob', age=25);

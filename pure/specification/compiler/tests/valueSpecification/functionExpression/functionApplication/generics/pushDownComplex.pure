@@ -113,3 +113,32 @@ function go__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
       AtomicValue  'region' :@String@[1]  ~@AtomicValue@  @44:26-44:33
       AtomicValue  'total' :@String@[1]  ~@AtomicValue@  @44:36-44:42
       AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @44:45-44:51
+
+###ReverseIndex
+Trade:
+  go__Any_MANY_
+Trade.quantity:
+  go__Any_MANY_
+Trade.tradeId:
+  go__Any_MANY_
+count_Any_MANY__Integer_1_:
+  go__Any_MANY_
+meta::pure::functions::collection::getAll_Class_1__T_MANY_:
+  go__Any_MANY_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_:
+  test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_
+sum_Number_MANY__Number_1_:
+  go__Any_MANY_
+test::AggregateValue:
+  test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_
+  test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_
+test::TabularDataSet:
+  test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_
+test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_:
+  go__Any_MANY_
+test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_:
+  go__Any_MANY_

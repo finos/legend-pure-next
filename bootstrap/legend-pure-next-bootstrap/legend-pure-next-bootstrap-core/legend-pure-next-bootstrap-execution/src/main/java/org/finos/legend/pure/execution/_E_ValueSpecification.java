@@ -132,7 +132,7 @@ public class _E_ValueSpecification
                     ._values(org.eclipse.collections.api.factory.Lists.mutable.empty())
                     ._genericType(genericType != null ? genericType
                             : (meta.pure.metamodel.type.generics.GenericType) resolver.getElement(
-                                    "meta::pure::metamodel::type::generics::optimization::GenericType_Nil"))
+                                    "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_Nil"))
                     ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity)
                             resolver.getElement("meta::pure::metamodel::multiplicity::PureZero"));
         }
@@ -188,6 +188,28 @@ public class _E_ValueSpecification
         if (value instanceof DynamicInstance di)
         {
             return _GenericType.type(di.getClassifierGenericType());
+        }
+        // TempCompilerPointer — `_classifierGenericType()` is guarded on
+        // pointer impls and throws under strict mode (the slot isn't
+        // populated on a pointer). Derive the type from the Java class name
+        // instead: every pointer impl in {@code meta.pure.metamodel.pointer}
+        // maps 1:1 to a Pure type at the same package path. The match-arm
+        // dispatcher only needs the runtime type to walk generalizations,
+        // and the pointer's typed interface chain already encodes the right
+        // ancestry (e.g. PackageableFunctionPointer → PackageableFunction →
+        // Function → Any, and also → PackageableElement).
+        if (value instanceof meta.pure.metamodel.pointer.TempCompilerPointer && resolver != null)
+        {
+            String simpleName = value.getClass().getSimpleName();
+            if (simpleName.endsWith("Impl"))
+            {
+                simpleName = simpleName.substring(0, simpleName.length() - 4);
+            }
+            Object pointerType = resolver.getElement("meta::pure::metamodel::pointer::" + simpleName);
+            if (pointerType instanceof Type t)
+            {
+                return t;
+            }
         }
         if (value instanceof meta.pure.metamodel.type.Any any)
         {

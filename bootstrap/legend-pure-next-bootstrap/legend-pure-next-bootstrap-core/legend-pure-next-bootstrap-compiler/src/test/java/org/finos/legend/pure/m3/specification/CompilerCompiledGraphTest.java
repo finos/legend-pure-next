@@ -22,6 +22,7 @@ import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraph;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphImpl;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension;
 import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
+import org.finos.legend.pure.m3.extensions.testfile.TestFileLanguageExtension;
 import org.finos.legend.pure.m3.module.CompilationError;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
@@ -46,6 +47,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -106,6 +108,46 @@ public class CompilerCompiledGraphTest
         throw new RuntimeException("Cannot locate pure/specification/compiler/tests by walking up from " + Path.of("").toAbsolutePath());
     }
 
+    /**
+     * Every {@code .pure} file under the compiler tests tree must declare
+     * either a {@code ###CompiledGraph} section (success spec) or a
+     * {@code ###Error} section (compile-error spec). A file with neither
+     * is silently skipped by both runners — exactly the failure mode we
+     * want to prevent. Fails the build with the full list of offenders
+     * so they can be annotated or removed in one pass.
+     */
+    @org.junit.jupiter.api.Test
+    public void everyTestFileMustDeclareCompiledGraphOrError() throws IOException
+    {
+        Path rootDir = locateTestsRoot();
+        List<String> offenders = new ArrayList<>();
+        try (Stream<Path> walk = Files.walk(rootDir))
+        {
+            walk.filter(Files::isRegularFile)
+                    .filter(p -> p.toString().endsWith(".pure"))
+                    .sorted()
+                    .forEach(p ->
+                    {
+                        try
+                        {
+                            String content = Files.readString(p, StandardCharsets.UTF_8);
+                            if (!content.contains(SECTION_MARKER) && !content.contains("###Error"))
+                            {
+                                offenders.add(rootDir.relativize(p).toString().replace('\\', '/'));
+                            }
+                        }
+                        catch (IOException e)
+                        {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        }
+        Assertions.assertTrue(offenders.isEmpty(),
+                "The following test files are missing a ###CompiledGraph or ###Error section "
+                        + "(would be silently skipped by the runners):\n  "
+                        + String.join("\n  ", offenders));
+    }
+
     public static Collection<Arguments> discoverTests() throws IOException
     {
         List<Arguments> tests = new ArrayList<>();
@@ -143,6 +185,8 @@ public class CompilerCompiledGraphTest
         return tests;
     }
 
+    private static final SpecTestRuntime RUNTIME = new SpecTestRuntime();
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("discoverTests")
     public void testCompiledGraph(String testName, String resourcePath) throws Exception
@@ -150,16 +194,10 @@ public class CompilerCompiledGraphTest
         ClassLoader cl = getClass().getClassLoader();
         String content = loadResource(cl, resourcePath);
 
-        // Parse for assertion extraction (with CompiledGraph + CompilerStats section support)
-        CompiledGraphLanguageExtension cgExt = new CompiledGraphLanguageExtension();
-        CompilerStatsLanguageExtension csExt = new CompilerStatsLanguageExtension();
-        PureLanguageExtension pureExt = new PureLanguageExtension();
-
-        PureParser parser = PureParser.builder().withExtensions(Lists.mutable.with(cgExt, csExt, pureExt)).build();
-        PureFile pureFile = parser.parse(testName, content);
+        CompiledSpec spec = RUNTIME.compileSpec(content, testName);
 
         // Extract expected compiled graph from parsed CompiledGraph elements
-        String expectedGraph = pureFile._sections().flatCollect(s -> s._elements())
+        String expectedGraph = spec.primary()._sections().flatCollect(s -> s._elements())
                 .selectInstancesOf(CompiledGraph.class)
                 .collect(CompiledGraph::_value)
                 .getFirst();
@@ -174,56 +212,24 @@ public class CompilerCompiledGraphTest
         }
         expectedGraph = expectedGraph.stripTrailing();
 
-        // Compile (LocalModule parses internally, cgExt provides both grammar + compiler)
-        PDBModule module =
-                new PDBModule(BootstrapModule.locateCorePdb(),
-                        PDBModule.Mode.COMPILATION);
-
-        PureModel model = PureModel.withModules(
-                        Lists.mutable.with(new LocalModule("test", "*", Lists.mutable.with(module.getName()),
-                                Lists.mutable.with(new PureContent(content, testName))), module))
-                .withExtensions(Lists.mutable.with(cgExt, csExt, pureExt))
-                .build();
-        CompilationResult result = model.compile();
-
         // Assert no compilation errors
-        List<String> errors = result.errors().stream()
+        List<String> errors = spec.result().errors().stream()
                 .map(CompilationError::message)
                 .toList();
         Assertions.assertTrue(errors.isEmpty(),
                 "Compilation errors for " + testName + ":\n" + String.join("\n", errors));
 
-        // Collect compiled elements in source order
-        List<PackageableElement> compiledElements = new ArrayList<>();
-        Module testModule = model.getModule("test");
-        pureFile._sections().forEach(section ->
-                section._elements().forEach(grammarElement ->
-                {
-                    if (grammarElement instanceof CompiledGraph)
-                    {
-                        return; // Skip CompiledGraph elements
-                    }
-                    String name = grammarElement._name();
-                    String packagePath = grammarElement._package() != null
-                            ? grammarElement._package()._value()
-                            : null;
-                    String fullPath = packagePath != null
-                            ? packagePath + "::" + name
-                            : name;
-                    PackageableElement resolved = testModule.getElement(fullPath);
-                    if (resolved != null)
-                    {
-                        compiledElements.add(resolved);
-                    }
-                }));
-
         // Print and compare
-        String actualGraph = CompiledGraphPrinter.print(compiledElements).stripTrailing();
+        String actualGraph = CompiledGraphPrinter.print(spec.compiledElementsInDeclarationOrder()).stripTrailing();
 
-        // Baseline generation mode: write actual output back to source file
+        // Baseline generation mode: write actual output back to source file.
+        // Always also emits a ###ReverseIndex section so every success test
+        // carries the recorded reverse index alongside its compiled graph —
+        // makes the test the canonical fixture for both signals.
+        String actualReverseIndex = formatReverseIndex(spec.result().referencedBy());
         if (Boolean.getBoolean("legend.pure.generateBaselines"))
         {
-            writeBaseline(resourcePath, actualGraph);
+            writeBaseline(resourcePath, actualGraph, actualReverseIndex);
             return;
         }
 
@@ -231,9 +237,104 @@ public class CompilerCompiledGraphTest
                 "CompiledGraph mismatch for " + testName
                         + "\n\nExpected:\n" + expectedGraph
                         + "\n\nActual:\n" + actualGraph);
+
+        // ###ReverseIndex is REQUIRED on every success test — the reverse
+        // index is part of the canonical test fixture. Missing section
+        // fails the test (re-run with -Dlegend.pure.generateBaselines=true
+        // to backfill). Empty sections are valid: parser's dispatchSection
+        // produces zero elements for an empty content body, so detect
+        // section presence via {@code Section._parserName()} instead of
+        // looking for a parsed {@code ReverseIndex} element.
+        boolean hasReverseIndexSection = spec.primary()._sections()
+                .anySatisfy(s -> "ReverseIndex".equals(s._parserName()));
+        Assertions.assertTrue(hasReverseIndexSection,
+                "Test file must contain a ###ReverseIndex section: " + testName
+                        + " (run with -Dlegend.pure.generateBaselines=true to backfill)");
+        String expectedRevIndex = spec.primary()._sections().flatCollect(s -> s._elements())
+                .selectInstancesOf(org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndex.class)
+                .collect(org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndex::_value)
+                .getFirst();
+        if (expectedRevIndex == null) expectedRevIndex = ""; // empty section
+        String actualRevIndex = formatReverseIndex(spec.result().referencedBy());
+        String normalizedExpected = normalizeReverseIndex(expectedRevIndex);
+        Assertions.assertEquals(normalizedExpected, actualRevIndex,
+                "ReverseIndex mismatch for " + testName
+                        + "\n\nExpected:\n" + normalizedExpected
+                        + "\n\nActual:\n" + actualRevIndex);
     }
 
-    private void writeBaseline(String resourcePath, String actualGraph) throws IOException
+    /**
+     * Render the reverse reference index as deterministic text. Targets
+     * appear in sorted order each followed by their sorted, two-space-
+     * indented callers. Matches the reverse-index shape (target → callers):
+     * <pre>
+     *   target_path:
+     *     caller_path_1
+     *     caller_path_2
+     *   other_target:
+     *     caller_path_1
+     * </pre>
+     */
+    private static String formatReverseIndex(java.util.Map<String, java.util.Set<String>> index)
+    {
+        java.util.List<String> targets = new java.util.ArrayList<>(index.keySet());
+        java.util.Collections.sort(targets);
+        StringBuilder sb = new StringBuilder();
+        for (String target : targets)
+        {
+            sb.append(target).append(':').append('\n');
+            java.util.List<String> callers = new java.util.ArrayList<>(index.get(target));
+            java.util.Collections.sort(callers);
+            for (String caller : callers)
+            {
+                sb.append("  ").append(caller).append('\n');
+            }
+        }
+        // Trim final newline so equality with stripped expected works
+        int len = sb.length();
+        while (len > 0 && sb.charAt(len - 1) == '\n')
+        {
+            len--;
+        }
+        sb.setLength(len);
+        return sb.toString();
+    }
+
+    /**
+     * Parse the user-authored {@code ###ReverseIndex} text into the same
+     * grouped/sorted shape as {@link #formatReverseIndex}. Lines ending
+     * in {@code :} declare a target; subsequent indented lines are its
+     * callers. Blank lines tolerated. Re-rendering ensures the expected
+     * matches the formatter's exact output even when authored loosely.
+     */
+    private static String normalizeReverseIndex(String raw)
+    {
+        java.util.LinkedHashMap<String, java.util.Set<String>> parsed = new java.util.LinkedHashMap<>();
+        String currentTarget = null;
+        for (String line : raw.split("\n"))
+        {
+            if (line.trim().isEmpty())
+            {
+                continue;
+            }
+            if (!Character.isWhitespace(line.charAt(0)))
+            {
+                String t = line.trim();
+                if (t.endsWith(":"))
+                {
+                    currentTarget = t.substring(0, t.length() - 1);
+                    parsed.computeIfAbsent(currentTarget, k -> new java.util.LinkedHashSet<>());
+                }
+            }
+            else if (currentTarget != null)
+            {
+                parsed.get(currentTarget).add(line.trim());
+            }
+        }
+        return formatReverseIndex(parsed);
+    }
+
+    private void writeBaseline(String resourcePath, String actualGraph, String actualReverseIndex) throws IOException
     {
         // Walk up from cwd to find legend-pure-next root, then locate spec source
         Path cwd = Paths.get(System.getProperty("user.dir"));
@@ -270,7 +371,23 @@ public class CompilerCompiledGraphTest
             return;
         }
 
-        String newContent = content.substring(0, idx + marker.length()) + actualGraph + "\n";
+        // Build the new file: keep everything up to and including the
+        // `###CompiledGraph` marker, append the actual graph, then append a
+        // `###ReverseIndex` section when there's anything to record. We
+        // intentionally wipe anything that followed the marker — same
+        // semantics as before, just extended for the new section.
+        StringBuilder sb = new StringBuilder();
+        sb.append(content, 0, idx + marker.length());
+        sb.append(actualGraph).append('\n');
+        // Always emit ###ReverseIndex (even when empty) so the test contract
+        // "section must be present" is upheld for every success test. An
+        // empty body still represents a valid, deliberately-empty index.
+        sb.append('\n').append("###ReverseIndex").append('\n');
+        if (actualReverseIndex != null && !actualReverseIndex.isEmpty())
+        {
+            sb.append(actualReverseIndex).append('\n');
+        }
+        String newContent = sb.toString();
         if (newContent.equals(content))
         {
             return;

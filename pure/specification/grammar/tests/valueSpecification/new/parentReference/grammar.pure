@@ -1,0 +1,30 @@
+###Pure
+import protocol::support::*;
+
+function protocol::testSelfRef(): Container[1]
+{
+  ^Container(name='outer', next=~)
+}
+
+function protocol::testParentRef(): Container[1]
+{
+  ^Container(name='outer', next=^Container(name='inner', next=~.~))
+}
+
+function protocol::testParentDotProperty(): Container[1]
+{
+  ^Container(name='outer', items=['a', 'b'], echoed=~.items)
+}
+
+function protocol::testParentDotPropertyArrow(): Container[1]
+{
+  ^Container(name='outer', items=['a', 'b'], echoed=~.items->map(s|$s))
+}
+
+Class protocol::support::Container
+{
+  name: String[1];
+  items: String[*];
+  echoed: String[*];
+  next: Container[0..1];
+}

@@ -613,6 +613,53 @@
             animation: spin 0.8s linear infinite;
         }
 
+        /* F9 progress display: stage caption + bar + current item. Fed by
+           pure/executeProgress notifications during compile+execute. */
+        .exec-progress {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 12px;
+            max-width: 640px;
+        }
+        .exec-progress-stage {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+        }
+        .exec-progress-bar {
+            position: relative;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .exec-progress-bar > .fill {
+            position: absolute;
+            inset: 0 auto 0 0;
+            background: var(--accent);
+            transition: width 0.12s linear;
+        }
+        .exec-progress-bar.indeterminate > .fill {
+            width: 40%;
+            animation: exec-progress-indet 1.4s ease-in-out infinite;
+        }
+        @keyframes exec-progress-indet {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(250%); }
+        }
+        .exec-progress-detail {
+            font-family: monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
 
         .diagram-container {
             flex: 1;
@@ -777,9 +824,28 @@
                             <div style="padding: 10px; border-bottom: 1px solid var(--border);">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                     <div id="testModeStatus" style="font-weight: bold; font-size: 13px; color: var(--accent);">No Tests Loaded</div>
-                                    <button onclick="reRunLastTests()" title="Re-run tests" style="background: transparent; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--text-primary); transition: all 0.2s;">
-                                        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path fill-rule="evenodd" d="M8 2.5a5.487 5.487 0 00-4.131 1.869l1.204 1.204A.25.25 0 014.896 6H1.25A.25.25 0 011 5.75V2.104a.25.25 0 01.427-.177l1.38 1.38A7.001 7.001 0 0114.95 7.16a.75.75 0 11-1.49.178A5.501 5.501 0 008 2.5zM1.705 8.005a.75.75 0 511.474-.272 5.5 5.5 0 0010.72-2.866V6.104a.25.25 0 01.427-.177l1.38 1.38A7.002 7.002 0 011.05 8.84a.75.75 0 01.656-.835z"></path></svg>
-                                    </button>
+                                    <div style="display: flex; gap: 4px;">
+                                        <button id="btnStopTests" onclick="cancelRunningTests()" title="Stop running tests" style="background: transparent; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--error); transition: all 0.2s;">
+                                            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1"/></svg>
+                                        </button>
+                                        <button onclick="reRunLastTests()" title="Re-run tests" style="background: transparent; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--text-primary); transition: all 0.2s;">
+                                            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path fill-rule="evenodd" d="M8 2.5a5.487 5.487 0 00-4.131 1.869l1.204 1.204A.25.25 0 014.896 6H1.25A.25.25 0 011 5.75V2.104a.25.25 0 01.427-.177l1.38 1.38A7.001 7.001 0 0114.95 7.16a.75.75 0 11-1.49.178A5.501 5.501 0 008 2.5zM1.705 8.005a.75.75 0 511.474-.272 5.5 5.5 0 0010.72-2.866V6.104a.25.25 0 01.427-.177l1.38 1.38A7.002 7.002 0 011.05 8.84a.75.75 0 01.656-.835z"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Test progress bar — three segments: passed (green),
+                                     failed (red), cancelled (grey). Width reflects each
+                                     count / total. Updated by refreshTestSummary. -->
+                                <div id="testProgressContainer" style="display: none; margin-bottom: 8px;">
+                                    <div style="height: 6px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; display: flex;">
+                                        <div id="testProgressPassed" style="height: 100%; background: var(--success); width: 0%; transition: width 0.15s ease-out;"></div>
+                                        <div id="testProgressFailed" style="height: 100%; background: var(--error); width: 0%; transition: width 0.15s ease-out;"></div>
+                                        <div id="testProgressCancelled" style="height: 100%; background: var(--text-secondary); opacity: 0.5; width: 0%; transition: width 0.15s ease-out;"></div>
+                                    </div>
+                                    <div id="testProgressLabel" style="margin-top: 4px; font-size: 11px; color: var(--text-secondary); display: flex; justify-content: space-between;">
+                                        <span id="testProgressCounts">0 / 0</span>
+                                        <span id="testProgressCurrent" style="color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%;"></span>
+                                    </div>
                                 </div>
                                 <div id="pctAdapterContainer" style="margin-bottom: 4px; display: none;">
                                     <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">PCT Adapter (for PCT runs):</label>
@@ -1132,13 +1198,20 @@
                 }
             }
             
+            // Queued state: static "pending" dot. Only the test the runner
+            // is currently on shows the animated spinner — driven by the
+            // streamed pure/testResult {status: "running"} notification.
+            currentRunningTest = null;
+            testResultsMap = {};
             tests.forEach(t => {
                 const icon = document.getElementById(`test-icon-${t}`);
                 if (icon) {
-                    icon.innerHTML = '<span class="spinner" style="width:10px;height:10px;border-width:1px;"></span>';
+                    icon.innerHTML = '';
+                    icon.textContent = '○';
                     icon.style.color = 'var(--text-secondary)';
                 }
             });
+            refreshTestSummary();
             
             document.getElementById('testSpecificOutput').innerHTML = '<div style="color: var(--text-secondary); padding: 12px;"><span class="spinner"></span> Running tests...</div>';
             
@@ -1152,38 +1225,131 @@
         }
         
         function applyTestResults(results) {
-            let passedCount = 0;
-            let failedCount = 0;
-            
-            results.forEach(res => {
-                testResultsMap[res.test] = res;
-                
-                const isPassed = res.status === 'passed';
-                const iconElem = document.getElementById(`test-icon-${res.test}`);
+            // Final batch response — most rows already updated via the
+            // pure/testResult stream. Refresh the summary banner using the
+            // accumulated testResultsMap so cancelled-mid-batch and
+            // partial-runs render correctly.
+            (results || []).forEach(res => { testResultsMap[res.test] = res; });
+            refreshTestSummary();
+            applyTestFilters();
+        }
+
+        /** Live per-test update from the LSP server. Fired both as a test
+         *  starts (status="running") and when it finishes (passed/failed/
+         *  cancelled). Keeps the icon, the testResultsMap, and the summary
+         *  in sync. The "running" state only updates the icon — it doesn't
+         *  populate testResultsMap, so re-running doesn't lose prior data. */
+        let currentRunningTest = null;
+
+        function handleStreamingTestResult(params) {
+            if (!params || !params.test) return;
+            const iconElem = document.getElementById(`test-icon-${params.test}`);
+            if (params.status === 'running') {
+                currentRunningTest = params.test;
                 if (iconElem) {
-                    iconElem.textContent = isPassed ? '✅' : '❌';
-                    iconElem.style.color = isPassed ? 'var(--success)' : 'var(--error)';
+                    iconElem.innerHTML = '<span class="spinner" style="width:10px;height:10px;border-width:1px;"></span>';
+                    iconElem.style.color = 'var(--accent)';
                 }
-                
-                if (isPassed) { passedCount++; } else { failedCount++; }
-            });
-            
+                // Scroll the running row into view so the user can follow
+                // progress without manually tracking it.
+                const row = iconElem ? iconElem.closest('.tree-node') : null;
+                if (row && row.scrollIntoView) {
+                    row.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+                }
+                refreshTestSummary();
+                return;
+            }
+            const res = {
+                test: params.test,
+                status: params.status,
+                error: params.error,
+                output: params.output
+            };
+            testResultsMap[res.test] = res;
+            if (iconElem) {
+                iconElem.innerHTML = '';  // clear any spinner span
+                if (res.status === 'passed') {
+                    iconElem.textContent = '✅';
+                    iconElem.style.color = 'var(--success)';
+                } else if (res.status === 'cancelled') {
+                    iconElem.textContent = '⏹';
+                    iconElem.style.color = 'var(--text-secondary)';
+                } else {
+                    iconElem.textContent = '❌';
+                    iconElem.style.color = 'var(--error)';
+                }
+            }
+            refreshTestSummary();
+        }
+
+        /** Re-render the top-right summary panel from {@code testResultsMap}.
+         *  Called from both the streaming path and the final-batch path so
+         *  the banner stays accurate at all times. Also drives the progress
+         *  bar in the test-tree header. */
+        function refreshTestSummary() {
+            const total = discoveredTests ? discoveredTests.length : 0;
+            let passed = 0, failed = 0, cancelled = 0, done = 0;
+            for (const t of discoveredTests || []) {
+                const r = testResultsMap[t];
+                if (!r) continue;
+                done++;
+                if (r.status === 'passed') passed++;
+                else if (r.status === 'cancelled') cancelled++;
+                else failed++;
+            }
+            const finished = done === total;
+            // Progress bar (three colored segments + count + current row).
+            const progressContainer = document.getElementById('testProgressContainer');
+            if (progressContainer) {
+                progressContainer.style.display = total > 0 ? 'block' : 'none';
+                const pct = (n) => total > 0 ? (n / total * 100) + '%' : '0%';
+                document.getElementById('testProgressPassed').style.width = pct(passed);
+                document.getElementById('testProgressFailed').style.width = pct(failed);
+                document.getElementById('testProgressCancelled').style.width = pct(cancelled);
+                document.getElementById('testProgressCounts').textContent = done + ' / ' + total
+                    + ' • ✅' + passed + ' ❌' + failed + (cancelled ? ' ⏹' + cancelled : '');
+                const currentLabel = (!finished && currentRunningTest)
+                    ? currentRunningTest.split('::').pop()
+                    : '';
+                document.getElementById('testProgressCurrent').textContent = currentLabel;
+                document.getElementById('testProgressCurrent').title = currentRunningTest || '';
+            }
+            const statusLabel = finished
+                ? (failed === 0 && cancelled === 0 ? 'Test Run Finished!' : (cancelled > 0 ? 'Test Run Cancelled' : 'Test Run Finished!'))
+                : `Running tests… (${done}/${total})`;
             document.getElementById('testSpecificOutput').innerHTML = `
                 <div style="margin-bottom: 12px; font-weight: bold; font-size: 14px; padding: 12px;">
-                    Test Run Finished! <br/>
+                    ${statusLabel} <br/>
                     <span style="font-size: 11px; font-weight: normal; color: var(--text-secondary);">
-                        Total Ran: ${results.length} | Passed: <span style="color:var(--success)">${passedCount}</span> | Failed: <span style="color:var(--error)">${failedCount}</span>
+                        ${done}/${total} | Passed: <span style="color:var(--success)">${passed}</span> | Failed: <span style="color:var(--error)">${failed}</span>${cancelled ? ' | Cancelled: <span style="color:var(--text-secondary)">' + cancelled + '</span>' : ''}
                     </span>
                 </div>
                 <div style="color: var(--text-secondary); font-style: italic; padding: 0 12px;">Select a test from the left to view output details</div>
             `;
-            
             const badge = document.getElementById('resultBadge');
             badge.style.display = 'inline-block';
-            badge.className = failedCount === 0 ? 'result-badge success' : 'result-badge error';
-            badge.textContent = failedCount === 0 ? 'TESTS PASSED' : 'TESTS FAILED';
-            
-            applyTestFilters(); // re-evaluate filter
+            if (!finished) {
+                badge.className = 'result-badge';
+                badge.textContent = 'RUNNING…';
+            } else if (cancelled > 0) {
+                badge.className = 'result-badge';
+                badge.textContent = 'CANCELLED';
+            } else {
+                badge.className = failed === 0 ? 'result-badge success' : 'result-badge error';
+                badge.textContent = failed === 0 ? 'TESTS PASSED' : 'TESTS FAILED';
+            }
+        }
+
+        /** Send STOP — the server's pure/runTests loop checks this flag
+         *  between tests and bails out, streaming "cancelled" rows for the
+         *  remaining queue. The currently-running test still finishes
+         *  (Truffle has no clean cancellation hook for in-flight eval). */
+        function cancelRunningTests() {
+            if (!initialized || !ws || ws.readyState !== WebSocket.OPEN) return;
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/cancelTests',
+                arguments: []
+            }).catch(console.error);
         }
         
         let currentTestFilter = 'all';
@@ -1739,11 +1905,20 @@
             editor.addCommand(monaco.KeyCode.F9, executeCode);
 
             // Ctrl/Cmd+B → Go to Definition (IntelliJ binding). Monaco's
-            // default for Ctrl+B is cursorLeft; we override here so the
-            // DefinitionProvider registered above fires on this shortcut
-            // in addition to the standard F12.
-            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, () => {
-                editor.getAction('editor.action.revealDefinition').run();
+            // default for Ctrl+B is cursorLeft; we register as an action so
+            // the keybinding has higher precedence and actually overrides
+            // (editor.addCommand doesn't reliably preempt built-in chords).
+            // Inside the action's run callback we use `trigger()` rather than
+            // `getAction(id).run()` — Monaco invokes triggered actions through
+            // the same path as the F12 keybinding, whereas nested .run() from
+            // a custom action doesn't reach the editor's command dispatcher.
+            editor.addAction({
+                id: 'pure.action.gotoDefinition',
+                label: 'Go to Definition (Pure)',
+                keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB],
+                contextMenuGroupId: 'navigation',
+                contextMenuOrder: 1.5,
+                run: (ed) => ed.trigger('pure-ide', 'editor.action.revealDefinition', null)
             });
 
             // Option+/ (Alt+/) → toggle line comment on selection
@@ -1772,7 +1947,18 @@
                     e.preventDefault();
                     switchBottomTab('search');
                 }
-            });
+                // Ctrl/Cmd+B → Go to Definition. Monaco's built-in
+                // Ctrl+B (cursorLeft) wins over editor.addCommand and
+                // editor.addAction keybindings — intercept at document
+                // level instead. Capture phase so we run before Monaco.
+                if (e.key === 'b' && (e.ctrlKey || e.metaKey)
+                        && !e.shiftKey && !e.altKey
+                        && editor && editor.hasTextFocus()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    editor.trigger('pure-ide', 'editor.action.revealDefinition', null);
+                }
+            }, true);
 
             // Update cursor position in status bar
             editor.onDidChangeCursorPosition((e) => {
@@ -1897,6 +2083,12 @@
             }
             else if (msg.method === 'pure/openFile') {
                 handleOpenFile(msg.params);
+            }
+            else if (msg.method === 'pure/testResult') {
+                handleStreamingTestResult(msg.params);
+            }
+            else if (msg.method === 'pure/executeProgress') {
+                handleExecuteProgress(msg.params);
             }
             else if (msg.method === 'window/showMessage') {
                 if (msg.params && msg.params.message) {
@@ -2079,13 +2271,22 @@
             return Promise.all(savePromises);
         }
 
+        let executeRunning = false;
         function executeCode() {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 showResult('Not connected to LSP server', true);
                 return;
             }
+            // Latch against double-fire: F9 pressed inside the editor goes through
+            // Monaco's addCommand but the keydown still bubbles to the document
+            // listener, so executeCode would run twice. Two concurrent pure/execute
+            // commands race on the per-module refIndex during LocalModule.compile()
+            // and crash sorting in LeanReferencesValidator with an NPE on a null
+            // entry. Pure-side, the second compile-pure invocation also fights for
+            // the registry mutation. Cleared in finally so the next F9 is free.
+            if (executeRunning) { return; }
+            executeRunning = true;
 
-            // Show spinner
             const content = document.getElementById('resultContent');
             content.className = 'result-content';
             content.innerHTML = '<span class="spinner"></span> Saving and executing...';
@@ -2093,23 +2294,48 @@
             const badge = document.getElementById('resultBadge');
             badge.style.display = 'none';
 
-            saveAllOpenFiles().then(() => {
-                sendRequest('workspace/executeCommand', {
-                    command: 'pure/execute',
-                    arguments: []
-                }).then(() => {
-                    // Result comes via pure/executeResult notification
-                }).catch(err => {
-                    showResult('Command failed: ' + (err.message || JSON.stringify(err)), true);
-                });
-            }).catch(e => {
-                showResult('Save failed: ' + e, true);
+            saveAllOpenFiles().then(() => sendRequest('workspace/executeCommand', {
+                command: 'pure/execute',
+                arguments: []
+            })).catch(err => {
+                showResult('Command failed: ' + (err && err.message ? err.message : JSON.stringify(err)), true);
+            }).finally(() => {
+                executeRunning = false;
             });
         }
 
         function handleExecuteResult(params) {
             showResult(params.result, params.isError || params.error);
             renderCompileStats(params.compileStats);
+        }
+
+        // pure/executeProgress: stage + bar + current item, streamed by the
+        // backend during F9 compile/execute so the user sees movement instead
+        // of an opaque spinner. total === 0 → indeterminate bar (the stage is
+        // a coarse boundary with no per-element counter, e.g. "Parsing").
+        function handleExecuteProgress(params) {
+            if (!params) return;
+            const content = document.getElementById('resultContent');
+            if (!content) return;
+            const total = params.total | 0;
+            const done = params.done | 0;
+            const pct = total > 0 ? Math.max(0, Math.min(100, Math.round(done * 100 / total))) : 0;
+            const indet = total <= 0;
+            const counter = indet ? '' : ` (${done}/${total})`;
+            content.className = 'result-content';
+            content.innerHTML = ''
+                + '<div class="exec-progress">'
+                +   '<div class="exec-progress-stage">'
+                +     '<span class="spinner"></span>'
+                +     '<span>' + escapeHtml(params.stage || 'Working') + counter + '</span>'
+                +   '</div>'
+                +   '<div class="exec-progress-bar' + (indet ? ' indeterminate' : '') + '">'
+                +     '<div class="fill" style="width:' + (indet ? '40%' : pct + '%') + '"></div>'
+                +   '</div>'
+                +   (params.detail
+                        ? '<div class="exec-progress-detail">' + escapeHtml(params.detail) + '</div>'
+                        : '')
+                + '</div>';
         }
 
         function renderCompileStats(stats) {

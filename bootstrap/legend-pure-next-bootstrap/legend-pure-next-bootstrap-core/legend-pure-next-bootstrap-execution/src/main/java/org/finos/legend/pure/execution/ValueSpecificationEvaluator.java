@@ -28,6 +28,7 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
 
 import java.lang.reflect.InvocationTargetException;
@@ -63,6 +64,32 @@ public class ValueSpecificationEvaluator
     private final Deque<meta.pure.metamodel.function.FunctionDefinition> fnEvalStack = new ArrayDeque<>();
     private final Deque<Scope> varStack = new ArrayDeque<>();
     private final Deque<Object> constructionStack = new ArrayDeque<>();
+    // Tracks instances created within the current new()/copy() expression.
+    // Used by copy() to enforce that values assigned to association properties
+    // were instantiated within the same copy expression — otherwise the copy
+    // would mutate the reverse-association property of an existing instance
+    // (e.g. `^$pierre(firm=$firmX)` would add bob to `firmX.employees`, breaking
+    // immutability of `$firmX`). Each new/copy invocation pushes a fresh scope
+    // on entry and registers its result in the parent scope on exit, so nested
+    // creations (`^$pierre(firm=^Firm())`) propagate correctly: the inner
+    // `^Firm()` registers in the outer copy's scope.
+    private final Deque<java.util.IdentityHashMap<Object, Boolean>> freshScopeStack = new ArrayDeque<>();
+
+    // Function-level `<T>` type-variable bindings stack: one entry per active
+    // generic function call, mapping `<T>` parameter names → resolved Type
+    // PE. Populated at function entry by walking the function's declared
+    // parameter types against the runtime argument CGTs. Read by cast()
+    // when target is a TypeParameter, so `cast(@T)` resolves to the
+    // caller-bound type instead of skipping the subtype check. Mirrors the
+    // Truffle PureContext.functionTypeVarStack.
+    private final Deque<java.util.Map<String, Object>> functionTypeVarStack = new ArrayDeque<>();
+
+    // Parallel stack for `<T|m>` multiplicity-parameter bindings: name → resolved
+    // Multiplicity PE (PureOne, ZeroOne, PureMany, or a freshly-constructed
+    // ConcreteMultiplicity from the argument's actual count). Read by cast()
+    // when target multiplicity is a MultiplicityParameter so probe count can
+    // be validated against the caller-bound bounds.
+    private final Deque<java.util.Map<String, Object>> functionMulVarStack = new ArrayDeque<>();
 
     // Inline cache for variable reads: maps each VariableExpression node to
     // the slot it last resolved to in the *current* frame. JFR found
@@ -124,6 +151,31 @@ public class ValueSpecificationEvaluator
     }
 
     /**
+     * Count the leading tilde sequence of a variable name. Returns N for names
+     * matching the pattern `~(.~){N-1}` (so {@code "~"} → 1, {@code "~.~"} → 2,
+     * …); returns 0 for any name that isn't a parent reference. Mirrors
+     * {@code PureLanguageCompilerContext.parentReferenceTildeCount}.
+     */
+    public static int parentReferenceTildeCount(String name)
+    {
+        if (name == null || name.isEmpty() || name.charAt(0) != '~')
+        {
+            return 0;
+        }
+        int count = 1;
+        int n = name.length();
+        for (int i = 1; i + 1 < n; i += 2)
+        {
+            if (name.charAt(i) != '.' || name.charAt(i + 1) != '~')
+            {
+                return 0;
+            }
+            count++;
+        }
+        return name.charAt(n - 1) == '~' ? count : 0;
+    }
+
+    /**
      * Push an instance onto the construction stack.
      * Used by {@code new} and {@code copy} natives to track the instance hierarchy
      * during construction, enabling parent-reference ({@code ~}) resolution.
@@ -139,6 +191,128 @@ public class ValueSpecificationEvaluator
     public void popConstruction()
     {
         constructionStack.pop();
+    }
+
+    /**
+     * Push a fresh-instance scope. Called on entry to new() / copy() so any
+     * inner instance created during this expression can be tracked as
+     * "freshly created within the current expression".
+     */
+    public void pushFreshScope()
+    {
+        freshScopeStack.push(new java.util.IdentityHashMap<>());
+    }
+
+    /**
+     * Pop the fresh-instance scope and register {@code result} (the new/copy's
+     * own product) into the PARENT scope, so an enclosing new/copy sees it as
+     * a fresh value too. Top-level expressions register into nothing.
+     */
+    public void popFreshScopeAndRegister(Object result)
+    {
+        freshScopeStack.pop();
+        if (!freshScopeStack.isEmpty() && result != null)
+        {
+            freshScopeStack.peek().put(result, Boolean.TRUE);
+        }
+    }
+
+    /**
+     * True iff {@code value} was created within any new/copy expression still
+     * active on the construction stack — i.e. it appears in any scope on the
+     * stack, or was registered into one by an inner new/copy that already
+     * completed. Scanning the whole stack (rather than just the top) lets
+     * higher-order operators (fold/map/etc.) compose naturally inside an outer
+     * new/copy: each lambda iteration's own scope sits on top, but values
+     * constructed in (or registered into) the enclosing scope still count as
+     * fresh. The enclosing scope owns final bidir wiring, so this is the
+     * right "ownership" boundary.
+     */
+    public boolean isFreshInCurrentScope(Object value)
+    {
+        if (value == null)
+        {
+            return false;
+        }
+        for (java.util.IdentityHashMap<Object, Boolean> scope : freshScopeStack)
+        {
+            if (scope.containsKey(value))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Push a function's `<T>` type-variable bindings (may be empty). */
+    public void pushFunctionTypeVarBindings(java.util.Map<String, Object> bindings)
+    {
+        functionTypeVarStack.push(bindings);
+    }
+
+    /** Pop the top function's `<T>` type-variable bindings. */
+    public void popFunctionTypeVarBindings()
+    {
+        functionTypeVarStack.pop();
+    }
+
+    /**
+     * Look up T's resolved Type from the innermost active function call that
+     * bound it. Returns null if the name isn't bound in any active scope —
+     * caller throws (cast on an unresolved T is a runtime error).
+     */
+    public Object lookupFunctionTypeVarBinding(String name)
+    {
+        if (name == null) return null;
+        for (java.util.Map<String, Object> scope : functionTypeVarStack)
+        {
+            Object v = scope.get(name);
+            if (v != null) return v;
+        }
+        return null;
+    }
+
+    /** Push a function's `<T|m>` multiplicity-variable bindings (may be empty). */
+    public void pushFunctionMulVarBindings(java.util.Map<String, Object> bindings)
+    {
+        functionMulVarStack.push(bindings);
+    }
+
+    /** Pop the top function's `<T|m>` multiplicity-variable bindings. */
+    public void popFunctionMulVarBindings()
+    {
+        functionMulVarStack.pop();
+    }
+
+    /** Look up m's resolved Multiplicity from the innermost active call. Null if unbound. */
+    public Object lookupFunctionMulVarBinding(String name)
+    {
+        if (name == null) return null;
+        for (java.util.Map<String, Object> scope : functionMulVarStack)
+        {
+            Object v = scope.get(name);
+            if (v != null) return v;
+        }
+        return null;
+    }
+
+    /**
+     * Register an instance directly into the current fresh scope. Used by
+     * deep-path copy paths (e.g. `^$pierre(firm.address=...)`) where the
+     * intermediate deep-copy of firm isn't created via a new()/copy() native
+     * call but is still a fresh product of the surrounding copy expression.
+     */
+    public void registerFreshInCurrentScope(Object value)
+    {
+        if (value == null)
+        {
+            return;
+        }
+        java.util.IdentityHashMap<Object, Boolean> top = freshScopeStack.peek();
+        if (top != null)
+        {
+            top.put(value, Boolean.TRUE);
+        }
     }
 
     /**
@@ -176,6 +350,25 @@ public class ValueSpecificationEvaluator
             {
                 Scope cur = varStack.peek();
                 String name = ve._name();
+                // Parent-reference variable (`~`, `~.~`, …): not a regular scope
+                // variable — its value is the in-progress `^X(...)` construction
+                // {@code depth} levels out, sourced from the construction stack
+                // maintained by the new()/copy() lazy natives. Same construct
+                // the compiler's VariableExpressionResolver types via
+                // {@code lookupParentReference} at compile time.
+                int tildeDepth = parentReferenceTildeCount(name);
+                if (tildeDepth > 0)
+                {
+                    Object target = peekConstruction(tildeDepth - 1);
+                    if (target == null)
+                    {
+                        throw new RuntimeException("Parent reference '" + name
+                                + "' is out of bounds — no enclosing `^X(...)` construction at depth "
+                                + (tildeDepth - 1) + ".");
+                    }
+                    yield _E_ValueSpecification.wrap(target, ve._genericType(), ve._multiplicity(),
+                            this.natives.resolver());
+                }
                 // Inline cache fast path: if the cached slot still holds
                 // the same name, return its value directly (one array
                 // index + one equality check).
@@ -284,6 +477,13 @@ public class ValueSpecificationEvaluator
         try
         {
             meta.pure.metamodel.function.Function func = fe._func();
+            if (func == null)
+            {
+                meta.pure.metamodel.SourceInformation si = fe._sourceInformation();
+                throw new RuntimeException("FunctionExpression._func() returned null at "
+                        + (si == null ? "?" : si._sourceId() + ":" + si._startLine() + "c" + si._startColumn())
+                        + " (call stack: " + getCallStackTrace() + ")");
+            }
             return switch (func)
             {
                 case meta.pure.metamodel.function.property.AbstractProperty prop ->
@@ -612,12 +812,41 @@ public class ValueSpecificationEvaluator
                 meta.pure.metamodel.multiplicity.Multiplicity mul =
                         (arg._multiplicity() != null) ? arg._multiplicity() : param._multiplicity();
                 // Bind the parameter: preserve the arg's own type info where available.
-                // For Collection args, use them directly (their per-element VS types are already correct).
-                // For AtomicValue args, restamp with the resolved gt/mul without unwrapping.
+                // Caller-driven shape coercion (Pure semantics: a 1-element collection
+                // equals its single value). If the declared param multiplicity has
+                // upperBound=1 but the arg arrived as a Collection-of-1, unwrap it to
+                // an AtomicValue so downstream property access / function dispatch see
+                // the scalar. Throw if the arg's actual size doesn't fit the param's
+                // declared bounds — the type checker normally catches this, but the
+                // runtime path through match's [1] arm (which passes the raw input
+                // collection straight to the arm lambda) can leak size mismatches.
                 ValueSpecification boundArg;
-                if (arg instanceof meta.pure.metamodel.valuespecification.Collection)
+                if (arg instanceof Collection col)
                 {
-                    boundArg = arg;
+                    int actualSize = col._values() == null ? 0 : col._values().size();
+                    Long paramUpper = _Multiplicity.upperBound(param._multiplicity());
+                    long paramLower = _Multiplicity.lowerBound(param._multiplicity());
+                    if (paramUpper != null && actualSize > paramUpper)
+                    {
+                        throw new RuntimeException("Argument multiplicity [" + actualSize
+                                + "] exceeds parameter '" + paramName + "' declared upper bound " + paramUpper);
+                    }
+                    if (actualSize < paramLower)
+                    {
+                        throw new RuntimeException("Argument multiplicity [" + actualSize
+                                + "] below parameter '" + paramName + "' declared lower bound " + paramLower);
+                    }
+                    if (paramUpper != null && paramUpper == 1 && actualSize == 1)
+                    {
+                        ValueSpecification inner = col._values().getFirst();
+                        boundArg = inner instanceof AtomicValue
+                                ? inner
+                                : _E_ValueSpecification.wrap(_E_ValueSpecification.unwrap(inner), gt, mul, this.natives.resolver());
+                    }
+                    else
+                    {
+                        boundArg = arg;
+                    }
                 }
                 else if (arg._genericType() == gt && arg._multiplicity() == mul)
                 {
@@ -629,6 +858,27 @@ public class ValueSpecificationEvaluator
                 }
                 childVars.put(paramName, boundArg);
             }
+        }
+
+        // Function-level `<T>` and `<T|m>` bindings: for each parameter whose
+        // declared type is a top-level TypeParameter, bind T → the argument's
+        // resolved type (arg._genericType().type). For each parameter whose
+        // declared multiplicity is a MultiplicityParameter, bind m → the
+        // argument's resolved multiplicity. Read by cast() when target type
+        // or multiplicity is parametric.
+        java.util.Map<String, Object> tvBindings = buildFunctionTypeVarBindings(params, args);
+        java.util.Map<String, Object> mvBindings = buildFunctionMulVarBindings(params, args);
+        boolean pushedTvBindings = false;
+        boolean pushedMvBindings = false;
+        if (tvBindings != null && !tvBindings.isEmpty())
+        {
+            pushFunctionTypeVarBindings(tvBindings);
+            pushedTvBindings = true;
+        }
+        if (mvBindings != null && !mvBindings.isEmpty())
+        {
+            pushFunctionMulVarBindings(mvBindings);
+            pushedMvBindings = true;
         }
 
         // Push child scope and evaluate expression sequence
@@ -649,8 +899,76 @@ public class ValueSpecificationEvaluator
         {
             varStack.pop();
             fnEvalStack.pop();
+            if (pushedTvBindings)
+            {
+                popFunctionTypeVarBindings();
+            }
+            if (pushedMvBindings)
+            {
+                popFunctionMulVarBindings();
+            }
         }
         return result;
+    }
+
+    /**
+     * Build T → resolved-Type bindings by walking declared parameter types
+     * for top-level TypeParameter occurrences. Bootstrap has it easier than
+     * Truffle: each ValueSpecification arg already carries its inferred
+     * genericType (collections too), so we just read it.
+     */
+    private java.util.Map<String, Object> buildFunctionTypeVarBindings(
+            MutableList<VariableExpression> params, List<ValueSpecification> args)
+    {
+        if (params == null || params.isEmpty()) return null;
+        java.util.Map<String, Object> bindings = null;
+        int n = Math.min(params.size(), args.size());
+        for (int i = 0; i < n; i++)
+        {
+            VariableExpression p = params.get(i);
+            if (p == null || p._genericType() == null) continue;
+            meta.pure.metamodel.type.Type pType = _GenericType.type(p._genericType());
+            if (!(pType instanceof meta.pure.metamodel.type.generics.TypeParameter tp)) continue;
+            String tvName = tp._name();
+            if (tvName == null || tvName.isEmpty()) continue;
+            ValueSpecification a = args.get(i);
+            if (a == null || a._genericType() == null) continue;
+            meta.pure.metamodel.type.Type resolved = _GenericType.type(a._genericType());
+            if (resolved == null) continue;
+            if (bindings == null) bindings = new java.util.HashMap<>(n);
+            bindings.put(tvName, resolved);
+        }
+        return bindings;
+    }
+
+    /**
+     * Build m → resolved-Multiplicity bindings by walking declared parameter
+     * multiplicities for MultiplicityParameter occurrences. Source of m's
+     * binding: the argument's actual multiplicity. For literal sequences,
+     * the arg's _multiplicity reflects the inferred multiplicity at the
+     * call site (PureOne for scalars, ZeroMany / ZeroOne / specific bounds
+     * for sequences as the type-checker assigned).
+     */
+    private java.util.Map<String, Object> buildFunctionMulVarBindings(
+            MutableList<VariableExpression> params, List<ValueSpecification> args)
+    {
+        if (params == null || params.isEmpty()) return null;
+        java.util.Map<String, Object> bindings = null;
+        int n = Math.min(params.size(), args.size());
+        for (int i = 0; i < n; i++)
+        {
+            VariableExpression p = params.get(i);
+            if (p == null || p._multiplicity() == null) continue;
+            meta.pure.metamodel.multiplicity.Multiplicity pMul = p._multiplicity();
+            if (!(pMul instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)) continue;
+            String mvName = mp._name();
+            if (mvName == null || mvName.isEmpty()) continue;
+            ValueSpecification a = args.get(i);
+            if (a == null || a._multiplicity() == null) continue;
+            if (bindings == null) bindings = new java.util.HashMap<>(n);
+            bindings.put(mvName, a._multiplicity());
+        }
+        return bindings;
     }
 
     /**
@@ -753,14 +1071,34 @@ public class ValueSpecificationEvaluator
             return "";
         }
         StringBuilder sb = new StringBuilder("\nPure stack trace:");
+        for (String frame : getCallStackFrames())
+        {
+            sb.append("\n    at ").append(frame);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Same as {@link #getCallStackTrace()} but returns the frames as a list —
+     * one entry per frame, formatted as
+     * {@code "<fnName> (<sourceId>:<line>c<col>)"}. Innermost-first.
+     *
+     * <p>Used by {@code tryEval} to populate {@code Error.stack} as
+     * {@code String[*]} so callers can iterate frames without re-parsing.</p>
+     */
+    public java.util.List<String> getCallStackFrames()
+    {
+        if (callStack.isEmpty())
+        {
+            return java.util.List.of();
+        }
+        java.util.List<String> frames = new java.util.ArrayList<>(callStack.size());
         java.util.Iterator<FunctionExpression> feIt = callStack.iterator();
         java.util.Iterator<meta.pure.metamodel.function.FunctionDefinition> fnIt = executingFnStack.iterator();
         while (feIt.hasNext() && fnIt.hasNext())
         {
-            FunctionExpression fe = feIt.next();
-            meta.pure.metamodel.function.FunctionDefinition fn = fnIt.next();
-            sb.append("\n    at ").append(formatSourceFrame(fe, fn));
+            frames.add(formatSourceFrame(feIt.next(), fnIt.next()));
         }
-        return sb.toString();
+        return frames;
     }
 }

@@ -50,3 +50,21 @@ class test::copy::support::MyTarget extends Any  ~Class<test::copy::support::MyT
 class test::copy::support::MyPointer extends test::copy::support::MyTarget  ~Class<test::copy::support::MyPointer>  @16:1-19:1
   <<meta::pure::profiles::compiler.pointer>>
   property path :@String@[1]  ~Property<test::copy::support::MyPointer, @String@|1>
+
+###ReverseIndex
+meta::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+  test::copy::testPointerStereotype__Any_MANY_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::copy::testPointerStereotype__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::copy::testPointerStereotype__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::copy::testPointerStereotype__Any_MANY_
+meta::pure::profiles::compiler:
+  test::copy::support::MyPointer
+meta::pure::profiles::compiler.pointer:
+  test::copy::support::MyPointer
+test::copy::support::MyPointer:
+  test::copy::testPointerStereotype__Any_MANY_
+test::copy::support::MyTarget:
+  test::copy::support::MyPointer

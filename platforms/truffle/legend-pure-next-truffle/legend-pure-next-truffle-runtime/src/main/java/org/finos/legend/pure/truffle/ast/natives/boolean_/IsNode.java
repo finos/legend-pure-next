@@ -14,9 +14,15 @@
 
 package org.finos.legend.pure.truffle.ast.natives.boolean_;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
+import org.finos.legend.pure.truffle.runtime.helper._GenericType;
+import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.util.Objects;
 
@@ -30,8 +36,8 @@ import java.util.Objects;
 public final class IsNode extends PureNode
 {
 
-    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
-    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = PureClassRegistry.globalSlot("classifierGenericType");
+    private static final int SLOT_NAME = PureClassRegistry.globalSlot("name");
     @Child
     private PureNode left;
 
@@ -47,6 +53,7 @@ public final class IsNode extends PureNode
     @Override
     public boolean executeBoolean(VirtualFrame frame)
     {
+        var resolver = getResolver();
         Object rawA = normalize(left.executeGeneric(frame));
         Object rawB = normalize(right.executeGeneric(frame));
         if (rawA == rawB)
@@ -63,14 +70,14 @@ public final class IsNode extends PureNode
         // so post-warmup it's a single ConcurrentHashMap.get(Class) — bounded
         // PE cost. Earlier the uncached pureTypeIs blew Graal's inlining
         // budget here; the cache fixes that. Validated on TrufflePureTestRunner.
-        boolean aIsEnum = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(rawA,
+        boolean aIsEnum = PureObj.pureTypeIs(rawA,
                 "meta::pure::metamodel::type::Enum");
-        boolean bIsEnum = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(rawB,
+        boolean bIsEnum = PureObj.pureTypeIs(rawB,
                 "meta::pure::metamodel::type::Enum");
         if (aIsEnum && bIsEnum)
         {
-            Object nameA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawA, SLOT_NAME);
-            Object nameB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawB, SLOT_NAME);
+            Object nameA = PureObj.readBySlot(rawA, SLOT_NAME);
+            Object nameB = PureObj.readBySlot(rawB, SLOT_NAME);
             if (!Objects.equals(nameA, nameB))
             {
                 return false;
@@ -78,35 +85,35 @@ public final class IsNode extends PureNode
             // Post enum-to-PDO migration: all enum values are PDO singletons
             // sharing the {@code Enum} classInfo. Two values are the same
             // enum type iff their CGTs resolve to the same Pure type.
-            Object cgtA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawA, SLOT_CLASSIFIER_GENERIC_TYPE);
-            Object cgtB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawB, SLOT_CLASSIFIER_GENERIC_TYPE);
+            Object cgtA = PureObj.readBySlot(rawA, SLOT_CLASSIFIER_GENERIC_TYPE);
+            Object cgtB = PureObj.readBySlot(rawB, SLOT_CLASSIFIER_GENERIC_TYPE);
             if (cgtA == null || cgtB == null)
             {
                 return false;
             }
-            var typeA = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgtA);
-            var typeB = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgtB);
+            var typeA = _GenericType.type(cgtA);
+            var typeB = _GenericType.type(cgtB);
             if (typeA == typeB)
             {
                 return true;
             }
             if (typeA != null && typeB != null)
             {
-                String pathA = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(typeA);
-                String pathB = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(typeB);
+                String pathA = _PackageableElement.path(typeA, resolver);
+                String pathB = _PackageableElement.path(typeB, resolver);
                 return pathA != null && pathA.equals(pathB);
             }
             return false;
         }
         if (aIsEnum && rawB instanceof String s)
         {
-            return Objects.equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawA, SLOT_NAME),
+            return Objects.equals(PureObj.readBySlot(rawA, SLOT_NAME),
                     extractEnumValueName(s));
         }
         if (bIsEnum && rawA instanceof String s)
         {
             return Objects.equals(extractEnumValueName(s),
-                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawB, SLOT_NAME));
+                    PureObj.readBySlot(rawB, SLOT_NAME));
         }
         return false;
     }
@@ -117,26 +124,27 @@ public final class IsNode extends PureNode
         return executeBoolean(frame);
     }
 
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    @TruffleBoundary
     private static boolean callPureEquals(Object a, Object b)
     {
         return Objects.equals(a, b);
     }
 
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    @TruffleBoundary
     private static String extractEnumValueName(String s)
     {
         int dotIdx = s.lastIndexOf('.');
         return (dotIdx > 0 && s.contains("::")) ? s.substring(dotIdx + 1) : s;
     }
 
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    @TruffleBoundary
     private static Object normalize(Object v)
     {
-        if (v instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty())
+        if (v instanceof PureSequence ps && ps.isEmpty())
         {
             return null;
         }
         return v;
     }
+
 }

@@ -107,3 +107,170 @@ function <<test.Test>> meta::pure::functions::lang::tests::cast::testCastCollect
    let result = [Integer, String]->cast(@Type);
    assertEquals(2, $result->size());
 }
+
+// --- Generic copy-through-upcast pattern (repro for annotate/javaDoc bug) ---
+//
+// Pattern observed in the Java metamodel's annotate<T>(target:T[1], ...):T[1]:
+//   1. upcast the typed `T` argument to a shared interface
+//   2. copy via `^$upcast(...)` to override a property defined on the interface
+//   3. downcast the copied result back to `T` to honour the declared return type
+//
+// Bug: step (3) throws "Cast exception: <ConcreteClass> cannot be cast to T".
+// The copy preserves the *upcast* classifier on the result, so the downcast
+// back to T fails — even though the dynamic instance is still a T.
+
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::cast::CR_Base
+{
+   tag : String[*];
+}
+
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::cast::CR_Sub extends CR_Base
+{
+   extra : String[1];
+}
+
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::cast::CR_OtherSub extends CR_Base
+{
+   more : String[1];
+}
+
+function <<test.TestDependency>> meta::pure::functions::lang::tests::cast::tagAs<T>(target:T[1], tag:String[1]):T[1]
+{
+   let base = $target->cast(@CR_Base);
+   let tagged = ^$base(tag=$base.tag->concatenate($tag));
+   $tagged->cast(@T);
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::cast::testGenericCopyThroughUpcastPreservesType():Boolean[1]
+{
+   let sub = ^CR_Sub(extra='e1');
+   let result = $sub->tagAs('hello');
+   // The dynamic instance is still CR_Sub — the upcast→copy→downcast
+   // round-trip must preserve its concrete type so subclass properties
+   // remain accessible at type T.
+   assertEquals('e1', $result.extra);
+   assertEquals(['hello'], $result.tag);
+   assert($result->instanceOf(CR_Sub));
+}
+
+// Strict-resolution probe: cast(@T) inside a generic function where T is
+// resolved from a *separate* argument (a "type hint" value). The compiler
+// infers T at the application site from $hint's static type; a strict
+// runtime would resolve T from the call's type-variable bindings and
+// reject a mismatched $value.
+//
+// Today: the runtime skips subtype validation when target is a TypeParameter
+// (both bootstrap and Truffle). T is not threaded into the cast site at
+// runtime — the compiler's inference is dropped. So a mis-typed value is
+// silently returned. The assertion below records what SHOULD happen so
+// the test stays red until the proper plumbing lands (extend the
+// frame-level type-var binding that `bindQpTypeVariablesStatic` does for
+// QP class type-vars to also cover function-level `<T>` parameters).
+function <<test.TestDependency>> meta::pure::functions::lang::tests::cast::castAsHint<T>(value:Any[1], hint:T[1]):T[1]
+{
+   $value->cast(@T)
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::cast::testGenericCastResolvesTypeParameter():Boolean[1]
+{
+   let hint = ^CR_Sub(extra='h');
+   // T is bound to CR_Sub via $hint; 'wrong-type' is a String. With T
+   // resolved at runtime this must throw.
+   assertError(
+      | castAsHint('wrong-type', $hint),
+      'Cast exception: String cannot be cast to CR_Sub'
+   );
+}
+
+// Sequence-resolution probes: a generic function whose `<T>` parameter is
+// declared T[*] (a collection). The runtime must derive T from the elements
+// — the common supertype across element CGTs — so that cast(@T) at a
+// nested site validates against that derived T.
+//
+// Sequences don't carry their inferred element type (PureSequence is bare
+// Object[]). The implementation walks the sequence at function entry,
+// reads each element's classifierGenericType.type, and computes the
+// common ancestor in the type hierarchy.
+function <<test.TestDependency>> meta::pure::functions::lang::tests::cast::castViaSeq<T>(values:T[*], probe:Any[1]):T[1]
+{
+   $probe->cast(@T)
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::cast::testSequenceTypeParameterHomogeneous():Boolean[1]
+{
+   // Both elements are CR_Sub → T binds to CR_Sub. Casting a String must throw.
+   let subs = [^CR_Sub(extra='a'), ^CR_Sub(extra='b')];
+   assertError(
+      | castViaSeq($subs, 'wrong-type'),
+      'Cast exception: String cannot be cast to CR_Sub'
+   );
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::cast::testSequenceTypeParameterHeterogeneousCommonSupertype():Boolean[1]
+{
+   // CR_Sub and CR_OtherSub both extend CR_Base; their meet is CR_Base.
+   // T binds to CR_Base — casting a String still throws.
+   let mixed = [^CR_Sub(extra='a'), ^CR_OtherSub(more='o')];
+   assertError(
+      | castViaSeq($mixed, 'wrong-type'),
+      'Cast exception: String cannot be cast to CR_Base'
+   );
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::cast::testSequenceTypeParameterAcceptsCommonSupertype():Boolean[1]
+{
+   // Same heterogeneous sequence; T = CR_Base. A bare CR_Base value satisfies
+   // T and the cast should succeed (return the value unchanged).
+   let mixed = [^CR_Sub(extra='a'), ^CR_OtherSub(more='o')];
+   let baseValue = ^CR_Base(tag=['x']);
+   let result = castViaSeq($mixed, $baseValue);
+   assertIs($baseValue, $result);
+}
+
+// Multiplicity-resolution probes: cast(@T|m) inside a generic function
+// where m is the multiplicity parameter from `<T|m>`. The runtime must
+// resolve m from the witness argument's actual multiplicity and reject
+// probes whose element count doesn't fit.
+//
+// Today: m isn't threaded to the cast site (same gap as T was). Tests
+// stay red until multiplicity-binding plumbing lands. Mirrors
+// testGenericCastResolvesTypeParameter and the sequence T tests but
+// exercises the [m] axis instead of the T axis.
+function <<test.TestDependency>> meta::pure::functions::lang::tests::cast::castAsTM<T|m>(witness:T[m], probe:Any[*]):T[m]
+{
+   $probe->cast(@T|m)
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::cast::testMultiplicityParameterRejectsCountMismatchScalarWitness():Boolean[1]
+{
+   // Witness is a single CR_Sub → T=CR_Sub, m=PureOne. Probe is a 2-element
+   // sequence: count violates m=[1..1]. The cast-side multiplicity check
+   // (now firing on sig 3 dispatch after the subsumes fix) throws.
+   let one = ^CR_Sub(extra='a');
+   assertError(
+      | castAsTM($one, [^CR_Sub(extra='1'), ^CR_Sub(extra='2')]),
+      'multiplicity'
+   );
+}
+
+
+function <<test.Test>> meta::pure::functions::lang::tests::cast::testMultiplicityParameterAcceptsMatchingScalarWitness():Boolean[1]
+{
+   // Witness is single → m=PureOne. Probe is a single element of matching T.
+   // Cast must accept and return the singleton unchanged.
+   let one = ^CR_Sub(extra='a');
+   let probe = ^CR_Sub(extra='b');
+   let result = castAsTM($one, $probe);
+   assertIs($probe, $result);
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::cast::testMultiplicityParameterAcceptsMatchingSequenceWitness():Boolean[1]
+{
+   // Two-element witness → m=[2..2] (or any range that allows 2). A
+   // 2-element probe of matching T fits. Use a homogeneous CR_Sub sequence
+   // so T resolves cleanly.
+   let twoWitness = [^CR_Sub(extra='a'), ^CR_Sub(extra='b')];
+   let twoProbe   = [^CR_Sub(extra='x'), ^CR_Sub(extra='y')];
+   let result = castAsTM($twoWitness, $twoProbe);
+   assertEquals(2, $result->size());
+}

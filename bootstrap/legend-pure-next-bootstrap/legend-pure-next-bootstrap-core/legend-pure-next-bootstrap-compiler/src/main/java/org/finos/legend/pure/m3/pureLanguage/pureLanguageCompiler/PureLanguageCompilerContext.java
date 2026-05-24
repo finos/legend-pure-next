@@ -15,6 +15,7 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
 import meta.pure.metamodel.multiplicity.MultiplicityParameter;
+import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.valuespecification.AtomicValue;
@@ -155,6 +156,66 @@ public class PureLanguageCompilerContext implements CompilerContextExtension
     public void addToCurrentScope(VariableExpression variable)
     {
         this.variableScopes.peek().add(variable);
+    }
+
+    // ========================================================================
+    // Parent-reference (`~`) scope management
+    // ========================================================================
+    //
+    // The construction-type stack carries the GenericType of every enclosing
+    // `^X(...)` being resolved. Inside the slot value of `^X(...)`, the
+    // VariableExpression `~` resolves to X (depth 0), `~.~` to the next
+    // enclosing X' (depth 1), etc. The resolver pushes before walking the
+    // key-expression collection and pops after.
+    private final MutableStack<GenericType> constructionTypeStack = Stacks.mutable.empty();
+
+    /** Push the GenericType of an `^X(...)` whose slot values we are about to resolve. */
+    public void pushConstructionType(GenericType gt)
+    {
+        this.constructionTypeStack.push(gt);
+    }
+
+    /** Pop the construction type after finishing slot-value resolution. */
+    public void popConstructionType()
+    {
+        this.constructionTypeStack.pop();
+    }
+
+    /** Return the construction GenericType {@code depth} levels out (0 = innermost), or null if depth is out of bounds. */
+    public GenericType lookupParentReference(int depth)
+    {
+        if (depth < 0 || depth >= this.constructionTypeStack.size())
+        {
+            return null;
+        }
+        return this.constructionTypeStack.peekAt(depth);
+    }
+
+    /** Number of `^X(...)` constructions currently open on the stack. */
+    public int constructionDepth()
+    {
+        return this.constructionTypeStack.size();
+    }
+
+    /** Depth count of `~`-style variable names ({@code "~"} → 1, {@code "~.~"} → 2, …); 0 if the name isn't a parent reference. */
+    public static int parentReferenceTildeCount(String name)
+    {
+        if (name == null || name.isEmpty() || name.charAt(0) != '~')
+        {
+            return 0;
+        }
+        int count = 1;
+        int n = name.length();
+        for (int i = 1; i + 1 < n; i += 2)
+        {
+            if (name.charAt(i) != '.' || name.charAt(i + 1) != '~')
+            {
+                return 0;
+            }
+            count++;
+        }
+        // Must be exactly the tilde pattern (last char is '~').
+        return name.charAt(n - 1) == '~' ? count : 0;
     }
 
     // ========================================================================

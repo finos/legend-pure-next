@@ -98,7 +98,7 @@ Class meta::pure::compiler::CompilerContext
 
     // Per-element timing collected across pass 2 and pass 3. Each element compile
     // appends an ElementStatistics with wall time (millis) and the rollback /
-    // candidate deltas for that element. compileDir aggregates entries with the
+    // candidate deltas for that element. compile() aggregates entries with the
     // same elementPath across passes when building the final summary.
     elementStatistics : ElementStatistics[*];
 
@@ -113,12 +113,46 @@ Class meta::pure::compiler::CompilerContext
     // where the lambda's params aren't concrete and we addError + return AV unchanged.
     // Membership is O(1); the value is unused (Boolean true sentinel).
     lambdaFailureCache : Map<String, Boolean>[1];
+
+    // Reverse reference index: target_path -> set of caller_paths. Mirrors Java
+    // CompilationContext.referencedBy. Populated as a side-effect of element
+    // resolution and explicit hook sites (annotation compiler, function-app /
+    // dot-app resolvers). Sub-element granularity on both sides — targets like
+    // {@code Foo.bar}, {@code MyEnum.VAL}, {@code Profile.flag}; callers
+    // refined via {@code withCallerSubElement} (e.g. {@code Class.id} for a
+    // ref made inside property "id").
+    // Pure's {@code Map} is single-value, so callers are accumulated in
+    // {@code List<String>} per target; downstream printers dedup + sort.
+    referencedBy : Map<String, List<String>>[1];
+
+    // Sub-element-aware caller path. Set by {@code setCurrentElement} once per
+    // element compile (pass 2 and pass 3), pushed/popped by
+    // {@code withCallerSubElement} when descending into properties / qualified
+    // properties / constraints / enum values. Read by {@code recordReference}
+    // to attribute the recorded reference to the current caller.
+    currentElementPath : String[0..1];
+
+    // Stack of GenericTypes for every enclosing `^X(...)` whose key
+    // expressions we are currently resolving. Pushed before walking the
+    // KeyExpression collection of `new`/`copy`, popped after. Read by the
+    // VariableExpression resolver when the name is a parent reference
+    // (`~`, `~.~`, …) to assign the construction's type to that variable
+    // — mirrors {@code PureLanguageCompilerContext.constructionTypeStack} in
+    // the Java compiler. Top-of-stack = innermost construction (depth 0).
+    constructionTypeStack : meta::pure::metamodel::type::generics::GenericType[*];
 }
 
 Class meta::pure::compiler::CachedLambdaOutcome
 {
     av : meta::pure::metamodel::valuespecification::AtomicValue[1];
     errorsFired : String[*];
+    // Reverse-index edges added during the lambda body's resolution.
+    // Replayed when the cache hits so cache-hit lambdas contribute the
+    // same recording-density as the original (uncached) resolution.
+    // Without this, every cache-hit lambda body silently drops its
+    // type-lookup recordings — which leaves a ~50KB gap vs Java's
+    // RecordingMetadataAccess.getElement-on-every-call behaviour.
+    recordingsDelta : Pair<String, List<String>>[*];
 }
 
 // Build a minimal CompilerContext with no source state — used by helper-module
@@ -136,7 +170,8 @@ function meta::pure::compiler::newPlainCompilerContext():CompilerContext[1]
         lambdaFailureCache=newMap([]->cast(@Pair<String, Boolean>)),
         inferenceRollbacks=0,
         candidateEvaluations=0,
-        rollbackSites=newMap([]->cast(@Pair<String, Integer>))
+        rollbackSites=newMap([]->cast(@Pair<String, Integer>)),
+        referencedBy=newMap([]->cast(@Pair<String, List<String>>))
     );
     // Seed the cache with universe types so {@code linearize} can be called
     //   straight away — every helper-test that constructs a plain context
@@ -176,6 +211,94 @@ function meta::pure::compiler::bumpRollbackSite(context:CompilerContext[1], site
         inferenceRollbacks = $context.inferenceRollbacks + 1,
         rollbackSites = $context.rollbackSites->put($site, $newCount)
     );
+}
+
+// ============================================================================
+// Reverse reference index — mirrors Java CompilationContext.recordReference /
+// recordFunctionReference / withCallerSubElement / setCurrentElement.
+// ============================================================================
+
+// Set the caller for subsequent records. Called once per element-compile at
+// the top of pass 2 and pass 3 dispatch. Returns the context with
+// {@code currentElementPath} set; callers should restore the prior path on
+// completion (mirrors Java's try/finally).
+function meta::pure::compiler::setCurrentElement(context:CompilerContext[1], path:String[1]):CompilerContext[1]
+{
+    ^$context(currentElementPath = $path);
+}
+
+// Clear the current element path. Pair with {@code setCurrentElement} after
+// each element finishes its pass 2 / pass 3 work.
+function meta::pure::compiler::clearCurrentElement(context:CompilerContext[1]):CompilerContext[1]
+{
+    ^$context(currentElementPath = []);
+}
+
+// Record a reference: target_path -> currentElementPath. Filters out
+// self-loops, callers with no path set, and noise (anything under
+// {@code meta::pure::metamodel::}). Mirrors Java
+// {@link CompilationContext#recordReference}.
+function meta::pure::compiler::recordReference(context:CompilerContext[1], targetPath:String[1]):CompilerContext[1]
+{
+    if($context.currentElementPath->isEmpty()
+            || $targetPath == $context.currentElementPath->toOne()
+            || $targetPath->startsWith('meta::pure::metamodel::'),
+        | $context,
+        | let caller = $context.currentElementPath->toOne();
+          let existing = $context.referencedBy->get($targetPath);
+          let callers = if($existing->isEmpty(),
+              | ^List<String>(values = [$caller]),
+              | if($existing->toOne().values->contains($caller),
+                  | $existing->toOne(),
+                  | ^List<String>(values = $existing->toOne().values->concatenate($caller))
+              )
+          );
+          ^$context(referencedBy = $context.referencedBy->put($targetPath, $callers));
+    );
+}
+
+// Record a reference to a function. Dispatches by function flavour to produce
+// the appropriate target path — property-functions use {@code Owner.name},
+// and packageable functions use {@code elementToPath}. Mirrors Java
+// {@link CompilationContext#recordFunctionReference}.
+function meta::pure::compiler::recordFunctionReference(context:CompilerContext[1], fn:Function<Any>[1]):CompilerContext[1]
+{
+    if($fn->instanceOf(meta::pure::metamodel::function::property::AbstractProperty),
+        | let prop = $fn->cast(@meta::pure::metamodel::function::property::AbstractProperty<Any>);
+          let owner = $prop.owner;
+          if($owner->isEmpty(),
+              | $context,
+              | let ownerPath = $owner->toOne()->cast(@PackageableElement)->elementToPath();
+                $context->recordReference($ownerPath + '.' + $prop.name->toOne());
+          );,
+        | if($fn->instanceOf(PackageableElement),
+              | $context->recordReference($fn->cast(@PackageableElement)->elementToPath()),
+              | $context
+          )
+    );
+}
+
+// Push a sub-element name onto the caller path for the duration of an action.
+// Pure has no Java-style try/finally — callers thread the modified context
+// through their action and reset {@code currentElementPath} on return. The
+// caller funcion takes (ctxWithSub) -> Pair<resultValue, newCtx> and returns
+// Pair<resultValue, ctxWithRestoredCaller>.
+//
+// Used in element handlers to refine the caller from e.g. {@code Foo} to
+// {@code Foo.bar} when descending into property/QP/constraint/enum-value
+// compilation. Mirrors Java
+// {@link CompilationContext#withCallerSubElement}.
+function meta::pure::compiler::withCallerSubElement<T>(context:CompilerContext[1], subName:String[1], action:Function<{CompilerContext[1] -> CompilerResult<T>[1]}>[1]):CompilerResult<T>[1]
+{
+    let saved = $context.currentElementPath;
+    let pushed = if($saved->isEmpty(),
+        | $context,
+        | ^$context(currentElementPath = $saved->toOne() + '.' + $subName)
+    );
+    let result = $action->eval($pushed);
+    let innerCtx = $result.context;
+    let restoredCtx = ^$innerCtx(currentElementPath = $saved);
+    ^$result(context = $restoredCtx);
 }
 
 function meta::pure::compiler::snapshotErrors(context:CompilerContext[1], checkpoint:Integer[1]):String[*]
@@ -386,6 +509,12 @@ function meta::pure::compiler::pathToElementInContext(context:CompilerContext[1]
 //     The correct lookup goes through imports.
 //   * Hard-coded `meta::pure::metamodel::type::` fallback — already handled
 //     by the imports loop since `defaultFileImports()` includes that package.
+// Look up an element by short or fully-qualified path. Returns
+// {@link PackageableElement} when found, empty when not.
+//
+// Does NOT record into the reverse index — for callsites that need recording
+// (the vast majority during compilation), prefer {@code resolveElementR},
+// which mirrors Java's {@code RecordingMetadataAccess.getElement} behaviour.
 function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
 {
     firstNonEmpty([
@@ -395,6 +524,27 @@ function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:S
               ->filter(e | $e->isNotEmpty())
               ->head()
     ])->head();
+}
+
+// Recording variant of {@link resolveElement}: returns a {@link CompilerResult}
+// whose {@code context} has the lookup recorded in the reverse reference
+// index (filtered through the same noise rules as
+// {@link recordReference} — {@code meta::pure::metamodel::} entries are
+// skipped, self-references collapsed). Mirrors Java's
+// {@code RecordingMetadataAccess.getElement}: every cross-element lookup
+// during compilation becomes a {@code (target -> caller)} edge.
+//
+// Call this from compile-time call sites (handlers, resolvers, helpers
+// that thread context). Use {@link resolveElement} when context cannot
+// be threaded (e.g. pure read-only helpers invoked at runtime).
+function meta::pure::compiler::resolveElementR(context:CompilerContext[1], path:String[1]):CompilerResult<PackageableElement>[1]
+{
+    let element = $context->resolveElement($path);
+    let recordedCtx = if($element->isEmpty(),
+        | $context,
+        | $context->recordReference($element->toOne()->elementToPath())
+    );
+    ^CompilerResult<PackageableElement>(value = $element, context = $recordedCtx);
 }
 
 function meta::pure::compiler::resolveAllElements(context:CompilerContext[1], path:String[1]):String[*]

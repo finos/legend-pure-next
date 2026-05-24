@@ -1,0 +1,18 @@
+###Error
+Can't find property 'notARealProperty' in class 'test::new::parentRefError::Container' (at valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_unknownProperty:10c53-10c70)
+
+###Pure
+import test::new::parentRefError::*;
+
+function test::new::parentRefError::testParentRefUnknownProperty(): Any[*]
+{
+  // `~.notARealProperty` references a property that doesn't exist on Container.
+  ^Container(name='outer', items=['a', 'b'], echoed=~.notARealProperty);
+}
+
+Class test::new::parentRefError::Container
+{
+  name:   String[1];
+  items:  String[*];
+  echoed: String[*];
+}

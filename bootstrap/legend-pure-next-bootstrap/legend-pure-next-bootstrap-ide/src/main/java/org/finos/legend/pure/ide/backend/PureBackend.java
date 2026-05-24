@@ -29,10 +29,10 @@ import org.finos.legend.pure.m3.module.localModule.LocalModule;
  *   <li>Truffle ignores the Java-direct model + function (function
  *       representations are incompatible — Truffle's resolver only knows
  *       {@code PureDynamicObject}s). It re-compiles the editable modules via
- *       {@code meta::pure::compiler::compileSource} invoked through
- *       {@code PureTruffleRuntime}, then finds the target function in the
- *       resulting {@code CompilationResult.elements} by matching on
- *       {@code function._name()}.</li>
+ *       {@code meta::pure::compiler::parseDir} + {@code meta::pure::compiler::compile}
+ *       invoked through {@code PureTruffleRuntime}, then finds the target
+ *       function in the resulting {@code CompilationResult.elements} by matching
+ *       on {@code function._name()}.</li>
  * </ul>
  */
 public interface PureBackend
@@ -60,10 +60,43 @@ public interface PureBackend
                             PureModel model,
                             CompilationResult compileResult,
                             FunctionDefinition function,
+                            ProgressSink progress,
                             ValueSpecification... args);
 
     /** Release resources (Truffle polyglot context, etc.). Idempotent. */
     default void close() {}
+
+    /**
+     * Receiver for fine-grained progress events emitted by the backend during
+     * {@link #execute}. The IDE plugs in a sink that forwards each event to
+     * the browser as a {@code pure/executeProgress} LSP notification so the
+     * user sees stage + bar updates live instead of staring at a spinner.
+     *
+     * <p>Implementations must be thread-safe; events fire from whichever
+     * thread the backend uses for compile/execute (Truffle uses its own
+     * single-threaded executor, Java-direct uses the caller's thread).</p>
+     */
+    @FunctionalInterface
+    interface ProgressSink
+    {
+        ProgressSink NOOP = e -> {};
+
+        void post(ProgressEvent event);
+    }
+
+    /**
+     * Single progress tick.
+     * <ul>
+     *   <li>{@code stage} — coarse phase name shown as the caption
+     *       (e.g. {@code "Parsing"}, {@code "Compile pass 1/3 — Skeletons"},
+     *       {@code "Executing"}).</li>
+     *   <li>{@code done}/{@code total} — granular counter for a progress bar;
+     *       {@code total == 0} means indeterminate (just show the stage).</li>
+     *   <li>{@code detail} — what's currently being processed
+     *       (e.g. the element being compiled). May be {@code null}.</li>
+     * </ul>
+     */
+    record ProgressEvent(String stage, int done, int total, String detail) {}
 
     /**
      * Result of an execute call.
@@ -72,7 +105,7 @@ public interface PureBackend
      *       executing function. Goes to the IDE Output tab.</li>
      *   <li>{@code compileStats} — structured compile metrics (Truffle only)
      *       pulled directly from {@code CompilationResult.statistics},
-     *       sidestepping {@code compileDir}'s progress-bar stdout. Goes to
+     *       sidestepping {@code compile}'s progress-bar stdout. Goes to
      *       the IDE Compile tab. {@code null} for backends that don't run a
      *       compile phase (Java-direct re-uses {@code lastModel}).</li>
      *   <li>{@code error} — thrown exception, or {@code null} on success.</li>

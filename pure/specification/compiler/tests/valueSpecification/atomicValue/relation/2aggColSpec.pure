@@ -35,3 +35,15 @@ function test__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
           Variable y :#Integer##[*]#  ~@VariableExpression@  @8:64-8:65
       AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @8:47-8:50
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+
+###ReverseIndex
+_sum_Integer_MANY__Integer_1_:
+  test__Any_1_
+meta::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+  test__Any_1_
+meta::pure::functions::relation::Window:
+  test_Relation_1__AggColSpec_1__Any_1_
+meta::pure::functions::relation::aggColSpec2_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_:
+  test__Any_1_
+test_Relation_1__AggColSpec_1__Any_1_:
+  test__Any_1_

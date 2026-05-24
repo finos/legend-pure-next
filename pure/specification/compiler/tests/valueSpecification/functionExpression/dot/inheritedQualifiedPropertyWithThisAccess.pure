@@ -48,3 +48,21 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
           AtomicValue  10 :@Integer@[1]  ~@AtomicValue@  @17:44-17:45
   DotApplication test::Base.greeting() :#String##[1]#  ~@DotApplication@  @18:7-18:17
     Variable c :#test::Child##[1]#  ~@VariableExpression@  @18:5-18:6
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::use__Any_MANY_
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  test::Base.greeting
+test::Base:
+  test::Child
+test::Base.greeting:
+  test::use__Any_MANY_
+test::Base.name:
+  test::Base.greeting
+test::Child:
+  test::use__Any_MANY_

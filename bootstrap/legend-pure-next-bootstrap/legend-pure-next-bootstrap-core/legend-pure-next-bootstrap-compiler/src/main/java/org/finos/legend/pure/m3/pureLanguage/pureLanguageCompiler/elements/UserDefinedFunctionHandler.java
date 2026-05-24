@@ -42,7 +42,7 @@ public final class UserDefinedFunctionHandler
     {
     }
 
-    public static UserDefinedFunction firstPass(meta.pure.protocol.grammar.function.UserDefinedFunction grammar, MetadataAccess model)
+    public static UserDefinedFunction firstPass(meta.pure.protocol.grammar.function.UserDefinedFunction grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
     {
         return new UserDefinedFunctionImpl()
                 ._name(grammar._name())
@@ -74,11 +74,11 @@ public final class UserDefinedFunctionHandler
         // Create constraint shells (expression sequences resolved in third pass)
         if (grammar._preConstraints() != null && grammar._preConstraints().notEmpty())
         {
-            result._preConstraints(grammar._preConstraints().collect(gc -> ConstraintCompiler.compileShell(gc, model)));
+            result._preConstraints(grammar._preConstraints().collect(gc -> ConstraintCompiler.compileShell(gc, model, context)));
         }
         if (grammar._postConstraints() != null && grammar._postConstraints().notEmpty())
         {
-            result._postConstraints(grammar._postConstraints().collect(gc -> ConstraintCompiler.compileShell(gc, model)));
+            result._postConstraints(grammar._postConstraints().collect(gc -> ConstraintCompiler.compileShell(gc, model, context)));
         }
 
         context.enrichCurrentErrors("function '" + PackageableFunctionCompiler.fullPath(grammar) + "'");

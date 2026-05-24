@@ -16,3 +16,7 @@ class pack::Base extends Any  ~Class<pack::Base<T~pack::Base>>  @3:1-6:1
 
 class pack::Child extends pack::Base<@String@>  ~Class<pack::Child>  @8:1-11:1
   property extra :@Integer@[1]  ~Property<pack::Child, @Integer@|1>
+
+###ReverseIndex
+pack::Base:
+  pack::Child

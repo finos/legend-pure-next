@@ -58,7 +58,7 @@ public final class _GenericType
         // from Java's compiler.pdb encoding.
         if (resolver != null)
         {
-            Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_UserDefinedGenericType");
+            Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType");
             if (canonical != null)
             {
                 PureObj.write(gt, "classifierGenericType", canonical);

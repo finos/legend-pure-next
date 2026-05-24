@@ -33,13 +33,6 @@ public final class _Type
         {
             return false;
         }
-        // Pointer-aware: the compiler wraps cross-element type refs as
-        // TempCompilerPointer (ClassPointer / PrimitiveTypePointer / etc.).
-        // Pointers carry only `.path`; identity-based ops (ancestors set,
-        // TypeCache) are keyed on live class instances. Resolve via the
-        // registry before consulting the cache.
-        sub = derefIfPointer(sub, resolver);
-        sup = derefIfPointer(sup, resolver);
         if (sub == sup)
         {
             return true;
@@ -59,24 +52,6 @@ public final class _Type
         return ((java.util.Set<Object>) resolver.typeCache().ancestors(sub)).contains(sup);
     }
 
-    private static Object derefIfPointer(Object type, TruffleMetadataAccess resolver)
-    {
-        if (type == null || resolver == null) return type;
-        // Don't use PureObj.isType here — it calls back into subtypeOf,
-        // causing infinite recursion. Detect pointer class by its pure path
-        // prefix instead (TempCompilerPointer subclasses all live under
-        // `meta::pure::metamodel::pointer::`).
-        String typePath = PureObj.pureTypeOf(type);
-        if (typePath == null || !typePath.startsWith("meta::pure::metamodel::pointer::"))
-        {
-            return type;
-        }
-        Object pathVal = PureObj.readBySlot(type,
-                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("path"));
-        if (!(pathVal instanceof String path) || path.isEmpty()) return type;
-        Object el = resolver.getElement(path);
-        return el != null ? el : type;
-    }
 
     public static Object findCommonType(List<?> types, boolean contravariant, TruffleMetadataAccess resolver)
     {
@@ -109,30 +84,23 @@ public final class _Type
     }
 
     /**
-     * Identity-compare against the cached canonical "Any" type instead of
-     * walking string equality every call. JFR identified ~19 samples on
-     * the {@code "Any".equals(pe._name())} path before this caching.
-     * The volatile field is initialised once on first call; subsequent
-     * calls hit the cached reference directly.
+     * Identity-compare against the resolver's canonical "Any" element. The
+     * resolver's {@code getElement} is itself a {@link
+     * java.util.concurrent.ConcurrentHashMap} lookup (see {@code
+     * TruffleModuleRegistry.elementCache}), so the cost is one hash + reference
+     * compare per call. Avoid static caching here: each test/process can run
+     * against a different registry instance, and a JVM-static Any reference
+     * would identity-mismatch the new registry's Any and break the {@code
+     * subtypeOf(_, Any)} fast path silently.
      */
-    private static volatile Object anyTypeRef;
-
     private static boolean isTopType(Object type, TruffleMetadataAccess resolver)
     {
         if (type == null) return false;
-        Object any = anyTypeRef;
-        if (any != null)
-        {
-            return type == any;
-        }
-        // First call: resolve and cache. Volatile write publishes the
-        // reference for subsequent unsynchronised reads.
         if (resolver != null)
         {
             Object resolved = resolver.getElement("meta::pure::metamodel::type::Any");
             if (resolved != null)
             {
-                anyTypeRef = resolved;
                 return type == resolved;
             }
         }

@@ -68,7 +68,8 @@ function meta::pure::ui::progress::startProgress(label:String[1]):Boolean[1]
 }
 
 // Redraw the bar with `done`/`total` and update the status line below it
-// with `current`. Restores the bar-line cursor invariant on exit.
+// with `current`. Restores the bar-line cursor invariant on exit. See
+// {@link tickProgress3} for the throttling rationale — same idea here.
 //   \r\u001B[K<bar>     — column 0, clear to EOL, write bar
 //   \u001B[B\r\u001B[K  — cursor down (no scroll) to status line, col 0, clear
 //   '  ' + $current     — write current item
@@ -76,9 +77,17 @@ function meta::pure::ui::progress::startProgress(label:String[1]):Boolean[1]
 //   \u001B[A\r          — cursor up back to bar line, col 0
 function meta::pure::ui::progress::tickProgress(done:Integer[1], total:Integer[1], current:String[1]):Boolean[1]
 {
-    print('\r\u001B[K' + meta::pure::ui::progress::renderBar($done, $total)
-          + '\u001B[B\r\u001B[K  ' + $current + '\u001B[K\u001B[A\r');
-    true;
+    if($total == 0, | true,
+        | let curPct = floor($done * 100 / $total);
+          let prevPct = if($done <= 1, | -1, | floor(($done - 1) * 100 / $total));
+          let shouldEmit = $done == 1 || $done == $total || $curPct != $prevPct;
+          if($shouldEmit,
+              | print('\r\u001B[K' + meta::pure::ui::progress::renderBar($done, $total)
+                      + '\u001B[B\r\u001B[K  ' + $current + '\u001B[K\u001B[A\r');
+                true;,
+              | true
+          );
+    );
 }
 
 // Clear the bar + status lines and drop the cursor onto a fresh line below.
@@ -120,12 +129,28 @@ function meta::pure::ui::progress::startProgress3():Boolean[1]
 
 // Redraw all 3 lines: header / bar / current item. Writes content first then
 // clears tail (\u001B[K) on each line - minimises flicker when content shrinks.
+//
+// Stateless throttle: emits only on the first tick, the last tick, and
+// whenever the integer percentage changes from the previous tick. Caps
+// terminal updates at ~100 per phase regardless of how many ticks the
+// caller fires — so a 60-element compile and a 6000-element compile both
+// produce roughly the same visible cadence. The decision is derived from
+// {@code done}/{@code total} alone (no mutable state) so callers can safely
+// invoke this on every iteration.
 function meta::pure::ui::progress::tickProgress3(header:String[1], done:Integer[1], total:Integer[1], current:String[1]):Boolean[1]
 {
-    print('\r' + $header + '\u001B[K\u001B[B\r  '
-          + meta::pure::ui::progress::renderBar($done, $total) + '\u001B[K\u001B[B\r  '
-          + $current + '\u001B[K\u001B[A\u001B[A\r');
-    true;
+    if($total == 0, | true,
+        | let curPct = floor($done * 100 / $total);
+          let prevPct = if($done <= 1, | -1, | floor(($done - 1) * 100 / $total));
+          let shouldEmit = $done == 1 || $done == $total || $curPct != $prevPct;
+          if($shouldEmit,
+              | print('\r' + $header + '\u001B[K\u001B[B\r  '
+                      + meta::pure::ui::progress::renderBar($done, $total) + '\u001B[K\u001B[B\r  '
+                      + $current + '\u001B[K\u001B[A\u001B[A\r');
+                true;,
+              | true
+          );
+    );
 }
 
 // Leave the 3 reserved lines in place (header / bar / current item visible

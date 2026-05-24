@@ -9,18 +9,6 @@ public final class _PackageableElement
     private _PackageableElement() {}
 
     /**
-     * Return the canonical Pure path for a PackageableElement.
-     *
-     * <p>Prefers the resolver's {@code pathOf()} reverse lookup (O(1) from
-     * the PDB index) over walking the FlatBuffer package chain, which is
-     * order-dependent and can produce inconsistent results.</p>
-     */
-    public static String path(Object pe)
-    {
-        return path(pe, null);
-    }
-
-    /**
      * Identity-keyed cache for PEs whose path the resolver doesn't know
      * (i.e. PEs created during compilation, not loaded from a PDB). Once
      * a PE has a path it's invariant — paths are derived from the
@@ -28,16 +16,18 @@ public final class _PackageableElement
      * {@code packagePath} (StringBuilder.insert chain) at ~5% of self-
      * compile CPU before this cache.
      */
-    // Volatile copy-on-write IdentityHashMap. Reads (cache hits — the hot
-    // path) are unsynchronized via the volatile reference. Writes take a
-    // monitor on PATH_CACHE_LOCK, copy the full map, and atomically
-    // install the new snapshot. Same pattern as TypeCache.entries; the
-    // synchronizedMap wrapper showed up at ~1% of warm CPU on this site
-    // alone before this change because path() is on the hot path of every
-    // type/element comparison and metaprogramming operation.
-    private static volatile java.util.IdentityHashMap<Object, String> PATH_CACHE =
-            new java.util.IdentityHashMap<>();
-    private static final Object PATH_CACHE_LOCK = new Object();
+    // Synchronized IdentityHashMap. An earlier copy-on-write variant pinned
+    // reads to a volatile snapshot for lock-free cache hits — a win on the
+    // self-compile bench (fixed PDO set, many repeat reads) but pathological
+    // for the IDE F9 cycle: each round inserts thousands of fresh
+    // in-memory-compile PDOs that never hit the cache, every put copied
+    // the full map, and the cache itself accumulated across F9s. Result was
+    // quadratic in cache size — observed: F9#1=368ms, F9#2=1591ms,
+    // F9#3=3092ms, F9#4=8381ms for the same element. The synchronized
+    // wrapper costs ~1% extra warm CPU on read paths; that's far cheaper
+    // than the quadratic blow-up.
+    private static final java.util.Map<Object, String> PATH_CACHE =
+            java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
 
     // @TruffleBoundary — the fallback walks the package chain via
     // StringBuilder.insert(0, ...), which Graal's PE follows into
@@ -56,16 +46,8 @@ public final class _PackageableElement
         // (pointers are opaque). Short-circuit to that slot before consulting
         // the resolver or walking the package chain — otherwise the walk reads
         // null name/package and returns "" or NPEs.
-        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(
-                pe, "meta::pure::metamodel::pointer::TempCompilerPointer", resolver))
-        {
-            Object ptrPath = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(
-                    pe, SLOT_POINTER_PATH);
-            if (ptrPath instanceof String s && !s.isEmpty())
-            {
-                return s;
-            }
-        }
+        String ptrPath = pointerPath(pe);
+        if (ptrPath != null) return ptrPath;
         // Fast path: resolver knows the canonical path from the PDB index
         if (resolver != null)
         {
@@ -92,18 +74,32 @@ public final class _PackageableElement
     private static final int SLOT_POINTER_PATH =
             org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("path");
 
+    private static final String POINTER_TYPE_PREFIX = "meta::pure::metamodel::pointer::";
+
+    /**
+     * If {@code v} is a {@code TempCompilerPointer} subtype, return its
+     * {@code .path} slot value; otherwise return {@code null}.
+     *
+     * <p>Used by {@link #path} and {@link #derefPackagePath} to short-circuit
+     * the package-chain walk when the value is a pointer — pointer's
+     * {@code .path} carries the canonical path directly.</p>
+     */
+    public static String pointerPath(Object v)
+    {
+        if (v == null) return null;
+        String typePath = PureObj.pureTypeOf(v);
+        if (typePath == null || !typePath.startsWith(POINTER_TYPE_PREFIX)) return null;
+        Object slotPath = PureObj.readBySlot(v, SLOT_POINTER_PATH);
+        // Empty path is a legal pointer value — {@code toPackagePointer}
+        // produces it for parentless Packages (the root). Return the empty
+        // string so callers reach the resolver; treating it as "no path" here
+        // would leave a {@code PackagePointer(path='')} unresolved.
+        return slotPath instanceof String s ? s : null;
+    }
+
     private static void putPathCache(Object pe, String result)
     {
-        synchronized (PATH_CACHE_LOCK)
-        {
-            if (PATH_CACHE.containsKey(pe))
-            {
-                return;
-            }
-            java.util.IdentityHashMap<Object, String> next = new java.util.IdentityHashMap<>(PATH_CACHE);
-            next.put(pe, result);
-            PATH_CACHE = next;
-        }
+        PATH_CACHE.putIfAbsent(pe, result);
     }
 
     private static final String PACKAGE_PURE_PATH = "meta::pure::metamodel::Package";
@@ -139,8 +135,18 @@ public final class _PackageableElement
         {
             return "";
         }
-        String pkgPath = packagePath(pkg);
+        // Package field may itself be a {@link PackagePointer} (compile-pure
+        // wraps Class.package so the parent ref doesn't go stale across
+        // pass-2 ^$pkg(children=...) rebuilds). Its {@code path} slot carries
+        // the parent's full path directly — short-circuit the chain walk.
+        String pkgPath = derefPackagePath(pkg);
         return pkgPath.isEmpty() ? name : pkgPath + "::" + name;
+    }
+
+    private static String derefPackagePath(Object pkg)
+    {
+        String ptrPath = pointerPath(pkg);
+        return ptrPath != null ? ptrPath : packagePath(pkg);
     }
 
     private static String packagePath(Object pkg)

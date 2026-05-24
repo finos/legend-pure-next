@@ -34,11 +34,11 @@ function meta::pure::compiler::helper::functionExpression::populateResolvedParam
     let rtp = fold($tbKeys, {k, resolved |
         let vals = get($bindings.typeBindings, $k)->toOne();
         if([pair(| $doFilterType && !$ownTypeParams->contains($k), | $resolved),
-            pair(| $vals.values->size() == 1, | $resolved->concatenate(buildResolvedTypeParameter($k, $vals.values->at(0)))),
+            pair(| $vals.values->size() == 1, | $resolved->concatenate(buildResolvedTypeParameter($k, $vals.values->at(0), $context))),
             pair(| $vals.values->size() > 1,
                  | let common = findCommonGenericType($vals.values, false, $context);
                    if($common->isNotEmpty(),
-                       | $resolved->concatenate(buildResolvedTypeParameter($k, $common->toOne())),
+                       | $resolved->concatenate(buildResolvedTypeParameter($k, $common->toOne(), $context)),
                        | $resolved
                    );)],
            | $resolved

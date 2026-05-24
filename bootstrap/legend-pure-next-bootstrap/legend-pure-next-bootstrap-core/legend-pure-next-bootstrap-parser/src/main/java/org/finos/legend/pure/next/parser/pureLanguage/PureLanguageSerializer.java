@@ -455,7 +455,20 @@ public class PureLanguageSerializer
             case AtomicValue av -> serializeAtomicValue(sb, av);
             case DotApplication dot -> serializeDotApplication(sb, dot);
             case FunctionExpression sfe -> serializeFunctionExpression(sb, sfe);
-            case VariableExpression ve -> sb.append("$").append(ve._name());
+            case VariableExpression ve ->
+            {
+                String veName = ve._name();
+                // Parent-reference variables (`~`, `~.~`, …) are written without
+                // the `$` prefix — they're a built-in construct, not a user variable.
+                if (veName != null && !veName.isEmpty() && veName.charAt(0) == '~')
+                {
+                    sb.append(veName);
+                }
+                else
+                {
+                    sb.append("$").append(veName);
+                }
+            }
             default -> sb.append("/* unsupported expression */");
         }
     }
@@ -1480,12 +1493,22 @@ public class PureLanguageSerializer
             sb.append(")");
             return;
         }
-        // Handle copy: ^$variable(prop=value, ...) expression instances
+        // Handle copy: ^$variable(prop=value, ...) and ^expression(prop=value, ...) instances.
+        // First param is the receiver: a VariableExpression (`^$x(...)` form) or any other
+        // value specification (`^buildOne()(...)`, `^$x.next(...)`, `^~.foo(...)` forms).
         if ("copy".equals(funcName) && params != null
-                && params.size() >= 1
-                && params.get(0) instanceof VariableExpression varExpr)
+                && params.size() >= 1)
         {
-            sb.append("^$").append(varExpr._name());
+            ValueSpecification receiver = params.get(0);
+            sb.append("^");
+            if (receiver instanceof VariableExpression varExpr)
+            {
+                sb.append("$").append(varExpr._name());
+            }
+            else
+            {
+                serializeExpression(sb, receiver);
+            }
             sb.append("(");
 
             // Second param (index 1) is a Collection of keyExpression calls

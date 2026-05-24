@@ -12,3 +12,7 @@ function test__ColSpecArray_1_():ColSpecArray<(name:@String@[1], id:@Integer@[0.
       AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @4:6-4:9
       AtomicValue  'id' :@String@[1]  ~@AtomicValue@  @4:22-4:23
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<(name:@String@[1], id:@Integer@[0..1])>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<(name:@String@[1], id:@Integer@[0..1])>
+
+###ReverseIndex
+meta::pure::functions::relation::colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_:
+  test__ColSpecArray_1_

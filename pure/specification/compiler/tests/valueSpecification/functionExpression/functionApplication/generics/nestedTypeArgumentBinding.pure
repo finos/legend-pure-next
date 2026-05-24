@@ -33,3 +33,17 @@ function test::wrapAndPut_Map_1__K_1__V_1__Map_1_(map:Map<K~test::wrapAndPut_Map
     Variable map :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>##[1]#  ~@VariableExpression@  @13:5-13:8
     Variable key :#K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @13:15-13:18
     Variable nl :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@VariableExpression@  @13:21-13:23
+
+###ReverseIndex
+meta::pure::functions::collection::List:
+  test::wrapAndPut_Map_1__K_1__V_1__Map_1_
+meta::pure::functions::collection::Map:
+  test::wrapAndPut_Map_1__K_1__V_1__Map_1_
+meta::pure::functions::collection::put_Map_1__U_1__V_1__Map_1_:
+  test::wrapAndPut_Map_1__K_1__V_1__Map_1_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::wrapAndPut_Map_1__K_1__V_1__Map_1_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::wrapAndPut_Map_1__K_1__V_1__Map_1_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::wrapAndPut_Map_1__K_1__V_1__Map_1_

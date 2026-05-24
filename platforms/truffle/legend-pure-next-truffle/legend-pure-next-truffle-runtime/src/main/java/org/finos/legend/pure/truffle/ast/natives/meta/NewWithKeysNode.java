@@ -116,6 +116,12 @@ public final class NewWithKeysNode extends PureNode
 
         // Push onto construction stack for parentReference() access across call boundaries
         var ctx = org.finos.legend.pure.truffle.PureLanguage.get(this);
+        // Open a fresh-instance scope. Any inner new/copy created during key
+        // evaluation registers in this scope; the post-build verify (in
+        // finalizeInstance) uses it to enforce that association-property
+        // values were instantiated within this expression.
+        eval.pushFreshScope();
+        Object newResult = null;
         ctx.pushConstruction(instance);
         try
         {
@@ -129,7 +135,7 @@ public final class NewWithKeysNode extends PureNode
                     // a chance to compare against the system-set classifier,
                     // making validation a no-op.
                     Object propValue = assignments[i].evaluateValue(frame);
-                    validateClassifierOverride(propValue, instance);
+                    validateClassifierOverride(propValue, instance, eval.resolver());
                     // Widened to non-null check: post-loader-flip propValue may
                     // be a PureDynamicObject (pureType=GenericTypeValue) rather
                     // than the typed XPDBHelper. Validation above already enforces
@@ -157,11 +163,13 @@ public final class NewWithKeysNode extends PureNode
             }
 
             finalizeInstance(instance, classPath, keyValues, eval);
+            newResult = instance;
             return instance;
         }
         finally
         {
             ctx.popConstruction();
+            eval.popFreshScopeAndRegister(newResult);
         }
     }
 
@@ -263,6 +271,9 @@ public final class NewWithKeysNode extends PureNode
                                    java.util.List<java.util.Map.Entry<String, Object>> keyValues,
                                    org.finos.legend.pure.truffle.PureContext eval)
     {
+        // Immutability check before bidir: every assoc-prop value must have
+        // been instantiated within this new/copy expression.
+        verifyAssocPropsAreFresh(classPath, keyValues, eval);
         setReverseAssociationPointers(instance, classPath, keyValues, eval, appendReader, appendWriter);
         if (instance != null)
         {
@@ -369,7 +380,7 @@ public final class NewWithKeysNode extends PureNode
      * matches the system one is allowed (this is what the
      * {@code RelationTypeCompiler} self-classifier wiring relies on).
      */
-    private static void validateClassifierOverride(Object proposed, Object instance)
+    private static void validateClassifierOverride(Object proposed, Object instance, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         Object currentCgt = instance != null
                 ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(instance, SLOT_CLASSIFIER_GENERIC_TYPE) : null;
@@ -377,27 +388,101 @@ public final class NewWithKeysNode extends PureNode
         // _GenericType.type is Object-tolerant (reads `type` via PureObj.read)
         // so it handles both typed GenericTypeValue and PDO uniformly.
         Object proposedType = proposed != null ? _GenericType.type(proposed) : null;
-        if (expected != null && proposedType != null && samePackageableElement(expected, proposedType))
+        if (expected != null && proposedType != null && samePackageableElement(expected, proposedType, resolver))
         {
             return;
         }
-        String expectedName = expected != null ? _PackageableElement.path(expected) : "<unknown>";
-        String proposedName = proposedType != null ? _PackageableElement.path(proposedType) : "<unknown>";
+        // Allow proposed to be a *subtype* of expected — covers the
+        // enum-value pattern, where an {@code ^Enum(...)} instance is
+        // intentionally re-classified as a specific user enumeration
+        // (e.g. {@code ^Enum(classifierGenericType = MyEnum<self>)}). The
+        // safety invariant — preventing arbitrary metaclass swaps like
+        // {@code ^LA_Person(classifierGenericType = ^...(type = Any))} —
+        // still holds since {@code Any} is a supertype of LA_Person, not a
+        // subtype, and the supertype path remains rejected.
+        //
+        // We can't go through {@link _Type#subtypeOf}: it queries the resolver's
+        // {@code TypeCache} which is populated lazily and doesn't see freshly
+        // constructed types (compile-pure pass-1 emits enums whose ancestors
+        // set hasn't been computed yet). Walk {@code .generalizations}
+        // directly, dereferencing pointer types as we go — the chain is short
+        // (user enum → Enum → PackageableElement → …) so the walk is cheap.
+        if (expected != null && proposedType != null && isSubtypeViaGeneralizations(proposedType, expected, resolver))
+        {
+            return;
+        }
+        // Compile-pure pass-1 pattern: the proposed classifier's type is a
+        // {@link TempCompilerPointer} whose target is being built right now
+        // and isn't yet in the resolver (e.g. {@code buildEnumerationSkeleton}
+        // wires an enum value's classifier as a pointer to the enum it's
+        // about to register). The pointer carries the path the producer
+        // intends, and {@code PointerGraphResolver} canonicalises it at
+        // module construction. Accept — a pointer is by construction
+        // compile-pure-internal, not a user-supplied raw type swap.
+        if (proposedType != null
+                && org.finos.legend.pure.truffle.runtime.helper._PackageableElement.pointerPath(proposedType) != null)
+        {
+            return;
+        }
+        String expectedName = expected != null ? _PackageableElement.path(expected, resolver) : "<unknown>";
+        String proposedName = proposedType != null ? _PackageableElement.path(proposedType, resolver) : "<unknown>";
         throw new RuntimeException("Cannot change classifierGenericType.type from '" + expectedName + "' to '" + proposedName
                 + "'. The classifier's raw type is system-managed (derived from the instance's metaclass)"
                 + " — only typeArguments, multiplicityArguments and typeVariableValues are user-customizable."
                 + " Use meta::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
     }
 
-    private static boolean samePackageableElement(Object a, Object b)
+    private static boolean samePackageableElement(Object a, Object b, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (a == b)
         {
             return true;
         }
-        String pathA = _PackageableElement.path(a);
-        String pathB = _PackageableElement.path(b);
+        String pathA = _PackageableElement.path(a, resolver);
+        String pathB = _PackageableElement.path(b, resolver);
         return pathA != null && pathA.equals(pathB);
+    }
+
+    private static final int SLOT_GENERAL = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("general");
+    private static final int SLOT_GENERALIZATIONS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("generalizations");
+
+    /**
+     * Walk {@code sub}'s generalization chain (dereferencing pointer types
+     * along the way) and return true when {@code sup} is reached by path
+     * comparison. Bounded by a max depth so a pathological cycle in the
+     * graph terminates cleanly rather than spinning.
+     */
+    private static boolean isSubtypeViaGeneralizations(Object sub, Object sup, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        if (samePackageableElement(sub, sup, resolver))
+        {
+            return true;
+        }
+        Object current = sub;
+        for (int depth = 0; depth < 32 && current != null; depth++)
+        {
+            // Pointer → live before reading .generalizations (pointers carry only .path)
+            String ptrPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.pointerPath(current);
+            if (ptrPath != null && resolver != null)
+            {
+                Object live = resolver.getElement(ptrPath);
+                if (live != null) current = live;
+            }
+            Object gens = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(current, SLOT_GENERALIZATIONS);
+            if (!(gens instanceof PureSequence seq) || seq.size() == 0) return false;
+            Object next = null;
+            for (int i = 0; i < seq.size(); i++)
+            {
+                Object g = seq.getBoxed(i);
+                Object generalGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(g, SLOT_GENERAL);
+                Object parent = generalGT != null ? _GenericType.type(generalGT) : null;
+                if (parent == null) continue;
+                if (samePackageableElement(parent, sup, resolver)) return true;
+                if (next == null) next = parent;
+            }
+            current = next;
+        }
+        return false;
     }
 
     /**
@@ -441,14 +526,24 @@ public final class NewWithKeysNode extends PureNode
         {
             return cached;
         }
-        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawType, SLOT_NAME);
-        String simpleName = nameObj instanceof String s ? s : null;
-        if (simpleName == null || simpleName.isEmpty())
+        // The canonical anchor key encodes the type's FULL Pure path so user
+        // modules whose simple names collide with platform types (e.g. a user
+        // module declaring its own `Package` class) don't pick up the wrong
+        // anchor and end up classified as the platform type. The pre-built
+        // anchors in core.pdb live at
+        //   meta::pure::metamodel::type::generics::optimization::GenericType_<path>
+        // with `::` in `<path>` replaced by `_`. Only types that have such
+        // an anchor (most Pure-platform classes; none from user modules) ever
+        // resolve to a non-null canonical here.
+        String typePath = _PackageableElement.path(rawType, resolver);
+        if (typePath == null || typePath.isEmpty())
         {
             CANONICAL_ANCHOR_CACHE.put(rawType, ABSENT_GTV);
             return gtv;
         }
-        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + simpleName);
+        String canonicalKey = "meta::pure::metamodel::type::generics::optimization::GenericType_"
+                + typePath.replace("::", "_");
+        Object canonical = resolver.getElement(canonicalKey);
         // Treat any non-null resolved element as the canonical anchor — the
         // typed `instanceof GenericTypeValue` guard fails post-loader-flip
         // because resolver.getElement now returns PureDynamicObject. The
@@ -473,6 +568,79 @@ public final class NewWithKeysNode extends PureNode
     private static final Object ABSENT_GTV = new Object();
     private static final java.util.Map<Object, Object> CANONICAL_ANCHOR_CACHE =
             java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+
+    /**
+     * Throws if any key assigns an association-property value that was not
+     * instantiated within the current new/copy expression. Mirrors the Java
+     * runtime's {@code MetaNatives.verifyAssocPropsAreFresh}. The check uses
+     * {@link #findReverseAssociationProperty} to detect assoc-owned props
+     * (delegated to the resolver's reverse-association index).
+     */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    public static void verifyAssocPropsAreFresh(String classPath,
+                                                 java.util.List<java.util.Map.Entry<String, Object>> keyValues,
+                                                 org.finos.legend.pure.truffle.PureContext eval)
+    {
+        if (keyValues.isEmpty())
+        {
+            return;
+        }
+        for (java.util.Map.Entry<String, Object> kv : keyValues)
+        {
+            String propName = kv.getKey();
+            Object value = kv.getValue();
+            if (value == null)
+            {
+                continue;
+            }
+            // Only check props owned by an Association — direct props are exempt.
+            String reversePropName = findReverseAssociationProperty(propName, classPath, eval.resolver());
+            if (reversePropName == null)
+            {
+                continue;
+            }
+            if (value instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
+            {
+                if (seq.isEmpty())
+                {
+                    continue;
+                }
+                for (int i = 0; i < seq.size(); i++)
+                {
+                    Object item = seq.getBoxed(i);
+                    if (item != null && !eval.isFreshInCurrentScope(item))
+                    {
+                        throw new RuntimeException(immutabilityMessage(classPath, propName));
+                    }
+                }
+            }
+            else if (value instanceof java.util.List<?> listVal)
+            {
+                for (Object item : listVal)
+                {
+                    if (item != null && !eval.isFreshInCurrentScope(item))
+                    {
+                        throw new RuntimeException(immutabilityMessage(classPath, propName));
+                    }
+                }
+            }
+            else
+            {
+                if (!eval.isFreshInCurrentScope(value))
+                {
+                    throw new RuntimeException(immutabilityMessage(classPath, propName));
+                }
+            }
+        }
+    }
+
+    private static String immutabilityMessage(String classPath, String propName)
+    {
+        return "Immutability violation: association property '" + propName + "' on '"
+                + classPath + "' must be instantiated within the new/copy expression. "
+                + "Use `" + propName + " = ^Type(...)`, `" + propName + " = ^$x()`, or `"
+                + propName + " = []`.";
+    }
 
     /**
      * After constructing an instance, set reverse association pointers.
@@ -506,23 +674,32 @@ public final class NewWithKeysNode extends PureNode
     }
 
     /**
-     * Reverse association index: maps propertyName → list of (otherPropName, targetClassPath) pairs.
-     * Built lazily on first access, then O(1) lookup per property.
+     * Look up the reverse association property name for {@code propName} when
+     * setting it on an instance of {@code classPath}. Returns the other-side
+     * property name (e.g. {@code "employees"} when binding {@code firm} on a
+     * {@code Person}), or {@code null} if no association involves this name.
+     *
+     * <p>Delegates the index to the resolver — see
+     * {@link org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry#reverseAssociationCandidates}.
+     * Pre-existing static cache on this class was invalid as soon as a JVM
+     * saw more than one resolver (e.g. a surefire fork where one test
+     * class loaded core+core-tests and another loaded only core), so the
+     * cache moved onto the registry and is invalidated on register/unregister.</p>
      */
-    private static volatile java.util.Map<String, java.util.List<String[]>> reverseAssocIndex;
-
     static String findReverseAssociationProperty(String propName, String classPath,
                                                           org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        java.util.Map<String, java.util.List<String[]>> index = reverseAssocIndex;
-        if (index == null)
+        if (!(resolver instanceof org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry registry))
         {
-            index = buildReverseAssocIndex(resolver);
-            reverseAssocIndex = index;
+            throw new IllegalStateException(
+                    "Reverse-association lookup requires a TruffleModuleRegistry resolver, got "
+                            + (resolver == null ? "null" : resolver.getClass().getName())
+                            + ". The reverse-association index lives on the registry so it can be"
+                            + " invalidated on register/unregister; bare TruffleMetadataAccess impls"
+                            + " can't host that lifecycle.");
         }
-
-        java.util.List<String[]> candidates = index.get(propName);
-        if (candidates == null)
+        java.util.List<String[]> candidates = registry.reverseAssociationCandidates(propName);
+        if (candidates.isEmpty())
         {
             return null;
         }
@@ -551,60 +728,6 @@ public final class NewWithKeysNode extends PureNode
             }
         }
         return null;
-    }
-
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static java.util.Map<String, java.util.List<String[]>> buildReverseAssocIndex(
-            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
-    {
-        java.util.Map<String, java.util.List<String[]>> index = new java.util.HashMap<>();
-        for (String path : resolver.elementPaths())
-        {
-            Object element = resolver.getElement(path);
-            if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
-                    "meta::pure::metamodel::relationship::Association", resolver))
-            {
-                continue;
-            }
-            Object propsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(element, SLOT_PROPERTIES);
-            if (!(propsObj instanceof PureSequence props) || props.size() != 2)
-            {
-                continue;
-            }
-            Object p0 = props.getBoxed(0);
-            Object p1 = props.getBoxed(1);
-            if (p0 != null && p1 != null)
-            {
-                addAssocEntry(index, p0, p1, resolver);
-                addAssocEntry(index, p1, p0, resolver);
-            }
-        }
-        return index;
-    }
-
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static void addAssocEntry(java.util.Map<String, java.util.List<String[]>> index,
-                                       Object matchProp, Object otherProp,
-                                       org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
-    {
-        Object propNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(matchProp, SLOT_NAME);
-        if (!(propNameObj instanceof String propName)) return;
-        Object otherGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(otherProp, SLOT_GENERIC_TYPE);
-        if (otherGT == null) return;
-        Object targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(otherGT);
-        if (targetType != null)
-        {
-            String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(targetType, resolver);
-            if (targetPath != null)
-            {
-                Object otherNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(otherProp, SLOT_NAME);
-                if (otherNameObj instanceof String otherName)
-                {
-                    index.computeIfAbsent(propName, k -> new java.util.ArrayList<>(2))
-                            .add(new String[]{otherName, targetPath});
-                }
-            }
-        }
     }
 
     // @TruffleBoundary — walks target.getClass().getMethods() to detect

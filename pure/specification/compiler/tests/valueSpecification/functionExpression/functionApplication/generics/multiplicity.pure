@@ -29,3 +29,11 @@ function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
       mulParam m -> [1]
       AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @14:7-14:9
     AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @14:16-14:19
+
+###ReverseIndex
+f_String_m__String_m_:
+  test__Any_MANY_
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  pl_String_1__String_1__String_1_
+pl_String_1__String_1__String_1_:
+  test__Any_MANY_

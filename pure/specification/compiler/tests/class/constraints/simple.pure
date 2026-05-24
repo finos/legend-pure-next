@@ -20,3 +20,9 @@ class test::Class extends Any  ~Class<test::Class>  @2:1-8:1
         AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @4:28-4:30
 
 native function _startsWith_String_1__String_1__Boolean_1_(source:@String@[1], val:@String@[1]):@Boolean@[1]  ~NativeFunction<{@String@[1], @String@[1]->@Boolean@[1]}>
+
+###ReverseIndex
+_startsWith_String_1__String_1__Boolean_1_:
+  test::Class
+test::Class.other:
+  test::Class

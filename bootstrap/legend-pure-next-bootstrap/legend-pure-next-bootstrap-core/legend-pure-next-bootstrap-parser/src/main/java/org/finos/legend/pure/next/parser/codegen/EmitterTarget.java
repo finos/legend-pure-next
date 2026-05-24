@@ -71,6 +71,40 @@ public interface EmitterTarget
     void emitConditionalSetter(StringBuilder sb, String indent, String predJava,
                                String receiver, String fieldName, String valueExpr);
 
+    // -------------------- list construction --------------------
+
+    /**
+     * Java expression for an empty list literal ({@code []} in the DSL).
+     * Protocol: {@code Lists.mutable.empty()}.
+     * Truffle:  {@code PureSequence.EMPTY}.
+     */
+    String listExpressionEmpty();
+
+    /**
+     * Opening fragment for a non-empty list literal ({@code [a, b, c]} in
+     * the DSL). The generator emits {@code listExpressionOpen() + a + ", " +
+     * b + ", " + c + listExpressionClose()}.
+     *
+     * <p>Protocol: {@code Lists.mutable.with(}.
+     * Truffle:  {@code new ObjectSequence(new Object[]{}.</p>
+     */
+    String listExpressionOpen();
+
+    /** Closing fragment for a non-empty list literal — see {@link #listExpressionOpen}. */
+    String listExpressionClose();
+
+    /**
+     * Wrap an arbitrary value expression that is about to be stored as a
+     * Pure-on-target slot value. Called by {@link #constructExpression} for
+     * every {@code put("k", value)} fragment and by {@link #emitSetterStatement}
+     * for explicit setter calls. Bootstrap targets pass the value through
+     * unchanged. Truffle targets wrap a parser-side {@code MutableList} /
+     * {@code Iterable} into a {@code PureSequence} — the boundary between the
+     * Java parser (which uses Eclipse Collections internally) and the Pure
+     * runtime (which only holds {@code PureSequence}).
+     */
+    String wrapForSlotAssignment(String valueExpr);
+
     // -------------------- property read --------------------
 
     /**

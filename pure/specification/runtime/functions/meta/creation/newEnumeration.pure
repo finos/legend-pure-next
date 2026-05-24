@@ -13,13 +13,85 @@
 // limitations under the License.
 
 import meta::pure::test::pct::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::multiplicity::*;
 import meta::pure::functions::meta::tests::model::*;
 
-// Creates a fully constructed Enumeration with all enum values.
-// Each value becomes a Property with a defaultValue lambda returning the Enum instance.
-// The Enumeration gets a self-referencing CGT (Enumeration<self>) and each Enum
-// instance gets CGT pointing to the Enumeration.
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::creation::newEnumeration(name:String[1], package:Package[1], valueNames:String[*]):Enumeration<Any>[1];
+// Construct a fully formed Enumeration<Any> with the given values. Mirrors
+// newClass's pattern: self-referencing CGT (Enumeration<self>) and uses `~.~`
+// (parent reference) to wire children back at the outer enumeration.
+//
+// Each value becomes a Property whose defaultValue lambda returns a fresh
+// Enum instance whose classifierGenericType points back at the new
+// enumeration. The Enum is built via `new(GenericType[1])` so its CGT can
+// be set to the in-progress enumeration (the `^Enum(...)` form would reject
+// the override since the proposed type isn't the system-derived `Enum`).
+function <<PCT.function>> meta::pure::functions::meta::creation::newEnumeration(name:String[1], package:Package[1], valueNames:String[*]):Enumeration<Any>[1]
+{
+    ^Enumeration<Any>(
+        name = $name,
+        package = $package,
+        // Self-referencing CGT: Enumeration<self>. `~.~.~` walks up the
+        // construction stack from inside the typeArgument UDGT to the outer
+        // Enumeration.
+        classifierGenericType = ^UserDefinedGenericType(
+            type = Enumeration,
+            typeArguments = ^UserDefinedGenericType(type = ~.~.~)
+        ),
+        // Every user-defined Enumeration extends Enum.
+        generalizations = ^Generalization(
+            specific = ~.~,
+            general = ^UserDefinedGenericType(type = Enum)
+        ),
+        // One Property per value: name + defaultValue lambda that returns
+        // a fresh Enum whose CGT points at the surrounding enumeration. Use
+        // `new(GenericType[1])` for both the Enum and the Property so we can
+        // set the classifierGenericType directly with the precise runtime
+        // type args (Property<Enumeration<self>, self|1>, Enum<>=self) —
+        // `^Type<...>` would only accept a parse-time type literal here.
+        properties = $valueNames->map(vn |
+            // Enum value: CGT type = the outer enumeration. `new(GT)`
+            // bypasses classifier-override validation. Set name via copy.
+            let baseEnum = new(^UserDefinedGenericType(type = ~.~))
+                ->cast(@meta::pure::metamodel::type::Enum);
+            let namedEnum = ^$baseEnum(name = $vn);
+            // Property: CGT = Property<Enumeration<self>, self|1> with
+            // multiplicity 1, mirroring the canonical structure built by
+            // the legacy native. The two typeArguments reference the outer
+            // enumeration; the inner UDGT layer adds one tilde level.
+            let baseProp = new(^UserDefinedGenericType(
+                type = Property,
+                typeArguments = [
+                    ^UserDefinedGenericType(
+                        type = Enumeration,
+                        typeArguments = ^UserDefinedGenericType(type = ~.~.~.~)
+                    ),
+                    ^UserDefinedGenericType(type = ~.~.~)
+                ],
+                multiplicityArguments = PureOne
+            ))->cast(@meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>, meta::pure::metamodel::type::Enum|1>);
+            ^$baseProp(
+                name = $vn,
+                owner = ~.~,
+                multiplicity = PureOne,
+                aggregation = AggregationKind.None,
+                genericType = ^UserDefinedGenericType(type = ~.~.~),
+                defaultValue = ^LambdaFunction<{->Any[1]}>(
+                    expressionSequence = ^AtomicValue(
+                        value = $namedEnum->cast(@meta::pure::metamodel::type::Any),
+                        genericType = ^UserDefinedGenericType(type = ~.~.~.~.~),
+                        multiplicity = PureOne
+                    )
+                )
+            );
+        )
+    );
+}
 
 function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewEnumeration():Boolean[1]
 {

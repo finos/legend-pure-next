@@ -1,0 +1,19 @@
+###Error
+Can't find property 'notARealProperty' in class 'test::copy::parentRefError::Container' (at valueSpecification/functionExpression/functionApplication/special/copy/copy_parentReference_E_unknownProperty:11c14-11c31)
+
+###Pure
+import test::copy::parentRefError::*;
+
+function test::copy::parentRefError::testCopyParentRefUnknownProperty(): Any[*]
+{
+  // `~.notARealProperty` references a property that doesn't exist on Container.
+  let c = ^Container(name='outer', items=['a', 'b']);
+  ^$c(echoed=~.notARealProperty);
+}
+
+Class test::copy::parentRefError::Container
+{
+  name:   String[1];
+  items:  String[*];
+  echoed: String[*];
+}

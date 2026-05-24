@@ -44,3 +44,22 @@ native function over__Window_1_():Window<T~over__Window_1_>[1]  ~NativeFunction<
 native function extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_(r:Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], window:Window<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], f:FuncColSpec<{Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], Window<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_[1]->@Any@[0..1]}, R~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1]):Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_+R~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1]  ~NativeFunction<{Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], Window<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], FuncColSpec<{Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], Window<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_[1]->@Any@[0..1]}, R~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1]->Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_+R~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1]}>
 
 native function lag_Relation_1__T_1__T_$0_1$_(w:Relation<T~lag_Relation_1__T_1__T_$0_1$_>[1], r:T~lag_Relation_1__T_1__T_$0_1$_[1]):T~lag_Relation_1__T_1__T_$0_1$_[0..1]  ~NativeFunction<{Relation<T~lag_Relation_1__T_1__T_$0_1$_>[1], T~lag_Relation_1__T_1__T_$0_1$_[1]->T~lag_Relation_1__T_1__T_$0_1$_[0..1]}>
+
+###ReverseIndex
+extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_:
+  f_Relation_1__Any_MANY_
+lag_Relation_1__T_1__T_$0_1$_:
+  f_Relation_1__Any_MANY_
+meta::pure::functions::collection::map_T_$0_1$__Function_1__V_$0_1$_:
+  f_Relation_1__Any_MANY_
+meta::pure::functions::lang::toOne_T_MANY__T_1_:
+  f_Relation_1__Any_MANY_
+meta::pure::functions::relation::Window:
+  extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_
+  over__Window_1_
+meta::pure::functions::relation::funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_:
+  f_Relation_1__Any_MANY_
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  f_Relation_1__Any_MANY_
+over__Window_1_:
+  f_Relation_1__Any_MANY_

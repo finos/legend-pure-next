@@ -12,3 +12,5 @@ function test::new::testNew__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@
   AtomicValue  meta::pure::metamodel::multiplicity::OneMany :#UserDefinedPackageableMultiplicity#[1]  ~@AtomicValue@  @6:12-6:18
   AtomicValue  meta::pure::metamodel::multiplicity::ZeroOne :#UserDefinedPackageableMultiplicity#[1]  ~@AtomicValue@  @6:21-6:27
   AtomicValue  meta::pure::metamodel::multiplicity::ZeroMany :#UserDefinedPackageableMultiplicity#[1]  ~@AtomicValue@  @6:30-6:37
+
+###ReverseIndex

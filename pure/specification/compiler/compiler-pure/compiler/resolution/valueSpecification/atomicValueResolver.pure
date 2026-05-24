@@ -82,7 +82,21 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                             if($cachedOutcome->isNotEmpty(),
                                 | debug($context, | 'resolveAtomicValue: LAMBDA cache hit ' + $cacheKey->toOne());
                                   let cached = $cachedOutcome->toOne();
-                                  let ctxWithReplay = ^$context(errors = $context.errors->concatenate($cached.errorsFired));
+                                  // Replay errors AND reverse-index recordings so
+                                  // cache-hit lambdas contribute the same recordings
+                                  // as the original (uncached) resolution. Mirrors
+                                  // Java's RecordingMetadataAccess.getElement which
+                                  // fires unconditionally on every lookup — Pure's
+                                  // body cache would otherwise drop these silently.
+                                  let ctxWithErrors = ^$context(errors = $context.errors->concatenate($cached.errorsFired));
+                                  let ctxWithReplay = $cached.recordingsDelta->fold({p, c |
+                                      $p.second.values->fold({caller, cc |
+                                          let savedCaller = $cc.currentElementPath;
+                                          let scopedCc = ^$cc(currentElementPath = $caller);
+                                          let recordedCc = $scopedCc->recordReference($p.first);
+                                          ^$recordedCc(currentElementPath = $savedCaller);
+                                      }, $c)
+                                  }, $ctxWithErrors);
                                   ^CompilerResult<ValueSpecification>(
                                       value = $cached.av,
                                       context = $ctxWithReplay
@@ -130,7 +144,27 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                                   let resolvedAv = ^$av(value = $resolvedLambda, genericType = $lambdaGT);
                                   // Cache the body outcome including any errors that fired.
                                   let errorsFired = $ctx1.errors->drop($preBodyErrorCount);
-                                  let outcome = ^CachedLambdaOutcome(av = $resolvedAv, errorsFired = $errorsFired);
+                                  // Capture the recording delta: edges added during
+                                  // this body resolution. Diff (target → callers) so
+                                  // a cache hit can replay the same recordings against
+                                  // the new caller scope. Comparing against
+                                  // {@code $context.referencedBy} (pre-resolve state)
+                                  // catches everything {@code resolveExpressionSequence}
+                                  // and its sub-resolvers added.
+                                  let beforeIdx = $context.referencedBy;
+                                  let afterIdx = $ctx1.referencedBy;
+                                  let deltaPairs = $afterIdx->keyValues()->map({kv |
+                                      let target = $kv.first;
+                                      let afterCallers = $kv.second.values;
+                                      let beforeOpt = $beforeIdx->get($target);
+                                      let beforeCallers = if($beforeOpt->isEmpty(), | []->cast(@String), | $beforeOpt->toOne().values);
+                                      let newCallers = $afterCallers->filter(c | !$beforeCallers->contains($c));
+                                      if($newCallers->isEmpty(),
+                                          | []->cast(@Pair<String, List<String>>),
+                                          | pair($target, ^List<String>(values = $newCallers))
+                                      );
+                                  })->concatenate([]->cast(@Pair<String, List<String>>));
+                                  let outcome = ^CachedLambdaOutcome(av = $resolvedAv, errorsFired = $errorsFired, recordingsDelta = $deltaPairs);
                                   let ctxOut = if($cacheKey->isEmpty(),
                                       | $ctx1,
                                       | ^$ctx1(lambdaResolutionCache = $ctx1.lambdaResolutionCache->put($cacheKey->toOne(), $outcome))
@@ -153,7 +187,9 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                 // specification/compiler/tests/valueSpecification/atomicValue/element/classWithTypeParameter.pure).
                 if($a->instanceOf(PackageableElement),
                     | let path = $a->cast(@PackageableElement)->elementToPath();
-                      let fromMap = $context->resolveElement($path);
+                      let fromMapR = $context->resolveElementR($path);
+                      let fromMap = $fromMapR.value;
+                      let ctxR = $fromMapR.context;
                       if($fromMap->isNotEmpty(),
                           | let resolved = $fromMap->toOne()->cast(@PackageableElement);
                             let resolvedCGT = $resolved->cast(@Any).classifierGenericType;
@@ -161,8 +197,13 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                                 | $av.genericType,
                                 | asInferredGenericType(withUndefinedTypeParams($resolvedCGT->toOne()))
                             );
-                            ^CompilerResult<ValueSpecification>(value = ^$av(value = $resolved, genericType = $updatedGT->toOne()), context = $context);,
-                          | ^CompilerResult<ValueSpecification>(value = $av, context = $context)
+                            // Keep the pass-2 pointer in .value; only refresh .genericType
+                            // from the resolved element's CGT. PointerGraphResolver
+                            // swaps the pointer for the byPath winner at module
+                            // construction. Writing $resolved here would freeze
+                            // whichever revision elementMap held at pass-3 time.
+                            ^CompilerResult<ValueSpecification>(value = ^$av(genericType = $updatedGT->toOne()), context = $ctxR);,
+                          | ^CompilerResult<ValueSpecification>(value = $av, context = $ctxR)
                       );,
                     | // Unresolved Package_Pointer: Pass-2 (valueSpecificationCompiler) keeps the
                       // grammar Package_Pointer here when the element wasn't found, matching Java's
@@ -177,7 +218,9 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                           | let pp = $a->cast(@meta::pure::protocol::grammar::Package_Pointer);
                             // Re-attempt resolution: the elementMap may have new entries since pass 2
                             // (associations registered properties on classes, etc.).
-                            let retry = $context->resolveElement($pp.value);
+                            let retryR = $context->resolveElementR($pp.value);
+                            let retry = $retryR.value;
+                            let retryCtx = $retryR.context;
                             if($retry->isNotEmpty(),
                                 | let resolved = $retry->toOne()->cast(@PackageableElement);
                                   let resolvedCGT = $resolved->cast(@Any).classifierGenericType;
@@ -185,7 +228,12 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                                       | $av.genericType,
                                       | asInferredGenericType(withUndefinedTypeParams($resolvedCGT->toOne()))
                                   );
-                                  ^CompilerResult<ValueSpecification>(value = ^$av(value = $resolved, genericType = $updatedGT->toOne()), context = $context);,
+                                  // Retry path: pass-2 may have left the AtomicValue with
+                                  // a grammar Package_Pointer ({@code value = $pp}). Now
+                                  // that we've resolved it, write a TempCompilerPointer
+                                  // so PointerGraphResolver can canonicalise to the byPath
+                                  // winner at module construction.
+                                  ^CompilerResult<ValueSpecification>(value = ^$av(value = meta::pure::compiler::helper::pointer::toElementPointer($resolved), genericType = $updatedGT->toOne()), context = $retryCtx);,
                                 | let siCtx = formatMetamodelSourceInfo($av.sourceInformation, $context);
                                   ^CompilerResult<ValueSpecification>(
                                       value = $av,

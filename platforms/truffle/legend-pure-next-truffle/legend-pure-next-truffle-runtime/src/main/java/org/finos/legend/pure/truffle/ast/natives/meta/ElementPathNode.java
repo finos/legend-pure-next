@@ -14,9 +14,14 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
+import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 
 import java.util.ArrayList;
@@ -30,8 +35,8 @@ import java.util.List;
 public final class ElementPathNode extends PureNode
 {
 
-    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
-    private static final int SLOT_PACKAGE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("package");
+    private static final int SLOT_NAME = PureClassRegistry.globalSlot("name");
+    private static final int SLOT_PACKAGE = PureClassRegistry.globalSlot("package");
     @Child
     private PureNode child;
 
@@ -44,33 +49,42 @@ public final class ElementPathNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object element = child.executeGeneric(frame);
-        return buildPath(element);
+        return buildPath(element, getResolver());
     }
 
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static Object buildPath(Object element)
+    @TruffleBoundary
+    private static Object buildPath(Object element, TruffleMetadataAccess resolver)
     {
         // PackageableElement-ness is established by carrying a package + name
         // pair; collectAncestors() reads via PureObj which gracefully no-ops
         // on non-PE values, so an upfront type check would just be redundant.
         List<Object> path = new ArrayList<>();
-        collectAncestors(element, path);
+        collectAncestors(element, path, resolver);
         return new ObjectSequence(path.toArray());
     }
 
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static void collectAncestors(Object pe, List<Object> path)
+    @TruffleBoundary
+    private static void collectAncestors(Object pe, List<Object> path, TruffleMetadataAccess resolver)
     {
-        Object parent = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pe, SLOT_PACKAGE);
+        Object parent = PureObj.readBySlot(pe, SLOT_PACKAGE);
         if (parent != null)
         {
-            collectAncestors(parent, path);
+            collectAncestors(parent, path, resolver);
         }
-        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pe, SLOT_NAME);
+        Object nameObj = PureObj.readBySlot(pe, SLOT_NAME);
         if (nameObj instanceof String name && !name.isEmpty())
         {
-            String elPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
-            if (!"::".equals(elPath))
+            String elPath = _PackageableElement.path(pe, resolver);
+            // Skip the canonical root only. Two forms manifest:
+            //   - elPath == "::" from computePath when a parentless Package
+            //     carries the m3.ttl convention name "::". Compile-pure's
+            //     synthetic root (compiler.pure) also uses this name now.
+            //   - elPath == "" from resolver.pathOf when the live root is
+            //     indexed at the empty path.
+            // Ephemeral packages with arbitrary names (e.g. an `^Package(
+            // name='X')` constructed by user code) are real path entries —
+            // they get added; only the canonical root short-circuits.
+            if (elPath != null && !elPath.isEmpty() && !"::".equals(elPath))
             {
                 path.add(pe);
             }

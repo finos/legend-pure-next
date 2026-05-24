@@ -83,6 +83,22 @@ public final class StringNodeFactories
         registry.register("replace_String_1__String_1__String_1__String_1_",
                 (args, gt, mul, fe) -> new ReplaceNode(args[0], args[1], args[2]));
 
+        // Regex natives backed by java.util.regex.Pattern. The Pure spec
+        // defines overloads with default-flag bodies that delegate to the
+        // 5-arg variants registered here.
+        registry.register("matches_String_1__String_1__Boolean_1_",
+                (args, gt, mul, fe) -> new MatchesNode(args[0], args[1]));
+        registry.register("regexpLike_String_1__String_1__RegexpParameter_$1_MANY$__Boolean_1_",
+                (args, gt, mul, fe) -> new RegexpLikeNode(args[0], args[1], args[2]));
+        registry.register("regexpCount_String_1__String_1__RegexpParameter_$1_MANY$__Integer_1_",
+                (args, gt, mul, fe) -> new RegexpCountNode(args[0], args[1], args[2]));
+        registry.register("regexpIndexOf_String_1__String_1__Integer_1__RegexpParameter_$1_MANY$__Integer_1_",
+                (args, gt, mul, fe) -> new RegexpIndexOfNode(args[0], args[1], args[2], args[3]));
+        registry.register("regexpReplace_String_1__String_1__String_1__Boolean_1__RegexpParameter_$1_MANY$__String_1_",
+                (args, gt, mul, fe) -> new RegexpReplaceNode(args[0], args[1], args[2], args[3], args[4]));
+        registry.register("regexpExtract_String_1__String_1__Boolean_1__Integer_1__RegexpParameter_$1_MANY$__String_MANY_",
+                (args, gt, mul, fe) -> new RegexpExtractNode(args[0], args[1], args[2], args[3], args[4]));
+
         registry.register("reverseString_String_1__String_1_",
                 (args, gt, mul, fe) -> new ReverseStringNode(args[0]));
 

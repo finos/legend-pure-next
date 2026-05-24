@@ -45,3 +45,17 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
           AtomicValue  'Lab' :@String@[1]  ~@AtomicValue@  @19:30-19:34
   DotApplication test::Dog.describe() :#String##[1]#  ~@DotApplication@  @20:7-20:17
     Variable d :#test::Dog##[1]#  ~@VariableExpression@  @20:5-20:6
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::use__Any_MANY_
+test::Animal:
+  test::Dog
+test::Dog:
+  test::use__Any_MANY_
+test::Dog.describe:
+  test::use__Any_MANY_

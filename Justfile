@@ -33,6 +33,11 @@ build: bootstrap::build truffle::build typescript::build
 # Run all tests across subprojects.
 test: bootstrap::test truffle::test typescript::test
 
+# Includes Pure-on-Java/Truffle self-host parity and standalone runtime test
+# suites on top of each subproject's `test`.
+# Run `test-all` across subprojects.
+test-all: bootstrap::test-all truffle::test-all typescript::test-all
+
 # Remove shared/ and per-subproject build artifacts.
 clean: bootstrap::clean truffle::clean typescript::clean
     @{{banner}} '[clean]' 'remove shared/'

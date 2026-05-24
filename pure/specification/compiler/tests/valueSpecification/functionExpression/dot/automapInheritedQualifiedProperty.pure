@@ -54,3 +54,19 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
     Lambda(v_automap:#test::Dog#[1]) :#LambdaFunction<#{#test::Dog#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
       DotApplication test::Animal.sound() :#String##[1]#  ~@DotApplication@  @17:10-17:17
         Variable v_automap :#test::Dog##[1]#  ~@VariableExpression@
+
+###ReverseIndex
+meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::use__Any_MANY_
+test::Animal:
+  test::Dog
+test::Animal.sound:
+  test::use__Any_MANY_
+test::Dog:
+  test::use__Any_MANY_

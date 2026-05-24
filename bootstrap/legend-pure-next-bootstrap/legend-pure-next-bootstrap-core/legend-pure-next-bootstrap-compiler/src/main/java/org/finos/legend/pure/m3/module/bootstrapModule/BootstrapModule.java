@@ -73,11 +73,23 @@ public class BootstrapModule implements Module
     }
 
     /**
-     * Load core.pdb from the classpath (packaged in the compiler JAR).
+     * Load core.pdb (lean — no <<test.*>>-annotated elements) from the
+     * classpath (packaged in the compiler JAR).
      */
     public static Path locateCorePdb()
     {
         return extractFromClasspath("core.pdb");
+    }
+
+    /**
+     * Load core-tests.pdb (companion to core.pdb, holds only
+     * <<test.*>>-annotated elements) from the classpath. Test runners that
+     * need to discover <<test.Test>>/<<test.TestDependency>> elements load
+     * this alongside core.pdb.
+     */
+    public static Path locateCoreTestsPdb()
+    {
+        return extractFromClasspath("core-tests.pdb");
     }
 
     /**

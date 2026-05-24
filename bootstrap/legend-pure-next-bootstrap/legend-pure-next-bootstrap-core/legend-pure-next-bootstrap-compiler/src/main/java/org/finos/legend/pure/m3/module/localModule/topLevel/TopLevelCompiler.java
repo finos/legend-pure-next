@@ -123,8 +123,15 @@ public class TopLevelCompiler
      */
     public boolean compile(LocalModule localModule, MutableList<PureFile> files, String packagePattern, MetadataAccess model, CompilationContext context)
     {
+        // Every cross-element lookup during compilation funnels through the
+        // recording wrapper so the resulting (caller, target) pairs land in
+        // the CompilationContext's reverse index. The index becomes a
+        // first-class artifact (queried by validators, IDE features, etc.)
+        // and is persisted to the produced PDB.
+        MetadataAccess recordingModel = new org.finos.legend.pure.m3.module.RecordingMetadataAccess(model, context);
+
         long t0 = System.nanoTime();
-        firstPass(files, model);
+        firstPass(files, recordingModel, context);
         this.firstPassDurationNanos = System.nanoTime() - t0;
 
         validatePathForModulePattern(packagePattern, context);
@@ -134,7 +141,7 @@ public class TopLevelCompiler
         }
 
         t0 = System.nanoTime();
-        secondPass(model, context);
+        secondPass(recordingModel, context);
         this.secondPassDurationNanos = System.nanoTime() - t0;
 
         if (context.errors().notEmpty())
@@ -142,10 +149,10 @@ public class TopLevelCompiler
             return false;
         }
 
-        updatePackageTree(model);
+        updatePackageTree(recordingModel);
 
         t0 = System.nanoTime();
-        thirdPass(localModule, model, context);
+        thirdPass(localModule, recordingModel, context);
         this.thirdPassDurationNanos = System.nanoTime() - t0;
 
         return context.errors().isEmpty();
@@ -232,11 +239,16 @@ public class TopLevelCompiler
     // First pass
     // -----------------------------------------------------------------------
 
-    private void firstPass(MutableList<PureFile> files, MetadataAccess model)
+    private void firstPass(MutableList<PureFile> files, MetadataAccess model, CompilationContext context)
     {
         files.forEach(file ->
         {
             String fileSourceId = file._sourceId();
+            // Mirror compiler-pure compiler.pure phase-2 wiring: every pass
+            // sets context.sourceId from the file currently being compiled so
+            // SourceInformationCompiler.compile(grammar, context.getSourceId(), model)
+            // falls back to the file when the grammar SI has no sourceId.
+            context.setSourceId(fileSourceId);
             file._sections().forEach(section ->
                     section._elements().forEach(grammarElement ->
                     {
@@ -253,7 +265,7 @@ public class TopLevelCompiler
                             throw new RuntimeException("The element '" + fullPath + "' already exists at: " + si._sourceId() + ":" + si._startLine() + "c" + si._startColumn());
                         }
                         long t0 = System.nanoTime();
-                        PackageableElement element = firstPassElement(grammarElement, model);
+                        PackageableElement element = firstPassElement(grammarElement, model, context);
                         long elapsed = System.nanoTime() - t0;
                         elementTimings.computeIfAbsent(fullPath, k -> new long[5])[0] = elapsed;
                         elementIndex.put(fullPath, new IndexEntry(element, grammarElement, section, fileSourceId));
@@ -262,11 +274,11 @@ public class TopLevelCompiler
     }
 
     private PackageableElement firstPassElement(
-            meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model)
+            meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context)
     {
         for (CompilerExtension ext : this.extensions)
         {
-            PackageableElement result = ext.firstPass(grammar, model);
+            PackageableElement result = ext.firstPass(grammar, model, context);
             if (result != null)
             {
                 return result;
@@ -291,7 +303,16 @@ public class TopLevelCompiler
                     context.setImports(resolveImports(entry.section()));
                 }
                 long t0 = System.nanoTime();
-                PackageableElement updated = secondPassEntry(entry, model, context);
+                context.setCurrentElement(entry.element(), fullPath);
+                PackageableElement updated;
+                try
+                {
+                    updated = secondPassEntry(entry, model, context);
+                }
+                finally
+                {
+                    context.setCurrentElement(null, null);
+                }
                 long elapsed = System.nanoTime() - t0;
                 elementTimings.computeIfAbsent(fullPath, k -> new long[5])[1] = elapsed;
                 context.flushCurrentErrors();
@@ -341,7 +362,16 @@ public class TopLevelCompiler
             int rollbacksBefore = context.inferenceRollbackCount();
             int candidatesBefore = context.candidateEvaluationCount();
             long t0 = System.nanoTime();
-            PackageableElement updated = thirdPassEntry(entry, model, context);
+            context.setCurrentElement(entry.element(), fullPath);
+            PackageableElement updated;
+            try
+            {
+                updated = thirdPassEntry(entry, model, context);
+            }
+            finally
+            {
+                context.setCurrentElement(null, null);
+            }
             long elapsed = System.nanoTime() - t0;
             long[] timings = elementTimings.computeIfAbsent(fullPath, k -> new long[5]);
             timings[2] = elapsed;
@@ -386,7 +416,7 @@ public class TopLevelCompiler
                 // chain matches Pure's `^Package(...)` (platform fix in MetaNatives.new substitutes canonical).
                 meta.pure.metamodel.type.generics.GenericTypeValue packageCanonical =
                         (meta.pure.metamodel.type.generics.GenericTypeValue) model.getElement(
-                                "meta::pure::metamodel::type::generics::optimization::GenericType_Package");
+                                "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_Package");
                 Package parent = packagePath != null
                         ? getOrCreatePackage(root, packagePath,
                                 packageCanonical != null

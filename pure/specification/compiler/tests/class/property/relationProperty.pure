@@ -13,3 +13,5 @@ Class protocol::WithRelation
 ###CompiledGraph
 class protocol::WithRelation extends Any  ~Class<protocol::WithRelation>  @8:1-11:1
   property rt :Relation<(col1:@String@[1], col2:@Integer@[1])>[1]  ~Property<protocol::WithRelation, Relation<(col1:@String@[1], col2:@Integer@[1])>|1>
+
+###ReverseIndex

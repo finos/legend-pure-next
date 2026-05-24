@@ -17,6 +17,7 @@ import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
 import org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension;
 import org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension;
+import org.finos.legend.pure.truffle.runtime.TruffleInMemoryModule;
 import org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry;
 import org.finos.legend.pure.truffle.runtime.TrufflePdbLoader;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
@@ -40,8 +41,8 @@ import java.util.concurrent.Executors;
  * call:</p>
  * <ol>
  *   <li>Each editable module's source dir is compiled via
- *       {@code meta::pure::compiler::compileDir} invoked through
- *       {@link PureTruffleRuntime#execute}. The runtime's resolver
+ *       {@code meta::pure::compiler::parseDir} + {@code meta::pure::compiler::compile}
+ *       invoked through {@link PureTruffleRuntime#execute}. The runtime's resolver
  *       (preloaded with {@code core.pdb} + {@code compiler.pdb}) supplies
  *       cross-references.</li>
  *   <li>The aggregated {@code CompilationResult.elements} is searched for a
@@ -64,16 +65,26 @@ import java.util.concurrent.Executors;
  */
 public final class TruffleBackend implements PureBackend
 {
-    private static final String COMPILE_DIR_FN_PATH =
-            "meta::pure::compiler::compileDir_String_1__Boolean_1__CompilationResult_1_";
+    private static final String PARSE_DIR_FN_PATH =
+            "meta::pure::compiler::parseDir_String_1__PureFile_MANY_";
+    private static final String COMPILE_FN_PATH =
+            "meta::pure::compiler::compile_PureFile_MANY__Boolean_1__CompilationResult_1_";
 
     /**
-     * Discard sink for compileDir's 3-line progress-bar stdout. compileDir
-     * is a CLI-facing entry point and always prints; rather than capture and
-     * filter the output, we route it to /dev/null and pull the structured
-     * {@code CompilationResult.statistics} below.
+     * Regex matching one {@code tickProgress3} frame written to stdout by
+     * {@code meta::pure::ui::progress::tickProgress3}. The frame is:
+     * <pre>
+     *   \r &lt;header&gt; [K[B\r  &lt;bar&gt; [K[B\r  &lt;current&gt; [K[A[A\r
+     * </pre>
+     * where {@code <bar>} contains a {@code [..bar..] N%  (DONE/TOTAL)}. We
+     * pull header / done / total / current and forward a structured
+     * {@link ProgressEvent} to the sink — the raw ANSI string itself never
+     * reaches the IDE, sidestepping the brittle CLI-cursor protocol.
      */
-    private static final PrintStream NULL_OUT = new PrintStream(java.io.OutputStream.nullOutputStream());
+    private static final java.util.regex.Pattern TICK_PROGRESS_3 = java.util.regex.Pattern.compile(
+            "\\r(?<header>[^\\u001B]*)\\u001B\\[K\\u001B\\[B\\r  "
+                    + "\\[[\\u2588\\u2591]+\\] \\d+%  \\((?<done>\\d+)/(?<total>\\d+)\\)\\u001B\\[K"
+                    + "\\u001B\\[B\\r  (?<current>[^\\u001B]*)\\u001B\\[K\\u001B\\[A\\u001B\\[A\\r");
 
     // Pinning rationale: PureTruffleRuntime enters its polyglot context on
     // the constructing thread and Truffle's AST builder uses thread-local
@@ -88,9 +99,9 @@ public final class TruffleBackend implements PureBackend
 
     /**
      * Build the Truffle backend's own compilation graph (core.pdb +
-     * compiler.pdb), independent of the IDE's edit graph. compileDir is
-     * always available in this runtime, regardless of which module the user
-     * is editing.
+     * compiler.pdb), independent of the IDE's edit graph. parseDir + compile
+     * are always available in this runtime, regardless of which module the
+     * user is editing.
      */
     public TruffleBackend(Path pdbDir) throws IOException
     {
@@ -130,6 +141,7 @@ public final class TruffleBackend implements PureBackend
                         .withParserExtensions(List.of(
                                 new TruffleCompiledGraphLanguageExtension(),
                                 new TruffleCompilerStatsLanguageExtension(),
+                                new org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension(),
                                 new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()))
                         .withCompileImmediately(false)
                         .build();
@@ -159,14 +171,15 @@ public final class TruffleBackend implements PureBackend
                                    PureModel model,
                                    org.finos.legend.pure.m3.module.CompilationResult compileResult,
                                    FunctionDefinition function,
+                                   ProgressSink progress,
                                    ValueSpecification... args)
     {
         // compileResult is the Java-direct stats hand-off from the LSP layer.
-        // Truffle doesn't use it: it runs its own compileDir and pulls stats
-        // out of the Truffle-side CompilationResult.statistics field below.
+        // Truffle doesn't use it: it runs its own parseDir + compile and pulls
+        // stats out of the Truffle-side CompilationResult.statistics field below.
         try
         {
-            return executor.submit(() -> doExecute(editableModules, function, args)).get();
+            return executor.submit(() -> doExecute(editableModules, function, progress, args)).get();
         }
         catch (InterruptedException e)
         {
@@ -182,28 +195,32 @@ public final class TruffleBackend implements PureBackend
 
     private ExecutionResult doExecute(MutableList<LocalModule> editableModules,
                                       FunctionDefinition function,
+                                      ProgressSink progress,
                                       ValueSpecification... args)
     {
-        // compileDir prints a 3-line progress bar via tickProgress3 — useful
-        // on a CLI, noise in an IDE. Discard the compile-phase stdout entirely
-        // and pull statistics structurally from CompilationResult.statistics
-        // (PureSequence + PureDynamicObject fields), which is what the user
-        // actually wants to see in the Compile tab. The run-phase println
-        // output is captured into runBuf and surfaced in the Output tab.
+        // compile prints a 3-line progress bar via tickProgress3 — useful
+        // on a CLI, noise in an IDE. We route that stdout through a parser
+        // that converts each frame into a structured ProgressEvent the IDE
+        // can render, and pull structured statistics out of
+        // CompilationResult.statistics (PureSequence + PureDynamicObject
+        // fields) for the Compile tab. The run-phase println output is
+        // captured into runBuf and surfaced in the Output tab.
         ByteArrayOutputStream runBuf = new ByteArrayOutputStream();
         PrintStream original = System.out;
         PrintStream runStream = null;
-        System.setOut(NULL_OUT);
+        PrintStream tickStream = new PrintStream(new TickProgress3ParsingStream(progress), true, StandardCharsets.UTF_8);
+        System.setOut(tickStream);
         Object result = null;
         Throwable err = null;
         CompileStats compileStats = null;
         try
         {
-            Object compileDirFn = registry.getElement(COMPILE_DIR_FN_PATH);
-            if (compileDirFn == null)
+            Object parseDirFn = registry.getElement(PARSE_DIR_FN_PATH);
+            Object compileFn = registry.getElement(COMPILE_FN_PATH);
+            if (parseDirFn == null || compileFn == null)
             {
                 throw new IllegalStateException(
-                        "Truffle resolver missing " + COMPILE_DIR_FN_PATH
+                        "Truffle resolver missing " + PARSE_DIR_FN_PATH + " or " + COMPILE_FN_PATH
                                 + " — was compiler.pdb loaded?");
             }
 
@@ -233,8 +250,11 @@ public final class TruffleBackend implements PureBackend
                 }
                 for (Path sourceFolder : module.sourceFolders())
                 {
-                    Object compileResult = runtime.execute(
-                            compileDirFn, sourceFolder.toAbsolutePath().toString(), Boolean.FALSE);
+                    progress.post(new ProgressEvent("Parsing " + module.getName(), 0, 0,
+                            sourceFolder.toString()));
+                    Object parsedFiles = runtime.execute(parseDirFn, sourceFolder.toAbsolutePath().toString());
+                    progress.post(new ProgressEvent("Compiling " + module.getName(), 0, 0, null));
+                    Object compileResult = runtime.execute(compileFn, parsedFiles, Boolean.FALSE);
                     lastCompileResult = compileResult;
                     List<String> thisCompileErrors = new ArrayList<>();
                     collectStrings(PureObj.read(compileResult, "errors"), thisCompileErrors);
@@ -268,13 +288,17 @@ public final class TruffleBackend implements PureBackend
                         {
                             deps.add(existing.name());
                         }
-                        registry.register(new TruffleInMemoryModule(memModuleName, deps, elements));
+                        progress.post(new ProgressEvent("Resolving pointers", 0, elements.size(),
+                                memModuleName));
+                        registry.register(new TruffleInMemoryModule(memModuleName, deps, elements, registry,
+                                (done, total, path) -> progress.post(new ProgressEvent(
+                                        "Resolving pointers", done, total, path))));
                     }
                 }
             }
             // Pull structured stats off the CompilationResult — much cleaner
-            // than parsing the progress-bar/stats output that compileDir
-            // emits unconditionally for CLI users.
+            // than parsing the progress-bar/stats output that compile emits
+            // unconditionally for CLI users.
             if (lastCompileResult != null)
             {
                 compileStats = readCompileStats(lastCompileResult);
@@ -297,13 +321,14 @@ public final class TruffleBackend implements PureBackend
             else
             {
                 // Switch to the run-phase buffer so go()'s println output is
-                // captured separately from the compileDir progress + stats.
+                // captured separately from the compile progress + stats.
                 // autoFlush=true so each println lands in runBuf at the
                 // newline — otherwise an exception mid-execution leaves the
                 // last println(s) trapped in the PrintStream's internal buffer
                 // and the user never sees their debug output.
                 runStream = new PrintStream(runBuf, true);
                 System.setOut(runStream);
+                progress.post(new ProgressEvent("Executing " + targetName, 0, 0, null));
                 result = args.length == 0
                         ? runtime.execute(truffleFn)
                         : runtime.execute(truffleFn, (Object[]) args);
@@ -489,4 +514,101 @@ public final class TruffleBackend implements PureBackend
             sink.add(s == null ? "" : s.toString());
         }
     }
+
+    /**
+     * {@link OutputStream} that recognises every {@code tickProgress3} frame
+     * written to its byte stream by {@code meta::pure::ui::progress::tickProgress3}
+     * and forwards a structured {@link ProgressEvent} to the IDE.
+     *
+     * <p>Buffers raw bytes until each frame's terminating {@code [A[A\r}
+     * arrives, applies {@link #TICK_PROGRESS_3} to pull header / done / total
+     * / current, then resets. Output that isn't a tickProgress3 frame
+     * (e.g. {@code finishProgress3}'s {@code [3B\r\n}) is swallowed — the CLI
+     * cursor protocol has no meaning in a browser anyway.</p>
+     */
+    private static final class TickProgress3ParsingStream extends java.io.OutputStream
+    {
+        // Byte sequence ending every tickProgress3 frame:
+        //   ESC [ K  ESC [ A  ESC [ A  CR
+        // erase-to-EOL + cursor-up-twice + carriage-return. Looking for this
+        // in the raw byte stream is the cheap end-of-frame sentinel — we only
+        // run the heavier regex (and only after UTF-8 decoding) once it shows up.
+        private static final byte[] FRAME_END = {
+                0x1B, '[', 'K', 0x1B, '[', 'A', 0x1B, '[', 'A', '\r'};
+
+        private final ProgressSink sink;
+        private final java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream(512);
+
+        TickProgress3ParsingStream(ProgressSink sink)
+        {
+            this.sink = sink;
+        }
+
+        @Override
+        public void write(int b)
+        {
+            buf.write(b);
+            tryEmit();
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len)
+        {
+            buf.write(b, off, len);
+            tryEmit();
+        }
+
+        private void tryEmit()
+        {
+            // Drain every complete frame buffered so far. A single PrintStream
+            // write call can deliver more than one tickProgress3 frame back-to-back
+            // (e.g. when a fast pass batches writes); without the loop we'd
+            // post one event per write instead of one per frame.
+            while (true)
+            {
+                byte[] bytes = buf.toByteArray();
+                int end = indexOf(bytes, FRAME_END);
+                if (end < 0) { return; }
+                int frameEnd = end + FRAME_END.length;
+                // Decode AS UTF-8 — the bar uses U+2588 (3 bytes) and the
+                // header carries U+2014 ("—"). Naive byte→char widening
+                // would leave both as raw byte sequences and break both the
+                // regex and any IDE-side display.
+                String frame = new String(bytes, 0, frameEnd, StandardCharsets.UTF_8);
+                java.util.regex.Matcher m = TICK_PROGRESS_3.matcher(frame);
+                if (m.find())
+                {
+                    sink.post(new ProgressEvent(
+                            m.group("header").stripLeading(),
+                            Integer.parseInt(m.group("done")),
+                            Integer.parseInt(m.group("total")),
+                            m.group("current").stripLeading()));
+                }
+                // Reset the buffer to the leftover bytes (anything after the
+                // matched frame). Reuses the same backing store rather than
+                // allocating a fresh one each tick.
+                int leftover = bytes.length - frameEnd;
+                buf.reset();
+                if (leftover > 0)
+                {
+                    buf.write(bytes, frameEnd, leftover);
+                }
+            }
+        }
+
+        private static int indexOf(byte[] hay, byte[] needle)
+        {
+            outer:
+            for (int i = 0, n = hay.length - needle.length; i <= n; i++)
+            {
+                for (int j = 0; j < needle.length; j++)
+                {
+                    if (hay[i + j] != needle[j]) { continue outer; }
+                }
+                return i;
+            }
+            return -1;
+        }
+    }
+
 }

@@ -29,8 +29,11 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
     let className = if($packagePath == '', | $protocolClass.name, | $packagePath + '::' + $protocolClass.name);
     let skeleton = $context->resolveElement($className)->toOne()->cast(@Class<Any>);
 
+    // Push sub-element caller path so references in each property's type
+    // attribute to {@code Class.propName} in the reverse index. Mirrors Java
+    // ClassHandler.secondPass withCallerSubElement wrapping.
     let propertyAccum = $protocolClass.properties->fold({p, acc |
-        let result = $p->compileProperty($acc.context, $packagePath, $skeleton);
+        let result = $acc.context->withCallerSubElement($p.name, {ctx | $p->compileProperty($ctx, $packagePath, $skeleton)});
         ^$acc(values += $result.value, context = $result.context);
     }, ^CompilerListResult<Property<Nil, Any|*>>(context = $context));
     let compiledProperties = $propertyAccum.values;
@@ -72,9 +75,10 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
     let compiledConstraints = $constraintAccum.values;
     let ctx5 = $constraintAccum.context;
 
-    // Compile qualified properties
+    // Compile qualified properties — sub-element caller scope so refs inside
+    // each QP's type attribute to {@code Class.qpName}.
     let qpAccum = $protocolClass.qualifiedProperties->fold({qp, acc |
-        let result = $qp->compileQualifiedProperty($acc.context, $packagePath, $skeleton);
+        let result = $acc.context->withCallerSubElement($qp.name, {ctx | $qp->compileQualifiedProperty($ctx, $packagePath, $skeleton)});
         ^$acc(values += $result.value, context = $result.context);
     }, ^CompilerListResult<QualifiedProperty<Any>>(context = $ctx5));
     let compiledQPs = $qpAccum.values;

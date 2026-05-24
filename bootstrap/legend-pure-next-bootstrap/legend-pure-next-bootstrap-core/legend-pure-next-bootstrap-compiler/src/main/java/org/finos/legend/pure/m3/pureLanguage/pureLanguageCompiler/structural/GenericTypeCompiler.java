@@ -114,22 +114,27 @@ public final class GenericTypeCompiler
                         ._multiplicityArguments(gtv._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model, context)))
                         ._typeVariableValues(gtv._typeVariableValues().collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)));
                 // Canonical-anchor preservation: when the compiled GT is a leaf
-                // (no type/mult/typeVar args) wrapping a named PE rawType with
-                // a `GenericType_<name>` UDPGT-PE in core.pdb, return the
-                // canonical anchor instead of the fresh inline UDGT. Mirrors the
-                // platform-level preferCanonicalAnchor applied by `new()`/`copy()`
-                // natives — closes the canonical drift exposed by
-                // `function/lambda/canonicalAnchor.pure`.
+                // (no type/mult/typeVar args) wrapping a PE rawType with a
+                // `GenericType_<fullPath>` UDPGT-PE in core.pdb, return the
+                // canonical anchor instead of the fresh inline UDGT. Anchor
+                // key encodes the FULL path so user modules whose simple
+                // names collide with platform types don't pick up the wrong
+                // anchor. Mirrors the platform-level preferCanonicalAnchor
+                // applied by `new()`/`copy()` natives.
                 if ((built._typeArguments() == null || built._typeArguments().isEmpty())
                         && (built._multiplicityArguments() == null || built._multiplicityArguments().isEmpty())
                         && (built._typeVariableValues() == null || built._typeVariableValues().isEmpty())
-                        && rawType instanceof PackageableElement rawPE
-                        && rawPE._name() != null && !rawPE._name().isEmpty())
+                        && rawType instanceof PackageableElement rawPE)
                 {
-                    Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + rawPE._name());
-                    if (canonical instanceof meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT && canonicalGT._type() == rawType)
+                    String typePath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(rawPE);
+                    if (typePath != null && !typePath.isEmpty())
                     {
-                        yield canonicalGT;
+                        Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                                + typePath.replace("::", "_"));
+                        if (canonical instanceof meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT && canonicalGT._type() == rawType)
+                        {
+                            yield canonicalGT;
+                        }
                     }
                 }
                 yield built;
@@ -169,7 +174,7 @@ public final class GenericTypeCompiler
         String pointerValue = pointer._value();
 
         int checkpoint = context.currentErrorCount();
-        SourceInformation sourceInfo = SourceInformationCompiler.compile(pointer._p_sourceInformation(), model);
+        SourceInformation sourceInfo = SourceInformationCompiler.compile(pointer._p_sourceInformation(), context.getSourceId(), model);
         PackageableElement element = _PackageableElement.findElementOrReportError(pointerValue, imports, model, context, sourceInfo);
         if (element instanceof Type type)
         {

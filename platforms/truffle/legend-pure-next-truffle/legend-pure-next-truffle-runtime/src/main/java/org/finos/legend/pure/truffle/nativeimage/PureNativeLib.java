@@ -22,6 +22,7 @@ import org.finos.legend.pure.truffle.PureTruffleRuntime;
 import org.finos.legend.pure.truffle.runtime.TrufflePdbLoader;
 import org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension;
 import org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension;
+import org.finos.legend.pure.truffle.runtime.TruffleTestFileLanguageExtension;
 import org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry;
 import org.graalvm.nativeimage.IsolateThread;
 import org.graalvm.nativeimage.c.function.CEntryPoint;
@@ -82,14 +83,14 @@ public final class PureNativeLib
     @CEntryPoint(name = "pure_compile")
     public static int pureCompile(IsolateThread thread,
                                   CCharPointer sourceDir,
-                                  CCharPointer outputPdb,
+                                  CCharPointer outputDir,
                                   CCharPointer extraPdbsCsv)
     {
         try
         {
             ensureLoaded();
             String src = CTypeConversion.toJavaString(sourceDir);
-            String out = CTypeConversion.toJavaString(outputPdb);
+            String out = CTypeConversion.toJavaString(outputDir);
             List<Path> basePdbs = new ArrayList<>();
             basePdbs.add(embeddedCorePath);
             basePdbs.add(embeddedCompilerPath);
@@ -97,8 +98,15 @@ public final class PureNativeLib
             {
                 basePdbs.add(Path.of(p));
             }
+            // Native-image entry point — always builds the lean PDB shape.
+            // Test-pdb production isn't a native-image use case (callers want
+            // a self-contained core+compiler image to run user code against).
+            // The "outputDir" C param holds the directory where <name>.pdb will
+            // be written (filename derived from module manifest).
             org.finos.legend.pure.truffle.runtime.TruffleCompilerBinaryBuilder.compile(
-                    basePdbs, Path.of(src), Path.of(out), b -> {});
+                    basePdbs, Path.of(src), Path.of(out),
+                    org.finos.legend.pure.m3.module.TestElementFilter.Mode.NONE,
+                    b -> {});
             return 0;
         }
         catch (RuntimeException e)
@@ -192,6 +200,8 @@ public final class PureNativeLib
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
+                        new TruffleTestFileLanguageExtension(),
+                        new org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension(),
                         new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()))
                 .build();
         try

@@ -166,12 +166,38 @@ public class PureLanguageSerialization
 
     public List<PDBArchiveSection> archiveSections(Module module)
     {
+        return archiveSections(module, null);
+    }
+
+    /**
+     * Same as {@link #archiveSections(Module)} but restricted to function
+     * entries whose full path is in {@code keepPaths}. Used by writers that
+     * filter the element list (lean / tests-only splits) so the embedded
+     * function index matches the elements actually written to that PDB
+     * — otherwise lean PDBs would carry test-only function entries from
+     * the module's full metadata.
+     */
+    public List<PDBArchiveSection> archiveSections(Module module, java.util.Set<String> keepPaths)
+    {
         if (module instanceof LocalModule localModule)
         {
             MutableList<PureLanguageMetadata> metas = localModule.getMetadataAccessExtension(PureLanguageMetadata.class);
             if (metas.notEmpty())
             {
-                return archiveSections(metas.getFirst().getAllFunctionHeaders());
+                List<FunctionIndexEntry> all = metas.getFirst().getAllFunctionHeaders();
+                if (keepPaths == null)
+                {
+                    return archiveSections(all);
+                }
+                List<FunctionIndexEntry> filtered = new java.util.ArrayList<>();
+                for (FunctionIndexEntry e : all)
+                {
+                    if (keepPaths.contains(e.fullPath()))
+                    {
+                        filtered.add(e);
+                    }
+                }
+                return archiveSections(filtered);
             }
         }
         return List.of();

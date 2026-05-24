@@ -77,7 +77,7 @@ public class PureIDEMain
      * their own compilation graph independently of the editor's edit graph
      * — e.g. Truffle always loads {@code core.pdb + compiler.pdb} into its
      * own runtime regardless of which module the user is editing, so that
-     * {@code compileDir} is always available for execution.</p>
+     * {@code parseDir} + {@code compile} are always available for execution.</p>
      */
     public static void run(List<String> args, Function<Path, PureBackend> backendFactory) throws Exception
     {

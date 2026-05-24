@@ -10,10 +10,13 @@ package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.nodes.Node;
+import org.finos.legend.pure.truffle.PureLanguage;
 import org.finos.legend.pure.truffle.runtime.PropertyAccessor;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureFbDecoder;
+import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * Helper for dynamic-name property reads ({@code execute(target, propName)} —
@@ -64,14 +67,10 @@ public final class PropertyReadNode extends Node
         if (boundName != null && target instanceof PureDynamicObject pdo)
         {
             Object v = pdo.readSlot(boundSlot);
-            return v == null ? org.finos.legend.pure.truffle.types.PureSequence.EMPTY : v;
+            return v == null ? PureSequence.EMPTY : v;
         }
         Object result = executeOrAbsent(target, propName);
-        if (result == ABSENT || result == null)
-        {
-            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
-        }
-        return result;
+        return result == ABSENT || result == null ? PureSequence.EMPTY : result;
     }
 
     /**

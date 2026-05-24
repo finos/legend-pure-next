@@ -35,3 +35,9 @@ function test::nilInNestedIf_Boolean_1__Type_$0_1$_(b:@Boolean@[1]):@Type@[0..1]
           AtomicValue  meta::pure::metamodel::type::Nil :#Class<@Nil@>#[1]  ~@AtomicValue@  @12:39-12:41
     Lambda :#LambdaFunction<#{->#Class<@Nil@>#[1]}#>#[1]  ~@AtomicValue@  @12:46-12:50
       AtomicValue  meta::pure::metamodel::type::Nil :#Class<@Nil@>#[1]  ~@AtomicValue@  @12:48-12:50
+
+###ReverseIndex
+meta::pure::functions::collection::pair_U_1__V_1__Pair_1_:
+  test::nilInNestedIf_Boolean_1__Type_$0_1$_
+meta::pure::functions::lang::if_Pair_MANY__Function_1__T_m_:
+  test::nilInNestedIf_Boolean_1__Type_$0_1$_

@@ -101,22 +101,109 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewWithIdVar
 
 function <<test.Test>> meta::pure::functions::lang::tests::new::testNewWithAssociation():Boolean[1]
 {
+    // new() applies the same immutability rule as copy: an association-property
+    // value passed in keys must itself have been instantiated within this
+    // new/copy expression. Sharing an existing association target across
+    // multiple constructions is disallowed because the bidirectional binding
+    // would mutate the target's reverse-property.
     let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', firm=^LA_Firm(legalName='FirmX'));
     assertEquals('Pierre', $pierre.firstName);
     assertEquals('Doe', $pierre.lastName);
 
     let firmX = $pierre.firm->toOne();
     assertEquals('FirmX', $firmX.legalName);
-
     assertEquals($firmX, $pierre.firm);
     assertEquals($pierre, $firmX.employees);
 
-    let bob = ^LA_Person(firstName='Bob', lastName='Roe', firm=$firmX);
+    // Sharing $firmX between pierre and bob via `firm=$firmX` is rejected.
+    assertError(
+        |^LA_Person(firstName='Bob', lastName='Roe', firm=$firmX),
+        'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
+    );
+
+    // Bob with a fresh inline firm works. Each Person has its own firm, and
+    // $firmX is not mutated.
+    let bob = ^LA_Person(firstName='Bob', lastName='Roe', firm=^LA_Firm(legalName='FirmY'));
     assertEquals('Bob', $bob.firstName);
     assertEquals('Roe', $bob.lastName);
+    assertEquals('FirmY', $bob.firm->toOne().legalName);
+    assertIsNot($firmX, $bob.firm->toOne());
+    // $firmX still has only $pierre — no mutation.
+    assertSameElements($pierre, $firmX.employees);
+}
 
-    assertEquals($firmX, $bob.firm);
-    assertSameElements([$bob, $pierre], $firmX.employees);
+function <<test.Test>> meta::pure::functions::lang::tests::new::testFoldInsideNewBuildsAssociationChain():Boolean[1]
+{
+    // A fold (or any higher-order) is transparent to fresh-scope: when it runs
+    // INSIDE an outer new/copy, every ^...() in its lambda registers into the
+    // outer scope, so `parent=$pack` composes legally across iterations
+    // without copies. The outer ^LA_Organization(parent=fold(...)) chains the
+    // children direction; bidir wires each ancestor's children list.
+    let leaf = ^LA_Organization(
+        name = 'd',
+        parent = ['b','c']->fold(
+            {cur, pack | ^LA_Organization(name=$cur, parent=$pack) },
+            ^LA_Organization(name='a')
+        )
+    );
+
+    // Forward direction (parent chain): leaf → 'c' → 'b' → 'a' → root.
+    assertEquals('d', $leaf.name);
+    assertEquals('c', $leaf.parent->toOne().name);
+    assertEquals('b', $leaf.parent->toOne().parent->toOne().name);
+    assertEquals('a', $leaf.parent->toOne().parent->toOne().parent->toOne().name);
+    assertEquals([], $leaf.parent->toOne().parent->toOne().parent->toOne().parent);
+
+    // Reverse direction (children chain): walking down from root must reach
+    // the same leaf instance — proves bidir wiring closed both sides
+    // consistently at every link.
+    let root = $leaf.parent->toOne().parent->toOne().parent->toOne();
+    let down1 = $root.children->toOne();
+    let down2 = $down1.children->toOne();
+    let down3 = $down2.children->toOne();
+    assertEquals('a', $root.name);
+    assertEquals('b', $down1.name);
+    assertEquals('c', $down2.name);
+    assertEquals('d', $down3.name);
+    assertIs($leaf, $down3);
+    assertIs($leaf.parent->toOne(), $down2);
+    assertIs($leaf.parent->toOne().parent->toOne(), $down1);
+    assertIs($leaf.parent->toOne().parent->toOne().parent->toOne(), $root);
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testMapInsideNewBuildsChildrenList():Boolean[1]
+{
+    // map inside new — every ^LA_Organization created in the lambda registers
+    // into the outer ^LA_Organization's scope, so the children list assignment
+    // satisfies the per-element freshness check.
+    let root = ^LA_Organization(
+        name = 'root',
+        children = ['a','b','c']->map(n | ^LA_Organization(name=$n))
+    );
+
+    // Forward (children): three named children in order.
+    assertEquals(3, $root.children->size());
+    assertEquals(['a','b','c'], $root.children.name);
+
+    // Reverse (parent): each child points back to root, by identity.
+    $root.children->forAll(c | $c.parent->toOne() == $root);
+    assertIs($root, $root.children->at(0).parent->toOne());
+    assertIs($root, $root.children->at(1).parent->toOne());
+    assertIs($root, $root.children->at(2).parent->toOne());
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testNewRejectsValueFromAlreadyClosedScope():Boolean[1]
+{
+    // A value constructed in a SEPARATE top-level expression isn't in any
+    // active scope by the time the next expression runs — must still be
+    // rejected. This is the "let firmX = ^...; ^Person(firm=$firmX)" case
+    // from testNewWithAssociation, restated as a regression guard for the
+    // relaxed any-active-scope freshness check.
+    let firmZ = ^LA_Firm(legalName='Z');
+    assertError(
+        |^LA_Person(firstName='Z', lastName='Z', firm=$firmZ),
+        'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
+    );
 }
 
 
@@ -212,7 +299,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewAnchorsAt
     );
     // The path must be GenericType_<TypeName>
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_FunctionType',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
         $cgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
     );
 }
@@ -232,7 +319,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewGenericTy
         'Expected new(GenericType) result classifier to be canonical UDPGT-PE'
     );
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_VariableExpression',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_valuespecification_VariableExpression',
         $cgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
     );
 }
@@ -263,7 +350,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNilLambdaPre
         'Expected | Nil lambda inner Nil_GT to be canonical UDPGT-PE'
     );
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_Nil',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_Nil',
         $nilGT->cast(@PackageableElement)->elementToPath()
     );
 }
@@ -281,7 +368,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testAnyLambdaPre
         'Expected | Any lambda inner Any_GT to be canonical UDPGT-PE'
     );
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_Any',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_Any',
         $anyGT->cast(@PackageableElement)->elementToPath()
     );
 }
@@ -295,7 +382,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewHolderNoK
         'Expected new(holder) result classifier to be canonical UDPGT-PE'
     );
     assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_VariableExpression',
+        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_valuespecification_VariableExpression',
         $cgt->cast(@PackageableElement)->elementToPath()
     );
 }

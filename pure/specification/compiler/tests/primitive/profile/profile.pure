@@ -27,3 +27,15 @@ primitive protocol::Varchar  ~@PrimitiveType@  @4:1-7:1
 profile protocol::support::AProfile  ~@Profile@  @9:1-13:1
   stereotype flag  ~@Stereotype@
   tag tag1  ~@Tag@
+
+###ReverseIndex
+meta::pure::functions::boolean::lessThan_Number_1__Number_1__Boolean_1_:
+  protocol::Varchar
+meta::pure::functions::string::length_String_1__Integer_1_:
+  protocol::Varchar
+protocol::support::AProfile:
+  protocol::Varchar
+protocol::support::AProfile.flag:
+  protocol::Varchar
+protocol::support::AProfile.tag1:
+  protocol::Varchar

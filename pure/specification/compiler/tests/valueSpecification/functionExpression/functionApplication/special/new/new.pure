@@ -119,3 +119,22 @@ class test::new::support::MyClassWithK extends Any  ~Class<test::new::support::M
 class test::new::support::MyClassWithKandM extends Any  ~Class<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM|m~test::new::support::MyClassWithKandM>>  @36:1-40:1
   property name :@String@[1]  ~Property<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM|m~test::new::support::MyClassWithKandM>, @String@|1>
   property value :K~test::new::support::MyClassWithKandM[m]  ~Property<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM|m~test::new::support::MyClassWithKandM>, K~test::new::support::MyClassWithKandM|m>
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::new::testNew__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::new::testNew__Any_MANY_
+meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  test::new::testNew__Any_MANY_
+test::new::support::A:
+  test::new::testNew__Any_MANY_
+test::new::support::B:
+  test::new::support::A.bs
+  test::new::testNew__Any_MANY_
+test::new::support::MyClass:
+  test::new::testNew__Any_MANY_
+test::new::support::MyClassWithK:
+  test::new::testNew__Any_MANY_
+test::new::support::MyClassWithKandM:
+  test::new::testNew__Any_MANY_

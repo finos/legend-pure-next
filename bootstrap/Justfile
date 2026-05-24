@@ -7,7 +7,7 @@
 #   bootstrap/build/pure-bootstrap.jar       — bootstrap-only fat jar
 #   <repo>/shared/core.pdb                    — shared (truffle codegen reads it)
 #   <repo>/shared/compiler.pdb                — shared
-#   bootstrap/build/compiler_bootstrap.pdb   — bootstrap-only (self-host output)
+#   bootstrap/build/compiler.pdb (Pure-compiled)   — bootstrap-only (self-host output)
 #   <repo>/shared/specification/              — shared (generated spec files)
 #
 # Two Maven modes selected by argument to a single parameterized `_mvn` recipe:
@@ -21,9 +21,10 @@
 # Public steps (`stage`, `build-compiler-pdb`) have no Maven dep of their own;
 # the entry-point recipe (`build` or `test`) lists Maven + stage + build-compiler-pdb in order.
 #
-# `test-pure-testFunctions`, `test-pure-PCTs`, `test-pure-compiler` are zero-dep "expert mode" recipes — they assume
-# `just build` (or `just test`) has already produced the artifacts. Run them
-# standalone for fast Pure-side iteration without re-invoking Maven.
+# `test-pure-runtime-testFunctions`, `test-pure-runtime-PCTs`, `test-pure-compiler` are zero-dep
+# "expert mode" recipes — they assume `just build` (or `just test`) has already produced the
+# artifacts. Run them standalone for fast Pure-side iteration without re-invoking Maven.
+# `test-pure-runtime` runs both runtime suites in one call.
 
 set quiet := true
 set shell := ["bash", "-c"]
@@ -52,29 +53,36 @@ default: test
 # Build the Java compiler/CLI and stage core.pdb + compiler.pdb into shared/.
 build: (_mvn "skip-tests") stage build-compiler-pdb
 
-# Copy bootstrap CLI jar to bootstrap/build/ and core.pdb + generated specs to shared/.
+# Copy bootstrap CLI jar to bootstrap/build/ and core.pdb / core-tests.pdb / generated specs to shared/.
 stage:
-    @{{banner}} '[stage]' 'copy bootstrap jar + core.pdb + generated specs'
+    @{{banner}} '[stage]' 'copy bootstrap jar + core.pdb + core-tests.pdb + generated specs'
     mkdir -p {{boot_out}} {{shared_out}}/specification/protocol
     cp {{boot}}/legend-pure-next-bootstrap-cli/target/pure-bootstrap-*-fat.jar {{cli}}
     cp {{bcore}}/legend-pure-next-bootstrap-compiler/target/classes/core.pdb {{shared_out}}/core.pdb
+    cp {{bcore}}/legend-pure-next-bootstrap-compiler/target/classes/core-tests.pdb {{shared_out}}/core-tests.pdb
     cp -r {{bcore}}/legend-pure-next-bootstrap-generators/target/generated-specification/* {{shared_out}}/specification/
 
-# Compile compiler-pure → shared/compiler.pdb via the bootstrap CLI (also a prerequisite for truffle work).
+# Compile compiler-pure → shared/compiler.pdb (lean) + shared/compiler-tests.pdb
+# (companion with the compiler-pure tests) via the bootstrap CLI. Mirrors
+# the core.pdb/core-tests.pdb split so the same test discovery path works.
 build-compiler-pdb:
-    @{{banner}} '[bootstrap]' 'compile compiler.pdb against core.pdb'
+    @{{banner}} '[bootstrap]' 'compile compiler.pdb + compiler-tests.pdb against core.pdb'
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --source {{compiler_src}} \
-        --output {{shared_out}}/compiler.pdb {{err_filter}}
+        --output-dir {{shared_out}} \
+        --tests split {{err_filter}}
 
 # Build + run Java unit tests (surefire) + run Pure compiler-graph spec tests.
 test: test-java stage build-compiler-pdb test-pure-compiler
 
+# `test` plus Pure-on-Java self-host + standalone runtime test suites.
+test-all: test test-pure-self-host test-pure-runtime
+
 # NB: surefire runs the full JUnit suite, which includes dynamic-test
 # factories that wrap Pure runTests (TestPureExecution) and PCT tests
-# (TestPCT) — so `test-java` already covers everything `test-pure-testFunctions`
-# and `test-pure-PCTs` run standalone. The compiler-graph spec suite is
+# (TestPCT) — so `test-java` already covers everything `test-pure-runtime-testFunctions`
+# and `test-pure-runtime-PCTs` run standalone. The compiler-graph spec suite is
 # covered by `CompilerCompiledGraphTest` (Java direct's own JUnit factory)
 # and additionally by `test-pure-compiler` via the bootstrap CLI; no
 # JUnit equivalent on the Pure-on-Java side.
@@ -87,21 +95,31 @@ test-java: (_mvn "with-tests")
 # thread-local around the body. Runner-side prints (tickProgress, etc.)
 # remain visible.
 
+# Run both runtime test suites (runTests + PCT) over meta::pure::functions.
+test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
+
+# Needs core-tests.pdb (runTests is <<test.TestDependency>>, classified into the
+# tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
 # Standalone Pure runTests over meta::pure::functions (also covered by `test-java` via TestPureExecution; assumes `just build` was run).
-test-pure-testFunctions:
+test-pure-runtime-testFunctions:
     @{{banner}} '[pure→bootstrap]' 'runTests over meta::pure::functions (assumes `just build` was run)'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
 
+# Needs core-tests.pdb and compiler-tests.pdb for the same reason as test-pure-runtime-testFunctions.
 # Standalone Pure PCT tests over meta::pure::functions (also covered by `test-java` via TestPCT; assumes `just build` was run).
-test-pure-PCTs:
+test-pure-runtime-PCTs:
     @{{banner}} '[pure→bootstrap]' 'runPCTTests over meta::pure::functions (assumes `just build` was run)'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
         --function "meta::pure::test::runPCTTests_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
 
@@ -110,28 +128,34 @@ test-pure-compiler:
     @{{banner}} '[pure→bootstrap]' 'runCompiledGraphTests over pure/specification/compiler/tests'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
         --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
 
-# Self-host: compile compiler-pure on Pure-on-Java, run compiler tests, then diff PDBs vs Java direct (and Truffle if present).
-test-pure-self-host: build-compiler-pdb
-    @{{banner}} '[self-host-java]' 'compiler-pure → compiler_bootstrap.pdb (Pure compiler)'
+# Self-host: compile compiler-pure on Pure-on-Java, run compiler tests, then diff PDBs vs Java direct (and Truffle if present; assumes `just build` was run).
+test-pure-self-host:
+    @{{banner}} '[self-host-java]' 'compiler-pure → compiler.pdb (Pure-compiled) (Pure compiler)'
     {{pure_bootstrap}} compile-via-pure \
         --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
         --base-pdb {{shared_out}}/compiler.pdb \
         --source {{compiler_src}} \
-        --output {{boot_out}}/compiler_bootstrap.pdb {{err_filter}}
-    @{{banner}} '[self-host-java]' 'runCompiledGraphTests against compiler_bootstrap.pdb'
+        --output-dir {{boot_out}} \
+        --tests split {{err_filter}}
+    @{{banner}} '[self-host-java]' 'runCompiledGraphTests (from compiler-tests.pdb) against Pure-compiled compiler.pdb'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
-        --pdb {{boot_out}}/compiler_bootstrap.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{boot_out}}/compiler.pdb \
+        --pdb {{boot_out}}/compiler-tests.pdb \
         --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
-    @{{banner}} '[self-host-java]' 'diff compiler.pdb (Java compiler) ↔ compiler_bootstrap.pdb (Pure compiler)'
+    @{{banner}} '[self-host-java]' 'diff Java compiler.pdb ↔ Pure-compiled compiler.pdb (both lean)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
         {{shared_out}}/compiler.pdb \
-        {{boot_out}}/compiler_bootstrap.pdb {{err_filter}}
+        {{boot_out}}/compiler.pdb {{err_filter}}
 
 # Launch the Pure IDE via the bootstrap CLI.
 ide: build-compiler-pdb

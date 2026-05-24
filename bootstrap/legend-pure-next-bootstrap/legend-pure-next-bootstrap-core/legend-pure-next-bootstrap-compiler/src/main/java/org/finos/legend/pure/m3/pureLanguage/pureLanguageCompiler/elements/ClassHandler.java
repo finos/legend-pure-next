@@ -53,7 +53,7 @@ public final class ClassHandler
     {
     }
 
-    public static meta.pure.metamodel.type.Class firstPass(meta.pure.protocol.grammar.type.Class grammar, MetadataAccess model)
+    public static meta.pure.metamodel.type.Class firstPass(meta.pure.protocol.grammar.type.Class grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
     {
         return new ClassImpl() // the classifierGenericType is set in the secondPass
                    ._name(grammar._name());
@@ -97,13 +97,18 @@ public final class ClassHandler
                     multiplicityParameters.collect(mp -> mp));
         }
 
+        // Per-property compile attributes references to the sub-element path
+        // (e.g. {@code MyClass.bar}) rather than the enclosing Class, so the
+        // reverse index shows which property uses each referenced type.
         MutableList<meta.pure.metamodel.function.property.Property> properties = grammar._properties()
-                .collect(p -> PropertyCompiler.compile(p, ownerGenericType, imports, model, context))
+                .collect(p -> context.withCallerSubElement(p._name(),
+                        () -> PropertyCompiler.compile(p, ownerGenericType, imports, model, context)))
                 .select(Objects::nonNull);
         properties.forEach(p -> ((meta.pure.metamodel.function.property.PropertyImpl) p)._owner(result));
 
         MutableList<meta.pure.metamodel.function.property.QualifiedProperty> qualifiedProperties = grammar._qualifiedProperties()
-                .collect(qp -> QualifiedPropertyCompiler.compile(qp, ownerGenericType, imports, model, context))
+                .collect(qp -> context.withCallerSubElement(qp._name(),
+                        () -> QualifiedPropertyCompiler.compile(qp, ownerGenericType, imports, model, context)))
                 .select(Objects::nonNull);
         qualifiedProperties.forEach(qp -> ((meta.pure.metamodel.function.property.QualifiedPropertyImpl) qp)._owner(result));
 
@@ -125,7 +130,7 @@ public final class ClassHandler
                 ._classifierGenericType(
                         _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::Class"), model)
                                 ._typeArguments(Lists.mutable.with(ownerGenericType)))
-                ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), model));
+                ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model));
 
         // Compile type variables (e.g., Class Foo(x:Integer[1]))
         if (grammar._typeVariables() != null && grammar._typeVariables().notEmpty())
@@ -138,7 +143,7 @@ public final class ClassHandler
         // Create constraint shells (name, owner, source info) without expression sequences
         if (grammar._constraints() != null && grammar._constraints().notEmpty())
         {
-            result._constraints(grammar._constraints().collect(gc -> ConstraintCompiler.compileShell(gc, model)));
+            result._constraints(grammar._constraints().collect(gc -> ConstraintCompiler.compileShell(gc, model, context)));
         }
 
         context.enrichCurrentErrors("class '" + _G_PackageableElement.fullPath(grammar) + "'");

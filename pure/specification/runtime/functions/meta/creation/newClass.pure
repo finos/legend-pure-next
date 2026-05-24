@@ -13,9 +13,40 @@
 // limitations under the License.
 
 import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::multiplicity::*;
 import meta::pure::test::pct::*;
 
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::creation::newClass(typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*], multiplicityParameters:meta::pure::metamodel::multiplicity::MultiplicityParameter[*]): Class<Any>[1];
+// Construct an anonymous Class<Any> with the given type/multiplicity parameters,
+// a self-referencing classifierGenericType (Class<self<TPs, MPs>>) and the
+// parameters' `owner` slots wired back to the new class via `~` notation.
+//
+// `~.~` inside the typeParameters / multiplicityParameters list resolves to
+// the outer ^Class<Any> being built, so each parameter copy's owner points at
+// the surviving class instance rather than the input. `~.~.~` inside the
+// nested selfGT does the same for the self-reference in the CGT.
+function <<PCT.function>> meta::pure::functions::meta::creation::newClass(typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*], multiplicityParameters:meta::pure::metamodel::multiplicity::MultiplicityParameter[*]): Class<Any>[1]
+{
+    ^Class<Any>(
+        name = '',
+        typeParameters = $typeParameters->map(tp | ^$tp(owner = ~.~)),
+        multiplicityParameters = $multiplicityParameters->map(mp | ^$mp(owner = ~.~))->cast(@MultiplicityParameter),
+        // The CGT slot reads ~.~.~.typeParameters / ~.~.~.multiplicityParameters
+        // to share the *wired* parameter instances (with owner=this class) between
+        // `cls.typeParameters` and `cls.cgt.typeArgs[0].typeArgs[i].type`. The
+        // platform `new()` native evaluates and APPLIES key expressions in source
+        // order, so the typeParameters / multiplicityParameters slots are set
+        // BEFORE this slot's expression runs.
+        classifierGenericType = ^UserDefinedGenericType(
+            type = Class,
+            typeArguments = [^UserDefinedGenericType(
+                type = ~.~.~,
+                typeArguments = ~.~.~.typeParameters->map(tp | ^UserDefinedGenericType(type = $tp))->cast(@meta::pure::metamodel::type::generics::GenericType),
+                multiplicityArguments = ~.~.~.multiplicityParameters->cast(@Multiplicity)
+            )]
+        )
+    );
+}
 
 function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClassEmpty():Boolean[1]
 {

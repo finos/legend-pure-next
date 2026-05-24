@@ -17,3 +17,9 @@ primitive protocol::Varchar  ~@PrimitiveType@  @2:1-5:1
         Variable x :#Integer##[1]#  ~@VariableExpression@  @4:24-4:25
 
 native function _length_String_1__Integer_1_(str:@String@[1]):@Integer@[1]  ~NativeFunction<{@String@[1]->@Integer@[1]}>
+
+###ReverseIndex
+_length_String_1__Integer_1_:
+  protocol::Varchar
+meta::pure::functions::boolean::lessThan_Number_1__Number_1__Boolean_1_:
+  protocol::Varchar

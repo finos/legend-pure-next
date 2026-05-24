@@ -1,0 +1,5 @@
+###Pure
+function test::t(): String[1]
+{
+  '/**X*/'
+}

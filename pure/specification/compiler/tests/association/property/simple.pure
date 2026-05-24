@@ -23,3 +23,9 @@ association pack::MyAssociation  ~@Association@  @4:1-8:1
 class pack::ClassA extends Any  ~Class<pack::ClassA>  @10:1-12:1
 
 class pack::ClassB extends Any  ~Class<pack::ClassB>  @14:1-16:1
+
+###ReverseIndex
+pack::ClassA:
+  pack::MyAssociation.a
+pack::ClassB:
+  pack::MyAssociation.b

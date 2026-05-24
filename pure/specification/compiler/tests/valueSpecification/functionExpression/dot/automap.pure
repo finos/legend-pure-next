@@ -59,3 +59,26 @@ class test::MyClass extends Any  ~Class<test::MyClass>  @16:1-21:1
         typeParam T -> test::Other
         TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Other|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Other|1>  @19:24-19:31
   property values :test::Other[*]  ~Property<test::MyClass, test::Other|*>
+
+###ReverseIndex
+meta::pure::functions::collection::map_T_$0_1$__Function_1__V_$0_1$_:
+  test::tst__Any_MANY_
+meta::pure::functions::collection::map_T_MANY__Function_1__V_MANY_:
+  test::tst__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_:
+  test::MyClass.value
+  test::tst__Any_MANY_
+test::MyClass:
+  test::tst__Any_MANY_
+test::MyClass.maybeValue:
+  test::tst__Any_MANY_
+test::MyClass.value:
+  test::tst__Any_MANY_
+test::MyClass.values:
+  test::tst__Any_MANY_
+test::Other:
+  test::MyClass.maybeValue
+  test::MyClass.value
+  test::MyClass.values
+test::Other.name:
+  test::tst__Any_MANY_

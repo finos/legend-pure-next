@@ -153,6 +153,12 @@ public final class CopyWithKeysNode extends PureNode
         for (var kv : keyValues) keyPropNames.add(kv.getKey());
         addCopiedAssociationProps(copy, classPath, keyPropNames, keyValues, eval);
 
+        // Immutability check (mirrors Java copy native): every assoc-prop
+        // value on the copy must have been instantiated within this copy
+        // expression. Runs after deep-property paths have been resolved
+        // (and deep-copied intermediates registered as fresh).
+        NewWithKeysNode.verifyAssocPropsAreFresh(classPath, keyValues, eval);
+
         NewWithKeysNode.setReverseAssociationPointers(copy, classPath, keyValues, eval, appendReader, appendWriter);
 
         for (String topProp : topLevelDeepProps)
@@ -164,7 +170,7 @@ public final class CopyWithKeysNode extends PureNode
                 var subType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(subCgt);
                 if (subType != null)
                 {
-                    String subPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(subType);
+                    String subPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(subType, eval.resolver());
                     java.util.List<java.util.Map.Entry<String, Object>> subKvs = new java.util.ArrayList<>();
                     addCopiedAssociationProps(subCopy, subPath, new java.util.HashSet<>(), subKvs, eval);
                     NewWithKeysNode.setReverseAssociationPointers(subCopy, subPath, subKvs, eval, appendReader, appendWriter);
@@ -178,6 +184,14 @@ public final class CopyWithKeysNode extends PureNode
     private Object invoke(VirtualFrame frame)
     {
         org.finos.legend.pure.truffle.PureContext eval = getContext();
+        // Open fresh-instance scope (mirror Java MetaNatives copy lazy
+        // native). Inner new/copy results register here; the verify in
+        // finalizeCopy enforces that assoc-prop values originated within
+        // this expression.
+        eval.pushFreshScope();
+        Object copyResult = null;
+        try
+        {
 
         // Step 1: Evaluate the source object (first arg) — pre-compiled as child node
         Object original = sourceNode.executeGeneric(frame);
@@ -192,7 +206,7 @@ public final class CopyWithKeysNode extends PureNode
         String classPath = classPathFromInstance(original);
         if ((classPath == null || classPath.isEmpty()) && cgt != null)
         {
-            classPath = resolveClassPathFromCGT(cgt);
+            classPath = resolveClassPathFromCGT(cgt, eval.resolver());
         }
 
         // Post-flip: original is always a PureDynamicObject. The typed
@@ -200,7 +214,12 @@ public final class CopyWithKeysNode extends PureNode
         // user-visible value is a typed XPDBHelper anymore.
         Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
         shallowCopyProperties(original, copy, cgt);
-        Object copyCgt = fixSelfReferentialCGT(cgt, original, copy, eval.resolver());
+        // No self-reference rewriting — copy is a literal shallow copy. Any slot
+        // that the user wants pointing at the copy (classifierGenericType,
+        // Property.owner, TypeParameter.owner, …) must be set explicitly via
+        // `~.~` in the copy expression. Letting the runtime do it implicitly
+        // would silently change graph identity in surprising ways.
+        Object copyCgt = cgt;
         // Platform-level canonical anchor: preserve canonical GenericType_<TypeName>
         // UDPGT-PE references through copy operations. Symmetric to NewWithKeysNode's
         // preferCanonicalAnchor — without this, copies of canonical-classified
@@ -210,10 +229,6 @@ public final class CopyWithKeysNode extends PureNode
             copyCgt = NewWithKeysNode.preferCanonicalAnchor(copyCgt, eval.resolver());
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(copy, "classifierGenericType", copyCgt);
         }
-        // Fix TypeParameter/MultiplicityParameter owners to point to the copy
-        fixTypeParameterOwners(copy);
-        // Fix property owners and nested enum value CGTs to point to the copy
-        fixPropertyOwners(original, copy, eval.resolver());
 
         // Step 3: Push onto construction stack, evaluate and set key properties
         var ctx = org.finos.legend.pure.truffle.PureLanguage.get(this);
@@ -244,11 +259,17 @@ public final class CopyWithKeysNode extends PureNode
                 }
             }
 
+            copyResult = copy;
             return finalizeCopy(copy, classPath, keyValues, eval);
         }
         finally
         {
             ctx.popConstruction();
+        }
+        }
+        finally
+        {
+            eval.popFreshScopeAndRegister(copyResult);
         }
     }
 
@@ -256,12 +277,12 @@ public final class CopyWithKeysNode extends PureNode
      * Resolve a class path from a truffle GenericTypeValue.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static String resolveClassPathFromCGT(Object cgt)
+    private static String resolveClassPathFromCGT(Object cgt, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         Object rawType = _GenericType.type(cgt);
         if (rawType != null)
         {
-            String path = _PackageableElement.path(rawType);
+            String path = _PackageableElement.path(rawType, resolver);
             if (path != null && !path.isEmpty())
             {
                 return path;
@@ -296,7 +317,7 @@ public final class CopyWithKeysNode extends PureNode
      * every copy was wasted work.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static java.util.List<String> collectAllPropertyNames(Object type)
+    private static java.util.List<String> collectAllPropertyNames(Object type, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         java.util.List<String> cached = PROPERTY_NAMES_CACHE.get(type);
         if (cached != null)
@@ -306,7 +327,7 @@ public final class CopyWithKeysNode extends PureNode
         java.util.List<String> names = new java.util.ArrayList<>();
         java.util.Set<String> seen = new java.util.LinkedHashSet<>();
         java.util.Set<String> visited = new java.util.HashSet<>();
-        collectPropertyNamesRecursive(type, names, seen, visited);
+        collectPropertyNamesRecursive(type, names, seen, visited, resolver);
         java.util.List<String> result = java.util.List.copyOf(names);
         synchronized (PROPERTY_NAMES_CACHE_LOCK)
         {
@@ -335,10 +356,11 @@ public final class CopyWithKeysNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void collectPropertyNamesRecursive(Object type, java.util.List<String> names,
                                                        java.util.Set<String> seen,
-                                                       java.util.Set<String> visited)
+                                                       java.util.Set<String> visited,
+                                                       org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         String typeId = type != null
-                ? _PackageableElement.path(type)
+                ? _PackageableElement.path(type, resolver)
                 : null;
         if (typeId == null) typeId = String.valueOf(System.identityHashCode(type));
         if (!visited.add(typeId))
@@ -361,7 +383,7 @@ public final class CopyWithKeysNode extends PureNode
                     Object superType = _GenericType.type(general);
                     if (superType != null)
                     {
-                        collectPropertyNamesRecursive(superType, names, seen, visited);
+                        collectPropertyNamesRecursive(superType, names, seen, visited, resolver);
                     }
                 }
             }
@@ -630,7 +652,7 @@ public final class CopyWithKeysNode extends PureNode
         {
             return cached;
         }
-        java.util.List<String> propertyNames = collectAllPropertyNames(type);
+        java.util.List<String> propertyNames = collectAllPropertyNames(type, resolver);
         java.util.List<String> result = new java.util.ArrayList<>();
         for (String propName : propertyNames)
         {

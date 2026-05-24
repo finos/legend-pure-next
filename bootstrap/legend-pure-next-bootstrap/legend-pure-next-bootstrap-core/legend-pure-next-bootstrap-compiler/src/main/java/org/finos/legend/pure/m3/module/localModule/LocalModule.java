@@ -321,7 +321,58 @@ public class LocalModule implements Module
 
         List<CompilationError> errors = compilationContext.errors().collect(
                 e -> new CompilationError(e.formatMessage(), e.sourceInformation())).toList();
-        return new CompilationResult(errors, statistics);
+
+        // Snapshot the reverse reference index built during compile. Convert
+        // Eclipse Collections MutableSet → java.util.Set so consumers don't
+        // need to depend on EC. The map is per-compile transient state in
+        // the CompilationContext; copying it here decouples lifetime.
+        java.util.LinkedHashMap<String, java.util.Set<String>> refIndex = new java.util.LinkedHashMap<>();
+        compilationContext.referencedBy().forEachKeyValue((target, callers) ->
+                refIndex.put(target, new java.util.LinkedHashSet<>(callers.toList())));
+
+        // Derive function-reference edges from the compiled AST. The in-flight
+        // recording at the function-/dot-application success sites was prone
+        // to multi-candidate trial pollution (phantom edges from candidates
+        // that lost specificity, or missing edges if those recordings were
+        // rolled back too aggressively). Walking the final {@code _func}
+        // slots is structurally exact — the edges match what the PDB
+        // actually serialises.
+        java.util.List<meta.pure.metamodel.PackageableElement> compiledElements =
+                this.state.elementIndex().valuesView()
+                        .collect(org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry::element)
+                        .reject(java.util.Objects::isNull)
+                        .toList();
+        org.finos.legend.pure.m3.module.FunctionRefExtractor.extractInto(compiledElements, (target, caller) ->
+                refIndex.computeIfAbsent(target, k -> new java.util.LinkedHashSet<>()).add(caller));
+
+        // Lean-references validator: scan the reverse index for any non-test
+        // element that references a test-only element. Uses the per-module
+        // resolver so cross-module callers can be classified. Violations are
+        // appended to the compile errors and formatted via the same
+        // CompilationError pipeline as compiler errors (preserves the
+        // {@code (at sourceId:line c col)} suffix from the caller element).
+        org.finos.legend.pure.m3.module.ScopedMetadataAccess accessForValidator =
+                new org.finos.legend.pure.m3.module.ScopedMetadataAccess(this, pureModel);
+        java.util.function.Function<String, meta.pure.metamodel.PackageableElement> resolveForValidator =
+                path -> accessForValidator.getElement(path);
+        List<CompilationError> leanRefsViolations = org.finos.legend.pure.m3.module.LeanReferencesValidator.validate(refIndex, resolveForValidator)
+                .stream()
+                .map(e ->
+                {
+                    org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError wrapped =
+                            new org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError(
+                                    e.message(), e.sourceInformation());
+                    return new CompilationError(wrapped.formatMessage(), wrapped.sourceInformation());
+                })
+                .toList();
+        if (!leanRefsViolations.isEmpty())
+        {
+            List<CompilationError> combined = new java.util.ArrayList<>(errors);
+            combined.addAll(leanRefsViolations);
+            errors = combined;
+        }
+
+        return new CompilationResult(errors, statistics, refIndex);
     }
 
     private List<PureContent> collectSources()

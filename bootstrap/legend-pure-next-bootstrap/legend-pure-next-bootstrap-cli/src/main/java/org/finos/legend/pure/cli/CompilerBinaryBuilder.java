@@ -22,6 +22,7 @@ import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ModuleManifest;
+import org.finos.legend.pure.m3.module.TestElementFilter;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveWriter;
@@ -43,23 +44,36 @@ public class CompilerBinaryBuilder
 {
     public static void main(String[] args) throws Exception
     {
-        if (args.length < 3)
+        Path corePdb = null;
+        Path sourceDir = null;
+        Path outputDir = null;
+        TestElementFilter.Mode mode = TestElementFilter.Mode.NONE;
+        for (int i = 0; i < args.length; i++)
         {
-            System.err.println("Usage: CompilerBinaryBuilder <corePdb> <sourceDir> <outputFile.pdb>");
+            switch (args[i])
+            {
+                case "--base-pdb" -> corePdb = Path.of(args[++i]);
+                case "--source" -> sourceDir = Path.of(args[++i]);
+                case "--output-dir" -> outputDir = Path.of(args[++i]);
+                case "--tests" -> mode = TestElementFilter.Mode.parse(args[++i]);
+                default -> throw new IllegalArgumentException("Unknown option: " + args[i]);
+            }
+        }
+        if (corePdb == null || sourceDir == null || outputDir == null)
+        {
+            System.err.println("Usage: CompilerBinaryBuilder --base-pdb <corePdb> --source <sourceDir> --output-dir <dir> [--tests {none|with|only|split}]");
             System.err.println("  module.json is auto-discovered by walking up from <sourceDir>.");
+            System.err.println("  Output filename comes from module manifest 'name'.");
             System.exit(1);
         }
 
-        Path corePdb = Path.of(args[0]);
-        Path sourceDir = Path.of(args[1]);
-        Path outputFile = Path.of(args[2]);
-
-        compile(corePdb, sourceDir, outputFile);
+        compile(corePdb, sourceDir, outputDir, mode);
     }
 
-    public static void compile(Path corePdb, Path sourceDir, Path outputFile) throws IOException
+    public static void compile(Path corePdb, Path sourceDir, Path outputDir, TestElementFilter.Mode mode) throws IOException
     {
         ModuleManifest manifest = ModuleManifest.locate(sourceDir);
+        Path outputFile = outputDir.resolve(manifest.name() + ".pdb");
 
         System.out.println();
         System.out.println("Pure Compiler Binary Builder From Pure Files (PDB)");
@@ -67,7 +81,8 @@ public class CompilerBinaryBuilder
         System.out.println("  Inputs: " + corePdb);
         System.out.println("          " + sourceDir);
         System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies());
-        System.out.println("  Output: " + outputFile);
+        System.out.println("  Output dir: " + outputDir);
+        System.out.println("  Tests mode: " + mode);
 
         // Load core.pdb — its identity (name "specification", etc.) comes from
         // the manifest embedded inside the archive.
@@ -108,10 +123,93 @@ public class CompilerBinaryBuilder
         List<PackageableElement> elements = new ArrayList<>(elementsByPath.values());
         System.out.println("  Compiled " + elements.size() + " elements");
 
-        // Write compiler.pdb
         Files.createDirectories(outputFile.getParent());
-        new CompressedArchiveWriter().write(elements, extensions, localModule, manifest, List.of(), outputFile);
-        System.out.println("    Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
+        writeFiltered(elements, extensions, localModule, manifest, outputFile, mode, result.referencedBy());
+    }
+
+    private static void writeFiltered(
+            List<PackageableElement> elements,
+            MutableList<LanguageExtension> extensions,
+            LocalModule localModule,
+            ModuleManifest manifest,
+            Path outputFile,
+            TestElementFilter.Mode mode,
+            java.util.Map<String, java.util.Set<String>> referencedBy) throws IOException
+    {
+        switch (mode)
+        {
+            case WITH ->
+                    writePdb("full", elements, extensions, localModule, manifest,
+                            TestElementFilter.withTestsPath(outputFile), referencedBy);
+            case NONE ->
+            {
+                List<PackageableElement> lean = elements.stream()
+                        .filter(e -> !TestElementFilter.isTestElement(e))
+                        .toList();
+                java.util.Set<String> leanPaths = pathSet(lean);
+                writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
+                        lean, extensions, localModule, manifest, outputFile,
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains));
+            }
+            case ONLY ->
+            {
+                List<PackageableElement> tests = elements.stream()
+                        .filter(TestElementFilter::isTestElement)
+                        .toList();
+                java.util.Set<String> testPaths = pathSet(tests);
+                writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
+                        tests, extensions, localModule, TestElementFilter.testsManifest(manifest),
+                        TestElementFilter.testsOnlyPath(outputFile),
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains));
+            }
+            case SPLIT ->
+            {
+                List<PackageableElement> lean = new ArrayList<>(elements.size());
+                List<PackageableElement> tests = new ArrayList<>();
+                for (PackageableElement e : elements)
+                {
+                    (TestElementFilter.isTestElement(e) ? tests : lean).add(e);
+                }
+                java.util.Set<String> leanPaths = pathSet(lean);
+                java.util.Set<String> testPaths = pathSet(tests);
+                writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
+                        lean, extensions, localModule, manifest, outputFile,
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains));
+                writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
+                        tests, extensions, localModule, TestElementFilter.testsManifest(manifest),
+                        TestElementFilter.testsOnlyPath(outputFile),
+                        org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains));
+            }
+        }
+    }
+
+    private static java.util.Set<String> pathSet(List<PackageableElement> elements)
+    {
+        java.util.Set<String> set = new java.util.HashSet<>();
+        for (PackageableElement e : elements)
+        {
+            String p = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(e);
+            if (p != null) set.add(p);
+        }
+        return set;
+    }
+
+    private static void writePdb(
+            String label,
+            List<PackageableElement> elements,
+            MutableList<LanguageExtension> extensions,
+            LocalModule localModule,
+            ModuleManifest manifest,
+            Path target,
+            java.util.Map<String, java.util.Set<String>> referencedBy) throws IOException
+    {
+        java.util.List<org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection> sections = new ArrayList<>();
+        org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection riSection =
+                org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.serialize(referencedBy);
+        if (riSection != null) sections.add(riSection);
+        new CompressedArchiveWriter().write(elements, extensions, localModule, manifest, sections, target);
+        System.out.println("    Written: " + target + " [" + label + ", " + Files.size(target) + " bytes, "
+                + (referencedBy == null ? 0 : referencedBy.size()) + " ref targets]");
     }
 
     private static void verifyDependencies(ModuleManifest manifest, List<String> availableNames)

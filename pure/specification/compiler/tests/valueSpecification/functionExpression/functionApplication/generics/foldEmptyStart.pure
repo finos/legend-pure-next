@@ -20,3 +20,11 @@ function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
         Variable acc :#Nil##[*]#  ~@VariableExpression@  @4:45-4:48
         Variable val :#Integer##[1]#  ~@VariableExpression@  @4:51-4:54
     Collection :#Nil#[0]  ~@Collection@  @4:59-4:60
+
+###ReverseIndex
+meta::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+  test::tst__Any_MANY_
+meta::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_:
+  test::tst__Any_MANY_
+meta::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+  test::tst__Any_MANY_

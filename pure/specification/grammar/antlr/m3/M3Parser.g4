@@ -229,6 +229,7 @@ atomicExpression:
                  | expressionInstance
                  | variable
                  | columnBuilders
+                 | parentReference
                  | (AT (type? (PIPE multiplicityArgument)? | multiplicity))
                  | anyLambda
                  | instanceReference
@@ -276,7 +277,7 @@ buildMilestoningVariableExpression: LATEST_DATE | DATE | variable
 ;
 
 expressionInstance: NEW_SYMBOL
-                          (variable | qualifiedName)
+                          (variable | qualifiedName | combinedExpression)
                           (LESSTHAN typeArguments? (PIPE multiplicityArguments)? GREATERTHAN)? (identifier)?
                           (typeVariableValues)?
                           GROUP_OPEN
@@ -290,10 +291,16 @@ expressionInstanceRightSide: expressionInstanceAtomicRightSide
 parentReference: TILDE (DOT TILDE)* (DOT propertyName (DOT propertyName)*)?
 ;
 
-expressionInstanceAtomicRightSide: parentReference | combinedExpression | expressionInstance | qualifiedName
+// parentReference is now an atomicExpression alternative so chains like
+// `~.foo->map(...)` parse naturally through combinedExpression. The plain
+// `~`, `~.~`, `~.foo` forms still parse, just via the combinedExpression branch.
+expressionInstanceAtomicRightSide: combinedExpression | expressionInstance | qualifiedName
 ;
 
-expressionInstanceParserPropertyAssignment: propertyName (DOT propertyName)* PLUS? EQUAL expressionInstanceRightSide
+// Deep-path syntax (e.g. `firm.legalName = 'X'`) is intentionally not part
+// of the grammar. To set a nested value, instantiate it inline at the top
+// level: `firm = ^LA_Firm(legalName='X', ...)`.
+expressionInstanceParserPropertyAssignment: propertyName PLUS? EQUAL expressionInstanceRightSide
 ;
 
 sliceExpression: BRACKET_OPEN ( (COLON expression) | (expression COLON expression) |  (expression COLON expression COLON expression) ) BRACKET_CLOSE
@@ -376,7 +383,7 @@ type: ( qualifiedName (LESSTHAN (typeArguments? (PIPE multiplicityArguments)?) G
       )
 ;
 
-typeVariableValues: GROUP_OPEN (instanceLiteral (COMMA instanceLiteral)*)? GROUP_CLOSE
+typeVariableValues: GROUP_OPEN instanceLiteral (COMMA instanceLiteral)* GROUP_CLOSE
 ;
 
 columnType: mayColumnName COLON mayColumnType multiplicity?

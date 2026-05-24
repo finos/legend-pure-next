@@ -102,14 +102,23 @@ function meta::pure::compiler::helper::multiplicity::multiplicitySubsumes(genera
     // errors when an unresolved FunctionExpression's multiplicity has been
     // stamped as NotSet — the outer return-multiplicity check should pass through
     // rather than fire spurious "expected [1], got [*]" messages.
-    if($general->instanceOf(MultiplicityParameter) || $specific->instanceOf(MultiplicityParameter)
-       || $general->instanceOf(CompilerNotSetMultiplicity) || $specific->instanceOf(CompilerNotSetMultiplicity),
+    // CompilerNotSet on either side: skip (wildcard match) per the comment above.
+    if($general->instanceOf(CompilerNotSetMultiplicity) || $specific->instanceOf(CompilerNotSetMultiplicity),
         | true,
         |
+        // Undefined multiplicities match only other undefined multiplicities.
+        // CHECK BEFORE MultiplicityParameter: `?` means "user did not specify
+        // this dimension" and is distinct from `m` (parameter, user provided).
+        // Without this order, a user-provided `m` matches a `?` slot, letting
+        // overload-resolution pick a `<T|?>` cast variant when the user
+        // explicitly wrote `cast(@T|m)` — silently dropping their constraint.
         let generalUndefined = $general->instanceOf(UndefinedMultiplicity);
         let specificUndefined = $specific->instanceOf(UndefinedMultiplicity);
         if($generalUndefined || $specificUndefined,
             | $generalUndefined == $specificUndefined,
+            |
+        if($general->instanceOf(MultiplicityParameter) || $specific->instanceOf(MultiplicityParameter),
+            | true,
             |
             let gLower = $general->multiplicityLowerBound();
             let sLower = $specific->multiplicityLowerBound();
@@ -120,6 +129,7 @@ function meta::pure::compiler::helper::multiplicity::multiplicitySubsumes(genera
                 pair(| $sUpper == -1, | false)],
                | $gUpper >= $sUpper
             );
+        );
         );
     )
 }

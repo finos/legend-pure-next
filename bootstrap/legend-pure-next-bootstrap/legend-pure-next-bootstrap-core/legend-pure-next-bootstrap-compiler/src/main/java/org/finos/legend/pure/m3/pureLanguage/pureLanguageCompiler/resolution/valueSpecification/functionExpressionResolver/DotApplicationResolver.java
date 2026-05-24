@@ -143,7 +143,9 @@ public final class DotApplicationResolver
                 && _Multiplicity.lowerBound(receiverMul) == 1
                 && _Multiplicity.upperBound(receiverMul) == 1)
         {
-            // Normal case: [1] receiver, direct access
+            // Normal case: [1] receiver, direct access.
+            // Function-reference recording is deferred to the post-compile AST
+            // walk in {@link FunctionRefExtractor}.
             context.debug("  direct access [1]");
             return  ((DotApplicationImpl) expr._copy())
                                         ._parametersValues(processParameters)

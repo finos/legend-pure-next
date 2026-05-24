@@ -43,3 +43,16 @@ class test::new::Dog extends test::new::Animal  ~Class<test::new::Dog>  @12:1-15
 
 class test::new::Holder extends Any  ~Class<test::new::Holder>  @17:1-20:1
   property animal :test::new::Animal[1]  ~Property<test::new::Holder, test::new::Animal|1>
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::new::testNew__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::new::testNew__Any_MANY_
+test::new::Animal:
+  test::new::Dog
+  test::new::Holder.animal
+test::new::Dog:
+  test::new::testNew__Any_MANY_
+test::new::Holder:
+  test::new::testNew__Any_MANY_

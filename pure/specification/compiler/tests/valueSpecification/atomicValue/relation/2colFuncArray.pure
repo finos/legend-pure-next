@@ -37,3 +37,15 @@ function test__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
           AtomicValue  'other' :@String@[1]  ~@AtomicValue@  @6:67-6:71
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(other:@Integer@[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:@String@[1], other:@Integer@[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+
+###ReverseIndex
+meta::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+  test__Any_1_
+meta::pure::functions::relation::Window:
+  test_Relation_1__FuncColSpecArray_1__Any_1_
+meta::pure::functions::relation::funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_:
+  test__Any_1_
+meta::pure::functions::relation::funcColSpecArray2_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_:
+  test__Any_1_
+test_Relation_1__FuncColSpecArray_1__Any_1_:
+  test__Any_1_

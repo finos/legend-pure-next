@@ -295,3 +295,103 @@ function test::factory::inferImportsLike_TestClass_1__String_MANY_(c:test::facto
       Lambda(t:#test::factory::TestType##[1]#) :#LambdaFunction<#{#test::factory::TestType##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @89:20-89:40
         FunctionInvocation test::factory::qualifiedName_TestType_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @89:24-89:40
           Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @89:38-89:39
+
+###ReverseIndex
+meta::pure::functions::boolean::equal_Any_MANY__Any_MANY__Boolean_1_:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+meta::pure::functions::boolean::not_Boolean_1__Boolean_1_:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+meta::pure::functions::collection::concatenate_T_MANY__T_MANY__T_MANY_:
+  test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+meta::pure::functions::collection::exists_T_MANY__Function_1__Boolean_1_:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+meta::pure::functions::collection::filter_T_MANY__Function_1__T_MANY_:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+meta::pure::functions::collection::isEmpty_Any_$0_1$__Boolean_1_:
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+meta::pure::functions::collection::map_T_MANY__Function_1__V_MANY_:
+  test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+meta::pure::functions::collection::removeDuplicatesBy_T_MANY__Function_1__T_MANY_:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+meta::pure::functions::collection::sort_T_m__T_m_:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+meta::pure::functions::lang::if_Boolean_1__Function_1__Function_1__T_m_:
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+meta::pure::functions::lang::toOne_T_MANY__T_1_:
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  test::factory::qualifiedName_TestType_1__String_1_
+test::factory::TestClass:
+  test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+test::factory::TestClass.annotations:
+  test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_
+test::factory::TestClass.constructors:
+  test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+test::factory::TestClass.fields:
+  test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+test::factory::TestClass.interfaces:
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+test::factory::TestClass.methods:
+  test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+test::factory::TestClass.pkg:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+test::factory::TestClass.superType:
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+test::factory::TestConstructor:
+  test::factory::TestClass.constructors
+test::factory::TestConstructor.annotations:
+  test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_
+test::factory::TestConstructor.paramTypes:
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+test::factory::TestField:
+  test::factory::TestClass.fields
+test::factory::TestField.annotations:
+  test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_
+test::factory::TestField.fieldType:
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+test::factory::TestMethod:
+  test::factory::TestClass.methods
+test::factory::TestMethod.annotations:
+  test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_
+test::factory::TestMethod.paramTypes:
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+test::factory::TestMethod.returnType:
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+test::factory::TestType:
+  test::factory::TestClass.annotations
+  test::factory::TestClass.interfaces
+  test::factory::TestClass.superType
+  test::factory::TestConstructor.annotations
+  test::factory::TestConstructor.paramTypes
+  test::factory::TestField.annotations
+  test::factory::TestField.fieldType
+  test::factory::TestMethod.annotations
+  test::factory::TestMethod.paramTypes
+  test::factory::TestMethod.returnType
+  test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_
+  test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_
+  test::factory::qualifiedName_TestType_1__String_1_
+test::factory::TestType.name:
+  test::factory::qualifiedName_TestType_1__String_1_
+test::factory::TestType.pkg:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+  test::factory::qualifiedName_TestType_1__String_1_
+test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_
+test::factory::qualifiedName_TestType_1__String_1_:
+  test::factory::inferImportsLike_TestClass_1__String_MANY_

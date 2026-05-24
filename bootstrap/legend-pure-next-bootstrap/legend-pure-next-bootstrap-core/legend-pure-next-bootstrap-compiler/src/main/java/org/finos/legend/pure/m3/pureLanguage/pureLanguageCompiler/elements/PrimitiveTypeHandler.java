@@ -29,12 +29,12 @@ public final class PrimitiveTypeHandler
     {
     }
 
-    public static PrimitiveType firstPass(meta.pure.protocol.grammar.type.PrimitiveType grammar, MetadataAccess model)
+    public static PrimitiveType firstPass(meta.pure.protocol.grammar.type.PrimitiveType grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
     {
         PrimitiveTypeImpl result = new PrimitiveTypeImpl(model)._name(grammar._name());
         if (grammar._p_sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), model));
+            result._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model));
         }
         return result;
     }
@@ -66,7 +66,7 @@ public final class PrimitiveTypeHandler
         // Expression sequences are compiled in thirdPass when all functions are available.
         if (grammar._constraints() != null && grammar._constraints().notEmpty())
         {
-            result._constraints(grammar._constraints().collect(gc -> ConstraintCompiler.compileShell(gc, model)));
+            result._constraints(grammar._constraints().collect(gc -> ConstraintCompiler.compileShell(gc, model, context)));
         }
 
         context.enrichCurrentErrors("primitive type '" + _G_PackageableElement.fullPath(grammar) + "'");

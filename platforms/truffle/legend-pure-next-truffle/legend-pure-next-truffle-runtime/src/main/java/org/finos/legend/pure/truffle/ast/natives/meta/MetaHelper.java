@@ -84,21 +84,16 @@ public final class MetaHelper
                     return enumType;
                 }
             }
-            // Detect date strings by format (fallback for dates not yet wrapped in PureDate)
-            if (org.finos.legend.pure.truffle.ast.natives.string.ToStringNode.isDateString(s))
-            {
-                if (s.contains("T"))
-                {
-                    return resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
-                }
-                // yyyy-MM-dd = StrictDate, yyyy or yyyy-MM = Date
-                long dashCount = s.chars().filter(c -> c == '-').count();
-                if (dashCount >= 2)
-                {
-                    return resolver.getElement("meta::pure::metamodel::type::primitives::StrictDate");
-                }
-                return resolver.getElement("meta::pure::metamodel::type::primitives::Date");
-            }
+            // A Java String value is genuinely a String — type/instanceOf/cast
+            // must respect the runtime class, not the string content. Previously
+            // a date-format heuristic returned DateTime for date-looking strings
+            // (`'2014-12-31T23:00:00.000-0500'`); that broke legitimate
+            // String→String casts in compile-pure's value-spec compiler. Dates
+            // that originated as Pure date literals already arrive here as
+            // {@link PureDate.StrictDate} / {@link PureDate.DateTime} instances
+            // (the AtomicValue lowering at PureASTBuilder.lowerAtomicValue
+            // wraps them based on the AtomicValue's genericType — see the
+            // earlier branches above).
             return resolver.getElement("meta::pure::metamodel::type::primitives::String");
         }
         if (value instanceof java.math.BigDecimal)

@@ -114,9 +114,12 @@ rule instanceLiteralToken {
                    genericType = primitiveType("Float"))
   }
   alt when $ctx.DECIMAL {
+    # DECIMAL literals are Pure `Decimal` (arbitrary-precision). parseDecimal
+    # emits `new java.math.BigDecimal(text)`; parseDouble would route through
+    # IEEE 754 and lose precision (e.g. 19.905d → 19.904999999999998d).
     return newImpl(AtomicValue,
                    sourceInformation = buildSourceInfo($ctx),
-                   value = parseDouble($ctx.DECIMAL.text),
+                   value = parseDecimal($ctx.DECIMAL.text),
                    genericType = primitiveType("Decimal"))
   }
   alt when $ctx.BOOLEAN {
@@ -293,7 +296,7 @@ rule functionVariableExpression {
 # -----------------------------------------------------------------------
 
 # Grammar: atomicExpression: variable | instanceLiteralToken | anyLambda | instanceReference
-#                          | expressionInstance | dsl | columnBuilders | AT ...
+#                          | expressionInstance | dsl | columnBuilders | parentReference | AT ...
 # A multi-way dispatcher: simple delegates for most sub-rules, an inline DSL block
 # alternative, and AT (TypeRef) and columnBuilders dispatched to their own rules.
 rule atomicExpression as ValueSpecification {
@@ -321,10 +324,31 @@ rule atomicExpression as ValueSpecification {
   alt when $ctx.columnBuilders {
     return buildColumnBuilders($ctx.columnBuilders)
   }
+  alt when $ctx.parentReference {
+    return buildParentReference($ctx.parentReference)
+  }
   alt when $ctx.AT {
     return buildAtomicTypeRef($ctx)
   }
   else error("Unsupported atomicExpression")
+}
+
+# Build a VariableExpression-style AST for `~`, `~.~`, `~.foo`, `~.~.foo.bar`, etc.
+# The tilde-only prefix becomes a VariableExpression whose name is the literal
+# tilde sequence ("~", "~.~", …) — the compiler binds these names in the
+# enclosing `^X(...)` scope so they carry the correct static type.
+# Each propertyName after the tildes is wrapped as a DotApplication around the
+# growing receiver, mirroring how `$x.foo.bar` parses.
+rule parentReference as ValueSpecification {
+  chain_fold from newImpl(VariableExpression,
+                          sourceInformation=buildSourceInfo($ctx),
+                          name=joinTextWith($ctx.TILDE, "."))
+                over $ctx.propertyName {
+    else step newImpl(DotApplication,
+                       sourceInformation=buildSourceInfo($ctx),
+                       functionName=$it.text,
+                       parametersValues=listOf(acc))
+  }
 }
 
 # Grammar: `@Type[mul]` / `@Type|mul` / `@Type` / `@|mul` / `@[mul]` — a "TypeHolder"
@@ -597,11 +621,17 @@ rule instanceReference as ValueSpecification {
 # Grammar: propertyExpression: DOT propertyName functionExpressionParameters?
 # Property access on a `receiver`: `receiver.propName` or `receiver.propName(args)`.
 # Takes the receiver value-spec as an extra method parameter.
-# Grammar: expressionInstance: NEW (variable | qualifiedName) typeArguments? multiplicityArguments?
+# Grammar: expressionInstance: NEW (variable | qualifiedName | combinedExpression) typeArguments? multiplicityArguments?
 #                              typeVariableValues? GROUP_OPEN expressionInstanceParserPropertyAssignment*
 #                              GROUP_CLOSE
-# Two alts: `^$var(...)` (copy) and `^Type(...)` (new). Property assignments are
-# wrapped in a single Collection appended to the params list when non-empty.
+# Three alts:
+#   - `^$var(...)` (copy variable) — head is `variable`
+#   - `^Type(...)` (new) — head is `qualifiedName`
+#   - `^expr(...)` (copy expression result) — head is `combinedExpression`, used for
+#     `^buildOne()(name='a')`, `^$x.next(name='b')`, `^~.foo(name='c')` etc.
+# All three forms produce a `copy` or `new` FunctionInvocation whose first param
+# is the receiver (variable, type holder, or arbitrary value spec). Property
+# assignments are wrapped in a single Collection appended when non-empty.
 rule expressionInstance as ValueSpecification {
   alt when $ctx.variable {
     return newImpl(FunctionInvocation,
@@ -615,7 +645,7 @@ rule expressionInstance as ValueSpecification {
                                     multiplicity = multBounds(count($ctx.expressionInstanceParserPropertyAssignment), count($ctx.expressionInstanceParserPropertyAssignment)))),
                      listOf(newImpl(VariableExpression, name = $ctx.variable.identifier.text, sourceInformation = buildSourceInfo($ctx.variable)))))
   }
-  alt else {
+  alt when $ctx.qualifiedName {
     return newImpl(FunctionInvocation,
                    sourceInformation = buildSourceInfo($ctx),
                    functionName = "new",
@@ -626,6 +656,18 @@ rule expressionInstance as ValueSpecification {
                                     values = mapList($ctx.expressionInstanceParserPropertyAssignment, buildExpressionInstanceParserPropertyAssignment),
                                     multiplicity = multBounds(count($ctx.expressionInstanceParserPropertyAssignment), count($ctx.expressionInstanceParserPropertyAssignment)))),
                      listOf(buildExpressionInstanceNewHead($ctx))))
+  }
+  alt else {
+    return newImpl(FunctionInvocation,
+                   sourceInformation = buildSourceInfo($ctx),
+                   functionName = "copy",
+                   parametersValues = ifPresent(notEmpty($ctx.expressionInstanceParserPropertyAssignment),
+                     listOf(buildCombinedExpression($ctx.combinedExpression),
+                            newImpl(Collection,
+                                    sourceInformation = buildSourceInfo($ctx),
+                                    values = mapList($ctx.expressionInstanceParserPropertyAssignment, buildExpressionInstanceParserPropertyAssignment),
+                                    multiplicity = multBounds(count($ctx.expressionInstanceParserPropertyAssignment), count($ctx.expressionInstanceParserPropertyAssignment)))),
+                     listOf(buildCombinedExpression($ctx.combinedExpression))))
   }
 }
 
@@ -650,43 +692,30 @@ helper buildExpressionInstanceGenericType(ExpressionInstanceContext ctx) {
                  typeVariableValues = ifPresent($ctx.typeVariableValues, mapList($ctx.typeVariableValues.instanceLiteral, buildInstanceLiteral)))
 }
 
-# Grammar: expressionInstanceParserPropertyAssignment: propertyName (DOT propertyName)*
-#          (PLUS)? EQUAL expressionInstanceRightSide
+# Grammar: expressionInstanceParserPropertyAssignment: propertyName (PLUS)? EQUAL expressionInstanceRightSide
 # Each assignment becomes a `keyExpression(nameStr, rhs[, plusFlag])` invocation.
+# Deep-path keys are not supported by the grammar (see M3Parser.g4 comment).
 rule expressionInstanceParserPropertyAssignment {
   return newImpl(FunctionInvocation,
                  sourceInformation = buildSourceInfo($ctx),
                  functionName = "keyExpression",
                  parametersValues = ifPresent($ctx.PLUS,
                    listOf(
-                     newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("String"), value = joinTextWith($ctx.propertyName, ".")),
+                     newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("String"), value = $ctx.propertyName.text),
                      buildExpressionInstanceRightSide($ctx.expressionInstanceRightSide),
                      newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("Boolean"), value = true)),
                    listOf(
-                     newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("String"), value = joinTextWith($ctx.propertyName, ".")),
+                     newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("String"), value = $ctx.propertyName.text),
                      buildExpressionInstanceRightSide($ctx.expressionInstanceRightSide))))
 }
 
 # Grammar: expressionInstanceRightSide: expressionInstanceAtomicRightSide
 # expressionInstanceAtomicRightSide:
-#     parentReference | combinedExpression | expressionInstance | qualifiedName
-# parentReference is `~.~.~...propertyName.propertyName`: count of TILDEs gives
-# the "depth", DOT-joined propertyNames give the "path".
+#     combinedExpression | expressionInstance | qualifiedName
+# parentReference (`~`, `~.~`, `~.foo`, `~.foo->arrow(...)`) is now an
+# `atomicExpression` alternative, so the combinedExpression branch covers it
+# — including chained arrow invocations after the parent-reference target.
 rule expressionInstanceRightSide as ValueSpecification {
-  alt when $ctx.expressionInstanceAtomicRightSide.parentReference {
-    return newImpl(FunctionInvocation,
-                   sourceInformation=buildSourceInfo($ctx.expressionInstanceAtomicRightSide.parentReference),
-                   functionName="parentReference",
-                   parametersValues=listOf(
-                     newImpl(AtomicValue,
-                             sourceInformation=buildSourceInfo($ctx.expressionInstanceAtomicRightSide.parentReference),
-                             genericType=primitiveType("Integer"),
-                             value=(long)($ctx.expressionInstanceAtomicRightSide.parentReference.TILDE.size - 1)),
-                     newImpl(AtomicValue,
-                             sourceInformation=buildSourceInfo($ctx.expressionInstanceAtomicRightSide.parentReference),
-                             genericType=primitiveType("String"),
-                             value=joinTextWith($ctx.expressionInstanceAtomicRightSide.parentReference.propertyName, "."))))
-  }
   alt when $ctx.expressionInstanceAtomicRightSide.combinedExpression {
     return buildCombinedExpression($ctx.expressionInstanceAtomicRightSide.combinedExpression)
   }
@@ -1317,9 +1346,11 @@ rule instanceLiteral as AtomicValueImpl {
                    genericType = primitiveType("Float"))
   }
   alt when $ctx.DECIMAL {
+    # Signed Decimal literal — parseDecimal(MINUS, text) handles the sign
+    # via string-prefix (BigDecimal has no unary minus operator in Java).
     return newImpl(AtomicValue,
                    sourceInformation = buildSourceInfo($ctx),
-                   value = ifPresent($ctx.MINUS, -parseDouble($ctx.DECIMAL.text), parseDouble($ctx.DECIMAL.text)),
+                   value = parseDecimal($ctx.MINUS, $ctx.DECIMAL.text),
                    genericType = primitiveType("Decimal"))
   }
   else error("Unsupported literal")

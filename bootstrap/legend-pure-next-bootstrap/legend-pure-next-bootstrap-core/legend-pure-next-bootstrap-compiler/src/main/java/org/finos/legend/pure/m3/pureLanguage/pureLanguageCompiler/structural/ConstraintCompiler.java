@@ -27,7 +27,7 @@ public final class ConstraintCompiler
      * Create a constraint shell with metadata (name, owner, etc.) but no expression sequences.
      * Expression sequences are compiled in the third pass when all functions are available.
      */
-    public static Constraint compileShell(meta.pure.protocol.grammar.constraint.Constraint grammarConstraint, MetadataAccess model)
+    public static Constraint compileShell(meta.pure.protocol.grammar.constraint.Constraint grammarConstraint, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
     {
         ConstraintImpl c = new ConstraintImpl(model);
         if (grammarConstraint._name() != null)
@@ -48,7 +48,7 @@ public final class ConstraintCompiler
         }
         if (grammarConstraint._p_sourceInformation() != null)
         {
-            c._sourceInformation(SourceInformationCompiler.compile(grammarConstraint._p_sourceInformation(), model));
+            c._sourceInformation(SourceInformationCompiler.compile(grammarConstraint._p_sourceInformation(), context.getSourceId(), model));
         }
         return c;
     }
@@ -69,41 +69,49 @@ public final class ConstraintCompiler
             Constraint compiled = pair.getOne();
             meta.pure.protocol.grammar.constraint.Constraint grammarC = pair.getTwo();
 
-            if (grammarC._functionDefinition() instanceof LambdaFunction lambdaFunc)
+            // Push the constraint name onto the caller path so references
+            // resolved inside the constraint body attribute to
+            // {@code Owner.constraintName} in the reverse index.
+            String constraintName = compiled._name() != null ? compiled._name() : grammarC._name();
+            context.withCallerSubElement(constraintName, () ->
             {
-                LambdaFunctionImpl lambda = LambdaCompiler.compile(lambdaFunc, imports, model, context);
-                MutableList<VariableExpression> params = Lists.mutable.<VariableExpression>with(thisVar);
-                if (extraParams != null)
+                if (grammarC._functionDefinition() instanceof LambdaFunction lambdaFunc)
                 {
-                    params.addAll(extraParams);
+                    LambdaFunctionImpl lambda = LambdaCompiler.compile(lambdaFunc, imports, model, context);
+                    MutableList<VariableExpression> params = Lists.mutable.<VariableExpression>with(thisVar);
+                    if (extraParams != null)
+                    {
+                        params.addAll(extraParams);
+                    }
+                    if (lambda._parameters() != null)
+                    {
+                        params.addAll(lambda._parameters());
+                    }
+                    lambda._parameters(params);
+                    lambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(lambda._expressionSequence(), model, context));
+                    lambda._classifierGenericType((GenericTypeValue) _Lambda.getLambdaClassifierGenericType(model, lambda));
+                    compiled._functionDefinition(lambda);
                 }
-                if (lambda._parameters() != null)
-                {
-                    params.addAll(lambda._parameters());
-                }
-                lambda._parameters(params);
-                lambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(lambda._expressionSequence(), model, context));
-                lambda._classifierGenericType((GenericTypeValue) _Lambda.getLambdaClassifierGenericType(model, lambda));
-                compiled._functionDefinition(lambda);
-            }
 
-            if (grammarC._messageFunction() instanceof LambdaFunction msgFunc)
-            {
-                LambdaFunctionImpl msgLambda = LambdaCompiler.compile(msgFunc, imports, model, context);
-                MutableList<VariableExpression> msgParams = Lists.mutable.<VariableExpression>with(thisVar);
-                if (extraParams != null)
+                if (grammarC._messageFunction() instanceof LambdaFunction msgFunc)
                 {
-                    msgParams.addAll(extraParams);
+                    LambdaFunctionImpl msgLambda = LambdaCompiler.compile(msgFunc, imports, model, context);
+                    MutableList<VariableExpression> msgParams = Lists.mutable.<VariableExpression>with(thisVar);
+                    if (extraParams != null)
+                    {
+                        msgParams.addAll(extraParams);
+                    }
+                    if (msgLambda._parameters() != null)
+                    {
+                        msgParams.addAll(msgLambda._parameters());
+                    }
+                    msgLambda._parameters(msgParams);
+                    msgLambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(msgLambda._expressionSequence(), model, context));
+                    msgLambda._classifierGenericType((GenericTypeValue) _Lambda.getLambdaClassifierGenericType(model, msgLambda));
+                    compiled._messageFunction(msgLambda);
                 }
-                if (msgLambda._parameters() != null)
-                {
-                    msgParams.addAll(msgLambda._parameters());
-                }
-                msgLambda._parameters(msgParams);
-                msgLambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(msgLambda._expressionSequence(), model, context));
-                msgLambda._classifierGenericType((GenericTypeValue) _Lambda.getLambdaClassifierGenericType(model, msgLambda));
-                compiled._messageFunction(msgLambda);
-            }
+                return null;
+            });
         });
     }
 }

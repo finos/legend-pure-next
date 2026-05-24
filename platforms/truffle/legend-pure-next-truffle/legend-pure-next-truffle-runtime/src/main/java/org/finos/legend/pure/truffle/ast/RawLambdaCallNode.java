@@ -106,7 +106,7 @@ public final class RawLambdaCallNode extends Node
         RootCallTarget target = getCallTarget(lambdaOrClosure);
         if (target == null)
         {
-            return fallback(lambdaOrClosure, args);
+            return dispatchByPureType(lambdaOrClosure, args);
         }
         if (target == cachedTarget)
         {
@@ -164,8 +164,9 @@ public final class RawLambdaCallNode extends Node
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private Object fallback(Object lambdaOrClosure, Object[] args)
+    private Object dispatchByPureType(Object lambdaOrClosure, Object[] args)
     {
+        // {@link TempCompilerPointer} dereference. compile-pure embeds
         if (lambdaOrClosure instanceof RawClosure rc)
         {
             // Get or compile CallTarget, then call

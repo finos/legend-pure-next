@@ -46,6 +46,7 @@ public class TruffleCompileToPdbTest
     private static PureTruffleRuntime runtime;
     private static TruffleMetadataAccess resolver;
     private static Object compileFn;
+    private static Object manageFileSectionsFn;
     private static org.finos.legend.pure.truffle.parser.TrufflePureParser pureParser;
 
     private static Path locateBuildDir()
@@ -97,16 +98,28 @@ public class TruffleCompileToPdbTest
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
+                        new TruffleTestFileLanguageExtension(),
+                        new TruffleReverseIndexLanguageExtension(),
                         new TruffleErrorLanguageExtension()))
                 .build();
 
-        compileFn = resolver.getElement("meta::pure::compiler::compile_PureFile_1__CompilationResult_1_");
+        // 3-arg silent variant — tests pull errors/stats structurally off the
+        // result; the live progress bar + stats summary would flood surefire output.
+        compileFn = resolver.getElement("meta::pure::compiler::compile_PureFile_MANY__Boolean_1__Boolean_1__CompilationResult_1_");
         if (compileFn == null
                 || !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(compileFn,
                 "meta::pure::metamodel::function::FunctionDefinition", resolver))
         {
             throw new RuntimeException("compile FunctionDefinition not resolvable: "
                     + (compileFn == null ? "null" : compileFn.getClass().getName()));
+        }
+        manageFileSectionsFn = resolver.getElement("meta::pure::compiler::test::manageFileSections_PureFile_1__PureFile_MANY_");
+        if (manageFileSectionsFn == null
+                || !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(manageFileSectionsFn,
+                "meta::pure::metamodel::function::FunctionDefinition", resolver))
+        {
+            throw new RuntimeException("manageFileSections FunctionDefinition not resolvable: "
+                    + (manageFileSectionsFn == null ? "null" : manageFileSectionsFn.getClass().getName()));
         }
 
         // Reuse the runtime's configured PureParser instance — same one the
@@ -220,7 +233,12 @@ public class TruffleCompileToPdbTest
         {
             try
             {
-                result = runtime.execute(compileFn, truffleFile);
+                // Always split: turns a single test-source PureFile into one
+                // PureFile per logical file (primary ###Pure + each ###File
+                // chunk). Single-file specs collapse to a 1-element list.
+                Object files = runtime.execute(manageFileSectionsFn, truffleFile);
+                // debug=false, silent=true
+                result = runtime.execute(compileFn, files, false, true);
             }
             catch (Exception e)
             {
@@ -283,13 +301,13 @@ public class TruffleCompileToPdbTest
                     {
                         TrufflePdbWriter.write(elements,
                                 new org.finos.legend.pure.m3.module.ModuleManifest("roundtrip", "*", java.util.List.of()),
-                                tmpPdb, /*validateRequired=*/ false);
+                                tmpPdb, /*validateRequired=*/ false, resolver);
                         if (Files.size(tmpPdb) == 0) issues.add("Round-tripped PDB is empty");
                         TrufflePdbLoader rt = new TrufflePdbLoader(tmpPdb);
                         int matched = 0;
                         for (Object original : elements)
                         {
-                            String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(original);
+                            String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(original, resolver);
                             Object reloaded = rt.getElement(path);
                             if (reloaded == null)
                             {

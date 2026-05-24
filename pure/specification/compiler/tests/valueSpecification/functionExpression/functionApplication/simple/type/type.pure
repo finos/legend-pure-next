@@ -43,3 +43,14 @@ function pack::testOverloadNumber_Number_1__Number_1_(n:@Number@[1]):@Number@[1]
 function pack::testOverloadString_String_1__String_1_(s:@String@[1]):@String@[1]  ~UserDefinedFunction<{@String@[1]->@String@[1]}>
   ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @19:5-19:15
     Variable s :#String##[1]#  ~@VariableExpression@  @19:3-19:4
+
+###ReverseIndex
+meta::pure::functions::math::minus_Number_1__Number_1__Number_1_:
+  pack::compute_Number_1__Number_1__Number_1_
+meta::pure::functions::math::plus_Number_1__Number_1__Number_1_:
+  pack::compute_Number_1__Number_1__Number_1_
+  pack::test_Number_1__Number_1__Number_1_
+pack::doStuff_Number_1__Number_1_:
+  pack::testOverloadNumber_Number_1__Number_1_
+pack::doStuff_String_1__String_1_:
+  pack::testOverloadString_String_1__String_1_

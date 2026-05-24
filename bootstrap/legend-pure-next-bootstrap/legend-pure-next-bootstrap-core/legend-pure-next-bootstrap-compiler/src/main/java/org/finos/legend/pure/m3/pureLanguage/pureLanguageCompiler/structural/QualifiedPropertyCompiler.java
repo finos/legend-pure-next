@@ -103,7 +103,7 @@ public final class QualifiedPropertyCompiler
                 ._taggedValues(grammarQP._taggedValues()
                         .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                         .select(Objects::nonNull))
-                ._sourceInformation(SourceInformationCompiler.compile(grammarQP._p_sourceInformation(), model));;
+                ._sourceInformation(SourceInformationCompiler.compile(grammarQP._p_sourceInformation(), context.getSourceId(), model));;
 
         if (owner != null)
         {
@@ -134,7 +134,13 @@ public final class QualifiedPropertyCompiler
         }
         for (QualifiedProperty qp : qualifiedProperties)
         {
-            FunctionDefinitionResolver.resolveAndValidate(qp, "qualified property", qp._name(), qp._genericType(), qp._multiplicity(), model, context);
+            // Push QP name onto the caller path so references resolved
+            // inside the QP body attribute to {@code Owner.qpName}.
+            context.withCallerSubElement(qp._name(), () ->
+            {
+                FunctionDefinitionResolver.resolveAndValidate(qp, "qualified property", qp._name(), qp._genericType(), qp._multiplicity(), model, context);
+                return null;
+            });
         }
     }
 }

@@ -71,6 +71,11 @@ public class CompressedArchiveWriter
             zos.setLevel(Deflater.BEST_COMPRESSION);
 
             List<String[]> elementEntries = new ArrayList<>();
+            // Collect the path-set of elements actually written so we can
+            // restrict the extension-contributed sections (e.g. function
+            // index) to the same scope. Without this, lean PDBs pick up
+            // test-only function entries from the module's full metadata.
+            java.util.Set<String> writtenPaths = new java.util.HashSet<>();
 
             for (PackageableElement element : elements)
             {
@@ -95,6 +100,7 @@ public class CompressedArchiveWriter
                 }
 
                 elementEntries.add(new String[]{path, typeName});
+                writtenPaths.add(path);
 
                 // Entry name format: "elements/meta/pure/metamodel/type/ElementName.TypeName"
                 String entryPath = "elements/" + path.replace("::", "/") + "." + typeName;
@@ -111,10 +117,12 @@ public class CompressedArchiveWriter
             // open instead of guessing from filename or constructor args.
             writeManifest(zos, manifest);
 
-            // Write extension-contributed archive sections
+            // Write extension-contributed archive sections, restricted to the
+            // paths actually written above (so lean PDBs don't carry test
+            // function-index entries from the module's full metadata).
             for (PDBExtension ext : extensions)
             {
-                for (PDBArchiveSection section : ext.archiveSections(module))
+                for (PDBArchiveSection section : ext.archiveSections(module, writtenPaths))
                 {
                     writeSection(zos, section);
                 }
@@ -175,23 +183,15 @@ public class CompressedArchiveWriter
         zos.closeEntry();
     }
 
+    // Delegates to the central pointer-aware helper. Pure-compiler skeletons
+    // wrap their {@code package} field as a {@code PackagePointer} (see
+    // {@code compiler.pure}'s pass-1 wrap), so a local walk via
+    // {@code _name()} / {@code _package()} alone collapses the parent chain
+    // to "" and yields a bare element name — producing duplicate
+    // {@code elements/<bare>.<type>} zip entries for any two elements with
+    // the same simple name in different packages.
     private String elementPath(PackageableElement element)
     {
-        if (element._package() != null)
-        {
-            String parentPath = packagePath(element._package());
-            return parentPath.isEmpty() ? element._name() : parentPath + "::" + element._name();
-        }
-        return element._name();
-    }
-
-    private String packagePath(meta.pure.metamodel.Package pkg)
-    {
-        if (pkg._package() != null && pkg._name() != null && !pkg._name().isEmpty())
-        {
-            String parentPath = packagePath(pkg._package());
-            return parentPath.isEmpty() ? pkg._name() : parentPath + "::" + pkg._name();
-        }
-        return "";
+        return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(element);
     }
 }

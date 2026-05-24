@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::*;
 import meta::pure::compiler::elements::*;
 import meta::pure::compiler::helper::genericType::*;
@@ -29,51 +30,35 @@ import meta::pure::functions::lang::*;
 import meta::pure::functions::date::*;
 import meta::pure::ui::progress::*;
 
-// Convenience entry for callers that have a (sourceId, content) pair rather
-// than a pre-parsed PureFile. Wraps `parse` + `compile` so the parsing
-// happens through the runtime-registered Pure parser (the test harness in
-// compilerTest.pure follows the same pattern).
-function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1]):CompilationResult[1]
+// Per-grammar-element entry threaded across the three compile passes. Mirrors
+// Java's {@code TopLevelCompiler.IndexEntry}: one per declared element in the
+// input, carrying the grammar form (input) plus the file context (sourceId,
+// imports) needed to set up per-element scope before each pass. The compiled
+// element itself lives in {@code CompilerContext.elementMap} keyed by
+// {@code fullPath}; this entry list is only the walk order for the passes.
+//
+// Pass 2 iterates the entries with `sourceId`/`imports` re-applied before
+// each call, so cross-file forward references resolve the same way Java does
+// (pass 1 over all entries first, then pass 2, then pass 3).
+Class meta::pure::compiler::IndexEntry
 {
-    meta::pure::compiler::compileSource($sourceId, $content, false);
-}
-
-function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1], debug:Boolean[1]):CompilationResult[1]
-{
-    meta::pure::compiler::compileSource($sourceId, $content, newCompilerContext($debug), $debug);
-}
-
-function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1], inputCtx:CompilerContext[1], debug:Boolean[1]):CompilationResult[1]
-{
-    let parseStart = currentTimeMillis();
-    let parsed = meta::pure::functions::meta::parse($sourceId, $content);
-    let parseMillis = currentTimeMillis() - $parseStart;
-    let result = meta::pure::compiler::compile($parsed, $inputCtx, $debug);
-    if($result.statistics->isEmpty(),
-        | $result,
-        | let s = $result.statistics->toOne();
-          ^$result(statistics = ^$s(
-              parsingMillis = $parseMillis,
-              totalMillis = $s.totalMillis + $parseMillis
-          ));
-    );
-}
-
-// Per-file work bundle threaded across the three compile passes. Mirrors Java's
-// LocalModule per-file structure: parse once, then run pass 1 over all files,
-// pass 2 over all files, pass 3 over all files — so forward references between
-// files (function in file A calling function in file B compiled later) resolve
-// the same way Java does.
-Class meta::pure::compiler::FileWorkItem
-{
+    fullPath : String[1];
+    grammarElement : meta::pure::protocol::grammar::PackageableElement[1];
     sourceId : String[1];
     imports : String[*];
-    grammarElements : meta::pure::protocol::grammar::PackageableElement[*];
-    // Populated after pass 2 — the compiled (non-resolved) elements for this file,
-    // in source order. Pass 3 iterates this list per file so each element gets
-    // its own file's sourceId + imports applied to the context before resolution.
-    compiledElements : meta::pure::metamodel::PackageableElement[*];
 }
+
+// Derive an element's qualified path ({@code pack::sub::Name} or just
+// {@code Name} when the grammar element is at the root) from its grammar
+// form. Mirrors the inline {@code packagePath + '::' + name} construction
+// each pass-1 / pass-2 match arm does — factored out so {@link IndexEntry}
+// can be built once per grammar element instead of by every pass arm.
+function meta::pure::compiler::elementPathFromGrammar(g:meta::pure::protocol::grammar::PackageableElement[1]):String[1]
+{
+    let pkg = if($g.package->isEmpty(), | '', | $g.package->toOne().value);
+    if($pkg == '', | $g.name, | $pkg + '::' + $g.name);
+}
+
 
 // Default imports applied to every file (mirrors Java's default-import set).
 function meta::pure::compiler::defaultFileImports():String[*]
@@ -111,157 +96,37 @@ function meta::pure::compiler::computeAllImports(file:meta::pure::protocol::Pure
     defaultFileImports()->concatenate($fileImports)->removeDuplicates();
 }
 
-// One-shot directory compile: walk every `.pure` under `dir`, parse all files,
-// then run pass 1 / pass 2 / pass 3 across all files in sequence (mirrors Java's
-// LocalModule.compile orchestration). Used by self-host CLI orchestrators
-// (`pure-bootstrap compile-via-pure`, `pure-truffle compile`) — the Java side
-// just calls this and serializes the resulting elements to a `.pdb`.
-function meta::pure::compiler::compileDir(dir:String[1]):CompilationResult[1]
+// Walk every `.pure` under `dir`, read and parse each, return the list of
+// parsed PureFiles. Companion to {@link compile} for self-host CLI
+// orchestrators (`pure-bootstrap compile-via-pure`, `pure-truffle compile`):
+// Java side calls `parseDir($dir)` then `compile($files, $debug)`.
+//
+// Parses silently (no progress display) — typically completes in under a
+// second even for the full compiler-pure tree, so the live readout would
+// be more flicker than information. The compile phase that follows owns
+// the progress bar.
+function meta::pure::compiler::parseDir(dir:String[1]):meta::pure::protocol::PureFile[*]
 {
-    meta::pure::compiler::compileDir($dir, false);
+    let files = directoryTree($dir)->filter(f | $f->endsWith('.pure'));
+    let prefixLen = $dir->length() + 1;
+    $files->map(f |
+        let name = substring($f, $prefixLen, $f->length());
+        meta::pure::functions::meta::parse($name, readFile($f));
+    );
 }
 
-function meta::pure::compiler::compileDir(dir:String[1], debug:Boolean[1]):CompilationResult[1]
+// Multi-root variant of {@link parseDir}. Each file's sourceId is the path
+// relative to whichever input root contains it. Mirrors the bootstrap
+// {@code SpecificationBinaryBuilder} setup, which builds core.pdb from
+// several source folders (e.g. {@code runtime/functions},
+// {@code runtime/test}) and stamps sourceIds relative to each — so a file at
+// {@code runtime/functions/asserts/assertError.pure} has sourceId
+// {@code asserts/assertError.pure}, not {@code functions/asserts/...}.
+// Callers that want the same stack-trace / error-path conventions as the PDB
+// build (notably the in-memory test harness) should use this entry point.
+function meta::pure::compiler::parseDirs(dirs:String[*]):meta::pure::protocol::PureFile[*]
 {
-    let dirStart = currentTimeMillis();
-    let files = directoryTree($dir)->filter(f | $f->endsWith('.pure'));
-    let total = $files->size();
-    let prefixLen = $dir->length() + 1;
-    let names = $files->map(f | substring($f, $prefixLen, $f->length()));
-
-    // 3-line live status (header / bar / current item) covers all four phases.
-    // Header changes per phase so the user sees the bar reset and a new label
-    // for parse / pass 1 / pass 2 / pass 3 instead of going dark mid-compile.
-    let dirLabel = $total->toString() + ' files under ' + $dir;
-    startProgress3();
-
-    // ============================================================================
-    // Phase 1 — parse all files
-    // ============================================================================
-    let parseStart = currentTimeMillis();
-    let parsedFiles = range(0, $total)->map({i |
-        let name = $names->at($i);
-        tickProgress3('  Parse [1/4]: ' + $dirLabel, $i + 1, $total, $name);
-        let parsed = meta::pure::functions::meta::parse($name, readFile($files->at($i)));
-        ^FileWorkItem(
-            sourceId = $name,
-            imports = computeAllImports($parsed),
-            grammarElements = $parsed.sections.elements,
-            compiledElements = []->cast(@meta::pure::metamodel::PackageableElement)
-        );
-    });
-    let parseMillis = currentTimeMillis() - $parseStart;
-
-    let initialCtx = newCompilerContext($debug);
-    let debugState = ^DebugState(debug = $debug, space = '');
-
-    // ============================================================================
-    // Phase 2 — pass 1 across all files (skeleton building)
-    // ============================================================================
-    let pass1Start = currentTimeMillis();
-    let pass1Ctx = range(0, $total)->fold({i, ctx |
-        let fileItem = $parsedFiles->at($i);
-        tickProgress3('  Pass 1/3 — Skeletons [2/4]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId);
-        let fileCtx = ^$ctx(debugState = $debugState, sourceId = $fileItem.sourceId, imports = $fileItem.imports);
-        $fileItem.grammarElements->fold({e, c | runCompilePass1($e, $c)}, $fileCtx);
-    }, $initialCtx);
-    let pass1Millis = currentTimeMillis() - $pass1Start;
-
-    // Build linearization cache + local function index between pass 1 and pass 2 so
-    // pass 2 body compilation has hits on universe types and pass-1 skeletons.
-    let pass2StartCtx = $pass1Ctx->buildLinearizationCache()->buildLocalFunctionIndex();
-
-    // ============================================================================
-    // Phase 3 — pass 2 across all files (compile element bodies)
-    // ============================================================================
-    let pass2Start = currentTimeMillis();
-    let pass2Result = range(0, $total)->fold({i, acc |
-        let fileItem = $parsedFiles->at($i);
-        tickProgress3('  Pass 2/3 — Bodies [3/4]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId);
-        let priorCtx = $acc.context;
-        let fileCtx = ^$priorCtx(sourceId = $fileItem.sourceId, imports = $fileItem.imports);
-        let perFileResult = $fileItem.grammarElements->fold({e, fAcc | runCompilePass2($e, $fAcc)}, ^CompilerListResult<meta::pure::metamodel::PackageableElement>(context = $fileCtx, values = []->cast(@meta::pure::metamodel::PackageableElement)));
-        let updatedFile = ^$fileItem(compiledElements = $perFileResult.values);
-        ^CompilerListResult<FileWorkItem>(
-            context = $perFileResult.context,
-            values = $acc.values->concatenate($updatedFile)
-        );
-    }, ^CompilerListResult<FileWorkItem>(context = $pass2StartCtx, values = []->cast(@FileWorkItem)));
-    let pass2Millis = currentTimeMillis() - $pass2Start;
-
-    // Refresh linearization cache + local function index between pass 2 and
-    // pass 3 — pass 2 fills in parameters/returnType on each FunctionDefinition,
-    // and {@link buildLocalFunctionIndex} indexes by name from elementMap. Without
-    // this rebuild, pass 3's `findAllFunctionsByNameAndArity` lookups still see
-    // pass-1 skeletons (empty `parameters` list), so the `parameters.size() == arity`
-    // filter rejects every locally-defined overload — every call site of a function
-    // defined in the source then errors with "function not found", inflating the
-    // total error count by the number of usage sites (e.g. ~300 cascade errors per
-    // unresolved local function on the language/java compile).
-    let pass3StartCtx = $pass2Result.context->buildLinearizationCache()->buildLocalFunctionIndex();
-    let pass2Files = $pass2Result.values;
-
-    // ============================================================================
-    // Phase 4 — pass 3 across all files (resolution)
-    // ============================================================================
-    let pass3Start = currentTimeMillis();
-    let pass3Ctx = range(0, $total)->fold({i, ctx |
-        let fileItem = $pass2Files->at($i);
-        tickProgress3('  Pass 3/3 — Resolution [4/4]: ' + $dirLabel, $i + 1, $total, $fileItem.sourceId);
-        let fileCtx = ^$ctx(sourceId = $fileItem.sourceId, imports = $fileItem.imports);
-        $fileItem.compiledElements->fold({elem, c | runCompilePass3($elem, $c)}, $fileCtx);
-    }, $pass3StartCtx);
-    let pass3Millis = currentTimeMillis() - $pass3Start;
-    finishProgress3();
-
-    // Pull all resolved elements from the final elementMap. This includes Package
-    // elements (which aren't in any file's compiledElements list) so the output
-    // PDB has the full graph — matches the OLD compileDir's elementMap->values()
-    // and Java's LocalModule.compile which also collects from elementMap.
-    let resolvedElements = $pass3Ctx.elementMap->values();
-
-    // Print errors directly to stdout (before the stats summary) so they appear
-    // in a single integrated output stream. Java callers also print errors to
-    // stderr after compileDir returns; surfacing them here keeps the live
-    // terminal output visually contiguous with the progress display the user
-    // was just watching, rather than getting buffered/reordered through
-    // stderr-via-pipe paths (`just`'s err_filter, etc.).
-    let errorCount = $pass3Ctx.errors->size();
-    if($errorCount > 0,
-        | println('');
-          println('  Compilation errors (' + $errorCount->toString() + ')');
-          $pass3Ctx.errors->map(e | println('    ' + $e));,
-        | true
-    );
-
-    let totalMillis = currentTimeMillis() - $dirStart;
-    let stats = ^CompilationStatistics(
-        totalMillis = $totalMillis,
-        parsingMillis = $parseMillis,
-        firstPassMillis = $pass1Millis,
-        secondPassMillis = $pass2Millis,
-        thirdPassMillis = $pass3Millis,
-        elementCount = $resolvedElements->size(),
-        sourceFileCount = $total,
-        inferenceRollbackCount = $pass3Ctx.inferenceRollbacks,
-        candidateEvaluationCount = $pass3Ctx.candidateEvaluations,
-        // Pass 2 and pass 3 each append a per-element ElementStatistics entry
-        // (compiler.pure:505 and compiler.pure:535), so the raw list has the
-        // same elementPath twice. Aggregate per path so the final stats and
-        // every downstream consumer (CLI summary, IDE Compile tab) sees one
-        // row per element with cumulative timing — matches Java-direct's
-        // map-keyed-with-per-pass-fields shape.
-        elementStatistics = $pass3Ctx.elementStatistics->aggregateElementStatistics(),
-        rollbackSites = $pass3Ctx.rollbackSites
-    );
-    println(printCompilationStatisticsSummary($stats));
-
-    ^CompilationResult(
-        elements = $resolvedElements,
-        errors   = $pass3Ctx.errors,
-        statistics = $stats,
-        context  = $pass3Ctx
-    );
+    $dirs->map(d | meta::pure::compiler::parseDir($d))->cast(@meta::pure::protocol::PureFile);
 }
 
 // Collapse per-pass duplicates into one row per element. Pass 2 and pass 3
@@ -344,7 +209,11 @@ function meta::pure::compiler::repeatString(s:String[1], n:Integer[1]):String[1]
 
 function meta::pure::compiler::getOrCreatePackagePath(ctx:CompilerContext[1], packagePath:String[1]):CompilerResult<Package>[1]
 {
-    let rootPkg = ^Package(name = 'Root');
+    // Synthetic root for the compile output. Matches m3.ttl's live root
+    // (which uses `:name "::"`); using "::" here means downstream code
+    // paths — the FBS writer, elementPath, all the path walkers in the
+    // platform — see exactly one root convention.
+    let rootPkg = ^Package(name = '::');
     let parts = if($packagePath == '', | []->cast(@String), | $packagePath->split('::'));
     let walked = $parts->fold({part, acc |
         let curCtx = $acc.first;
@@ -354,10 +223,21 @@ function meta::pure::compiler::getOrCreatePackagePath(ctx:CompilerContext[1], pa
         let existing = $curCtx.elementMap->get($curPath);
         if($existing->isNotEmpty(),
             | pair($curCtx, pair($existing->toOne()->cast(@Package), $curPath)),
-            | let newPkg = ^Package(name = $part, package = $parentPkg);
+            | // Parent back-ref is a PackagePointer: each putElementUnderPackage
+              // call rebuilds parentPkg via `^$parentPkg(children = ...)`, so a
+              // direct PDO ref captured here would orphan after the first
+              // sibling lands. PointerGraphResolver swaps the path-pointer for
+              // the byPath winner at module construction.
+              let parentPkgRef = ^meta::pure::metamodel::pointer::PackagePointer(path = $parentPath)->cast(@meta::pure::metamodel::Package);
+              let newPkg = ^Package(name = $part, package = $parentPkgRef);
               let newMap = if($parentPath == '',
                   | $curCtx.elementMap->put($curPath, $newPkg),
-                  | let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($newPkg));
+                  | // Children entries are always wrapped as pointers — the live
+                    // element lives in elementMap, and pass 2/3 rebuild it via
+                    // `^$skeleton(...)`. A hard ref here would freeze pass-1
+                    // skeletons in children and surface them as stale duplicates
+                    // when consumers walk the package subtree.
+                    let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($newPkg->toElementPointer()));
                     $curCtx.elementMap->put($parentPath, $updatedParent)->put($curPath, $newPkg);
               );
               pair(^$curCtx(elementMap = $newMap), pair($newPkg, $curPath));
@@ -373,7 +253,9 @@ function meta::pure::compiler::putElementUnderPackage(ctx:CompilerContext[1], el
     let ctxWithPkg = $pkgRes.context;
     if($packagePath == '',
         | ^$ctxWithPkg(elementMap = $ctxWithPkg.elementMap->put($elementPath, $element)),
-        | let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($element));
+        | // Children entries are always wrapped as pointers — see
+          // {@link getOrCreatePackagePath} for the rationale.
+          let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($element->toElementPointer()));
           ^$ctxWithPkg(elementMap = $ctxWithPkg.elementMap->put($packagePath, $updatedParent)->put($elementPath, $element));
     );
 }
@@ -390,14 +272,16 @@ function meta::pure::compiler::newCompilerContext(debugMode:Boolean[1]):Compiler
         lambdaFailureCache = newMap([]->cast(@Pair<String, Boolean>)),
         inferenceRollbacks = 0,
         candidateEvaluations = 0,
-        rollbackSites = newMap([]->cast(@Pair<String, Integer>))
+        rollbackSites = newMap([]->cast(@Pair<String, Integer>)),
+        referencedBy = newMap([]->cast(@Pair<String, List<String>>)),
+        constructionTypeStack = []->cast(@meta::pure::metamodel::type::generics::GenericType)
     );
 }
 
 // ============================================================================
-// Per-element pass dispatch — extracted from compile() so compileDir can run
-// pass 1 across all files, pass 2 across all files, pass 3 across all files
-// (matching Java's LocalModule orchestration).
+// Per-element pass dispatch — used by compile() to run pass 1 across all
+// files, then pass 2 across all files, then pass 3 across all files (matching
+// Java's LocalModule orchestration).
 // ============================================================================
 
 function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::PackageableElement[1], ctx:CompilerContext[1]):CompilerContext[1]
@@ -409,13 +293,41 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
             let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
             let typeParams = $c.typeParameters->map(tp | buildTypeParameter($tp.name, false));
             let mulParams = $c.multiplicityParameters->map(mp | buildUserDefinedMultiplicityParameter($mp.name)->cast(@MultiplicityParameter));
-            let emptyClass = meta::pure::functions::meta::creation::newClass($typeParams, $mulParams);
-            let skeleton = ^$emptyClass(
+            // Pass-1 class skeleton built with a {@link ClassPointer} self-ref
+            // for {@code classifierGenericType.typeArguments[0].type} — avoids
+            // the {@code newEnumeration}-style pass-1-vs-pass-2 PDO drift,
+            // where {@code newClass}'s direct-PDO self-ref freezes the
+            // pass-1 emptyClass identity into every property's classifierGT
+            // (Property<owner, value>) that's built off this class.
+            // Package wrap rationale: each {@code putElementUnderPackage}
+            // rebuilds the parent Package ({@code ^$pkg(children = ...)}),
+            // so the parent ref captured at skeleton-creation time goes stale
+            // as siblings are compiled. PackagePointer carries only the path;
+            // runtime deref via the resolver lands on the latest version.
+            let shell = ^Class<Any>(
                 name = $c.name,
-                package = $pkgRes.value->toOne(),
-                typeParameters = $typeParams,
-                multiplicityParameters = $mulParams,
-                sourceInformation = compileSourceInformation($c.p_sourceInformation)
+                package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package),
+                sourceInformation = compileSourceInformation($c.p_sourceInformation, $ctx)
+            );
+            let classPtr = $shell->toClassPointer();
+            // Back-reference each TypeParameter / MultiplicityParameter to the
+            // class as a {@link ClassPointer} — matches what the {@code newClass}
+            // Java native used to do via {@code tp.owner = cls}, but path-stable
+            // across pass-2/3 rebuilds of the class. PointerGraphResolver swaps
+            // the pointer for the live class at module construction.
+            let owningPtr = $classPtr->cast(@meta::pure::metamodel::type::generics::TypeAndMultiplicityParametersOwner);
+            let typeParamsBuilt = $typeParams->map(tp | ^$tp(owner = $owningPtr));
+            let mulParamsBuilt = $mulParams->map(mp | ^$mp(owner = $owningPtr))->cast(@MultiplicityParameter);
+            let selfGT = ^UserDefinedGenericType(
+                type = $classPtr->cast(@Type),
+                typeArguments = $typeParamsBuilt->map(tp | buildUserDefinedGenericType($tp))->cast(@meta::pure::metamodel::type::generics::GenericType),
+                multiplicityArguments = $mulParamsBuilt->cast(@meta::pure::metamodel::multiplicity::Multiplicity)
+            );
+            let cgt = ^UserDefinedGenericType(type = Class, typeArguments = [$selfGT]);
+            let skeleton = ^$shell(
+                typeParameters = $typeParamsBuilt,
+                multiplicityParameters = $mulParamsBuilt,
+                classifierGenericType = $cgt
             );
             putElementUnderPackage($pkgRes.context, $className, $packagePath, $skeleton);,
         a:meta::pure::protocol::grammar::relationship::Association[1] |
@@ -424,8 +336,8 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
             let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
             let assocSkeleton = ^Association(
                 name = $a.name,
-                package = $pkgRes.value->toOne(),
-                sourceInformation = compileSourceInformation($a.p_sourceInformation)
+                package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package),
+                sourceInformation = compileSourceInformation($a.p_sourceInformation, $ctx)
             );
             putElementUnderPackage($pkgRes.context, $aName, $packagePath, $assocSkeleton);,
         en:meta::pure::protocol::grammar::type::Enumeration[1] |
@@ -433,7 +345,11 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
             let enName = $packagePath + '::' + $en.name;
             let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
             let valueNames = $en.properties->map(p | $p.name);
-            let enumSkeleton = meta::pure::functions::meta::creation::newEnumeration($en.name, $pkgRes.value->toOne(), $valueNames);
+            // Use the pointer-anchored Pure-side skeleton builder rather than
+            // the {@code newEnumeration} native — see
+            // {@link buildEnumerationSkeleton} for rationale (pass-1 vs pass-2
+            // PDO drift on the native's direct-PDO self-refs).
+            let enumSkeleton = meta::pure::compiler::elements::buildEnumerationSkeleton($en.name, $pkgRes.value->toOne(), $valueNames);
             putElementUnderPackage($pkgRes.context, $enName, $packagePath, $enumSkeleton);,
         pr:meta::pure::protocol::grammar::extension::Profile[1] |
             $pr->compileProfilePass1($ctx);,
@@ -447,8 +363,8 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
             let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
             let primSkeleton = ^PrimitiveType(
                 name = $p.name,
-                package = $pkgRes.value->toOne(),
-                sourceInformation = compileSourceInformation($p.p_sourceInformation)
+                package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package),
+                sourceInformation = compileSourceInformation($p.p_sourceInformation, $ctx)
             );
             putElementUnderPackage($pkgRes.context, $pName, $packagePath, $primSkeleton);,
         a:meta::pure::protocol::grammar::PackageableElement[1] | $ctx
@@ -462,58 +378,68 @@ function meta::pure::compiler::runCompilePass2(e:meta::pure::protocol::grammar::
     let beforeRb = $beforeCtx.inferenceRollbacks;
     let beforeCa = $beforeCtx.candidateEvaluations;
     let prevSize = $acc.values->size();
+    // Establish caller scope for reverse-index recording. Each match arm
+    // computes its own (packagePath, name) for elementMap insertion and
+    // reuses the path as the caller. Mirrors Java TopLevelCompiler.pass2
+    // setCurrentElement / clearCurrentElement.
     let newAcc = $e->match([
         c:meta::pure::protocol::grammar::type::Class[1] |
-            let r = $c->compileClass($acc.context);
-            let compiledClass = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().value);
             let className = if($packagePath == '', | $c.name, | $packagePath + '::' + $c.name);
-            let ctx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($className);
+            let r = $c->compileClass($scopedCtx);
+            let compiledClass = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let ctx = $r.context->clearCurrentElement();
             let newMap = $ctx.elementMap->put($className, $compiledClass);
             let updatedCtx = ^$ctx(elementMap = $newMap);
             ^$acc(values += $compiledClass, context = $updatedCtx);,
         p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
-            let r = $p->compilePrimitive($acc.context);
-            let compiledPrim = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let primPackagePath = if($p.package->isEmpty(), | '', | $p.package->toOne().value);
             let primName = if($primPackagePath == '', | $p.name, | $primPackagePath + '::' + $p.name);
-            let primRCtx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($primName);
+            let r = $p->compilePrimitive($scopedCtx);
+            let compiledPrim = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let primRCtx = $r.context->clearCurrentElement();
             let primNewMap = $primRCtx.elementMap->put($primName, $compiledPrim);
             let primCtx = ^$primRCtx(elementMap = $primNewMap);
             ^$acc(values += $compiledPrim, context = $primCtx);,
         assoc:meta::pure::protocol::grammar::relationship::Association[1] |
-            let r = $assoc->compileAssociation($acc.context);
-            let compiledAssoc = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let assocPackagePath = if($assoc.package->isEmpty(), | '', | $assoc.package->toOne().value);
             let assocName = if($assocPackagePath == '', | $assoc.name, | $assocPackagePath + '::' + $assoc.name);
-            let assocRCtx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($assocName);
+            let r = $assoc->compileAssociation($scopedCtx);
+            let compiledAssoc = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let assocRCtx = $r.context->clearCurrentElement();
             let assocNewMap = $assocRCtx.elementMap->put($assocName, $compiledAssoc);
             let assocCtx = ^$assocRCtx(elementMap = $assocNewMap);
             ^$acc(values += $compiledAssoc, context = $assocCtx);,
         en:meta::pure::protocol::grammar::type::Enumeration[1] |
-            let r = $en->compileEnumeration($acc.context);
-            let compiledEnum = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let enumPackagePath = if($en.package->isEmpty(), | '', | $en.package->toOne().value);
             let enumName = if($enumPackagePath == '', | $en.name, | $enumPackagePath + '::' + $en.name);
-            let enumRCtx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($enumName);
+            let r = $en->compileEnumeration($scopedCtx);
+            let compiledEnum = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let enumRCtx = $r.context->clearCurrentElement();
             let enumNewMap = $enumRCtx.elementMap->put($enumName, $compiledEnum);
             let enumCtx = ^$enumRCtx(elementMap = $enumNewMap);
             ^$acc(values += $compiledEnum, context = $enumCtx);,
         fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
-            let r = $fn->compileNativeFunctionPass2($acc.context);
-            let compiledFn = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let fnPackagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().value);
             let fnName = if($fnPackagePath == '', | $fn.name, | $fnPackagePath + '::' + $fn.name);
-            let fnRCtx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($fnName);
+            let r = $fn->compileNativeFunctionPass2($scopedCtx);
+            let compiledFn = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let fnRCtx = $r.context->clearCurrentElement();
             let fnNewMap = $fnRCtx.elementMap->put($fnName, $compiledFn);
             let fnCtx = ^$fnRCtx(elementMap = $fnNewMap);
             ^$acc(values += $compiledFn, context = $fnCtx);,
         fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
-            let r = $fd->compileUserDefinedFunctionPass2($acc.context);
-            let compiledFd = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
             let fdPackagePath = if($fd.package->isEmpty(), | '', | $fd.package->toOne().value);
             let fdName = if($fdPackagePath == '', | $fd.name, | $fdPackagePath + '::' + $fd.name);
-            let fdRCtx = $r.context;
+            let scopedCtx = $acc.context->setCurrentElement($fdName);
+            let r = $fd->compileUserDefinedFunctionPass2($scopedCtx);
+            let compiledFd = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+            let fdRCtx = $r.context->clearCurrentElement();
             let fdNewMap = $fdRCtx.elementMap->put($fdName, $compiledFd);
             let fdCtx = ^$fdRCtx(elementMap = $fdNewMap);
             ^$acc(values += $compiledFd, context = $fdCtx);,
@@ -546,17 +472,22 @@ function meta::pure::compiler::runCompilePass3(elem:meta::pure::metamodel::Packa
     let beforeT = currentTimeMillis();
     let beforeRb = $ctx.inferenceRollbacks;
     let beforeCa = $ctx.candidateEvaluations;
+    // Establish the caller scope for reverse-index recording. Mirrors Java
+    // TopLevelCompiler.pass3 setCurrentElement / clearCurrentElement around
+    // each element's resolution — every {@code recordReference} call that
+    // fires inside the resolve* chain attributes back to this element.
+    let scopedCtx = $ctx->setCurrentElement($elem->elementToPath());
     let newCtx = $elem->match([
         fn:UserDefinedFunction<Any>[1] |
-            resolveFunctionDefinition($fn, $ctx);,
+            resolveFunctionDefinition($fn, $scopedCtx);,
         cls:Class<Any>[1] |
-            resolveClass($cls, $ctx);,
+            resolveClass($cls, $scopedCtx);,
         assoc:Association[1] |
-            resolveAssociation($assoc, $ctx);,
+            resolveAssociation($assoc, $scopedCtx);,
         pt:PrimitiveType[1] |
-            resolvePrimitive($pt, $ctx);,
-        a:Any[1] | $ctx
-    ]);
+            resolvePrimitive($pt, $scopedCtx);,
+        a:Any[1] | $scopedCtx
+    ])->clearCurrentElement();
     let elapsed = currentTimeMillis() - $beforeT;
     let stat = ^ElementStatistics(
         elementPath = $elem->elementToPath(),
@@ -568,65 +499,166 @@ function meta::pure::compiler::runCompilePass3(elem:meta::pure::metamodel::Packa
     ^$newCtx(elementStatistics = $newCtx.elementStatistics->concatenate($stat));
 }
 
-function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):CompilationResult[1]
+function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*]):CompilationResult[1]
 {
-    meta::pure::compiler::compile($file, false);
+    meta::pure::compiler::compile($files, false);
 }
 
-function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], debugMode:Boolean[1]):CompilationResult[1]
+// Default 2-arg form is verbose (CLI-friendly): live 3-line progress bar
+// during the three passes, error lines printed before stats, then a stats
+// summary. Tests/IDEs that want a clean stdout should call the 4-arg form
+// with {@code silent=true}.
+function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], debugMode:Boolean[1]):CompilationResult[1]
 {
-    meta::pure::compiler::compile($file, newCompilerContext($debugMode), $debugMode);
+    meta::pure::compiler::compile($files, newCompilerContext($debugMode), $debugMode, false);
 }
 
-function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], inputCtx:CompilerContext[1], debugMode:Boolean[1]):CompilationResult[1]
+// Silent variant: same compile, no stdout side-effects. For programmatic
+// callers (test harnesses, IDE compile-on-save) that pull structured
+// statistics off {@link CompilationResult} rather than parsing stdout.
+function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], debugMode:Boolean[1], silent:Boolean[1]):CompilationResult[1]
 {
-    let debug = ^DebugState(debug = $debugMode, space = '');
+    meta::pure::compiler::compile($files, newCompilerContext($debugMode), $debugMode, $silent);
+}
+
+// Three-pass compile across a list of pre-parsed files. Mirrors Java's
+// LocalModule.compile orchestration: pass 1 (skeletons), pass 2 (bodies),
+// pass 3 (resolution), with the linearization cache + local-function index
+// rebuilt between passes. Each file's grammar elements are processed under
+// that file's sourceId + imports so forward references between files
+// resolve the same way Java does.
+//
+// {@code silent} controls whether the function writes anything to stdout
+// (progress bar, error lines, stats summary). Pass {@code false} for CLI
+// orchestrators that want the live readout; pass {@code true} when calling
+// programmatically and pulling structured statistics off the result.
+function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], inputCtx:CompilerContext[1], debugMode:Boolean[1], silent:Boolean[1]):CompilationResult[1]
+{
     let compileStart = currentTimeMillis();
 
-    let allElements = $file.sections.elements;
-    let allImports = computeAllImports($file);
+    // Build the local index — one IndexEntry per grammar element across all
+    // files, in source declaration order. Mirrors Java's
+    // {@code TopLevelCompiler.elementIndex} shape: each entry carries the
+    // grammar form + its file context (sourceId, imports) so the 3 passes
+    // iterate a flat list and re-apply per-entry scope on the way in.
+    let entries = $files->fold({f, acc |
+        let fileImports = computeAllImports($f);
+        // {@code PureFile.sourceId} is declared {@code String[0..1]}; in
+        // practice both parser and test-constructed PureFiles always populate
+        // it, so {@code toOne()} is safe and lets {@code IndexEntry.sourceId}
+        // stay {@code String[1]}.
+        let fileSourceId = $f.sourceId->toOne();
+        let fileEntries = $f.sections.elements->map(g | ^IndexEntry(
+            fullPath = elementPathFromGrammar($g),
+            grammarElement = $g,
+            sourceId = $fileSourceId,
+            imports = $fileImports
+        ));
+        $acc->concatenate($fileEntries);
+    }, []->cast(@IndexEntry));
 
-    // Pass 1: Build structural scaffolding
+    let total = $entries->size();
+    let label = $total->toString() + ' elements';
+    let debugState = ^DebugState(debug = $debugMode, space = '');
+
+    // 3-line live status (header / bar / current item) covers all three
+    // passes. Header changes per phase so the user sees the bar reset and a
+    // new label for pass 1 / 2 / 3 instead of going dark mid-compile.
+    if($silent, | true, | startProgress3(); true;);
+
+    // ============================================================================
+    // Pass 1 across all entries (skeleton building)
+    // ============================================================================
     let pass1Start = currentTimeMillis();
-    let pass1Context = $allElements->fold({e, ctx | runCompilePass1($e, $ctx)}, ^$inputCtx(debugState = $debug, sourceId = $file.sourceId, imports = $allImports));
+    let pass1Ctx = range(0, $total)->fold({i, ctx |
+        let e = $entries->at($i);
+        if($silent, | true, | tickProgress3('  Pass 1/3 — Skeletons [1/3]: ' + $label, $i + 1, $total, $e.fullPath));
+        let elemCtx = ^$ctx(debugState = $debugState, sourceId = $e.sourceId, imports = $e.imports);
+        runCompilePass1($e.grammarElement, $elemCtx);
+    }, $inputCtx);
     let pass1Millis = currentTimeMillis() - $pass1Start;
 
-    $pass1Context->debug({| 'compile: pass 1 done (' + $pass1Context.elementMap->keys()->size()->toString() + ' skeletons), starting pass 2'});
+    // Build linearization cache + local function index between pass 1 and pass 2 so
+    // pass 2 body compilation has hits on universe types and pass-1 skeletons.
+    let pass2StartCtx = $pass1Ctx->buildLinearizationCache()->buildLocalFunctionIndex();
 
-    // Pass 2: Compile elements (threading context for error collection).
-    // Per-element timing wraps each match dispatch — snapshot time + counter
-    // values before, capture deltas after, append an ElementStatistics entry
-    // when the element was actually added (the catch-all PackageableElement
-    // arm yields the unchanged acc and contributes no entry).
-    // Build the linearization cache in two stages: once between pass 1 and
-    //   pass 2 (universe + skeletons from pass 1) so pass 2 body compilation
-    //   has hits, and again between pass 2 and pass 3 so any types refined
-    //   during pass 2 (e.g. compiled bodies that change generalizations or
-    //   add new types) get refreshed entries before pass 3 resolution.
-    let pass2StartCtx = $pass1Context->buildLinearizationCache()->buildLocalFunctionIndex();
+    // ============================================================================
+    // Pass 2 across all entries (compile element bodies)
+    // ============================================================================
     let pass2Start = currentTimeMillis();
-    let pass2 = $allElements->fold({e, acc | runCompilePass2($e, $acc)}, ^CompilerListResult<meta::pure::metamodel::PackageableElement>(context = $pass2StartCtx, values = []->cast(@meta::pure::metamodel::PackageableElement)));
+    let pass2Result = range(0, $total)->fold({i, acc |
+        let e = $entries->at($i);
+        if($silent, | true, | tickProgress3('  Pass 2/3 — Bodies [2/3]: ' + $label, $i + 1, $total, $e.fullPath));
+        let priorCtx = $acc.context;
+        let elemCtx = ^$priorCtx(sourceId = $e.sourceId, imports = $e.imports);
+        runCompilePass2($e.grammarElement, ^$acc(context = $elemCtx));
+    }, ^CompilerListResult<meta::pure::metamodel::PackageableElement>(context = $pass2StartCtx, values = []->cast(@meta::pure::metamodel::PackageableElement)));
     let pass2Millis = currentTimeMillis() - $pass2Start;
 
-    $pass2.context->debug({| 'compile: pass 2 done (' + $pass2.values->size()->toString() + ' elements compiled), starting pass 3'});
+    // Refresh linearization cache + local function index between pass 2 and
+    // pass 3 — pass 2 fills in parameters/returnType on each FunctionDefinition,
+    // and {@link buildLocalFunctionIndex} indexes by name from elementMap. Without
+    // this rebuild, pass 3's `findAllFunctionsByNameAndArity` lookups still see
+    // pass-1 skeletons (empty `parameters` list), so the `parameters.size() == arity`
+    // filter rejects every locally-defined overload — every call site of a function
+    // defined in the source then errors with "function not found", inflating the
+    // total error count by the number of usage sites (e.g. ~300 cascade errors per
+    // unresolved local function on the language/java compile).
+    let pass3StartCtx = $pass2Result.context->buildLinearizationCache()->buildLocalFunctionIndex();
 
-    // Pass 3: Resolution — resolve expression sequences, constraints, qualified properties.
-    // Per-element timing mirrors pass 2: append an ElementStatistics entry for
-    // each element so compileDir can merge by path across passes.
-    // Build the local-function index once before resolution so the 13K
-    // findAllFunctionsByNameAndArityUnfiltered calls become O(1) lookups
-    // rather than full elementMap.values() walks.
-    let pass3StartCtx = $pass2.context->buildLocalFunctionIndex()->buildLinearizationCache();
+    // ============================================================================
+    // Pass 3 across all entries (resolution) — look up each entry's compiled
+    // element from {@code elementMap} (pass 2 populated it) before resolving.
+    // Some grammar element types (test-fixture markers like ###CompiledGraph)
+    // don't produce a metamodel element and are silently skipped.
+    // ============================================================================
     let pass3Start = currentTimeMillis();
-    let pass3Ctx = $pass2.values->fold({elem, ctx | runCompilePass3($elem, $ctx)}, $pass3StartCtx);
+    let pass3RawCtx = range(0, $total)->fold({i, ctx |
+        let e = $entries->at($i);
+        if($silent, | true, | tickProgress3('  Pass 3/3 — Resolution [3/3]: ' + $label, $i + 1, $total, $e.fullPath));
+        let elemOpt = $ctx.elementMap->get($e.fullPath);
+        if($elemOpt->isEmpty(), | $ctx,
+            | let elem = $elemOpt->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+              let elemCtx = ^$ctx(sourceId = $e.sourceId, imports = $e.imports);
+              runCompilePass3($elem, $elemCtx);
+        );
+    }, $pass3StartCtx);
+    // Derive function-reference edges from the compiled AST. Replaces the
+    // in-flight function-/dot-application resolver recording hooks which were
+    // prone to multi-candidate trial pollution (cached lambda outcomes from a
+    // failed trial could leak deltas into the index when a later winning
+    // trial reused the cache). Walking the final {@code func} slots is
+    // structurally exact — recorded edges match what the PDB serialises.
+    // Mirrors Java's {@code FunctionRefExtractor}. The walk runs over
+    // {@code elementMap}'s values, which is the same source the PDB write
+    // path uses, so the recorded edges are aligned with the serialised graph.
+    let pass3CtxWithFuncRefs = extractFunctionRefsInto($pass3RawCtx, $pass3RawCtx.elementMap->values());
+
+    // Lean-references validator (mirrors single-file compile path).
+    let leanRefViolations = validateLeanReferences($pass3CtxWithFuncRefs);
+    let pass3Ctx = ^$pass3CtxWithFuncRefs(errors = $pass3CtxWithFuncRefs.errors->concatenate($leanRefViolations));
     let pass3Millis = currentTimeMillis() - $pass3Start;
+    if($silent, | true, | finishProgress3(); true;);
 
-    $pass3Ctx->debug({| 'compile: pass 3 done (' + $pass3Ctx.errors->size()->toString() + ' errors)'});
+    // Pull all resolved elements from the final elementMap. Includes Packages
+    // (which aren't in any file's compiledElements list) so the output PDB
+    // has the full graph — matches Java's LocalModule.compile. Order is
+    // elementMap iteration; the test printer sorts by sourceInfo for a
+    // deterministic textual diff. The PDB write path doesn't care about list
+    // order (diff-pdb compares path-set + per-element hash).
+    let resolvedElements = $pass3Ctx.elementMap->values();
 
-    // Pull the compiled (resolved) source elements out of the map, in
-    // pass2 source order. Packages live in $pass3Ctx.elementMap too — they
-    // surface to the caller via the returned context, not through this list.
-    let resolvedElements = $pass2.values->map(e | let fromMap = $pass3Ctx.elementMap->get($e->elementToPath()); if($fromMap->isEmpty(), | $e, | $fromMap->toOne()->cast(@PackageableElement)););
+    // Print errors directly to stdout (before the stats summary) so they
+    // appear in a single integrated output stream. Suppressed when {@code
+    // silent} is true — callers extract errors structurally off the result.
+    let errorCount = $pass3Ctx.errors->size();
+    if($silent || $errorCount == 0, | true,
+        | println('');
+          println('  Compilation errors (' + $errorCount->toString() + ')');
+          $pass3Ctx.errors->map(e | println('    ' + $e));
+          true;
+    );
+
     let totalMillis = currentTimeMillis() - $compileStart;
     let stats = ^CompilationStatistics(
         totalMillis = $totalMillis,
@@ -635,20 +667,27 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], i
         secondPassMillis = $pass2Millis,
         thirdPassMillis = $pass3Millis,
         elementCount = $resolvedElements->size(),
-        sourceFileCount = 1,
-        // Per-file stats report this file's CONTRIBUTION (delta), not cumulative
-        // counters. compileDir's aggregate sums per-file contributions to arrive at
-        // total compile rollback/candidate counts. Reporting cumulative caused
-        // quadratic over-counting on multi-file builds (each subsequent file's
-        // cumulative was added to the running sum, which already included its prior
-        // files' work). For self-host on compiler-pure (58 files), this inflated
-        // the inferenceRollbackCount from ~10K actual events to ~120K reported.
+        sourceFileCount = $total,
+        // Per-file stats are a CONTRIBUTION (delta), not cumulative — see
+        // [[per_file_stat_delta_not_cumulative]] memory for the quadratic
+        // over-counting bug that motivated this.
         inferenceRollbackCount = $pass3Ctx.inferenceRollbacks - $inputCtx.inferenceRollbacks,
         candidateEvaluationCount = $pass3Ctx.candidateEvaluations - $inputCtx.candidateEvaluations,
-        elementStatistics = $pass3Ctx.elementStatistics,
+        // Pass 2 and pass 3 each append a per-element ElementStatistics entry
+        // so the raw list has the same elementPath twice. Aggregate per path
+        // so the final stats and every downstream consumer (CLI summary, IDE
+        // Compile tab) sees one row per element with cumulative timing.
+        elementStatistics = $pass3Ctx.elementStatistics->aggregateElementStatistics(),
         rollbackSites = $pass3Ctx.rollbackSites
     );
-    ^CompilationResult(elements = $resolvedElements, errors = $pass3Ctx.errors, statistics = $stats, context = $pass3Ctx);
+    if($silent, | true, | println(printCompilationStatisticsSummary($stats)); true;);
+
+    ^CompilationResult(
+        elements = $resolvedElements,
+        errors   = $pass3Ctx.errors,
+        statistics = $stats,
+        context  = $pass3Ctx
+    );
 }
 
 // Extract a short element-type label (e.g. "UserDefinedFunction", "Class") from an
@@ -732,11 +771,16 @@ function meta::pure::compiler::resolveClass(cls:Class<Any>[1], context:CompilerC
     let constraintResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($currentCls.constraints, $ctx2);
     let propResult = meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($currentCls.properties, $constraintResult.context);
     let ctx5 = meta::pure::compiler::structural::propertyCompiler::validatePropertyOverrides($currentCls, $propResult.context);
-    // Store resolved class back into the map (preserving propertiesFromAssociations from currentCls)
+    // Store resolved class back into the map (preserving propertiesFromAssociations from currentCls).
+    // Also rebuild generalizations so each Generalization.specific points at
+    // the pass-3 class — without this, generalizations carried over from
+    // pass-2 still embed the pass-2 PDO, which becomes the byPath loser
+    // once this pass-3 emission overwrites the map entry.
     let resolvedCls = ^$currentCls(
         qualifiedProperties = $qpResult.values->map(qp | ^$qp(owner = ~.~)),
         constraints = $constraintResult.values,
-        properties = $propResult.values->map(p | ^$p(owner = ~.~))
+        properties = $propResult.values->map(p | ^$p(owner = ~.~)),
+        generalizations = $currentCls.generalizations->map(g | ^$g(specific = ~.~))
     );
     let updatedCtx = ^$ctx5(elementMap = $ctx5.elementMap->put($clsPath, $resolvedCls));
     // Clear ownerTypeParams/ownerMulParams — matches Java clearEnclosingOwner

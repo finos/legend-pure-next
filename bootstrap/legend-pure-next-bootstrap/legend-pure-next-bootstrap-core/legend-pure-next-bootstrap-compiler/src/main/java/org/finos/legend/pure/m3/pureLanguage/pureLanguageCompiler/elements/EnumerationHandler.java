@@ -47,7 +47,7 @@ public final class EnumerationHandler
     {
     }
 
-    public static Enumeration firstPass(meta.pure.protocol.grammar.type.Enumeration grammar, MetadataAccess model)
+    public static Enumeration firstPass(meta.pure.protocol.grammar.type.Enumeration grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
     {
         return new EnumerationImpl() // the classifierGenericType is set in the secondPass
                 ._name(grammar._name());
@@ -72,16 +72,19 @@ public final class EnumerationHandler
                 .toBag().selectDuplicates().toSet()
                 .each(name -> context.addError(new CompilationError(
                         "Duplicate enum value '" + name + "'",
-                        SourceInformationCompiler.compile(grammar._p_sourceInformation(), model))));
+                        SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model))));
 
-        // Create one Property per enum value, each with a defaultValue containing the Enum instance
+        // Create one Property per enum value, each with a defaultValue containing the Enum instance.
+        // Push sub-element caller path so stereotype/tag refs on each value
+        // attribute to {@code EnumName.VALUE} in the reverse index.
         var properties = grammar._properties().collect(grammarProp ->
+                context.withCallerSubElement(grammarProp._name(), () ->
         {
             // Create the Enum instance
             EnumImpl enumInstance = new EnumImpl()  // the classifierGenericType is set below
                     ._name(grammarProp._name())
                     ._classifierGenericType(enumGT)
-                    ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), model));
+                    ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), context.getSourceId(), model));
 
             // Create a parameterless lambda whose body is the AtomicValue
 
@@ -97,7 +100,7 @@ public final class EnumerationHandler
             LambdaFunctionImpl defaultValueLambda = new LambdaFunctionImpl();
             defaultValueLambda._expressionSequence(Lists.mutable.with(
                     new AtomicValueImpl(model)
-                                ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), model))
+                                ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), context.getSourceId(), model))
                                 ._value(enumInstance)
                                 ._genericType(enumGT)
                                 ._multiplicity(pureOne)
@@ -124,8 +127,8 @@ public final class EnumerationHandler
                          ._taggedValues(grammarProp._taggedValues()
                                  .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                                  .select(Objects::nonNull))
-                         ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), model));
-        });
+                         ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), context.getSourceId(), model));
+        }));
 
         org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.function.property.Property> props =
                 (org.eclipse.collections.api.list.MutableList) properties;
@@ -142,7 +145,7 @@ public final class EnumerationHandler
                 ._taggedValues(grammar._taggedValues()
                         .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                         .select(Objects::nonNull))
-                ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), model));
+                ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model));
 
         context.enrichCurrentErrors("enumeration '" + _G_PackageableElement.fullPath(grammar) + "'");
         return result;

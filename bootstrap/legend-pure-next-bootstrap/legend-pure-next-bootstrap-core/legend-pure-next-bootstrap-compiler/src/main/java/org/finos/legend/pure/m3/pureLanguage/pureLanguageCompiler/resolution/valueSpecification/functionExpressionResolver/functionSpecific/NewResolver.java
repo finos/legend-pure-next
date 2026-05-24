@@ -11,6 +11,7 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 
@@ -195,7 +196,7 @@ public class NewResolver
                 // Deep property path: traverse each segment
                 validateDeepPropertyPath(cls, name, fe, model, context);
             }
-            else if (findProperty(cls, name) == null)
+            else if (_Class.findProperty(cls, name) == null)
             {
                 context.addError(new CompilationError(
                         "Unknown property '" + name + "' in class '" +
@@ -223,7 +224,7 @@ public class NewResolver
                 ValueSpecification keyValueVS = keyExpr._parametersValues().get(1);
                 if (keyNameVS instanceof meta.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof String propName)
                 {
-                    meta.pure.metamodel.function.property.Property prop = findProperty(cls, propName);
+                    meta.pure.metamodel.function.property.Property prop = _Class.findProperty(cls, propName);
                     if (prop == null)
                     {
                         return; // unknown property — already reported above
@@ -292,7 +293,15 @@ public class NewResolver
         for (int i = 0; i < segments.length; i++)
         {
             String segment = segments[i];
-            meta.pure.metamodel.function.property.Property prop = findProperty(currentType, segment);
+            // currentType starts as Class (a SimplePropertyOwner) but after the
+            // first hop becomes whatever a property's GenericType resolved to —
+            // which may be a non-SimplePropertyOwner Type (PrimitiveType,
+            // FunctionType). Those have no properties; treat as "not found"
+            // and surface the deep-path error below.
+            meta.pure.metamodel.function.property.Property prop =
+                    currentType instanceof meta.pure.metamodel.SimplePropertyOwner owner
+                            ? _Class.findProperty(owner, segment)
+                            : null;
             if (prop == null)
             {
                 String currentTypeName = currentType instanceof meta.pure.metamodel.PackageableElement pe
@@ -326,42 +335,6 @@ public class NewResolver
             return lower == 0 ? "[*]" : "[" + lower + "..*]";
         }
         return lower == upper ? "[" + lower + "]" : "[" + lower + ".." + upper + "]";
-    }
-
-    private static meta.pure.metamodel.function.property.Property findProperty(meta.pure.metamodel.type.Type type, String name)
-    {
-        if (type instanceof meta.pure.metamodel.SimplePropertyOwner po && po._properties() != null)
-        {
-            var prop = po._properties().detect(p -> name.equals(p._name()));
-            if (prop != null)
-            {
-                return prop;
-            }
-        }
-        // Check association properties
-        if (type instanceof meta.pure.metamodel.type.Class cls && cls._propertiesFromAssociations() != null)
-        {
-            var assocProp = cls._propertiesFromAssociations().detect(p -> name.equals(p._name()));
-            if (assocProp != null)
-            {
-                return assocProp;
-            }
-        }
-        if (type._generalizations() != null)
-        {
-            for (var gen : type._generalizations())
-            {
-                if (gen._general() != null && _GenericType.type(gen._general()) != null)
-                {
-                    var inherited = findProperty(_GenericType.type(gen._general()), name);
-                    if (inherited != null)
-                    {
-                        return inherited;
-                    }
-                }
-            }
-        }
-        return null;
     }
 
     private static void checkMissingProperties(

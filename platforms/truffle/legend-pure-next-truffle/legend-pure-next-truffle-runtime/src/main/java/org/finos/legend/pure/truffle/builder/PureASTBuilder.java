@@ -366,24 +366,6 @@ public final class PureASTBuilder
                     + " registry-view:" + registryView);
         }
         Object func = funcObj;
-        // Pointer dereference: compile-pure emits TempCompilerPointer-typed funcs
-        // (PackageableFunctionPointer, PropertyPointer, QualifiedPropertyPointer)
-        // to keep cross-element refs identity-stable across compile passes. The
-        // AST builder needs the live target's metaclass (NativeFunction /
-        // FunctionDefinition / AbstractProperty) to choose a dispatch arm, so
-        // resolve through the registry here before the metaclass checks below.
-        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess pointerResolver =
-                org.finos.legend.pure.truffle.PureLanguage.get(null).resolver();
-        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(func,
-                "meta::pure::metamodel::pointer::TempCompilerPointer", pointerResolver))
-        {
-            func = dereferencePointer(func, pointerResolver);
-            if (func == null)
-            {
-                throw new RuntimeException("Failed to dereference pointer func in: "
-                        + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNCTION_NAME));
-            }
-        }
         // QP overload disambiguation: the PDB func path may resolve to the wrong
         // overload when multiple QPs share the same simple name (e.g. res() vs res(z)).
         // Fix by matching the QP's param count against the call's arg count.
@@ -727,66 +709,6 @@ public final class PureASTBuilder
     /**
      * Find the correct QP overload from the owning class by matching parameter count.
      */
-    /**
-     * Resolve a TempCompilerPointer subtype to its live target via the registry.
-     *
-     * <p>Mirrors the Pure-side {@code dereferencePointer} in {@code _Pointer.pure}:
-     * PE-style pointers (PackageableFunctionPointer, ClassPointer, etc.) carry
-     * only {@code .path}; member pointers (PropertyPointer, QualifiedPropertyPointer)
-     * carry {@code .path} (owner) + {@code .element} (member name).</p>
-     */
-    private Object dereferencePointer(Object ptr,
-            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
-    {
-        Object pathObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(
-                ptr, org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("path"));
-        if (!(pathObj instanceof String path) || resolver == null)
-        {
-            return null;
-        }
-        Object owner = resolver.getElement(path);
-        if (owner == null)
-        {
-            return null;
-        }
-        // Member pointers — find the member by element name on the owner.
-        Object elementObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(
-                ptr, org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("element"));
-        if (elementObj instanceof String elementName)
-        {
-            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(ptr,
-                    "meta::pure::metamodel::pointer::QualifiedPropertyPointer"))
-            {
-                Object qps = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(owner, SLOT_QUALIFIED_PROPERTIES);
-                if (qps instanceof PureSequence qpsSeq)
-                {
-                    for (int i = 0; i < qpsSeq.size(); i++)
-                    {
-                        Object qp = qpsSeq.getBoxed(i);
-                        Object qpName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(qp, SLOT_NAME);
-                        if (elementName.equals(qpName)) return qp;
-                    }
-                }
-                return null;
-            }
-            // PropertyPointer (default member pointer arm).
-            Object props = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(owner,
-                    org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("properties"));
-            if (props instanceof PureSequence propsSeq)
-            {
-                for (int i = 0; i < propsSeq.size(); i++)
-                {
-                    Object p = propsSeq.getBoxed(i);
-                    Object pName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(p, SLOT_NAME);
-                    if (elementName.equals(pName)) return p;
-                }
-            }
-            return null;
-        }
-        // PE-style pointer — owner IS the target.
-        return owner;
-    }
-
     private Object findQpOverload(Object wrongQp, int expectedParamCount)
     {
         Object owner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(wrongQp, SLOT_OWNER);
@@ -1165,12 +1087,40 @@ public final class PureASTBuilder
     {
         Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(ve, SLOT_NAME);
         String veName = nameObj instanceof String s ? s : null;
+        // Parent-reference variable: name is a tilde sequence (`~`, `~.~`, …).
+        // Doesn't live in a frame slot — peek the PureLanguage construction
+        // stack instead. Depth = (tilde count - 1).
+        int tildeDepth = parentReferenceTildeCount(veName);
+        if (tildeDepth > 0)
+        {
+            return new org.finos.legend.pure.truffle.ast.ParentReferenceReadNode(tildeDepth - 1, veName);
+        }
         Integer slot = resolveSlot(veName);
         if (slot != null)
         {
             return new FrameVariableReadNode(slot, veName);
         }
         return new FrameVariableReadNode(-1, veName);
+    }
+
+    /** Tilde-pattern count: {@code "~"} → 1, {@code "~.~"} → 2, …; 0 for non-parent-ref names. */
+    private static int parentReferenceTildeCount(String name)
+    {
+        if (name == null || name.isEmpty() || name.charAt(0) != '~')
+        {
+            return 0;
+        }
+        int count = 1;
+        int n = name.length();
+        for (int i = 1; i + 1 < n; i += 2)
+        {
+            if (name.charAt(i) != '.' || name.charAt(i + 1) != '~')
+            {
+                return 0;
+            }
+            count++;
+        }
+        return name.charAt(n - 1) == '~' ? count : 0;
     }
 
     private PureNode lowerFrameLet(Object fe)

@@ -48,85 +48,90 @@ public final class PureStackFormatter
      */
     public static String format(Throwable e)
     {
+        java.util.List<String> frames = frames(e);
+        if (frames.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder("\nPure stack trace:");
+        for (String frame : frames)
+        {
+            sb.append("\n    at ").append(frame);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Same as {@link #format} but returns the frames as a list — one entry
+     * per frame, formatted as {@code "<fnName> (<sourceId>:<line>c<col>)"}.
+     * Innermost-first. Empty list when no Truffle frames are recorded.
+     *
+     * <p>Used by {@code tryEval} to populate {@code Error.stack} as
+     * {@code String[*]} so callers can iterate frames without re-parsing.</p>
+     */
+    public static java.util.List<String> frames(Throwable e)
+    {
         Throwable inner = e;
         while (inner.getCause() != null && inner.getCause() != inner)
         {
             inner = inner.getCause();
         }
-
         try
         {
-            List<TruffleStackTraceElement> frames = TruffleStackTrace.getStackTrace(inner);
-            if (frames == null || frames.isEmpty())
+            List<TruffleStackTraceElement> rawFrames = TruffleStackTrace.getStackTrace(inner);
+            if (rawFrames == null || rawFrames.isEmpty()) return java.util.List.of();
+            java.util.List<String> out = new java.util.ArrayList<>(rawFrames.size());
+            for (TruffleStackTraceElement frame : rawFrames)
             {
-                return "";
+                out.add(formatFrame(frame));
             }
-            // Match the bootstrap (Java direct) runtime's stack format exactly
-            // so the IDE renders both backends identically:
-            //  - header `\nPure stack trace:`
-            //  - each frame `\n    at <fn> (<sourceId>:<line>c<col>)`  (4-space indent)
-            //  - innermost frame first (the throwing site)
-            //
-            // Bootstrap's ValueSpecificationEvaluator.getCallStackTrace iterates
-            // its ArrayDeque<FunctionExpression> in stack-order (top-first =
-            // innermost-first). Truffle's TruffleStackTrace.getStackTrace also
-            // returns frames innermost-first, so we iterate in natural order.
-            StringBuilder sb = new StringBuilder("\nPure stack trace:");
-            for (TruffleStackTraceElement frame : frames)
-            {
-                RootNode rootNode = frame.getTarget().getRootNode();
-                String name = rootNode != null ? rootNode.getName() : "?";
-                // Normalize anonymous-lambda names. Truffle's RootNode for a
-                // lambda is auto-named `lambda@<sourceId>:<line>:<col>` —
-                // bootstrap renders the same frame as just `lambda`. Strip the
-                // synthetic suffix so the two engines emit identical names;
-                // the per-frame location (rendered separately below) still
-                // pins where the lambda lives.
-                //
-                // (PureContext.getFunctionName now emits the unmangled
-                // `package::functionName` form directly, so the older
-                // first-`__` strip is no longer needed.)
-                if (name != null && name.startsWith("lambda@"))
-                {
-                    name = "lambda";
-                }
-
-                // Prefer the location node's source section (the actual call
-                // site or expression), walking up the AST until we hit one;
-                // fall back to the root node's section if none is found.
-                SourceSection sourceSection = null;
-                Node location = frame.getLocation();
-                if (location != null)
-                {
-                    sourceSection = location.getSourceSection();
-                    Node node = location;
-                    while (sourceSection == null && node != null)
-                    {
-                        sourceSection = node.getSourceSection();
-                        node = node.getParent();
-                    }
-                }
-                if (sourceSection == null && rootNode != null)
-                {
-                    sourceSection = rootNode.getSourceSection();
-                }
-
-                // 4-space indent matches bootstrap's `\n    at` exactly.
-                sb.append("\n    at ").append(name != null ? name : "?");
-                if (sourceSection != null && sourceSection.getSource() != null)
-                {
-                    // Column separator `c` matches both bootstrap's format and
-                    // the IDE's stack-link regex (`at <fn> (<sourceId>:<line>c<col>)`).
-                    sb.append(" (").append(sourceSection.getSource().getName())
-                            .append(":").append(sourceSection.getStartLine())
-                            .append("c").append(sourceSection.getStartColumn()).append(")");
-                }
-            }
-            return sb.toString();
+            return out;
         }
         catch (Exception ignored)
         {
-            return "";
+            return java.util.List.of();
         }
+    }
+
+    private static String formatFrame(TruffleStackTraceElement frame)
+    {
+        RootNode rootNode = frame.getTarget().getRootNode();
+        String name = rootNode != null ? rootNode.getName() : "?";
+        // Normalize anonymous-lambda names. Truffle's RootNode for a lambda
+        // is auto-named `lambda@<sourceId>:<line>:<col>` — bootstrap renders
+        // the same frame as just `lambda`. Strip the synthetic suffix so the
+        // two engines emit identical names; the per-frame location (rendered
+        // separately below) still pins where the lambda lives.
+        if (name != null && name.startsWith("lambda@"))
+        {
+            name = "lambda";
+        }
+        // Prefer the location node's source section (the actual call site or
+        // expression), walking up the AST until we hit one; fall back to the
+        // root node's section if none is found.
+        SourceSection sourceSection = null;
+        Node location = frame.getLocation();
+        if (location != null)
+        {
+            sourceSection = location.getSourceSection();
+            Node node = location;
+            while (sourceSection == null && node != null)
+            {
+                sourceSection = node.getSourceSection();
+                node = node.getParent();
+            }
+        }
+        if (sourceSection == null && rootNode != null)
+        {
+            sourceSection = rootNode.getSourceSection();
+        }
+
+        StringBuilder sb = new StringBuilder(name != null ? name : "?");
+        if (sourceSection != null && sourceSection.getSource() != null)
+        {
+            // Column separator `c` matches both bootstrap's format and the
+            // IDE's stack-link regex (`at <fn> (<sourceId>:<line>c<col>)`).
+            sb.append(" (").append(sourceSection.getSource().getName())
+                    .append(":").append(sourceSection.getStartLine())
+                    .append("c").append(sourceSection.getStartColumn()).append(")");
+        }
+        return sb.toString();
     }
 }

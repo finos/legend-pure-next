@@ -146,14 +146,6 @@ public final class PropertyCoercion
     private static PureSequence toPureSequence(Object value)
     {
         if (value instanceof PureSequence seq) return seq;
-        if (value instanceof org.eclipse.collections.api.list.MutableList<?> ml)
-        {
-            return new ObjectSequence(ml.toArray());
-        }
-        if (value instanceof java.util.List<?> list)
-        {
-            return new ObjectSequence(list.toArray());
-        }
         if (value == null)
         {
             return new ObjectSequence(new Object[0]);

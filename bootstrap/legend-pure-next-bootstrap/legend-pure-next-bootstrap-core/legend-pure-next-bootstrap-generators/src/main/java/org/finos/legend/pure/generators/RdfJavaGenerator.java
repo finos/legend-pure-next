@@ -57,6 +57,21 @@ public class RdfJavaGenerator
     private final M3Model m3Model;
     private final String outputPackage;
     private final boolean isMetamodel;
+    /**
+     * Names of all classes carrying the {@code pointer} stereotype
+     * ({@code TempCompilerPointer} and its descendants). Used by the impl
+     * generator to decide which getters need a
+     * {@link org.finos.legend.pure.m3.pointer.PointerAccessGuard#checkAccess}
+     * preamble — properties inherited from a non-pointer parent on a pointer
+     * class shouldn't be read until the pointer is dereferenced.
+     *
+     * <p>The guard preamble is always emitted; the throw itself is gated by
+     * the runtime static-final {@code PointerAccessGuard.STRICT} flag,
+     * which defaults false. Production CLI / IDE leaves the flag off and
+     * the JIT folds the check away to nothing; surefire sets it true so
+     * {@code mvn test} catches pointer misuse.</p>
+     */
+    private final java.util.Set<String> pointerClassNames;
 
     public RdfJavaGenerator(String ttlPath)
     {
@@ -73,6 +88,23 @@ public class RdfJavaGenerator
         this.m3Model = m3Model;
         this.outputPackage = outputPackage;
         this.isMetamodel = isMetamodel;
+        this.pointerClassNames = new java.util.HashSet<>();
+        m3Model.classInfoMap().valuesView().forEach(ci ->
+        {
+            if (ci.stereotypes.anySatisfy(s -> bareName(s).equals("pointer")))
+            {
+                this.pointerClassNames.add(ci.name);
+            }
+        });
+    }
+
+    /**
+     * True if {@code className} is a {@code TempCompilerPointer} subtype
+     * (i.e. carries the {@code pointer} stereotype).
+     */
+    private boolean isPointerClass(String className)
+    {
+        return this.pointerClassNames.contains(className);
     }
 
     /**
@@ -377,7 +409,13 @@ public class RdfJavaGenerator
                 sb.append("    public ").append(classInfo.name).append("Impl(org.finos.legend.pure.m3.module.MetadataAccess model)\n");
                 sb.append("    {\n");
                 sb.append("        this._classifierGenericType(\n");
-                sb.append("            (meta.pure.metamodel.type.generics.GenericTypeValue) model.getElement(\"meta::pure::metamodel::type::generics::optimization::GenericType_").append(classInfo.name).append("\"));\n");
+                // Anchor key encodes the type's full Pure path (`::` -> `_`) so
+                // user modules whose simple names collide with platform types
+                // don't pick up the wrong anchor and end up classified as a
+                // platform type.
+                sb.append("            (meta.pure.metamodel.type.generics.GenericTypeValue) model.getElement(\"meta::pure::metamodel::type::generics::optimization::GenericType_")
+                        .append((classInfo.packagePath == null ? "" : classInfo.packagePath.replace("::", "_") + "_"))
+                        .append(classInfo.name).append("\"));\n");
             }
             else
             {
@@ -394,12 +432,23 @@ public class RdfJavaGenerator
             sb.append("    public ").append(classInfo.name).append("Impl() {}\n\n");
         }
 
+        // Pointer impls get a strict-mode guard on getters for properties
+        // inherited from a non-pointer parent. See {@link PointerAccessGuard}.
+        boolean classIsPointer = isPointerClass(classInfo.name);
+
         // Generate getters and fluent setters
         allProperties.forEach(prop ->
         {
             String javaType = mapToJavaType(prop.typeName, prop.isMany);
             String fieldName = escapeFieldName(prop.name);
             String getterName = "_" + prop.name;
+            // Guard inherited (non-pointer-native) properties: e.g. on
+            // {@code PropertyPointerImpl}, {@code _name()} (inherited from
+            // {@code Property}) trips the guard, but {@code _path()} (from
+            // {@code TempCompilerPointer}) and {@code _element()} (from
+            // {@code PropertyPointer}) don't. The guard is dead code unless
+            // strict mode is on (see {@link #pointerClassNames}).
+            boolean needsGuard = classIsPointer && !isPointerClass(prop.ownerName);
 
             // Getter (returns unmodifiable list view when frozen)
             appendPureAnnotations(sb, prop.stereotypes, prop.taggedValues, "    ");
@@ -407,6 +456,11 @@ public class RdfJavaGenerator
             sb.append("    public ").append(javaType).append(" ");
             sb.append(getterName).append("()\n");
             sb.append("    {\n");
+            if (needsGuard)
+            {
+                sb.append("        org.finos.legend.pure.m3.pointer.PointerAccessGuard.checkAccess(\"")
+                  .append(classInfo.name).append("\", \"").append(prop.name).append("\");\n");
+            }
             if (prop.isMany)
             {
                 sb.append("        return this.frozen && this.").append(fieldName).append(" != null ? this.").append(fieldName).append(".asUnmodifiable() : this.").append(fieldName).append(";\n");

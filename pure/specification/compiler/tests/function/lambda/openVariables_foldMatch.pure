@@ -30,3 +30,11 @@ function test::foldMatchOpenVar__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@
               Variable acc :#Integer##[1]#  ~@VariableExpression@  @6:28-6:31
               Variable i :#Integer##[1]#  ~@VariableExpression@  @6:35-6:36
     AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @8:8-8:8
+
+###ReverseIndex
+meta::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_:
+  test::foldMatchOpenVar__Any_MANY_
+meta::pure::functions::lang::match_Any_MANY__Function_$1_MANY$__T_m_:
+  test::foldMatchOpenVar__Any_MANY_
+meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  test::foldMatchOpenVar__Any_MANY_

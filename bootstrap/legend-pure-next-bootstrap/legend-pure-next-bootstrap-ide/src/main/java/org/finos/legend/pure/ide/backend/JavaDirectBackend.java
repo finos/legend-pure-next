@@ -46,6 +46,7 @@ public final class JavaDirectBackend implements PureBackend
                                    PureModel model,
                                    CompilationResult compileResult,
                                    FunctionDefinition function,
+                                   ProgressSink progress,
                                    ValueSpecification... args)
     {
         // Prefer the welcome module as the resolver scope so user-defined
@@ -70,6 +71,8 @@ public final class JavaDirectBackend implements PureBackend
         Throwable err = null;
         try
         {
+            progress.post(new ProgressEvent("Executing "
+                    + ((meta.pure.metamodel.PackageableElement) function)._name(), 0, 0, null));
             result = args.length == 0
                     ? execution.execute(function)
                     : execution.execute(function, (Object[]) args);

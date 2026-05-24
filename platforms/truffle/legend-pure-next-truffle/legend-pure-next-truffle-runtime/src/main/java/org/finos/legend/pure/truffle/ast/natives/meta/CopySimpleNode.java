@@ -41,8 +41,22 @@ public final class CopySimpleNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object result = child.executeGeneric(frame);
-        return doCopy(result, getResolver());
+        // Simple copy has no keys, so no immutability check is needed — but
+        // it still participates in the fresh-scope stack so its product
+        // registers in the enclosing new/copy expression's scope.
+        var eval = org.finos.legend.pure.truffle.PureLanguage.get(this);
+        eval.pushFreshScope();
+        Object copyResult = null;
+        try
+        {
+            Object result = child.executeGeneric(frame);
+            copyResult = doCopy(result, getResolver());
+            return copyResult;
+        }
+        finally
+        {
+            eval.popFreshScopeAndRegister(copyResult);
+        }
     }
 
     private static Object doCopy(Object original, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
@@ -56,15 +70,12 @@ public final class CopySimpleNode extends PureNode
         // longer hands back typed XImpls — transient XImpls inside decoder
         // lambdas don't escape `readProperty`.
         Object copy = pdoCopy(original);
-        // Fix self-referencing CGT (e.g., Class<x> where x == original) —
-        // _copy() preserves the CGT reference to the source object, but
-        // for self-referential cases we need to rewire it to the copy.
+        // No self-reference rewriting. A shallow copy preserves whatever slot
+        // references the original held — including `classifierGenericType`
+        // pointing back at the original (e.g. `Class<x>` for a Class instance).
+        // If the caller wants the copy to be the referent instead, they must
+        // wire it explicitly with `~.~` in their copy expression.
         Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(original, SLOT_CLASSIFIER_GENERIC_TYPE);
-        if (cgt != null && hasSelfReference(cgt, original))
-        {
-            cgt = deepCopyCgt(cgt, original, copy, resolver);
-            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(copy, "classifierGenericType", cgt);
-        }
         // Platform-level canonical anchor: preserve canonical GenericType_<TypeName>
         // UDPGT-PE references through copy. Symmetric to new() canonical anchoring.
         if (cgt != null)

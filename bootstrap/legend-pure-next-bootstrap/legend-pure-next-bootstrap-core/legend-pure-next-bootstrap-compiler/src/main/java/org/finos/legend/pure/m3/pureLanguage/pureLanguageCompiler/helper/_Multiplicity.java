@@ -45,18 +45,25 @@ public final class _Multiplicity
             return true; // unknown / not set — skip
         }
 
-        // If either has a multiplicity parameter, skip concrete checking
-        if (general instanceof MultiplicityParameter || specific instanceof MultiplicityParameter)
-        {
-            return true;
-        }
-
-        // Undefined multiplicities match only other undefined multiplicities
+        // Undefined multiplicities match only other undefined multiplicities.
+        // CHECK BEFORE the MultiplicityParameter rule below: `?` means "user
+        // did not specify this dimension" and is semantically distinct from
+        // a parameter `m` (which means "user provided this slot"). Without
+        // this order, a user-provided `m` matches a `?` slot, letting
+        // overload-resolution pick a `<T|?>` cast variant when the user
+        // explicitly wrote `cast(@T|m)` — and silently dropping the user's
+        // multiplicity constraint.
         boolean generalUndefined = general instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity;
         boolean specificUndefined = specific instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity;
         if (generalUndefined || specificUndefined)
         {
             return generalUndefined == specificUndefined;
+        }
+
+        // If either has a multiplicity parameter, skip concrete checking
+        if (general instanceof MultiplicityParameter || specific instanceof MultiplicityParameter)
+        {
+            return true;
         }
 
         long generalLower = lowerBound(general);

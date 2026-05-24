@@ -16,27 +16,14 @@ import meta::pure::metamodel::*;
 import meta::pure::compiler::*;
 import meta::pure::functions::collection::*;
 
-// Mirrors Java SourceInformationCompiler.compile(src, model) — element-level
-// metadata path with NO fallback. Used for declarative/structural source info
-// (class, association, property, profile declarations, etc.). If grammar
-// parser emits null sourceId, the resulting SI also has null sourceId.
-function meta::pure::compiler::structural::sourceInformationCompiler::compileSourceInformation(grammarSI:meta::pure::protocol::grammar::SourceInformation[0..1]):SourceInformation[0..1]
-{
-    $grammarSI->map(si |
-        ^SourceInformation(
-            sourceId = $si.sourceId,
-            startLine = $si.startLine,
-            startColumn = $si.startColumn,
-            endLine = $si.endLine,
-            endColumn = $si.endColumn
-        );
-    )
-}
-
-// Mirrors Java SourceInformationCompiler.compile(src, fallbackSourceId, model)
-// — body VS path WITH fallback. Used for VS expressions inside function bodies
-// where the parser builds line/column but doesn't carry the section path.
-function meta::pure::compiler::structural::sourceInformationCompiler::compileSourceInformationWithFallback(grammarSI:meta::pure::protocol::grammar::SourceInformation[0..1], context:CompilerContext[1]):SourceInformation[0..1]
+// Compile a grammar-level SourceInformation to a metamodel-level one,
+// falling back to {@code context.sourceId} when the grammar SI has no
+// sourceId. The grammar parser emits SourceInformation per-section
+// without knowing the enclosing file; the file identity lives on the
+// CompilerContext (set per file in every compile pass — see
+// compiler.pure phases 2/3/4). Every compiled SI must carry the file —
+// LSP go-to-definition, error reporting, and stack frames depend on it.
+function meta::pure::compiler::structural::sourceInformationCompiler::compileSourceInformation(grammarSI:meta::pure::protocol::grammar::SourceInformation[0..1], context:CompilerContext[1]):SourceInformation[0..1]
 {
     $grammarSI->map(si |
         let sid = if($si.sourceId->isNotEmpty(), | $si.sourceId, | $context.sourceId);

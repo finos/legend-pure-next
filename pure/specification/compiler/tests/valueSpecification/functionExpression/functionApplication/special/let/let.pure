@@ -32,3 +32,7 @@ function test::new::testNew__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@
     AtomicValue  'k' :@String@[1]  ~@AtomicValue@  @7:7-7:7
     Lambda(r:@String@[1]) :#LambdaFunction<#{@String@[1]->@Integer@[1]}#>#[1]  ~@AtomicValue@  @7:11-7:23
       AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @7:23-7:23
+
+###ReverseIndex
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::new::testNew__Any_MANY_

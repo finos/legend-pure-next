@@ -1,0 +1,1253 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "new",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 34,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        },
+        "parametersValues" : [ {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Container"
+            }
+          },
+          "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
+            "lowerBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            },
+            "upperBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 34,
+            "endLine" : 6,
+            "startColumn" : 3,
+            "startLine" : 6
+          }
+        }, {
+          "_type" : "Collection",
+          "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
+            "lowerBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 2
+            },
+            "upperBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 2
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 34,
+            "endLine" : 6,
+            "startColumn" : 3,
+            "startLine" : 6
+          },
+          "values" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 25,
+              "endLine" : 6,
+              "startColumn" : 14,
+              "startLine" : 6
+            },
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 25,
+                "endLine" : 6,
+                "startColumn" : 14,
+                "startLine" : 6
+              },
+              "value" : "name"
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 25,
+                "endLine" : 6,
+                "startColumn" : 19,
+                "startLine" : 6
+              },
+              "value" : "outer"
+            } ]
+          }, {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 33,
+              "endLine" : 6,
+              "startColumn" : 28,
+              "startLine" : 6
+            },
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 33,
+                "endLine" : 6,
+                "startColumn" : 28,
+                "startLine" : 6
+              },
+              "value" : "next"
+            }, {
+              "_type" : "VariableExpression",
+              "name" : "~",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 33,
+                "endLine" : 6,
+                "startColumn" : 33,
+                "startLine" : 6
+              }
+            } ]
+          } ]
+        } ]
+      } ],
+      "functionName" : "testSelfRef",
+      "name" : "testSelfRef__Container_1_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 4
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 43,
+            "endLine" : 4,
+            "startColumn" : 35,
+            "startLine" : 4
+          },
+          "value" : "Container"
+        }
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 1
+        },
+        "upperBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 1
+        }
+      }
+    }, {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "new",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 67,
+          "endLine" : 11,
+          "startColumn" : 3,
+          "startLine" : 11
+        },
+        "parametersValues" : [ {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Container"
+            }
+          },
+          "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
+            "lowerBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            },
+            "upperBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 67,
+            "endLine" : 11,
+            "startColumn" : 3,
+            "startLine" : 11
+          }
+        }, {
+          "_type" : "Collection",
+          "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
+            "lowerBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 2
+            },
+            "upperBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 2
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 67,
+            "endLine" : 11,
+            "startColumn" : 3,
+            "startLine" : 11
+          },
+          "values" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 25,
+              "endLine" : 11,
+              "startColumn" : 14,
+              "startLine" : 11
+            },
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 25,
+                "endLine" : 11,
+                "startColumn" : 14,
+                "startLine" : 11
+              },
+              "value" : "name"
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 25,
+                "endLine" : 11,
+                "startColumn" : 19,
+                "startLine" : 11
+              },
+              "value" : "outer"
+            } ]
+          }, {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 66,
+              "endLine" : 11,
+              "startColumn" : 28,
+              "startLine" : 11
+            },
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 66,
+                "endLine" : 11,
+                "startColumn" : 28,
+                "startLine" : 11
+              },
+              "value" : "next"
+            }, {
+              "_type" : "FunctionInvocation",
+              "functionName" : "new",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 66,
+                "endLine" : 11,
+                "startColumn" : 33,
+                "startLine" : 11
+              },
+              "parametersValues" : [ {
+                "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+                "genericType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
+                    "_type" : "Type_Pointer",
+                    "value" : "Container"
+                  }
+                },
+                "multiplicity" : {
+                  "_type" : "UserDefinedAdHocMultiplicity",
+                  "lowerBound" : {
+                    "_type" : "MultiplicityValue",
+                    "value" : 1
+                  },
+                  "upperBound" : {
+                    "_type" : "MultiplicityValue",
+                    "value" : 1
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 66,
+                  "endLine" : 11,
+                  "startColumn" : 33,
+                  "startLine" : 11
+                }
+              }, {
+                "_type" : "Collection",
+                "multiplicity" : {
+                  "_type" : "UserDefinedAdHocMultiplicity",
+                  "lowerBound" : {
+                    "_type" : "MultiplicityValue",
+                    "value" : 2
+                  },
+                  "upperBound" : {
+                    "_type" : "MultiplicityValue",
+                    "value" : 2
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 66,
+                  "endLine" : 11,
+                  "startColumn" : 33,
+                  "startLine" : 11
+                },
+                "values" : [ {
+                  "_type" : "FunctionInvocation",
+                  "functionName" : "keyExpression",
+                  "p_sourceInformation" : {
+                    "_type" : "SourceInformation",
+                    "endColumn" : 55,
+                    "endLine" : 11,
+                    "startColumn" : 44,
+                    "startLine" : 11
+                  },
+                  "parametersValues" : [ {
+                    "_type" : "AtomicValue",
+                    "genericType" : {
+                      "_type" : "UserDefinedGenericType",
+                      "type" : {
+                        "_type" : "Type_Pointer",
+                        "value" : "String"
+                      }
+                    },
+                    "p_sourceInformation" : {
+                      "_type" : "SourceInformation",
+                      "endColumn" : 55,
+                      "endLine" : 11,
+                      "startColumn" : 44,
+                      "startLine" : 11
+                    },
+                    "value" : "name"
+                  }, {
+                    "_type" : "AtomicValue",
+                    "genericType" : {
+                      "_type" : "UserDefinedGenericType",
+                      "type" : {
+                        "_type" : "Type_Pointer",
+                        "value" : "String"
+                      }
+                    },
+                    "p_sourceInformation" : {
+                      "_type" : "SourceInformation",
+                      "endColumn" : 55,
+                      "endLine" : 11,
+                      "startColumn" : 49,
+                      "startLine" : 11
+                    },
+                    "value" : "inner"
+                  } ]
+                }, {
+                  "_type" : "FunctionInvocation",
+                  "functionName" : "keyExpression",
+                  "p_sourceInformation" : {
+                    "_type" : "SourceInformation",
+                    "endColumn" : 65,
+                    "endLine" : 11,
+                    "startColumn" : 58,
+                    "startLine" : 11
+                  },
+                  "parametersValues" : [ {
+                    "_type" : "AtomicValue",
+                    "genericType" : {
+                      "_type" : "UserDefinedGenericType",
+                      "type" : {
+                        "_type" : "Type_Pointer",
+                        "value" : "String"
+                      }
+                    },
+                    "p_sourceInformation" : {
+                      "_type" : "SourceInformation",
+                      "endColumn" : 65,
+                      "endLine" : 11,
+                      "startColumn" : 58,
+                      "startLine" : 11
+                    },
+                    "value" : "next"
+                  }, {
+                    "_type" : "VariableExpression",
+                    "name" : "~.~",
+                    "p_sourceInformation" : {
+                      "_type" : "SourceInformation",
+                      "endColumn" : 65,
+                      "endLine" : 11,
+                      "startColumn" : 63,
+                      "startLine" : 11
+                    }
+                  } ]
+                } ]
+              } ]
+            } ]
+          } ]
+        } ]
+      } ],
+      "functionName" : "testParentRef",
+      "name" : "testParentRef__Container_1_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 12,
+        "startColumn" : 1,
+        "startLine" : 9
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 45,
+            "endLine" : 9,
+            "startColumn" : 37,
+            "startLine" : 9
+          },
+          "value" : "Container"
+        }
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 1
+        },
+        "upperBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 1
+        }
+      }
+    }, {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "new",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 60,
+          "endLine" : 16,
+          "startColumn" : 3,
+          "startLine" : 16
+        },
+        "parametersValues" : [ {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Container"
+            }
+          },
+          "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
+            "lowerBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            },
+            "upperBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 60,
+            "endLine" : 16,
+            "startColumn" : 3,
+            "startLine" : 16
+          }
+        }, {
+          "_type" : "Collection",
+          "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
+            "lowerBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 3
+            },
+            "upperBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 3
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 60,
+            "endLine" : 16,
+            "startColumn" : 3,
+            "startLine" : 16
+          },
+          "values" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 25,
+              "endLine" : 16,
+              "startColumn" : 14,
+              "startLine" : 16
+            },
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 25,
+                "endLine" : 16,
+                "startColumn" : 14,
+                "startLine" : 16
+              },
+              "value" : "name"
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 25,
+                "endLine" : 16,
+                "startColumn" : 19,
+                "startLine" : 16
+              },
+              "value" : "outer"
+            } ]
+          }, {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 43,
+              "endLine" : 16,
+              "startColumn" : 28,
+              "startLine" : 16
+            },
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 43,
+                "endLine" : 16,
+                "startColumn" : 28,
+                "startLine" : 16
+              },
+              "value" : "items"
+            }, {
+              "_type" : "Collection",
+              "multiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
+                "lowerBound" : {
+                  "_type" : "MultiplicityValue",
+                  "value" : 2
+                },
+                "upperBound" : {
+                  "_type" : "MultiplicityValue",
+                  "value" : 2
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 43,
+                "endLine" : 16,
+                "startColumn" : 34,
+                "startLine" : 16
+              },
+              "values" : [ {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
+                    "_type" : "Type_Pointer",
+                    "value" : "String"
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 37,
+                  "endLine" : 16,
+                  "startColumn" : 35,
+                  "startLine" : 16
+                },
+                "value" : "a"
+              }, {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
+                    "_type" : "Type_Pointer",
+                    "value" : "String"
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 42,
+                  "endLine" : 16,
+                  "startColumn" : 40,
+                  "startLine" : 16
+                },
+                "value" : "b"
+              } ]
+            } ]
+          }, {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 59,
+              "endLine" : 16,
+              "startColumn" : 46,
+              "startLine" : 16
+            },
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 59,
+                "endLine" : 16,
+                "startColumn" : 46,
+                "startLine" : 16
+              },
+              "value" : "echoed"
+            }, {
+              "_type" : "DotApplication",
+              "functionName" : "items",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 59,
+                "endLine" : 16,
+                "startColumn" : 53,
+                "startLine" : 16
+              },
+              "parametersValues" : [ {
+                "_type" : "VariableExpression",
+                "name" : "~",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 59,
+                  "endLine" : 16,
+                  "startColumn" : 53,
+                  "startLine" : 16
+                }
+              } ]
+            } ]
+          } ]
+        } ]
+      } ],
+      "functionName" : "testParentDotProperty",
+      "name" : "testParentDotProperty__Container_1_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 17,
+        "startColumn" : 1,
+        "startLine" : 14
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 53,
+            "endLine" : 14,
+            "startColumn" : 45,
+            "startLine" : 14
+          },
+          "value" : "Container"
+        }
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 1
+        },
+        "upperBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 1
+        }
+      }
+    }, {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "new",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 71,
+          "endLine" : 21,
+          "startColumn" : 3,
+          "startLine" : 21
+        },
+        "parametersValues" : [ {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Container"
+            }
+          },
+          "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
+            "lowerBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            },
+            "upperBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 71,
+            "endLine" : 21,
+            "startColumn" : 3,
+            "startLine" : 21
+          }
+        }, {
+          "_type" : "Collection",
+          "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
+            "lowerBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 3
+            },
+            "upperBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 3
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 71,
+            "endLine" : 21,
+            "startColumn" : 3,
+            "startLine" : 21
+          },
+          "values" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 25,
+              "endLine" : 21,
+              "startColumn" : 14,
+              "startLine" : 21
+            },
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 25,
+                "endLine" : 21,
+                "startColumn" : 14,
+                "startLine" : 21
+              },
+              "value" : "name"
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 25,
+                "endLine" : 21,
+                "startColumn" : 19,
+                "startLine" : 21
+              },
+              "value" : "outer"
+            } ]
+          }, {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 43,
+              "endLine" : 21,
+              "startColumn" : 28,
+              "startLine" : 21
+            },
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 43,
+                "endLine" : 21,
+                "startColumn" : 28,
+                "startLine" : 21
+              },
+              "value" : "items"
+            }, {
+              "_type" : "Collection",
+              "multiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
+                "lowerBound" : {
+                  "_type" : "MultiplicityValue",
+                  "value" : 2
+                },
+                "upperBound" : {
+                  "_type" : "MultiplicityValue",
+                  "value" : 2
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 43,
+                "endLine" : 21,
+                "startColumn" : 34,
+                "startLine" : 21
+              },
+              "values" : [ {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
+                    "_type" : "Type_Pointer",
+                    "value" : "String"
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 37,
+                  "endLine" : 21,
+                  "startColumn" : 35,
+                  "startLine" : 21
+                },
+                "value" : "a"
+              }, {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
+                    "_type" : "Type_Pointer",
+                    "value" : "String"
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 42,
+                  "endLine" : 21,
+                  "startColumn" : 40,
+                  "startLine" : 21
+                },
+                "value" : "b"
+              } ]
+            } ]
+          }, {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 70,
+              "endLine" : 21,
+              "startColumn" : 46,
+              "startLine" : 21
+            },
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "String"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 70,
+                "endLine" : 21,
+                "startColumn" : 46,
+                "startLine" : 21
+              },
+              "value" : "echoed"
+            }, {
+              "_type" : "ArrowInvocation",
+              "functionName" : "map",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 70,
+                "endLine" : 21,
+                "startColumn" : 60,
+                "startLine" : 21
+              },
+              "parametersValues" : [ {
+                "_type" : "DotApplication",
+                "functionName" : "items",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 59,
+                  "endLine" : 21,
+                  "startColumn" : 53,
+                  "startLine" : 21
+                },
+                "parametersValues" : [ {
+                  "_type" : "VariableExpression",
+                  "name" : "~",
+                  "p_sourceInformation" : {
+                    "_type" : "SourceInformation",
+                    "endColumn" : 59,
+                    "endLine" : 21,
+                    "startColumn" : 53,
+                    "startLine" : 21
+                  }
+                } ]
+              }, {
+                "_type" : "AtomicValue",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 69,
+                  "endLine" : 21,
+                  "startColumn" : 66,
+                  "startLine" : 21
+                },
+                "value" : {
+                  "expressionSequence" : [ {
+                    "_type" : "VariableExpression",
+                    "name" : "s",
+                    "p_sourceInformation" : {
+                      "_type" : "SourceInformation",
+                      "endColumn" : 69,
+                      "endLine" : 21,
+                      "startColumn" : 68,
+                      "startLine" : 21
+                    }
+                  } ],
+                  "p_sourceInformation" : {
+                    "_type" : "SourceInformation",
+                    "endColumn" : 69,
+                    "endLine" : 21,
+                    "startColumn" : 66,
+                    "startLine" : 21
+                  },
+                  "parameters" : [ {
+                    "_type" : "VariableExpression",
+                    "name" : "s"
+                  } ]
+                }
+              } ]
+            } ]
+          } ]
+        } ]
+      } ],
+      "functionName" : "testParentDotPropertyArrow",
+      "name" : "testParentDotPropertyArrow__Container_1_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 22,
+        "startColumn" : 1,
+        "startLine" : 19
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 58,
+            "endLine" : 19,
+            "startColumn" : 50,
+            "startLine" : 19
+          },
+          "value" : "Container"
+        }
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 1
+        },
+        "upperBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 1
+        }
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "Container",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 30,
+        "startColumn" : 1,
+        "startLine" : 24
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 14,
+              "endLine" : 26,
+              "startColumn" : 9,
+              "startLine" : 26
+            },
+            "value" : "String"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "name",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 18,
+          "endLine" : 26,
+          "startColumn" : 3,
+          "startLine" : 26
+        }
+      }, {
+        "_type" : "Property",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 15,
+              "endLine" : 27,
+              "startColumn" : 10,
+              "startLine" : 27
+            },
+            "value" : "String"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 0
+          }
+        },
+        "name" : "items",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 19,
+          "endLine" : 27,
+          "startColumn" : 3,
+          "startLine" : 27
+        }
+      }, {
+        "_type" : "Property",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 16,
+              "endLine" : 28,
+              "startColumn" : 11,
+              "startLine" : 28
+            },
+            "value" : "String"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 0
+          }
+        },
+        "name" : "echoed",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 20,
+          "endLine" : 28,
+          "startColumn" : 3,
+          "startLine" : 28
+        }
+      }, {
+        "_type" : "Property",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 17,
+              "endLine" : 29,
+              "startColumn" : 9,
+              "startLine" : 29
+            },
+            "value" : "Container"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 0
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "next",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 24,
+          "endLine" : 29,
+          "startColumn" : 3,
+          "startLine" : 29
+        }
+      } ]
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

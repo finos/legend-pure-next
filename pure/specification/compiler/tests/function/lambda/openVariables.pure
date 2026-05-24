@@ -17,3 +17,9 @@ function test::t__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
     FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @5:18-5:22
       Variable x :#Integer##[1]#  ~@VariableExpression@  @5:18-5:19
       Variable z :#Integer##[1]#  ~@VariableExpression@  @5:21-5:22
+
+###ReverseIndex
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::t__Any_MANY_
+meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  test::t__Any_MANY_

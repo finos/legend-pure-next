@@ -1,0 +1,28 @@
+// `@T|m` inside a generic function `<T|m>` body, with `witness:T[m]` as
+// the inference source for T and m. The cast should dispatch to the
+// `cast_Any_MANY__…` variant (signature 3 — both T and m from the holder),
+// NOT `cast_Any_m__…` (signature 1 — m inferred from source) which would
+// silently discard the user's `m` constraint.
+//
+// This was broken until `_Multiplicity.subsumes` was fixed to reject the
+// `?` (UndefinedMultiplicity) vs `m` (MultiplicityParameter) match — they
+// are semantically distinct (user-omitted vs user-provided) and shouldn't
+// unify, which is what was causing the resolver to accept signature 1.
+
+###Pure
+function test::run<T|m>(witness:T[m], probe:Any[*]):T[m]
+{
+   $probe->cast(@T|m)
+}
+
+###CompiledGraph
+function test::run_T_m__Any_MANY__T_m_(witness:T~test::run_T_m__Any_MANY__T_m_[m], probe:@Any@[*]):T~test::run_T_m__Any_MANY__T_m_[m]  ~UserDefinedFunction<{T~test::run_T_m__Any_MANY__T_m_[m], @Any@[*]->T~test::run_T_m__Any_MANY__T_m_[m]}>
+  ArrowInvocation cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_ :#T~test::run_T_m__Any_MANY__T_m_##[m]#  ~@ArrowInvocation@  @15:10-15:21
+    typeParam T -> T~test::run_T_m__Any_MANY__T_m_
+    mulParam m -> [m]
+    Variable probe :#Any##[*]#  ~@VariableExpression@  @15:4-15:9
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<T~test::run_T_m__Any_MANY__T_m_|m>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<T~test::run_T_m__Any_MANY__T_m_|m>  @15:17-15:20
+
+###ReverseIndex
+meta::pure::functions::lang::cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_:
+  test::run_T_m__Any_MANY__T_m_

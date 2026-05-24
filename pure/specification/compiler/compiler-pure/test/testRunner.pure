@@ -34,6 +34,17 @@ import meta::pure::ui::progress::*;
 // and asserts it compiles correctly against the ###CompiledGraph or ###Error
 // section that documents the expected output.
 // ---------------------------------------------------------------------------
+
+// Mirror of {@code meta::pure::test::TestResult} for the compiled-graph runner.
+// {@code error} is {@code [0..1]} so successful runs don't carry a sentinel —
+// Pure's {@code pair} requires both members {@code [1]} which is why we use a
+// class instead.
+Class <<test.TestDependency>> meta::pure::compiler::test::CompiledGraphTestResult
+{
+    name : String[1];
+    error : meta::pure::functions::lang::Error[0..1];
+}
+
 function <<test.TestDependency>> meta::pure::compiler::test::runCompiledGraphTests(testDir:String[1]):String[1]
 {
     let files = directoryTree($testDir)
@@ -47,14 +58,31 @@ function <<test.TestDependency>> meta::pure::compiler::test::runCompiledGraphTes
     // so tests see e.g. `association/profile/profile_E_unknownProfile` instead of
     // an absolute filesystem path.
     let prefixLen = $testDir->length() + 1;
-    range(0, $total)->map(i |
+    // Wrap each test in tryEval so a single assertion failure doesn't abort
+    // the whole run — collect (name, errorOrEmpty) pairs and report at the
+    // end. Mirrors {@code runTests} in functionTestRunner.pure.
+    let results = range(0, $total)->map(i |
         let f = $files->at($i);
         let name = substring($f, $prefixLen, $f->length() - 5);
         tickProgress($i + 1, $total, $name);
-        meta::pure::compiler::test::assertCompiledGraph(readFile($f), $name);
+        let result = tryEval(| meta::pure::compiler::test::assertCompiledGraph(readFile($f), $name));
+        ^meta::pure::compiler::test::CompiledGraphTestResult(name = $name, error = $result.failure);
     );
 
     let elapsedMs = currentTimeMillis() - $start;
     finishProgress();
-    'OK: ' + $total->toString() + ' / ' + $total->toString() + ' tests passed in ' + $elapsedMs->toString() + ' ms';
+
+    let failures = $results->filter(r | $r.error->isNotEmpty());
+    let failed = $failures->size();
+    let passed = $total - $failed;
+    if($failed == 0,
+        | 'OK: ' + $total->toString() + ' / ' + $total->toString() + ' tests passed in ' + $elapsedMs->toString() + ' ms',
+        | $failures->map(r |
+              let err = $r.error->toOne();
+              println('  FAIL: ' + $r.name);
+              println('    ' + $err.message);
+              $err.stack->map(frame | println('      at ' + $frame));
+          );
+          'FAIL: ' + $passed->toString() + ' / ' + $total->toString() + ' tests passed (' + $failed->toString() + ' failed) in ' + $elapsedMs->toString() + ' ms';
+    );
 }

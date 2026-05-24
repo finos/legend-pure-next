@@ -44,3 +44,19 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
   DotApplication test::Box.value :#String##[1]#  ~@DotApplication@  @15:13-15:18
     DotApplication test::Wrapper.inner :#test::Box<@String@>##[1]#  ~@DotApplication@  @15:7-15:12
       Variable w :#test::Wrapper<test::Box<@String@>>##[1]#  ~@VariableExpression@  @15:5-15:6
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::use__Any_MANY_
+test::Box:
+  test::use__Any_MANY_
+test::Box.value:
+  test::use__Any_MANY_
+test::Wrapper:
+  test::use__Any_MANY_
+test::Wrapper.inner:
+  test::use__Any_MANY_

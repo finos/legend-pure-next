@@ -37,3 +37,19 @@ profile protocol::support::AProfile  ~@Profile@  @10:1-14:1
 class protocol::support::ClassA extends Any  ~Class<protocol::support::ClassA>  @16:1-18:1
 
 class protocol::support::ClassB extends Any  ~Class<protocol::support::ClassB>  @20:1-22:1
+
+###ReverseIndex
+protocol::support::AProfile:
+  protocol::MyAssociation
+protocol::support::AProfile.flag:
+  protocol::MyAssociation
+protocol::support::AProfile.newFlag:
+  protocol::MyAssociation
+protocol::support::AProfile.tag1:
+  protocol::MyAssociation
+protocol::support::AProfile.tag2:
+  protocol::MyAssociation
+protocol::support::ClassA:
+  protocol::MyAssociation.a
+protocol::support::ClassB:
+  protocol::MyAssociation.b

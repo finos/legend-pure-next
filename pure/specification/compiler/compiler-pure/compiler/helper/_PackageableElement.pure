@@ -24,13 +24,24 @@ function meta::pure::compiler::helper::packageableElement::fullPath(element:Pack
 {
     $element->match([
         // TempCompilerPointer carries its canonical path directly; package/name are unset.
-        ptr : TempCompilerPointer[1] | $ptr.path,
+        // PackagePointer for the root carries {@code path=''} (per toPackagePointer's
+        // parentless special case which keeps child-path composition clean). For display
+        // purposes the root's full path is '::', matching the live root Package's name.
+        ptr : TempCompilerPointer[1] | if($ptr.path == '', | '::', | $ptr.path),
         pe  : PackageableElement[1] |
             let pkg = $pe.package;
             let name = $pe.name->toOne();
             if($pkg->isEmpty(),
                 | $name,
-                | let pkgPath = $pkg->toOne()->packagePath();
+                | // Package may itself be a {@link PackagePointer} (compile-pure
+                  // wraps parent Package refs as pointers so children's stale
+                  // skeletons don't propagate). The pointer's {@code path}
+                  // field carries the parent's full path directly — use it.
+                  let p = $pkg->toOne();
+                  let pkgPath = if($p->instanceOf(TempCompilerPointer),
+                      | $p->cast(@TempCompilerPointer).path,
+                      | $p->packagePath()
+                  );
                   if($pkgPath == '',
                       | $name,
                       | $pkgPath + '::' + $name
@@ -41,12 +52,15 @@ function meta::pure::compiler::helper::packageableElement::fullPath(element:Pack
 
 function meta::pure::compiler::helper::packageableElement::packagePath(pkg:Package[1]):String[1]
 {
-    if($pkg.package->isEmpty() || $pkg.name->isEmpty(),
-        | '',
-        | let parentPath = $pkg.package->toOne()->packagePath();
-          if($parentPath == '',
-              | $pkg.name->toOne(),
-              | $parentPath + '::' + $pkg.name->toOne()
+    if($pkg->instanceOf(TempCompilerPointer),
+        | $pkg->cast(@TempCompilerPointer).path,
+        | if($pkg.package->isEmpty() || $pkg.name->isEmpty(),
+              | '',
+              | let parentPath = $pkg.package->toOne()->packagePath();
+                if($parentPath == '',
+                    | $pkg.name->toOne(),
+                    | $parentPath + '::' + $pkg.name->toOne()
+                );
           );
     );
 }

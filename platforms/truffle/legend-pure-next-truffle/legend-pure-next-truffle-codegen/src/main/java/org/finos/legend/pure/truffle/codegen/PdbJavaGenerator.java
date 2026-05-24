@@ -1093,14 +1093,28 @@ public class PdbJavaGenerator
         // pathOf — recursive ::-separated path of a PackageableElement,
         // inlined here so the generated writer is self-contained within codegen.
         // Mirrors the bootstrap _PackageableElement.path() / packagePath()
-        // pair: the *root anchor* is detected by `_package() == null`, not by
-        // matching its name against "Root". Bootstrap creates the root with
-        // name `"::"` (BootstrapModule), so a name-based check leaks `::::`
-        // into every path that walks through it.
-        // pathOf — recursive ::-separated path of a PackageableElement.
-        // Reads via readProp so it works for both typed XPDBHelper and PDO.
+        // pair: the *root anchor* is detected by `_package() == null`, not
+        // by matching a sentinel name. Bootstrap creates the root with name
+        // `"::"` (m3.ttl convention); compile-pure's synthetic root uses
+        // the same name. A name-based check would leak `::::` into every
+        // path that walks through it.
+        //
+        // Pointer short-circuit: a TempCompilerPointer carries its canonical
+        // path directly in `.path` and leaves the inherited `.name`/`.package`
+        // fields unset. Without this short-circuit, a Pure-compiler skeleton
+        // whose `.package` is a `PackagePointer` (pass-1 wrap that keeps parent
+        // refs identity-stable) would walk into the pointer, see null name/package,
+        // and collapse to a BARE element name (e.g. "IndexEntry" instead of
+        // "meta::pure::compiler::IndexEntry") — manifesting as `[PTR-FAIL]`
+        // logs at PDB load time. Mirrors bootstrap `_PackageableElement.path`.
         sb.append("    private static String pathOf(Object pe)\n    {\n");
         sb.append("        if (pe == null) { return null; }\n");
+        sb.append("        String _ptype = pureTypeOf(pe);\n");
+        sb.append("        if (_ptype != null && _ptype.startsWith(\"meta::pure::metamodel::pointer::\"))\n");
+        sb.append("        {\n");
+        sb.append("            Object _p = readProp(pe, \"path\");\n");
+        sb.append("            if (_p instanceof String _ps) { return _ps; }\n");
+        sb.append("        }\n");
         sb.append("        Object nameObj = readProp(pe, \"name\");\n");
         sb.append("        String name = nameObj instanceof String _ns ? _ns : null;\n");
         sb.append("        Object pkg = readProp(pe, \"package\");\n");
@@ -1110,6 +1124,12 @@ public class PdbJavaGenerator
         sb.append("    }\n\n");
         sb.append("    private static String pathOfPkg(Object pkg)\n    {\n");
         sb.append("        if (pkg == null) { return \"\"; }\n");
+        sb.append("        String _ptype = pureTypeOf(pkg);\n");
+        sb.append("        if (_ptype != null && _ptype.startsWith(\"meta::pure::metamodel::pointer::\"))\n");
+        sb.append("        {\n");
+        sb.append("            Object _p = readProp(pkg, \"path\");\n");
+        sb.append("            if (_p instanceof String _ps) { return _ps; }\n");
+        sb.append("        }\n");
         sb.append("        Object grandparent = readProp(pkg, \"package\");\n");
         sb.append("        Object nameObj = readProp(pkg, \"name\");\n");
         sb.append("        String name = nameObj instanceof String _ns ? _ns : null;\n");
@@ -2218,7 +2238,7 @@ public class PdbJavaGenerator
         {
             for (int idx = 0; idx < members.size(); idx++)
             {
-                generateUnionCase(sb, idx + 1, members.get(idx), camelName, true);
+                generateUnionCase(sb, idx + 1, members.get(idx), camelName, true, unionName);
             }
         }
         sb.append("                default: break;\n");
@@ -2241,7 +2261,7 @@ public class PdbJavaGenerator
         {
             for (int idx = 0; idx < members.size(); idx++)
             {
-                generateUnionCase(sb, idx + 1, members.get(idx), camelName, false);
+                generateUnionCase(sb, idx + 1, members.get(idx), camelName, false, unionName);
             }
         }
         sb.append("            default: __raw = null; break;\n");
@@ -2249,7 +2269,7 @@ public class PdbJavaGenerator
     }
 
     private void generateUnionCase(StringBuilder sb, int discriminator, String defName,
-                                   String camelName, boolean isVector)
+                                   String camelName, boolean isVector, String unionName)
     {
         String target = isVector ? "arr[i]" : "__raw";
         if (FbsSchema.isSpecialRef(defName))
@@ -2303,7 +2323,27 @@ public class PdbJavaGenerator
         }
         else if ("StringValueDef".equals(defName))
         {
-            sb.append("if (d != null) ").append(target).append(" = d.val(); ");
+            if (ATOMIC_VALUE_CONTENT_UNION.equals(unionName))
+            {
+                // AtomicValue.value can hold an Enum instance. The bootstrap
+                // writer (RdfFbsJavaGenerator emit for AtomicValue.value)
+                // flattens such values into a StringValueDef containing the
+                // enum-value path "OwnerEnum.ValueName" — there's no dedicated
+                // EnumValueDef union member, and Enum PDOs are too small to
+                // pay the table overhead. Mirror Java-direct's
+                // AtomicValueFlatBufferWrapper: when the AtomicValue's
+                // genericType.rawType is an Enumeration, rebuild a
+                // PureDynamicObject for the enum value with `name` set so
+                // downstream Pure code (enumValues(), .name->toLower(),
+                // match dispatch) sees a proper Enum PDO instead of a raw
+                // String. Plain-string AtomicValues fall through untouched.
+                sb.append("if (d != null) ").append(target)
+                  .append(" = org.finos.legend.pure.truffle.runtime.dynobj.AtomicValueEnumReconstructor.reconstruct(d.val(), readProperty(\"genericType\"), resolver); ");
+            }
+            else
+            {
+                sb.append("if (d != null) ").append(target).append(" = d.val(); ");
+            }
         }
         else if ("DecimalValueDef".equals(defName))
         {

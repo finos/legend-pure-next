@@ -43,3 +43,17 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
           AtomicValue  'test' :@String@[1]  ~@AtomicValue@  @14:59-14:64
   DotApplication test::Container.items :#T~test::Container##[m]#  ~@DotApplication@  @15:8-15:13
     Variable sl :#test::StringList##[1]#  ~@VariableExpression@  @15:5-15:7
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::use__Any_MANY_
+test::Container:
+  test::StringList
+test::Container.items:
+  test::use__Any_MANY_
+test::StringList:
+  test::use__Any_MANY_

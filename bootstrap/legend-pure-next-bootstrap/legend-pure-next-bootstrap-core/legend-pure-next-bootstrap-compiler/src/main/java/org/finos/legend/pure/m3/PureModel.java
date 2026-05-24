@@ -222,6 +222,7 @@ public class PureModel
             int candidateTotal = 0;
             MutableMap<String, ElementStatistics> allElementStats = Maps.mutable.empty();
             MutableMap<String, Integer> allRollbackSites = Maps.mutable.empty();
+            java.util.LinkedHashMap<String, java.util.Set<String>> aggregatedRefIndex = new java.util.LinkedHashMap<>();
 
             // Compile each module in dependency order
             for (Module module : modules)
@@ -246,6 +247,15 @@ public class PureModel
                     allElementStats.putAll(s.elementStatistics());
                     s.rollbackSites().forEachKeyValue((k, v) -> allRollbackSites.merge(k, v, Integer::sum));
                 }
+                // Merge each module's reverse index. Same target can appear
+                // in multiple modules' indexes (each module sees its own
+                // callers); union the caller sets.
+                if (result.referencedBy() != null)
+                {
+                    result.referencedBy().forEach((target, callers) ->
+                            aggregatedRefIndex.computeIfAbsent(target, k -> new java.util.LinkedHashSet<>())
+                                    .addAll(callers));
+                }
             }
 
             // Set classifierGenericType on Root package (and any in-memory packages)
@@ -257,7 +267,7 @@ public class PureModel
                     totalDuration, parsingTotal, firstPassTotal, secondPassTotal, thirdPassTotal,
                     elementTotal, sourceFileTotal, memoryDeltaTotal, rollbackTotal, candidateTotal,
                     allElementStats, allRollbackSites);
-            return new CompilationResult(List.of(), aggregated);
+            return new CompilationResult(List.of(), aggregated, aggregatedRefIndex);
         }
         finally
         {
@@ -315,9 +325,10 @@ public class PureModel
     {
         if (pkg instanceof PackageImpl pi && pi._classifierGenericType() == null)
         {
-            // Anchor at canonical GenericType_Package (UDPGT) so the chain matches
-            // Pure's `^Package(...)` (platform fix in MetaNatives.new substitutes canonical).
-            Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_Package");
+            // Anchor at canonical GenericType_<fullPath> (UDPGT) so the chain
+            // matches Pure's `^Package(...)` (platform fix in MetaNatives.new
+            // substitutes canonical). Full path encoded with `::` -> `_`.
+            Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_Package");
             if (canonical instanceof meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT)
             {
                 pi._classifierGenericType(canonicalGT);

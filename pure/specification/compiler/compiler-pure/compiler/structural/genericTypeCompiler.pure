@@ -94,11 +94,13 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                             value = buildUserDefinedGenericType(Any),
                             context = ^$context(errors += $errorMsg)
                         );,
-                      | let resolvedOpt = $context->resolveElement($p.value);
-                        let resolvedOptWithPackage = if($resolvedOpt->isEmpty(),
-                            | $context->resolveElement($packagePath + '::' + $p.value),
-                            | $resolvedOpt
+                      | let resolvedOptR = $context->resolveElementR($p.value);
+                        let resolvedOptWithPackageR = if($resolvedOptR.value->isEmpty(),
+                            | $context->resolveElementR($packagePath + '::' + $p.value),
+                            | $resolvedOptR
                         );
+                        let resolvedOptWithPackage = $resolvedOptWithPackageR.value;
+                        let recordedCtx = $resolvedOptWithPackageR.context;
                         if($resolvedOptWithPackage->isEmpty(),
                             | let errorMsg = 'The type \'' + $p.value + '\' can\'t be found' + $elemCtx + $ownerCtx + $siCtx;
                               ^CompilerResult<GenericType>(
@@ -113,10 +115,13 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                               // Use the canonical-anchor variant so built-in types like
                               // String/Any/Integer keep their `GenericType_<Name>` UDPGT-PE
                               // identity (the test-output `@String@` marker).
+                              // recordedCtx (from resolveElementR above) carries the
+                              // reverse-index reference for the resolved type.
+                              let resolvedElem = $resolvedOptWithPackage->toOne();
                               ^CompilerResult<GenericType>(
-                                  value = buildCanonicalOrUserDefinedGenericType($resolvedOptWithPackage->toOne()->cast(@Type)->meta::pure::compiler::helper::pointer::toTypePointer(), $context),
-                                  context = $context
-                              )
+                                  value = buildCanonicalOrUserDefinedGenericType($resolvedElem->cast(@Type)->toTypePointer(), $recordedCtx),
+                                  context = $recordedCtx
+                              );
                         );
                   );
             );,

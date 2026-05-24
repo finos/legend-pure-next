@@ -11,3 +11,5 @@ Class meta::pure::test::classWithMulParams<T|m>
 class meta::pure::test::classWithTypeParams extends Any  ~Class<meta::pure::test::classWithTypeParams<T~meta::pure::test::classWithTypeParams, U~meta::pure::test::classWithTypeParams>>  @2:1-4:1
 
 class meta::pure::test::classWithMulParams extends Any  ~Class<meta::pure::test::classWithMulParams<T~meta::pure::test::classWithMulParams|m~meta::pure::test::classWithMulParams>>  @6:1-8:1
+
+###ReverseIndex

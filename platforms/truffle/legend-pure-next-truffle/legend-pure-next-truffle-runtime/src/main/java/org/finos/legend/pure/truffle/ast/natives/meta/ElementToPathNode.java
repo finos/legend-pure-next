@@ -66,29 +66,13 @@ public final class ElementToPathNode extends PureNode
         Object element = values[0];
         String separator = values.length > 1 ? StringHelper.asString(values[1], "elementToPath") : "::";
 
-        // TempCompilerPointer carries its canonical path directly; don't walk
-        // the package chain (its package/name fields are unset).
-        if (element != null && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(
-                element, "meta::pure::metamodel::pointer::TempCompilerPointer", resolver))
-        {
-            Object pathObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(
-                    element, org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("path"));
-            String path = pathObj != null ? pathObj.toString() : "";
-            if (path.isEmpty())
-            {
-                return "";
-            }
-            return "::".equals(separator) ? path : path.replace("::", separator);
-        }
-
-        // Try _PackageableElement.path for any Pure metamodel object — works
-        // for both legacy XPDBHelper and PureDynamicObject. The path helper walks
-        // the package chain via PureObj.read; the typed `instanceof
-        // PackageableElement` guard wouldn't match a PDO post-loader-flip.
+        // path() handles both pointers (short-circuits to the .path slot) and
+        // regular PackageableElements (walks the package chain). Single entry
+        // point keeps this native a thin separator-application wrapper.
         if (element != null && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(element) != null)
         {
             String path = _PackageableElement.path(element, resolver);
-            if (path == null || path.isEmpty() || "Root".equals(path) || "::".equals(path))
+            if (path == null || path.isEmpty() || "::".equals(path))
             {
                 return "";
             }

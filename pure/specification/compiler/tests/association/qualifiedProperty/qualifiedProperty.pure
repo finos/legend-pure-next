@@ -25,3 +25,12 @@ association test::Employment  ~@Association@  @10:1-15:1
   qualifiedProperty activeEmployees(date:@String@[1]) :test::Person[*]
     DotApplication test::Employment.employees :#test::Person##[*]#  ~@DotApplication@  @14:41-14:50
       Variable this :#test::Firm##[1]#  ~@VariableExpression@  @14:36-14:40
+
+###ReverseIndex
+test::Employment.employees:
+  test::Employment.activeEmployees
+test::Firm:
+  test::Employment.employer
+test::Person:
+  test::Employment.activeEmployees
+  test::Employment.employees

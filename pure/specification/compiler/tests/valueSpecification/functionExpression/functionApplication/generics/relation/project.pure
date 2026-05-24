@@ -74,3 +74,23 @@ function f__Relation_1_():Relation<(legal:@String@[1])>[1]  ~UserDefinedFunction
 native function project_Z_MANY__FuncColSpec_1__Relation_1_(cl:Z~project_Z_MANY__FuncColSpec_1__Relation_1_[*], x:FuncColSpec<{Z~project_Z_MANY__FuncColSpec_1__Relation_1_[1]->@Any@[*]}, T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]):Relation<T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]  ~NativeFunction<{Z~project_Z_MANY__FuncColSpec_1__Relation_1_[*], FuncColSpec<{Z~project_Z_MANY__FuncColSpec_1__Relation_1_[1]->@Any@[*]}, T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]->Relation<T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]}>
 
 native function project_Z_MANY__FuncColSpecArray_1__Relation_1_(cl:Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[*], x:FuncColSpecArray<{Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[1]->@Any@[*]}, T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]):Relation<T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]  ~NativeFunction<{Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[*], FuncColSpecArray<{Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[1]->@Any@[*]}, T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]->Relation<T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]}>
+
+###ReverseIndex
+Firm:
+  f__Relation_1_
+Firm.legalName:
+  f__Relation_1_
+Firm.numeric:
+  f__Relation_1_
+meta::pure::functions::collection::getAll_Class_1__T_MANY_:
+  f__Relation_1_
+meta::pure::functions::relation::funcColSpecArray_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_:
+  f__Relation_1_
+meta::pure::functions::relation::funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_:
+  f__Relation_1_
+project_Z_MANY__FuncColSpecArray_1__Relation_1_:
+  f__Relation_1_
+project_Z_MANY__FuncColSpec_1__Relation_1_:
+  f__Relation_1_
+x::Numeric:
+  Firm.numeric

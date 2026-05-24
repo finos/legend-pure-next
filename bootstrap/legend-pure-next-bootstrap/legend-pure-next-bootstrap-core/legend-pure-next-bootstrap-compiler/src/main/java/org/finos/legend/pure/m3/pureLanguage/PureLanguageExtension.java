@@ -97,6 +97,12 @@ public class PureLanguageExtension implements LanguageExtension
         return serialization.archiveSections(module);
     }
 
+    @Override
+    public List<PDBArchiveSection> archiveSections(Module module, java.util.Set<String> keepPaths)
+    {
+        return serialization.archiveSections(module, keepPaths);
+    }
+
     /**
      * Build archive sections (function index) directly from a list of
      * function-index entries. Used by builders that don't go through a
@@ -131,9 +137,9 @@ public class PureLanguageExtension implements LanguageExtension
     }
 
     @Override
-    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model)
+    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context)
     {
-        return pureLanguageCompilerExtension.firstPass(grammar, model);
+        return pureLanguageCompilerExtension.firstPass(grammar, model, context);
     }
 
     @Override

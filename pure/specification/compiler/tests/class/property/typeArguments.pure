@@ -17,3 +17,7 @@ class pack::Wrapper extends Any  ~Class<pack::Wrapper<T~pack::Wrapper>>  @4:1-7:
 
 class pack::MyClass extends Any  ~Class<pack::MyClass>  @9:1-12:1
   property items :pack::Wrapper<@String@>[*]  ~Property<pack::MyClass, pack::Wrapper<@String@>|*>
+
+###ReverseIndex
+pack::Wrapper:
+  pack::MyClass.items

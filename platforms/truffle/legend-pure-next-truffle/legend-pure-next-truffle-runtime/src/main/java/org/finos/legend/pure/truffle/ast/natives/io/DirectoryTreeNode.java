@@ -69,6 +69,17 @@ public final class DirectoryTreeNode extends PureNode
         {
             throw new RuntimeException("Error walking directory: " + path, e);
         }
+        // -Dpure.dir.shuffle.seed=<long|random> shuffles the walk order to
+        // reproduce ordering-dependent compile-pure bugs (CI on Linux ext4
+        // returns a different Files.walk order than macOS APFS). Seed is
+        // echoed to stderr so a failing run can be replayed verbatim.
+        String shuffleSeed = System.getProperty("pure.dir.shuffle.seed");
+        if (shuffleSeed != null)
+        {
+            long seed = "random".equals(shuffleSeed) ? System.nanoTime() : Long.parseLong(shuffleSeed);
+            System.err.println("[DirectoryTreeNode] shuffling " + paths.size() + " paths with seed=" + seed + " for " + path);
+            java.util.Collections.shuffle(paths, new java.util.Random(seed));
+        }
         if (paths.isEmpty())
         {
             return PureSequence.EMPTY;

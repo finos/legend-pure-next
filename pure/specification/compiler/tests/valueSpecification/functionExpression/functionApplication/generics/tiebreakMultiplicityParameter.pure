@@ -44,3 +44,7 @@ function x::testF__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}
     Collection :#String#[2]  ~@Collection@  @18:23-18:31
       AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @18:24-18:26
       AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @18:28-18:30
+
+###ReverseIndex
+x::myFunc_String_m__String_m__String_1_:
+  x::testF__String_1_

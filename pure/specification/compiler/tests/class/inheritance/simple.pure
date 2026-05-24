@@ -16,3 +16,7 @@ class pack::Animal extends Any  ~Class<pack::Animal>  @3:1-6:1
 
 class pack::Dog extends pack::Animal  ~Class<pack::Dog>  @8:1-11:1
   property breed :@String@[1]  ~Property<pack::Dog, @String@|1>
+
+###ReverseIndex
+pack::Animal:
+  pack::Dog

@@ -1,0 +1,103 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::functions::lang::*;
+import meta::pure::functions::string::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+
+// Mirrors Java LeanReferencesValidator: classify each (target, caller) pair in
+// the reverse reference index and flag any non-test caller that references a
+// test-only target. The test profile lives at meta::pure::profiles::test;
+// any stereotype on it (Test, TestDependency, BeforePackage, AfterPackage,
+// ToFix) marks an element as test-only. A subset of meta::pure::test::pct::PCT
+// stereotypes (test, adapter) are also test-only.
+function meta::pure::compiler::isTestElement(element:PackageableElement[0..1]):Boolean[1]
+{
+    if($element->isEmpty(),
+        | false,
+        | $element->toOne()->match([
+            ews:ElementWithStereotypes[1] |
+                $ews.stereotypes->exists(s | $s->isTestStereotype()),
+            a:Any[1] | false
+        ])
+    );
+}
+
+function meta::pure::compiler::isTestStereotype(s:Stereotype[1]):Boolean[1]
+{
+    if($s.profile->isEmpty(),
+        | false,
+        | let profilePath = $s.profile->toOne()->fullPath();
+          let profileMatch = $profilePath == 'meta::pure::profiles::test';
+          if($profileMatch,
+              | true,
+              | $profilePath == 'meta::pure::test::pct::PCT'
+                  && $s.value->isNotEmpty()
+                  && ($s.value->toOne() == 'test' || $s.value->toOne() == 'adapter')
+          );
+    );
+}
+
+// Strip the sub-element suffix (after the first '.') and look up the parent
+// element. Sub-element paths like {@code Foo.bar} or {@code MyEnum.VAL} have
+// at most one dot (between the parent element path and the sub-element name).
+// Their parent carries the stereotype classification.
+function meta::pure::compiler::resolveElementWithSubPath(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
+{
+    let parts = $path->split('.');
+    let parentPath = $parts->at(0);
+    $context->resolveElement($parentPath);
+}
+
+// Run the lean-references validator over the current compilation context and
+// return a list of formatted error messages. Each violation is reported once
+// per (caller, target) pair; the source-info attribution uses the caller
+// element's sourceInformation (function/class definition line).
+function meta::pure::compiler::validateLeanReferences(context:CompilerContext[1]):String[*]
+{
+    // Flatten the reverse index into (caller, target) pairs first, then sort
+    // by (caller, target) so output is deterministic across Java/Pure
+    // compilers regardless of recording order.
+    let pairs = $context.referencedBy->keyValues()->fold({entry, acc |
+        let targetPath = $entry.first;
+        $entry.second.values->fold({callerPath, innerAcc |
+            $innerAcc->concatenate(pair($callerPath, $targetPath));
+        }, $acc);
+    }, []->cast(@Pair<String, String>));
+    let sortedPairs = $pairs->sort({a, b |
+        let byCaller = if($a.first < $b.first, | -1, | if($a.first > $b.first, | 1, | 0));
+        if($byCaller != 0,
+            | $byCaller,
+            | if($a.second < $b.second, | -1, | if($a.second > $b.second, | 1, | 0))
+        );
+    });
+    $sortedPairs->fold({p, acc |
+        let callerPath = $p.first;
+        let targetPath = $p.second;
+        let targetElement = $context->resolveElementWithSubPath($targetPath);
+        if(!$targetElement->isTestElement(),
+            | $acc,
+            | let callerElement = $context->resolveElementWithSubPath($callerPath);
+              if($callerElement->isEmpty() || $callerElement->isTestElement(),
+                  | $acc,
+                  | let siCtx = formatMetamodelSourceInfo($callerElement->toOne().sourceInformation, $context);
+                    $acc->concatenate('Non-test element \'' + $callerPath + '\' references test-only element \'' + $targetPath + '\'' + $siCtx);
+              );
+        );
+    }, []->cast(@String));
+}

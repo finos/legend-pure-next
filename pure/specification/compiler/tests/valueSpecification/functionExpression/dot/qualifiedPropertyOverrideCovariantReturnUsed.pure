@@ -36,3 +36,17 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
     DotApplication test::Child.info() :#Integer##[1]#  ~@DotApplication@  @15:5-15:11
       Variable c :#test::Child##[1]#  ~@VariableExpression@  @15:3-15:4
     AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @15:15-15:15
+
+###ReverseIndex
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_:
+  test::use__Any_MANY_
+meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  test::use__Any_MANY_
+test::Base:
+  test::Child
+test::Child:
+  test::use__Any_MANY_
+test::Child.info:
+  test::use__Any_MANY_

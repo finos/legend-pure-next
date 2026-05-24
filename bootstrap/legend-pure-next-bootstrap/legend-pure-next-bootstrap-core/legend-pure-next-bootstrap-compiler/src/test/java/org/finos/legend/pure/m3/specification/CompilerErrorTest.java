@@ -18,6 +18,7 @@ import meta.pure.protocol.PureFile;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
+import org.finos.legend.pure.m3.extensions.testfile.TestFileLanguageExtension;
 import org.finos.legend.pure.m3.extensions.error.Error;
 import org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension;
 import org.finos.legend.pure.m3.module.CompilationError;
@@ -116,6 +117,8 @@ public class CompilerErrorTest
         return tests;
     }
 
+    private static final SpecTestRuntime RUNTIME = new SpecTestRuntime();
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("discoverErrorTests")
     public void testCompilerError(String testName, String resourcePath) throws Exception
@@ -123,20 +126,12 @@ public class CompilerErrorTest
         ClassLoader cl = getClass().getClassLoader();
         String content = loadResource(cl, resourcePath);
 
-        // Parse for assertion extraction (with Error + CompilerStats section support).
-        // CompilerStats may appear alongside Error in spec tests now that
-        // ###CompilerStats is part of the canonical test format.
-        ErrorLanguageExtension errExt = new ErrorLanguageExtension();
-        CompilerStatsLanguageExtension csExt = new CompilerStatsLanguageExtension();
-        PureLanguageExtension pureExt = new PureLanguageExtension();
-
-        PureParser parser = PureParser.builder().withExtensions(Lists.mutable.with(errExt, csExt, pureExt)).build();
-        PureFile pureFile = parser.parse(testName, content);
+        CompiledSpec spec = RUNTIME.compileSpec(content, testName);
 
         // Extract expected errors from Error elements.
         // Each error block is separated by a blank line.
         // Multi-line errors (e.g. with suggestion lines) are preserved.
-        String rawExpected = pureFile._sections().flatCollect(s -> s._elements())
+        String rawExpected = spec.primary()._sections().flatCollect(s -> s._elements())
                 .selectInstancesOf(Error.class)
                 .collect(Error::_value)
                 .getFirst();
@@ -169,20 +164,10 @@ public class CompilerErrorTest
         Assertions.assertFalse(expectedErrors.isEmpty(),
                 "###Error section must contain at least one error line: " + testName);
 
-        // Compile (LocalModule parses internally, errExt provides both grammar + compiler)
-        PDBModule module =
-                new PDBModule(BootstrapModule.locateCorePdb(),
-                        PDBModule.Mode.COMPILATION);
-
-        CompilationResult result = PureModel.withModules(
-                Lists.mutable.with(new LocalModule("test", "*", Lists.mutable.with(module.getName()),
-                        Lists.mutable.with(new PureContent(content, testName))), module))
-                .withExtensions(Lists.mutable.with(errExt, csExt, pureExt)).build().compile();
-
-        Assertions.assertFalse(result.errors().isEmpty(),
+        Assertions.assertFalse(spec.result().errors().isEmpty(),
                 "Expected compilation errors for: " + testName);
 
-        List<String> actualErrors = result.errors().stream()
+        List<String> actualErrors = spec.result().errors().stream()
                 .map(CompilationError::message)
                 .toList();
 

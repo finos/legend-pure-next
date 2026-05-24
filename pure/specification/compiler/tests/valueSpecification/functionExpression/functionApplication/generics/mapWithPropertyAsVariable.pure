@@ -73,3 +73,23 @@ function test::testMapWithPropertyAsVariable__Boolean_1_():@Boolean@[1]  ~UserDe
       mulParam m -> #[2]#
       Variable vals :#test::MPV_Person##[2]#  ~@VariableExpression@  @17:29-17:33
       Variable property :#Property<#Nil#, #Any#>##[1]#  ~@VariableExpression@  @17:40-17:48
+
+###ReverseIndex
+meta::pure::functions::asserts::assertEquals_Any_MANY__Any_MANY__Boolean_1_:
+  test::testMapWithPropertyAsVariable__Boolean_1_
+meta::pure::functions::boolean::equal_Any_MANY__Any_MANY__Boolean_1_:
+  test::testMapWithPropertyAsVariable__Boolean_1_
+meta::pure::functions::collection::filter_T_MANY__Function_1__T_MANY_:
+  test::testMapWithPropertyAsVariable__Boolean_1_
+meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::testMapWithPropertyAsVariable__Boolean_1_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::testMapWithPropertyAsVariable__Boolean_1_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::testMapWithPropertyAsVariable__Boolean_1_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::testMapWithPropertyAsVariable__Boolean_1_
+meta::pure::functions::lang::toOne_T_MANY__T_1_:
+  test::testMapWithPropertyAsVariable__Boolean_1_
+test::MPV_Person:
+  test::testMapWithPropertyAsVariable__Boolean_1_

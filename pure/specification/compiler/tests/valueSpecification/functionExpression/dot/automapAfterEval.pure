@@ -14,8 +14,51 @@ function test::testTypeParamResolution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z
     $f->eval(|^TPR_Person(firstName='A', lastName='B')->head()).lastName;
 }
 
-###CompilerStats
-inferenceRollbacks: 2
-candidateEvaluations: 9
-rollbackSites:
-  MULTI_CANDIDATE_PRE_RESOLVE = 1
+###CompiledGraph
+class test::TPR_Person extends Any  ~Class<test::TPR_Person>  @4:1-8:1
+  property firstName :@String@[1]  ~Property<test::TPR_Person, @String@|1>
+  property lastName :@String@[1]  ~Property<test::TPR_Person, @String@|1>
+
+function test::testTypeParamResolution_Function_1__Any_MANY_(f:Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]):@Any@[*]  ~UserDefinedFunction<{Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->@Any@[*]}>
+  FunctionInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@FunctionInvocation@  @14:64-14:72
+    typeParam T -> #test::TPR_Person#
+    typeParam V -> #String#
+    mulParam m -> #[*]#
+    ArrowInvocation eval_Function_1__T_n__V_m_ :#test::TPR_Person##[*]#  ~@ArrowInvocation@  @14:7-14:63
+      typeParam T -> #Function<#{->#test::TPR_Person##[*]#}#>#
+      typeParam V -> #test::TPR_Person#
+      mulParam m -> #[*]#
+      mulParam n -> #[1]#
+      Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>##[1]#  ~@VariableExpression@  @14:5-14:6
+      Lambda :#LambdaFunction<#{->#test::TPR_Person##[0..1]#}#>#[1]  ~@AtomicValue@  @14:14-14:62
+        ArrowInvocation head_T_MANY__T_$0_1$_ :#test::TPR_Person##[0..1]#  ~@ArrowInvocation@  @14:55-14:62
+          typeParam T -> #test::TPR_Person#
+          FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  ~@FunctionInvocation@  @14:15-14:54
+            typeParam T -> test::TPR_Person
+            TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>  @14:15-14:54
+            Collection :#KeyExpression#[2]  ~@Collection@  @14:15-14:54
+              FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @14:27-14:39
+                AtomicValue  'firstName' :@String@[1]  ~@AtomicValue@  @14:27-14:39
+                AtomicValue  'A' :@String@[1]  ~@AtomicValue@  @14:37-14:39
+              FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @14:42-14:53
+                AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @14:42-14:53
+                AtomicValue  'B' :@String@[1]  ~@AtomicValue@  @14:51-14:53
+    Lambda(v_automap:#test::TPR_Person#[1]) :#LambdaFunction<#{#test::TPR_Person#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
+      DotApplication test::TPR_Person.lastName :#String##[1]#  ~@DotApplication@  @14:64-14:72
+        Variable v_automap :#test::TPR_Person##[1]#  ~@VariableExpression@
+
+###ReverseIndex
+meta::pure::functions::collection::head_T_MANY__T_$0_1$_:
+  test::testTypeParamResolution_Function_1__Any_MANY_
+meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+  test::testTypeParamResolution_Function_1__Any_MANY_
+meta::pure::functions::lang::eval_Function_1__T_n__V_m_:
+  test::testTypeParamResolution_Function_1__Any_MANY_
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::testTypeParamResolution_Function_1__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::testTypeParamResolution_Function_1__Any_MANY_
+test::TPR_Person:
+  test::testTypeParamResolution_Function_1__Any_MANY_
+test::TPR_Person.lastName:
+  test::testTypeParamResolution_Function_1__Any_MANY_

@@ -40,3 +40,17 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
           AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @14:51-14:53
   DotApplication test::Box.value :#T~test::Box##[1]#  ~@DotApplication@  @15:7-15:12
     Variable b :#test::StringBox##[1]#  ~@VariableExpression@  @15:5-15:6
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::use__Any_MANY_
+test::Box:
+  test::StringBox
+test::Box.value:
+  test::use__Any_MANY_
+test::StringBox:
+  test::use__Any_MANY_

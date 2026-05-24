@@ -16,6 +16,7 @@ import meta::pure::metamodel::valuespecification::*;
 import meta::pure::metamodel::type::generics::*;
 import meta::pure::metamodel::relation::*;
 import meta::pure::metamodel::function::*;
+import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
@@ -39,23 +40,257 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     debug($context, | 'resolveFunctionExpression: ' + $fi.functionName->toOne() + ' (' + $fi->type()->toOne()->elementToPath() + ')');
     let deepCtx = $context->debugSpaceInc();
     let checkpoint = $context.errors->size();
-    let result = match($fi, [
+    // Auto-map rewrite for collection-receiver copy: `^expr(keys)` where expr's
+    // multiplicity is not [1] is rewritten to `expr->map(_automap | ^$_automap(keys))`.
+    // The native `copy(T[1], KeyExpression[*])` signature requires a single-cardinality
+    // receiver, so without this rewrite the function resolver emits
+    // "No matching function 'copy' found for argument types (T[0..1], ...)".
+    let autoMapResult = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::maybeRewriteCopyForCollection($fi, $scope, $deepCtx);
+    if($autoMapResult->isNotEmpty(),
+        | $autoMapResult->toOne(),
+        | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::resolveFunctionExpressionStandard($fi, $scope, $context, $checkpoint, $deepCtx)
+    );
+}
+
+// Standard resolution path — extracted so the auto-map rewrite can short-circuit
+// without duplicating the rest of the pipeline. Same behavior as inline-prior.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::resolveFunctionExpressionStandard(fi:FunctionExpression[1], scope:VariableExpression[*], context:CompilerContext[1], checkpoint:Integer[1], deepCtx:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+{
+    // Topo-sort `new`/`copy` key expressions so a producer is built before any
+    // `~.foo` reader. Detects circular dependencies and emits a compile error.
+    let reorderResult = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::reorderKeyExpressionsForParentReferences($fi, $deepCtx);
+    let reorderedFi = $reorderResult.first;
+    let postReorderCtx = $reorderResult.second;
+    // Parent-reference (`~`) typing: when resolving `^X(...)` or `^$x(...)`,
+    // push the construction's GenericType so any `~` VariableExpression that
+    // appears inside the key expressions resolves against the right enclosing
+    // type. The push is into the CompilerContext (immutable, threaded). Skipped
+    // when the type can't be extracted yet — the fixpoint resolver will catch
+    // it on a later pass.
+    let ctorGT = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractConstructionType($reorderedFi, $scope, $postReorderCtx);
+    let pushedCtx = if($ctorGT->isNotEmpty(),
+        | ^$postReorderCtx(constructionTypeStack = $postReorderCtx.constructionTypeStack->concatenate($ctorGT->toOne())),
+        | $postReorderCtx
+    );
+    let result = match($reorderedFi, [
         dot:DotApplication[1] |
             if($dot.parametersValues->isNotEmpty(),
-                | resolveDotApplication($dot, $scope, $deepCtx),
-                | resolveFunctionApplication($dot->cast(@FunctionInvocation), $scope, $deepCtx)
+                | resolveDotApplication($dot, $scope, $pushedCtx),
+                | resolveFunctionApplication($dot->cast(@FunctionInvocation), $scope, $pushedCtx)
             );,
         inv:FunctionApplication[1] |
-            resolveFunctionApplication($inv, $scope, $deepCtx)
+            resolveFunctionApplication($inv, $scope, $pushedCtx)
     ]);
-    // Finalize all FunctionExpressions (mirrors Java FunctionExpressionResolver.finalizeFunctionExpression)
-    if($result.value->isNotEmpty(),
-        | match($result.value->toOne(), [
-              fe:FunctionExpression[1] | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($fe, $checkpoint, $result.context),
-              a:Any[1] | $result
-          ]),
+    // Pop the construction type back off the threaded context before finalising.
+    // The pushed/popped scope only matters for the inner key-expression walk.
+    let poppedCtx = if($ctorGT->isNotEmpty(),
+        | let resultCtx = $result.context;
+          let stackSize = $resultCtx.constructionTypeStack->size();
+          let truncated = $resultCtx.constructionTypeStack->take($stackSize - 1);
+          let newCtx = ^$resultCtx(constructionTypeStack = $truncated);
+          ^$result(context = $newCtx);,
         | $result
     );
+    // Finalize all FunctionExpressions (mirrors Java FunctionExpressionResolver.finalizeFunctionExpression)
+    if($poppedCtx.value->isNotEmpty(),
+        | match($poppedCtx.value->toOne(), [
+              fe:FunctionExpression[1] | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($fe, $checkpoint, $poppedCtx.context),
+              a:Any[1] | $poppedCtx
+          ]),
+        | $poppedCtx
+    );
+}
+
+// For `new(GTMH, KeyExpression[*])` or `copy(T, KeyExpression[*])`, return the
+// GenericType of the instance being constructed. Used to push a scope for `~`
+// VariableExpression resolution. Returns empty when the type can't yet be read
+// off the call's first argument (the fixpoint resolver will pick it up on a
+// later pass).
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractConstructionType(fi:FunctionExpression[1], scope:VariableExpression[*], context:CompilerContext[1]):meta::pure::metamodel::type::generics::GenericType[0..1]
+{
+    if($fi.functionName->isEmpty() || $fi.parametersValues->isEmpty(),
+        | []->cast(@meta::pure::metamodel::type::generics::GenericType),
+        | let fname = $fi.functionName->toOne();
+          if($fname == 'new',
+              | let firstArg = $fi.parametersValues->at(0);
+                $firstArg->match([
+                    gtmh:meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder[1] |
+                        if($gtmh.genericType->isEmpty(),
+                            | []->cast(@meta::pure::metamodel::type::generics::GenericType),
+                            | let gt = $gtmh.genericType->toOne();
+                              let typeArgs = $gt->genericTypeTypeArguments();
+                              if($typeArgs->isEmpty(),
+                                  | []->cast(@meta::pure::metamodel::type::generics::GenericType),
+                                  | $typeArgs->at(0)
+                              );
+                        );,
+                    a:Any[1] | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+                ]);,
+              | if($fname == 'copy',
+                    | let firstArg2 = $fi.parametersValues->at(0);
+                      if($firstArg2.genericType->isNotEmpty()
+                              && !$firstArg2.genericType->toOne()->instanceOf(CompilerNotSetGenericType),
+                          | $firstArg2.genericType->toOne(),
+                          | // Best effort: look the variable up in scope.
+                            $firstArg2->match([
+                                ve:VariableExpression[1] |
+                                    let match = $scope->filter(s | $s.name == $ve.name);
+                                    if($match->isNotEmpty()
+                                            && $match->at(0).genericType->isNotEmpty()
+                                            && !$match->at(0).genericType->toOne()->instanceOf(CompilerNotSetGenericType),
+                                        | $match->at(0).genericType->toOne(),
+                                        | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+                                    );,
+                                a:Any[1] | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+                            ]);
+                      );,
+                    | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+              );
+          );
+    );
+}
+
+// Topo-sort `new(GTMH, [keyExprs])` / `copy(T, [keyExprs])` key expressions
+// so a producer is built before any `~.foo` reader of that slot. Returns the
+// reordered FunctionExpression and the updated CompilerContext (with a
+// compilation error appended if a circular dependency was detected). Mirrors
+// Java FunctionExpressionResolver.reorderKeyExpressionsForParentReferences.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::reorderKeyExpressionsForParentReferences(fi:FunctionExpression[1], context:CompilerContext[1]):Pair<FunctionExpression, CompilerContext>[1]
+{
+    if($fi.functionName->isEmpty() || $fi.parametersValues->size() < 2,
+        | pair($fi, $context),
+        | let fname = $fi.functionName->toOne();
+          if($fname != 'new' && $fname != 'copy',
+              | pair($fi, $context),
+              | let arg1 = $fi.parametersValues->at(1);
+                $arg1->match([
+                    col:Collection[1] |
+                        let items = $col.values;
+                        if($items->size() <= 1,
+                            | pair($fi, $context),
+                            | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::topoSortKeyExpressions($fi, $col, $items, $context)
+                        );,
+                    a:Any[1] | pair($fi, $context)
+                ]);
+          );
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::topoSortKeyExpressions(fi:FunctionExpression[1], col:Collection[1], items:ValueSpecification[*], context:CompilerContext[1]):Pair<FunctionExpression, CompilerContext>[1]
+{
+    let names = $items->map(it | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractKeyExpressionName($it));
+    let depLists = $items->map(it | ^List<Integer>(values = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractSiblingDeps($it, $names)));
+    let anyDep = $depLists->exists(d | $d.values->isNotEmpty());
+    if(!$anyDep,
+        | pair($fi, $context),
+        | let n = $items->size();
+          let initialOrder = range(0, $n);
+          let sortResult = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::topoSortIndices($initialOrder, $depLists);
+          if($sortResult.second,
+              | // Circular dependency — keep original order, add error. Append
+                // the first name again at the end so the cycle is closed in the
+                // rendered chain (matches the Java compiler's format).
+                let cycleNames = $sortResult.first.values->map(i | if($names->at($i)->isNotEmpty(), | '\'' + $names->at($i)->toOne() + '\'', | '?'));
+                let closedCycle = if($cycleNames->isNotEmpty(),
+                    | $cycleNames->concatenate([$cycleNames->at(0)]),
+                    | $cycleNames
+                );
+                let cycleMsg = $closedCycle->joinStrings(' -> ');
+                let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($fi.sourceInformation, $context);
+                pair($fi, ^$context(errors += 'Circular parent-reference dependency in key expressions: ' + $cycleMsg + $siCtx));,
+              | let order = $sortResult.first.values;
+                if($order == $initialOrder,
+                    | pair($fi, $context),
+                    | let sorted = $order->map(i | $items->at($i));
+                      let newCol = ^$col(values = $sorted);
+                      let newParams = [$fi.parametersValues->at(0)]->concatenate([$newCol->cast(@ValueSpecification)])->concatenate($fi.parametersValues->drop(2));
+                      pair(^$fi(parametersValues = $newParams), $context);
+                );
+          );
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractKeyExpressionName(ke:ValueSpecification[1]):String[0..1]
+{
+    $ke->match([
+        fi:FunctionApplication[1] |
+            if($fi.functionName == 'keyExpression' && $fi.parametersValues->isNotEmpty(),
+                | $fi.parametersValues->at(0)->match([
+                      av:AtomicValue[1] | if($av.value->isNotEmpty() && $av.value->toOne()->instanceOf(String), | $av.value->toOne()->cast(@String), | []->cast(@String)),
+                      a:Any[1] | []->cast(@String)
+                  ]),
+                | []->cast(@String)
+            ),
+        a:Any[1] | []->cast(@String)
+    ]);
+}
+
+// Returns the SET of sibling indices that this keyExpression's value reads via
+// `~.foo` at the current construction level (depth 0). `~.~.foo` is a parent
+// reference and not a sibling dep.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractSiblingDeps(ke:ValueSpecification[1], names:String[*]):Integer[*]
+{
+    $ke->match([
+        fi:FunctionApplication[1] |
+            if($fi.functionName == 'keyExpression' && $fi.parametersValues->size() >= 2,
+                | let depNames = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::collectSiblingNames($fi.parametersValues->at(1), 0);
+                  $depNames->map(n | $names->indexOf($n))->filter(i | $i >= 0 && $i < $names->size());,
+                | []->cast(@Integer)
+            ),
+        a:Any[1] | []->cast(@Integer)
+    ]);
+}
+
+// Walk a value spec, collecting property names accessed via `~.<name>` at the
+// given construction depth (0 = current `^X(...)`). Crossing into a nested
+// `^Y(...)` or `^$x(...)` bumps the depth.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::collectSiblingNames(vs:ValueSpecification[1], ctorDepth:Integer[1]):String[*]
+{
+    $vs->match([
+        da:DotApplication[1] |
+            let here = if($ctorDepth == 0 && $da.parametersValues->isNotEmpty(),
+                | $da.parametersValues->at(0)->match([
+                      ve:VariableExpression[1] |
+                          if(meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::parentReferenceTildeCount($ve.name) == 1,
+                              | [$da.functionName->toOne()]->cast(@String),
+                              | []->cast(@String)
+                          );,
+                      a:Any[1] | []->cast(@String)
+                  ]),
+                | []->cast(@String)
+            );
+            $here->concatenate($da.parametersValues->map(p | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::collectSiblingNames($p, $ctorDepth)));,
+        fi:FunctionApplication[1] |
+            let childDepth = if($fi.functionName == 'new' || $fi.functionName == 'copy', | $ctorDepth + 1, | $ctorDepth);
+            $fi.parametersValues->map(p | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::collectSiblingNames($p, $childDepth));,
+        col:Collection[1] |
+            $col.values->map(p | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::collectSiblingNames($p, $ctorDepth));,
+        a:Any[1] | []->cast(@String)
+    ]);
+}
+
+// Iterative (Kahn-style) topo sort. Each iteration moves all indices whose
+// remaining deps are all already resolved. Returns the resulting order and a
+// `cycle` flag — true when no progress can be made but unresolved indices
+// remain (the remaining set is a cycle, returned as the order so the caller
+// can render the cycle path).
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::topoSortIndices(indices:Integer[*], depLists:List<Integer>[*]):Pair<List<Integer>, Boolean>[1]
+{
+    $indices->fold({_idx, acc |
+        let resolved = $acc.first.values;
+        if($acc.second,
+            | $acc,
+            | let unresolved = $indices->filter(i | !$resolved->contains($i));
+              if($unresolved->isEmpty(),
+                  | $acc,
+                  | let progress = $unresolved->filter(i | $depLists->at($i).values->forAll(d | $resolved->contains($d)));
+                    if($progress->isEmpty(),
+                        | pair(^List<Integer>(values = $unresolved), true),
+                        | pair(^List<Integer>(values = $resolved->concatenate($progress)), false)
+                    );
+              );
+        );
+    }, pair(^List<Integer>(values = []->cast(@Integer)), false));
 }
 
 // Mirrors Java FunctionExpressionResolver.finalizeFunctionExpression (lines 87-124)
@@ -142,4 +377,90 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           );
           ^CompilerResult<ValueSpecification>(value = $updated, context = $ctx1);
     );
+}
+
+// If `fi` is a `copy(receiver, [keys])` call whose receiver's resolved multiplicity
+// is not exactly [1], rewrite it as `receiver->map(_automap | copy($_automap, [keys]))`
+// and return the resolved rewrite. Otherwise returns empty so the caller falls
+// through to standard resolution.
+//
+// The pre-resolution of the receiver here gets re-done by the standard path when
+// no rewrite fires — accepted as a small cost since the alternative (threading the
+// pre-resolved receiver through) would complicate every other code path.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::maybeRewriteCopyForCollection(fi:FunctionExpression[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[0..1]
+{
+    if($fi.functionName->isEmpty() || $fi.functionName->toOne() != 'copy' || $fi.parametersValues->isEmpty(),
+        | []->cast(@CompilerResult<ValueSpecification>),
+        | let receiver = $fi.parametersValues->at(0);
+          let receiverResult = resolveValueSpecification($receiver, $scope, $context);
+          if($receiverResult.value->isEmpty(),
+              | []->cast(@CompilerResult<ValueSpecification>),
+              | let resolvedReceiver = $receiverResult.value->toOne();
+                let receiverMul = $resolvedReceiver.multiplicity;
+                let isExactlyOne = $receiverMul->isNotEmpty()
+                                && !$receiverMul->toOne()->instanceOf(CompilerNotSetMultiplicity)
+                                && multiplicityLowerBound($receiverMul->toOne()) == 1
+                                && multiplicityUpperBound($receiverMul->toOne()) == 1;
+                if($isExactlyOne,
+                    | []->cast(@CompilerResult<ValueSpecification>),
+                    | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::buildCopyAutomap($fi, $resolvedReceiver, $scope, $receiverResult.context)
+                );
+          );
+    );
+}
+
+// Build `receiver->map({_automap:T[1] | copy($_automap, keys)})` and resolve it.
+// `keys` is the original Collection<KeyExpression> from the source `copy(...)` call;
+// we hand it to the inner copy verbatim so any `~`/`~.~` parent references in key
+// values still resolve against the element-level construction.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::buildCopyAutomap(fi:FunctionExpression[1], resolvedReceiver:ValueSpecification[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+{
+    let receiverGT = $resolvedReceiver.genericType->toOne();
+    // Lambda param: _automap : ReceiverElementType[1] — uses the receiver's element-
+    // level genericType so the inner copy's signature match resolves on `T[1]`.
+    let lambdaParam = ^VariableExpression(
+        name = '_automap',
+        genericType = $receiverGT,
+        multiplicity = PureOne
+    );
+    // Lambda body: copy($_automap, [keys]). The inner var ref is left unresolved
+    // (NotSet GT/mul) so the resolveFunctionExpression call below binds it via
+    // the lambda's introduced scope, matching how dotApplicationResolver's
+    // automap path constructs its body.
+    let varRef = ^VariableExpression(
+        name = '_automap',
+        genericType = ^CompilerNotSetGenericType(),
+        multiplicity = ^CompilerNotSetMultiplicity()
+    );
+    let keys = if($fi.parametersValues->size() >= 2,
+        | [$fi.parametersValues->at(1)],
+        | []->cast(@ValueSpecification)
+    );
+    let innerCopy = ^FunctionInvocation(
+        functionName = 'copy',
+        parametersValues = [$varRef->cast(@ValueSpecification)]->concatenate($keys),
+        genericType = ^CompilerNotSetGenericType(),
+        multiplicity = ^CompilerNotSetMultiplicity(),
+        sourceInformation = $fi.sourceInformation
+    );
+    let emptyLambda = meta::pure::functions::lang::new(
+        ^UserDefinedGenericType(type = LambdaFunction)
+    )->cast(@LambdaFunction<Any>);
+    let lambda = ^$emptyLambda(
+        parameters = [$lambdaParam],
+        expressionSequence = [$innerCopy->cast(@ValueSpecification)]
+    );
+    let lambdaAV = ^AtomicValue(
+        value = $lambda,
+        genericType = ^CompilerNotSetGenericType(),
+        multiplicity = PureOne
+    );
+    let mapFI = ^FunctionInvocation(
+        functionName = 'map',
+        parametersValues = [$resolvedReceiver, $lambdaAV->cast(@ValueSpecification)],
+        genericType = ^CompilerNotSetGenericType(),
+        multiplicity = ^CompilerNotSetMultiplicity(),
+        sourceInformation = $fi.sourceInformation
+    );
+    resolveValueSpecification($mapFI, $scope, $context);
 }

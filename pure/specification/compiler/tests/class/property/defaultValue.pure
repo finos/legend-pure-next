@@ -22,3 +22,9 @@ class pack::MyClass extends Any  ~Class<pack::MyClass>  @4:1-9:1
         DotApplication pack::MyClass.str :#String##[1]#  ~@DotApplication@  @8:31-8:34
           Variable this :#pack::MyClass##[1]#  ~@VariableExpression@  @8:26-8:30
         AtomicValue  'bla' :@String@[1]  ~@AtomicValue@  @8:38-8:42
+
+###ReverseIndex
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  pack::MyClass.advanced
+pack::MyClass.str:
+  pack::MyClass.advanced

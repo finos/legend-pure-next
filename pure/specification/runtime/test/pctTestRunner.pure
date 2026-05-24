@@ -37,12 +37,15 @@ function <<test.TestDependency>> meta::pure::test::hasPctTestStereotype(el:Packa
 
 function <<test.TestDependency>> meta::pure::test::collectPCTTests(pkg:Package[1]):UserDefinedFunction<Any>[*]
 {
-    let directTests = $pkg.children
+    // See {@link meta::pure::test::resolveChild} — derefs in-memory pointer
+    // children to canonical elements; non-pointer children pass through.
+    let resolvedChildren = $pkg.children->map(c | meta::pure::test::resolveChild($c));
+    let directTests = $resolvedChildren
         ->filter(e | $e->instanceOf(UserDefinedFunction)
                      && meta::pure::test::hasPctTestStereotype($e))
         ->cast(@UserDefinedFunction<Any>);
 
-    let subPackages = $pkg.children
+    let subPackages = $resolvedChildren
         ->filter(e | $e->instanceOf(Package))
         ->cast(@Package);
     let subTests = $subPackages->map(p | meta::pure::test::collectPCTTests($p));
@@ -63,20 +66,32 @@ function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:S
     // adapter (testAdapterForInMemoryExecution) by reference — it just calls
     // $f->eval() on the closure the test hands it.
     //
-    // The trailing `true;` pins the map body's return type to Boolean[1].
-    // Without it the generic return type of eval() (parameterized on the
-    // adapter's X/o) propagates into map's overload resolution and picks the
-    // many→many form, breaking scalar iteration. (Known Java-interpreter
-    // quirk; the Truffle rewrite makes this dispatch unambiguous.)
-    range(0, $total)->map(i:Integer[1] |
+    // tryEval wraps each test invocation so a single failure doesn't abort
+    // the whole run. Collect (testPath, errorOrEmpty) pairs for a final
+    // summary that shows every failure (not just the first).
+    let results = range(0, $total)->map(i:Integer[1] |
         let fn = $tests->at($i);
         let name = $fn->elementToPath();
         tickProgress($i + 1, $total, $name);
-        $fn->eval(meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_);
-        true;
+        let result = tryEval(| $fn->eval(meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_));
+        ^meta::pure::test::TestResult(name = $name, error = $result.failure);
     );
 
     let elapsedMs = currentTimeMillis() - $start;
     finishProgress();
-    'OK: ' + $total->toString() + ' / ' + $total->toString() + ' <<PCT.test>> tests passed in ' + $elapsedMs->toString() + ' ms';
+
+    let failures = $results->filter(r | $r.error->isNotEmpty());
+    let failed = $failures->size();
+    let passed = $total - $failed;
+
+    if($failed > 0,
+        | $failures->map(r |
+              let err = $r.error->toOne();
+              println('  FAIL: ' + $r.name);
+              println('    ' + $err.message);
+              $err.stack->map(frame | println('      at ' + $frame));
+          );
+          'FAIL: ' + $passed->toString() + ' / ' + $total->toString() + ' <<PCT.test>> tests passed (' + $failed->toString() + ' failed) in ' + $elapsedMs->toString() + ' ms';,
+        | 'OK: ' + $total->toString() + ' / ' + $total->toString() + ' <<PCT.test>> tests passed in ' + $elapsedMs->toString() + ' ms'
+    );
 }

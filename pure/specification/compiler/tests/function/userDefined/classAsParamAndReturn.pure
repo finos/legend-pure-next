@@ -1,0 +1,61 @@
+###Pure
+Class test::Person
+[
+  hasName: $this.name->length() > 0
+]
+{
+  name: String[1];
+  age: Integer[1];
+}
+
+function test::cloneOlder(p: test::Person[1]): test::Person[1]
+{
+  ^test::Person(name=$p.name, age=$p.age + 1);
+}
+
+###CompiledGraph
+class test::Person extends Any  ~Class<test::Person>  @2:1-9:1
+  property name :@String@[1]  ~Property<test::Person, @String@|1>
+  property age :@Integer@[1]  ~Property<test::Person, @Integer@|1>
+  constraint hasName
+    Lambda(this:test::Person[1])  ~#LambdaFunction<#{test::Person[1]->#Boolean##[1]#}#>#
+      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @4:22-4:35
+        ArrowInvocation length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @4:22-4:31
+          DotApplication test::Person.name :#String##[1]#  ~@DotApplication@  @4:17-4:21
+            Variable this :#test::Person##[1]#  ~@VariableExpression@  @4:12-4:16
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @4:35-4:35
+
+function test::cloneOlder_Person_1__Person_1_(p:test::Person[1]):test::Person[1]  ~UserDefinedFunction<{test::Person[1]->test::Person[1]}>
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Person##[1]#  ~@FunctionInvocation@  @13:3-13:45
+    typeParam T -> test::Person
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Person|1>  @13:3-13:45
+    Collection :#KeyExpression#[2]  ~@Collection@  @13:3-13:45
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @13:17-13:28
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @13:17-13:28
+        DotApplication test::Person.name :#String##[1]#  ~@DotApplication@  @13:24-13:28
+          Variable p :#test::Person##[1]#  ~@VariableExpression@  @13:22-13:23
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @13:31-13:44
+        AtomicValue  'age' :@String@[1]  ~@AtomicValue@  @13:31-13:44
+        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @13:37-13:44
+          DotApplication test::Person.age :#Integer##[1]#  ~@DotApplication@  @13:37-13:40
+            Variable p :#test::Person##[1]#  ~@VariableExpression@  @13:35-13:36
+          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @13:44-13:44
+
+###ReverseIndex
+meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
+  test::Person.hasName
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::cloneOlder_Person_1__Person_1_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::cloneOlder_Person_1__Person_1_
+meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+  test::cloneOlder_Person_1__Person_1_
+meta::pure::functions::string::length_String_1__Integer_1_:
+  test::Person.hasName
+test::Person:
+  test::cloneOlder_Person_1__Person_1_
+test::Person.age:
+  test::cloneOlder_Person_1__Person_1_
+test::Person.name:
+  test::Person.hasName
+  test::cloneOlder_Person_1__Person_1_

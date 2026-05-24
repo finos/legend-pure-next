@@ -40,10 +40,12 @@ function meta::pure::compiler::helper::genericType::buildCanonicalOrUserDefinedG
           // than typeEquals which inspects internal fields and would diverge
           // between a pointer and its live target.
           let rawPath = $rawType->cast(@PackageableElement)->elementToPath();
-          let peName = $rawPath->split('::')->last();
-          if($peName->isEmpty(),
+          if($rawPath->isEmpty(),
               | $fallback,
-              | let canonicalPath = 'meta::pure::metamodel::type::generics::optimization::GenericType_' + $peName->toOne();
+              | // Anchor name encodes the type's full Pure path (`::` -> `_`)
+                // so user modules whose simple names collide with platform
+                // types don't pick up the wrong anchor.
+                let canonicalPath = 'meta::pure::metamodel::type::generics::optimization::GenericType_' + $rawPath->replace('::', '_');
                 let resolved = $context->resolveElement($canonicalPath);
                 if($resolved->isEmpty() || !$resolved->toOne()->instanceOf(GenericTypeValue),
                     | $fallback,
@@ -84,9 +86,68 @@ function meta::pure::compiler::helper::genericType::buildMultiplicityValue(value
     ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $value);
 }
 
-function meta::pure::compiler::helper::genericType::buildResolvedTypeParameter(name:String[1], value:meta::pure::metamodel::type::generics::GenericType[1]):meta::pure::metamodel::type::generics::ResolvedTypeParameter[1]
+function meta::pure::compiler::helper::genericType::buildResolvedTypeParameter(name:String[1], value:meta::pure::metamodel::type::generics::GenericType[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::generics::ResolvedTypeParameter[1]
 {
-    ^meta::pure::metamodel::type::generics::ResolvedTypeParameter(name = $name, value = $value);
+    // Cross-element store: the receiving `value` slot may persist a Type ref
+    // that points anywhere in the graph. When the rawType is currently being
+    // compiled (`context.elementMap` holds it), wrap as a pointer so a later
+    // PointerGraphResolver walk doesn't trip on a duplicate PDO produced by
+    // multi-pass rebuild. Types loaded from a dep PDB (core, compiler) can't
+    // duplicate — leave them direct so downstream consumers reading the raw
+    // type (instanceOf, PDB writer, inference) keep working without per-site
+    // deref.
+    let wrapped = $value->meta::pure::compiler::helper::genericType::wrapGenericTypeWithPointer($context);
+    ^meta::pure::metamodel::type::generics::ResolvedTypeParameter(name = $name, value = $wrapped);
+}
+
+// Wrap a GenericType's PE rawType (Class/Enumeration/PrimitiveType) as a pointer
+// when that type is in the current compilation's element map — i.e. the
+// compiler may rebuild it across passes and a direct ref to an earlier
+// revision would later read as a duplicate PDO. Types absent from
+// `context.elementMap` are dep-loaded (core / compiler PDB) — single canonical
+// instance, no duplication risk, no wrap needed.
+function meta::pure::compiler::helper::genericType::wrapGenericTypeWithPointer(gt:meta::pure::metamodel::type::generics::GenericType[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::generics::GenericType[1]
+{
+    $gt->match([
+        igt : meta::pure::metamodel::type::generics::InferredGenericType[1] |
+            let currentType = $igt.type;
+            if($currentType->isEmpty() || !$currentType->toOne()->meta::pure::compiler::helper::genericType::isLocallyCompiledType($context),
+                | $igt,
+                | let wrappedType = $currentType->toOne()->meta::pure::compiler::helper::pointer::toTypePointer();
+                  if($wrappedType == $currentType->toOne(),
+                      | $igt,
+                      | ^$igt(type = $wrappedType)
+                  );
+            );,
+        gtv : meta::pure::metamodel::type::generics::GenericTypeValue[1] |
+            let currentType = $gtv.type;
+            if($currentType->isEmpty() || !$currentType->toOne()->meta::pure::compiler::helper::genericType::isLocallyCompiledType($context),
+                | $gtv,
+                | let wrappedType = $currentType->toOne()->meta::pure::compiler::helper::pointer::toTypePointer();
+                  if($wrappedType == $currentType->toOne(),
+                      | $gtv,
+                      | ^$gtv(type = $wrappedType)
+                  );
+            );,
+        other : meta::pure::metamodel::type::generics::GenericType[1] | $gt
+    ]);
+}
+
+// Returns true when `t` is in the current compilation's `elementMap` — i.e.
+// it's being produced/rebuilt by this compile pass and therefore at risk of
+// duplicate-PDO when persisted as a direct ref across element boundaries.
+// Already-wrapped (TempCompilerPointer) and non-PE Types (FunctionType,
+// RelationType, TypeParameter) short-circuit to false.
+function meta::pure::compiler::helper::genericType::isLocallyCompiledType(t:meta::pure::metamodel::type::Type[1], context:meta::pure::compiler::CompilerContext[1]):Boolean[1]
+{
+    if($t->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer),
+        | false,
+        | if(!$t->instanceOf(meta::pure::metamodel::type::Class) && !$t->instanceOf(meta::pure::metamodel::type::Enumeration) && !$t->instanceOf(meta::pure::metamodel::type::PrimitiveType),
+              | false,
+              | let path = $t->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath();
+                $context.elementMap->get($path)->isNotEmpty();
+        );
+    );
 }
 
 function meta::pure::compiler::helper::genericType::buildResolvedMultiplicityParameter(name:String[1], value:meta::pure::metamodel::multiplicity::Multiplicity[1]):meta::pure::metamodel::type::generics::ResolvedMultiplicityParameter[1]
@@ -641,7 +702,14 @@ function meta::pure::compiler::helper::genericType::resolveForTarget_GenericType
 {
     if($src.type->isEmpty(),
         | [],
-        | let sourceType = $src.type->toOne();
+        | // Dereference pointer types so structural reads below
+          // ({@code cls.typeParameters}, {@code .generalizations}) hit the
+          // live element. {@link buildInferredGenericType} /
+          // {@link buildUserDefinedGenericType} wrap the raw type as a
+          // {@code TempCompilerPointer} at construction; pointers carry only
+          // {@code .path}, so reading interior slots through them returns
+          // empty.
+          let sourceType = $src.type->toOne()->meta::pure::compiler::helper::type::derefTypeIfPointer($context)->toOne();
           if(typeEquals($sourceType, $targetType),
               | $src,
               | let initialBindings = newPlainParametersBinding();
@@ -1052,13 +1120,15 @@ function meta::pure::compiler::helper::genericType::inferLiteralType(value:Any[1
 // inferred-marker semantics.
 function meta::pure::compiler::helper::genericType::canonicalAnchorFor(newType:Type[1], reconciledTypeArgs:GenericType[*], mulArgs:Multiplicity[*], typeVarVals:ValueSpecification[*], actual:GenericType[1], context:meta::pure::compiler::CompilerContext[1]):GenericType[0..1]
 {
-    // Pointer-aware name derivation: pointers carry only `.path`, with `.name`
-    // unset. Derive simple-name from the path's last segment so the canonical
-    // anchor lookup still fires for pointer-wrapped leaf types (e.g.
-    // ClassPointer(test::String) → name "String" → lookup GenericType_String).
-    let peName = $newType->match([
-        ptr : meta::pure::metamodel::pointer::TempCompilerPointer[1] | $ptr->cast(@PackageableElement)->elementToPath()->split('::')->last(),
-        pe  : PackageableElement[1] | $pe.name,
+    // Pointer-aware path derivation: pointers carry only `.path`, with `.name`
+    // unset. Derive the full Pure path so the canonical anchor lookup still
+    // fires for pointer-wrapped leaf types (e.g. ClassPointer(test::String)
+    // → lookup GenericType_<fullPath>). Anchor name encodes the full path
+    // (`::` -> `_`) so user modules whose simple names collide with platform
+    // types don't pick up the wrong anchor.
+    let typePath = $newType->match([
+        ptr : meta::pure::metamodel::pointer::TempCompilerPointer[1] | $ptr->cast(@PackageableElement)->elementToPath(),
+        pe  : PackageableElement[1] | $pe->elementToPath(),
         other : Type[1] | []->cast(@String)
     ]);
     let isLeaf = !$actual->instanceOf(Inferred)
@@ -1066,10 +1136,10 @@ function meta::pure::compiler::helper::genericType::canonicalAnchorFor(newType:T
         && $mulArgs->isEmpty()
         && $typeVarVals->isEmpty()
         && $newType->instanceOf(PackageableElement)
-        && $peName->isNotEmpty();
+        && $typePath->isNotEmpty();
     if(!$isLeaf,
         | []->cast(@GenericType),
-        | let canonicalPath = 'meta::pure::metamodel::type::generics::optimization::GenericType_' + $peName->toOne();
+        | let canonicalPath = 'meta::pure::metamodel::type::generics::optimization::GenericType_' + $typePath->toOne()->replace('::', '_');
           let resolved = $context->resolveElement($canonicalPath);
           if($resolved->isEmpty() || !$resolved->toOne()->instanceOf(GenericTypeValue),
               | []->cast(@GenericType),

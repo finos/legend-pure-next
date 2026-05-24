@@ -55,6 +55,9 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
 
     private static final int SLOT_FUNCTION_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("functionName");
     private static final int SLOT_PARAMETERS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("parameters");
+    private static final int SLOT_PROPERTIES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("properties");
+    private static final int SLOT_PROPERTY_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_PROPERTY_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("genericType");
     private final LinkedHashMap<String, TruffleModule> modules = new LinkedHashMap<>();
     private final TypeCache typeCache = new TypeCache();
     // Lazy index keyed by (function shortName, arity) → resolved
@@ -69,6 +72,16 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
     //   on register / unregister so newly registered modules' functions become
     //   visible without forcing callers through a rebuild.
     private Map<String, Map<Integer, List<Object>>> functionsByNameArity;
+    // Lazy index: property name → list of (otherPropName, otherEndClassPath) pairs,
+    // one entry per Association involving a property of that name. Lets
+    // {@code ^Person(firm=$firm)} look up "the property on Firm whose value is
+    // built from this side" in O(1). Built by walking every Association across
+    // registered modules; invalidated on register/unregister so cross-module
+    // associations (e.g. test-only LA_* associations in core-tests.pdb) become
+    // visible the moment their module is registered. Previously cached as a
+    // static volatile on {@code NewWithKeysNode} which assumed one resolver per
+    // JVM — broke when a surefire JVM ran tests with different module sets.
+    private Map<String, List<String[]>> reverseAssocIndex;
 
     /**
      * Register a module. Validates that all declared dependencies are already
@@ -91,8 +104,84 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
                     "Module '" + module.name() + "' is already registered. "
                             + "Call unregister(name) before re-registering.");
         }
+        // Uniqueness check: a module may not declare a path that an already-
+        // registered module already declares. A path collision means we'd
+        // have two Java instances representing the same Pure element, which
+        // breaks identity comparisons (`is`) and corrupts the type cache.
+        // Compile-pure should never emit a top-level element at a path that
+        // already exists in a dep PDB — if this fires, the compile result has
+        // a duplicate of a core/compiler element and we want to find the bug,
+        // not silently dedup.
+        java.util.List<String> collisions = new java.util.ArrayList<>();
+        java.util.List<String> collisionOwners = new java.util.ArrayList<>();
+        for (String path : module.elementPaths())
+        {
+            for (TruffleModule existing : modules.values())
+            {
+                if (existing.hasElement(path))
+                {
+                    collisions.add(path);
+                    collisionOwners.add(existing.name());
+                    if (collisions.size() >= 10) break;
+                }
+            }
+            if (collisions.size() >= 10) break;
+        }
+        if (!collisions.isEmpty())
+        {
+            StringBuilder sb = new StringBuilder("Module '").append(module.name())
+                    .append("' declares paths already present in registered module(s): ");
+            for (int i = 0; i < collisions.size(); i++)
+            {
+                sb.append("\n  ").append(collisions.get(i))
+                        .append("  (owned by '").append(collisionOwners.get(i)).append("')");
+            }
+            throw new IllegalStateException(sb.toString());
+        }
         modules.put(module.name(), module);
         functionsByNameArity = null;
+        reverseAssocIndex = null;
+        // Drop the element cache. Without this, any path the new module owns
+        // that some earlier lookup tried (and missed, caching {@link #ABSENT_PATH})
+        // would keep returning null forever — including class-info population
+        // for the new module's user classes. Compile-pure execution routinely
+        // calls {@link #getElement} for not-yet-registered user paths during
+        // its compile, so this staleness manifests as silent class-info
+        // population failures (writeProperty: ... has no property ...).
+        elementCache.clear();
+    }
+
+    /**
+     * Manifest-level dependency check: every registered module's declared
+     * {@code dependencies()} must itself be registered. {@link #register}
+     * already enforces this at registration time (deps must be registered
+     * first), so the explicit {@code validate()} is mostly a "setup is done,
+     * confirm the closure" assertion — useful for CLI entry points where the
+     * caller may register in any order or programmatically.
+     *
+     * <p>Reports every missing dependency (not just the first) so a caller
+     * with multiple gaps sees them all at once.</p>
+     */
+    public void validate()
+    {
+        java.util.List<String> errors = new java.util.ArrayList<>();
+        for (TruffleModule m : modules.values())
+        {
+            for (String dep : m.dependencies())
+            {
+                if (!modules.containsKey(dep))
+                {
+                    errors.add("module '" + m.name() + "' declares dependency '" + dep + "' which is not registered");
+                }
+            }
+        }
+        if (!errors.isEmpty())
+        {
+            StringBuilder sb = new StringBuilder("Registry validation failed (")
+                    .append(errors.size()).append(" missing dependencies):");
+            for (String e : errors) sb.append("\n  - ").append(e);
+            throw new IllegalStateException(sb.toString());
+        }
     }
 
     /**
@@ -129,6 +218,7 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
         }
         modules.remove(name);
         functionsByNameArity = null;
+        reverseAssocIndex = null;
         for (String d : dependents)
         {
             unregister(d);
@@ -187,6 +277,80 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
             }
         }
         return idx;
+    }
+
+    /**
+     * Lookup the reverse-association entries for a given property name.
+     * Returns a list of {@code [otherPropName, otherEndClassPath]} pairs,
+     * one per Association declaring a property of that name across the
+     * registered modules. Empty when no association uses the name.
+     *
+     * <p>O(1) after first call — backed by an index built lazily and
+     * invalidated on every {@link #register} / {@link #unregister}, so a
+     * test fixture that registers a tests-companion PDB after construction
+     * still sees its associations the next time this is called.</p>
+     */
+    @TruffleBoundary
+    public List<String[]> reverseAssociationCandidates(String propName)
+    {
+        Map<String, List<String[]>> idx = reverseAssocIndex;
+        if (idx == null)
+        {
+            idx = buildReverseAssocIndex();
+            reverseAssocIndex = idx;
+        }
+        List<String[]> hits = idx.get(propName);
+        return hits != null ? hits : List.of();
+    }
+
+    @TruffleBoundary
+    private Map<String, List<String[]>> buildReverseAssocIndex()
+    {
+        Map<String, List<String[]>> index = new HashMap<>();
+        for (TruffleModule m : modules.values())
+        {
+            for (String path : m.elementPaths())
+            {
+                Object element = getElement(path);
+                if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
+                        "meta::pure::metamodel::relationship::Association", this))
+                {
+                    continue;
+                }
+                Object propsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(element, SLOT_PROPERTIES);
+                if (!(propsObj instanceof org.finos.legend.pure.truffle.types.PureSequence props) || props.size() != 2)
+                {
+                    continue;
+                }
+                Object p0 = props.getBoxed(0);
+                Object p1 = props.getBoxed(1);
+                if (p0 != null && p1 != null)
+                {
+                    addAssocEntry(index, p0, p1);
+                    addAssocEntry(index, p1, p0);
+                }
+            }
+        }
+        return index;
+    }
+
+    @TruffleBoundary
+    private void addAssocEntry(Map<String, List<String[]>> index, Object matchProp, Object otherProp)
+    {
+        Object propNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(matchProp, SLOT_PROPERTY_NAME);
+        if (!(propNameObj instanceof String propName)) return;
+        Object otherGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(otherProp, SLOT_PROPERTY_GENERIC_TYPE);
+        if (otherGT == null) return;
+        Object targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(otherGT);
+        if (targetType == null) return;
+        String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(targetType, this);
+        if (targetPath == null) return;
+        Object otherNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(otherProp, SLOT_PROPERTY_NAME);
+        if (otherNameObj instanceof String otherName)
+        {
+            index.computeIfAbsent(propName, k -> new ArrayList<>(2))
+                    .add(new String[]{otherName, targetPath});
+        }
     }
 
     /** All registered modules, in dependency-first order. */

@@ -111,6 +111,30 @@ public abstract class JavaPojoEmitterTarget implements EmitterTarget
     }
 
     @Override
+    public String listExpressionEmpty()
+    {
+        return "Lists.mutable.empty()";
+    }
+
+    @Override
+    public String listExpressionOpen()
+    {
+        return "Lists.mutable.with(";
+    }
+
+    @Override
+    public String listExpressionClose()
+    {
+        return ")";
+    }
+
+    @Override
+    public String wrapForSlotAssignment(String valueExpr)
+    {
+        return valueExpr;
+    }
+
+    @Override
     public void emitDispatchSectionScaffolding(StringBuilder sb, String className)
     {
         // The three fields covered by this scaffolding:

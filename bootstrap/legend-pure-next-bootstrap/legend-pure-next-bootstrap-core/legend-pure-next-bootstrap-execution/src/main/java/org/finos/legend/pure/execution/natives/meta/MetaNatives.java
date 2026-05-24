@@ -187,21 +187,20 @@ public class MetaNatives
             {
                 // No type arguments — set classifier from resolved class path.
                 // Mirror Java direct's `new XxxImpl(model)` ctor pattern: prefer
-                // the canonical `GenericType_<ClassName>` UDPGT-PE from core.pdb
-                // when one exists. Falls through to a fresh UDGT wrapping the
-                // class when no canonical anchor exists.
+                // the canonical `GenericType_<fullPath>` UDPGT-PE from core.pdb
+                // when one exists (full path encoded with `::` -> `_`, so user
+                // modules whose simple names collide with platform types don't
+                // pick up the wrong anchor). Falls through to a fresh UDGT
+                // wrapping the class when no canonical anchor exists.
                 Object typeElement = resolver.getElement(classPath);
                 if (typeElement instanceof meta.pure.metamodel.type.Type t && t instanceof meta.pure.metamodel.PackageableElement pe)
                 {
-                    String className = pe._name();
-                    if (className != null && !className.isEmpty())
+                    Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                            + classPath.replace("::", "_"));
+                    if (canonical instanceof GenericTypeValue canonicalGT)
                     {
-                        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + className);
-                        if (canonical instanceof GenericTypeValue canonicalGT)
-                        {
-                            any._classifierGenericType(canonicalGT);
-                            return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
-                        }
+                        any._classifierGenericType(canonicalGT);
+                        return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
                     }
                     any._classifierGenericType(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType(t, resolver));
                 }
@@ -265,6 +264,17 @@ public class MetaNatives
         // BEFORE evaluating key expressions, enabling parentReference (~) resolution.
         lazyNatives.put("new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", (fe, eval) ->
         {
+            // Open a fresh-instance scope so this instance — and any inner
+            // new/copy created during key evaluation — is tracked as fresh
+            // relative to the enclosing expression. The check in copy's
+            // verifyAssocPropsAreFresh inspects the top scope; without this
+            // push/pop, `^Person(firm = ^Firm())` inside `^$pierre(...)` would
+            // not register the inner Firm in the outer copy's scope, and the
+            // check would reject it even though it was created inline.
+            eval.pushFreshScope();
+            Object newResult = null;
+            try
+            {
             org.eclipse.collections.api.list.MutableList<ValueSpecification> paramSpecs = fe._parametersValues();
             // Step 1: Evaluate ONLY the type holder (first arg)
             Object typeHolder = _E_ValueSpecification.unwrap(eval.evaluate(paramSpecs.get(0)));
@@ -312,20 +322,17 @@ public class MetaNatives
                 else if (instance instanceof Any any && !"Unknown".equals(classPath))
                 {
                     // Same as the simple-new-helper above: prefer canonical
-                    // GenericType_<ClassName> UDPGT-PE when one exists.
+                    // GenericType_<fullPath> UDPGT-PE when one exists.
                     Object typeElement = resolver.getElement(classPath);
                     if (typeElement instanceof meta.pure.metamodel.type.Type t && t instanceof meta.pure.metamodel.PackageableElement pe)
                     {
-                        String className = pe._name();
                         boolean setClassifier = false;
-                        if (className != null && !className.isEmpty())
+                        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                                + classPath.replace("::", "_"));
+                        if (canonical instanceof GenericTypeValue canonicalGT)
                         {
-                            Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + className);
-                            if (canonical instanceof GenericTypeValue canonicalGT)
-                            {
-                                any._classifierGenericType(canonicalGT);
-                                setClassifier = true;
-                            }
+                            any._classifierGenericType(canonicalGT);
+                            setClassifier = true;
                         }
                         if (!setClassifier)
                         {
@@ -334,26 +341,57 @@ public class MetaNatives
                     }
                 }
 
-                // Step 3: Push onto construction stack, then evaluate key expressions
+                // Step 3: Push onto construction stack, then evaluate and apply key
+                // expressions ONE AT A TIME so that each slot value can read
+                // already-set slots via `~.<prop>` (parent reference with property
+                // path). If we batch-evaluated paramSpecs.get(1) up front,
+                // `~.typeParameters` inside a later slot would read the instance
+                // BEFORE typeParameters has been written.
                 eval.pushConstruction(instance);
                 try
                 {
-                    ValueSpecification keyExprsVS = eval.evaluate(paramSpecs.get(1));
-
-                    // Step 4: Process key expressions
                     List<Map.Entry<String, Object>> keyValues = new ArrayList<>();
-                    Object keyExprsRaw = _E_ValueSpecification.unwrap(keyExprsVS);
-                    if (keyExprsRaw instanceof List<?> keyExprs)
+                    ValueSpecification keyExprsParam = paramSpecs.get(1);
+                    if (keyExprsParam instanceof meta.pure.metamodel.valuespecification.Collection col)
                     {
-                        for (Object ke : keyExprs)
+                        // Inline `^X(slot=value, slot=value)` form: items are
+                        // unevaluated keyExpression FunctionInvocations.
+                        // Evaluate + apply each in source order.
+                        for (ValueSpecification item : col._values())
                         {
+                            Object ke = _E_ValueSpecification.unwrap(eval.evaluate(item));
                             processKeyExpression(ke, instance, keyValues, resolver);
                         }
                     }
                     else
                     {
-                        processKeyExpression(keyExprsRaw, instance, keyValues, resolver);
+                        // Non-inline form (e.g. `^X($alreadyBuiltKeys)`): the
+                        // KeyExpression list is already constructed, slot values
+                        // already resolved — no `~` references possible inside.
+                        ValueSpecification keyExprsVS = eval.evaluate(keyExprsParam);
+                        Object keyExprsRaw = _E_ValueSpecification.unwrap(keyExprsVS);
+                        if (keyExprsRaw instanceof List<?> keyExprs)
+                        {
+                            for (Object ke : keyExprs)
+                            {
+                                processKeyExpression(ke, instance, keyValues, resolver);
+                            }
+                        }
+                        else
+                        {
+                            processKeyExpression(keyExprsRaw, instance, keyValues, resolver);
+                        }
                     }
+
+                    // Immutability check: same rule as copy_T_1__KeyExpression_MANY__T_1_.
+                    // Every association property's value on this fresh instance
+                    // must itself have been instantiated within this new/copy
+                    // expression. Catches `^LA_Person(firm=$firmX)` — $firmX
+                    // exists outside this expression, and the bidir step below
+                    // would add the new person to $firmX.employees, mutating
+                    // the original. Use `firm = ^LA_Firm(...)` (inline) or
+                    // `firm = ^$x()` (inline copy) instead.
+                    verifyAssocPropsAreFresh(classPath, keyValues, eval, resolver);
 
                     // Set reverse association pointers
                     setReverseAssociationPointers(instance, classPath, keyValues, resolver);
@@ -376,9 +414,15 @@ public class MetaNatives
                     }
                 }
 
+                newResult = instance;
                 return _E_ValueSpecification.wrap(instance, fe._genericType(), fe._multiplicity(), resolver);
             }
             throw new RuntimeException("Not possible");
+            }
+            finally
+            {
+                eval.popFreshScopeAndRegister(newResult);
+            }
         });
 
         // keyExpression — creates a key-value pair
@@ -401,25 +445,17 @@ public class MetaNatives
         natives.put("keyExpression_String_1__Any_MANY__KeyExpression_1_", keyExprFn);
         natives.put("keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_", keyExprFn);
 
-        // parentReference — returns a sentinel that resolves to a parent instance during new/copy construction
-        natives.put("parentReference_Integer_1__String_1__Any_1_", (args, eval, genericType, multiplicity) ->
-        {
-            int depth = ((Number) _E_ValueSpecification.unwrap(args.get(0))).intValue();
-            String propPath = (String) _E_ValueSpecification.unwrap(args.get(1));
-            // Look up the construction stack: depth 0 = self (top), depth 1 = parent, etc.
-            Object target = eval.peekConstruction(depth);
-            if (target == null)
-            {
-                throw new RuntimeException("Parent reference ~ at depth " + depth
-                        + " is out of bounds (construction stack size: unknown). "
-                        + "Ensure ~ is used inside a ^Type(...) expression.");
-            }
-            return _E_ValueSpecification.wrap(target, genericType, multiplicity, resolver);
-        });
-
         // copy(T[1]) : T[1] — simple copy with no overrides
         natives.put("copy_T_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
+            // Open + close a fresh-instance scope so this copy's product
+            // registers in the enclosing new/copy expression's scope (see
+            // ValueSpecificationEvaluator#freshScopeStack). Simple copy itself
+            // has no keys, so there's nothing to verify — just propagate.
+            eval.pushFreshScope();
+            Object simpleCopyResult = null;
+            try
+            {
             Object original = _E_ValueSpecification.unwrap(args.get(0));
             String classPath;
             GenericTypeValue cgt;
@@ -450,13 +486,16 @@ public class MetaNatives
             }
 
             Object copy = createInstanceByPath(classPath);
-            // First copy all properties (including classifierGenericType from original)
+            // Shallow copy all properties (including classifierGenericType from original).
+            // We do NOT rewrite self-references (classifierGenericType, TypeParameter.owner,
+            // Property.owner, etc.) to point to the copy — that would silently mutate
+            // graph identity. Users who want the copy to be referenced in such slots
+            // must explicitly write `~.~` (parent reference) in their copy expression.
             shallowCopyProperties(original, copy, cgt, resolver);
-            // Then fix and set the self-referential classifierGenericType to point to the copy
-            GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
             // Platform-level canonical anchor: if the copy's classifier could be
             // a canonical GenericType_<TypeName> UDPGT-PE, prefer it. Symmetric
             // to new() — preserves canonical references through copy operations.
+            GenericTypeValue copyCgt = cgt;
             if (copyCgt != null)
             {
                 copyCgt = (GenericTypeValue) preferCanonicalAnchor(copyCgt, resolver);
@@ -469,9 +508,13 @@ public class MetaNatives
             {
                 diC.setClassifierGenericType(copyCgt);
             }
-            fixTypeParameterOwners(original, copy);
-            fixPropertyOwners(original, copy, resolver);
+            simpleCopyResult = copy;
             return _E_ValueSpecification.wrap(copy, genericType, multiplicity, resolver);
+            }
+            finally
+            {
+                eval.popFreshScopeAndRegister(simpleCopyResult);
+            }
         });
 
         // copy(T[1], KeyExpression[*]) : T[1] — shallow copy with property overrides
@@ -479,6 +522,17 @@ public class MetaNatives
         // BEFORE evaluating key expressions, enabling parentReference (~) resolution.
         lazyNatives.put("copy_T_1__KeyExpression_MANY__T_1_", (fe, eval) ->
         {
+            // Open a fresh-instance scope. Every PDO created by `^Type(...)` or
+            // `^$x()` while evaluating the keys (or this very copy itself)
+            // registers in this scope; the post-build check uses it to
+            // require that any association property's value originated within
+            // the copy expression. `popFreshScopeAndRegister(copy)` in the
+            // finally below registers this copy's result into any enclosing
+            // expression's scope.
+            eval.pushFreshScope();
+            Object copyResult = null;
+            try
+            {
             org.eclipse.collections.api.list.MutableList<ValueSpecification> paramSpecs = fe._parametersValues();
             // Step 1: Evaluate the source object (first arg)
             ValueSpecification sourceVS = eval.evaluate(paramSpecs.get(0));
@@ -511,12 +565,11 @@ public class MetaNatives
                 classPath = resolveClassPathFromCGT(cgt);
             }
 
-            // Step 2: Create the copy
+            // Step 2: Create the copy. No self-reference rewriting — see the
+            // copy(T[1]) variant above for the rationale.
             Object copy = createInstanceByPath(classPath);
             shallowCopyProperties(original, copy, cgt, resolver);
-            GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
-            // Platform-level canonical anchor: same as copy() above — preserve
-            // canonical GenericType_<TypeName> UDPGT-PE references through copy.
+            GenericTypeValue copyCgt = cgt;
             if (copyCgt != null)
             {
                 copyCgt = (GenericTypeValue) preferCanonicalAnchor(copyCgt, resolver);
@@ -529,7 +582,6 @@ public class MetaNatives
             {
                 diC.setClassifierGenericType(copyCgt);
             }
-            fixPropertyOwners(original, copy, resolver);
 
             // Step 3: Push onto construction stack, then evaluate key expressions
             eval.pushConstruction(copy);
@@ -567,8 +619,26 @@ public class MetaNatives
             }
 
 
+            // Register deep-copied intermediates from `prop.X = ...` paths as
+            // fresh. They're products of this copy expression (just not
+            // produced via the new()/copy() natives), so the immutability
+            // check should accept them.
+            for (DynamicInstance nested : deepCopied.values())
+            {
+                eval.registerFreshInCurrentScope(nested);
+            }
+
             // Collect key/value pairs for reverse pointer processing
             List<Map.Entry<String, Object>> allProps = getAllPropertyEntries(copy, cgt, resolver);
+
+            // Immutability check: every association property's value on `copy`
+            // must be a PDO created within this copy expression. Catches
+            // `^$pierre(firstName='Bob')` — bob.firm is shallow-copied from
+            // pierre, points at $firmX which exists outside this expression,
+            // and the bidir step below would add bob to $firmX.employees
+            // (mutating the original). Throws with guidance to use a fresh
+            // value, an empty `[]`, or `^$x()`.
+            verifyAssocPropsAreFresh(classPath, allProps, eval, resolver);
 
             // Set reverse association pointers for ALL properties on the copy
             setReverseAssociationPointers(copy, classPath, allProps, resolver);
@@ -607,7 +677,13 @@ public class MetaNatives
                 }
             }
 
+            copyResult = copy;
             return _E_ValueSpecification.wrap(copy, fe._genericType(), fe._multiplicity(), resolver);
+            }
+            finally
+            {
+                eval.popFreshScopeAndRegister(copyResult);
+            }
         });
 
         // cast(Any[m], T[1]) : T[m]
@@ -619,6 +695,7 @@ public class MetaNatives
             // Resolve the target GenericType from the GenericTypeAndMultiplicityHolder
             meta.pure.metamodel.type.generics.GenericType targetGT = null;
             meta.pure.metamodel.type.Type targetType = null;
+            meta.pure.metamodel.multiplicity.Multiplicity targetMul = null;
             if (targetVs instanceof GenericTypeAndMultiplicityHolder gtmh
                     && gtmh._genericType() != null
                     && _GenericType.typeArguments(gtmh._genericType()) != null
@@ -626,6 +703,12 @@ public class MetaNatives
             {
                 targetGT = _GenericType.typeArguments(gtmh._genericType()).getFirst();
                 targetType = _GenericType.type(targetGT);
+                if (gtmh._genericType() instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv
+                        && gtv._multiplicityArguments() != null
+                        && gtv._multiplicityArguments().notEmpty())
+                {
+                    targetMul = gtv._multiplicityArguments().getFirst();
+                }
             }
             else if (targetVs._genericType() != null)
             {
@@ -633,10 +716,72 @@ public class MetaNatives
                 targetType = _GenericType.type(targetGT);
             }
 
+            // Variant-driven validation, mirroring the three cast<T|m> native
+            // signatures:
+            //   cast<T|m>(source:Any[m], holder<T|?>):T[m]    — check T,  skip m
+            //   cast<T|m>(source:T[*],   holder<?|m>):T[m]    — skip T,   check m
+            //   cast<T|m>(source:Any[*], holder<T|m>):T[m]    — check both
+            // The `?` markers materialize as UndefinedGenericType (at the GT
+            // level) and UndefinedMultiplicity in the metamodel — explicit
+            // "this side is unconstrained" signals.
+            boolean targetTypeUndefined = targetGT instanceof meta.pure.metamodel.type.generics.UndefinedGenericType;
+            boolean targetMulUndefined = targetMul instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity;
+
+            // If the target is a TypeParameter (e.g. `cast(@T)` inside `f<T>(...)`),
+            // resolve T from the enclosing function's recorded `<T>`-bindings
+            // (see ValueSpecificationEvaluator.buildFunctionTypeVarBindings). If we
+            // find a binding, replace targetType with the resolved Type so the
+            // normal subtype check runs against it. If unbound, throw — a
+            // `cast(@T)` whose T can't be resolved at runtime is a real
+            // runtime error, not a silent pass-through.
+            if (!targetTypeUndefined && targetType instanceof meta.pure.metamodel.type.generics.TypeParameter tp)
+            {
+                String tvName = tp._name();
+                Object bound = tvName != null ? eval.lookupFunctionTypeVarBinding(tvName) : null;
+                if (bound == null)
+                {
+                    throw new RuntimeException("Cast exception: type parameter '" + tvName
+                            + "' could not be resolved at runtime. The enclosing generic function did"
+                            + " not bind it from any scalar T[1] argument or non-empty T[*] sequence.");
+                }
+                targetType = (meta.pure.metamodel.type.Type) bound;
+            }
+
+            // Symmetric resolution for `<T|m>`: if the target multiplicity is
+            // a MultiplicityParameter, resolve m from the recorded `<T|m>`
+            // bindings and validate the input value's count against m's
+            // bounds. Throw on unresolved m (same rule as T).
+            if (!targetMulUndefined && targetMul instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
+            {
+                String mvName = mp._name();
+                Object boundMul = mvName != null ? eval.lookupFunctionMulVarBinding(mvName) : null;
+                if (boundMul == null)
+                {
+                    throw new RuntimeException("Cast exception: multiplicity parameter '" + mvName
+                            + "' could not be resolved at runtime. The enclosing generic function did"
+                            + " not bind it from any argument's actual multiplicity.");
+                }
+                targetMul = (meta.pure.metamodel.multiplicity.Multiplicity) boundMul;
+            }
+            if (!targetMulUndefined && targetMul instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
+            {
+                int count = inputCount(inputVs);
+                long lower = cm._lowerBound() != null && cm._lowerBound()._value() != null ? cm._lowerBound()._value() : 0;
+                long upper = cm._upperBound() != null && cm._upperBound()._value() != null ? cm._upperBound()._value() : -1;
+                if (count < lower || (upper != -1 && count > upper))
+                {
+                    String mulStr = upper == -1 ? "[" + lower + "..*]" : "[" + lower + ".." + upper + "]";
+                    throw new RuntimeException("Cast exception: multiplicity violation — value count "
+                            + count + " does not fit " + mulStr);
+                }
+            }
+
             // Validate type compatibility for scalar values.
             // Skip Collections — their common element type is lossy and cast is per-element.
+            // Skip when targetType is UndefinedType (variant 2: T inferred from source).
             Object value = _E_ValueSpecification.unwrap(inputVs);
-            if (value != null
+            if (!targetTypeUndefined
+                    && value != null
                     && !(inputVs instanceof meta.pure.metamodel.valuespecification.Collection)
                     && targetType instanceof PackageableElement targetPe
                     && !(value instanceof meta.pure.metamodel.type.generics.TypeParameter)
@@ -681,6 +826,16 @@ public class MetaNatives
             }
             return _E_ValueSpecification.wrap(value, targetGT, inputVs._multiplicity(), resolver);
         });
+
+        // Aliases for the other two cast variants — same implementation, the
+        // logic is shape-agnostic (reads typeGT / mul from holder, validates
+        // against source). Previously only `Any_m__…` was registered because
+        // the resolver always dispatched there even for `<T|m>` / `<?|m>`
+        // holders; now that subsumes() correctly rejects `?`-vs-real matches,
+        // sig 3 / sig 2 dispatches need an implementation too.
+        NativeImpl castImpl = natives.get("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_");
+        natives.put("cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_", castImpl);
+        natives.put("cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_", castImpl);
 
         // evaluateAndDeactivate — passthrough
         NativeImpl evalAndDeactivate = (args, eval, genericType, multiplicity) -> args.get(0);
@@ -767,117 +922,7 @@ public class MetaNatives
             return _E_ValueSpecification.wrap(newClass, genericType, multiplicity, resolver);
         });
 
-        // newEnumeration(String[1], Package[1], String[*]) : Enumeration<Any>[1]
-        natives.put("newEnumeration_String_1__Package_1__String_MANY__Enumeration_1_", (args, eval, genericType, multiplicity) ->
-        {
-            String name = (String) _E_ValueSpecification.unwrap(args.get(0));
-            Object pkg = _E_ValueSpecification.unwrap(args.get(1));
-            Object valueNamesRaw = _E_ValueSpecification.unwrap(args.get(2));
-            List<String> valueNames = new ArrayList<>();
-            if (valueNamesRaw instanceof List<?> list)
-            {
-                list.forEach(v -> valueNames.add((String) v));
-            }
-            else if (valueNamesRaw instanceof String s)
-            {
-                valueNames.add(s);
-            }
-
-            meta.pure.metamodel.type.EnumerationImpl enumeration = new meta.pure.metamodel.type.EnumerationImpl();
-            enumeration._name(name);
-            if (pkg instanceof meta.pure.metamodel.Package p)
-            {
-                enumeration._package(p);
-            }
-
-            // Add generalization: every user-defined enumeration extends Enum
-            meta.pure.metamodel.type.Type enumType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Enum");
-            meta.pure.metamodel.relationship.GeneralizationImpl gen = new meta.pure.metamodel.relationship.GeneralizationImpl();
-            gen._general(_GenericType.buildUserDefinedGenericType(enumType, resolver));
-            gen._specific(enumeration);
-            meta.pure.metamodel.type.Type genType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::relationship::Generalization");
-            if (genType != null)
-            {
-                gen._classifierGenericType(_GenericType.buildUserDefinedGenericType(genType, resolver));
-            }
-            enumeration._generalizations(org.eclipse.collections.impl.factory.Lists.mutable.with(gen));
-
-            // Self-referencing CGT: Enumeration<self>
-            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef = _GenericType.buildUserDefinedGenericType(enumeration, resolver);
-            meta.pure.metamodel.type.Type enumerationType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Enumeration");
-            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = _GenericType.buildUserDefinedGenericType(enumerationType, resolver);
-            cgt._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(selfRef));
-            enumeration._classifierGenericType(cgt);
-
-            // GenericType for this enumeration (used as CGT for enum values)
-            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl enumGT = _GenericType.buildUserDefinedGenericType(enumeration, resolver);
-
-            meta.pure.metamodel.multiplicity.Multiplicity pureOne = (meta.pure.metamodel.multiplicity.Multiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne");
-            meta.pure.metamodel.type.Type propertyType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::function::property::Property");
-
-            // Build properties for each value
-            org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.function.property.Property> properties = org.eclipse.collections.impl.factory.Lists.mutable.empty();
-            for (String valueName : valueNames)
-            {
-                // Create Enum instance
-                meta.pure.metamodel.type.EnumImpl enumInstance = new meta.pure.metamodel.type.EnumImpl();
-                enumInstance._name(valueName);
-                enumInstance._classifierGenericType(enumGT);
-
-                // Build defaultValue lambda
-                meta.pure.metamodel.type.FunctionTypeImpl ft = new meta.pure.metamodel.type.FunctionTypeImpl();
-                meta.pure.metamodel.type.Type ftType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::FunctionType");
-                if (ftType != null) ft._classifierGenericType(_GenericType.buildUserDefinedGenericType(ftType, resolver));
-                ft._returnType(enumGT);
-                ft._returnMultiplicity(pureOne);
-                meta.pure.metamodel.type.generics.InferredGenericTypeImpl lambdaCGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver);
-                lambdaCGT._type((meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::function::LambdaFunction"));
-                lambdaCGT._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
-                        new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver)._type(ft)));
-
-                meta.pure.metamodel.function.LambdaFunctionImpl lambda = new meta.pure.metamodel.function.LambdaFunctionImpl();
-                lambda._classifierGenericType(lambdaCGT);
-                lambda._expressionSequence(org.eclipse.collections.impl.factory.Lists.mutable.with(
-                        new meta.pure.metamodel.valuespecification.AtomicValueImpl(resolver)
-                                ._value(enumInstance)
-                                ._genericType(enumGT)
-                                ._multiplicity(pureOne)));
-
-                // Build Property
-                meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl propCGT = _GenericType.buildUserDefinedGenericType(propertyType, resolver);
-                propCGT._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(cgt, enumGT));
-                propCGT._multiplicityArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(pureOne));
-
-                meta.pure.metamodel.function.property.PropertyImpl prop = new meta.pure.metamodel.function.property.PropertyImpl();
-                prop._name(valueName);
-                prop._classifierGenericType(propCGT);
-                prop._genericType(enumGT);
-                prop._multiplicity(pureOne);
-                prop._owner(enumeration);
-                // AggregationKind.None — resolve from the PDB
-                Object aggNone = resolver.getElement("meta::pure::metamodel::function::property::AggregationKind");
-                if (aggNone instanceof meta.pure.metamodel.type.Enumeration aggEnum && aggEnum._properties() != null)
-                {
-                    for (meta.pure.metamodel.function.property.Property aggProp : aggEnum._properties())
-                    {
-                        if ("None".equals(aggProp._name()) && aggProp._defaultValue() != null)
-                        {
-                            Object aggVal = _E_ValueSpecification.unwrap(aggProp._defaultValue()._expressionSequence().getFirst());
-                            if (aggVal instanceof meta.pure.metamodel.function.property.AggregationKind ak)
-                            {
-                                prop._aggregation(ak);
-                            }
-                            break;
-                        }
-                    }
-                }
-                prop._defaultValue(lambda);
-                properties.add(prop);
-            }
-
-            enumeration._properties(properties);
-            return _E_ValueSpecification.wrap(enumeration, genericType, multiplicity, resolver);
-        });
+        // newEnumeration is implemented in Pure (see newEnumeration.pure).
     }
 
     // =========================================================================
@@ -1242,12 +1287,17 @@ public class MetaNatives
         {
             return cgt;
         }
-        String simpleName = pe._name();
-        if (simpleName == null || simpleName.isEmpty())
+        // Encode the type's full Pure path in the anchor key so user modules
+        // whose simple names collide with platform types (e.g. a user
+        // `Package` class) don't fall through to the platform anchor and end
+        // up classified as the platform type.
+        String typePath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
+        if (typePath == null || typePath.isEmpty())
         {
             return cgt;
         }
-        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + simpleName);
+        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                + typePath.replace("::", "_"));
         if (canonical instanceof meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT)
         {
             return canonicalGT;
@@ -1532,6 +1582,27 @@ public class MetaNatives
         {
             return;
         }
+        // Allow proposed to be a *subtype* of expected — covers the enum-value
+        // pattern where {@code ^Enum(...)} is intentionally re-classified as a
+        // specific user enumeration. Walks generalizations directly; safer than
+        // a {@code TypeCache} lookup since freshly-built types may not be in
+        // the cache yet. Mirrors {@code NewWithKeysNode.isSubtypeViaGeneralizations}
+        // on the Truffle side.
+        if (expected != null && proposedType != null && isSubtypeViaGeneralizations(proposedType, expected))
+        {
+            return;
+        }
+        // Compile-pure pass-1 pattern: proposedType is a {@link TempCompilerPointer}
+        // whose target is being built right now and isn't yet in the elementMap
+        // (e.g. {@code buildEnumerationSkeleton} wires an enum value's classifier
+        // as a pointer to the enum it's about to register). The pointer carries
+        // the path the producer intends; the post-processor canonicalises it at
+        // module construction. Accept — a pointer is compile-pure-internal, not
+        // a user-supplied raw type swap.
+        if (proposedType instanceof meta.pure.metamodel.pointer.TempCompilerPointer)
+        {
+            return;
+        }
         String expectedName = expected instanceof meta.pure.metamodel.PackageableElement peE
                 ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peE) : "<unknown>";
         String proposedName = proposedType instanceof meta.pure.metamodel.PackageableElement peP
@@ -1552,6 +1623,34 @@ public class MetaNatives
         {
             return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peA).equals(
                     org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peB));
+        }
+        return false;
+    }
+
+    /**
+     * Walk {@code sub}'s generalization chain looking for {@code sup} by path.
+     * Bounded depth so a pathological cycle terminates. Used by
+     * {@link #validateClassifierOverride} to allow {@code ^Enum(...)} to be
+     * re-classified as a specific user enumeration (subtype of Enum).
+     */
+    private static boolean isSubtypeViaGeneralizations(meta.pure.metamodel.type.Type sub, meta.pure.metamodel.type.Type sup)
+    {
+        if (samePackageableElement(sub, sup)) return true;
+        meta.pure.metamodel.type.Type current = sub;
+        for (int depth = 0; depth < 32 && current != null; depth++)
+        {
+            org.eclipse.collections.api.RichIterable<? extends meta.pure.metamodel.relationship.Generalization> gens = current._generalizations();
+            if (gens == null || gens.isEmpty()) return false;
+            meta.pure.metamodel.type.Type next = null;
+            for (meta.pure.metamodel.relationship.Generalization g : gens)
+            {
+                meta.pure.metamodel.type.generics.GenericType generalGT = g._general();
+                meta.pure.metamodel.type.Type parent = generalGT != null ? _GenericType.type(generalGT) : null;
+                if (parent == null) continue;
+                if (samePackageableElement(parent, sup)) return true;
+                if (next == null) next = parent;
+            }
+            current = next;
         }
         return false;
     }
@@ -1619,58 +1718,25 @@ public class MetaNatives
             return;
         }
 
-        int dotIdx = fullKey.indexOf('.');
-        if (dotIdx < 0)
+        if (fullKey.indexOf('.') >= 0)
         {
-            Object addVS = keyExpr.get("add");
-            if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(addVS)))
-            {
-                appendToProperty(copy, fullKey, value, resolver);
-            }
-            else
-            {
-                setInstanceProperty(copy, fullKey, value);
-            }
+            // Deep-path copy keys (e.g. `^$pierre(firm.legalName='X')`) are no
+            // longer supported. They created an implicit deep-copy of the
+            // intermediate, which is confusing and obscures whether `firm` is
+            // shared or duplicated. Users must instantiate the nested value
+            // inline: `^$pierre(firm = ^LA_Firm(legalName='X', ...))`.
+            throw new RuntimeException("Deep-path copy keys (e.g. '" + fullKey
+                    + "') are not supported. Instantiate the nested value inline: `"
+                    + fullKey.substring(0, fullKey.indexOf('.')) + " = ^Type(...)`.");
+        }
+        Object addVS = keyExpr.get("add");
+        if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(addVS)))
+        {
+            appendToProperty(copy, fullKey, value, resolver);
         }
         else
         {
-            String topProp = fullKey.substring(0, dotIdx);
-            String restKey = fullKey.substring(dotIdx + 1);
-
-            DynamicInstance nestedCopy = deepCopied.get(topProp);
-            if (nestedCopy == null)
-            {
-                ValueSpecification existingVS = getInstanceProperty(copy, topProp, resolver);
-                Object existing = _E_ValueSpecification.unwrap(existingVS);
-                if (existing instanceof DynamicInstance existingDi)
-                {
-                    nestedCopy = new DynamicInstance(existingDi.getClassPath());
-                    nestedCopy.getValues().putAll(existingDi.getValues());
-                    if (existingDi.getClassifierGenericType() != null)
-                    {
-                        nestedCopy.setClassifierGenericType(existingDi.getClassifierGenericType());
-                    }
-                }
-                else
-                {
-                    nestedCopy = new DynamicInstance("Unknown");
-                }
-                deepCopied.put(topProp, nestedCopy);
-                setInstanceProperty(copy, topProp, _E_ValueSpecification.wrap(nestedCopy,
-                        existingVS != null ? existingVS._genericType() : null,
-                        existingVS != null ? existingVS._multiplicity() : null,
-                        resolver));
-            }
-
-            DynamicInstance syntheticKe = new DynamicInstance("KeyExpression");
-            syntheticKe.put("name", _E_ValueSpecification.wrap(restKey, (nameVS instanceof ValueSpecification vs) ? vs._genericType() : null, null, resolver));
-            syntheticKe.put("expression", value);
-            Object addVS2 = keyExpr.get("add");
-            if (addVS2 != null)
-            {
-                syntheticKe.put("add", addVS2);
-            }
-            applyCopyKeyExpressionWithDotPath(nestedCopy, syntheticKe, deepCopied, resolver);
+            setInstanceProperty(copy, fullKey, value);
         }
     }
 
@@ -1733,6 +1799,91 @@ public class MetaNatives
         {
             setPropertyViaReflection(instance, key, org.eclipse.collections.api.factory.Lists.mutable.withAll(list));
         }
+    }
+
+    /**
+     * Throws if any association property on {@code classPath} carries a value
+     * that was NOT created within the current new/copy expression. Called from
+     * copy_T_1__KeyExpression_MANY__T_1_ before {@link #setReverseAssociationPointers}.
+     *
+     * The rule enforces immutability of any pre-existing instance: setting
+     * {@code bob.firm = $firmX} (an existing firm) would otherwise mutate
+     * {@code $firmX.employees} via the bidirectional binding. The caller must
+     * either pass a freshly-created value (`firm = ^Firm(...)`, `firm = ^$x()`,
+     * `firm = new(...)`) or set the property to empty (`firm = []`).
+     */
+    public static void verifyAssocPropsAreFresh(String classPath,
+                                                List<Map.Entry<String, Object>> allProps,
+                                                ValueSpecificationEvaluator eval,
+                                                MetadataAccess resolver)
+    {
+        if (resolver == null || allProps.isEmpty())
+        {
+            return;
+        }
+        PackageableElement classElement = resolver.getElement(classPath);
+        if (!(classElement instanceof meta.pure.metamodel.type.Class cls))
+        {
+            return;
+        }
+        List<meta.pure.metamodel.function.property.Property> allAssocProps = new ArrayList<>();
+        collectAssocPropsFromHierarchy(cls, allAssocProps, new java.util.HashSet<>());
+        if (allAssocProps.isEmpty())
+        {
+            return;
+        }
+        java.util.Set<String> assocPropNames = new java.util.HashSet<>();
+        for (meta.pure.metamodel.function.property.Property p : allAssocProps)
+        {
+            if (p != null && p._name() != null)
+            {
+                assocPropNames.add(p._name());
+            }
+        }
+        for (Map.Entry<String, Object> kv : allProps)
+        {
+            String propName = kv.getKey();
+            if (!assocPropNames.contains(propName))
+            {
+                continue;
+            }
+            Object value = kv.getValue();
+            if (value == null)
+            {
+                continue;
+            }
+            Object raw = _E_ValueSpecification.unwrap(value);
+            if (raw == null)
+            {
+                continue;
+            }
+            if (raw instanceof List<?> listVal)
+            {
+                for (Object item : listVal)
+                {
+                    Object itemRaw = item instanceof ValueSpecification vs ? _E_ValueSpecification.unwrap(vs) : item;
+                    if (itemRaw != null && !eval.isFreshInCurrentScope(itemRaw))
+                    {
+                        throw new RuntimeException(immutabilityMessage(classPath, propName));
+                    }
+                }
+            }
+            else
+            {
+                if (!eval.isFreshInCurrentScope(raw))
+                {
+                    throw new RuntimeException(immutabilityMessage(classPath, propName));
+                }
+            }
+        }
+    }
+
+    private static String immutabilityMessage(String classPath, String propName)
+    {
+        return "Immutability violation: association property '" + propName + "' on '"
+                + classPath + "' must be instantiated within the new/copy expression. "
+                + "Use `" + propName + " = ^Type(...)`, `" + propName + " = ^$x()`, or `"
+                + propName + " = []`.";
     }
 
     public static void setReverseAssociationPointers(Object instance, String classPath,
@@ -2005,5 +2156,21 @@ public class MetaNatives
             }
             return;
         }
+    }
+
+    /**
+     * Count of values in a ValueSpecification — 0 for empty/null,
+     * collection size for Collection VSs, 1 for scalar VSs.
+     */
+    private static int inputCount(ValueSpecification vs)
+    {
+        if (vs == null) return 0;
+        if (vs instanceof meta.pure.metamodel.valuespecification.Collection col)
+        {
+            return col._values() != null ? col._values().size() : 0;
+        }
+        Object value = _E_ValueSpecification.unwrap(vs);
+        if (value == null) return 0;
+        return 1;
     }
 }

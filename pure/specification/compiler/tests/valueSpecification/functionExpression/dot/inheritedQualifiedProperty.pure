@@ -43,3 +43,19 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
   DotApplication test::SuperClass.greet(@String@[1]) :#String##[1]#  ~@DotApplication@  @17:7-17:21
     Variable x :#test::SubClass##[1]#  ~@VariableExpression@  @17:5-17:6
     AtomicValue  'world' :@String@[1]  ~@AtomicValue@  @17:14-17:20
+
+###ReverseIndex
+meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+  test::use__Any_MANY_
+meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+  test::use__Any_MANY_
+meta::pure::functions::string::plus_String_1__String_1__String_1_:
+  test::SuperClass.greet
+test::SubClass:
+  test::use__Any_MANY_
+test::SuperClass:
+  test::SubClass
+test::SuperClass.greet:
+  test::use__Any_MANY_

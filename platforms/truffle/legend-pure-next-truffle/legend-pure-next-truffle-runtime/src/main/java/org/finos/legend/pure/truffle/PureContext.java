@@ -49,6 +49,9 @@ public final class PureContext
     private static final int SLOT_TYPE_VARIABLE_VALUES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("typeVariableValues");
     private static final int SLOT_TYPE_VARIABLES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("typeVariables");
     private static final int SLOT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
+    private static final int SLOT_MULTIPLICITY = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("multiplicity");
+    private static final int SLOT_LOWER_BOUND = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("lowerBound");
+    private static final int SLOT_UPPER_BOUND = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("upperBound");
     private final PureLanguage language;
     private final TruffleLanguage.Env env;
 
@@ -73,6 +76,28 @@ public final class PureContext
 
     // Construction stack for new/copy parent references (~)
     private final ArrayDeque<Object> constructionStack = new ArrayDeque<>();
+    // Fresh-instance scope stack: each new/copy expression pushes a scope on
+    // entry and registers its product in the parent scope on exit. Used to
+    // enforce that association-property values are themselves products of
+    // the current expression (immutability rule — see Java's
+    // ValueSpecificationEvaluator.freshScopeStack for the mirror).
+    private final ArrayDeque<java.util.IdentityHashMap<Object, Boolean>> freshScopeStack = new ArrayDeque<>();
+    // Function-level type-variable bindings stack: one entry per active generic
+    // function call, mapping `<T>` parameter names → resolved Type (PDO or
+    // typed XHelper). Populated at function entry by walking the function's
+    // declared parameter types against the runtime argument CGTs (top-level
+    // T-in-parameter only — nested forms like List<T> are a follow-up).
+    // Read by CastNode when target is a TypeParameter, so `cast(@T)` resolves
+    // to the caller-bound type instead of skipping the subtype check. Mirrors
+    // the existing QP class-level type-var binding (bindQpTypeVariablesStatic)
+    // but at the function level for `<T>`-parameterized FunctionDefinitions.
+    private final ArrayDeque<java.util.Map<String, Object>> functionTypeVarStack = new ArrayDeque<>();
+    // Parallel stack for `<T|m>` multiplicity-parameter bindings: name → resolved
+    // Multiplicity PDO (PureOne, ZeroOne, PureMany, etc.). Built from the
+    // argument's runtime count at function entry. Read by CastNode when
+    // target multiplicity is a MultiplicityParameter so probe count can be
+    // validated against the bound bounds.
+    private final ArrayDeque<java.util.Map<String, Object>> functionMulVarStack = new ArrayDeque<>();
 
     // Per-module state holds caches whose entries reference wrappers from a
     // specific module. typePathCgts is keyed by Pure type path; the cached
@@ -178,6 +203,99 @@ public final class PureContext
 
     public void pushConstruction(Object instance) { constructionStack.push(instance); }
     public void popConstruction() { constructionStack.pop(); }
+
+    /** Push a fresh-instance scope at the start of a new/copy expression. */
+    public void pushFreshScope() { freshScopeStack.push(new java.util.IdentityHashMap<>()); }
+
+    /** Pop the fresh-scope and register {@code result} in the parent scope (if any). */
+    public void popFreshScopeAndRegister(Object result)
+    {
+        freshScopeStack.pop();
+        if (!freshScopeStack.isEmpty() && result != null)
+        {
+            freshScopeStack.peek().put(result, Boolean.TRUE);
+        }
+    }
+
+    /**
+     * True iff {@code value} was created within any new/copy expression still
+     * active on the construction stack. Scanning the whole stack (not just the
+     * top) lets higher-order operators (fold/map/etc.) compose naturally
+     * inside an outer new/copy — each lambda iteration's own scope sits on top,
+     * but values constructed in (or registered into) the enclosing scope still
+     * count as fresh. The enclosing scope is the one that owns final bidir
+     * wiring, so this is the right "ownership" boundary.
+     */
+    public boolean isFreshInCurrentScope(Object value)
+    {
+        if (value == null) return false;
+        for (java.util.IdentityHashMap<Object, Boolean> scope : freshScopeStack)
+        {
+            if (scope.containsKey(value)) return true;
+        }
+        return false;
+    }
+
+    /** Register an instance directly into the current fresh scope (for deep-copied intermediates). */
+    public void registerFreshInCurrentScope(Object value)
+    {
+        if (value == null) return;
+        java.util.IdentityHashMap<Object, Boolean> top = freshScopeStack.peek();
+        if (top != null) top.put(value, Boolean.TRUE);
+    }
+
+    /** Push a function's `<T>` type-variable bindings (may be empty). */
+    public void pushFunctionTypeVarBindings(java.util.Map<String, Object> bindings)
+    {
+        functionTypeVarStack.push(bindings);
+    }
+
+    /** Pop the top function's `<T>` type-variable bindings. */
+    public void popFunctionTypeVarBindings()
+    {
+        functionTypeVarStack.pop();
+    }
+
+    /**
+     * Look up T's resolved Type from the innermost active function call that
+     * bound it. Returns null if the name isn't bound in any active scope —
+     * caller falls back to whatever lax behavior it had before (e.g.
+     * CastNode skips subtype validation).
+     */
+    public Object lookupFunctionTypeVarBinding(String name)
+    {
+        if (name == null) return null;
+        for (java.util.Map<String, Object> scope : functionTypeVarStack)
+        {
+            Object v = scope.get(name);
+            if (v != null) return v;
+        }
+        return null;
+    }
+
+    /** Push a function's `<T|m>` multiplicity-variable bindings (may be empty). */
+    public void pushFunctionMulVarBindings(java.util.Map<String, Object> bindings)
+    {
+        functionMulVarStack.push(bindings);
+    }
+
+    /** Pop the top function's `<T|m>` multiplicity-variable bindings. */
+    public void popFunctionMulVarBindings()
+    {
+        functionMulVarStack.pop();
+    }
+
+    /** Look up m's resolved Multiplicity. Null if unbound — caller throws. */
+    public Object lookupFunctionMulVarBinding(String name)
+    {
+        if (name == null) return null;
+        for (java.util.Map<String, Object> scope : functionMulVarStack)
+        {
+            Object v = scope.get(name);
+            if (v != null) return v;
+        }
+        return null;
+    }
     public Object peekConstruction(int depth)
     {
         int i = 0;
@@ -255,9 +373,11 @@ public final class PureContext
                         }
                     }
                 }
+                ParamShapePlan lambdaShape = computeParamShapePlan(lambda);
                 RawLambdaRootNode root = new RawLambdaRootNode(
                         language, lambdaProfileName(lambda),
-                        cf.layout(), cf.layout().paramSlots(), openVarNames, body);
+                        cf.layout(), cf.layout().paramSlots(), openVarNames, body,
+                        lambdaShape.upperBounds, lambdaShape.lowerBounds);
                 RootCallTarget ct = root.getCallTarget();
                 lambdaCache.put(lambda, ct);
                 return ct;
@@ -291,7 +411,7 @@ public final class PureContext
         {
             return null;
         }
-        String enumPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(en);
+        String enumPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(en, this.resolver);
         if (enumPath == null)
         {
             return null;
@@ -606,7 +726,23 @@ public final class PureContext
                 catch (Exception e) { throw new RuntimeException("Failed to set source information", e); }
                 boolean mayBindTypeVars = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fd,
                         "meta::pure::metamodel::function::property::QualifiedProperty");
-                PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body, rootSource, mayBindTypeVars);
+                // Function-level `<T>` binding plan: for each parameter whose
+                // declared type is a top-level TypeParameter, record its index
+                // and T's name. At call time, the corresponding argument's
+                // CGT type is read and bound. Empty arrays = no plan (most
+                // functions). Built once at compile time and held final.
+                FunctionTypeVarPlan plan = computeFunctionTypeVarPlan(fd);
+                // Per-param multiplicity bounds: drives caller-driven shape
+                // coercion at frame-binding time (Pure semantics: a 1-element
+                // collection equals its single value). When a param declares
+                // upperBound=1 but the runtime arg arrives as a sequence-of-1,
+                // unwrap to the bare singleton so downstream property reads
+                // / function dispatch see a scalar receiver.
+                ParamShapePlan shapePlan = computeParamShapePlan(fd);
+                PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body, rootSource,
+                        mayBindTypeVars, plan.paramIndices, plan.tvNames,
+                        plan.mulParamIndices, plan.mvNames,
+                        shapePlan.upperBounds, shapePlan.lowerBounds);
                 cf.setCallTarget(root.getCallTarget());
             }
         }
@@ -617,7 +753,185 @@ public final class PureContext
         return cf;
     }
 
-    private static String getFunctionName(Object fd)
+    /**
+     * Compile-time analysis: for `fd`'s declared parameters, find every one
+     * whose declared type is a top-level TypeParameter (e.g. `T`, not
+     * `List<T>`), AND every one whose declared multiplicity is a
+     * MultiplicityParameter (e.g. `T[m]`). Returns parallel arrays for both
+     * — used later at call entry to bind T from the argument's CGT and m
+     * from the argument's runtime count.
+     */
+    private FunctionTypeVarPlan computeFunctionTypeVarPlan(Object fd)
+    {
+        try
+        {
+            Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fd, SLOT_CLASSIFIER_GENERIC_TYPE);
+            if (cgt == null) return FunctionTypeVarPlan.EMPTY;
+            org.finos.legend.pure.truffle.types.PureSequence ta = org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(cgt);
+            if (ta == null || ta.size() == 0) return FunctionTypeVarPlan.EMPTY;
+            Object functionTypeGT = ta.getBoxed(0);
+            if (functionTypeGT == null) return FunctionTypeVarPlan.EMPTY;
+            Object functionType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(functionTypeGT,
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("type"));
+            if (functionType == null) return FunctionTypeVarPlan.EMPTY;
+            Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(functionType, SLOT_PARAMETERS);
+            if (!(paramsObj instanceof org.finos.legend.pure.truffle.types.PureSequence params) || params.isEmpty())
+            {
+                return FunctionTypeVarPlan.EMPTY;
+            }
+            java.util.ArrayList<Integer> tIdx = new java.util.ArrayList<>();
+            java.util.ArrayList<String> tNames = new java.util.ArrayList<>();
+            java.util.ArrayList<Integer> mIdx = new java.util.ArrayList<>();
+            java.util.ArrayList<String> mNames = new java.util.ArrayList<>();
+            int multiplicitySlot = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("multiplicity");
+            for (int i = 0; i < params.size(); i++)
+            {
+                Object param = params.getBoxed(i);
+                if (param == null) continue;
+                // Type-parameter side. Use isType (subtype-aware) — the
+                // runtime class can be UserDefined/Inferred/ResolvedTypeParameter,
+                // all subclasses of TypeParameter; pureTypeIs (exact-class)
+                // would miss them.
+                Object paramGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(param,
+                        org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("genericType"));
+                if (paramGT != null)
+                {
+                    Object paramType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(paramGT);
+                    if (paramType != null
+                            && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(paramType,
+                                    "meta::pure::metamodel::type::generics::TypeParameter", resolver))
+                    {
+                        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(paramType, SLOT_NAME);
+                        if (nameObj instanceof String s)
+                        {
+                            tIdx.add(i);
+                            tNames.add(s);
+                        }
+                    }
+                }
+                // Multiplicity-parameter side — same isType (subtype-aware).
+                Object paramMul = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(param, multiplicitySlot);
+                if (paramMul != null
+                        && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(paramMul,
+                                "meta::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
+                {
+                    Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(paramMul, SLOT_NAME);
+                    if (nameObj instanceof String s)
+                    {
+                        mIdx.add(i);
+                        mNames.add(s);
+                    }
+                }
+            }
+            if (tIdx.isEmpty() && mIdx.isEmpty()) return FunctionTypeVarPlan.EMPTY;
+            int[] tArr = new int[tIdx.size()];
+            for (int i = 0; i < tArr.length; i++) tArr[i] = tIdx.get(i);
+            int[] mArr = new int[mIdx.size()];
+            for (int i = 0; i < mArr.length; i++) mArr[i] = mIdx.get(i);
+            return new FunctionTypeVarPlan(tArr, tNames.toArray(new String[0]),
+                    mArr, mNames.toArray(new String[0]));
+        }
+        catch (RuntimeException e)
+        {
+            // A malformed FunctionType in compile cache shouldn't crash the
+            // compile — degrade to no binding (matches pre-fix behavior).
+            return FunctionTypeVarPlan.EMPTY;
+        }
+    }
+
+    /**
+     * Compile-time per-param multiplicity bounds, parallel-indexed with paramSlots.
+     * {@code upperBounds[i] = Long.MAX_VALUE} means unbounded ({@code *}).
+     * {@code upperBounds[i] = -1} means the bound is unknown / parametric
+     * (e.g. a MultiplicityParameter {@code m}) — skip the shape coercion.
+     */
+    public static final class ParamShapePlan
+    {
+        static final ParamShapePlan EMPTY = new ParamShapePlan(new long[0], new long[0]);
+        public final long[] upperBounds;
+        public final long[] lowerBounds;
+        ParamShapePlan(long[] upperBounds, long[] lowerBounds)
+        {
+            this.upperBounds = upperBounds;
+            this.lowerBounds = lowerBounds;
+        }
+    }
+
+    /**
+     * Read each declared parameter's multiplicity bounds. For a MultiplicityParameter
+     * (e.g. {@code [m]}) or any case where the upper/lower bound can't be read,
+     * record {@code -1} for that slot so the binding code skips coercion.
+     */
+    ParamShapePlan computeParamShapePlan(Object fd)
+    {
+        try
+        {
+            Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fd, SLOT_PARAMETERS);
+            if (!(paramsObj instanceof org.finos.legend.pure.truffle.types.PureSequence params) || params.isEmpty())
+            {
+                return ParamShapePlan.EMPTY;
+            }
+            int n = params.size();
+            long[] upper = new long[n];
+            long[] lower = new long[n];
+            for (int i = 0; i < n; i++)
+            {
+                upper[i] = -1L;
+                lower[i] = -1L;
+                Object p = params.getBoxed(i);
+                if (p == null) continue;
+                Object mul = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(p, SLOT_MULTIPLICITY);
+                if (mul == null) continue;
+                // MultiplicityParameter (e.g. `m`) — bounds are parametric, skip.
+                if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(mul,
+                        "meta::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
+                {
+                    continue;
+                }
+                Object lbObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mul, SLOT_LOWER_BOUND);
+                Object ubObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mul, SLOT_UPPER_BOUND);
+                Long lbV = readMultiplicityBoundValue(lbObj);
+                Long ubV = readMultiplicityBoundValue(ubObj);
+                lower[i] = lbV != null ? lbV : 0L;
+                upper[i] = ubV != null ? ubV : Long.MAX_VALUE;
+            }
+            return new ParamShapePlan(upper, lower);
+        }
+        catch (RuntimeException e)
+        {
+            return ParamShapePlan.EMPTY;
+        }
+    }
+
+    private static Long readMultiplicityBoundValue(Object boundObj)
+    {
+        if (boundObj == null) return null;
+        Object v = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(boundObj,
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value"));
+        if (v instanceof Long l) return l;
+        if (v instanceof Integer i) return i.longValue();
+        return null;
+    }
+
+    /** Compile-time plan: which arg index supplies which `<T>`/`<T|m>` binding. */
+    public static final class FunctionTypeVarPlan
+    {
+        static final FunctionTypeVarPlan EMPTY = new FunctionTypeVarPlan(new int[0], new String[0], new int[0], new String[0]);
+        public final int[] paramIndices;
+        public final String[] tvNames;
+        public final int[] mulParamIndices;
+        public final String[] mvNames;
+        FunctionTypeVarPlan(int[] paramIndices, String[] tvNames,
+                            int[] mulParamIndices, String[] mvNames)
+        {
+            this.paramIndices = paramIndices;
+            this.tvNames = tvNames;
+            this.mulParamIndices = mulParamIndices;
+            this.mvNames = mvNames;
+        }
+    }
+
+    private String getFunctionName(Object fd)
     {
         // Prefer the unmangled name = package::functionName. fd._name() is
         // the mangled identifier (`assertError_Function_1__String_1__...`);
@@ -635,8 +949,13 @@ public final class PureContext
                         fd, org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("package"));
                 if (pkg != null)
                 {
-                    String pkgPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pkg);
-                    return (pkgPath == null || pkgPath.isEmpty() || "Root".equals(pkgPath))
+                    String pkgPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pkg, this.resolver);
+                    // Root pkg shows up two ways depending on which module
+                    // it came from: live m3.ttl root resolves to "" via the
+                    // resolver's pathOf cache; compile-pure's synthetic root
+                    // (which now also names itself "::") resolves to "::" via
+                    // computePath when the resolver doesn't index it.
+                    return (pkgPath == null || pkgPath.isEmpty() || "::".equals(pkgPath))
                             ? fnName
                             : pkgPath + "::" + fnName;
                 }
@@ -644,7 +963,7 @@ public final class PureContext
             }
             // Fallback to mangled path for fd types without `functionName`
             // (lambdas, native function placeholders).
-            String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(fd);
+            String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(fd, this.resolver);
             if (path != null) return path;
         }
         catch (RuntimeException ignored) {}

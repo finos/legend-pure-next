@@ -39,3 +39,7 @@ function x::testF__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}
     typeParam T -> #Any#
     AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @19:12-19:12
     AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @19:15-19:17
+
+###ReverseIndex
+x::myFunc_T_1__T_1__String_1_:
+  x::testF__String_1_

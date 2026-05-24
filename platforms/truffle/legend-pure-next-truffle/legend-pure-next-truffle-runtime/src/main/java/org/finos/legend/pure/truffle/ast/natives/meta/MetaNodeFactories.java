@@ -81,16 +81,20 @@ public final class MetaNodeFactories
         registry.register("keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_",
                 (args, gt, mul, fe) -> new KeyExpressionNode(args, gt, mul));
 
-        // parentReference(Integer[1], String[1]) : Any[1]
-        registry.register("parentReference_Integer_1__String_1__Any_1_",
-                (args, gt, mul, fe) -> new ParentReferenceNode(args[0], args[1], gt, mul));
-
         // copy(T[1]) : T[1] — simple copy with no overrides
         registry.register("copy_T_1__T_1_",
                 (args, gt, mul, fe) -> new CopySimpleNode(args[0]));
 
-        // cast(Any[m], GenericTypeAndMultiplicityHolder[1]) : T[m]
+        // cast variants — all three signatures share one CastNode
+        // implementation; they only differ on which dimension(s) of the
+        // holder are user-specified vs `?`. The runtime check is the same;
+        // CastNode skips T or m validation when its respective slot is
+        // UndefinedGenericType / UndefinedMultiplicity.
         registry.register("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_",
+                (args, gt, mul, fe) -> new CastNode(args[0], args[1]));
+        registry.register("cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_",
+                (args, gt, mul, fe) -> new CastNode(args[0], args[1]));
+        registry.register("cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_",
                 (args, gt, mul, fe) -> new CastNode(args[0], args[1]));
 
         // evaluateAndDeactivate — passthrough
@@ -131,9 +135,8 @@ public final class MetaNodeFactories
         registry.register("newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_",
                 (args, gt, mul, fe) -> new NewClassNode(args[0], args[1]));
 
-        // newEnumeration — creates a fully constructed Enumeration with all enum values
-        registry.register("newEnumeration_String_1__Package_1__String_MANY__Enumeration_1_",
-                (args, gt, mul, fe) -> new NewEnumNode(args[0], args[1], args[2]));
+        // newEnumeration is implemented in Pure (see newEnumeration.pure) —
+        // no Truffle native node needed.
 
         // parse — invokes the Pure parser (TODO: implement without DynamicInstance)
         registry.register("parse_String_1__String_1__PureFile_1_",

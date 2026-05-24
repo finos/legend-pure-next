@@ -39,12 +39,19 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
 
     let ownerCtx = 'association \'' + $assocName + '\'';
 
-    let gt1Result = $p1Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)
-                        ->compileGenericType($context, $packagePath, [], 'property \'' + $p1Protocol.name + '\'', $ownerCtx);
+    // Push sub-element caller path so type refs in each property's
+    // genericType attribute to {@code Assoc.propName} in the reverse index.
+    // Mirrors Java AssociationHandler.secondPass withCallerSubElement.
+    let gt1Result = $context->withCallerSubElement($p1Protocol.name, {ctx |
+        $p1Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)
+            ->compileGenericType($ctx, $packagePath, [], 'property \'' + $p1Protocol.name + '\'', $ownerCtx);
+    });
     let mGenType1 = $gt1Result.value->toOne();
 
-    let gt2Result = $p2Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)
-                        ->compileGenericType($gt1Result.context, $packagePath, [], 'property \'' + $p2Protocol.name + '\'', $ownerCtx);
+    let gt2Result = $gt1Result.context->withCallerSubElement($p2Protocol.name, {ctx |
+        $p2Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)
+            ->compileGenericType($ctx, $packagePath, [], 'property \'' + $p2Protocol.name + '\'', $ownerCtx);
+    });
     let mGenType2 = $gt2Result.value->toOne();
 
     let ctx1 = $gt2Result.context;
@@ -67,7 +74,7 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
               multiplicity = $mMult1,
               stereotypes = compilePropertyStereotypes($p1Protocol, $ctx1, $ownerCtx).values,
               taggedValues = compilePropertyTaggedValues($p1Protocol, $ctx1, $ownerCtx).values,
-              sourceInformation = compileSourceInformation($p1Protocol.p_sourceInformation)
+              sourceInformation = compileSourceInformation($p1Protocol.p_sourceInformation, $context)
           );
 
           let propClassifierGT2 = ^UserDefinedGenericType(
@@ -83,7 +90,7 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
               multiplicity = $mMult2,
               stereotypes = compilePropertyStereotypes($p2Protocol, $ctx1, $ownerCtx).values,
               taggedValues = compilePropertyTaggedValues($p2Protocol, $ctx1, $ownerCtx).values,
-              sourceInformation = compileSourceInformation($p2Protocol.p_sourceInformation)
+              sourceInformation = compileSourceInformation($p2Protocol.p_sourceInformation, $context)
           );
 
           // Compile stereotypes and tagged values on the association itself

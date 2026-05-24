@@ -1,0 +1,19 @@
+###Error
+Circular parent-reference dependency in key expressions: 'a' -> 'b' -> 'a' (at valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_circular:12c3-12c22)
+
+###Pure
+import test::new::parentRefError::*;
+
+// `a = ~.b` and `b = ~.a` form a cycle — neither can be built before the
+// other. The compiler must reject this with a circular-dependency error
+// instead of silently producing one or the other empty.
+function test::new::parentRefError::testParentRefCircular(): Any[*]
+{
+  ^Cycle(a=~.b, b=~.a);
+}
+
+Class test::new::parentRefError::Cycle
+{
+  a: String[*];
+  b: String[*];
+}

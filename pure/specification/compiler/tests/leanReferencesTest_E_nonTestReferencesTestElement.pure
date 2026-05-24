@@ -1,0 +1,38 @@
+###Error
+Non-test element 'meta::pure::compiler::test::leanRefsTest::anotherNonTest_Any_1__String_1_' references test-only element 'meta::pure::compiler::test::leanRefsTest::TestCallerClass' (at leanReferencesTest_E_nonTestReferencesTestElement:33c1-38c1)
+Non-test element 'meta::pure::compiler::test::leanRefsTest::anotherNonTest_Any_1__String_1_' references test-only element 'meta::pure::compiler::test::leanRefsTest::TestCallerClass.name' (at leanReferencesTest_E_nonTestReferencesTestElement:33c1-38c1)
+Non-test element 'meta::pure::compiler::test::leanRefsTest::anotherNonTest_Any_1__String_1_' references test-only element 'meta::pure::compiler::test::leanRefsTest::testHelper_Any_1__Boolean_1_' (at leanReferencesTest_E_nonTestReferencesTestElement:33c1-38c1)
+Non-test element 'meta::pure::compiler::test::leanRefsTest::nonTestUsesTest_Any_1__Boolean_1_' references test-only element 'meta::pure::compiler::test::leanRefsTest::testHelper_Any_1__Boolean_1_' (at leanReferencesTest_E_nonTestReferencesTestElement:25c1-28c1)
+
+###Pure
+import meta::pure::compiler::test::leanRefsTest::*;
+
+// Test element: a helper function marked <<test.TestDependency>>.
+// Lean (non-test) elements must NOT reference it.
+function <<test.TestDependency>> meta::pure::compiler::test::leanRefsTest::testHelper(a:Any[1]):Boolean[1]
+{
+   true;
+}
+
+// Test element: a model class marked <<test.TestDependency>>.
+// Lean (non-test) elements must NOT reference it.
+Class <<test.TestDependency>> meta::pure::compiler::test::leanRefsTest::TestCallerClass
+{
+   name: String[1];
+}
+
+// Violation 1: a non-test function references the test helper directly.
+function meta::pure::compiler::test::leanRefsTest::nonTestUsesTest(a:Any[1]):Boolean[1]
+{
+   testHelper($a);
+}
+
+// Violations 2 + 3 + 4: another non-test function references the test helper,
+// the test class (via construction), and the test class's sub-element `.name`
+// property (via property access).
+function meta::pure::compiler::test::leanRefsTest::anotherNonTest(a:Any[1]):String[1]
+{
+   testHelper($a);
+   let x = ^TestCallerClass(name='foo');
+   $x.name;
+}
