@@ -28,15 +28,17 @@ sectionContent
     ;
 
 // Any token that is not a section header constitutes content.
-// STRING_CONTENT (a `'...'` literal) is included so its raw text — possibly
-// containing `/*...*/` substrings — flows through to the per-section lexer
-// without the top-level BLOCK_COMMENT skip rule eating into it.
+// STRING_CONTENT (a `'...'` literal) and STRING_TRIPLE_CONTENT (a `'''...'''`
+// multi-line literal) are included so their raw text — possibly containing
+// `/*...*/` substrings — flows through to the per-section lexer without the
+// top-level BLOCK_COMMENT skip rule eating into it.
 contentToken
     : CONTENT_LINE
     | HASH
     | SLASH
     | NEWLINE
     | SEMICOLON
+    | STRING_TRIPLE_CONTENT
     | STRING_CONTENT
     | QUOTE
     ;

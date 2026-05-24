@@ -1,0 +1,12 @@
+###Pure
+function protocol::f(): Any[*]
+{
+  '''
+  /**
+   * Embedded doc comment
+   */
+  public class Foo
+  {
+  }
+  '''
+}

@@ -1,0 +1,24 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::*;
+import meta::external::language::java::factory::tests::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::serialization::*;
+
+function meta::external::language::java::factory::tests::assertCode(expectedCode:String[1], expectedType:meta::external::language::java::metamodel::Type[1], code:Code[1]):Boolean[1]
+{
+   assertEquals($expectedCode, $code->codeToString());
+   assertEquals($expectedType->meta::external::language::java::serialization::typeToString(), $code.type->meta::external::language::java::serialization::typeToString());
+}

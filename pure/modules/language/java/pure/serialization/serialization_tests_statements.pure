@@ -1,0 +1,211 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::*;
+import meta::external::language::java::factory::project::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::metamodel::annotations::java::validation::constraints::*;
+import meta::external::language::java::metamodel::annotations::json::*;
+import meta::external::language::java::metamodel::project::*;
+import meta::external::language::java::serialization::*;
+import meta::external::language::java::serialization::tests::*;
+
+function <<test.Test>> meta::external::language::java::serialization::tests::forEach():Boolean[1]
+{
+   let param = j_parameter(javaString(), 's');
+   let list  = j_variable(javaList(javaString()), 'strings');
+
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public void test()
+            {
+                for (String s: strings)
+                {
+                    System.out.println(s);
+                }
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaVoid(), 'test', [], j_for($param, $list, j_println($param))))
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::forLoop():Boolean[1]
+{
+   let param  = j_parameter(javaInt(), 'i');
+   let list   = j_variable(javaList(javaString()), 'strings');
+
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public void test()
+            {
+                for (int i = 0; i < strings.size(); i++)
+                {
+                    System.out.println(strings.get(i));
+                }
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaVoid(), 'test', [],
+                           j_for($param->j_declare(j_int(0)), $param->j_lt($list->j_invoke('size', [])), $param->j_inc(), j_println($list->j_invoke('get', $param)))
+                       ))
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::conditionalAndInstanceOf():Boolean[1]
+{
+   let list = j_parameter(javaList(javaString()), 'list');
+
+   test('''
+        package org.finos.test;
+        
+        import java.util.ArrayList;
+        import java.util.List;
+        
+        class Test
+        {
+            public String test(List<String> list)
+            {
+                return list instanceof ArrayList ? "ArrayList" : "Some other list";
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaString(), 'test', $list,
+                           j_return(j_conditional($list->j_instanceof(javaArrayList()), j_string('ArrayList'), j_string('Some other list')))
+                       ))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::while():Boolean[1]
+{
+   let list = j_parameter(javaList(javaString()), 'list');
+
+   test('''
+        package org.finos.test;
+        
+        import java.util.List;
+        
+        class Test
+        {
+            public void test(List<String> list)
+            {
+                while (!list.isEmpty())
+                {
+                    list.remove(0);
+                }
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaVoid(), 'test', $list,
+                           j_while(j_not($list->j_invoke('isEmpty', [])), $list->j_invoke('remove', j_int(0), javaString()))
+                       ))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::doWhile():Boolean[1]
+{
+   let list = j_parameter(javaList(javaString()), 'list');
+
+   test('''
+        package org.finos.test;
+        
+        import java.util.List;
+        
+        class Test
+        {
+            public void test(List<String> list)
+            {
+                do
+                {
+                    list.remove(0);
+                }
+                while (!list.isEmpty());
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaVoid(), 'test', $list,
+                           j_doWhile($list->j_invoke('remove', j_int(0), javaString()), j_not($list->j_invoke('isEmpty', [])))
+                       ))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::tryCatch():Boolean[1]
+{
+   let list = j_parameter(javaList(javaString()), 'list');
+   let e    = j_parameter(javaException(), 'e');
+
+   test('''
+        package org.finos.test;
+        
+        import java.io.PrintStream;
+        import java.util.List;
+        
+        class Test
+        {
+            public void test(List<String> list)
+            {
+                try
+                {
+                    list.remove(0);
+                }
+                catch (Exception e)
+                {
+                    System.out.println(e.getMessage());
+                }
+                finally
+                {
+                    System.out.println("in the end");
+                }
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaVoid(), 'test', $list,
+                           j_try(
+                              $list->j_invoke('remove', j_int(0), javaString()),
+                              j_catch($e, j_println($e->j_invoke('getMessage', []))),
+                              j_finally(j_println(j_string('in the end')))
+                           )
+                       ))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::throw():Boolean[1]
+{
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public void test()
+            {
+                throw new UnsupportedOperationException("No way!");
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaVoid(), 'test', [],
+                           j_throw(j_new(javaUnsupportedOperationException(), j_string('No way!')))
+                       ))
+           ->inferImports()
+   );
+}

@@ -1,0 +1,67 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::*;
+import meta::external::language::java::factory::tests::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::serialization::*;
+
+function <<test.Test>> meta::external::language::java::factory::tests::inferredImports():Boolean[1]
+{
+   let cls = javaClass('test.pkg.TestClass')
+                ->addField(javaField('private', javaString(), 'aString'))
+                ->addField(javaField('private', javaList(javaString()), 'aList'))
+                ->addField(javaField('private', javaClass('test.pkg.TestOther'), 'samePackage'))
+                ->addField(javaField('private', javaClass('test.pkg..other.TestOther'), 'sameNameAsClassInPackage'))
+                ->inferImports();
+   
+   assertEquals(['java.util.List'], $cls.additionalImports);
+}
+
+function <<test.Test>> meta::external::language::java::factory::tests::inferredImportsOnEnum():Boolean[1]
+{
+   let cls = javaEnum('public', 'org.finos.Things')
+      ->addEntries([
+           javaEnumEntry('Alpha')->annotate(^meta::external::language::java::metamodel::annotations::generated::Generated(value='a', comments='In the beginning'))->javaDoc('The first one')
+        ])
+      ->inferImports();
+   
+   assertEquals(['javax.annotation.Generated'], $cls.additionalImports);
+}
+
+function <<test.Test>> meta::external::language::java::factory::tests::inferredImportsEnum():Boolean[1]
+{
+   let cls = javaClass('test.pkg.TestClass')
+                ->addField(javaField('private', javaString(), 'aString'))
+                ->addField(javaField('private', javaList(javaString()), 'aList'))
+                ->addField(javaField('private', javaClass('test.pkg.TestOther'), 'samePackage'))
+                ->addField(javaField('private', javaClass('test.pkg..other.TestOther'), 'sameNameAsClassInPackage'))
+                ->meta::external::language::java::factory::annotate(^meta::external::language::java::metamodel::annotations::json::JsonTypeInfo(
+                      use = ^meta::external::language::java::metamodel::annotations::json::EnumValue(value='JsonTypeInfo.Id.NAME'),
+                      property = '_type'
+                    )
+                )
+                ->meta::external::language::java::factory::annotate(^meta::external::language::java::metamodel::annotations::json::JsonSubTypes(
+                          subTypes=[
+                                  ^meta::external::language::java::metamodel::annotations::json::JsonSubType(
+                                      value='test.pkg.TestClassOther',
+                                      name='test'
+                                  )
+                              ]
+                           )
+                     )
+                ->inferImports();
+   
+   assertEquals(['com.fasterxml.jackson.annotation.JsonSubTypes', 'com.fasterxml.jackson.annotation.JsonTypeInfo', 'java.util.List'], $cls.additionalImports);
+}

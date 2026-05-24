@@ -1,0 +1,115 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::*;
+import meta::external::language::java::factory::tests::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::serialization::*;
+
+function <<test.Test>> meta::external::language::java::factory::tests::castEmptyListIsNull():Boolean[1]
+{
+   assertCode('(String) null', javaString(), j_emptyList(javaList(javaWildcard()))->j_cast(javaString()));
+}
+
+function <<test.Test>> meta::external::language::java::factory::tests::castToExistingTypeIsANoOp():Boolean[1]
+{
+   assertCode('"Hello"', javaString(), j_string('Hello')->j_cast(javaString()));
+}
+
+function <<test.Test>> meta::external::language::java::factory::tests::castToDifferentType():Boolean[1]
+{
+   assertCode('(CharSequence) "Hello"', javaCharSequence(), j_string('Hello')->j_cast(javaCharSequence()));
+}
+
+function <<test.Test>> meta::external::language::java::factory::tests::BigDecimalOperations():Boolean[1]
+{
+  assertCode('3.14', javaBigDecimal(), j_bigDecimal(3.14d));
+  assertCode('3.1415926535897', javaBigDecimal(), j_bigDecimal('3.1415926535897'));
+  assertCode('new java.math.BigDecimal(1.5)', javaBigDecimal(), j_new(javaBigDecimal(),j_double(1.5)));
+  assertCode('new java.math.BigDecimal("1.5")', javaBigDecimal(), j_new(javaBigDecimal(),j_string('1.5')));
+}
+
+function <<test.Test>> meta::external::language::java::factory::tests::castUnboxedToBoxed():Boolean[1]
+{
+   assertCode('4',    javaIntBoxed(),    j_int(4)     ->j_cast(javaIntBoxed()));
+   assertCode('4L',   javaLongBoxed(),   j_long(4)    ->j_cast(javaLongBoxed()));
+   assertCode('1.5F', javaFloatBoxed(),  j_float(1.5) ->j_cast(javaFloatBoxed()));
+   assertCode('1.5',  javaDoubleBoxed(), j_double(1.5)->j_cast(javaDoubleBoxed()));
+
+   assertCode('(Number) new Integer(4)',  javaNumber(),      j_int(4)     ->j_cast(javaNumber()));
+   assertCode('(Number) new Long(4L)',    javaNumber(),      j_long(4)    ->j_cast(javaNumber()));
+   assertCode('(Number) new Float(1.5F)', javaNumber(),      j_float(1.5) ->j_cast(javaNumber()));
+   assertCode('(Number) new Double(1.5)', javaNumber(),      j_double(1.5)->j_cast(javaNumber()));
+
+   assertCode('(Object) new Integer(4)',  javaObject(),      j_int(4)     ->j_cast(javaObject()));
+   assertCode('(Object) new Long(4L)',    javaObject(),      j_long(4)    ->j_cast(javaObject()));
+   assertCode('(Object) new Float(1.5F)', javaObject(),      j_float(1.5) ->j_cast(javaObject()));
+   assertCode('(Object) new Double(1.5)', javaObject(),      j_double(1.5)->j_cast(javaObject()));
+}
+
+function <<test.Test>> meta::external::language::java::factory::tests::castBoxedToUnboxedUsesValueMethods():Boolean[1]
+{
+   let n = j_variable(javaNumber(), 'n');
+
+   assertCode('new Integer(4).intValue()',  javaInt(), j_int(4)     ->j_box()->j_cast(javaInt()));
+   assertCode('new Long(4L).intValue()',    javaInt(), j_long(4)    ->j_box()->j_cast(javaInt()));
+   assertCode('new Float(1.5F).intValue()', javaInt(), j_float(1.5) ->j_box()->j_cast(javaInt()));
+   assertCode('new Double(1.5).intValue()', javaInt(), j_double(1.5)->j_box()->j_cast(javaInt()));
+   assertCode('n.intValue()',               javaInt(), $n->j_cast(javaInt()));
+
+   assertCode('new Integer(4).longValue()',  javaLong(), j_int(4)     ->j_box()->j_cast(javaLong()));
+   assertCode('new Long(4L).longValue()',    javaLong(), j_long(4)    ->j_box()->j_cast(javaLong()));
+   assertCode('new Float(1.5F).longValue()', javaLong(), j_float(1.5) ->j_box()->j_cast(javaLong()));
+   assertCode('new Double(1.5).longValue()', javaLong(), j_double(1.5)->j_box()->j_cast(javaLong()));
+   assertCode('n.longValue()',               javaLong(), $n->j_cast(javaLong()));
+
+   assertCode('new Integer(4).shortValue()',  javaShort(), j_int(4)     ->j_box()->j_cast(javaShort()));
+   assertCode('new Long(4L).shortValue()',    javaShort(), j_long(4)    ->j_box()->j_cast(javaShort()));
+   assertCode('new Float(1.5F).shortValue()', javaShort(), j_float(1.5) ->j_box()->j_cast(javaShort()));
+   assertCode('new Double(1.5).shortValue()', javaShort(), j_double(1.5)->j_box()->j_cast(javaShort()));
+   assertCode('n.shortValue()',               javaShort(), $n->j_cast(javaShort()));
+
+   assertCode('new Integer(4).byteValue()',  javaByte(), j_int(4)     ->j_box()->j_cast(javaByte()));
+   assertCode('new Long(4L).byteValue()',    javaByte(), j_long(4)    ->j_box()->j_cast(javaByte()));
+   assertCode('new Float(1.5F).byteValue()', javaByte(), j_float(1.5) ->j_box()->j_cast(javaByte()));
+   assertCode('new Double(1.5).byteValue()', javaByte(), j_double(1.5)->j_box()->j_cast(javaByte()));
+   assertCode('n.byteValue()',               javaByte(), $n->j_cast(javaByte()));
+
+   assertCode('new Integer(4).floatValue()',  javaFloat(), j_int(4)     ->j_box()->j_cast(javaFloat()));
+   assertCode('new Long(4L).floatValue()',    javaFloat(), j_long(4)    ->j_box()->j_cast(javaFloat()));
+   assertCode('new Float(1.5F).floatValue()', javaFloat(), j_float(1.5) ->j_box()->j_cast(javaFloat()));
+   assertCode('new Double(1.5).floatValue()', javaFloat(), j_double(1.5)->j_box()->j_cast(javaFloat()));
+   assertCode('n.floatValue()',               javaFloat(), $n->j_cast(javaFloat()));
+   
+   assertCode('new Integer(4).doubleValue()',  javaDouble(), j_int(4)     ->j_box()->j_cast(javaDouble()));
+   assertCode('new Long(4L).doubleValue()',    javaDouble(), j_long(4)    ->j_box()->j_cast(javaDouble()));
+   assertCode('new Float(1.5F).doubleValue()', javaDouble(), j_float(1.5) ->j_box()->j_cast(javaDouble()));
+   assertCode('new Double(1.5).doubleValue()', javaDouble(), j_double(1.5)->j_box()->j_cast(javaDouble()));
+   assertCode('n.doubleValue()',               javaDouble(), $n->j_cast(javaDouble()));
+}
+
+function <<test.Test>> meta::external::language::java::factory::tests::doubleCastingRecastsTheOriginal():Boolean[1]
+{
+   assertCode('new Integer(4).intValue()',      javaInt(),          j_int(4)->j_box()->j_cast(javaDouble())->j_cast(javaInt()));
+   assertCode('new Integer(4)',                 javaIntBoxed(),     j_int(4)->j_box()->j_cast(javaDouble())->j_cast(javaIntBoxed()));
+   assertCode('(java.io.Serializable) "Hello"', javaSerializable(), j_string('Hello')->j_cast(javaCharSequence())->j_cast(javaSerializable()));
+}
+
+function <<test.Test>> meta::external::language::java::factory::tests::primitiveCastsPreseveredByBoxingIfDoubleCast():Boolean[1]
+{
+   let i = j_variable(javaInt(), 'i');
+   
+   assertCode('(Object) new Long((long) i)', javaObject(), $i->j_cast(javaLong())->j_cast(javaObject()));
+   assertCode('(Number) new Long((long) i)', javaNumber(), $i->j_cast(javaLong())->j_cast(javaNumber()));
+}

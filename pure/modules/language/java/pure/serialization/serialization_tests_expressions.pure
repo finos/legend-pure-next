@@ -1,0 +1,271 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::*;
+import meta::external::language::java::factory::project::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::metamodel::annotations::java::validation::constraints::*;
+import meta::external::language::java::metamodel::annotations::json::*;
+import meta::external::language::java::metamodel::project::*;
+import meta::external::language::java::serialization::*;
+import meta::external::language::java::serialization::tests::*;
+
+function <<test.Test>> meta::external::language::java::serialization::tests::null():Boolean[1]
+{
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public String test()
+            {
+                return null;
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaString(), 'test', [],
+                           j_return(j_null())
+                       ))
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::arrayAccessAndPrefix():Boolean[1]
+{
+   let array = j_parameter(javaArray(javaString()), 'array');
+   let index = j_parameter(javaInt(), 'index');
+
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public String test(String[] array, int index)
+            {
+                return array[--index];
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaString(), 'test', [$array, $index],
+                           j_return($array->j_arrayAccess(j_preDec($index)))
+                       ))
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::cast():Boolean[1]
+{
+   let list = j_parameter(javaList(javaString()), 'list');
+
+   test('''
+        package org.finos.test;
+        
+        import java.util.ArrayList;
+        import java.util.List;
+        
+        class Test
+        {
+            public String test(List<String> list)
+            {
+                return ((ArrayList<String>) list).get(0);
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaString(), 'test', $list,
+                           j_return($list->j_cast(javaArrayList(javaString()))->j_invoke('get', j_int(0)))
+                       ))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::constructorCalls():Boolean[1]
+{
+   let message = j_parameter(javaString(), 'message');
+
+   test('''
+        package org.finos.test;
+        
+        class TestException extends RuntimeException
+        {
+            public TestException()
+            {
+                this("My fault");
+            }
+        
+            public TestException(String message)
+            {
+                super("Test: " + message);
+            }
+        }''',
+        javaClass('org.finos.test.TestException')
+           ->jextends(javaRuntimeException())
+           ->addConstructor(cls| javaConstructor('public', [], $cls->j_thisInvoke(j_string('My fault'))))
+           ->addConstructor(cls| javaConstructor('public', $message, $cls->j_superInvoke(j_string('Test: ')->j_plus($message))))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::lambda():Boolean[1]
+{
+   let list    = j_parameter(javaList(javaString()), 'list');
+   let s       = j_parameter(javaString(), 's');
+   let rtnType = javaList(javaInt()->toBoxed());
+
+   test('''
+        package org.finos.test;
+        
+        import java.util.List;
+        import java.util.stream.Collectors;
+        import java.util.stream.Stream;
+        
+        class Test
+        {
+            public List<Integer> test(List<String> list)
+            {
+                return list.stream().map((String s) -> s.length()).collect(Collectors.toList());
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', $rtnType, 'test', $list,
+                           j_return($list->j_streamOf()->js_map(j_lambda($s, $s->j_invoke('length', [])))->js_resolve($rtnType))
+                       ))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::methodReference():Boolean[1]
+{
+   let list    = j_parameter(javaList(javaString()), 'list');
+   let s       = j_parameter(javaString(), 's');
+   let rtnType = javaList(javaIntBoxed());
+   let result  = j_parameter($rtnType, 'result');
+
+   test('''
+        package org.finos.test;
+        
+        import java.util.ArrayList;
+        import java.util.List;
+        import java.util.stream.Stream;
+        
+        class Test
+        {
+            public List<Integer> test(List<String> list)
+            {
+                List<Integer> result = new ArrayList<Integer>();
+                list.stream().map(String::length).forEach(result::add);
+                return result;
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', $rtnType, 'test', $list,
+                           [
+                              $result->j_declare(j_new(javaArrayList(javaIntBoxed()), [])),
+                              $list->j_streamOf()
+                                   ->js_map(j_methodReference(javaString(), 'length', javaFunctionType(javaString(), javaIntBoxed())->nonNull()))
+                                   ->js_forEach(j_methodReference($result, 'add', javaFunctionType(javaIntBoxed(), javaVoid()))),
+                              j_return($result)
+                           ]
+                       ))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::anonymousClass():Boolean[1]
+{
+   let rtnType = javaSupplier(javaString());
+
+   test('''
+        package org.finos.test;
+        
+        import java.util.function.Supplier;
+        
+        class Test
+        {
+            public String text;
+        
+            public Supplier<String> test()
+            {
+                return new Supplier<String>()
+                {
+                    public String get()
+                    {
+                        return Test.this.text;
+                    }
+                };
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addField(javaField('public', javaString(), 'text'))
+           ->addMethod(cls| javaMethod('public', $rtnType, 'test', [],
+                           j_return(j_newAnon($rtnType, [], j_method('public', javaString(), 'get', [], j_return(j_this($cls)->j_field('text')))))
+                       ))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::anonymousClassAsArgument():Boolean[1]
+{
+   let list = j_parameter(javaList(javaString()), 'list');
+   let s    = j_parameter(javaString(), 's');
+
+   test('''
+        package org.finos.test;
+        
+        import java.io.PrintStream;
+        import java.util.List;
+        import java.util.function.Consumer;
+        
+        class Test
+        {
+            public void test(List<String> list)
+            {
+                list.forEach(new Consumer<String>()
+                {
+                    public void accept(String s)
+                    {
+                        System.out.println(s);
+                    }
+                });
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(cls| javaMethod('public', javaVoid(), 'test', $list,
+                           $list->j_invoke('forEach', j_newAnon(javaConsumer(javaString()), [], j_method('public', javaVoid(), 'accept', $s, j_println($s))), javaVoid())
+                       ))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::packageClassCausesLangToBeQualified():Boolean[1]
+{
+   let myString = javaClass('org.finos.test.String');
+   let class    = javaClass('org.finos.test.Test')
+                     ->addMethod(javaMethod('public', javaString(), 'test', [],
+                          j_return(j_string('Hello'))
+                       ));
+
+   let project = newProject()->addClasses([$myString, $class]);
+
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public java.lang.String test()
+            {
+                return "Hello";
+            }
+        }''',
+        $class,
+        newStringifier($project)
+   );
+}
