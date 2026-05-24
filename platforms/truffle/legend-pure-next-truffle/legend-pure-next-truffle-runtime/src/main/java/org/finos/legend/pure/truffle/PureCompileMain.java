@@ -284,6 +284,10 @@ public final class PureCompileMain
         // Wire composite resolver into each loader for cross-module FBW resolution
         for (var loader : loaders) loader.setResolver(resolver);
         for (var loader : loaders) loader.preloadAll();
+        // Setup is done — globally validate cross-references so any missing
+        // dependency PDB (e.g. forgot --pdb shared/core.pdb) fails here with
+        // a clear "missing class" diagnostic instead of a downstream NPE.
+        resolver.validate();
 
         PureTruffleRuntime.Builder runtimeBuilder = PureTruffleRuntime.builder()
                 .withResolver(resolver)

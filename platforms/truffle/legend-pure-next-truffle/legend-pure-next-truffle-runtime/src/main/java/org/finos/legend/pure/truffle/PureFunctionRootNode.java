@@ -81,17 +81,29 @@ public final class PureFunctionRootNode extends RootNode
     @CompilationFinal(dimensions = 1)
     private final String[] funcMulVarNames;
 
+    /**
+     * Per-param declared multiplicity bounds (parallel-indexed with paramSlots).
+     * {@code paramUpperBound[i] == -1} means "skip shape coercion" (parametric
+     * multiplicity like `[m]`, or the bounds couldn't be read). Otherwise the
+     * binding code enforces {@code lower <= argSize <= upper} and unwraps a
+     * sequence-of-1 to its bare element when upper bound is 1.
+     */
+    @CompilationFinal(dimensions = 1)
+    private final long[] paramUpperBound;
+    @CompilationFinal(dimensions = 1)
+    private final long[] paramLowerBound;
+
     public PureFunctionRootNode(PureLanguage language, String name,
                                 FrameLayout layout, PureNode[] body)
     {
-        this(language, name, layout, body, null, false, EMPTY_INT, EMPTY_STR, EMPTY_INT, EMPTY_STR);
+        this(language, name, layout, body, null, false, EMPTY_INT, EMPTY_STR, EMPTY_INT, EMPTY_STR, EMPTY_LONG, EMPTY_LONG);
     }
 
     public PureFunctionRootNode(PureLanguage language, String name,
                                 FrameLayout layout, PureNode[] body,
                                 com.oracle.truffle.api.source.SourceSection sourceSection)
     {
-        this(language, name, layout, body, sourceSection, false, EMPTY_INT, EMPTY_STR, EMPTY_INT, EMPTY_STR);
+        this(language, name, layout, body, sourceSection, false, EMPTY_INT, EMPTY_STR, EMPTY_INT, EMPTY_STR, EMPTY_LONG, EMPTY_LONG);
     }
 
     public PureFunctionRootNode(PureLanguage language, String name,
@@ -99,7 +111,7 @@ public final class PureFunctionRootNode extends RootNode
                                 com.oracle.truffle.api.source.SourceSection sourceSection,
                                 boolean mayBindTypeVars)
     {
-        this(language, name, layout, body, sourceSection, mayBindTypeVars, EMPTY_INT, EMPTY_STR, EMPTY_INT, EMPTY_STR);
+        this(language, name, layout, body, sourceSection, mayBindTypeVars, EMPTY_INT, EMPTY_STR, EMPTY_INT, EMPTY_STR, EMPTY_LONG, EMPTY_LONG);
     }
 
     public PureFunctionRootNode(PureLanguage language, String name,
@@ -108,6 +120,19 @@ public final class PureFunctionRootNode extends RootNode
                                 boolean mayBindTypeVars,
                                 int[] funcTypeVarArgIdx, String[] funcTypeVarNames,
                                 int[] funcMulVarArgIdx, String[] funcMulVarNames)
+    {
+        this(language, name, layout, body, sourceSection, mayBindTypeVars,
+                funcTypeVarArgIdx, funcTypeVarNames, funcMulVarArgIdx, funcMulVarNames,
+                EMPTY_LONG, EMPTY_LONG);
+    }
+
+    public PureFunctionRootNode(PureLanguage language, String name,
+                                FrameLayout layout, PureNode[] body,
+                                com.oracle.truffle.api.source.SourceSection sourceSection,
+                                boolean mayBindTypeVars,
+                                int[] funcTypeVarArgIdx, String[] funcTypeVarNames,
+                                int[] funcMulVarArgIdx, String[] funcMulVarNames,
+                                long[] paramUpperBound, long[] paramLowerBound)
     {
         super(language, layout.descriptor());
         this.name = name;
@@ -120,10 +145,13 @@ public final class PureFunctionRootNode extends RootNode
         this.funcTypeVarNames = funcTypeVarNames != null ? funcTypeVarNames : EMPTY_STR;
         this.funcMulVarArgIdx = funcMulVarArgIdx != null ? funcMulVarArgIdx : EMPTY_INT;
         this.funcMulVarNames = funcMulVarNames != null ? funcMulVarNames : EMPTY_STR;
+        this.paramUpperBound = paramUpperBound != null ? paramUpperBound : EMPTY_LONG;
+        this.paramLowerBound = paramLowerBound != null ? paramLowerBound : EMPTY_LONG;
     }
 
     private static final int[] EMPTY_INT = new int[0];
     private static final String[] EMPTY_STR = new String[0];
+    private static final long[] EMPTY_LONG = new long[0];
 
     @Override
     public com.oracle.truffle.api.source.SourceSection getSourceSection()
@@ -143,10 +171,22 @@ public final class PureFunctionRootNode extends RootNode
 
         Object[] arguments = frame.getArguments();
 
-        // Bind params from arguments[0..]
+        // Bind params from arguments[0..]. Caller-driven shape coercion
+        // (Pure semantics: a 1-element collection equals its single value):
+        // when the declared param has upperBound=1 but the arg arrived as a
+        // PureSequence-of-1, unwrap to the bare element so downstream
+        // property access / function dispatch see a scalar receiver.
+        // {@code paramUpperBound[i] == -1} means "skip coercion" (parametric
+        // multiplicity or no bound info available).
+        boolean haveShapeInfo = paramUpperBound.length > 0;
         for (int i = 0; i < paramSlots.length && i < arguments.length; i++)
         {
-            frame.setObject(paramSlots[i], arguments[i] != null ? arguments[i] : PureSequence.EMPTY);
+            Object arg = arguments[i] != null ? arguments[i] : PureSequence.EMPTY;
+            if (haveShapeInfo && i < paramUpperBound.length)
+            {
+                arg = coerceArgToParamShape(arg, paramUpperBound[i], paramLowerBound[i], i);
+            }
+            frame.setObject(paramSlots[i], arg);
         }
 
 
@@ -198,6 +238,46 @@ public final class PureFunctionRootNode extends RootNode
 
         org.finos.legend.pure.truffle.profiler.PureProfiler.exit();
         return result;
+    }
+
+    /**
+     * Pure-semantic shape coercion: a 1-element collection equals its single
+     * value. When the param declares upperBound=1 and the arg arrived as a
+     * PureSequence-of-1, unwrap to the bare singleton. Throws when the arg's
+     * actual size doesn't fit the declared bounds — type checker normally
+     * catches this, but match's [1]-arm path (which passes the raw input
+     * collection straight to the arm lambda) can leak size mismatches.
+     */
+    static Object coerceArgToParamShape(Object arg, long upperBound, long lowerBound, int paramIdx)
+    {
+        if (upperBound < 0) return arg; // parametric / unknown — skip
+        int actualSize;
+        if (arg instanceof PureSequence ps)
+        {
+            actualSize = ps.size();
+        }
+        else
+        {
+            actualSize = 1;
+        }
+        if (actualSize > upperBound)
+        {
+            com.oracle.truffle.api.CompilerDirectives.transferToInterpreter();
+            throw new RuntimeException("Argument multiplicity [" + actualSize
+                    + "] exceeds parameter " + paramIdx + " declared upper bound " + upperBound);
+        }
+        if (actualSize < lowerBound)
+        {
+            com.oracle.truffle.api.CompilerDirectives.transferToInterpreter();
+            throw new RuntimeException("Argument multiplicity [" + actualSize
+                    + "] below parameter " + paramIdx + " declared lower bound " + lowerBound);
+        }
+        // upper == 1 and we have a singleton sequence → unwrap to bare element.
+        if (upperBound == 1 && actualSize == 1 && arg instanceof PureSequence ps2)
+        {
+            return ps2.getBoxed(0);
+        }
+        return arg;
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary

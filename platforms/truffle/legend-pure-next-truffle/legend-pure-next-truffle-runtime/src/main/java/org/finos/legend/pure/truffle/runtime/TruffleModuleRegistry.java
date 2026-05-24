@@ -152,6 +152,39 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
     }
 
     /**
+     * Manifest-level dependency check: every registered module's declared
+     * {@code dependencies()} must itself be registered. {@link #register}
+     * already enforces this at registration time (deps must be registered
+     * first), so the explicit {@code validate()} is mostly a "setup is done,
+     * confirm the closure" assertion — useful for CLI entry points where the
+     * caller may register in any order or programmatically.
+     *
+     * <p>Reports every missing dependency (not just the first) so a caller
+     * with multiple gaps sees them all at once.</p>
+     */
+    public void validate()
+    {
+        java.util.List<String> errors = new java.util.ArrayList<>();
+        for (TruffleModule m : modules.values())
+        {
+            for (String dep : m.dependencies())
+            {
+                if (!modules.containsKey(dep))
+                {
+                    errors.add("module '" + m.name() + "' declares dependency '" + dep + "' which is not registered");
+                }
+            }
+        }
+        if (!errors.isEmpty())
+        {
+            StringBuilder sb = new StringBuilder("Registry validation failed (")
+                    .append(errors.size()).append(" missing dependencies):");
+            for (String e : errors) sb.append("\n  - ").append(e);
+            throw new IllegalStateException(sb.toString());
+        }
+    }
+
+    /**
      * Unregister a module and cascade-invalidate any module that depends on
      * it. After this returns, the named module and every transitive dependent
      * are gone from the registry; their associated state (caches, shapes,

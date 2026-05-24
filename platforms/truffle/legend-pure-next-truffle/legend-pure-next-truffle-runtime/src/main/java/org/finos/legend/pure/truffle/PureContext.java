@@ -49,6 +49,9 @@ public final class PureContext
     private static final int SLOT_TYPE_VARIABLE_VALUES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("typeVariableValues");
     private static final int SLOT_TYPE_VARIABLES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("typeVariables");
     private static final int SLOT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
+    private static final int SLOT_MULTIPLICITY = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("multiplicity");
+    private static final int SLOT_LOWER_BOUND = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("lowerBound");
+    private static final int SLOT_UPPER_BOUND = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("upperBound");
     private final PureLanguage language;
     private final TruffleLanguage.Env env;
 
@@ -370,9 +373,11 @@ public final class PureContext
                         }
                     }
                 }
+                ParamShapePlan lambdaShape = computeParamShapePlan(lambda);
                 RawLambdaRootNode root = new RawLambdaRootNode(
                         language, lambdaProfileName(lambda),
-                        cf.layout(), cf.layout().paramSlots(), openVarNames, body);
+                        cf.layout(), cf.layout().paramSlots(), openVarNames, body,
+                        lambdaShape.upperBounds, lambdaShape.lowerBounds);
                 RootCallTarget ct = root.getCallTarget();
                 lambdaCache.put(lambda, ct);
                 return ct;
@@ -727,9 +732,17 @@ public final class PureContext
                 // CGT type is read and bound. Empty arrays = no plan (most
                 // functions). Built once at compile time and held final.
                 FunctionTypeVarPlan plan = computeFunctionTypeVarPlan(fd);
+                // Per-param multiplicity bounds: drives caller-driven shape
+                // coercion at frame-binding time (Pure semantics: a 1-element
+                // collection equals its single value). When a param declares
+                // upperBound=1 but the runtime arg arrives as a sequence-of-1,
+                // unwrap to the bare singleton so downstream property reads
+                // / function dispatch see a scalar receiver.
+                ParamShapePlan shapePlan = computeParamShapePlan(fd);
                 PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body, rootSource,
                         mayBindTypeVars, plan.paramIndices, plan.tvNames,
-                        plan.mulParamIndices, plan.mvNames);
+                        plan.mulParamIndices, plan.mvNames,
+                        shapePlan.upperBounds, shapePlan.lowerBounds);
                 cf.setCallTarget(root.getCallTarget());
             }
         }
@@ -824,6 +837,80 @@ public final class PureContext
             // compile — degrade to no binding (matches pre-fix behavior).
             return FunctionTypeVarPlan.EMPTY;
         }
+    }
+
+    /**
+     * Compile-time per-param multiplicity bounds, parallel-indexed with paramSlots.
+     * {@code upperBounds[i] = Long.MAX_VALUE} means unbounded ({@code *}).
+     * {@code upperBounds[i] = -1} means the bound is unknown / parametric
+     * (e.g. a MultiplicityParameter {@code m}) — skip the shape coercion.
+     */
+    public static final class ParamShapePlan
+    {
+        static final ParamShapePlan EMPTY = new ParamShapePlan(new long[0], new long[0]);
+        public final long[] upperBounds;
+        public final long[] lowerBounds;
+        ParamShapePlan(long[] upperBounds, long[] lowerBounds)
+        {
+            this.upperBounds = upperBounds;
+            this.lowerBounds = lowerBounds;
+        }
+    }
+
+    /**
+     * Read each declared parameter's multiplicity bounds. For a MultiplicityParameter
+     * (e.g. {@code [m]}) or any case where the upper/lower bound can't be read,
+     * record {@code -1} for that slot so the binding code skips coercion.
+     */
+    ParamShapePlan computeParamShapePlan(Object fd)
+    {
+        try
+        {
+            Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fd, SLOT_PARAMETERS);
+            if (!(paramsObj instanceof org.finos.legend.pure.truffle.types.PureSequence params) || params.isEmpty())
+            {
+                return ParamShapePlan.EMPTY;
+            }
+            int n = params.size();
+            long[] upper = new long[n];
+            long[] lower = new long[n];
+            for (int i = 0; i < n; i++)
+            {
+                upper[i] = -1L;
+                lower[i] = -1L;
+                Object p = params.getBoxed(i);
+                if (p == null) continue;
+                Object mul = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(p, SLOT_MULTIPLICITY);
+                if (mul == null) continue;
+                // MultiplicityParameter (e.g. `m`) — bounds are parametric, skip.
+                if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(mul,
+                        "meta::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
+                {
+                    continue;
+                }
+                Object lbObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mul, SLOT_LOWER_BOUND);
+                Object ubObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mul, SLOT_UPPER_BOUND);
+                Long lbV = readMultiplicityBoundValue(lbObj);
+                Long ubV = readMultiplicityBoundValue(ubObj);
+                lower[i] = lbV != null ? lbV : 0L;
+                upper[i] = ubV != null ? ubV : Long.MAX_VALUE;
+            }
+            return new ParamShapePlan(upper, lower);
+        }
+        catch (RuntimeException e)
+        {
+            return ParamShapePlan.EMPTY;
+        }
+    }
+
+    private static Long readMultiplicityBoundValue(Object boundObj)
+    {
+        if (boundObj == null) return null;
+        Object v = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(boundObj,
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value"));
+        if (v instanceof Long l) return l;
+        if (v instanceof Integer i) return i.longValue();
+        return null;
     }
 
     /** Compile-time plan: which arg index supplies which `<T>`/`<T|m>` binding. */

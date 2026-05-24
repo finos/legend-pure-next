@@ -49,11 +49,26 @@ public final class RawLambdaRootNode extends RootNode
     @CompilationFinal(dimensions = 1)
     private final int[] openVarSlots;
 
+    /** Per-param declared multiplicity bounds — see {@link PureFunctionRootNode}. */
+    @CompilationFinal(dimensions = 1)
+    private final long[] paramUpperBound;
+    @CompilationFinal(dimensions = 1)
+    private final long[] paramLowerBound;
+
     @Children
     private final Node[] body;
 
+    private static final long[] EMPTY_LONG = new long[0];
+
     public RawLambdaRootNode(PureLanguage language, String name, FrameLayout layout,
                              int[] paramSlots, String[] openVarNames, PureNode[] body)
+    {
+        this(language, name, layout, paramSlots, openVarNames, body, EMPTY_LONG, EMPTY_LONG);
+    }
+
+    public RawLambdaRootNode(PureLanguage language, String name, FrameLayout layout,
+                             int[] paramSlots, String[] openVarNames, PureNode[] body,
+                             long[] paramUpperBound, long[] paramLowerBound)
     {
         super(language, layout.descriptor());
         this.name = name;
@@ -68,6 +83,8 @@ public final class RawLambdaRootNode extends RootNode
         }
         this.openVarSlots = slots;
         this.body = java.util.Arrays.copyOf(body, body.length, Node[].class);
+        this.paramUpperBound = paramUpperBound != null ? paramUpperBound : EMPTY_LONG;
+        this.paramLowerBound = paramLowerBound != null ? paramLowerBound : EMPTY_LONG;
     }
 
     @Override
@@ -79,10 +96,17 @@ public final class RawLambdaRootNode extends RootNode
         Object[] arguments = frame.getArguments();
         Object closureOrLambda = arguments[0];
 
-        // Bind params from arguments[1..]
+        // Bind params from arguments[1..] with caller-driven shape coercion
+        // (see PureFunctionRootNode#coerceArgToParamShape).
+        boolean haveShapeInfo = paramUpperBound.length > 0;
         for (int i = 0; i < paramSlots.length; i++)
         {
-            frame.setObject(paramSlots[i], arguments[i + 1]);
+            Object arg = arguments[i + 1];
+            if (haveShapeInfo && i < paramUpperBound.length && arg != null)
+            {
+                arg = PureFunctionRootNode.coerceArgToParamShape(arg, paramUpperBound[i], paramLowerBound[i], i);
+            }
+            frame.setObject(paramSlots[i], arg);
         }
         // Bind open vars from RawClosure captured values. Iterate
         // openVarSlots.length (compilation-final) so @ExplodeLoop above

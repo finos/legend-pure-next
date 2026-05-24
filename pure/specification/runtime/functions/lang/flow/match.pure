@@ -205,3 +205,65 @@ function <<test.Test>> meta::pure::functions::lang::tests::match::testMatchUserD
     ]);
     assertEquals('gtv', $result);
 }
+
+// Repro for the match [1]-arm leakage bug. The [1] arm of match dispatches
+// to the lambda with the raw input (a sequence-of-1); the lambda body `| $n`
+// returns that sequence unchanged. When the result is then passed to a
+// function expecting `T[1]`, the receiver gets the wrapper instead of the
+// scalar. Without caller-driven shape coercion at the function-call binding,
+// property access inside that function fails because the receiver is a
+// sequence wrapper, not a PDO.
+Class meta::pure::functions::lang::tests::match::M_Node
+{
+    name : String[1];
+}
+
+function <<test.TestDependency>> meta::pure::functions::lang::tests::match::useNodeAsScalar(node: M_Node[1]): String[1]
+{
+    $node.name;
+}
+
+// Produces a runtime PureSequence-of-1 via filter — vs an inline `[X]`
+// literal, which Truffle's RawCollectionNode constant-folds to a bare scalar
+// at parse time.
+function <<test.TestDependency>> meta::pure::functions::lang::tests::match::singleNodeNamed(name: String[1]): M_Node[*]
+{
+    [^M_Node(name=$name), ^M_Node(name='_decoy_')]->filter(n | $n.name == $name);
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::match::testMatchOneArmFeedsScalarParam():Boolean[1]
+{
+    let picked = singleNodeNamed('alpha')->match([
+        n0 : M_Node[0] | ^M_Node(name='missing'),
+        n  : M_Node[1] | $n
+    ]);
+    assertEquals('alpha', useNodeAsScalar($picked));
+}
+
+// Repro for Truffle AST-build NPE: lowerBody reads expressionSequence as null
+// on this function. Bootstrap compiles + executes it fine; only Truffle's
+// PureASTBuilder.lowerBody chokes ("Cannot invoke PureSequence.size() because
+// seq is null").
+Class meta::pure::functions::lang::tests::match::MA_Node
+{
+    name : String[1];
+}
+
+function <<test.TestDependency>> meta::pure::functions::lang::tests::match::useAsScalar(node: MA_Node[1]): String[1]
+{
+    $node.name;
+}
+
+function <<test.TestDependency>> meta::pure::functions::lang::tests::match::singletonSeq(name: String[1]): MA_Node[*]
+{
+    [^MA_Node(name=$name), ^MA_Node(name='_other_')]->filter(n | $n.name == $name);
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::match::testMatchOneArmPassedToScalarParam():Boolean[1]
+{
+    let picked = singletonSeq('alpha')->match([
+        n0 : MA_Node[0] | ^MA_Node(name='missing'),
+        n  : MA_Node[1] | $n
+    ]);
+    assertEquals('alpha', useAsScalar($picked));
+}

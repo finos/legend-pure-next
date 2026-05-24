@@ -28,6 +28,7 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
 
 import java.lang.reflect.InvocationTargetException;
@@ -811,12 +812,41 @@ public class ValueSpecificationEvaluator
                 meta.pure.metamodel.multiplicity.Multiplicity mul =
                         (arg._multiplicity() != null) ? arg._multiplicity() : param._multiplicity();
                 // Bind the parameter: preserve the arg's own type info where available.
-                // For Collection args, use them directly (their per-element VS types are already correct).
-                // For AtomicValue args, restamp with the resolved gt/mul without unwrapping.
+                // Caller-driven shape coercion (Pure semantics: a 1-element collection
+                // equals its single value). If the declared param multiplicity has
+                // upperBound=1 but the arg arrived as a Collection-of-1, unwrap it to
+                // an AtomicValue so downstream property access / function dispatch see
+                // the scalar. Throw if the arg's actual size doesn't fit the param's
+                // declared bounds — the type checker normally catches this, but the
+                // runtime path through match's [1] arm (which passes the raw input
+                // collection straight to the arm lambda) can leak size mismatches.
                 ValueSpecification boundArg;
-                if (arg instanceof meta.pure.metamodel.valuespecification.Collection)
+                if (arg instanceof Collection col)
                 {
-                    boundArg = arg;
+                    int actualSize = col._values() == null ? 0 : col._values().size();
+                    Long paramUpper = _Multiplicity.upperBound(param._multiplicity());
+                    long paramLower = _Multiplicity.lowerBound(param._multiplicity());
+                    if (paramUpper != null && actualSize > paramUpper)
+                    {
+                        throw new RuntimeException("Argument multiplicity [" + actualSize
+                                + "] exceeds parameter '" + paramName + "' declared upper bound " + paramUpper);
+                    }
+                    if (actualSize < paramLower)
+                    {
+                        throw new RuntimeException("Argument multiplicity [" + actualSize
+                                + "] below parameter '" + paramName + "' declared lower bound " + paramLower);
+                    }
+                    if (paramUpper != null && paramUpper == 1 && actualSize == 1)
+                    {
+                        ValueSpecification inner = col._values().getFirst();
+                        boundArg = inner instanceof AtomicValue
+                                ? inner
+                                : _E_ValueSpecification.wrap(_E_ValueSpecification.unwrap(inner), gt, mul, this.natives.resolver());
+                    }
+                    else
+                    {
+                        boundArg = arg;
+                    }
                 }
                 else if (arg._genericType() == gt && arg._multiplicity() == mul)
                 {
