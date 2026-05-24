@@ -35,7 +35,7 @@ Class meta::external::language::java::serialization::Stringifier
    pending          : String[1];
    completeLines    : String[*];
 
-   tabString()  { range(0, $this.tabDepth)->map(x| $this.tab)->joinStrings() }: String[1];
+   tabString()  { range(0, $this.tabDepth)->map(x| $this.tab)->joinStrings('') }: String[1];
 
    inParameters() { $this.scope == Scope.IN_PARAMETERS }: Boolean[1];
    inForHead()    { $this.scope == Scope.IN_FOR_HEAD   }: Boolean[1];
@@ -424,7 +424,7 @@ function <<access.private>> meta::external::language::java::serialization::doAnn
 
 function <<access.private>> meta::external::language::java::serialization::doAnnotation(sfer:Stringifier[1], a:meta::external::language::java::metamodel::Annotation[1]): Stringifier[1]
 {
-   let type = $a->genericType()->genericTypeRawType()->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
+   let type = $a->genericType()->rawType()->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
 
    if($type == JsonSubTypes,
       {|
@@ -469,7 +469,7 @@ function <<access.private>> meta::external::language::java::serialization::annot
 
 function <<access.private>> meta::external::language::java::serialization::modifierToString(modifier:meta::external::language::java::metamodel::Modifier[1]):String[1]
 {
-   $modifier->id()->toLower();
+   $modifier.name->toLower();
 }
 
 function <<access.private>> meta::external::language::java::serialization::doCode(sfer:Stringifier[1], code: Code[0..1]) :Stringifier[1]
@@ -578,18 +578,18 @@ function <<access.private>> meta::external::language::java::serialization::prece
       pre :PrefixExpression[1]                                  | 13,     // 13 unary                  ++expr --expr +expr -expr ~ !
       pre :Cast[1]                                              | 13,     // 13 unary                  (type)
       {in:InfixExpression[1]|
-         if($in.op->in(['*', '/', '%']),                        | 12, |   // 12 multiplicative         * / %
-         if($in.op->in(['+', '-']),                             | 11, |   // 11 additive               + -
-         if($in.op->in(['<<', '>>', '>>>']),                    | 10, |   // 10 shift                  << >> >>>
-         if($in.op->in(['<', '>', '<=', '>=']),                 |  9, |   //  9 relational             < > <= >= instanceof (see below)
-         if($in.op->in(['==', '!=']),                           |  8, |   //  8 equality               == !=
-         if($in.op->in(['&']),                                  |  7, |   //  7 bitwise AND            &
-         if($in.op->in(['^']),                                  |  6, |   //  6 bitwise exclusive OR   ^
-         if($in.op->in(['|']),                                  |  5, |   //  5 bitwise inclusive OR   |
-         if($in.op->in(['&&']),                                 |  4, |   //  4 logical AND            &&
-         if($in.op->in(['||']),                                 |  3, |   //  3 logical OR             ||
+         if(['*', '/', '%']->contains($in.op),                        | 12, |   // 12 multiplicative         * / %
+         if(['+', '-']->contains($in.op),                             | 11, |   // 11 additive               + -
+         if(['<<', '>>', '>>>']->contains($in.op),                    | 10, |   // 10 shift                  << >> >>>
+         if(['<', '>', '<=', '>=']->contains($in.op),                 |  9, |   //  9 relational             < > <= >= instanceof (see below)
+         if(['==', '!=']->contains($in.op),                           |  8, |   //  8 equality               == !=
+         if($in.op == '&',                                            |  7, |   //  7 bitwise AND            &
+         if($in.op == '^',                                            |  6, |   //  6 bitwise exclusive OR   ^
+         if($in.op == '|',                                            |  5, |   //  5 bitwise inclusive OR   |
+         if($in.op == '&&',                                           |  4, |   //  4 logical AND            &&
+         if($in.op == '||',                                           |  3, |   //  3 logical OR             ||
                                                                           //  2 ternary (SEE BELOW)
-         if($in.op->in(assignmentOperators()),                  |  1, |   //  1 assignment             = += -= *= /= %= &= ^= |= <<= >>= >>>=
+         if(assignmentOperators()->contains($in.op),                  |  1, |   //  1 assignment             = += -= *= /= %= &= ^= |= <<= >>= >>>=
             fail('Unknown operator: '+$in.op);-1;
          )))))))))))
       },
@@ -688,8 +688,8 @@ function <<access.private>> meta::external::language::java::serialization::debug
    println('scope         = ' + $sfer.scope->toString());
    println('tabDepth      = ' + $sfer.tabDepth->toString());
    println('pending       = \'' + $sfer.pending->replace('\n', '\\n') + '\'');
-   println('wipLine       = \'' + $sfer.wipLine->plus() + '\'');
-   println('completeLines = \'' + $sfer.completeLines->plus()->replace('\n', '\\n') + '\'');
+   println('wipLine       = \'' + $sfer.wipLine->joinStrings('') + '\'');
+   println('completeLines = \'' + $sfer.completeLines->joinStrings('')->replace('\n', '\\n') + '\'');
    println('--------------------------------------------------');
    $sfer;
 }
@@ -715,7 +715,7 @@ function <<access.private>> meta::external::language::java::serialization::addTe
 function <<access.private>> meta::external::language::java::serialization::finishLine(sfer:Stringifier[1]): Stringifier[1]
 {
   ^$sfer(
-      completeLines += $sfer.wipLine->plus()->applyFolds(0, 100),
+      completeLines += $sfer.wipLine->joinStrings('')->applyFolds(0, 100),
       pending       = '',
       wipLine       = $sfer.tabString
   )
@@ -807,7 +807,7 @@ function <<access.private>> meta::external::language::java::serialization::blank
 
 function <<access.private>> meta::external::language::java::serialization::blankLine(sfer:Stringifier[1]): Stringifier[1]
 {
-   if($sfer.pending->endsWith('\n\n') || $sfer.wipLine->plus()->matches(' *\\{'),  //  TODO: Extra new lines  are ok so this can be dropped
+   if($sfer.pending->endsWith('\n\n') || $sfer.wipLine->joinStrings('')->matches(' *\\{'),  //  TODO: Extra new lines  are ok so this can be dropped
           | $sfer,
          |
       if($sfer.pending->endsWith('\n'),
@@ -910,7 +910,7 @@ function <<access.private>> meta::external::language::java::serialization::initi
 
 function meta::external::language::java::serialization::getResult(sfer:Stringifier[1]): String[1]
 {
-   $sfer->finishLine().completeLines->plus();
+   $sfer->finishLine().completeLines->joinStrings('');
 }
 
 function <<access.private>> meta::external::language::java::serialization::applyFolds(s:String[1], level:Integer[1], maxLength:Integer[1]): String[1]
@@ -930,7 +930,7 @@ function <<access.private>> meta::external::language::java::serialization::apply
             {|
                let allParts  = $parts->map(p| $p->split('\n'));
                let prefold   = $allParts->at(0);
-               let padding   = $prefold->chunk(1)->map(ch| ' ')->joinStrings();
+               let padding   = $prefold->chunk(1)->map(ch| ' ')->joinStrings('');
                let remaining = $allParts->tail();
                $prefold + $remaining->head()->concatenate($remaining->tail()->map(p| $padding + $p))->map(p| $p->trimTrailing())->joinStrings('\n');
             }

@@ -45,9 +45,9 @@ function meta::external::language::java::metamodel::isSameLiteral(left:Code[1], 
 function meta::external::language::java::metamodel::isValidExpressionAsStatement(expression:Code[1]):Boolean[1]
 {
    $expression->match([
-      pre : PrefixExpression[1]  | $pre.op->in(['++', '--']),
-      post: PostfixExpression[1] | $post.op->in(['++', '--']),
-      inf : InfixExpression[1]   | $inf.op->in(assignmentOperators()),
+      pre : PrefixExpression[1]  | ['++', '--']->contains($pre.op),
+      post: PostfixExpression[1] | ['++', '--']->contains($post.op),
+      inf : InfixExpression[1]   | assignmentOperators()->contains($inf.op),
       mc  : MethodCall[1]        | true,
       smc : StaticMethodCall[1]  | true,
       new : New[1]               | true,
@@ -58,7 +58,7 @@ function meta::external::language::java::metamodel::isValidExpressionAsStatement
 function meta::external::language::java::metamodel::isAssignment(c:Code[1]):Boolean[1]
 {
    $c->match([
-      inf : InfixExpression[1] | $inf.op->in(assignmentOperators()),
+      inf : InfixExpression[1] | assignmentOperators()->contains($inf.op),
       _c  : Code[1]            | false
    ])
 }
@@ -114,5 +114,5 @@ function meta::external::language::java::metamodel::variableName(c:Code[1]):Stri
 
 function meta::external::language::java::metamodel::isNil(i:ValueSpecification[1]) : Boolean[1]
 {
-  $i->cast(@ValueSpecification).genericType->genericTypeRawType() == Nil;
+  $i->cast(@ValueSpecification).genericType->rawType() == Nil;
 }

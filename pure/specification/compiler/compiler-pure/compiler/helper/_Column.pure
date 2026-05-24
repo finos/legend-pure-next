@@ -40,7 +40,7 @@ function <<test.Test>> meta::pure::compiler::helper::column::tests::testBuildCol
     assertEquals(PureOne, $col.multiplicity);
     
     let cgt = $col.classifierGenericType->toOne();
-    assertEquals(Column, $cgt->genericTypeRawType()->toOne());
+    assertEquals(Column, $cgt->rawType()->toOne());
     
     let ta = $cgt->genericTypeTypeArguments();
     assertEquals(2, $ta->size());

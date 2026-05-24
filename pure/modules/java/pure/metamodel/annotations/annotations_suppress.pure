@@ -14,10 +14,7 @@
 
 import meta::external::language::java::metamodel::*;
 
-Profile meta::external::language::java::metamodel::annotations::AnnotationJavaInfo
-{
-  tags : [javaClass];
-}
+
 
 Class meta::external::language::java::metamodel::annotations::SuppressWarnings extends meta::external::language::java::metamodel::Annotation
 {

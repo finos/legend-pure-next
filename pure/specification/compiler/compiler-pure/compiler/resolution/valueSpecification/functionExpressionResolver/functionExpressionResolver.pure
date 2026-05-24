@@ -318,8 +318,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                               && $fi.parametersValues->isNotEmpty()
                               && $fi.parametersValues->at(0).genericType->isNotEmpty()
                               && !$fi.parametersValues->at(0).genericType->toOne()->instanceOf(CompilerNotSetGenericType)
-                              && $fi.parametersValues->at(0).genericType->toOne()->genericTypeRawType()->isNotEmpty()
-                              && $fi.parametersValues->at(0).genericType->toOne()->genericTypeRawType()->toOne()->instanceOf(Class);
+                              && $fi.parametersValues->at(0).genericType->toOne()->rawType()->isNotEmpty()
+                              && $fi.parametersValues->at(0).genericType->toOne()->rawType()->toOne()->instanceOf(Class);
           let bindings = if($classBindingsAvailable,
               | let receiverGT = $fi.parametersValues->at(0).genericType->toOne();
                 // Deref the raw type so we read typeParameters off the live class,
@@ -327,7 +327,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                 // Without this, T binding for Wrapper<Box<String>>.inner is lost on
                 // the finalize pass and the dot's genericType is overwritten with
                 // unresolved T — see propertyGenericTypeChained.
-                let rawOwner = $receiverGT->genericTypeRawType()->toOne()->derefTypeIfPointer($context)->toOne()->cast(@Class<Any>);
+                let rawOwner = $receiverGT->rawType()->toOne()->derefTypeIfPointer($context)->toOne()->cast(@Class<Any>);
                 buildBindingsFromGenericType($rawOwner, $receiverGT);,
               | $baseBindings
           );

@@ -33,7 +33,7 @@ function meta::external::language::java::metamodel::isPrimitive(type: meta::exte
 
 function meta::external::language::java::metamodel::isPrimitiveNumber(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
 {
-   $type->isPrimitive() && $type->cast(@meta::external::language::java::metamodel::PrimitiveType).simpleName->in(['int', 'long', 'short', 'byte', 'float', 'double']);
+   $type->isPrimitive() && ['int', 'long', 'short', 'byte', 'float', 'double']->contains($type->cast(@meta::external::language::java::metamodel::PrimitiveType).simpleName);
 }
 
 function meta::external::language::java::metamodel::isPrimitiveInt(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
@@ -53,7 +53,7 @@ function meta::external::language::java::metamodel::isBoxedType(type: meta::exte
 
 function meta::external::language::java::metamodel::isBoxedType(class: meta::external::language::java::metamodel::Class[1]):Boolean[1]
 {
-   $class.simpleName->in(['Boolean', 'Byte', 'Character', 'Float', 'Integer', 'Long', 'Short', 'Double'])
+   ['Boolean', 'Byte', 'Character', 'Float', 'Integer', 'Long', 'Short', 'Double']->contains($class.simpleName)
       && $class.package.name == 'lang'
       && $class.package.parent->isNotEmpty()
       && $class.package.parent.name == 'java'
@@ -67,7 +67,7 @@ function meta::external::language::java::metamodel::isBoxedNumberType(type: meta
 
 function meta::external::language::java::metamodel::isBoxedNumberType(class: meta::external::language::java::metamodel::Class[1]):Boolean[1]
 {
-   $class.simpleName->in(['Byte', 'Float', 'Integer', 'Long', 'Short', 'Double', 'Number']) && $class.package ->isJavaLang();
+   ['Byte', 'Float', 'Integer', 'Long', 'Short', 'Double', 'Number']->contains($class.simpleName) && $class.package ->isJavaLang();
 }
 
 function meta::external::language::java::metamodel::isClass(type:meta::external::language::java::metamodel::Type[1], qualifiedName:String[1]):Boolean[1]
@@ -96,7 +96,7 @@ function meta::external::language::java::metamodel::isClass(c:meta::external::la
 
 function meta::external::language::java::metamodel::isClass(c:meta::external::language::java::metamodel::Class[1], pkg:String[1], names:String[*]):Boolean[1]
 {
-   $c->isInPackage($pkg) && $c.simpleName->in($names);
+   $c->isInPackage($pkg) && $names->contains($c.simpleName);
 }
 
 function meta::external::language::java::metamodel::isSubclassOf(c1:meta::external::language::java::metamodel::Class[1], c2:meta::external::language::java::metamodel::Class[1]):Boolean[1]

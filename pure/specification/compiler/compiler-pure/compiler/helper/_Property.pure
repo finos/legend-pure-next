@@ -15,7 +15,7 @@ function meta::pure::compiler::helper::property::resolveProperty(prop:Property<N
     let resolvedMultiplicity = $prop.multiplicity;
     let resolvedClassifierGenericType = $prop.classifierGenericType;
 
-    let resolvedTuple = $receiverType->genericTypeRawType()->toOne()->match(
+    let resolvedTuple = $receiverType->rawType()->toOne()->match(
         [
             ownerClass : Class<Any>[1] |
                 let bindings = $ownerClass->buildBindingsFromGenericType($receiverType);

@@ -106,7 +106,7 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
           // (the class that "owns" the first property, i.e. where QPs are accessible).
           // Deref pointer first so downstream `.name` / `.typeParameters` reads work
           // (Class_Pointer carries only path+element).
-          let qpOwnerClass = $mGenType2->genericTypeRawType()->meta::pure::compiler::helper::type::derefTypeIfPointer($ctx2)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
+          let qpOwnerClass = $mGenType2->rawType()->meta::pure::compiler::helper::type::derefTypeIfPointer($ctx2)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
           let qpAccum = $protocolAssoc.qualifiedProperties->fold({qp, acc |
               let result = $qp->compileQualifiedProperty($acc.context, $packagePath, $qpOwnerClass);
               ^$acc(values += $result.value, context = $result.context);
@@ -129,8 +129,8 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
           // Use the properties from the compiled association (they have owner set to the association)
           let registeredProp1 = $compiledAssoc.properties->at(0);
           let registeredProp2 = $compiledAssoc.properties->at(1);
-          let class2Path = $mGenType2->genericTypeRawType()->toOne()->cast(@PackageableElement)->elementToPath();
-          let class1Path = $mGenType1->genericTypeRawType()->toOne()->cast(@PackageableElement)->elementToPath();
+          let class2Path = $mGenType2->rawType()->toOne()->cast(@PackageableElement)->elementToPath();
+          let class1Path = $mGenType1->rawType()->toOne()->cast(@PackageableElement)->elementToPath();
           // Self-association (both ends point at the same class, e.g. `Package.parent`
           // / `Package.children`): apply BOTH property additions to the same instance
           // before writing back. The Java side mutates `class._propertiesFromAssociations()`

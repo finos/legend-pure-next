@@ -64,7 +64,30 @@ build-truffle:
         --source {{java_root}} \
         --output-dir {{shared_out}} {{err_filter}}
 
-# Remove shared/java.pdb.
+# Compile with tests split into shared/java-tests.pdb (needed by `test-all`).
+build-tests:
+    @{{banner}} '[language-java]' 'compile pure/language/java -> shared/java.pdb + java-tests.pdb'
+    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --source {{java_root}} \
+        --output-dir {{shared_out}} \
+        --tests split {{err_filter}}
+
+# Run all Pure tests under meta::external::language::java via pure-bootstrap.
+# Needs core-tests.pdb because runTests is <<test.TestDependency>>.
+test-all: build-tests
+    @{{banner}} '[language-java]' 'runTests meta::external::language::java'
+    test -f {{shared_out}}/core-tests.pdb || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/java.pdb \
+        --pdb {{shared_out}}/java-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::external::language::java" {{err_filter}}
+
+# Remove shared/java.pdb (and the tests PDB).
 clean:
-    @{{banner}} '[language-java clean]' 'remove shared/java.pdb'
-    rm -f {{shared_out}}/java.pdb
+    @{{banner}} '[language-java clean]' 'remove shared/java.pdb + shared/java-tests.pdb'
+    rm -f {{shared_out}}/java.pdb {{shared_out}}/java-tests.pdb

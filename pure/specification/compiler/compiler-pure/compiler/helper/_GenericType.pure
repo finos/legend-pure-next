@@ -213,9 +213,9 @@ function meta::pure::compiler::helper::genericType::printGenericType(genericType
             ugt : UndefinedGenericType[1] | '?',
             gto : GenericTypeOperation[1] | $gto->printGenericTypeOperation($fullPath),
             gtv : GenericTypeValue[1]     | $gtv->printGenericTypeValue($fullPath),
-            a   : Any[1]                  | if($genericType->genericTypeRawType()->isEmpty(),
+            a   : Any[1]                  | if($genericType->rawType()->isEmpty(),
                                                | 'Unknown',
-                                               | $genericType->genericTypeRawType()->toOne()->cast(@PackageableElement).name->toOne()
+                                               | $genericType->rawType()->toOne()->cast(@PackageableElement).name->toOne()
                                                  + if($genericType->genericTypeTypeArguments()->isEmpty(),
                                                       | '',
                                                       | '<' + $genericType->genericTypeTypeArguments()->map(t | $t->printGenericType($fullPath))->joinStrings(', ') + '>'

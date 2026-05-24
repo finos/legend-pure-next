@@ -1,0 +1,588 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::packages::*;
+import meta::external::language::java::factory::*;
+import meta::external::language::java::factory::project::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::metamodel::project::*;
+import meta::external::language::java::serialization::*;
+
+function <<access.private>> meta::external::language::java::factory::packageFromList( names:String[*], fullPath:String[0..1]): meta::external::language::java::metamodel::Package[1]
+{
+   let size = $names->size();
+   if($size==0,
+      |^meta::external::language::java::metamodel::Package(name='', fullPath=''),
+      |  let path = if($fullPath->isEmpty(), |$names->joinStrings('.'),|$fullPath);
+         if($size==1,
+          | ^meta::external::language::java::metamodel::Package(fullPath=$path,name=$names->toOne()),
+          | // Fold lives INSIDE the outer ^Package so every intermediate
+            // Package registers into the same fresh scope — `parent=$pack`
+            // composes legally without copies.
+            ^meta::external::language::java::metamodel::Package(
+                fullPath = $path,
+                name     = $names->last()->toOne(),
+                parent   = $names->init()->tail()->fold(
+                   {cur, pack | ^meta::external::language::java::metamodel::Package(name=$cur, parent=$pack) },
+                   ^meta::external::language::java::metamodel::Package(name=$names->at(0)->toOne())
+                )
+            );
+         );
+   );
+
+}
+
+function <<access.private>> meta::external::language::java::factory::usingKnownPackages(class:meta::external::language::java::metamodel::Class[1], knownPackages:Function<{meta::external::language::java::metamodel::Package[1]->meta::external::language::java::factory::KnownPackage[1]}>[1]):meta::external::language::java::metamodel::Class[1]
+{
+   ^meta::external::language::java::factory::FactoryClass
+   (
+      knownPackages        = $knownPackages,
+      typeParameters       = $class.typeParameters,
+      annotations          = $class.annotations,
+      javaDoc              = $class.javaDoc,
+      simpleName           = $class.simpleName,
+      package              = $class.package,
+      modifiers            = $class.modifiers,
+      interfaces           = $class.interfaces,
+      superType            = $class.superType,
+      constructors         = $class.constructors,
+      fields               = $class.fields,
+      methods              = $class.methods,
+      additionalImports    = $class.additionalImports,
+      projectionParentName = $class.projectionParentName
+   )
+}
+
+Class meta::external::language::java::factory::FactoryClass extends meta::external::language::java::metamodel::Class
+{
+   knownPackages:Function<{meta::external::language::java::metamodel::Package[1]->meta::external::language::java::factory::KnownPackage[1]}>[1];
+}
+
+
+function meta::external::language::java::factory::inferImports(class:meta::external::language::java::metamodel::Class[1]): meta::external::language::java::metamodel::Class[1]
+{   //TODO: This can be skipped in fast mode
+   let allCodes  = $class.fields.valueCode->concatenate($class.constructors.bodyCode)->concatenate($class.methods.bodyCode);
+   let canInfer  = $class.additionalImports->isEmpty() && !$allCodes->containsSimpleCode();
+   if($canInfer,
+      {|
+          let annotationsTypes = $class.annotations
+                                  ->concatenate($class.fields.annotations)
+                                  ->concatenate($class.methods.annotations)
+                                  ->concatenate($class.methods.parameters.annotations)
+                                  ->concatenate($class.constructors.annotations)
+                                  ->concatenate($class.constructors.parameters.annotations)
+                                  ->concatenate($class->match([
+                                     enm:meta::external::language::java::metamodel::Enumeration[1]| $enm.enumeration.annotations,
+                                     oth:Any[1] | []
+                                   ]))
+                                  ->map(x|
+                                          let rawType   = $x->genericType()->rawType()->toOne();
+                                          let pe        = $rawType->cast(@meta::pure::metamodel::PackageableElement);
+                                          let javaClass = $pe->meta::pure::functions::meta::value4Tag('javaClass', meta::external::language::java::metamodel::annotations::AnnotationJavaInfo);
+                                          assert(!$javaClass->isEmpty(), 'Error: Please provide the Java class that supports the annotation "'+$pe->elementToPath()+'"" using the profile "meta::external::language::java::metamodel::annotations::AnnotationJavaInfo"');
+                                          $javaClass.value;
+                                        )
+                                  ->removeDuplicates()
+                                  ->map(x|javaClass($x));
+         let classesUsed = $allCodes->classesUsed()
+                                    ->concatenate($class.interfaces)
+                                    ->concatenate($class.superType)
+                                    ->concatenate($class.fields.type)
+                                    ->concatenate($class.methods.returnType)
+                                    ->concatenate($class.methods.parameters.type)
+                                    ->concatenate($class.constructors.parameters.type)
+                                    ->typesToClasses()
+                                    ->concatenate($annotationsTypes)
+                                    ->filter(c| $c.package != anonymousPackage())
+                                    ->removeDuplicates();
+         let inSamePackage = $classesUsed->filter(c| $c.package == $class.package);
+         let toImport      = $classesUsed->filter(c| !$inSamePackage.simpleName->contains($c.simpleName));
+         let withImports   = $toImport->fold({i, c| $c->imports($i)}, $class);
+         ^$withImports(additionalImports=$withImports.additionalImports->sort());
+      },
+      |^$class(additionalImports=$class.additionalImports->map(c| javaClass($c))->filter(c| $c.package != $class.package)->map(c| $c->typeToString()));
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::containsSimpleCode(codes:Code[*]): Boolean[1]
+{
+   $codes->exists(code| $code->match([
+      c:InfixExpression[1]          | $c.left->containsSimpleCode() || $c.right->containsSimpleCode(),
+      c:PrefixExpression[1]         | $c.expression->containsSimpleCode(),
+      c:PostfixExpression[1]        | $c.expression->containsSimpleCode(),
+      c:Conditional[1]              | $c.test->containsSimpleCode() || $c.then->containsSimpleCode() || $c.else->containsSimpleCode(),
+      c:InstanceOf[1]               | $c.expression->containsSimpleCode(),
+      c:ArrayAccess[1]              | $c.array->containsSimpleCode() || $c.index->containsSimpleCode(),
+      c:CastProxy[1]                | $c.expression->containsSimpleCode() || $c.proxy->containsSimpleCode(),
+      c:Cast[1]                     | $c.expression->containsSimpleCode(),
+      c:LocalVariableDeclaration[1] | $c.initializer->containsSimpleCode(),
+      c:ConstructorCall[1]          | $c.arguments->containsSimpleCode(),
+      c:MethodCall[1]               | $c.instance->containsSimpleCode() || $c.arguments->containsSimpleCode(),
+      c:FieldAccess[1]              | $c.instance->containsSimpleCode(),
+      c:MethodReference[1]          | $c.instance->containsSimpleCode(),
+      c:Block[1]                    | $c.statements->containsSimpleCode(),
+      c:ExpressionStatement[1]      | $c.expression->containsSimpleCode(),
+      c:If[1]                       | $c.test->containsSimpleCode() || $c.then->containsSimpleCode() || $c.else->containsSimpleCode(),
+      c:For[1]                      | $c.init->containsSimpleCode() || $c.test->containsSimpleCode() || $c.update->containsSimpleCode(),
+      c:ForEach[1]                  | $c.parameter->cast(@Code)->containsSimpleCode() || $c.collection->containsSimpleCode() || $c.body->containsSimpleCode(),
+      c:While[1]                    | $c.test->containsSimpleCode() || $c.then->containsSimpleCode(),
+      c:DoWhile[1]                  | $c.do->containsSimpleCode() || $c.while->containsSimpleCode(),
+      c:Try[1]                      | $c.try->containsSimpleCode() || $c.catches->containsSimpleCode() || $c.finally->containsSimpleCode(),
+      c:Catch[1]                    | $c.clause->containsSimpleCode(),
+      c:Finally[1]                  | $c.clause->containsSimpleCode(),
+      c:Return[1]                   | $c.expression->containsSimpleCode(),
+      c:Throw[1]                    | $c.expression->containsSimpleCode(),
+      c:NewAnonymous[1]             | $c.arguments->containsSimpleCode() || $c.methods->containsSimpleCode(),
+      c:New[1]                      | $c.arguments->containsSimpleCode(),
+      c:CodeMethod[1]               | $c.parameters->containsSimpleCode() || $c.body->containsSimpleCode(),
+      c:StaticMethodCall[1]         | $c.arguments->containsSimpleCode(),
+      c:DeferredStreamResolve[1]    | $c.stream->containsSimpleCode(),
+      c:Lambda[1]                   | $c.expression->containsSimpleCode(),
+      c:Code[1]                     | $c->instanceOf(SimpleCode)
+   ]));
+}
+
+
+// TODO Eliminate this
+function meta::external::language::java::factory::merge(codes: Code[1..*]):Code[1]
+{
+   let head = $codes->at(0);
+   $codes->tail()->fold({c, a|^$a(requires=$a->dependencies()->concatenate($c->dependencies())->removeDuplicates())}, $head);
+}
+
+Class meta::external::language::java::factory::KnownPackage
+{
+   package: meta::external::language::java::metamodel::Package[1];
+   classNames: String[*];
+}
+
+function meta::external::language::java::factory::knownPackage(pkg: meta::external::language::java::metamodel::Package[1]): KnownPackage[1]
+{
+   let pkgName = $pkg->packageToString();
+
+   if($pkg->instanceOf(KnownPackage),
+      | $pkg->cast(@KnownPackage),
+      |
+   if($pkgName == 'java.lang',
+      | javaLangPackage(),
+      |
+   if($pkgName == 'java.util',
+      | javaUtilPackage(),
+      |
+   if($pkgName == 'java.util.function',
+      | javaUtilFunctionPackage(),
+      |
+   if($pkgName == 'java.util.stream',
+      | javaUtilStreamPackage(),
+      |
+   if($pkgName == 'java.io',
+      | javaIoPackage(),
+      |
+   if($pkgName == 'java.net',
+      | javaNetPackage(),
+      |
+   if($pkgName == 'java.math',
+      | javaMathPackage(),
+      |
+   if($pkgName == 'java.time',
+      | javaTimePackage(),
+      | fail('Package ' + $pkgName + ' is not well known'); ^KnownPackage(package=javaPackage(''));
+   )))))))));
+}
+
+function <<access.private>> meta::external::language::java::factory::javaLangPackage(): meta::external::language::java::factory::KnownPackage[1]
+{
+   ^meta::external::language::java::factory::KnownPackage(
+      package    = javaPackage('java.lang'),
+      classNames = [
+         'AbstractMethodError',                  'Appendable',                           'ArithmeticException',                  'ArrayIndexOutOfBoundsException',
+         'ArrayStoreException',                  'AssertionError',                       'AutoCloseable',                        'Boolean',
+         'BootstrapMethodError',                 'Byte',                                 'Character',                            'Character.Subset',
+         'Character.UnicodeBlock',               'Character.UnicodeScript',              'CharSequence',                         'Class',
+         'ClassCastException',                   'ClassCircularityError',                'ClassFormatError',                     'ClassLoader',
+         'ClassNotFoundException',               'ClassValue',                           'Cloneable',                            'CloneNotSupportedException',
+         'Comparable',                           'Compiler',                             'Deprecated',                           'Double',
+         'Enum',                                 'EnumConstantNotPresentException',      'Error',                                'Exception',
+         'ExceptionInInitializerError',          'Float',                                'FunctionalInterface',                  'IllegalAccessError',
+         'IllegalAccessException',               'IllegalArgumentException',             'IllegalMonitorStateException',         'IllegalStateException',
+         'IllegalThreadStateException',          'IndexOutOfBoundsException',            'IncompatibleClassChangeError',         'InheritableThreadLocal',
+         'InstantiationError',                   'InstantiationException',               'Integer',                              'InternalError',
+         'InterruptedException',                 'Iterable',                             'LinkageError',                         'Long',
+         'Math',                                 'NegativeArraySizeException',           'NoClassDefFoundError',                 'NoSuchFieldError',
+         'NoSuchFieldException',                 'NoSuchMethodError',                    'NoSuchMethodException',                'NullPointerException',
+         'Number',                               'NumberFormatException',                'Object',                               'OutOfMemoryError',
+         'Override',                             'Package',                              'Process',                              'ProcessBuilder',
+         'ProcessBuilder.Redirect',              'ProcessBuilder.Redirect.Type',         'Readable',                             'ReflectiveOperationException',
+         'Runnable',                             'Runtime',                              'RuntimeException',                     'RuntimePermission',
+         'SafeVarargs',                          'SecurityException',                    'SecurityManager',                      'Short',
+         'StackOverflowError',                   'StackTraceElement',                    'StrictMath',                           'String',
+         'StringBuffer',                         'StringBuilder',                        'StringIndexOutOfBoundsException',      'SuppressWarnings',
+         'System',                               'Thread',                               'State',                                'UncaughtExceptionHandler',
+         'ThreadDeath',                          'ThreadGroup',                          'ThreadLocal',                          'Throwable',
+         'TypeNotPresentException',              'UnsatisfiedLinkError',                 'UnknownError',                         'UnsupportedClassVersionError',
+         'UnsupportedOperationException',        'VerifyError',                          'VirtualMachineError',                  'Void'
+      ]
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::javaUtilPackage(): meta::external::language::java::factory::KnownPackage[1]
+{
+   ^meta::external::language::java::factory::KnownPackage(
+      package    = javaPackage('java.util'),
+      classNames = [
+         'AbstractCollection',                   'AbstractList',                         'AbstractMap',                          'AbstractMap.SimpleEntry',
+         'AbstractMap.SimpleImmutableEntry',     'AbstractQueue',                        'AbstractSequentialList',               'AbstractSet',
+         'ArrayDeque',                           'ArrayList',                            'Arrays',                               'Base64',
+         'Base64.Decoder',                       'Base64.Encoder',                       'BitSet',                               'Calendar',
+         'Calendar.Builder',                     'Collection',                           'Collections',                          'Comparator',
+         'ConcurrentModificationException',      'Currency',                             'Date',                                 'Deque',
+         'Dictionary',                           'DoubleSummaryStatistics',              'DuplicateFormatFlagsException',        'EmptyStackException',
+         'EnumMap',                              'EnumSet',                              'Enumeration',                          'EventListener',
+         'EventListenerProxy',                   'EventObject',                          'FormatFlagsConversionMismatchException',
+         'Formattable',                          'FormattableFlags',                     'Formatter',                            'Formatter.BigDecimalLayoutForm',
+         'FormatterClosedException',             'GregorianCalendar',                    'HashMap',                              'HashSet',
+         'Hashtable',                            'IdentityHashMap',                      'IllegalFormatCodePointException',      'IllegalFormatConversionException',
+         'IllegalFormatException',               'IllegalFormatFlagsException',          'IllegalFormatPrecisionException',      'IllegalFormatWidthException',
+         'IllformedLocaleException',             'InputMismatchException',               'IntSummaryStatistics',                 'InvalidPropertiesFormatException',
+         'Iterator',                             'LinkedHashMap',                        'LinkedHashSet',                        'LinkedList',
+         'List',                                 'ListIterator',                         'ListResourceBundle',                   'Locale',
+         'Locale.Builder',                       'Locale.Category',                      'Locale.FilteringMode',                 'Locale.LanguageRange',
+         'LongSummaryStatistics',                'Map',                                  'Map.Entry',                            'MissingFormatArgumentException',
+         'MissingFormatWidthException',          'MissingResourceException',             'NavigableMap',                         'NavigableSet',
+         'NoSuchElementException',               'Objects',                              'Observable',                           'Observer',
+         'Optional',                             'OptionalDouble',                       'OptionalInt',                          'OptionalLong',
+         'PrimitiveIterator',                    'PrimitiveIterator.OfDouble',           'PrimitiveIterator.OfInt',              'PrimitiveIterator.OfLong',
+         'PriorityQueue',                        'Properties',                           'PropertyPermission',                   'PropertyResourceBundle',
+         'Queue',                                'Random',                               'RandomAccess',                         'ResourceBundle',
+         'ResourceBundle.Control',               'Scanner',                              'ServiceConfigurationError',            'ServiceLoader',
+         'Set',                                  'SimpleTimeZone',                       'SortedMap',                            'SortedSet',
+         'Spliterator',                          'Spliterator.OfDouble',                 'Spliterator.OfInt',                    'Spliterator.OfLong',
+         'Spliterator.OfPrimitive',              'Spliterators',                         'Spliterators.AbstractDoubleSpliterator',
+         'Spliterators.AbstractIntSpliterator',  'Spliterators.AbstractLongSpliterator', 'Spliterators.AbstractSpliterator',     'SplittableRandom',
+         'Stack',                                'StringJoiner',                         'StringTokenizer',                      'TimeZone',
+         'Timer',                                'TimerTask',                            'TooManyListenersException',            'TreeMap',
+         'TreeSet',                              'UUID',                                 'UnknownFormatConversionException',     'UnknownFormatFlagsException',
+         'Vector',                               'WeakHashMap'
+      ]
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::javaUtilFunctionPackage(): meta::external::language::java::factory::KnownPackage[1]
+{
+   ^meta::external::language::java::factory::KnownPackage(
+      package    = javaPackage('java.util.function'),
+      classNames = [
+         'BiConsumer',                           'BiFunction',                           'BinaryOperator',                       'BiPredicate',
+         'BooleanSupplier',                      'Consumer',                             'DoubleBinaryOperator',                 'DoubleConsumer',
+         'DoubleFunction',                       'DoublePredicate',                      'DoubleSupplier',                       'DoubleToIntFunction',
+         'DoubleToLongFunction',                 'DoubleUnaryOperator',                  'Function',                             'IntBinaryOperator',
+         'IntConsumer',                          'IntFunction',                          'IntPredicate',                         'IntSupplier',
+         'IntToDoubleFunction',                  'IntToLongFunction',                    'IntUnaryOperator',                     'LongBinaryOperator',
+         'LongConsumer',                         'LongFunction',                         'LongPredicate',                        'LongSupplier',
+         'LongToDoubleFunction',                 'LongToIntFunction',                    'LongUnaryOperator',                    'ObjDoubleConsumer',
+         'ObjIntConsumer',                       'ObjLongConsumer',                      'Predicate',                            'Supplier',
+         'ToDoubleBiFunction',                   'ToDoubleFunction',                     'ToIntBiFunction',                      'ToIntFunction',
+         'ToLongBiFunction',                     'ToLongFunction',                       'UnaryOperator'
+      ]
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::javaUtilStreamPackage(): meta::external::language::java::factory::KnownPackage[1]
+{
+   ^meta::external::language::java::factory::KnownPackage(
+      package    = javaPackage('java.util.stream'),
+      classNames = [
+         'BaseStream',                           'Collector',                            'Collector.Characteristics',            'Collectors',
+         'DoubleStream',                         'DoubleStream.Builder',                 'IntStream',                            'IntStream.Builder',
+         'LongStream',                           'LongStream.Builder',                   'Stream',                               'Stream.Builder',
+         'StreamSupport'
+      ]
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::javaIoPackage(): meta::external::language::java::factory::KnownPackage[1]
+{
+   ^meta::external::language::java::factory::KnownPackage(
+      package    = javaPackage('java.io'),
+      classNames = [
+         'BufferedInputStream',                  'BufferedOutputStream',                 'BufferedReader',                       'BufferedWriter',
+         'ByteArrayInputStream',                 'ByteArrayOutputStream',                'CharArrayReader',                      'CharArrayWriter',
+         'CharConversionException',              'Closeable',                            'Console',                              'DataInput',
+         'DataInputStream',                      'DataOutput',                           'DataOutputStream',                     'EOFException',
+         'Externalizable',                       'File',                                 'FileDescriptor',                       'FileFilter',
+         'FileInputStream',                      'FilenameFilter',                       'FileNotFoundException',                'FileOutputStream',
+         'FilePermission',                       'FileReader',                           'FileWriter',                           'FilterInputStream',
+         'FilterOutputStream',                   'FilterReader',                         'FilterWriter',                         'Flushable',
+         'InputStream',                          'InputStreamReader',                    'InterruptedIOException',               'InvalidClassException',
+         'InvalidObjectException',               'IOError',                              'IOException',                          'LineNumberInputStream',
+         'LineNumberReader',                     'NotActiveException',                   'NotSerializableException',             'ObjectInput',
+         'ObjectInputStream',                    'ObjectInputStream.GetField',           'ObjectInputValidation',                'ObjectOutput',
+         'ObjectOutputStream',                   'ObjectOutputStream.PutField',          'ObjectStreamClass',                    'ObjectStreamConstants',
+         'ObjectStreamException',                'ObjectStreamField',                    'OptionalDataException',                'OutputStream',
+         'OutputStreamWriter',                   'PipedInputStream',                     'PipedOutputStream',                    'PipedReader',
+         'PipedWriter',                          'PrintStream',                          'PrintWriter',                          'PushbackInputStream',
+         'PushbackReader',                       'RandomAccessFile',                     'Reader',                               'SequenceInputStream',
+         'Serializable',                         'SerializablePermission',               'StreamCorruptedException',             'StreamTokenizer',
+         'StringBufferInputStream',              'StringReader',                         'StringWriter',                         'SyncFailedException',
+         'UncheckedIOException',                 'UnsupportedEncodingException',         'UTFDataFormatException',               'WriteAbortedException',
+         'Writer'
+      ]
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::javaNetPackage(): meta::external::language::java::factory::KnownPackage[1]
+{
+   ^meta::external::language::java::factory::KnownPackage(
+      package    = javaPackage('java.net'),
+      classNames = [
+         'Authenticator',                        'Authenticator.RequestorType',          'BindException',                        'CacheRequest',
+         'CacheResponse',                        'ConnectException',                     'ContentHandler',                       'ContentHandlerFactory',
+         'CookieHandler',                        'CookieManager',                        'CookiePolicy',                         'CookieStore',
+         'DatagramPacket',                       'DatagramSocket',                       'DatagramSocketImpl',                   'DatagramSocketImplFactory',
+         'FileNameMap',                          'HttpCookie',                           'HttpRetryException',                   'HttpURLConnection',
+         'IDN',                                  'Inet4Address',                         'Inet6Address',                         'InetAddress',
+         'InetSocketAddress',                    'InterfaceAddress',                     'JarURLConnection',                     'MalformedURLException',
+         'MulticastSocket',                      'NetPermission',                        'NetworkInterface',                     'NoRouteToHostException',
+         'PasswordAuthentication',               'PortUnreachableException',             'ProtocolException',                    'ProtocolFamily',
+         'Proxy',                                'Proxy.Type',                           'ProxySelector',                        'ResponseCache',
+         'SecureCacheResponse',                  'ServerSocket',                         'Socket',                               'SocketAddress',
+         'SocketException',                      'SocketImpl',                           'SocketImplFactory',                    'SocketOption',
+         'SocketOptions',                        'SocketPermission',                     'SocketTimeoutException',               'StandardProtocolFamily',
+         'StandardSocketOptions',                'UnknownHostException',                 'UnknownServiceException',              'URI',
+         'URISyntaxException',                   'URL',                                  'URLClassLoader',                       'URLConnection',
+         'URLDecoder',                           'URLEncoder',                           'URLPermission',                        'URLStreamHandler',
+         'URLStreamHandlerFactory'
+      ]
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::javaMathPackage(): meta::external::language::java::factory::KnownPackage[1]
+{
+   ^meta::external::language::java::factory::KnownPackage(
+      package    = javaPackage('java.math'),
+      classNames = [
+         'BigDecimal',                           'BigInteger',                           'MathContext',                          'RoundingMode'
+      ]
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::javaTimePackage(): meta::external::language::java::factory::KnownPackage[1]
+{
+   ^meta::external::language::java::factory::KnownPackage(
+      package    = javaPackage('java.time'),
+      classNames = [
+         'Clock',                                'DateTimeException',                    'DayOfWeek',                            'Duration',
+         'Instant',                              'LocalDate',                            'LocalDateTime',                        'LocalTime',
+         'Month',                                'MonthDay',                             'OffsetDateTime',                       'OffsetTime',
+         'ZoneId',                                'ZoneOffset'
+      ]
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::smartJavaMath(in:meta::external::language::java::metamodel::Class[1]): meta::external::language::java::metamodel::Class[1]
+{
+   if($in.simpleName == 'BigDecimal',
+      | $in->addMethodIfMissing(javaMethod(javaBigDecimal(),   'add',           [javaParam(javaBigDecimal(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'subtract',      [javaParam(javaBigDecimal(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'multiply',      [javaParam(javaBigDecimal(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'divide',        [javaParam(javaBigDecimal(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'divide',        [javaParam(javaBigDecimal(), 'x'), javaParam(javaInt(), 'y')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'divide',        [javaParam(javaBigDecimal(), 'x'), javaParam(javaRoundingMode(), 'y')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'negate',        []))
+           ->addMethodIfMissing(javaMethod(javaInt(),          'compareTo',     [javaParam(javaBigDecimal(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'remainder',     [javaParam(javaBigDecimal(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'round',         [javaParam(javaMathContext(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'setScale',      [javaParam(javaInt(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'setScale',      [javaParam(javaInt(), 'x'), javaParam(javaInt(), 'y')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'setScale',      [javaParam(javaInt(), 'x'), javaParam(javaRoundingMode(), 'y')]))
+           ->addMethodIfMissing(javaMethod(javaString(),       'toPlainString', []))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'valueOf',       [javaParam(javaLong(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBigDecimal(),   'valueOf',       [javaParam(javaDouble(), 'x')]))
+           ->addNumberMethods(),
+      | $in
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::smartJavaLang(in:meta::external::language::java::metamodel::Class[1]): meta::external::language::java::metamodel::Class[1]
+{
+   if($in.simpleName == 'String',
+      | $in->addMethodIfMissing(javaMethod(javaChar(),    'charAt',           [javaParam(javaInt(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBoolean(), 'contains',         [javaParam(javaString(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaInt(),     'compareTo',        [javaParam(javaString(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBoolean(), 'endsWith',         [javaParam(javaString(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaBoolean(), 'equalsIgnoreCase', [javaParam(javaString(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaString(),  'format',           [javaParam(javaString(), 'format'), javaParam(javaArray(javaObject()), 'args')]))
+           ->addMethodIfMissing(javaMethod(javaArray(javaByte()), 'getBytes', []))
+           ->addMethodIfMissing(javaMethod(javaInt(),     'indexOf',          [javaParam(javaString(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaInt(),     'length',           []))
+           ->addMethodIfMissing(javaMethod(javaBoolean(), 'matches',          [javaParam(javaString(), 'str'), javaParam(javaString(), 'regexp')]))
+           ->addMethodIfMissing(javaMethod(javaString(),  'replace',          [javaParam(javaString(), 'x'), javaParam(javaString(), 'y')]))
+           ->addMethodIfMissing(javaMethod(javaString(),  'replaceAll',       [javaParam(javaString(), 'x'), javaParam(javaString(), 'y')]))
+           ->addMethodIfMissing(javaMethod(javaBoolean(), 'startsWith',       [javaParam(javaString(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaString(),  'substring',        [javaParam(javaInt(), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaString(),  'substring',        [javaParam(javaInt(), 'x'), javaParam(javaInt(), 'y')]))
+           ->addMethodIfMissing(javaMethod(javaString(),  'toLowerCase',      []))
+           ->addMethodIfMissing(javaMethod(javaString(),  'toUpperCase',      []))
+           ->addMethodIfMissing(javaMethod(javaString(),  'trim',             [])),
+      |
+   if($in.simpleName == 'Boolean',
+      | $in->addMethodIfMissing(javaMethod(javaBoolean(), 'parseBoolean', javaParam(javaString(), 'x'))),
+      |
+   if($in.simpleName == 'Float',
+      | $in->addMethodIfMissing(javaMethod(javaFloat(), 'parseFloat', javaParam(javaString(), 'x')))
+           ->addMethodIfMissing(javaMethod(javaInt(),   'compareTo',  javaParam(javaFloat()->toBoxed(), 'x')))
+           ->addNumberMethods(),
+      |
+   if($in.simpleName == 'Double',
+      | $in->addMethodIfMissing(javaMethod('static', javaDouble(), 'parseDouble', javaParam(javaString(), 'x')))
+           ->addMethodIfMissing(javaMethod(          javaInt(),    'compareTo',   javaParam(javaDouble()->toBoxed(), 'x')))
+           ->addMethodIfMissing(javaMethod('static', javaInt(),    'compare',     [javaParam(javaDouble(), 'x'), javaParam(javaDouble(), 'y')]))
+           ->addMethodIfMissing(javaMethod('static', javaDouble(), 'max',         [javaParam(javaDouble(), 'x'), javaParam(javaDouble(), 'y')]))
+           ->addMethodIfMissing(javaMethod('static', javaDouble(), 'min',         [javaParam(javaDouble(), 'x'), javaParam(javaDouble(), 'y')]))
+           ->addNumberMethods(),
+      |
+   if($in.simpleName == 'Integer',
+      | $in->addMethod(javaMethod('static', javaInt(),      'parseInt',  javaParam(javaString(), 'x')))
+           ->addMethod(javaMethod(          javaInt(),      'compareTo', javaParam(javaInt()->toBoxed(), 'x')))
+           ->addMethod(javaMethod('static', javaIntBoxed(), 'valueOf',   javaParam(javaString(), 'x')))
+           ->addNumberMethods(),
+      |
+   if($in.simpleName == 'Long',
+      | $in->addMethodIfMissing(javaMethod('static', javaLong(),      'parseLong', javaParam(javaString(), 'x')))
+           ->addMethodIfMissing(javaMethod(          javaInt(),       'compareTo', javaParam(javaLong()->toBoxed(), 'x')))
+           ->addMethodIfMissing(javaMethod('static', javaLong(),      'max',       [javaParam(javaLong(), 'x'), javaParam(javaLong(), 'y')]))
+           ->addMethodIfMissing(javaMethod('static', javaLong(),      'min',       [javaParam(javaLong(), 'x'), javaParam(javaLong(), 'y')]))
+           ->addMethodIfMissing(javaMethod('static', javaLong(),      'sum',       [javaParam(javaLong(), 'x'), javaParam(javaLong(), 'y')]))
+           ->addMethodIfMissing(javaMethod('static', javaLongBoxed(), 'valueOf',   javaParam(javaString(), 'x')))
+           ->addNumberMethods(),
+      |
+   if($in.simpleName == 'Number',
+      | $in->addNumberMethods(),
+      |
+   if($in.simpleName == 'StringBuilder',
+      | $in->addMethodIfMissing(javaMethod(javaInt(),           'length',     []))
+           ->addMethodIfMissing(javaMethod(javaStringBuilder(), 'append', javaParam(javaObject(), 'x')))
+           ->addMethodIfMissing(javaMethod(javaChar(),          'charAt', javaParam(javaInt(), 'x'))),
+      |
+   if($in.simpleName == 'Class',
+      | $in->addMethodIfMissing(javaMethod(javaString(),   'getName',       []))
+           ->addMethodIfMissing(javaMethod(javaString(),   'getSimpleName', [])),
+      | $in
+   )))))))));
+}
+
+function <<access.private>> meta::external::language::java::factory::smartJavaIO(in:meta::external::language::java::metamodel::Class[1]): meta::external::language::java::metamodel::Class[1]
+{
+   if($in.simpleName->endsWith('Reader'),
+      | $in->addMethodIfMissing(javaMethod(javaInt(), 'read', []))
+           ->addMethodIfMissing(javaMethod(javaInt(), 'read', [javaParam(javaArray(javaChar()), 'x')]))
+           ->addMethodIfMissing(javaMethod(javaInt(), 'read', [javaParam(javaArray(javaChar()), 'x'), javaParam(javaInt(), 'y'), javaParam(javaInt(), 'z')]))
+           ->addMethodIfMissing(javaMethod(javaInt(), 'read', [javaParam(javaClass('java.nio.CharBuffer'), 'x')])),
+      |
+   if($in.simpleName->endsWith('PrintStream'),
+      | $in->addMethodIfMissing(javaMethod(javaVoid(), 'println', [])),
+      | $in
+   ));
+}
+
+function <<access.private>> meta::external::language::java::factory::smartJavaNet(in:meta::external::language::java::metamodel::Class[1]): meta::external::language::java::metamodel::Class[1]
+{
+   if($in.simpleName->endsWith('URL'),
+      | $in->addMethodIfMissing(javaMethod(javaInputStream(), 'openStream', [])),
+      | $in
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::smartJavaUtilStream(in:meta::external::language::java::metamodel::Class[1]): meta::external::language::java::metamodel::Class[1]
+{
+
+   if($in.simpleName == 'LongStream',
+      | $in->addMethodIfMissing(javaMethod(javaLongStream(), 'range',  [javaParam(javaLong(), 'startInclusive'), javaParam(javaLong(), 'endExclusive')]))
+           ->addMethodIfMissing(javaMethod(javaLongStream(), 'filter', [javaParam(javaLongPredicate(), 'predicate')]))
+           ->addMethodIfMissing(javaMethod(javaLongStream(), 'map',    [javaParam(javaLongUnaryOperator(), 'mapper')]))
+           ->addMethodIfMissing(javaMethod(javaLongStream(), 'iterate',[javaParam(javaLong(), 'seed'), javaParam(javaLongUnaryOperator(), 'f')]))
+           ->addMethodIfMissing(javaMethod(javaLongStream(), 'limit',  [javaParam(javaLong(), 'limit')]))
+           ->addMethodIfMissing(javaMethod(javaStream(javaLong()), 'boxed', []));,
+      | $in
+   );
+
+}
+
+function <<access.private>> meta::external::language::java::factory::smartJavaUtil(in:meta::external::language::java::metamodel::ParameterizedType[1]): meta::external::language::java::metamodel::Class[1]
+{
+   let class       = $in.rawType->cast(@meta::external::language::java::metamodel::Class);
+   let elementType = $in.typeArguments->at(0);
+
+   if(['List','ArrayList']->contains($class.simpleName),
+      | $class->addMethodIfMissing(javaMethod(javaBoolean(), 'add',     javaParam($elementType, 'x')))
+              ->addMethodIfMissing(javaMethod($elementType,  'get',     javaParam(javaInt(), 'x')))
+              ->addMethodIfMissing(javaMethod(javaInt(),     'indexOf', javaParam($elementType, 'x')))
+              ->addMethodIfMissing(javaMethod(javaBoolean(), 'isEmpty', []))
+              ->addCollectionMethods($elementType),
+      |
+   if(['Map','TreeMap','HashMap']->contains($class.simpleName),
+      {|
+         let keyType   = $in.typeArguments->at(0);
+         let valueType = $in.typeArguments->at(1);
+         $class->addMethodIfMissing(javaMethod($valueType,    'put',         [javaParam($keyType, 'x'), javaParam($valueType, 'y')]))
+               ->addMethodIfMissing(javaMethod(javaBoolean(), 'containsKey', [javaParam($keyType, 'x')]))
+               ->addMethodIfMissing(javaMethod($valueType,    'get',         [javaParam($keyType, 'x')]));
+      },
+      |
+   if($class.simpleName == 'Queue',
+      | $class->addMethodIfMissing(javaMethod(javaBoolean(), 'add',     javaParam($elementType, 'x')))
+              ->addMethodIfMissing(javaMethod(javaBoolean(), 'offer',   javaParam($elementType, 'x')))
+              ->addMethodIfMissing(javaMethod($elementType,  'peek',    []))
+              ->addMethodIfMissing(javaMethod($elementType,  'poll',    []))
+              ->addMethodIfMissing(javaMethod($elementType,  'element', []))
+              ->addMethodIfMissing(javaMethod($elementType,  'remove',  []))
+              ->addCollectionMethods($elementType),
+      |
+   if($class.simpleName == 'Iterator',
+      | $class->addMethodIfMissing(javaMethod(javaBoolean(), 'hasNext', []))
+              ->addMethodIfMissing(javaMethod($elementType,  'next',    [])),
+      |
+   if($class.simpleName == 'Optional',
+      | $class->addMethodIfMissing(javaMethod(javaVoid(), 'ifPresent', javaParam(javaConsumer($elementType), 'x'))),
+      | $class
+   )))));
+}
+
+function <<access.private>> meta::external::language::java::factory::smartJavaUtilStream(in:meta::external::language::java::metamodel::ParameterizedType[1]): meta::external::language::java::metamodel::Class[1]
+{
+   let class       = $in.rawType->cast(@meta::external::language::java::metamodel::Class);
+   let elementType = $in.typeArguments->at(0);
+
+   if($class.simpleName == 'Stream',
+      | $class->addMethodIfMissing(javaMethod(javaIterator($elementType),  'iterator',    [])),
+      | $class
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::smartJavaUtilFunction(in:meta::external::language::java::metamodel::ParameterizedType[1]): meta::external::language::java::metamodel::Class[1]
+{
+   let class       = $in.rawType->cast(@meta::external::language::java::metamodel::Class);
+   let elementType = $in.typeArguments->at(0);
+
+   if($class.simpleName == 'Supplier',
+      | $class->addMethodIfMissing(javaMethod($elementType,  'get',     [])),
+      | $class
+   );
+}
+
+function <<access.private>> meta::external::language::java::factory::project::packageToDirectoryNames(pkg: meta::external::language::java::metamodel::Package[1]): String[*]
+{
+   if($pkg.parent->isEmpty(), |[], |$pkg.parent->toOne()->packageToDirectoryNames())
+      ->concatenate([$pkg.name]);
+}

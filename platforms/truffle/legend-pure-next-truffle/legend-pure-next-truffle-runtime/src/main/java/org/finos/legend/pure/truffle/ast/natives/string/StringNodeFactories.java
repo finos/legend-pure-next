@@ -57,6 +57,8 @@ public final class StringNodeFactories
 
         registry.register("split_String_1__String_1__String_MANY_",
                 (args, gt, mul, fe) -> new SplitNode(args[0], args[1], gt, mul));
+        registry.register("chunk_String_1__Integer_1__String_MANY_",
+                (args, gt, mul, fe) -> new ChunkNode(args[0], args[1]));
 
         registry.register("toUpper_String_1__String_1_",
                 (args, gt, mul, fe) -> new ToUpperNode(args[0]));
@@ -79,6 +81,9 @@ public final class StringNodeFactories
         registry.register("indexOf_String_1__String_1__Integer_1__Integer_1_",
                 (args, gt, mul, fe) -> new IndexOfNode(args[0], args[1], args[2],
                         "indexOf_String_1__String_1__Integer_1__Integer_1_"));
+        registry.register("lastIndexOf_String_1__String_1__Integer_1_",
+                (args, gt, mul, fe) -> new LastIndexOfNode(args[0], args[1],
+                        "lastIndexOf_String_1__String_1__Integer_1_"));
 
         registry.register("replace_String_1__String_1__String_1__String_1_",
                 (args, gt, mul, fe) -> new ReplaceNode(args[0], args[1], args[2]));

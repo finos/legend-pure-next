@@ -226,7 +226,7 @@ function meta::pure::compiler::structural::propertyCompiler::validatePropertyOve
 {
     $cls.properties->fold({prop, pCtx |
         let superProp = $cls.generalizations
-            ->map(g | $g.general->genericTypeRawType())
+            ->map(g | $g.general->rawType())
             ->map(superType | $superType->meta::pure::compiler::helper::type::derefTypeIfPointer($context))
             ->filter(t | $t->isNotEmpty())
             ->map(t | $t->toOne())

@@ -36,7 +36,7 @@ function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:St
                           | $assocMatch->head(),
                           | // Inherited properties via generalizations
                             let inherited = $cls.generalizations
-                                ->map(g | $g.general->genericTypeRawType())
+                                ->map(g | $g.general->rawType())
                                 ->map(superType | $superType->findProperty($name))
                                 ->filter(p | $p->isNotEmpty())
                                 ->head();
@@ -103,7 +103,7 @@ function meta::pure::compiler::helper::class::findInheritedProperty(generalizati
     $generalizations->fold({g, acc |
         if($acc->isNotEmpty(),
             | $acc,
-            | let t = $g.general->genericTypeRawType();
+            | let t = $g.general->rawType();
               if($t->isEmpty() || (!$t->toOne()->instanceOf(Class) && !$t->toOne()->instanceOf(Enumeration)),
                   | $acc,
                   | let superPath = $t->toOne()->cast(@PackageableElement)->elementToPath();
@@ -124,7 +124,7 @@ function meta::pure::compiler::helper::class::findQualifiedProperties(cls:Class<
     let directMatch = $cls.qualifiedProperties->filter(qp | $qp.name == $name);
     // Inherited qualified properties via generalizations
     let inherited = $cls.generalizations
-        ->map(g | $g.general->genericTypeRawType())
+        ->map(g | $g.general->rawType())
         ->filter(t | $t->instanceOf(Class))
         ->map(t | $t->cast(@Class<Any>)->findQualifiedProperties($name));
     $directMatch->concatenate($inherited);
@@ -135,7 +135,7 @@ function meta::pure::compiler::helper::class::findQualifiedProperties(cls:Class<
 {
     let directMatch = $cls.qualifiedProperties->filter(qp | $qp.name == $name);
     let inherited = $cls.generalizations
-        ->map(g | $g.general->genericTypeRawType())
+        ->map(g | $g.general->rawType())
         ->filter(t | $t->instanceOf(Class))
         ->map(t |
             let superPath = $t->cast(@PackageableElement)->elementToPath();
@@ -250,11 +250,11 @@ function <<test.Test>> meta::pure::compiler::helper::class::tests::testBuildBind
     assertEquals(['m'], $mKeys);
     
     let tBinding = $bindings.typeBindings->get('T')->toOne().values->at(0);
-    assertEquals(meta::pure::compiler::helper::class::tests::Wrapper, $tBinding->genericTypeRawType()->toOne());
-    assertEquals(String, $tBinding->genericTypeTypeArguments()->at(0)->genericTypeRawType()->toOne());
+    assertEquals(meta::pure::compiler::helper::class::tests::Wrapper, $tBinding->rawType()->toOne());
+    assertEquals(String, $tBinding->genericTypeTypeArguments()->at(0)->rawType()->toOne());
     
     let uBinding = $bindings.typeBindings->get('U')->toOne().values->at(0);
-    assertEquals(Integer, $uBinding->genericTypeRawType()->toOne());
+    assertEquals(Integer, $uBinding->rawType()->toOne());
 
     let mBinding = $bindings.multiplicityBindings->get('m')->toOne().values->at(0);
     assertEquals(1, $mBinding->multiplicityLowerBound());

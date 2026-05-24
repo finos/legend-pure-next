@@ -50,17 +50,7 @@ function meta::pure::compiler::helper::type::isBottomType(t:Type[1]):Boolean[1]
 // pointer-wrapped type still reports its parent chain.
 function meta::pure::compiler::helper::type::directSupertypes(t:Type[1], context:meta::pure::compiler::CompilerContext[1]):Type[*]
 {
-    $t->derefTypeIfPointer($context)->toOne().generalizations->map(g | $g.general->genericTypeRawType())
-}
-
-function meta::pure::compiler::helper::type::genericTypeRawType(gt:GenericType[1]):Type[0..1]
-{
-    $gt->match(
-        [
-            gtv : GenericTypeValue[1] | $gtv.type,
-            a   : Any[1]              | []
-        ]
-    )
+    $t->derefTypeIfPointer($context)->toOne().generalizations->map(g | $g.general->rawType())
 }
 
 // Cheap single-pointer-follow on a Type. If the Type is a TempCompilerPointer
@@ -68,7 +58,7 @@ function meta::pure::compiler::helper::type::genericTypeRawType(gt:GenericType[1
 // `path`/`element`), resolves via the registry to the live target — one
 // HashMap lookup, no tree walk. Otherwise returns the Type unchanged.
 //
-// Use this immediately after `genericTypeRawType` at call sites that read
+// Use this immediately after `rawType` at call sites that read
 // raw-type slots like `.name`, `.properties`, `.generalizations` directly,
 // since pointer subclasses don't carry those slots. Sites that only need
 // identity / path comparisons don't need to deref — pointers are still

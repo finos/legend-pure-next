@@ -84,8 +84,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         let lastParam = $innerFE.parametersValues->at($innerFE.parametersValues->size() - 1);
         let lastParamGT = if($lastParam.genericType->isNotEmpty() && !$lastParam.genericType->toOne()->instanceOf(CompilerNotSetGenericType), | $lastParam.genericType->toOne(), | $lastParam->cast(@Any).classifierGenericType->toOne());
         let typeArgs = $lastParamGT->genericTypeTypeArguments();
-        if($typeArgs->isNotEmpty() && $typeArgs->at(0)->genericTypeRawType()->isNotEmpty(),
-            | $typeArgs->at(0)->genericTypeRawType()->toOne()->match([
+        if($typeArgs->isNotEmpty() && $typeArgs->at(0)->rawType()->isNotEmpty(),
+            | $typeArgs->at(0)->rawType()->toOne()->match([
                   rt:RelationType<Any>[1] | $rt.columns->cast(@Column<Nil, Any|*>),
                   a:Any[1] | []->cast(@Column<Nil, Any|*>)
               ]),
@@ -107,7 +107,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let typeArgs = $typeHolderParamGT->genericTypeTypeArguments();
     if($typeArgs->isEmpty(),
         | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context),
-        | let innerType = $typeArgs->at(0)->genericTypeRawType();
+        | let innerType = $typeArgs->at(0)->rawType();
           if($innerType->isEmpty(),
               | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context),
               | $innerType->toOne()->match([
@@ -136,7 +136,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::resolveFromSubset(paramValues:ValueSpecification[*], subsetOp:GenericTypeOperation[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1], exprSourceInformation:SourceInformation[0..1]):EnrichResult[1]
 {
     let resolvedRight = makeAsConcreteAsPossible($subsetOp.right, $bindings, $context);
-    let referenceType = $resolvedRight->genericTypeRawType();
+    let referenceType = $resolvedRight->rawType();
     if($referenceType->isEmpty(),
         | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context),
         | $referenceType->toOne()->match([
@@ -168,7 +168,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::resolveFromEqualWithWildcard(paramValues:ValueSpecification[*], equalOp:GenericTypeOperation[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1]):EnrichResult[1]
 {
     let resolvedRight = makeAsConcreteAsPossible($equalOp.right, $bindings, $context);
-    let rightType = $resolvedRight->genericTypeRawType();
+    let rightType = $resolvedRight->rawType();
     if($rightType->isEmpty(),
         | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context),
         | $rightType->toOne()->match([
@@ -222,8 +222,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     if($enrichedGT->isNotEmpty() && !$enrichedGT->toOne()->instanceOf(CompilerNotSetGenericType),
         | let paramGT = $ft.parameters->at($typeHolderArgIdx)->cast(@VariableExpression).genericType->toOne();
           let typeArgs = $paramGT->genericTypeTypeArguments();
-          if($typeArgs->isNotEmpty() && $typeArgs->at(0)->genericTypeRawType()->isNotEmpty(),
-              | $typeArgs->at(0)->genericTypeRawType()->toOne()->match([
+          if($typeArgs->isNotEmpty() && $typeArgs->at(0)->rawType()->isNotEmpty(),
+              | $typeArgs->at(0)->rawType()->toOne()->match([
                     tp:TypeParameter[1] |
                         let typeParamName = $tp.name;
                         let enrichedTypeArgs = $enrichedGT->toOne()->genericTypeTypeArguments();

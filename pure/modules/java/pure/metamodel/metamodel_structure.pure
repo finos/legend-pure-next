@@ -147,3 +147,8 @@ Class meta::external::language::java::metamodel::Constructor extends meta::exter
    body : String[0..1]; // String for now ... will model expressions later
    bodyCode: Code[0..1];
 }
+
+Profile meta::external::language::java::metamodel::annotations::AnnotationJavaInfo
+{
+  tags : [javaClass];
+}

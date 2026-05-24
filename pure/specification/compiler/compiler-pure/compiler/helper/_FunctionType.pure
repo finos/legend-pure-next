@@ -282,8 +282,8 @@ function meta::pure::compiler::helper::functionType::compareFunctionTypes(f1:Fun
               // `.name` read below sees a concrete Class rather than a pointer
               // subclass (which has no `name` slot). Single registry lookup,
               // no tree walk.
-              let t1 = $params1->at($i).genericType->toOne()->genericTypeRawType()->derefTypeIfPointer($context);
-              let t2 = $params2->at($i).genericType->toOne()->genericTypeRawType()->derefTypeIfPointer($context);
+              let t1 = $params1->at($i).genericType->toOne()->rawType()->derefTypeIfPointer($context);
+              let t2 = $params2->at($i).genericType->toOne()->rawType()->derefTypeIfPointer($context);
               let t1IsTP = if($t1->isEmpty(), | false, | $t1->toOne()->instanceOf(TypeParameter));
               let t2IsTP = if($t2->isEmpty(), | false, | $t2->toOne()->instanceOf(TypeParameter));
               let typeCmp = if([

@@ -12,7 +12,7 @@ function meta::pure::compiler::helper::function::resolveFunctionType(genericType
     let res = $genericType->resolveForTarget(Function, $context);
     let rt = if($res->isNotEmpty(), | $res->toOne()->genericTypeTypeArguments(), | []);
     if($rt->isNotEmpty(),
-       | $rt->at(0)->genericTypeRawType()->toOne()->cast(@FunctionType),
+       | $rt->at(0)->rawType()->toOne()->cast(@FunctionType),
        | []
     );
 }
@@ -42,7 +42,7 @@ function <<test.Test>> meta::pure::compiler::helper::function::tests::testResolv
 
     assert($ft.parameters->isNotEmpty());
     assertEquals('a', $ft.parameters->at(0).name);
-    assertEquals(String, $ft.parameters->at(0).genericType->toOne()->genericTypeRawType()->toOne());
+    assertEquals(String, $ft.parameters->at(0).genericType->toOne()->rawType()->toOne());
 }
 
 function <<test.Test>> meta::pure::compiler::helper::function::tests::testGetFunctionType():Boolean[1]
@@ -51,7 +51,7 @@ function <<test.Test>> meta::pure::compiler::helper::function::tests::testGetFun
     let func = meta::pure::compiler::helper::function::tests::testResolveFunctionType__Boolean_1_;
     let ft = $func->getFunctionType($ctx);
 
-    assertEquals(Boolean, $ft.returnType->toOne()->genericTypeRawType()->toOne());
+    assertEquals(Boolean, $ft.returnType->toOne()->rawType()->toOne());
     assertEquals(1, $ft.returnMultiplicity->toOne()->multiplicityLowerBound());
 }
 

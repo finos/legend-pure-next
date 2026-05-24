@@ -56,7 +56,7 @@ function meta::external::language::java::metamodel::packageNames(pkg: meta::exte
 function meta::external::language::java::metamodel::isValidPackageName(name: String[1]): Boolean[1]
 {
    // TODO Enable once matches is fully available
-   $name->split('.')->forAll(nm | /*$nm->matches('[_$a-zA-Z][_$a-zA-Z0-9]*') && */ !$nm->in(javaKeywords()));
+   $name->split('.')->forAll(nm | /*$nm->matches('[_$a-zA-Z][_$a-zA-Z0-9]*') && */ !javaKeywords()->contains($nm));
 }
 
 function meta::external::language::java::metamodel::isInPackage(type: meta::external::language::java::metamodel::Type[1], packageName: String[1]):Boolean[1]

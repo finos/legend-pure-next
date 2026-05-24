@@ -921,8 +921,8 @@ function <<test.Test>> meta::external::language::java::serialization::tests::fol
 
 function <<test.Test>> meta::external::language::java::serialization::tests::longString():Boolean[1]
 {
-   let as1k  = range(1000)->map(n| 'a')->joinStrings();
-   let as80k = range(80)->map(n| $as1k)->joinStrings();
+   let as1k  = range(1000)->map(n| 'a')->joinStrings('');
+   let as80k = range(80)->map(n| $as1k)->joinStrings('');
 
    let class = javaClass('org.finos.test.Test')
                   ->addMethod(javaMethod('public', javaString(), 'test', [],

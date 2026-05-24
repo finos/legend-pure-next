@@ -1,0 +1,1338 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::packages::*;
+import meta::external::language::java::factory::*;
+import meta::external::language::java::factory::project::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::metamodel::project::*;
+import meta::external::language::java::serialization::*;
+
+// --- Java coding
+
+function meta::external::language::java::factory::j_code(code:String[1], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   j_code($code, $type, []);
+}
+
+function meta::external::language::java::factory::j_code(code:String[1], type:meta::external::language::java::metamodel::Type[1], dependencies:CodeDependency[*]):Code[1]
+{
+   ^SimpleCode(code=$code, type=$type, requires=$dependencies);
+}
+
+function meta::external::language::java::factory::j_null():Code[1]
+{
+   ^Null(type=javaVoid()); // void to represent bottom (Nil)
+}
+
+function meta::external::language::java::factory::j_null(type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   ^Null(type=$type);
+}
+
+/* Used to indicate a nested anonymous class (primarilly for j_this). Nesting level starts at 1:
+
+   class X
+   {
+      ...
+      new Something()
+      {
+         ...
+         new SomethingElse()
+         {
+            ...
+         }
+      }
+      new Another()
+      {
+         ...
+      }
+   }
+
+  Something and Another are anonymousNestedClass(1), SomethingElse is anonymousNestedClass(2)
+
+  This is different than the compiler which will make them: Something->$1, SomethingElse->$2, Another->$3
+*/
+function meta::external::language::java::factory::anonymousNestedClass(level:Integer[1]):meta::external::language::java::metamodel::Class[1]
+{
+   ^meta::external::language::java::metamodel::Class(simpleName='Level'+$level->toString(), package=anonymousPackage());
+}
+
+function meta::external::language::java::factory::j_this(type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   ^This(type=$type);
+}
+
+function meta::external::language::java::factory::j_super(type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   ^Super(type=$type);
+}
+
+function meta::external::language::java::factory::j_variable(param:meta::external::language::java::metamodel::Parameter[1]):Code[1]
+{
+   ^Variable(name=$param.name, type=$param.type);
+}
+
+function meta::external::language::java::factory::j_variable(type:meta::external::language::java::metamodel::Type[1], name:String[1]):Code[1]
+{
+   ^Variable(name=$name, type=$type);
+}
+
+function meta::external::language::java::factory::j_parameter(param:meta::external::language::java::metamodel::Parameter[1]):Code[1]
+{
+   ^CodeParameter(name=$param.name, type=$param.type);
+}
+
+function meta::external::language::java::factory::j_parameter(type:meta::external::language::java::metamodel::Type[1], name:String[1]):Code[1]
+{
+   ^CodeParameter(name=$name, type=$type);
+}
+
+function meta::external::language::java::factory::j_arrayAccess(array:Code[1], index:Code[1]):Code[1]
+{
+   ^ArrayAccess(array=$array, index=$index, type=$array.type->elementTypeOfJavaArray());
+}
+
+function meta::external::language::java::factory::j_block(codes:Code[*]):Code[1]
+{
+   let statements = $codes->toStatements();
+   let last       = $statements->last().type;
+   ^Block(statements=$statements, type=if($last->isEmpty(), |javaVoid(), |$last->toOne()));
+}
+
+function meta::external::language::java::factory::j_expressionStatement(expression:Code[1]):Code[1]
+{
+   assert($expression->isValidExpressionAsStatement(), |'Not a valid expression to use as a statement');
+   ^ExpressionStatement(expression=$expression, type=$expression.type);
+}
+
+function meta::external::language::java::factory::j_if(test:Code[1], then:Code[1..*]):Code[1]
+{
+   j_if($test, $then, []);
+}
+
+function meta::external::language::java::factory::j_if(test:Code[1], then:Code[1..*], else:Code[*]):Code[1]
+{
+   let canonicalThen = $then->match([
+      c1:Code[1] | $c1->blockIfNot(),
+      cs:Code[*] | $cs->j_block()
+   ]);
+   let canonicalElse = $else->match([
+      c0:Code[0] | [],
+      c1:Code[1] | if($c1->instanceOf(If), |$c1, |$c1->blockIfNot()),
+      cs:Code[*] | $cs->j_block()
+   ]);
+
+   ^If(test=$test, then=$canonicalThen, else=$canonicalElse, type=javaVoid());
+}
+
+function meta::external::language::java::factory::j_if(testsAndThens:List<Pair<Code,Code>>[1]):Code[1]
+{
+   j_if($testsAndThens, []);
+}
+
+function meta::external::language::java::factory::j_if(testsAndThens:List<Pair<Code,Code>>[1], else:Code[0..1]):Code[1]
+{
+   assert($testsAndThens.values->isNotEmpty(), |'No then clauses');
+   $testsAndThens.values->reverse()->fold({tt, a| j_if($tt.first, $tt.second, $a)}, $else)->toOne();
+}
+
+function meta::external::language::java::factory::j_for(init:Code[0..1], test:Code[0..1], update:Code[0..1], body:Code[1..*]):Code[1]
+{
+   let canonicalBody = $body->match([
+      c1:Code[1] | $c1->blockIfNot(),
+      cs:Code[*] | $cs->j_block()
+   ]);
+   ^For(init=$init, test=$test, update=$update, body=$canonicalBody, type=javaVoid());
+}
+
+function meta::external::language::java::factory::j_for(parameter:Code[1], collection:Code[1], body:Code[1..*]):Code[1]
+{
+   assert($parameter->instanceOf(CodeParameter), 'Parameter must be properly created (j_parameter)');
+   let canonicalBody = $body->match([
+      c1:Code[1] | $c1->blockIfNot(),
+      cs:Code[*] | $cs->j_block()
+   ]);
+   ^ForEach(parameter=$parameter->cast(@CodeParameter), collection=$collection, body=$canonicalBody, type=javaVoid());
+}
+
+function meta::external::language::java::factory::j_while(test:Code[1], then:Code[1..*]):Code[1]
+{
+   let canonicalThen = $then->match([
+      c1:Code[1] | $c1->blockIfNot(),
+      cs:Code[*] | $cs->j_block()
+   ]);
+   ^While(test=$test, then=$canonicalThen, type=javaVoid());
+}
+
+function meta::external::language::java::factory::j_doWhile(do:Code[1..*], while:Code[1]):Code[1]
+{
+   let canonicalDo = $do->match([
+      c1:Code[1] | $c1->blockIfNot(),
+      cs:Code[*] | $cs->j_block()
+   ]);
+   ^DoWhile(do=$canonicalDo, while=$while, type=javaVoid());
+}
+
+function meta::external::language::java::factory::j_catch(parameter:meta::external::language::java::metamodel::Parameter[1], clause:Code[1..*]):Code[1]
+{
+   j_catch($parameter->j_parameter(), $clause);
+}
+
+function meta::external::language::java::factory::j_catch(parameter:Code[1], clause:Code[1..*]):Code[1]
+{
+   assert($parameter->instanceOf(CodeParameter), 'Parameter must be properly created (j_parameter)');
+   let canonicalClause = $clause->match([
+      c1:Code[1] | $c1->blockIfNot(),
+      cs:Code[*] | $cs->j_block()
+   ]);
+   ^Catch(parameter=$parameter->cast(@CodeParameter), clause=$canonicalClause, type=javaVoid());
+}
+
+function meta::external::language::java::factory::j_finally(clause:Code[1..*]):Code[1]
+{
+   let canonicalClause = $clause->match([
+      c1:Code[1] | $c1->blockIfNot(),
+      cs:Code[*] | $cs->j_block()
+   ]);
+   ^Finally(clause=$canonicalClause, type=javaVoid());
+}
+
+function meta::external::language::java::factory::j_try(try:Code[1..*], c1:Code[1]):Code[1]
+{
+   if($c1->instanceOf(Catch),
+      |j_tryInternal($try, [$c1], []),
+      |j_tryInternal($try, [],    $c1)
+   );
+}
+
+function meta::external::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1]):Code[1]
+{
+   if($c2->instanceOf(Catch),
+      |j_tryInternal($try, [$c1, $c2], []),
+      |j_tryInternal($try, [$c1],      $c2)
+   );
+}
+
+function meta::external::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1], c3:Code[1]):Code[1]
+{
+   if($c3->instanceOf(Catch),
+      |j_tryInternal($try, [$c1, $c2, $c3], []),
+      |j_tryInternal($try, [$c1, $c2],      $c3)
+   );
+}
+
+function meta::external::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1], c3:Code[1], c4:Code[1]):Code[1]
+{
+   if($c4->instanceOf(Catch),
+      |j_tryInternal($try, [$c1, $c2, $c3, $c4], []),
+      |j_tryInternal($try, [$c1, $c2, $c3],      $c4)
+   );
+}
+
+function meta::external::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1], c3:Code[1], c4:Code[1], c5:Code[1]):Code[1]
+{
+   if($c4->instanceOf(Catch),
+      |j_tryInternal($try, [$c1, $c2, $c3, $c4, $c5], []),
+      |j_tryInternal($try, [$c1, $c2, $c3, $c4],      $c5)
+   );
+}
+
+function meta::external::language::java::factory::j_try(try:Code[1..*], catches:Code[*], finally:Code[0..1]):Code[1]
+{
+   j_tryInternal($try, $catches, $finally);
+}
+
+function <<access.private>> meta::external::language::java::factory::j_tryInternal(try:Code[1..*], catches:Code[*], finally:Code[0..1]):Code[1]
+{
+   assert($catches->forAll(c| $c->instanceOf(Catch)), 'catch clauses must be properly created (j_catch)');
+   assert($finally->forAll(f| $f->instanceOf(Finally)), 'finally clause must be properly created (j_finally)');
+   let canonicalTry = $try->match([
+      c1:Code[1] | $c1->blockIfNot(),
+      cs:Code[*] | $cs->j_block()
+   ]);
+   ^Try(try=$canonicalTry, catches=$catches->cast(@Catch), finally=$finally->cast(@Finally), type=javaVoid());
+}
+
+function meta::external::language::java::factory::j_return():Code[1]
+{
+   ^Return(type=javaVoid());
+}
+
+function meta::external::language::java::factory::j_return(expression:Code[1]):Code[1]
+{
+   ^Return(expression=$expression, type=$expression.type);
+}
+
+function meta::external::language::java::factory::j_throw(expression:Code[1]):Code[1]
+{
+   ^Throw(expression=$expression, type=$expression.type);
+}
+
+function meta::external::language::java::factory::j_castWithoutChecks(expression:Code[1], castTo:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   ^Cast(expression=$expression, type=$castTo);
+}
+
+function <<access.private>> meta::external::language::java::factory::functionTypeCastBody(expression:Code[1], castTo:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   let ft = $expression.type->cast(@meta::external::language::java::metamodel::FunctionType);
+   assert($castTo->isJavaSupplier() || $castTo->isJavaFunction(), 'Cannot cast \''+$expression.type->typeToString()+'\' to: ' + $castTo->typeToString());
+
+   let funcResult = $ft.returnType;
+   if ($castTo->isJavaFunction(),
+       {|
+          let castResult     = $castTo->returnTypeOfJavaFunction();
+          let inputType      = $castTo->inputTypeOfJavaFunction();
+          let inputParameter = $expression->cast(@Lambda).parameters->at(0);
+
+          if($castResult->isJavaList() && !$funcResult->isJavaList(),
+             {|
+                let fResult  = j_variable($funcResult, '_fResult');
+                let makeList = j_lambda($inputParameter, j_block([
+                   $fResult->j_declare($expression->j_cast(javaFunction($inputType, $funcResult))->j_invoke('apply', [$inputParameter], $funcResult)),
+                   $fResult->j_listOf(javaList($funcResult))->j_return()
+                ]));
+                ^Cast(expression=$makeList, type=$castTo);
+             },
+             {| ^Cast(expression=$expression, type=$castTo); }
+          );
+       },
+       {|
+          if($castTo->isJavaSupplier(),
+             {|
+                let castResult = $castTo->suppliedTypeOfJavaSupplier();
+                if($castResult->isJavaList() && !$funcResult->isJavaList(),
+                   {|
+                      let fResult  = j_variable($funcResult, '_fResult');
+                      let makeList = j_lambda([]->cast(@Code), j_block([
+                         $fResult->j_declare($expression->j_cast(javaSupplier($funcResult))->j_invoke('get', [], $funcResult)),
+                         $fResult->j_listOf(javaList($funcResult))->j_return()
+                      ]));
+                      ^Cast(expression=$makeList, type=$castTo);
+                   },
+                   {|
+                      if($funcResult->isJavaList() && !$castResult->isJavaList(),
+                         {|
+                            assert($expression->isLambdaReturningCollectionsEmptyList(), |'Should only happen for empty list');
+                            ^Cast(expression=j_lambda([]->cast(@Code), j_null()->j_return()), type=$castTo);
+                         },
+                         {| ^Cast(expression=$expression, type=$castTo); }
+                      );
+                   }
+                );
+             },
+             {| ^Cast(expression=$expression, type=$castTo); }
+          );
+       }
+   );
+}
+
+function meta::external::language::java::factory::j_cast(expression:Code[1], castTo:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   if($expression.type == $castTo,
+     | $expression,
+     |
+   if($expression.type->isPrimitiveNumber() && ($castTo == javaNumber() || $castTo == javaObject()),
+     | ^CastProxy(expression=$expression, proxy=$expression->j_box()->j_cast($castTo), type=$castTo),
+     |
+   if($expression->instanceOf(Cast),
+     | $expression->cast(@Cast).expression->j_cast($castTo),
+     |
+   if($castTo == javaInt() && $expression.type->isBoxedNumberType(),
+     | ^CastProxy(expression=$expression, proxy=$expression->j_invoke('intValue', [], javaInt()), type=$castTo),
+     |
+   if($castTo == javaLong() && $expression.type->isBoxedNumberType(),
+     | ^CastProxy(expression=$expression, proxy=$expression->j_invoke('longValue', [], javaLong()), type=$castTo),
+     |
+   if($castTo == javaShort() && $expression.type->isBoxedNumberType(),
+     | ^CastProxy(expression=$expression, proxy=$expression->j_invoke('shortValue', [], javaShort()), type=$castTo),
+     |
+   if($castTo == javaByte() && $expression.type->isBoxedNumberType(),
+     | ^CastProxy(expression=$expression, proxy=$expression->j_invoke('byteValue', [], javaByte()), type=$castTo),
+     |
+   if($castTo == javaFloat() && $expression.type->isBoxedNumberType(),
+     | ^CastProxy(expression=$expression, proxy=$expression->j_invoke('floatValue', [], javaFloat()), type=$castTo),
+     |
+   if($castTo == javaDouble() && $expression.type->isBoxedNumberType(),
+     | ^CastProxy(expression=$expression, proxy=$expression->j_invoke('doubleValue', [], javaDouble()), type=$castTo),
+     |
+   if($expression.type->toBoxed() == $castTo || $expression.type == $castTo->toBoxed(),
+     | ^CastProxy(expression=$expression, proxy=$expression, type=$castTo),
+     |
+   if($expression->isCollectionsEmptyList() && !$castTo->isJavaList(),
+     | ^CastProxy(expression=$expression, proxy=j_null()->j_cast($castTo), type=$castTo),
+     |
+   if($expression.type->instanceOf(meta::external::language::java::metamodel::FunctionType) && $castTo->instanceOf(meta::external::language::java::metamodel::FunctionType),
+      {|
+         let ft = $expression.type->cast(@meta::external::language::java::metamodel::FunctionType);
+         let ct = $castTo->cast(@meta::external::language::java::metamodel::FunctionType);
+         assert($ft.parameterTypes->size() == $ct.parameterTypes->size(), 'Cannot cast to a differnt number of parameters');
+         assert($expression->instanceOf(Lambda), 'Cannot cast other type to lambda of function type');
+
+         let exp = $expression->cast(@Lambda);
+         ^Lambda(
+            parameters = range($exp.parameters->size())->map(n|j_parameter($ct.parameterTypes->at($n), $exp.parameters->at($n).name))->cast(@CodeParameter),
+            expression = $exp.expression->j_cast($ct.returnType),
+            type       = $castTo
+         );
+      },
+      |
+   if($expression.type->instanceOf(meta::external::language::java::metamodel::FunctionType),
+      | functionTypeCastBody($expression, $castTo),
+      |
+   if($expression.type->isJavaStream() && $castTo->isJavaStream(),
+      | streamCastBody($expression, $castTo),
+      |
+   if($expression->instanceOf(DeferredStreamResolve) && $castTo->isJavaList(),
+     {|
+        let deferred = $expression->cast(@DeferredStreamResolve);
+        ^$deferred(stream=$deferred.stream->j_cast(javaStream($castTo->elementTypeOfJavaList())), type=$castTo);
+     },
+     |^Cast(expression=$expression, type=$castTo)
+   )))))))))))))));
+}
+
+function <<access.private>> meta::external::language::java::factory::isLambdaReturningCollectionsEmptyList(c:Code[1]):Boolean[1]
+{
+   $c->match([
+      {l:Lambda[1] |
+         $l.expression->match([
+            b:Block[1]     | $b.statements->match([
+               r:Return[1] | $r.expression->isNotEmpty() && $r.expression->toOne()->isCollectionsEmptyList(),
+               _stmts:Code[*]   | false
+            ]),
+            r:Return[1] | $r.expression->isNotEmpty() && $r.expression->toOne()->isCollectionsEmptyList(),
+            _other:Code[1]   | false
+         ])
+      },
+      _any:Code[1] | false
+   ])
+}
+
+
+function meta::external::language::java::factory::j_string(s:String[1]):Code[1]
+{
+   if($s->length() <= 65000,
+      | ^Literal(literal=escapedString($s), type=javaString()),
+      | ^Literal(literal=$s->chunk(65000)->map(c| escapedString($c))->joinStrings(' + '), type=javaString())
+   );
+}
+
+function meta::external::language::java::factory::j_char(s:String[1]):Code[1]
+{
+   assert($s->length() == 1, 'char must be a single character');
+   let esc = escapedString($s);
+   ^Literal(literal='\''+$esc->substring(1, $esc->length()-1)+'\'', type=javaChar());
+}
+
+function meta::external::language::java::factory::j_false():Code[1]
+{
+   j_boolean('false');
+}
+
+function meta::external::language::java::factory::j_true():Code[1]
+{
+   j_boolean('true');
+}
+
+function meta::external::language::java::factory::j_boolean(b:Boolean[1]):Code[1]
+{
+   j_boolean($b->toString());
+}
+
+function meta::external::language::java::factory::j_boolean(literal:String[1]):Code[1]
+{
+   ^Literal(literal=$literal, type=javaBoolean());
+}
+
+function meta::external::language::java::factory::j_short(literal:String[1]):Code[1]
+{
+   ^Literal(literal=$literal, type=javaShort());
+}
+
+function meta::external::language::java::factory::j_int(i:Integer[1]):Code[1]
+{
+   ^Literal(literal=$i->toString(), type=javaInt());
+}
+
+function meta::external::language::java::factory::j_int(literal:String[1]):Code[1]
+{
+   ^Literal(literal=$literal, type=javaInt());
+}
+
+function meta::external::language::java::factory::j_long(i:Integer[1]):Code[1]
+{
+   ^Literal(literal=$i->toString()+'L', type=javaLong());
+}
+
+function meta::external::language::java::factory::j_long(literal:String[1]):Code[1]
+{
+   ^Literal(literal=$literal, type=javaLong());
+}
+
+function meta::external::language::java::factory::j_float(i:Integer[1]):Code[1]
+{
+   ^Literal(literal=$i->toString()+'.0F', type=javaFloat());
+}
+
+function meta::external::language::java::factory::j_float(f:Float[1]):Code[1]
+{
+   ^Literal(literal=$f->toString()+'F', type=javaFloat());
+}
+
+function meta::external::language::java::factory::j_float(literal:String[1]):Code[1]
+{
+   ^Literal(literal=$literal, type=javaFloat());
+}
+
+function meta::external::language::java::factory::j_double(i:Integer[1]):Code[1]
+{
+   ^Literal(literal=$i->toString()+'.0', type=javaDouble());
+}
+
+function meta::external::language::java::factory::j_double(f:Float[1]):Code[1]
+{
+   ^Literal(literal=$f->toString(), type=javaDouble());
+}
+
+function meta::external::language::java::factory::j_double(literal:String[1]):Code[1]
+{
+   ^Literal(literal=$literal, type=javaDouble());
+}
+
+function meta::external::language::java::factory::j_bigDecimal(literal:String[1]):Code[1]
+{
+   ^Literal(literal=$literal, type=javaBigDecimal());
+}
+
+function meta::external::language::java::factory::j_bigDecimal(d:Decimal[1]):Code[1]
+{
+   ^Literal(literal=$d->toString(), type=javaBigDecimal());
+}
+
+function meta::external::language::java::factory::j_box(expression:Code[1]):Code[1]
+{
+   if($expression.type == javaBoolean(),
+      | j_new(javaClass('java.lang.Boolean'), $expression),
+      |
+   if($expression.type == javaShort(),
+      | j_new(javaClass('java.lang.Short'), $expression),
+      |
+   if($expression.type == javaInt(),
+      | j_new(javaClass('java.lang.Integer'), $expression),
+      |
+   if($expression.type == javaLong(),
+      | j_new(javaClass('java.lang.Long'), $expression),
+      |
+   if($expression.type == javaFloat(),
+      | j_new(javaClass('java.lang.Float'), $expression),
+      |
+   if($expression.type == javaDouble(),
+      | j_new(javaClass('java.lang.Double'), $expression),
+      | $expression
+   ))))));
+}
+
+function meta::external::language::java::factory::j_assign(variable:Code[1], expression:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$variable, op='=', right=$expression, type=$variable.type);
+}
+
+function meta::external::language::java::factory::j_lt(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='<', right=$right, type=javaBoolean());
+}
+
+function meta::external::language::java::factory::j_le(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='<=', right=$right, type=javaBoolean());
+}
+
+function meta::external::language::java::factory::j_eq(left:Code[1], right:Code[1]):Code[1]
+{
+   if($left->instanceOf(Null) || $right->instanceOf(Null),
+      | ^InfixExpression(left=$left, op='==', right=$right, type=javaBoolean()),
+      {|
+         let compatibility = bestCompatibility(castCompatibility($left.type, $right.type), castCompatibility($right.type, $left.type));
+         if($compatibility == CastCompatibility.Disallowed,
+            | j_false(),
+            |
+         if($compatibility == CastCompatibility.Unknown,
+            | ^InfixExpression(left=$left->j_cast(javaObject()), op='==', right=$right, type=javaBoolean()),
+            | ^InfixExpression(left=$left, op='==', right=$right, type=javaBoolean())
+         ));
+      }
+   );
+}
+
+function meta::external::language::java::factory::j_ne(left:Code[1], right:Code[1]):Code[1]
+{
+   if($left->instanceOf(Null) || $right->instanceOf(Null),
+      | ^InfixExpression(left=$left, op='!=', right=$right, type=javaBoolean()),
+      {|
+         let compatibility = bestCompatibility(castCompatibility($left.type, $right.type), castCompatibility($right.type, $left.type));
+         if($compatibility == CastCompatibility.Disallowed,
+            | j_true(),
+            |
+         if($compatibility == CastCompatibility.Unknown,
+            | ^InfixExpression(left=$left->j_cast(javaObject()), op='!=', right=$right, type=javaBoolean()),
+            | ^InfixExpression(left=$left, op='!=', right=$right, type=javaBoolean())
+         ));
+      }
+   );
+}
+
+function meta::external::language::java::factory::j_ge(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='>=', right=$right, type=javaBoolean());
+}
+
+function meta::external::language::java::factory::j_gt(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='>', right=$right, type=javaBoolean());
+}
+
+function meta::external::language::java::factory::j_or(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='||', right=$right, type=javaBoolean());
+}
+
+function meta::external::language::java::factory::j_and(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='&&', right=$right, type=javaBoolean());
+}
+
+function meta::external::language::java::factory::j_not(expression:Code[1]):Code[1]
+{
+   ^PrefixExpression(op='!', expression=$expression, type=javaBoolean());
+}
+
+function meta::external::language::java::factory::j_bitwiseNot(expression:Code[1]):Code[1]
+{
+   ^PrefixExpression(op='~', expression=$expression, type=$expression.type);
+}
+
+function meta::external::language::java::factory::j_bitwiseAnd(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='&', right=$right, type=$left.type);
+}
+
+function meta::external::language::java::factory::j_bitwiseOr(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='|', right=$right, type=$left.type);
+}
+
+function meta::external::language::java::factory::j_bitwiseXor(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='^', right=$right, type=$left.type);
+}
+
+function meta::external::language::java::factory::j_bitwiseShiftLeft(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='<<', right=$right, type=$left.type);
+}
+
+function meta::external::language::java::factory::j_bitwiseShiftRight(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='>>', right=$right, type=$left.type);
+}
+
+function meta::external::language::java::factory::j_plus(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='+', right=$right, type=$left.type);
+}
+
+function meta::external::language::java::factory::j_minus(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='-', right=$right, type=$left.type);
+}
+
+function meta::external::language::java::factory::j_minus(expression:Code[1]):Code[1]
+{
+   ^PrefixExpression(op='-', expression=$expression, type=$expression.type);
+}
+
+function meta::external::language::java::factory::j_multiply(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='*', right=$right, type=$left.type);
+}
+
+function meta::external::language::java::factory::j_divide(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='/', right=$right, type=$left.type);
+}
+
+function meta::external::language::java::factory::j_remainder(left:Code[1], right:Code[1]):Code[1]
+{
+   ^InfixExpression(left=$left, op='%', right=$right, type=$left.type);
+}
+
+function meta::external::language::java::factory::j_inc(expression:Code[1]):Code[1]
+{
+   ^PostfixExpression(expression=$expression, op='++', type=$expression.type);
+}
+
+function meta::external::language::java::factory::j_dec(expression:Code[1]):Code[1]
+{
+   ^PostfixExpression(expression=$expression, op='--', type=$expression.type);
+}
+
+function meta::external::language::java::factory::j_preInc(expression:Code[1]):Code[1]
+{
+   ^PrefixExpression(expression=$expression, op='++', type=$expression.type);
+}
+
+function meta::external::language::java::factory::j_preDec(expression:Code[1]):Code[1]
+{
+   ^PrefixExpression(expression=$expression, op='--', type=$expression.type);
+}
+
+function meta::external::language::java::factory::j_instanceof(expression:Code[1], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   let class = $type->match([
+      cl:meta::external::language::java::metamodel::Class[1]             | $cl,
+      pt:meta::external::language::java::metamodel::ParameterizedType[1] | $pt.rawType->cast(@meta::external::language::java::metamodel::Class)
+   ]);
+   ^InstanceOf(expression=$expression->j_box(), class=$class, type=javaBoolean());
+}
+
+function meta::external::language::java::factory::j_conditional(test:Code[1], then:Code[1], else:Code[1]):Code[1]
+{
+   // TODO common interface inference
+   let thenBoxed = if($then.type->isPrimitiveNumber() && $else.type->isBoxedNumberType() ||  ($then.type->isPrimitive() &&  $else.type->isBoxedType()   )  , | $then->j_box(), | []);
+   let elseBoxed = if($else.type->isPrimitiveNumber() && $then.type->isBoxedNumberType()||  ($else.type->isPrimitive() &&  $then.type->isBoxedType()   ) , | $else->j_box(), | []);
+
+   let thenType = if($thenBoxed->isEmpty(),
+                    | if($then->instanceOf(Null) && $then.type == javaVoid(), |$else.type, |$then.type),
+                    | $thenBoxed->toOne().type
+                  );
+
+   let elseType = if($elseBoxed->isEmpty(),
+                    | if($else->instanceOf(Null) && $else.type == javaVoid(), |$then.type, |$else.type),
+                    | $elseBoxed->toOne().type
+                  );
+
+   assert($thenType == $elseType, 'Type not inferred: then: '+$thenType->typeToString()+' else: '+$elseType->typeToString());
+
+   if($test->instanceOf(InfixExpression),
+      | optimizeEqualityComparison($test->cast(@InfixExpression), $thenBoxed->orElse($then), $elseBoxed->orElse($else), $thenType),
+      | ^Conditional(test=$test, then=$thenBoxed->orElse($then), else=$elseBoxed->orElse($else), type=$thenType)
+   );
+}
+
+function meta::external::language::java::factory::optimizeEqualityComparison(expr:InfixExpression[1], then:Code[1], else:Code[1], type:meta::external::language::java::metamodel::Type[1]): Code[1]
+{
+   if($expr.left->instanceOf(Null) && $expr.right->instanceOf(Null) && $expr.op == '==',
+   | $then,
+   |
+   if($expr.left->instanceOf(Null) && $expr.right->instanceOf(Null) && $expr.op == '!=',
+   | $else,
+   |
+   if($expr.left->isSameLiteral($expr.right) && $expr.op == '==',
+   | $then,
+   |
+   if($expr.left->isSameLiteral($expr.right) && $expr.op == '!=',
+   | $else,
+   | ^Conditional(test=$expr, then=$then, else=$else, type=$type)
+   ))))
+}
+
+function meta::external::language::java::factory::j_conditional(test:Code[1], then:Code[1], else:Code[1], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   ^Conditional(test=$test, then=$then, else=$else, type=$type);
+}
+
+function meta::external::language::java::factory::j_declare(variable:Code[1]):Code[1]
+{
+   j_declare([], $variable, []);
+}
+
+function meta::external::language::java::factory::j_declare(variable:Code[1], initializer:Code[1]):Code[1]
+{
+   j_declare([], $variable, $initializer);
+}
+
+function meta::external::language::java::factory::j_declare(modifiers:String[*], variable:Code[1]):Code[1]
+{
+   j_declare($modifiers, $variable, []);
+}
+
+function meta::external::language::java::factory::j_declare(modifiers:String[*], variable:Code[1], initializer:Code[0..1]):Code[1]
+{
+   let v = $variable->cast(@Variable);
+   j_declare($modifiers, $v.type, $v.name, $initializer);
+}
+
+function meta::external::language::java::factory::j_declare(type:meta::external::language::java::metamodel::Type[1], variableName:String[1]):Code[1]
+{
+   j_declare([], $type, $variableName, []);
+}
+
+function meta::external::language::java::factory::j_declare(type:meta::external::language::java::metamodel::Type[1], variableName:String[1], initializer:Code[1]):Code[1]
+{
+   j_declare([], $type, $variableName, $initializer);
+}
+
+function meta::external::language::java::factory::j_declare(modifiers:String[*], type:meta::external::language::java::metamodel::Type[1], variableName:String[1]):Code[1]
+{
+   j_declare($modifiers, $type, $variableName, []);
+}
+
+function meta::external::language::java::factory::j_declare(modifiers:String[*], type:meta::external::language::java::metamodel::Type[1], variableName:String[1], initializer:Code[0..1]):Code[1]
+{
+   ^LocalVariableDeclaration(modifiers=$modifiers->javaModifiers(), type=$type, variableName=$variableName, initializer=$initializer);
+}
+
+function meta::external::language::java::factory::j_new(type:meta::external::language::java::metamodel::Type[1], args:Code[*]):Code[1]
+{
+   $type->match([
+      pt:meta::external::language::java::metamodel::ParameterizedType[1] | ^New(type=$pt.rawType, typeArguments=$pt.typeArguments, arguments=$args),
+      ar:meta::external::language::java::metamodel::Array[1]             | ^NewArray(type=$ar, arguments=$args),
+      cl:meta::external::language::java::metamodel::Class[1]             | ^New(type=$cl, arguments=$args)
+   ]);
+}
+
+function meta::external::language::java::factory::j_newAnon(type:meta::external::language::java::metamodel::Type[1], args:Code[*], methods:Code[*]):Code[1]
+{
+   assert($methods->forAll(m| $m->instanceOf(CodeMethod)), 'Methods must be properly created (j_method)');
+   $type->match([
+      pt:meta::external::language::java::metamodel::ParameterizedType[1] | ^NewAnonymous(type=$pt.rawType, typeArguments=$pt.typeArguments, arguments=$args, methods=$methods->cast(@CodeMethod)),
+      cl:meta::external::language::java::metamodel::Class[1]             | ^NewAnonymous(type=$cl, arguments=$args, methods=$methods->cast(@CodeMethod))
+   ]);
+}
+
+function meta::external::language::java::factory::j_method(modifiers:String[*], returnType:meta::external::language::java::metamodel::Type[1], name:String[1], parameters:Code[*], body:Code[*]):Code[1]
+{
+   j_method($modifiers, $returnType, $name, $parameters, $body->j_block());
+}
+
+function meta::external::language::java::factory::j_method(modifiers:String[*], returnType:meta::external::language::java::metamodel::Type[1], name:String[1], parameters:Code[*], body:Code[1]):Code[1]
+{
+   assert($parameters->forAll(p| $p->instanceOf(CodeParameter)), 'Parameters must be properly created (j_parameter)');
+   ^CodeMethod(modifiers=$modifiers->javaModifiers(), type=$returnType, name=$name, parameters=$parameters->cast(@CodeParameter), body=$body->blockIfNot());
+}
+
+function meta::external::language::java::factory::j_thisInvoke(ofType:meta::external::language::java::metamodel::Type[1], args:Code[*]):Code[1]
+{
+   ^ThisConstructorCall(arguments=$args, type=$ofType);
+}
+
+function meta::external::language::java::factory::j_superInvoke(ofType:meta::external::language::java::metamodel::Type[1], args:Code[*]):Code[1]
+{
+   ^SuperConstructorCall(arguments=$args, type=$ofType);
+}
+
+function meta::external::language::java::factory::j_invoke(instance:Code[1], method:meta::external::language::java::metamodel::Method[1], args:Code[*]):Code[1]
+{
+   j_invoke($instance, [], $method.name, $args, $method.returnType);
+}
+
+function meta::external::language::java::factory::j_invoke(instance:Code[1], methodName:String[1], args:Code[*]):Code[1]
+{
+   j_invoke($instance, [], $methodName, $args);
+}
+
+function meta::external::language::java::factory::j_invoke(instance:Code[1], typeArguments:meta::external::language::java::metamodel::Type[*], methodName:String[1], args:Code[*]):Code[1]
+{
+   j_invoke($instance, $typeArguments, $methodName, $args, $instance.type->methodReturnType($methodName));
+}
+
+function meta::external::language::java::factory::j_invoke(instance:Code[1], methodName:String[1], args:Code[*], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   j_invoke($instance, [], $methodName, $args, $type);
+}
+
+function meta::external::language::java::factory::j_invoke(instance:Code[1], typeArguments:meta::external::language::java::metamodel::Type[*], methodName:String[1], args:Code[*], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   ^MethodCall(instance=$instance, typeArguments=$typeArguments, methodName=$methodName, arguments=$args, type=$type);
+}
+
+function meta::external::language::java::factory::j_field(instance:Code[1], field:meta::external::language::java::metamodel::Field[1]):Code[1]
+{
+   j_field($instance, $field.name, $field.type);
+}
+
+function meta::external::language::java::factory::j_field(instance:Code[1], fieldName:String[1]):Code[1]
+{
+   j_field($instance, $fieldName, $instance.type->typeForField($fieldName));
+}
+
+function meta::external::language::java::factory::j_field(instance:Code[1], fieldName:String[1], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   ^FieldAccess(instance=$instance, fieldName=$fieldName, type=$type);
+}
+
+function meta::external::language::java::factory::j_methodReference(instance:Code[1], methodName:String[1], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   assert($type->instanceOf(meta::external::language::java::metamodel::FunctionType));
+   ^MethodReference(instance=$instance, methodName=$methodName, type=$type);
+}
+
+function meta::external::language::java::factory::j_invoke(class:meta::external::language::java::metamodel::Type[1], methodName:String[1], args:Code[*]):Code[1]
+{
+   j_invoke($class, [], $methodName, $args);
+}
+
+function meta::external::language::java::factory::j_invoke(class:meta::external::language::java::metamodel::Type[1], typeArguments:meta::external::language::java::metamodel::Type[*], methodName:String[1], args:Code[*]):Code[1]
+{
+   j_invoke($class, $typeArguments, $methodName, $args, $class->methodReturnType($methodName));
+}
+
+function meta::external::language::java::factory::j_invoke(class:meta::external::language::java::metamodel::Type[1], methodName:String[1], args:Code[*], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   j_invoke($class, [], $methodName, $args, $type);
+}
+
+function meta::external::language::java::factory::j_invoke(class:meta::external::language::java::metamodel::Type[1], typeArguments:meta::external::language::java::metamodel::Type[*], methodName:String[1], args:Code[*], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   assert($class->instanceOf(meta::external::language::java::metamodel::Class) || $class->instanceOf(meta::external::language::java::metamodel::Array), |'Cannot use static method '+$methodName +' on type: ' + $class->typeToString());
+   ^StaticMethodCall(class=$class, typeArguments=$typeArguments, methodName=$methodName, arguments=$args, type=$type);
+}
+
+function meta::external::language::java::factory::j_field(class:meta::external::language::java::metamodel::Type[1], field:meta::external::language::java::metamodel::Field[1]):Code[1]
+{
+   j_field($class, $field.name, $field.type);
+}
+
+function meta::external::language::java::factory::j_field(class:meta::external::language::java::metamodel::Type[1], fieldName:String[1]):Code[1]
+{
+   j_field($class, $fieldName, $class->typeForField($fieldName));
+}
+
+function meta::external::language::java::factory::j_field(class:meta::external::language::java::metamodel::Type[1], fieldName:String[1], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   assert($class->instanceOf(meta::external::language::java::metamodel::Class) || $class->instanceOf(meta::external::language::java::metamodel::Array), |'Cannot use static field on type: ' + $class->typeToString());
+   ^StaticFieldAccess(class=$class, fieldName=$fieldName, type=$type);
+}
+
+function meta::external::language::java::factory::j_classField(type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   ^StaticFieldAccess(class=$type, fieldName='class', type=javaClassType());
+}
+
+function meta::external::language::java::factory::j_methodReference(class:meta::external::language::java::metamodel::Type[1], methodName:String[1]):Code[1]
+{
+   let refTo = $class->findMethod($methodName);
+   j_methodReference($class, $methodName, $refTo.functionType->toOne());
+}
+
+function meta::external::language::java::factory::j_methodReference(class:meta::external::language::java::metamodel::Type[1], methodName:String[1], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   assert($class->instanceOf(meta::external::language::java::metamodel::Class) || $class->instanceOf(meta::external::language::java::metamodel::Array), |'Cannot use static method on type: ' + $class->typeToString());
+   assert($type->instanceOf(meta::external::language::java::metamodel::FunctionType));
+   ^StaticMethodReference(class=$class, methodName=$methodName, type=$type);
+}
+
+function meta::external::language::java::factory::j_lambda(parameters:meta::external::language::java::metamodel::Parameter[*], expression:Code[1]):Code[1]
+{
+   j_lambda($parameters->map(p| $p->j_parameter()), $expression);
+}
+
+function meta::external::language::java::factory::j_lambda(parameters:meta::external::language::java::metamodel::Parameter[*], expression:Code[1], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   j_lambda($parameters->map(p| $p->j_parameter()), $expression, $type);
+}
+
+function meta::external::language::java::factory::j_lambda(parameters:Code[*], expression:Code[1]):Code[1]
+{
+   j_lambda($parameters, $expression, javaFunctionType($parameters.type, $expression.type));
+}
+
+function meta::external::language::java::factory::j_lambda(parameters:Code[*], expression:Code[1], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   assert($parameters->forAll(p| $p->instanceOf(CodeParameter)), 'Parameters must be properly created (j_parameter)');
+   ^Lambda(parameters=$parameters->cast(@CodeParameter), expression=$expression, type=$type);
+}
+
+function meta::external::language::java::factory::j_identity(type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   j_identity('x', $type);
+}
+
+function meta::external::language::java::factory::j_identity(varName:String[1], type:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   let p = j_parameter($type, $varName);
+   j_lambda($p, $p);
+}
+
+function meta::external::language::java::factory::j_emptyList(listType:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   if($listType->elementType()->instanceOf(meta::external::language::java::metamodel::WildcardType),
+      | javaCollections()->j_invoke('emptyList', [], $listType),
+      | javaCollections()->j_invoke($listType->elementType(), 'emptyList', [], $listType)
+   );
+}
+
+function meta::external::language::java::factory::j_listOf(of: Code[1], listType:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   if($of.type == $listType,
+      | $of,
+      |
+   if($of.type->isJavaList() && $of->isCollectionsEmptyList(),
+      | j_emptyList($listType),
+      |
+   if($of.type->isJavaList(),
+      | $of->j_streamOf()->j_cast(javaStream($listType->elementType()))->js_resolve($listType),
+      |
+   if($of.type->isJavaPrimitive(),
+      | javaCollections()->j_invoke($listType->elementType(), 'singletonList', $of, $listType),
+      | javaOptional()
+           ->j_invoke('ofNullable', $of->j_cast($listType->elementType()), javaOptional($of.type))
+           ->j_invoke('map', javaCollections()->j_methodReference('singletonList', javaFunctionType($of.type, $listType)), $listType)
+           ->j_invoke('orElseGet', javaCollections()->j_methodReference('emptyList', javaFunctionType([], $listType)), $listType)
+           ->j_cast($listType)
+   ))));
+}
+
+function meta::external::language::java::factory::j_streamOf(of: Code[1]):Code[1]
+{
+   $of->match([
+      {dsr:DeferredStreamResolve[1]| $dsr.stream; },
+      {c:Code[1] |
+         let streamType = if($c.type->isJavaList(), |javaStream($c.type->elementTypeOfJavaList()), |javaStream($c.type));
+         if($of.type->isJavaStream(),
+            | $of,
+            |
+         if($of.type->isJavaCollection(),
+            | $of->j_invoke('stream', [], javaStream($c.type->elementType())),
+            |
+         if($of.type->isJavaPrimitive(),
+            | javaStream()->j_invoke($of.type->toBoxed(), 'of', $of, javaStream($c.type->toBoxed())),
+            | javaOptional()
+                 ->j_invoke('ofNullable', $of, javaOptional($of.type))
+                 ->j_invoke('map', javaStream()->j_methodReference('of', javaFunctionType($of.type, javaStream($of.type))), javaStream($of.type))
+                 ->j_invoke('orElseGet', javaStream()->j_methodReference('empty', javaFunctionType([], javaStream($of.type))), javaStream($of.type))
+         )));
+      }
+   ]);
+}
+
+function meta::external::language::java::factory::j_toString(c:Code[1]): Code[1]
+{
+   $c->j_invoke('toString', [], javaString());
+}
+
+
+function meta::external::language::java::factory::j_println(s:String[1]): Code[1]
+{
+   j_println(j_string($s));
+}
+
+function meta::external::language::java::factory::j_println(msg:Code[1]): Code[1]
+{
+   javaSystem()->j_field('out', javaPrintStream())->j_invoke('println', $msg, javaVoid());
+}
+
+function meta::external::language::java::factory::j_sysout():Code[1]
+{
+   javaSystem()->j_field('out', javaPrintStream());
+}
+
+function meta::external::language::java::factory::j_syserr():Code[1]
+{
+   javaSystem()->j_field('out', javaPrintStream());
+}
+
+function meta::external::language::java::factory::j_exTryCatch(toTry:Code[1..*]): Code[1]
+{
+   let ex   = j_parameter(javaException(), 'e');
+   let rtEx = j_parameter(javaRuntimeException(), 'e');
+
+   j_try(
+      $toTry,
+      j_catch($rtEx, $rtEx->j_throw()),
+      j_catch($ex, javaRuntimeException()->j_new($ex)->j_throw())
+   );
+}
+
+function meta::external::language::java::factory::j_ioExTryCatch(toTry:Code[1..*]): Code[1]
+{
+   let ioEx = j_parameter(javaIOException(), 'e');
+
+   j_try(
+      $toTry,
+      j_catch($ioEx, javaRuntimeException()->j_new($ioEx)->j_throw())
+   );
+}
+
+// Utilities
+
+function meta::external::language::java::factory::asParameters(parameters:Code[*]):meta::external::language::java::metamodel::Parameter[*]
+{
+   assert($parameters->forAll(p |$p->instanceOf(Parameter)), 'Parameters must be properly created (j_parameter)');
+   $parameters->cast(@meta::external::language::java::metamodel::Parameter);
+}
+
+function meta::external::language::java::factory::resolveDeferred(code: Code[1]):Code[1]
+{
+   $code->match([
+      {dsr:DeferredStreamResolve[1]|
+         if(isJavaList($dsr.type),
+            | $dsr.stream->j_invoke('collect', j_invoke(javaClass('java.util.stream.Collectors'), 'toList', [], $dsr.type), $dsr.type),
+            | $dsr.stream->j_invoke('findFirst', [], javaOptional($dsr.type))->jo_orElseNull()
+         );
+      },
+      {c:Code[1] | $c }
+   ])
+}
+
+Enum meta::external::language::java::factory::CastCompatibility
+{
+   Identity, Widening, WideningAndNarrowing, Boxing, BoxingAndWidening, Unboxing, UnboxingAndWidening, Narrowing, UnboxingAndNarrowing, Disallowed, Unknown
+}
+
+function <<access.private>> meta::external::language::java::factory::bestCompatibility(c1:CastCompatibility[1], c2:CastCompatibility[1]):CastCompatibility[1]
+{
+   let compatibilities = CastCompatibility->enumValues()->cast(@CastCompatibility);
+   let i1 = $compatibilities->indexOf($c1);
+   let i2 = $compatibilities->indexOf($c2);
+   $compatibilities->at(min($i1, $i2));
+}
+
+function <<access.private>> meta::external::language::java::factory::castCompatibility(from:meta::external::language::java::metamodel::Type[1], to:meta::external::language::java::metamodel::Type[1]):CastCompatibility[1]
+{
+   $from->match([
+      {fromP:meta::external::language::java::metamodel::PrimitiveType[1] |
+         $to->match([
+            {toP:meta::external::language::java::metamodel::PrimitiveType[1] |
+               if($fromP.simpleName == $toP.simpleName,
+                  | CastCompatibility.Identity,
+                  |
+               if($fromP.simpleName == 'byte' && $toP.simpleName == 'char',
+                  | CastCompatibility.WideningAndNarrowing,
+                  |
+               if($fromP.simpleName == 'byte' && ['short', 'int', 'long', 'float', 'double']->contains($toP.simpleName),
+                  | CastCompatibility.Widening,
+                  |
+               if($fromP.simpleName == 'short' && ['byte', 'char']->contains($toP.simpleName),
+                  | CastCompatibility.Narrowing,
+                  |
+               if($fromP.simpleName == 'short' && ['int', 'long', 'float', 'double']->contains($toP.simpleName),
+                  | CastCompatibility.Widening,
+                  |
+               if($fromP.simpleName == 'char' && ['byte', 'short']->contains($toP.simpleName),
+                  | CastCompatibility.Narrowing,
+                  |
+               if($fromP.simpleName == 'char' && ['int', 'long', 'float', 'double']->contains($toP.simpleName),
+                  | CastCompatibility.Widening,
+                  |
+               if($fromP.simpleName == 'int' && ['byte', 'short', 'char']->contains($toP.simpleName),
+                  | CastCompatibility.Narrowing,
+                  |
+               if($fromP.simpleName == 'int' && ['long', 'float', 'double']->contains($toP.simpleName),
+                  | CastCompatibility.Widening,
+                  |
+               if($fromP.simpleName == 'long' && ['byte', 'short', 'char', 'int']->contains($toP.simpleName),
+                  | CastCompatibility.Narrowing,
+                  |
+               if($fromP.simpleName == 'long' && ['float', 'double']->contains($toP.simpleName),
+                  | CastCompatibility.Widening,
+                  |
+               if($fromP.simpleName == 'float' && ['byte', 'short', 'char', 'int', 'long']->contains($toP.simpleName),
+                  | CastCompatibility.Narrowing,
+                  |
+               if($fromP.simpleName == 'float' && $toP.simpleName == 'double',
+                  | CastCompatibility.Widening,
+                  |
+               if($fromP.simpleName == 'double' && ['byte', 'short', 'char', 'int', 'long', 'float']->contains($toP.simpleName),
+                  | CastCompatibility.Narrowing,
+                  | CastCompatibility.Disallowed
+               ))))))))))))));
+            },
+            {toC:meta::external::language::java::metamodel::Class[1] |
+               if($fromP.simpleName == 'byte' && $toC->isClass('java.lang', 'Byte'),
+                  | CastCompatibility.Boxing,
+                  |
+               if($fromP.simpleName == 'byte' && $toC->isClass('java.lang', ['Short', 'Character', 'Integer', 'Long', 'Float', 'Double', 'Number', 'Object']),
+                  | CastCompatibility.BoxingAndWidening,
+                  |
+               if($fromP.simpleName == 'short' && $toC->isClass('java.lang', 'Short'),
+                  | CastCompatibility.Boxing,
+                  |
+               if($fromP.simpleName == 'short' && $toC->isClass('java.lang', ['Integer', 'Long', 'Float', 'Double', 'Number', 'Object']),
+                  | CastCompatibility.BoxingAndWidening,
+                  |
+               if($fromP.simpleName == 'char' && $toC->isClass('java.lang', 'Character'),
+                  | CastCompatibility.Boxing,
+                  |
+               if($fromP.simpleName == 'char' && $toC->isClass('java.lang', ['Integer', 'Long', 'Float', 'Double', 'Number', 'Object']),
+                  | CastCompatibility.BoxingAndWidening,
+                  |
+               if($fromP.simpleName == 'int' && $toC->isClass('java.lang', 'Integer'),
+                  | CastCompatibility.Boxing,
+                  |
+               if($fromP.simpleName == 'int' && $toC->isClass('java.lang', ['Long', 'Float', 'Double', 'Number', 'Object']),
+                  | CastCompatibility.BoxingAndWidening,
+                  |
+               if($fromP.simpleName == 'long' && $toC->isClass('java.lang', 'Long'),
+                  | CastCompatibility.Boxing,
+                  |
+               if($fromP.simpleName == 'long' && $toC->isClass('java.lang', ['Float', 'Double', 'Number', 'Object']),
+                  | CastCompatibility.BoxingAndWidening,
+                  |
+               if($fromP.simpleName == 'float' && $toC->isClass('java.lang', 'Float'),
+                  | CastCompatibility.Boxing,
+                  |
+               if($fromP.simpleName == 'float' && $toC->isClass('java.lang', ['Double', 'Number', 'Object']),
+                  | CastCompatibility.BoxingAndWidening,
+                  |
+               if($fromP.simpleName == 'double' && $toC->isClass('java.lang', 'Double'),
+                  | CastCompatibility.Boxing,
+                  |
+               if($fromP.simpleName == 'double' && $toC->isClass('java.lang', ['Number', 'Object']),
+                  | CastCompatibility.BoxingAndWidening,
+                  |
+               if($fromP.simpleName == 'boolean' && $toC->isClass('java.lang', 'Boolean'),
+                  | CastCompatibility.Boxing,
+                  |
+               if($fromP.simpleName == 'boolean' && $toC->isClass('java.lang', 'Object'),
+                  | CastCompatibility.BoxingAndWidening,
+                  | CastCompatibility.Disallowed
+               ))))))))))))))));
+            },
+            {a:Any[1] | CastCompatibility.Disallowed }
+         ])
+      },
+      {fromC:meta::external::language::java::metamodel::Class[1] |
+         $to->match([
+            {toP:meta::external::language::java::metamodel::PrimitiveType[1] |
+               if($fromC->isInPackage('java.lang'),
+                  {|
+                     if($fromC.simpleName == 'Byte' && $toP.simpleName == 'byte',
+                        | CastCompatibility.Unboxing,
+                        |
+                     if($fromC.simpleName == 'Byte' && ['short', 'int', 'long', 'float', 'double']->contains($toP.simpleName),
+                        | CastCompatibility.UnboxingAndWidening,
+                        |
+                     if($fromC.simpleName == 'Short' && $toP.simpleName == 'short',
+                        | CastCompatibility.Unboxing,
+                        |
+                     if($fromC.simpleName == 'Short' && ['int', 'long', 'float', 'double']->contains($toP.simpleName),
+                        | CastCompatibility.UnboxingAndWidening,
+                        |
+                     if($fromC.simpleName == 'Character' && $toP.simpleName == 'char',
+                        | CastCompatibility.Unboxing,
+                        |
+                     if($fromC.simpleName == 'Character' && ['int', 'long', 'float', 'double']->contains($toP.simpleName),
+                        | CastCompatibility.UnboxingAndWidening,
+                        |
+                     if($fromC.simpleName == 'Integer' && $toP.simpleName == 'int',
+                        | CastCompatibility.Unboxing,
+                        |
+                     if($fromC.simpleName == 'Integer' && ['long', 'float', 'double']->contains($toP.simpleName),
+                        | CastCompatibility.UnboxingAndWidening,
+                        |
+                     if($fromC.simpleName == 'Long' && $toP.simpleName == 'long',
+                        | CastCompatibility.Unboxing,
+                        |
+                     if($fromC.simpleName == 'Long' && ['float', 'double']->contains($toP.simpleName),
+                        | CastCompatibility.UnboxingAndWidening,
+                        |
+                     if($fromC.simpleName == 'Float' && $toP.simpleName == 'float',
+                        | CastCompatibility.Unboxing,
+                        |
+                     if($fromC.simpleName == 'Float' && $toP.simpleName == 'double',
+                        | CastCompatibility.UnboxingAndWidening,
+                        |
+                     if($fromC.simpleName == 'Double' && $toP.simpleName == 'double',
+                        | CastCompatibility.Unboxing,
+                        |
+                     if($fromC.simpleName == 'Boolean' && $toP.simpleName == 'boolean',
+                        | CastCompatibility.Unboxing,
+                        |
+                     if($fromC.simpleName == 'Number' && ['byte', 'short', 'char', 'int', 'long', 'float', 'double']->contains($toP.simpleName),
+                        | CastCompatibility.UnboxingAndNarrowing,
+                        |
+                     if($fromC.simpleName == 'Object',
+                        | CastCompatibility.UnboxingAndNarrowing,
+                        | CastCompatibility.Disallowed
+                     ))))))))))))))));
+                  },
+                  |  CastCompatibility.Disallowed
+               );
+            },
+            {toC:meta::external::language::java::metamodel::Class[1] |
+               if($fromC == $toC,
+                  | CastCompatibility.Identity,
+                  |
+               if($fromC->isSubclassOf($toC),
+                  | CastCompatibility.Narrowing,
+                  |
+               if($toC->isSubclassOf($fromC),
+                  | CastCompatibility.Widening,
+                  | CastCompatibility.Unknown    // If further sitauations can be reliably identified they can be added here but JLS (SE 8) 5.5.1 is difficult to implement with the criteria known here
+               )));
+            },
+            {a:Any[1] | CastCompatibility.Unknown }
+         ])
+      },
+      {a:Any[1] | CastCompatibility.Unknown }
+   ]);
+}
+
+function meta::external::language::java::factory::toStatement(code: Code[1]):Code[1]
+{
+   $code->toStatements()->toOne();
+}
+
+function meta::external::language::java::factory::toStatements(codes: Code[*]):Code[*]
+{
+   $codes->fold(
+      {c, a|
+         let l = $a.first;
+         let n = $a.second;
+
+         if($c->isStatement() || $c->instanceOf(Method),
+            | pair(list($l.values->add($c)), $n),
+            |
+         if($c->isValidExpressionAsStatement(),
+            | pair(list($l.values->add($c->j_expressionStatement())), $n),
+            |
+         if($c.type == javaVoid(),
+            | $a,
+            | pair(list($l.values->add(j_variable($c.type, '_dummy_'+$n->toString())->j_declare($c))), $n+1)
+         )));
+      },
+      pair(^List<Code>(), 1)
+   ).first.values;
+}
+
+function meta::external::language::java::factory::variableDeclared(c:Code[1]):Code[1]
+{
+   assert($c->isDeclaration(), 'Not a declaration');
+   j_variable($c.type, $c->cast(@LocalVariableDeclaration).variableName);
+}
+
+function meta::external::language::java::factory::variableAssigned(c:Code[1]):Code[1]
+{
+   assert($c->isAssignment(), 'Not an assignment');
+   $c->cast(@InfixExpression).left;
+}
+
+function meta::external::language::java::factory::generateIfForCollection(emptyCase:String[1], singletonCase:String[1], nonEmptyCase:String[1]) : String[1]
+{
+   'if (in.isEmpty())\n'+
+   '{\n'+
+   '   ' + $emptyCase + '\n' +
+   '}\n'+
+   'else if (in.size() == 1)\n'+
+   '{\n'+
+   '   ' + $singletonCase + '\n'+
+   '}\n'+
+   'else\n'+
+   '{\n'+
+   '   ' + $nonEmptyCase + '\n'+
+   '}'
+}

@@ -224,7 +224,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
     // Check unknown properties (including deep paths). Use the context-aware
     // findProperty from _Class.pure (matching Java _Class.findProperty): walking
-    // generalizations through `genericTypeRawType()` + resolveElement picks up
+    // generalizations through `rawType()` + resolveElement picks up
     // properties registered later (e.g. via associations) and handles deeper
     // inheritance chains. The previous local findPropertyOnClass missed
     // properties inherited via mid-chain classes like GenericDeclaration on
@@ -274,8 +274,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                                     // Pull the raw type, then deref ONCE if it's a pointer —
                                                     // `.name` (read below) lives on the live target, not on
                                                     // the Class_Pointer / PrimitiveTypePointer / etc.
-                                                    let propType = $resolvedPropGT->genericTypeRawType()->derefTypeIfPointer($context);
-                                                    let valType = $keyValueVS.genericType->toOne()->genericTypeRawType()->derefTypeIfPointer($context);
+                                                    let propType = $resolvedPropGT->rawType()->derefTypeIfPointer($context);
+                                                    let valType = $keyValueVS.genericType->toOne()->rawType()->derefTypeIfPointer($context);
                                                     if($propType->isNotEmpty() && $valType->isNotEmpty(),
                                                         | let pName = $propType->toOne()->cast(@PackageableElement).name->toOne();
                                                           let vName = $valType->toOne()->cast(@PackageableElement).name->toOne();
@@ -337,7 +337,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           let prop = $resolvedType->findProperty($segment, $context);
           if([pair(| $prop->isEmpty(), | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
                 ^$context(errors += 'Unknown deep property path \'' + $fullPath + '\' in class \'' + $rootCls->fullPath() + '\': property \'' + $segment + '\' not found in class \'' + $resolvedType->fullPath() + '\'' + $siCtx);),
-              pair(| $index < $segments->size() - 1 && $prop->toOne().genericType->isNotEmpty(), | let nextType = $prop->toOne().genericType->toOne()->genericTypeRawType();
+              pair(| $index < $segments->size() - 1 && $prop->toOne().genericType->isNotEmpty(), | let nextType = $prop->toOne().genericType->toOne()->rawType();
                       if($nextType->isNotEmpty(),
                           | $nextType->toOne()->match([
                                 c:Class<Any>[1] | validateDeepPropertyPathSegments($rootCls, $c, $segments, $index + 1, $fullPath, $fi, $context),
@@ -353,8 +353,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 // Simple type compatibility check: is actual a subtype of declared?
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::isCompatibleType(declared:GenericType[1], actual:GenericType[1], context:CompilerContext[1]):Boolean[1]
 {
-    let declaredType = $declared->genericTypeRawType();
-    let actualType = $actual->genericTypeRawType();
+    let declaredType = $declared->rawType();
+    let actualType = $actual->rawType();
     if($declaredType->isEmpty() || $actualType->isEmpty(),
         | true,
         | let declaredCanonical = resolveCanonicalType($declaredType->toOne(), $context);
