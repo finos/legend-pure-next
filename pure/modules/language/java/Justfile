@@ -26,7 +26,7 @@ set quiet := true
 set shell := ["bash", "-c"]
 
 java_root      := source_directory()
-repo_root      := java_root / ".." / ".." / ".."
+repo_root      := java_root / ".." / ".." / ".." / ".."
 shared_out     := repo_root / "shared"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"

@@ -385,17 +385,19 @@ function <<test.Test>> meta::external::language::java::factory::tests::notInstan
 function <<test.Test>> meta::external::language::java::factory::tests::listOfAtomic():Boolean[1]
 {
    let list = j_variable(javaString(), 'var')->j_listOf(javaList(javaString()));
-   assertCode('java.util.Optional.ofNullable(var)\n' + 
-              '                  .map(java.util.Collections::singletonList)\n' + 
-              '                  .orElseGet(java.util.Collections::emptyList)', javaList(javaString()), $list);
+   assertCode('''
+              java.util.Optional.ofNullable(var)
+                                .map(java.util.Collections::singletonList)
+                                .orElseGet(java.util.Collections::emptyList)''', javaList(javaString()), $list);
 }
 
 function <<test.Test>> meta::external::language::java::factory::tests::listOfAtomicCasted():Boolean[1]
 {
    let list = j_variable(javaString(), 'var')->j_listOf(javaList(javaObject()));
-   assertCode('java.util.Optional.ofNullable((Object) var)\n' +
-              '                  .map(java.util.Collections::singletonList)\n' +
-              '                  .orElseGet(java.util.Collections::emptyList)', javaList(javaObject()), $list);
+   assertCode('''
+              java.util.Optional.ofNullable((Object) var)
+                                .map(java.util.Collections::singletonList)
+                                .orElseGet(java.util.Collections::emptyList)''', javaList(javaObject()), $list);
 }
 
 function <<test.Test>> meta::external::language::java::factory::tests::listOfList():Boolean[1]
@@ -433,17 +435,19 @@ function <<test.Test>> meta::external::language::java::factory::tests::mapToList
 {
    let x      = j_parameter(javaString(), 'x');
    let stream = j_variable(javaList(javaString()), 'var')->j_streamOf()->js_map(j_lambda($x, javaCollections()->j_invoke('singletonList', $x, javaList(javaString()))));
-   assertCode('var.stream()\n'+ 
-              '   .map((String x) -> java.util.Collections.singletonList(x))\n'+
-              '   .flatMap(java.util.Collection::stream)', javaStream(javaString()), $stream);
+   assertCode('''
+              var.stream()
+                 .map((String x) -> java.util.Collections.singletonList(x))
+                 .flatMap(java.util.Collection::stream)''', javaStream(javaString()), $stream);
 }
 
 function <<test.Test>> meta::external::language::java::factory::tests::streamOfAtomic():Boolean[1]
 {
    let stream = j_variable(javaString(), 'var')->j_streamOf();
-   assertCode('java.util.Optional.ofNullable(var)\n' + 
-              '                  .map(java.util.stream.Stream::of)\n' + 
-              '                  .orElseGet(java.util.stream.Stream::empty)', javaStream(javaString()), $stream);
+   assertCode('''
+              java.util.Optional.ofNullable(var)
+                                .map(java.util.stream.Stream::of)
+                                .orElseGet(java.util.stream.Stream::empty)''', javaStream(javaString()), $stream);
 }
 
 function <<test.Test>> meta::external::language::java::factory::tests::resolveStreamToList():Boolean[1]
@@ -463,12 +467,13 @@ function <<test.Test>> meta::external::language::java::factory::tests::streamOfR
    let x       = j_parameter(javaString(), 'x');
    let id      = j_lambda($x, $x);
    let complex = j_variable(javaList(javaString()), 'var')->j_streamOf()->js_map($id)->js_resolve(javaList(javaString()))->j_streamOf()->js_map($id)->js_resolve(javaList(javaString()));
-   assertCode('var.stream()\n' +
-              '   .map((String x) -> x)\n' +
-              '   .filter((String $x) -> $x != null)\n' +
-              '   .map((String x) -> x)\n' + 
-              '   .filter((String $x) -> $x != null)\n' +
-              '   .collect(java.util.stream.Collectors.toList())', javaList(javaString()), $complex);
+   assertCode('''
+              var.stream()
+                 .map((String x) -> x)
+                 .filter((String $x) -> $x != null)
+                 .map((String x) -> x)
+                 .filter((String $x) -> $x != null)
+                 .collect(java.util.stream.Collectors.toList())''', javaList(javaString()), $complex);
 }
 
 function <<test.Test>> meta::external::language::java::factory::tests::streamOfResolvedStreamToAtomicIsOptimized():Boolean[1]
@@ -476,15 +481,16 @@ function <<test.Test>> meta::external::language::java::factory::tests::streamOfR
    let x       = j_parameter(javaString(), 'x');
    let id      = j_lambda($x, $x);
    let complex = j_variable(javaString(), 'var')->j_streamOf()->js_map($id)->js_resolve(javaString())->j_streamOf()->js_map($id)->js_resolve(javaString());
-   assertCode('java.util.Optional.ofNullable(var)\n' + 
-              '                  .map(java.util.stream.Stream::of)\n' + 
-              '                  .orElseGet(java.util.stream.Stream::empty)\n' + 
-              '                  .map((String x) -> x)\n' +
-              '                  .filter((String $x) -> $x != null)\n' + 
-              '                  .map((String x) -> x)\n' + 
-              '                  .filter((String $x) -> $x != null)\n' + 
-              '                  .findFirst()\n' +
-              '                  .orElse(null)', javaString(), $complex);
+   assertCode('''
+              java.util.Optional.ofNullable(var)
+                                .map(java.util.stream.Stream::of)
+                                .orElseGet(java.util.stream.Stream::empty)
+                                .map((String x) -> x)
+                                .filter((String $x) -> $x != null)
+                                .map((String x) -> x)
+                                .filter((String $x) -> $x != null)
+                                .findFirst()
+                                .orElse(null)''', javaString(), $complex);
 }
 
 function <<test.Test>> meta::external::language::java::factory::tests::castEmptyListIsNull():Boolean[1]

@@ -60,33 +60,34 @@ function <<test.Test>> meta::external::language::java::serialization::tests::cla
                   '    }\n' +
                   '\n' +
                   '    MyClass(/** Give some value */ @NotNull String value)\n' +
-                  '    {\n' +
-                  '        this.myField = value;\n' +
-                  '    }\n' +
-                  '\n' +
-                  '    protected <T extends String> void doSomething(@NotNull String p)\n' +
-                  '    {\n' +
-                  '        myCode();\n' +
-                  '    }\n' +
-                  '\n' +
-                  '    abstract String doSomethingElse();\n' +
-                  '\n' +
-                  '    protected void doWildCardThing(List<? extends Object> p)\n' +
-                  '    {\n' +
-                  '        if (p.size() == 0)\n' +
-                  '        {\n' +
-                  '            this.myField = "List is empty";\n' +
-                  '        }\n' +
-                  '        else if (p.size() == 1)\n' +
-                  '        {\n' +
-                  '            this.myField = "List is singleton";\n' +
-                  '        }\n' +
-                  '        else\n' +
-                  '        {\n' +
-                  '            this.myField = "List has many";\n' +
-                  '        }\n' +
-                  '    }\n' +
-                  '}';
+                  '''
+                      {
+                          this.myField = value;
+                      }
+                  
+                      protected <T extends String> void doSomething(@NotNull String p)
+                      {
+                          myCode();
+                      }
+                  
+                      abstract String doSomethingElse();
+                  
+                      protected void doWildCardThing(List<? extends Object> p)
+                      {
+                          if (p.size() == 0)
+                          {
+                              this.myField = "List is empty";
+                          }
+                          else if (p.size() == 1)
+                          {
+                              this.myField = "List is singleton";
+                          }
+                          else
+                          {
+                              this.myField = "List has many";
+                          }
+                      }
+                  }''';
 
 
    test($expected, $c);
@@ -127,33 +128,34 @@ function <<test.Test>> meta::external::language::java::serialization::tests::cla
                   '    }\n' +
                   '\n' +
                   '    MyClass(/** Give some value */ @NotNull String value)\n' +
-                  '    {\n' +
-                  '        this.myField = value;\n' +
-                  '    }\n' +
-                  '\n' +
-                  '    protected <T extends String> void doSomething(@NotNull String p)\n' +
-                  '    {\n' +
-                  '        myCode();\n' +
-                  '    }\n' +
-                  '\n' +
-                  '    abstract String doSomethingElse();\n' +
-                  '\n' +
-                  '    protected void doWildCardThing(java.util.List<? extends Object> p)\n' +
-                  '    {\n' +
-                  '        if (p.size() == 0)\n' +
-                  '        {\n' +
-                  '            this.myField = "List is empty";\n' +
-                  '        }\n' +
-                  '        else if (p.size() == 1)\n' +
-                  '        {\n' +
-                  '            this.myField = "List is singleton";\n' +
-                  '        }\n' +
-                  '        else\n' +
-                  '        {\n' +
-                  '            this.myField = "List has many";\n' +
-                  '        }\n' +
-                  '    }\n' +
-                  '}';
+                  '''
+                      {
+                          this.myField = value;
+                      }
+                  
+                      protected <T extends String> void doSomething(@NotNull String p)
+                      {
+                          myCode();
+                      }
+                  
+                      abstract String doSomethingElse();
+                  
+                      protected void doWildCardThing(java.util.List<? extends Object> p)
+                      {
+                          if (p.size() == 0)
+                          {
+                              this.myField = "List is empty";
+                          }
+                          else if (p.size() == 1)
+                          {
+                              this.myField = "List is singleton";
+                          }
+                          else
+                          {
+                              this.myField = "List has many";
+                          }
+                      }
+                  }''';
 
 
    test($expected, $c);
@@ -190,33 +192,34 @@ function <<test.Test>> meta::external::language::java::serialization::tests::cla
                   '    }\n' +
                   '\n' +
                   '    MyClass(/** Give some value */ @NotNull String value)\n' +
-                  '    {\n' +
-                  '        this.myField = value;\n' +
-                  '    }\n' +
-                  '\n' +
-                  '    protected <T extends String> void doSomething(@NotNull String p)\n' +
-                  '    {\n' +
-                  '        myCode();\n' +
-                  '    }\n' +
-                  '\n' +
-                  '    abstract String doSomethingElse();\n' +
-                  '\n' +
-                  '    protected void doWildCardThing(java.util.List<? extends Object> p)\n' +
-                  '    {\n' +
-                  '        if (p.size() == 0)\n' +
-                  '        {\n' +
-                  '            this.myField = "List is empty";\n' +
-                  '        }\n' +
-                  '        else if (p.size() == 1)\n' +
-                  '        {\n' +
-                  '            this.myField = "List is singleton";\n' +
-                  '        }\n' +
-                  '        else\n' +
-                  '        {\n' +
-                  '            this.myField = "List has many";\n' +
-                  '        }\n' +
-                  '    }\n' +
-                  '}';
+                  '''
+                      {
+                          this.myField = value;
+                      }
+                  
+                      protected <T extends String> void doSomething(@NotNull String p)
+                      {
+                          myCode();
+                      }
+                  
+                      abstract String doSomethingElse();
+                  
+                      protected void doWildCardThing(java.util.List<? extends Object> p)
+                      {
+                          if (p.size() == 0)
+                          {
+                              this.myField = "List is empty";
+                          }
+                          else if (p.size() == 1)
+                          {
+                              this.myField = "List is singleton";
+                          }
+                          else
+                          {
+                              this.myField = "List has many";
+                          }
+                      }
+                  }''';
 
    test($expected, $c);
 }
@@ -232,13 +235,14 @@ function <<test.Test>> meta::external::language::java::serialization::tests::int
    let expected = 'package org.finos;\n' +
                   '\n' +
                   '/**\n' +
-                  ' * Interface documenmtation.\n' +
-                  ' */\n' +
-                  'public interface IFace extends OtherIface<String>\n' +
-                  '{\n' +
-                  '    void doSomething(@NotNull String p);\n' +
-                  '    String someString();\n' +
-                  '}';
+                  '''
+                   * Interface documenmtation.
+                   */
+                  public interface IFace extends OtherIface<String>
+                  {
+                      void doSomething(@NotNull String p);
+                      String someString();
+                  }''';
    test($expected, $i);
 }
 
@@ -268,10 +272,11 @@ function <<test.Test>> meta::external::language::java::serialization::tests::sim
                   '    Delta,\n' +
                   '\n' +
                   '    /**\n' +
-                  '     * The last one\n' +
-                  '     */\n' +
-                  '    Omega\n' +
-                  '}';
+                  '''
+                       * The last one
+                       */
+                      Omega
+                  }''';
    test($expected, $e);
 }
 
@@ -293,80 +298,85 @@ function <<test.Test>> meta::external::language::java::serialization::tests::com
            javaMethod('public', javaString(), 'getDescription', [], j_return(j_this($cls)->j_field('desc')));
         });
 
-   let expected = 'package org.finos;\n' +
-                  '\n' +
-                  'public enum Things\n' +
-                  '{\n' +
-                  '    Alpha("The first"),\n' +
-                  '    Beta("The second"),\n' +
-                  '    Gamma("The third"),\n' +
-                  '    Delta("The fourth");\n' +
-                  '\n' +
-                  '    private final String desc;\n' +
-                  '\n' +
-                  '    Things(String desc)\n' +
-                  '    {\n' +
-                  '        this.desc = desc;\n' +
-                  '    }\n' +
-                  '\n' +
-                  '    public String getDescription()\n' +
-                  '    {\n' +
-                  '        return this.desc;\n' +
-                  '    }\n' +
-                  '}';
+   let expected = '''
+                  package org.finos;
+                  
+                  public enum Things
+                  {
+                      Alpha("The first"),
+                      Beta("The second"),
+                      Gamma("The third"),
+                      Delta("The fourth");
+                  
+                      private final String desc;
+                  
+                      Things(String desc)
+                      {
+                          this.desc = desc;
+                      }
+                  
+                      public String getDescription()
+                      {
+                          return this.desc;
+                      }
+                  }''';
    test($expected, $e);
 }
 
 function <<test.Test>> meta::external::language::java::serialization::tests::testImportsForClass():Boolean[1]
 {
    // Class in same package is considered imported
-   test('package org.finos.test;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public A a;\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public A a;
+        }''',
         javaClass('org.finos.test.Test')
            ->addField(javaField('public', javaClass('org.finos.test.A'), 'a'))
    );
 
    // Class in imported package is considered imported
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.util.*;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public List<String> a;\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.util.*;
+        
+        class Test
+        {
+            public List<String> a;
+        }''',
         javaClass('org.finos.test.Test')
            ->imports(javaPackage('java.util'))
            ->addField(javaField('public', javaList(javaString()), 'a'))
    );
 
    // Explicitly imported class is imported
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import org.finos.testx.A;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public A a;\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import org.finos.testx.A;
+        
+        class Test
+        {
+            public A a;
+        }''',
         javaClass('org.finos.test.Test')
            ->imports(javaClass('org.finos.testx.A'))
            ->addField(javaField('public', javaClass('org.finos.testx.A'), 'a'))
    );
 
    // Class in same package is not considered imported if masked by another import
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import org.finos.testx.A;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public org.finos.test.A a;\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import org.finos.testx.A;
+        
+        class Test
+        {
+            public org.finos.test.A a;
+        }''',
         javaClass('org.finos.test.Test')
            ->imports(javaClass('org.finos.testx.A'))
            ->addField(javaField('public', javaClass('org.finos.test.A'), 'a'))
@@ -375,40 +385,42 @@ function <<test.Test>> meta::external::language::java::serialization::tests::tes
 
 function <<test.Test>> meta::external::language::java::serialization::tests::preformattedText():Boolean[1]
 {
-   test('package org.finos.test;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public void test(String text)\n' +
-        '    {\n' +
-        '        if (text.length() > 30)\n' +
-        '        {\n' +
-        '           String s2 = text.replace("aa", "a");\n' +
-        '           if (text.length() > 30)\n' +
-        '           {\n' +
-        '               System.out.println(text);\n' +
-        '           }\n' +
-        '           else\n' +
-        '           {\n' +
-        '               System.out.println(s2);\n' +
-        '           }\n' +
-        '        }\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public void test(String text)
+            {
+                if (text.length() > 30)
+                {
+                   String s2 = text.replace("aa", "a");
+                   if (text.length() > 30)
+                   {
+                       System.out.println(text);
+                   }
+                   else
+                   {
+                       System.out.println(s2);
+                   }
+                }
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaVoid(), 'test', j_parameter(javaString(), 'text'), 
-                       'if (text.length() > 30)\n' + 
-                       '{\n' +
-                       '   String s2 = text.replace("aa", "a");\n' +
-                       '   if (text.length() > 30)\n' + 
-                       '   {\n' +
-                       '       System.out.println(text);\n' +
-                       '   }\n' +
-                       '   else\n' + 
-                       '   {\n' +
-                       '       System.out.println(s2);\n' +
-                       '   }\n' +
-                       '}'
+                       '''
+                       if (text.length() > 30)
+                       {
+                          String s2 = text.replace("aa", "a");
+                          if (text.length() > 30)
+                          {
+                              System.out.println(text);
+                          }
+                          else
+                          {
+                              System.out.println(s2);
+                          }
+                       }'''
             ))
    );
 }
@@ -418,18 +430,19 @@ function <<test.Test>> meta::external::language::java::serialization::tests::for
    let param = j_parameter(javaString(), 's');
    let list  = j_variable(javaList(javaString()), 'strings');
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public void test()\n' +
-        '    {\n' +
-        '        for (String s: strings)\n' +
-        '        {\n' +
-        '            System.out.println(s);\n' +
-        '        }\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public void test()
+            {
+                for (String s: strings)
+                {
+                    System.out.println(s);
+                }
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaVoid(), 'test', [], j_for($param, $list, j_println($param))))
    );
@@ -440,18 +453,19 @@ function <<test.Test>> meta::external::language::java::serialization::tests::for
    let param  = j_parameter(javaInt(), 'i');
    let list   = j_variable(javaList(javaString()), 'strings');
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public void test()\n' +
-        '    {\n' +
-        '        for (int i = 0; i < strings.size(); i++)\n' +
-        '        {\n' +
-        '            System.out.println(strings.get(i));\n' +
-        '        }\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public void test()
+            {
+                for (int i = 0; i < strings.size(); i++)
+                {
+                    System.out.println(strings.get(i));
+                }
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaVoid(), 'test', [],
                            j_for($param->j_declare(j_int(0)), $param->j_lt($list->j_invoke('size', [])), $param->j_inc(), j_println($list->j_invoke('get', $param)))
@@ -461,15 +475,16 @@ function <<test.Test>> meta::external::language::java::serialization::tests::for
 
 function <<test.Test>> meta::external::language::java::serialization::tests::null():Boolean[1]
 {
-   test('package org.finos.test;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public String test()\n' +
-        '    {\n' +
-        '        return null;\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public String test()
+            {
+                return null;
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaString(), 'test', [],
                            j_return(j_null())
@@ -482,15 +497,16 @@ function <<test.Test>> meta::external::language::java::serialization::tests::arr
    let array = j_parameter(javaArray(javaString()), 'array');
    let index = j_parameter(javaInt(), 'index');
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public String test(String[] array, int index)\n' +
-        '    {\n' +
-        '        return array[--index];\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public String test(String[] array, int index)
+            {
+                return array[--index];
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaString(), 'test', [$array, $index],
                            j_return($array->j_arrayAccess(j_preDec($index)))
@@ -502,18 +518,19 @@ function <<test.Test>> meta::external::language::java::serialization::tests::con
 {
    let list = j_parameter(javaList(javaString()), 'list');
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.util.ArrayList;\n' +
-        'import java.util.List;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public String test(List<String> list)\n' +
-        '    {\n' +
-        '        return list instanceof ArrayList ? "ArrayList" : "Some other list";\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.util.ArrayList;
+        import java.util.List;
+        
+        class Test
+        {
+            public String test(List<String> list)
+            {
+                return list instanceof ArrayList ? "ArrayList" : "Some other list";
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaString(), 'test', $list,
                            j_return(j_conditional($list->j_instanceof(javaArrayList()), j_string('ArrayList'), j_string('Some other list')))
@@ -526,20 +543,21 @@ function <<test.Test>> meta::external::language::java::serialization::tests::whi
 {
    let list = j_parameter(javaList(javaString()), 'list');
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.util.List;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public void test(List<String> list)\n' +
-        '    {\n' +
-        '        while (!list.isEmpty())\n' +
-        '        {\n' +
-        '            list.remove(0);\n' +
-        '        }\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.util.List;
+        
+        class Test
+        {
+            public void test(List<String> list)
+            {
+                while (!list.isEmpty())
+                {
+                    list.remove(0);
+                }
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaVoid(), 'test', $list,
                            j_while(j_not($list->j_invoke('isEmpty', [])), $list->j_invoke('remove', j_int(0), javaString()))
@@ -552,21 +570,22 @@ function <<test.Test>> meta::external::language::java::serialization::tests::doW
 {
    let list = j_parameter(javaList(javaString()), 'list');
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.util.List;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public void test(List<String> list)\n' +
-        '    {\n' +
-        '        do\n' +
-        '        {\n' +
-        '            list.remove(0);\n' +
-        '        }\n' +
-        '        while (!list.isEmpty());\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.util.List;
+        
+        class Test
+        {
+            public void test(List<String> list)
+            {
+                do
+                {
+                    list.remove(0);
+                }
+                while (!list.isEmpty());
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaVoid(), 'test', $list,
                            j_doWhile($list->j_invoke('remove', j_int(0), javaString()), j_not($list->j_invoke('isEmpty', [])))
@@ -580,29 +599,30 @@ function <<test.Test>> meta::external::language::java::serialization::tests::try
    let list = j_parameter(javaList(javaString()), 'list');
    let e    = j_parameter(javaException(), 'e');
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.io.PrintStream;\n' +
-        'import java.util.List;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public void test(List<String> list)\n' +
-        '    {\n' +
-        '        try\n' +
-        '        {\n' +
-        '            list.remove(0);\n' +
-        '        }\n' +
-        '        catch (Exception e)\n' +
-        '        {\n' +
-        '            System.out.println(e.getMessage());\n' +
-        '        }\n' +
-        '        finally\n' +
-        '        {\n' +
-        '            System.out.println("in the end");\n' +
-        '        }\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.io.PrintStream;
+        import java.util.List;
+        
+        class Test
+        {
+            public void test(List<String> list)
+            {
+                try
+                {
+                    list.remove(0);
+                }
+                catch (Exception e)
+                {
+                    System.out.println(e.getMessage());
+                }
+                finally
+                {
+                    System.out.println("in the end");
+                }
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaVoid(), 'test', $list,
                            j_try(
@@ -617,15 +637,16 @@ function <<test.Test>> meta::external::language::java::serialization::tests::try
 
 function <<test.Test>> meta::external::language::java::serialization::tests::throw():Boolean[1]
 {
-   test('package org.finos.test;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public void test()\n' +
-        '    {\n' +
-        '        throw new UnsupportedOperationException("No way!");\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public void test()
+            {
+                throw new UnsupportedOperationException("No way!");
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaVoid(), 'test', [],
                            j_throw(j_new(javaUnsupportedOperationException(), j_string('No way!')))
@@ -638,18 +659,19 @@ function <<test.Test>> meta::external::language::java::serialization::tests::cas
 {
    let list = j_parameter(javaList(javaString()), 'list');
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.util.ArrayList;\n' +
-        'import java.util.List;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public String test(List<String> list)\n' +
-        '    {\n' +
-        '        return ((ArrayList<String>) list).get(0);\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.util.ArrayList;
+        import java.util.List;
+        
+        class Test
+        {
+            public String test(List<String> list)
+            {
+                return ((ArrayList<String>) list).get(0);
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaString(), 'test', $list,
                            j_return($list->j_cast(javaArrayList(javaString()))->j_invoke('get', j_int(0)))
@@ -662,20 +684,21 @@ function <<test.Test>> meta::external::language::java::serialization::tests::con
 {
    let message = j_parameter(javaString(), 'message');
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'class TestException extends RuntimeException\n' +
-        '{\n' +
-        '    public TestException()\n' +
-        '    {\n' +
-        '        this("My fault");\n' +
-        '    }\n' +
-        '\n' +
-        '    public TestException(String message)\n' +
-        '    {\n' +
-        '        super("Test: " + message);\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        class TestException extends RuntimeException
+        {
+            public TestException()
+            {
+                this("My fault");
+            }
+        
+            public TestException(String message)
+            {
+                super("Test: " + message);
+            }
+        }''',
         javaClass('org.finos.test.TestException')
            ->jextends(javaRuntimeException())
            ->addConstructor(cls| javaConstructor('public', [], $cls->j_thisInvoke(j_string('My fault'))))
@@ -690,19 +713,20 @@ function <<test.Test>> meta::external::language::java::serialization::tests::lam
    let s       = j_parameter(javaString(), 's');
    let rtnType = javaList(javaInt()->toBoxed());
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.util.List;\n' +
-        'import java.util.stream.Collectors;\n' +
-        'import java.util.stream.Stream;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public List<Integer> test(List<String> list)\n' +
-        '    {\n' +
-        '        return list.stream().map((String s) -> s.length()).collect(Collectors.toList());\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.util.List;
+        import java.util.stream.Collectors;
+        import java.util.stream.Stream;
+        
+        class Test
+        {
+            public List<Integer> test(List<String> list)
+            {
+                return list.stream().map((String s) -> s.length()).collect(Collectors.toList());
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', $rtnType, 'test', $list,
                            j_return($list->j_streamOf()->js_map(j_lambda($s, $s->j_invoke('length', [])))->js_resolve($rtnType))
@@ -718,21 +742,22 @@ function <<test.Test>> meta::external::language::java::serialization::tests::met
    let rtnType = javaList(javaIntBoxed());
    let result  = j_parameter($rtnType, 'result');
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.util.ArrayList;\n' +
-        'import java.util.List;\n' +
-        'import java.util.stream.Stream;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public List<Integer> test(List<String> list)\n' +
-        '    {\n' +
-        '        List<Integer> result = new ArrayList<Integer>();\n' +
-        '        list.stream().map(String::length).forEach(result::add);\n' +
-        '        return result;\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.util.ArrayList;
+        import java.util.List;
+        import java.util.stream.Stream;
+        
+        class Test
+        {
+            public List<Integer> test(List<String> list)
+            {
+                List<Integer> result = new ArrayList<Integer>();
+                list.stream().map(String::length).forEach(result::add);
+                return result;
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', $rtnType, 'test', $list,
                            [
@@ -751,25 +776,26 @@ function <<test.Test>> meta::external::language::java::serialization::tests::ano
 {
    let rtnType = javaSupplier(javaString());
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.util.function.Supplier;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public String text;\n' +
-        '\n' +
-        '    public Supplier<String> test()\n' +
-        '    {\n' +
-        '        return new Supplier<String>()\n' +
-        '        {\n' +
-        '            public String get()\n' +
-        '            {\n' +
-        '                return Test.this.text;\n' +
-        '            }\n' +
-        '        };\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.util.function.Supplier;
+        
+        class Test
+        {
+            public String text;
+        
+            public Supplier<String> test()
+            {
+                return new Supplier<String>()
+                {
+                    public String get()
+                    {
+                        return Test.this.text;
+                    }
+                };
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addField(javaField('public', javaString(), 'text'))
            ->addMethod(cls| javaMethod('public', $rtnType, 'test', [],
@@ -784,25 +810,26 @@ function <<test.Test>> meta::external::language::java::serialization::tests::ano
    let list = j_parameter(javaList(javaString()), 'list');
    let s    = j_parameter(javaString(), 's');
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.io.PrintStream;\n' +
-        'import java.util.List;\n' +
-        'import java.util.function.Consumer;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public void test(List<String> list)\n' +
-        '    {\n' +
-        '        list.forEach(new Consumer<String>()\n' +
-        '        {\n' +
-        '            public void accept(String s)\n' +
-        '            {\n' +
-        '                System.out.println(s);\n' +
-        '            }\n' +
-        '        });\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.io.PrintStream;
+        import java.util.List;
+        import java.util.function.Consumer;
+        
+        class Test
+        {
+            public void test(List<String> list)
+            {
+                list.forEach(new Consumer<String>()
+                {
+                    public void accept(String s)
+                    {
+                        System.out.println(s);
+                    }
+                });
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(cls| javaMethod('public', javaVoid(), 'test', $list,
                            $list->j_invoke('forEach', j_newAnon(javaConsumer(javaString()), [], j_method('public', javaVoid(), 'accept', $s, j_println($s))), javaVoid())
@@ -822,30 +849,31 @@ function <<test.Test>> meta::external::language::java::serialization::tests::fol
    let i2      = j_parameter(javaInt(), 'i2');
    let rtnType = javaList(javaInt()->toBoxed());
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.util.List;\n' +
-        'import java.util.stream.Stream;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public List<Integer> test(List<String> list,\n' +
-        '                              List<String> someParameterThatsNotUsed,\n' +
-        '                              List<String> andAnother,\n' +
-        '                              List<String> andYetAnother)\n' +
-        '    {\n' +
-        '        return list.stream()\n' +
-        '                   .map((String s) -> s.length())\n' +
-        '                   .map((int i) -> i + 1)\n' +
-        '                   .map((int i) -> i + 2)\n' +
-        '                   .map((int i) -> i + 3)\n' +
-        '                   .map((int i) -> i - 6)\n' +
-        '                   .reduce(0,\n' +
-        '                           (int i, int i2) -> i % 2 == 0 ? (i + i2) * 32 - 1\n' +
-        '                                                         : i % 3 == 0 ? (i + i2) / 128 - 1 / 2\n' +
-        '                                                                      : ((i - i2) * 16 + 1) / 5);\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.util.List;
+        import java.util.stream.Stream;
+        
+        class Test
+        {
+            public List<Integer> test(List<String> list,
+                                      List<String> someParameterThatsNotUsed,
+                                      List<String> andAnother,
+                                      List<String> andYetAnother)
+            {
+                return list.stream()
+                           .map((String s) -> s.length())
+                           .map((int i) -> i + 1)
+                           .map((int i) -> i + 2)
+                           .map((int i) -> i + 3)
+                           .map((int i) -> i - 6)
+                           .reduce(0,
+                                   (int i, int i2) -> i % 2 == 0 ? (i + i2) * 32 - 1
+                                                                 : i % 3 == 0 ? (i + i2) / 128 - 1 / 2
+                                                                              : ((i - i2) * 16 + 1) / 5);
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', $rtnType, 'test', [$list, $p1, $p2, $p3],
                            j_return($list->j_streamOf()
@@ -877,30 +905,31 @@ function <<test.Test>> meta::external::language::java::serialization::tests::fol
    let i       = j_parameter(javaInt(), 'i');
    let rtnType = javaList(javaInt()->toBoxed());
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'import java.util.Collections;\n' +
-        'import java.util.List;\n' +
-        'import java.util.stream.Collectors;\n' +
-        'import java.util.stream.Stream;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public List<Integer> test(List<String> list,\n' +
-        '                              List<String> someParameterThatsNotUsed,\n' +
-        '                              List<String> andAnother,\n' +
-        '                              List<String> andYetAnother)\n' +
-        '    {\n' +
-        '        return i % 2 == 0 ? Collections.<Integer>emptyList()\n' +
-        '                          : list.stream()\n' +
-        '                                .map((String s) -> s.length())\n' +
-        '                                .map((int i) -> i + 1)\n' +
-        '                                .map((int i) -> i + 2)\n' +
-        '                                .map((int i) -> i + 3)\n' +
-        '                                .map((int i) -> i - 6)\n' +
-        '                                .collect(Collectors.toList());\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        import java.util.Collections;
+        import java.util.List;
+        import java.util.stream.Collectors;
+        import java.util.stream.Stream;
+        
+        class Test
+        {
+            public List<Integer> test(List<String> list,
+                                      List<String> someParameterThatsNotUsed,
+                                      List<String> andAnother,
+                                      List<String> andYetAnother)
+            {
+                return i % 2 == 0 ? Collections.<Integer>emptyList()
+                                  : list.stream()
+                                        .map((String s) -> s.length())
+                                        .map((int i) -> i + 1)
+                                        .map((int i) -> i + 2)
+                                        .map((int i) -> i + 3)
+                                        .map((int i) -> i - 6)
+                                        .collect(Collectors.toList());
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', $rtnType, 'test', [$list, $p1, $p2, $p3],
                            j_return(
@@ -945,15 +974,16 @@ function <<test.Test>> meta::external::language::java::serialization::tests::pac
 
    let project = newProject()->addClasses([$myString, $class]);
 
-   test('package org.finos.test;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public java.lang.String test()\n' +
-        '    {\n' +
-        '        return "Hello";\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public java.lang.String test()
+            {
+                return "Hello";
+            }
+        }''',
         $class,
         newStringifier($project)
    );
@@ -962,15 +992,16 @@ function <<test.Test>> meta::external::language::java::serialization::tests::pac
 
 function <<test.Test>> meta::external::language::java::serialization::tests::emptyString():Boolean[1]
 {
-   test('package org.finos.test;\n' +
-        '\n' +
-        'class Test\n' +
-        '{\n' +
-        '    public String test()\n' +
-        '    {\n' +
-        '        return "";\n' +
-        '    }\n' +
-        '}',
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public String test()
+            {
+                return "";
+            }
+        }''',
         javaClass('org.finos.test.Test')
            ->addMethod(javaMethod('public', javaString(), 'test', [], j_return(j_string(''))))
    );
@@ -982,26 +1013,27 @@ function <<test.Test>> meta::external::language::java::serialization::tests::int
    let proto = javaClass(['public', 'interface'], 'meta.java.generation.tests.model.A');
    let cls   = ^$proto(additionalImports = ['javax.annotation.Generated', 'java.time.*', 'java.util.*', 'javax.validation.*', 'javax.validation.constraints.*']);
    
-   test('package meta.java.generation.tests.model;\n' +
-        '\n' +
-        'import javax.annotation.Generated;\n' + 
-        'import java.time.*;\n' +
-        'import java.util.*;\n' +
-        'import javax.validation.*;\n' +
-        'import javax.validation.constraints.*;\n' +
-        '\n' +
-        '@Generated("meta::java::generation::tests::model::1_0_0::A")\n' +
-        'public interface A\n' +
-        '{\n' +
-        '    static final String _version_ = "AHH#AKu:AHO:0-ALD:AHj:2$AHO#ALf:AEfOIi:3$%AHj#A6M:A6M-A6T:A6T";\n' +
-        '    static final String _type_ = "A";\n' +
-        '\n' +
-        '    Optional<B> getB();\n' +
-        '\n' +
-        '    @NotNull\n' +
-        '    @Valid\n' +
-        '    List<E> getE();\n' +
-        '}',
+   test('''
+        package meta.java.generation.tests.model;
+        
+        import javax.annotation.Generated;
+        import java.time.*;
+        import java.util.*;
+        import javax.validation.*;
+        import javax.validation.constraints.*;
+        
+        @Generated("meta::java::generation::tests::model::1_0_0::A")
+        public interface A
+        {
+            static final String _version_ = "AHH#AKu:AHO:0-ALD:AHj:2$AHO#ALf:AEfOIi:3$%AHj#A6M:A6M-A6T:A6T";
+            static final String _type_ = "A";
+        
+            Optional<B> getB();
+        
+            @NotNull
+            @Valid
+            List<E> getE();
+        }''',
         $cls->annotate(^meta::external::language::java::metamodel::annotations::generated::Generated(value='meta::java::generation::tests::model::1_0_0::A'))
             ->addField(javaField(['static','final'], javaString(), '_version_', j_string('AHH#AKu:AHO:0-ALD:AHj:2$AHO#ALf:AEfOIi:3$%AHj#A6M:A6M-A6T:A6T')))
             ->addField(javaField(['static','final'], javaString(), '_type_', j_string('A')))
