@@ -1,0 +1,375 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::imports::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::serialization::tests::*;
+
+// =============================================================================
+// Expression-position imports — Identifiers with a source picked up by the
+// deep walker through method/function bodies and nested expressions.
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveCallTarget(): Boolean[1]
+{
+   // A function call whose callee is imported from another file.
+   let userFile = tsSourceFile('src/user.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsFunction('main',
+         [],
+         tsVoid(),
+         tsBlock([
+            tsExprStmt(tsCall(tsIdFrom('createUser', tsLocalSource($userFile)), []))
+         ]))
+   ]);
+   testFile('''
+            import { createUser } from './user.js';
+
+            function main(): void {
+              createUser();
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveNewTarget(): Boolean[1]
+{
+   // A constructor call (`new Foo()`) whose target is imported.
+   let userFile = tsSourceFile('src/user.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsFunction('make',
+         [],
+         [],
+         tsBlock([
+            tsExprStmt(^NewExpression(expression=tsIdFrom('User', tsLocalSource($userFile)), arguments=[], typeArguments=[]))
+         ]))
+   ]);
+   testFile('''
+            import { User } from './user.js';
+
+            function make() {
+              new User();
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveCallArgument(): Boolean[1]
+{
+   // An imported identifier passed as a call argument.
+   let utilFile = tsSourceFile('src/util.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsFunction('run', [], [],
+         tsBlock([
+            tsExprStmt(tsCall(tsId('log'), [tsIdFrom('DEFAULT_OPTIONS', tsLocalSource($utilFile))]))
+         ]))
+   ]);
+   testFile('''
+            import { DEFAULT_OPTIONS } from './util.js';
+
+            function run() {
+              log(DEFAULT_OPTIONS);
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveMethodBody(): Boolean[1]
+{
+   // Walker must descend into method body.
+   let svcFile = tsSourceFile('src/svc.ts', []);
+   let appFile = tsSourceFile('src/app.ts', [
+      tsClass('Controller', [
+         tsMethod('handle', [], [],
+            tsBlock([
+               tsReturn(tsCall(tsIdFrom('serviceCall', tsLocalSource($svcFile)), []))
+            ]))
+      ])
+   ]);
+   testFile('''
+            import { serviceCall } from './svc.js';
+
+            class Controller {
+              handle() {
+                return serviceCall();
+              }
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveTypeAndIdMixed(): Boolean[1]
+{
+   // Same source file referenced from both type and expression positions —
+   // dedupes into one import.
+   let userFile = tsSourceFile('src/user.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsFunction('build',
+         [],
+         tsRefFrom('User', tsLocalSource($userFile)),
+         tsBlock([
+            tsReturn(tsCall(tsIdFrom('createUser', tsLocalSource($userFile)), []))
+         ]))
+   ]);
+   testFile('''
+            import { User, createUser } from './user.js';
+
+            function build(): User {
+              return createUser();
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveExternalCall(): Boolean[1]
+{
+   // External (npm) call import via Identifier source.
+   let appFile = tsSourceFile('src/app.ts', [
+      tsConst('schema', [],
+         tsCall(tsIdFrom('z', tsExternalSource('zod')), []))
+   ]);
+   testFile('''
+            import { z } from 'zod';
+
+            const schema = z();
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveBinaryOperand(): Boolean[1]
+{
+   // Imported identifier inside a binary expression.
+   let constFile = tsSourceFile('src/constants.ts', []);
+   let appFile   = tsSourceFile('src/app.ts', [
+      tsConst('cutoff', [],
+         tsBinary(tsIdFrom('BASE', tsLocalSource($constFile)), '+', tsNumLit('10')))
+   ]);
+   testFile('''
+            import { BASE } from './constants.js';
+
+            const cutoff = BASE + 10;
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveArrowBody(): Boolean[1]
+{
+   // Walker descends through arrow function bodies.
+   let utilFile = tsSourceFile('src/util.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsConst('mapper', [],
+         tsArrowExpr(
+            [tsParamNoType('x')],
+            tsCall(tsIdFrom('transform', tsLocalSource($utilFile)), [tsId('x')])))
+   ]);
+   testFile('''
+            import { transform } from './util.js';
+
+            const mapper = (x) => transform(x);
+            ''',
+            $appFile->resolveImports());
+}
+
+// =============================================================================
+// import type — emitted when all refs through a specifier are type-position.
+// Mixed (any value-position ref) falls back to plain `import`.
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::importTypeWhenAllTypeOnly(): Boolean[1]
+{
+   // Only type-position usage → import type
+   let userFile = tsSourceFile('src/user.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsClass('Service', [
+         tsProperty('current', tsRefFrom('User', tsLocalSource($userFile))),
+         tsProperty('history', tsArrayOf(tsRefFrom('User', tsLocalSource($userFile))))
+      ])
+   ]);
+   testFile('''
+            import type { User } from './user.js';
+
+            class Service {
+              current: User;
+
+              history: User[];
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::plainImportWhenMixedTypeAndValue(): Boolean[1]
+{
+   // Same source: User as type AND createUser as value → plain import (no `type`)
+   let userFile = tsSourceFile('src/user.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsFunction('build',
+         [],
+         tsRefFrom('User', tsLocalSource($userFile)),
+         tsBlock([
+            tsReturn(tsCall(tsIdFrom('createUser', tsLocalSource($userFile)), []))
+         ]))
+   ]);
+   testFile('''
+            import { User, createUser } from './user.js';
+
+            function build(): User {
+              return createUser();
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+// =============================================================================
+// Aliased imports — collision resolution via `import { Foo as MyFoo }`.
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::aliasedTypeImport(): Boolean[1]
+{
+   // Two sources both export `User`. Generator uses tsRefAliased to give
+   // the external one a different local name. Resolver emits the alias.
+   let internalUserFile = tsSourceFile('src/user.ts', []);
+   let appFile          = tsSourceFile('src/app.ts', [
+      tsClass('App', [
+         tsProperty('local',    tsRefFrom('User', tsLocalSource($internalUserFile))),
+         tsProperty('external', tsRefAliased('ExternalUser', 'User', tsExternalSource('external-lib')))
+      ])
+   ]);
+   testFile('''
+            import type { User as ExternalUser } from 'external-lib';
+            import type { User } from './user.js';
+
+            class App {
+              local: User;
+
+              external: ExternalUser;
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::aliasedIdentifierImport(): Boolean[1]
+{
+   // Same collision case but at expression position (value, not type).
+   let appFile = tsSourceFile('src/app.ts', [
+      tsConst('lib',  [], tsCall(tsIdFrom('flow', tsExternalSource('lodash')), [])),
+      tsConst('flow2', [], tsCall(tsIdAliased('rxFlow', 'flow', tsExternalSource('rxjs')), []))
+   ]);
+   testFile('''
+            import { flow } from 'lodash';
+            import { flow as rxFlow } from 'rxjs';
+
+            const lib = flow();
+
+            const flow2 = rxFlow();
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::aliasReusedDedupes(): Boolean[1]
+{
+   // Same aliased ref used twice should produce a single import specifier.
+   let appFile = tsSourceFile('src/app.ts', [
+      tsClass('App', [
+         tsProperty('a', tsRefAliased('ExtUser', 'User', tsExternalSource('ext'))),
+         tsProperty('b', tsRefAliased('ExtUser', 'User', tsExternalSource('ext')))
+      ])
+   ]);
+   testFile('''
+            import type { User as ExtUser } from 'ext';
+
+            class App {
+              a: ExtUser;
+
+              b: ExtUser;
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+// =============================================================================
+// tsconfig path aliases — `@/...` style specifiers via resolveImportsWithAliases.
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::pathAliasReplacesRelative(): Boolean[1]
+{
+   // PathAlias('@/', 'src/') turns 'src/lib/user.ts' into '@/lib/user.js'.
+   let userFile = tsSourceFile('src/lib/user.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsClass('App', [tsProperty('u', tsRefFrom('User', tsLocalSource($userFile)))])
+   ]);
+   let aliases = [pathAlias('@/', 'src/')];
+   testFile('''
+            import type { User } from '@/lib/user.js';
+
+            class App {
+              u: User;
+            }
+            ''',
+            $appFile->resolveImportsWithAliases($aliases));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::pathAliasFirstMatchWins(): Boolean[1]
+{
+   // Two aliases: more-specific '@lib/' before '@/'. First match wins.
+   let userFile = tsSourceFile('src/lib/user.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsClass('App', [tsProperty('u', tsRefFrom('User', tsLocalSource($userFile)))])
+   ]);
+   let aliases = [pathAlias('@lib/', 'src/lib/'), pathAlias('@/', 'src/')];
+   testFile('''
+            import type { User } from '@lib/user.js';
+
+            class App {
+              u: User;
+            }
+            ''',
+            $appFile->resolveImportsWithAliases($aliases));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::pathAliasFallbackToRelative(): Boolean[1]
+{
+   // Target doesn't match any alias's prefix → fall back to relative path.
+   let userFile = tsSourceFile('other/user.ts', []);  // NOT under 'src/'
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsClass('App', [tsProperty('u', tsRefFrom('User', tsLocalSource($userFile)))])
+   ]);
+   let aliases = [pathAlias('@/', 'src/')];
+   testFile('''
+            import type { User } from '../other/user.js';
+
+            class App {
+              u: User;
+            }
+            ''',
+            $appFile->resolveImportsWithAliases($aliases));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::pathAliasExternalsUnaffected(): Boolean[1]
+{
+   // External sources keep their bare specifier (aliases only apply to LocalSource).
+   let appFile = tsSourceFile('src/app.ts', [
+      tsClass('App', [tsProperty('s', tsRefFrom('Schema', tsExternalSource('zod')))])
+   ]);
+   let aliases = [pathAlias('@/', 'src/')];
+   testFile('''
+            import type { Schema } from 'zod';
+
+            class App {
+              s: Schema;
+            }
+            ''',
+            $appFile->resolveImportsWithAliases($aliases));
+}

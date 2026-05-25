@@ -14,6 +14,7 @@
 
 import meta::pure::functions::asserts::*;
 import meta::pure::metamodel::type::*;
+import meta::pure::test::pct::*;
 
 // Returns the underlying Type carried by a GenericType, or empty if none.
 // Currently only GenericTypeValue carries a concrete `.type`; other GenericType
@@ -26,14 +27,12 @@ function meta::pure::metamodel::type::rawType(gt:GenericType[1]):Type[0..1]
     ]);
 }
 
-function <<test.Test>> meta::pure::metamodel::type::tests::rawType::testRawTypeOnGenericTypeValue():Boolean[1]
+function <<PCT.test>> meta::pure::metamodel::type::tests::rawType::testRawTypeOnGenericTypeValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let gt = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type=String);
-    assertEquals(String, $gt->rawType()->toOne());
+    assertEquals(String, $f->eval(|let gt = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type=String); $gt->rawType()->toOne();));
 }
 
-function <<test.Test>> meta::pure::metamodel::type::tests::rawType::testRawTypeOnUndefinedGenericType():Boolean[1]
+function <<PCT.test>> meta::pure::metamodel::type::tests::rawType::testRawTypeOnUndefinedGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let gt = ^meta::pure::metamodel::type::generics::UndefinedGenericType();
-    assert($gt->rawType()->isEmpty());
+    assert($f->eval(|let gt = ^meta::pure::metamodel::type::generics::UndefinedGenericType(); $gt->rawType()->isEmpty();));
 }

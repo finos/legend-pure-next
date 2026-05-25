@@ -1,0 +1,144 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::translation::shared::*;
+
+// ============================================================================
+// makeCanonical — Pure-AST -> Pure-AST simplification pipeline. Composes a
+// fixed sequence of passes; downstream translators consume the canonical
+// form and don't have to handle variants the passes have already rewritten
+// away. Each pass is `FunctionDefinition[1] -> FunctionDefinition[1]` and
+// must be a fixpoint: applying it twice gives the same result as once.
+//
+// Current pass list (in order):
+//
+//   1. inlineOpenVariables  — substitute every captured VariableExpression
+//                             in the body with the protocol expression
+//                             representing the captured value. Implementation
+//                             strategy: decompile the compiled FunctionDefinition
+//                             to its protocol form (substituting captures
+//                             along the way), wrap in a PureFile, and feed
+//                             through the standard `meta::pure::compiler::compile`
+//                             pipeline with the live runtime registry seeded
+//                             into the CompilerContext via
+//                             `buildLiveCompilerContext`. After this pass the
+//                             canonical FunctionDefinition has openVariables = []
+//                             and every VariableExpression refers to a local
+//                             parameter or a let-binding inside the body.
+//
+// Planned (not yet implemented):
+//
+//   2. constantFold         — evaluate sub-expressions whose operands are
+//                             all literals at translation time. `1 + 1` -> 2,
+//                             `'hello, ' + 'world'` -> 'hello, world', etc.
+//                             Reduces the AST surface the per-language
+//                             coders have to handle.
+//
+//   3. deadCodeElim         — drop let-bindings whose name is never
+//                             referenced after the above passes have
+//                             substituted them.
+// ============================================================================
+
+function meta::pure::translation::shared::makeCanonical(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
+{
+   $f->match([
+      lf: LambdaFunction<Any>[1] | $lf->inlineOpenVariables(),
+      // UserDefinedFunctions have no captures by construction — passthrough.
+      other: FunctionDefinition<Any>[1] | $other
+   ]);
+}
+
+// ----------------------------------------------------------------------------
+// Pass 1 — inlineOpenVariables.
+//
+// Strategy:
+//   1. Fast path: lambdas with no open variables are already canonical
+//      (no substitution needed). Return as-is.
+//   2. Decompile the compiled body into protocol form, substituting every
+//      VariableExpression whose name is in openVariableValues(lambda) with
+//      the protocol expression representing the captured value (see
+//      decompile.pure).
+//   3. Wrap the decompiled body in a synthetic UserDefinedFunction —
+//      grammar's equivalent of `function canonical::__canonical__(params): ?
+//      { body }` — and feed through `meta::pure::compiler::compile`.
+//   4. Pull the compiled UserDefinedFunction out of the result by name.
+//      The result has openVariables = [] by construction (every captured
+//      ref was replaced with an inline literal before recompile).
+//
+// Note: the canonical form is a UserDefinedFunction (not a LambdaFunction).
+// Downstream translators consume FunctionDefinition (the common super of
+// both), so this is structurally compatible.
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::inlineOpenVariables(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
+{
+   if ($lambda.openVariables->isEmpty(),
+      | $lambda,
+      | $lambda->inlineOpenVariablesViaRecompile()
+   );
+}
+
+function meta::pure::translation::shared::inlineOpenVariablesViaRecompile(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
+{
+   let captures = $lambda->meta::pure::functions::meta::openVariableValues();
+   let canonicalPkg  = '__canonical__';
+   let canonicalName = '__canonical__';
+   let protoUDF = toProtocolUserDefinedFunction(
+      $lambda.expressionSequence,
+      $lambda.parameters,
+      $captures,
+      $canonicalPkg,
+      $canonicalName
+   );
+   let pf = ^meta::pure::protocol::PureFile(
+      sourceId = '__canonical__.pure',
+      sections = [^meta::pure::protocol::Section(
+         parserName = 'Pure',
+         imports    = [],
+         elements   = [$protoUDF]
+      )]
+   );
+   let result = meta::pure::compiler::compile(
+      [$pf],
+      meta::pure::compiler::newCompilerContext(false),
+      false,
+      true
+   );
+   // Pull the canonicalized function out of the result by functionName.
+   $result.context->toOne().elementMap->values()
+      ->filter(e | $e->instanceOf(UserDefinedFunction))
+      ->cast(@UserDefinedFunction<Any>)
+      ->filter(udf | $udf.functionName == $canonicalName)
+      ->toOne('inlineOpenVariables: canonicalized function not found after recompile; errors=' + $result.errors->joinStrings(' | '));
+}
+
+// ============================================================================
+// Compile bridge — recompiling a protocol fragment resolves references to
+// the currently-loaded universe via the compile pipeline's existing
+// live-registry fallbacks:
+//   - `findFunctionsByNameAndArity` native unions the local function index
+//     with the live PDB function index (see
+//     findAllFunctionsByNameAndArityUnfiltered in compilerContext.pure).
+//   - `pathToElementInContext` falls through to `lenientPathToElement` (the
+//     live element resolver) when a path isn't in elementMap.
+//   - `findAllTypes` provides the universe-side of buildLinearizationCache.
+//
+// Net effect: we can call `meta::pure::compiler::compile([pf], newCompilerContext(false), ...)`
+// and references to already-loaded elements (plus, filter, CO_Person, ...)
+// resolve without manually seeding elementMap. The seeding only matters
+// when running in a context where the live registry isn't reachable (e.g.
+// detached compile in CI tooling), which isn't our case.
+// ============================================================================

@@ -28,31 +28,31 @@ native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::
 // Tests
 // ---------------------------------------------------------------------------
 
-function <<test.Test>> meta::pure::functions::lang::tests::tryEval::testTryEvalSuccess():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::tryEval::testTryEvalSuccess<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   let result = tryEval(| 42);
+   let result = $f->eval(|tryEval(|42));
    assert($result.failure->isEmpty(), 'expected no failure on successful eval');
    assertEquals(42, $result.value);
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::tryEval::testTryEvalSuccessWithCollection():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::tryEval::testTryEvalSuccessWithCollection<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   let result = tryEval(| [1, 2, 3]);
+   let result = $f->eval(|tryEval(|[1, 2, 3]));
    assert($result.failure->isEmpty(), 'expected no failure');
    assertEquals([1, 2, 3], $result.value);
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::tryEval::testTryEvalCapturesFailureMessage():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::tryEval::testTryEvalCapturesFailureMessage<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   let result = tryEval(| assert(false, 'boom'));
+   let result = $f->eval(|tryEval(|assert(false, 'boom')));
    assert($result.failure->isNotEmpty(), 'expected failure on throw');
    let err = $result.failure->toOne();
    assert($err.message->contains('boom'), 'expected message to contain "boom"; got: ' + $err.message);
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::tryEval::testTryEvalCapturesFailureStack():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::tryEval::testTryEvalCapturesFailureStack<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   let result = tryEval(| assert(false, 'boom'));
+   let result = $f->eval(|tryEval(|assert(false, 'boom')));
    let err = $result.failure->toOne();
    assert($err.stack->size() > 0, 'expected at least one Pure stack frame; got ' + $err.stack->size()->toString());
 }

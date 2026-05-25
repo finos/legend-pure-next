@@ -1,0 +1,132 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::serialization::tests::*;
+
+// =============================================================================
+// Union types
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::unionTwo(): Boolean[1]
+{
+   testType('string | number', tsUnion([tsString(), tsNumber()]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::unionThree(): Boolean[1]
+{
+   testType('string | number | boolean', tsUnion([tsString(), tsNumber(), tsBoolean()]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::unionWithRef(): Boolean[1]
+{
+   testType('Foo | null', tsUnion([tsRef('Foo'), tsRef('null')]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::unionAsPropertyType(): Boolean[1]
+{
+   testStmt('let value: string | number = 0;',
+            tsLet('value', tsUnion([tsString(), tsNumber()]), tsNumLit('0')));
+}
+
+// =============================================================================
+// Intersection types
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::intersectionTwo(): Boolean[1]
+{
+   testType('Foo & Bar', tsIntersection([tsRef('Foo'), tsRef('Bar')]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::intersectionThree(): Boolean[1]
+{
+   testType('A & B & C', tsIntersection([tsRef('A'), tsRef('B'), tsRef('C')]));
+}
+
+// =============================================================================
+// Tuple types
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::tupleEmpty(): Boolean[1]
+{
+   testType('[]', tsTuple([]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::tupleSimple(): Boolean[1]
+{
+   testType('[number, string]', tsTuple([tsNumber(), tsString()]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::tupleWithDestructureParam(): Boolean[1]
+{
+   testStmt(
+      '''
+      class C {
+        f([a, b]: [number, string]): void {}
+      }''',
+      tsClass('C', [
+         tsMethod(
+            'f',
+            [tsParam(tsArrayBinding([tsBindName('a'), tsBindName('b')]),
+                     tsTuple([tsNumber(), tsString()]))],
+            tsVoid(),
+            tsBlock([]))
+      ]));
+}
+
+// =============================================================================
+// Spread in array literals and call args
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::arraySpread(): Boolean[1]
+{
+   testExpr('[1, 2, ...rest]',
+            tsArrayLit([tsNumLit('1'), tsNumLit('2'), tsSpread(tsId('rest'))]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::callSpread(): Boolean[1]
+{
+   testExpr('fn(...args)',
+            tsCall(tsId('fn'), [tsSpread(tsId('args'))]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::callMixedSpread(): Boolean[1]
+{
+   testExpr('fn(1, ...rest, 3)',
+            tsCall(tsId('fn'), [tsNumLit('1'), tsSpread(tsId('rest')), tsNumLit('3')]));
+}
+
+// =============================================================================
+// Spread in object literals
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::objectSpread(): Boolean[1]
+{
+   testExpr('{ ...defaults, name: \'Ada\' }',
+            tsObject([
+               tsSpreadEntry(tsId('defaults')),
+               tsEntry('name', tsStrLit('Ada'))
+            ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::objectSpreadMerge(): Boolean[1]
+{
+   testExpr('{ ...base, ...override }',
+            tsObject([
+               tsSpreadEntry(tsId('base')),
+               tsSpreadEntry(tsId('override'))
+            ]));
+}

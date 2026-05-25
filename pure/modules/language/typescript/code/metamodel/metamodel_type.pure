@@ -1,0 +1,185 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/*
+   Strategy
+   --------
+   This metamodel describes TypeScript source syntax for the purpose of
+   emission. It is 100% TypeScript: every class name, slot name, and
+   structural relationship reflects the TypeScript language as exposed
+   by the official compiler (typescript.d.ts) and ts-morph. No Java-
+   reflection vocabulary leaks in (no `Field`, no `package`, no
+   `supertype`); no host-language conveniences shape the model.
+
+   Source of truth
+   ---------------
+   1. ts-morph class hierarchy (https://ts-morph.com) — primary, because
+      it is already shaped for code generation.
+   2. typescript.d.ts (`ts.SyntaxKind` + node interfaces) — canonical
+      fallback when ts-morph collapses or hides distinctions we need.
+
+   Scope (v1)
+   ----------
+   The v1 surface is deliberately small: enough TypeScript to express
+   the shape of a typical declaration file plus light implementations.
+   It is NOT a complete model of TypeScript. The intent is to grow
+   demand-driven, one node at a time, as real emitters need new forms.
+
+   Included in v1:
+     - Type nodes:   KeywordTypeNode, ArrayTypeNode, TypeReferenceNode,
+                     FunctionTypeNode, LiteralTypeNode, TypeParameterDeclaration
+     - Declarations: SourceFile, ImportDeclaration, ClassDeclaration,
+                     InterfaceDeclaration, TypeAliasDeclaration,
+                     FunctionDeclaration, MethodDeclaration,
+                     PropertyDeclaration, ConstructorDeclaration,
+                     ParameterDeclaration, VariableDeclaration
+     - Statements:   Block, ReturnStatement, IfStatement,
+                     VariableStatement, ExpressionStatement
+     - Expressions:  Identifier, PropertyAccessExpression, CallExpression,
+                     NewExpression, BinaryExpression, PrefixUnaryExpression,
+                     PostfixUnaryExpression, ArrowFunction,
+                     ObjectLiteralExpression, ArrayLiteralExpression,
+                     StringLiteral, NumericLiteral, BooleanLiteral,
+                     NullLiteral, ThisExpression, SuperExpression
+
+   Explicitly deferred (not v1):
+     - UnionTypeNode / IntersectionTypeNode
+     - MappedTypeNode / ConditionalTypeNode / IndexedAccessTypeNode
+     - TupleTypeNode / NamedTupleMember / RestType / OptionalType
+     - TypeOperatorNode (keyof / typeof / readonly)
+     - TypePredicateNode (`x is T`)
+     - Decorators (legacy and Stage-3)
+     - JSX/TSX nodes
+     - Destructuring patterns (ObjectBindingPattern, ArrayBindingPattern)
+     - Template literals and tagged templates
+     - Async/await, generators, yield expressions
+     - EnumDeclaration, ModuleDeclaration (namespaces), ambient declarations
+     - GetAccessor / SetAccessor
+     - JSDoc nodes
+     - Spread, satisfies, `as` cast, non-null `!`
+     - Parameter property modifiers (`constructor(public x: T)`)
+     - Re-exports, namespace imports
+
+   Modeling notes
+   --------------
+   - Node category hierarchy mirrors the TS compiler: TypeNode lives here;
+     Statement and Expression live in metamodel_code.pure; declarations
+     that are also statements live in metamodel_structure.pure.
+   - `Identifier` is intentionally a single class with a `text` slot, not
+     a string. This matches the TS compiler API and leaves room for
+     attaching source position / type info later.
+   - Modifiers are a flat enum (`ModifierFlag`) carried as a list, mirroring
+     the TS compiler. `Public`/`Private`/`Protected` are distinct flags
+     rather than an access-level enum, because TS permits combinations
+     like `public static readonly`.
+   - Bodies are modelled as `Block[0..1]` so `abstract` / overload
+     signatures (no body) are first-class. Arrow-function concise bodies
+     are a separate slot (`expressionBody`) because TS distinguishes them.
+*/
+
+import meta::external::language::typescript::metamodel::*;
+
+// =============================================================================
+// Node — root of the syntax tree. Marker base; mirrors ts.Node.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::Node
+{
+}
+
+// =============================================================================
+// TypeNode — anything that can appear in a type position.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::TypeNode extends Node
+{
+}
+
+// KeywordTypeNode covers the built-in keyword types: string, number, boolean,
+// void, undefined, null, unknown, any, never, object, bigint, symbol.
+// The `keyword` slot holds the keyword text exactly as it appears in source.
+Class meta::external::language::typescript::metamodel::KeywordTypeNode extends TypeNode
+{
+   <<equality.Key>> keyword : String[1];
+}
+
+Class meta::external::language::typescript::metamodel::ArrayTypeNode extends TypeNode
+{
+   <<equality.Key>> elementType : TypeNode[1];
+}
+
+// TypeReferenceNode — a named type reference, possibly generic:
+//   Foo, Foo<T>, ns.Foo<T, U>
+// `typeName` is the LOCAL name as it appears in code.
+//
+// `source` (optional) records where this name comes from so the imports
+// resolver can synthesize the right ImportDeclaration. An empty source
+// means the name is in scope already (built-in, TypeParameter, etc.).
+//
+// `originalName` (optional) is the EXPORTED name from `source`, when it
+// differs from `typeName`. Used to emit `import { originalName as typeName }`
+// for collision-resolving aliases. Empty means typeName == originalName.
+Class meta::external::language::typescript::metamodel::TypeReferenceNode extends TypeNode
+{
+   <<equality.Key>> typeName      : String[1];
+   <<equality.Key>> typeArguments : TypeNode[*];
+   source        : meta::external::language::typescript::metamodel::ImportSource[0..1];
+   originalName  : String[0..1];
+}
+
+// TypeParameterDeclaration — `<T>`, `<T extends Foo>`, `<T = Foo>`.
+// Appears on ClassDeclaration, InterfaceDeclaration, TypeAliasDeclaration,
+// FunctionDeclaration, MethodDeclaration, ArrowFunction, FunctionTypeNode.
+Class meta::external::language::typescript::metamodel::TypeParameterDeclaration extends Node
+{
+   <<equality.Key>> name        : String[1];
+   constraint  : TypeNode[0..1];
+   defaultType : TypeNode[0..1];
+}
+
+// FunctionTypeNode — `(p: T) => R`.
+// Reuses ParameterDeclaration (from metamodel_structure.pure) for the
+// parameter list, matching the TS compiler exactly: ts.FunctionTypeNode
+// has `parameters: NodeArray<ParameterDeclaration>`.
+Class meta::external::language::typescript::metamodel::FunctionTypeNode extends TypeNode
+{
+   <<equality.Key>> typeParameters : TypeParameterDeclaration[*];
+   <<equality.Key>> parameters     : meta::external::language::typescript::metamodel::ParameterDeclaration[*];
+   <<equality.Key>> returnType     : TypeNode[1];
+}
+
+// LiteralTypeNode — `'foo'`, `42`, `true`, `null`. Wraps a literal expression
+// in a type position. Matches ts.LiteralTypeNode { literal: Expression }.
+Class meta::external::language::typescript::metamodel::LiteralTypeNode extends TypeNode
+{
+   <<equality.Key>> literal : meta::external::language::typescript::metamodel::Expression[1];
+}
+
+// UnionTypeNode — `A | B | C`. Matches ts.UnionTypeNode { types }.
+Class meta::external::language::typescript::metamodel::UnionTypeNode extends TypeNode
+{
+   <<equality.Key>> types : TypeNode[1..*];
+}
+
+// IntersectionTypeNode — `A & B & C`.
+Class meta::external::language::typescript::metamodel::IntersectionTypeNode extends TypeNode
+{
+   <<equality.Key>> types : TypeNode[1..*];
+}
+
+// TupleTypeNode — `[T, U, V]`. Named tuple members and rest types deferred.
+Class meta::external::language::typescript::metamodel::TupleTypeNode extends TypeNode
+{
+   <<equality.Key>> elements : TypeNode[*];
+}

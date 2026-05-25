@@ -1,0 +1,102 @@
+# pure/modules/translation/typescript/Justfile — builds the Pure-to-TypeScript translator
+# into a single PDB.
+#
+# Direct invocation: just <recipe>   (from pure/modules/translation/typescript/)
+#
+# Inputs:  shared/core.pdb, shared/core-tests.pdb, shared/typescript.pdb.
+# Output:  shared/typescript-translation.pdb
+#
+# The translator consumes the language/typescript metamodel + factories +
+# serializer (shared/typescript.pdb) and the Pure metamodel (shared/core.pdb),
+# and emits a TypeScript AST that serializes back to source. Round-trip
+# execution uses meta::external::language::typescript::compileAndExecute,
+# a Truffle-only native — so test recipes run via pure-truffle, not the
+# bootstrap backend.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+trn_root       := source_directory()
+repo_root      := trn_root / ".." / ".." / ".." / ".."
+shared_out     := repo_root / "shared"
+pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+
+verbose := ""
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+
+# Default: build typescript-translation.pdb.
+default: build
+
+# Compile pure/modules/translation/typescript -> shared/typescript-translation.pdb.
+# Requires shared/core.pdb, core-tests.pdb, typescript.pdb.
+build:
+    @{{banner}} '[typescript-translation]' 'compile pure/modules/translation/typescript -> shared/typescript-translation.pdb'
+    test -f {{shared_out}}/core.pdb       || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/typescript.pdb || (echo "ERROR: missing {{shared_out}}/typescript.pdb (run \`just language::typescript::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
+        --base-pdb {{shared_out}}/typescript.pdb \
+        --source {{trn_root}} \
+        --output-dir {{shared_out}} {{err_filter}}
+
+# Compile with tests split into shared/typescript-translation-tests.pdb.
+build-tests:
+    @{{banner}} '[typescript-translation]' 'compile pure/modules/translation/typescript -> shared/typescript-translation.pdb + typescript-translation-tests.pdb'
+    test -f {{shared_out}}/core.pdb       || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/typescript.pdb || (echo "ERROR: missing {{shared_out}}/typescript.pdb (run \`just language::typescript::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
+        --base-pdb {{shared_out}}/typescript.pdb \
+        --source {{trn_root}} \
+        --output-dir {{shared_out}} \
+        --tests split {{err_filter}}
+
+# Default umbrella: translator's <<test.Test>> suite (including PCT wrappers)
+# run via Truffle so the typescript compileAndExecute native is registered.
+test-all: test-translation
+
+test-translation: build-tests _check-runtime-pdbs
+    @{{banner}} '[typescript-translation]' 'runTests meta::external::language::typescript::translation (Truffle)'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/typescript-translation.pdb \
+        --pdb {{shared_out}}/typescript-translation-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::external::language::typescript::translation" {{err_filter}}
+
+# Run every PCT test under `meta::pure::functions` through the translator.
+# Surfaces what's left to translate — tests for natives without a coder fail
+# loudly with "no translator branch for function: <name>".
+test-pure-runtime-PCTs: build-tests _check-runtime-pdbs
+    @{{banner}} '[typescript-translation]' 'runPCTTests meta::pure::functions (Truffle, translator adapter)'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/typescript-translation.pdb \
+        --pdb {{shared_out}}/typescript-translation-tests.pdb \
+        --function "meta::external::language::typescript::translation::runPCTTestsViaTranslator_String_1__String_1_" \
+        --args "meta::pure::functions" {{err_filter}}
+
+# Internal: fail loudly if PDBs / pure-truffle aren't staged.
+_check-runtime-pdbs:
+    #!/usr/bin/env bash
+    if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
+        echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2
+        exit 1
+    fi
+    if [[ ! -x "{{pure_truffle}}" ]]; then
+        echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" >&2
+        exit 1
+    fi
+
+clean:
+    @{{banner}} '[typescript-translation clean]' 'remove shared/typescript-translation.pdb + typescript-translation-tests.pdb'
+    rm -f {{shared_out}}/typescript-translation.pdb {{shared_out}}/typescript-translation-tests.pdb

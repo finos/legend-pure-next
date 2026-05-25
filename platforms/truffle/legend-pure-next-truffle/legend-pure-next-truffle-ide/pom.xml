@@ -41,7 +41,7 @@
         </dependency>
         <dependency>
             <groupId>org.finos.legend.pure</groupId>
-            <artifactId>legend-pure-next-truffle-codegen</artifactId>
+            <artifactId>legend-pure-next-truffle-pdb-generation</artifactId>
             <version>${project.version}</version>
         </dependency>
 

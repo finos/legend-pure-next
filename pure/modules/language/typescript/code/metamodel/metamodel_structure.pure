@@ -1,0 +1,344 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Declarations and their members. See metamodel_type.pure for the strategy.
+
+import meta::external::language::typescript::metamodel::*;
+
+// =============================================================================
+// Statement / Declaration / Expression bases
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::Statement extends Node
+{
+}
+
+// Declaration is a Statement: in TypeScript, top-level class/interface/function
+// declarations sit in the same statement list as `if`, `return`, etc.
+Class meta::external::language::typescript::metamodel::Declaration extends Statement
+{
+}
+
+// =============================================================================
+// Modifiers — flat enum, carried as a list to permit combinations like
+// `public static readonly`. Mirrors ts.SyntaxKind keyword modifiers.
+// =============================================================================
+
+Enum meta::external::language::typescript::metamodel::ModifierFlag
+{
+   Public,
+   Private,
+   Protected,
+   Static,
+   Readonly,
+   Abstract,
+   Async,
+   Export,
+   Default,
+   Declare
+}
+
+// =============================================================================
+// SourceFile — one .ts file. Top-level node; parent of all statements.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::SourceFile extends Node
+{
+   <<equality.Key>> filePath   : String[1];          // e.g. 'src/foo/bar.ts'
+   statements : Statement[*];                        // imports + declarations + statements
+   leadingComment : String[0..1];                    // optional file banner
+}
+
+// =============================================================================
+// ImportDeclaration — ES module imports.
+//
+//   import 'side-effect-only.js';
+//   import Default from './x.js';
+//   import { a, b as c } from './y.js';
+//   import * as ns from './z.js';
+//
+// One declaration can mix a default binding with named bindings:
+//   import Default, { a } from './w.js';
+// but cannot mix namespace and named.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::ImportDeclaration extends Statement
+[
+   $this.namespaceImport->isEmpty() || $this.namedImports->isEmpty()
+]
+{
+   <<equality.Key>> moduleSpecifier : String[1];     // exact text between quotes
+   defaultImport   : String[0..1];                   // local name for the default import
+   namedImports    : ImportSpecifier[*];
+   namespaceImport : String[0..1];                   // `* as <name>`
+   isTypeOnly      : Boolean[0..1];                  // `import type ...`
+}
+
+Class meta::external::language::typescript::metamodel::ImportSpecifier extends Node
+{
+   <<equality.Key>> name  : String[1];               // name as exported
+   alias : String[0..1];                             // local alias (`name as alias`)
+   isTypeOnly : Boolean[0..1];
+}
+
+// =============================================================================
+// ClassDeclaration
+//   class Name<T> extends Base implements I1, I2 { ... }
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::ClassMember extends Node
+{
+   modifiers : ModifierFlag[*];
+}
+
+Class meta::external::language::typescript::metamodel::ClassDeclaration extends Declaration
+{
+   <<equality.Key>> name           : String[1];
+   modifiers      : ModifierFlag[*];
+   typeParameters : TypeParameterDeclaration[*];
+   extendsClause  : TypeReferenceNode[0..1];         // single extends in TS classes
+   implementsClause : TypeReferenceNode[*];
+   members        : ClassMember[*];
+}
+
+Class meta::external::language::typescript::metamodel::PropertyDeclaration extends ClassMember
+{
+   <<equality.Key>> name : String[1];
+   type        : TypeNode[0..1];
+   optional    : Boolean[0..1];                      // `name?: T`
+   initializer : meta::external::language::typescript::metamodel::Expression[0..1];
+}
+
+Class meta::external::language::typescript::metamodel::MethodDeclaration extends ClassMember
+{
+   <<equality.Key>> name : String[1];
+   typeParameters : TypeParameterDeclaration[*];
+   parameters     : ParameterDeclaration[*];
+   returnType     : TypeNode[0..1];
+   body           : Block[0..1];                     // empty body permitted for `abstract`/overloads
+}
+
+Class meta::external::language::typescript::metamodel::ConstructorDeclaration extends ClassMember
+{
+   parameters : ParameterDeclaration[*];
+   body       : Block[0..1];
+}
+
+// =============================================================================
+// InterfaceDeclaration
+//   interface Name<T> extends I1, I2 { ... }
+//
+// Interface bodies hold TypeElements (signature-only members): no
+// implementation bodies, no initializers. Modeled as a distinct base
+// from ClassMember to enforce this at the type level.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::TypeElement extends Node
+{
+}
+
+Class meta::external::language::typescript::metamodel::InterfaceDeclaration extends Declaration
+{
+   <<equality.Key>> name : String[1];
+   modifiers       : ModifierFlag[*];
+   typeParameters  : TypeParameterDeclaration[*];
+   extendsClause   : TypeReferenceNode[*];           // interfaces may extend many
+   members         : TypeElement[*];
+}
+
+Class meta::external::language::typescript::metamodel::PropertySignature extends TypeElement
+{
+   <<equality.Key>> name : String[1];
+   readonly : Boolean[0..1];
+   optional : Boolean[0..1];
+   type     : TypeNode[0..1];
+}
+
+Class meta::external::language::typescript::metamodel::MethodSignature extends TypeElement
+{
+   <<equality.Key>> name : String[1];
+   optional       : Boolean[0..1];
+   typeParameters : TypeParameterDeclaration[*];
+   parameters     : ParameterDeclaration[*];
+   returnType     : TypeNode[0..1];
+}
+
+// =============================================================================
+// EnumDeclaration — `enum Name { A, B, C }` or `const enum Name { ... }`.
+// `isConst` produces the `const enum` form (members inlined by the
+// compiler). Each member may carry an initializer expression for explicit
+// numeric or string values.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::EnumDeclaration extends Declaration
+{
+   <<equality.Key>> name : String[1];
+   modifiers : ModifierFlag[*];
+   isConst   : Boolean[0..1];
+   members   : EnumMember[*];
+}
+
+Class meta::external::language::typescript::metamodel::EnumMember extends Node
+{
+   <<equality.Key>> name : String[1];
+   initializer : meta::external::language::typescript::metamodel::Expression[0..1];
+}
+
+// =============================================================================
+// GetAccessor / SetAccessor — class members of the form
+//   get x(): T { ... }
+//   set x(v: T) { ... }
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::GetAccessor extends ClassMember
+{
+   <<equality.Key>> name : String[1];
+   returnType : TypeNode[0..1];
+   body       : Block[0..1];
+}
+
+Class meta::external::language::typescript::metamodel::SetAccessor extends ClassMember
+{
+   <<equality.Key>> name : String[1];
+   parameter  : ParameterDeclaration[1];
+   body       : Block[0..1];
+}
+
+// =============================================================================
+// TypeAliasDeclaration — `type Name<T> = ...`
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::TypeAliasDeclaration extends Declaration
+{
+   <<equality.Key>> name : String[1];
+   modifiers      : ModifierFlag[*];
+   typeParameters : TypeParameterDeclaration[*];
+   type           : TypeNode[1];
+}
+
+// =============================================================================
+// FunctionDeclaration — top-level functions.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::FunctionDeclaration extends Declaration
+{
+   <<equality.Key>> name : String[1];
+   modifiers      : ModifierFlag[*];
+   typeParameters : TypeParameterDeclaration[*];
+   parameters     : ParameterDeclaration[*];
+   returnType     : TypeNode[0..1];
+   body           : Block[0..1];                     // empty for overload signatures
+}
+
+// =============================================================================
+// ParameterDeclaration — used by methods, functions, constructors, arrows,
+// and FunctionTypeNode (mirrors the TS compiler).
+//
+// `name` is a BindingName so destructuring patterns are first-class:
+//   - leaf Identifier:           `function f(x: T)`
+//   - ObjectBindingPattern:      `function f({a, b}: T)`
+//   - ArrayBindingPattern:       `function f([a, b]: T)`
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::ParameterDeclaration extends Node
+{
+   <<equality.Key>> name : BindingName[1];
+   type        : TypeNode[0..1];
+   optional    : Boolean[0..1];                      // `name?: T`
+   initializer : meta::external::language::typescript::metamodel::Expression[0..1];
+}
+
+// =============================================================================
+// ImportSource — where a referenced symbol comes from, used by the imports
+// resolver to synthesize ImportDeclarations at the top of a SourceFile.
+//
+//   LocalSource    — another SourceFile in the same project tree.
+//                    Module specifier is computed as a relative path.
+//   ExternalSource — an npm package or bare module string. The specifier
+//                    is the raw `from` text, e.g. 'zod' or '@scope/foo'.
+//
+// Attached to TypeReferenceNode via its optional `source` slot. A type ref
+// without a source is assumed to be in-scope (already imported, or a
+// built-in / TypeParameter).
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::ImportSource extends Node
+{
+}
+
+Class meta::external::language::typescript::metamodel::LocalSource extends ImportSource
+{
+   <<equality.Key>> target : SourceFile[1];
+}
+
+Class meta::external::language::typescript::metamodel::ExternalSource extends ImportSource
+{
+   <<equality.Key>> moduleSpecifier : String[1];
+}
+
+// =============================================================================
+// BindingName / BindingPattern — the LHS of `let x = …` and parameter names.
+//
+// In the TS compiler:
+//     BindingName    = Identifier | BindingPattern
+//     BindingPattern = ObjectBindingPattern | ArrayBindingPattern
+//
+// We mirror that exactly. `Identifier` (defined in metamodel_code.pure) also
+// extends BindingName so the same leaf node plays both expression and
+// binding-name roles, matching ts.Identifier.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::BindingName extends Node
+{
+}
+
+Class meta::external::language::typescript::metamodel::BindingPattern extends BindingName
+{
+}
+
+Class meta::external::language::typescript::metamodel::ObjectBindingPattern extends BindingPattern
+{
+   elements : BindingElement[*];
+}
+
+Class meta::external::language::typescript::metamodel::ArrayBindingPattern extends BindingPattern
+{
+   elements : BindingElement[*];
+}
+
+// BindingElement — one position inside a BindingPattern.
+//
+//   const { a, b: alias, c = 1, ...rest } = obj
+//          ^  ^^^^^^^^^  ^^^^^  ^^^^^^^
+//          |  rename      default rest
+//          simple
+//
+// `propertyName` carries the source-side property name when it differs
+// from the target binding name (the rename case `b: alias`). When absent,
+// the binding name is also the source property.
+//
+// `name` is itself a BindingName, allowing nested destructuring:
+//   const { user: { name } } = obj
+//
+// v1 limitations:
+//   - propertyName is String, not PropertyName: computed-key destructure
+//     `const { [k]: v } = obj` is deferred.
+//   - Array holes (`const [, a] = arr`) are not modeled.
+Class meta::external::language::typescript::metamodel::BindingElement extends Node
+{
+   propertyName : String[0..1];
+   <<equality.Key>> name : BindingName[1];
+   initializer  : meta::external::language::typescript::metamodel::Expression[0..1];
+   isRest       : Boolean[0..1];
+}

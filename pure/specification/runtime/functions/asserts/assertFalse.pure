@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::functions::asserts::*;
+import meta::pure::test::pct::*;
 
 function meta::pure::functions::asserts::assertFalse(condition:Boolean[1]):Boolean[1]
 {
@@ -37,30 +38,30 @@ function meta::pure::functions::asserts::assertFalse(condition:Boolean[1], messa
 
 
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessAssertFalse():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertFalse<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertFalse(false);
-    assertFalse(2 == 3);
-    assertFalse((1 + 2) == 4);
+    assert($f->eval(|assertFalse(false)));
+    assert($f->eval(|assertFalse(2 == 3)));
+    assert($f->eval(|assertFalse((1 + 2) == 4)));
 }
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessAssertFalseWithMessage():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertFalseWithMessage<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertFalse(false, 'Test message');
-    assertFalse(2 == 3, 'Test message');
-    assertFalse((1 + 2) == 4, 'Test message');
+    assert($f->eval(|assertFalse(false, 'Test message')));
+    assert($f->eval(|assertFalse(2 == 3, 'Test message')));
+    assert($f->eval(|assertFalse((1 + 2) == 4, 'Test message')));
 }
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessAssertFalseWithFormat():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertFalseWithFormat<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertFalse(false, 'Test message: %s', [true]);
-    assertFalse(2 == 3, 'Test message: %s', [true]);
-    assertFalse((1 + 2) == 4, 'Test message: %s', [true]);
+    assert($f->eval(|assertFalse(false, 'Test message: %s', [true])));
+    assert($f->eval(|assertFalse(2 == 3, 'Test message: %s', [true])));
+    assert($f->eval(|assertFalse((1 + 2) == 4, 'Test message: %s', [true])));
 }
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessAssertFalseWithLambda():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertFalseWithLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertFalse(false, | 'Test message');
-    assertFalse(2 == 3, | format('Test message %s', [true]));
-    assertFalse((1 + 2) == 4, | format('Test message: %s', [true]));
+    assert($f->eval(|assertFalse(false, | 'Test message')));
+    assert($f->eval(|assertFalse(2 == 3, | format('Test message %s', [true]))));
+    assert($f->eval(|assertFalse((1 + 2) == 4, | format('Test message: %s', [true]))));
 }

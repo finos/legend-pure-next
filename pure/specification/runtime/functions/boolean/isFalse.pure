@@ -14,23 +14,24 @@
 
 import meta::pure::functions::asserts::*;
 import meta::pure::functions::boolean::*;
+import meta::pure::test::pct::*;
 
 function meta::pure::functions::boolean::isFalse(b:Boolean[0..1]): Boolean[1]
 {
     !$b->isEmpty() && !$b->toOne();
 }
 
-function <<test.Test>> meta::pure::functions::boolean::tests::isFalse::testIsFalseOnFalse():Boolean[1]
+function <<PCT.test>> meta::pure::functions::boolean::tests::isFalse::testIsFalseOnFalse<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert(isFalse(false));
+    assert($f->eval(|isFalse(false)));
 }
 
-function <<test.Test>> meta::pure::functions::boolean::tests::isFalse::testIsFalseOnTrue():Boolean[1]
+function <<PCT.test>> meta::pure::functions::boolean::tests::isFalse::testIsFalseOnTrue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertFalse(isFalse(true));
+    assertFalse($f->eval(|isFalse(true)));
 }
 
-function <<test.Test>> meta::pure::functions::boolean::tests::isFalse::testIsFalseOnEmpty():Boolean[1]
+function <<PCT.test>> meta::pure::functions::boolean::tests::isFalse::testIsFalseOnEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertFalse(isFalse([]));
+    assertFalse($f->eval(|isFalse([])));
 }

@@ -1,0 +1,90 @@
+# pure/modules/language/typescript/Justfile — builds the TypeScript-generation module
+# into a single PDB.
+#
+# Direct invocation: just <recipe>     (from pure/modules/language/typescript/)
+#
+# Inputs:  shared/core.pdb (produced by `bootstrap::build`).
+# Output:  shared/typescript.pdb
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+ts_root        := source_directory()
+repo_root      := ts_root / ".." / ".." / ".." / ".."
+shared_out     := repo_root / "shared"
+pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+
+verbose := ""
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+
+# Default: build typescript.pdb.
+default: build
+
+# Compile pure/modules/language/typescript into shared/typescript.pdb.
+# Requires shared/core.pdb (run `just bootstrap::build` from repo root first).
+build:
+    @{{banner}} '[language-typescript]' 'compile pure/modules/language/typescript -> shared/typescript.pdb'
+    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --source {{ts_root}} \
+        --output-dir {{shared_out}} {{err_filter}}
+
+# Compile via the Pure compiler running on Truffle. Picks up changes to
+# pure/specification/compiler/compiler-pure automatically.
+build-truffle:
+    @{{banner}} '[language-typescript]' 'compile pure/modules/language/typescript -> shared/typescript.pdb (Truffle)'
+    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/compiler.pdb || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
+    {{pure_truffle}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source {{ts_root}} \
+        --output-dir {{shared_out}} {{err_filter}}
+
+# Compile with tests split into shared/typescript-tests.pdb (needed by `test-all`).
+build-tests:
+    @{{banner}} '[language-typescript]' 'compile pure/modules/language/typescript -> shared/typescript.pdb + typescript-tests.pdb'
+    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --source {{ts_root}} \
+        --output-dir {{shared_out}} \
+        --tests split {{err_filter}}
+
+# Run all Pure tests under meta::external::language::typescript via pure-truffle.
+# The `compileAndExecute` native is implemented in the Truffle TypeScript
+# extension (legend-pure-next-truffle-extension-typescript's
+# TypeScriptCompileNatives) — the bootstrap CLI does NOT register it, so
+# testCompileAndExecute* tests fail there with "No native implementation
+# for: compileAndExecute".
+test-all: build-tests _check-runtime-pdbs
+    @{{banner}} '[language-typescript]' 'runTests meta::external::language::typescript (Truffle)'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/typescript-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::external::language::typescript" {{err_filter}}
+
+# Internal: fail loudly if PDBs / pure-truffle aren't staged.
+_check-runtime-pdbs:
+    #!/usr/bin/env bash
+    if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
+        echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2
+        exit 1
+    fi
+    if [[ ! -x "{{pure_truffle}}" ]]; then
+        echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" >&2
+        exit 1
+    fi
+
+# Remove shared/typescript.pdb (and the tests PDB).
+clean:
+    @{{banner}} '[language-typescript clean]' 'remove shared/typescript.pdb + shared/typescript-tests.pdb'
+    rm -f {{shared_out}}/typescript.pdb {{shared_out}}/typescript-tests.pdb

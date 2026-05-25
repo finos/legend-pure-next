@@ -1,0 +1,60 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Factories for template literals (plain + interpolated) and TS-only type
+// expressions: `as`, `satisfies`, non-null `!`.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+
+// =============================================================================
+// Template literals.
+// =============================================================================
+
+// `plain text` — no interpolation.
+function meta::external::language::typescript::factories::tsTemplate(text: String[1]): NoSubstitutionTemplateLiteral[1]
+{
+   ^NoSubstitutionTemplateLiteral(text=$text);
+}
+
+// `head${spans[0].expr}lit0${spans[1].expr}lit1…` — interpolated template.
+function meta::external::language::typescript::factories::tsTemplateExpr(head: String[1], spans: TemplateSpan[1..*]): TemplateExpression[1]
+{
+   ^TemplateExpression(head=$head, spans=$spans);
+}
+
+// One `${expr}<literal>` span.
+function meta::external::language::typescript::factories::tsTemplateSpan(expression: Expression[1], literal: String[1]): TemplateSpan[1]
+{
+   ^TemplateSpan(expression=$expression, literal=$literal);
+}
+
+// =============================================================================
+// Type cast / assertion.
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsAs(expression: Expression[1], type: TypeNode[1]): AsExpression[1]
+{
+   ^AsExpression(expression=$expression, type=$type);
+}
+
+function meta::external::language::typescript::factories::tsSatisfies(expression: Expression[1], type: TypeNode[1]): SatisfiesExpression[1]
+{
+   ^SatisfiesExpression(expression=$expression, type=$type);
+}
+
+function meta::external::language::typescript::factories::tsNonNull(expression: Expression[1]): NonNullExpression[1]
+{
+   ^NonNullExpression(expression=$expression);
+}

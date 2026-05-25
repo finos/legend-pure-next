@@ -30,72 +30,72 @@ function meta::pure::functions::meta::lenientPathToElement(path:String[1]):Packa
 native function meta::pure::functions::meta::lenientPathToElement(path:String[1], separator:String[1]):PackageableElement[0..1];
 
 
-function <<test.Test>> meta::pure::functions::meta::tests::pathToElement::testPathToElement():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::pathToElement::testPathToElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(CC_Person, pathToElement('meta::pure::functions::meta::tests::model::CC_Person'));
-    assertIs(CC_Person, pathToElement('meta.pure.functions.meta.tests.model.CC_Person', '.'));
-    assertIs(CC_Person.package->toOne(), pathToElement('meta::pure::functions::meta::tests::model'));
-    assertIs(CC_Person.package->toOne(), pathToElement('meta_pure_functions_meta_tests_model', '_'));
+    assertIs(CC_Person, $f->eval(|pathToElement('meta::pure::functions::meta::tests::model::CC_Person')));
+    assertIs(CC_Person, $f->eval(|pathToElement('meta.pure.functions.meta.tests.model.CC_Person', '.')));
+    assertIs(CC_Person.package->toOne(), $f->eval(|pathToElement('meta::pure::functions::meta::tests::model')));
+    assertIs(CC_Person.package->toOne(), $f->eval(|pathToElement('meta_pure_functions_meta_tests_model', '_')));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::pathToElement::testLenientPathToElement():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::pathToElement::testLenientPathToElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(CC_Person, lenientPathToElement('meta::pure::functions::meta::tests::model::CC_Person')->toOne());
-    assertIs(CC_Person, lenientPathToElement('meta.pure.functions.meta.tests.model.CC_Person', '.')->toOne());
-    assertEmpty(lenientPathToElement('meta::pure::functions::meta::tests::model::CCC_Person'));
-    assertEmpty(lenientPathToElement('meta.pure.functions.meta.tests.model.CCC_Person', '.'));
-    assertEmpty(lenientPathToElement('meta::pure::functions::meta::tests::models::CC_Person'));
-    assertEmpty(lenientPathToElement('meta.pure.functions.meta.tests.models.CC_Person', '.'));
+    assertIs(CC_Person, $f->eval(|lenientPathToElement('meta::pure::functions::meta::tests::model::CC_Person')->toOne()));
+    assertIs(CC_Person, $f->eval(|lenientPathToElement('meta.pure.functions.meta.tests.model.CC_Person', '.')->toOne()));
+    assertEmpty($f->eval(|lenientPathToElement('meta::pure::functions::meta::tests::model::CCC_Person')));
+    assertEmpty($f->eval(|lenientPathToElement('meta.pure.functions.meta.tests.model.CCC_Person', '.')));
+    assertEmpty($f->eval(|lenientPathToElement('meta::pure::functions::meta::tests::models::CC_Person')));
+    assertEmpty($f->eval(|lenientPathToElement('meta.pure.functions.meta.tests.models.CC_Person', '.')));
 
-    assertIs(CC_Person.package->toOne(), lenientPathToElement('meta::pure::functions::meta::tests::model')->toOne());
-    assertIs(CC_Person.package->toOne(), lenientPathToElement('meta_pure_functions_meta_tests_model', '_')->toOne());
-    assertEmpty(lenientPathToElement('meta::pure::functions::metal::tests::model'));
-    assertEmpty(lenientPathToElement('meta_pure_functions_metal_tests_model', '_'));
+    assertIs(CC_Person.package->toOne(), $f->eval(|lenientPathToElement('meta::pure::functions::meta::tests::model')->toOne()));
+    assertIs(CC_Person.package->toOne(), $f->eval(|lenientPathToElement('meta_pure_functions_meta_tests_model', '_')->toOne()));
+    assertEmpty($f->eval(|lenientPathToElement('meta::pure::functions::metal::tests::model')));
+    assertEmpty($f->eval(|lenientPathToElement('meta_pure_functions_metal_tests_model', '_')));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::pathToElement::testRootPathToElement():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::pathToElement::testRootPathToElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(::, pathToElement('::'));
-    assertIs(::, pathToElement('.', '.'));
-    assertIs(::, pathToElement(''));
-    assertIs(::, pathToElement('', '$'));
+    assertIs(::, $f->eval(|pathToElement('::')));
+    assertIs(::, $f->eval(|pathToElement('.', '.')));
+    assertIs(::, $f->eval(|pathToElement('')));
+    assertIs(::, $f->eval(|pathToElement('', '$')));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::pathToElement::testNativeFunctionPathToElement():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::pathToElement::testNativeFunctionPathToElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(meta::pure::functions::string::toString_Any_1__String_1_, pathToElement('meta::pure::functions::string::toString_Any_1__String_1_'));
+    assertIs(meta::pure::functions::string::toString_Any_1__String_1_, $f->eval(|pathToElement('meta::pure::functions::string::toString_Any_1__String_1_')));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::pathToElement::testConcreteFunctionDefinitionPathToElement():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::pathToElement::testConcreteFunctionDefinitionPathToElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_, pathToElement('meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_'));
+    assertIs(meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_, $f->eval(|pathToElement('meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_')));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::pathToElement::testTopLevelPathToElement():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::pathToElement::testTopLevelPathToElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(Boolean, pathToElement('meta::pure::metamodel::type::primitives::Boolean'));
-    assertIs(Byte, pathToElement('meta::pure::metamodel::type::primitives::Byte'));
-    assertIs(Date, pathToElement('meta::pure::metamodel::type::primitives::Date'));
-    assertIs(DateTime, pathToElement('meta::pure::metamodel::type::primitives::DateTime'));
-    assertIs(Decimal, pathToElement('meta::pure::metamodel::type::primitives::Decimal'));
-    assertIs(Integer, pathToElement('meta::pure::metamodel::type::primitives::Integer'));
-    assertIs(Float, pathToElement('meta::pure::metamodel::type::primitives::Float'));
-    assertIs(LatestDate, pathToElement('meta::pure::metamodel::type::primitives::LatestDate'));
-    assertIs(Number, pathToElement('meta::pure::metamodel::type::primitives::Number'));
-    assertIs(Package, pathToElement('meta::pure::metamodel::Package'));
-    assertIs(StrictDate, pathToElement('meta::pure::metamodel::type::primitives::StrictDate'));
-    assertIs(StrictTime, pathToElement('meta::pure::metamodel::type::primitives::StrictTime'));
-    assertIs(String, pathToElement('meta::pure::metamodel::type::primitives::String'));
-}
-
-// To be removed
-function <<test.Test, meta::pure::profiles::doc.deprecated>> meta::pure::functions::meta::tests::testIsNativeFunctions():Boolean[1]
-{
-    true;
+    assertIs(Boolean, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::Boolean')));
+    assertIs(Byte, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::Byte')));
+    assertIs(Date, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::Date')));
+    assertIs(DateTime, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::DateTime')));
+    assertIs(Decimal, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::Decimal')));
+    assertIs(Integer, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::Integer')));
+    assertIs(Float, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::Float')));
+    assertIs(LatestDate, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::LatestDate')));
+    assertIs(Number, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::Number')));
+    assertIs(Package, $f->eval(|pathToElement('meta::pure::metamodel::Package')));
+    assertIs(StrictDate, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::StrictDate')));
+    assertIs(StrictTime, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::StrictTime')));
+    assertIs(String, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::String')));
 }
 
 // To be removed
-function <<test.Test, meta::pure::profiles::doc.deprecated>> meta::pure::functions::meta::tests::testIsConcreteFunctionDefinitions():Boolean[1]
+function <<PCT.test, meta::pure::profiles::doc.deprecated>> meta::pure::functions::meta::tests::testIsNativeFunctions<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    true;
+    assert($f->eval(|true));
+}
+
+// To be removed
+function <<PCT.test, meta::pure::profiles::doc.deprecated>> meta::pure::functions::meta::tests::testIsConcreteFunctionDefinitions<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|true));
 }

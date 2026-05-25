@@ -1,0 +1,57 @@
+# pure/modules/translation/shared/Justfile — Pure-AST -> Pure-AST transformations
+# shared across target-language translators.
+#
+# Direct invocation: just <recipe>   (from pure/modules/translation/shared/)
+#
+# Inputs:  shared/core.pdb
+# Output:  shared/translation-shared.pdb
+#
+# Target-language-agnostic. Provides:
+#   - makeCanonical: a Pure-AST simplification pipeline (open-variable inlining,
+#     constant folding, ...) shared by Java + TypeScript translators.
+#   - collectDependencies: AST-walk that returns the transitive PackageableElement
+#     callees of a function. Today walks the AST at runtime; future optimization
+#     is to read the compiler's reverseIndex out of the PDB — needs a
+#     post-archive protocol the bootstrap doesn't expose yet.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+shared_root    := source_directory()
+repo_root      := shared_root / ".." / ".." / ".." / ".."
+shared_out     := repo_root / "shared"
+pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+
+verbose := ""
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+
+default: build
+
+build:
+    @{{banner}} '[translation-shared]' 'compile pure/modules/translation/shared -> shared/translation-shared.pdb'
+    test -f {{shared_out}}/core.pdb     || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/compiler.pdb || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source {{shared_root}} \
+        --output-dir {{shared_out}} {{err_filter}}
+
+build-tests:
+    @{{banner}} '[translation-shared]' 'compile pure/modules/translation/shared -> translation-shared.pdb + translation-shared-tests.pdb'
+    test -f {{shared_out}}/core.pdb       || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/core-tests.pdb || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/compiler.pdb   || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source {{shared_root}} \
+        --output-dir {{shared_out}} \
+        --tests split {{err_filter}}
+
+clean:
+    @{{banner}} '[translation-shared clean]' 'remove shared/translation-shared.pdb + translation-shared-tests.pdb'
+    rm -f {{shared_out}}/translation-shared.pdb {{shared_out}}/translation-shared-tests.pdb

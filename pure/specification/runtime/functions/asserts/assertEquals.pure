@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::functions::asserts::*;
+import meta::pure::test::pct::*;
 
 
 function meta::pure::functions::asserts::assertEquals(expected:Any[*], actual:Any[*]):Boolean[1]
@@ -39,16 +40,16 @@ function meta::pure::functions::asserts::assertEquals(expected:Any[*], actual:An
 
 
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessAssertEquals():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertEquals<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(1, 1);
-    assertEquals('aaa', 'aaa');
+    assert($f->eval(|assertEquals(1, 1)));
+    assert($f->eval(|assertEquals('aaa', 'aaa')));
 }
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessAssertEqualsWithCollections():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertEqualsWithCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals([1, 2], [1, 2]);
-    assertEquals(['aaa'], ['aaa']);
-    assertEquals(['aaa', 'bb'], ['aaa', 'bb']);
-    assertEquals(['aaa', 2], ['aaa', 2]);
+    assert($f->eval(|assertEquals([1, 2], [1, 2])));
+    assert($f->eval(|assertEquals(['aaa'], ['aaa'])));
+    assert($f->eval(|assertEquals(['aaa', 'bb'], ['aaa', 'bb'])));
+    assert($f->eval(|assertEquals(['aaa', 2], ['aaa', 2])));
 }

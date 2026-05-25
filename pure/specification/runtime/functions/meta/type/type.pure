@@ -21,36 +21,36 @@ function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::type(an
 }
 
 
-function <<test.Test>> meta::pure::functions::meta::tests::type::testTypePrimitive():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypePrimitive<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(Integer, 1->type());
-    assertEquals(String, 'the quick brown fox jumps over the lazy dog'->type());
-    assertEquals(Boolean, true->type());
-    assertEquals(Float, 5.5->type());
-    assertEquals(Date, %2014-01->type());
+    assertEquals(Integer, $f->eval(|1->type()));
+    assertEquals(String, $f->eval(|'the quick brown fox jumps over the lazy dog'->type()));
+    assertEquals(Boolean, $f->eval(|true->type()));
+    assertEquals(Float, $f->eval(|5.5->type()));
+    assertEquals(Date, $f->eval(|%2014-01->type()));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::type::testTypeInstance():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypeInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(CC_Person, ^CC_Person(firstName='Pierre', lastName='Doe')->type());
+    assertEquals(CC_Person, $f->eval(|^CC_Person(firstName='Pierre', lastName='Doe')->type()));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::type::testTypeFromType():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypeFromType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(Class, CC_Person->type());
+    assertEquals(Class, $f->eval(|CC_Person->type()));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::type::testTypeFromEnum():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypeFromEnum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(Enumeration, CC_GeographicEntityType->type());
+    assertEquals(Enumeration, $f->eval(|CC_GeographicEntityType->type()));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::type::testTypeFromEnumVal():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypeFromEnumVal<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(CC_GeographicEntityType, CC_GeographicEntityType.CITY->type());
+    assertEquals(CC_GeographicEntityType, $f->eval(|CC_GeographicEntityType.CITY->type()));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::type::testTypeWithGenerics():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypeWithGenerics<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(CC_List, ^CC_List<String>(values=['a', 'b', 'c'])->type());
+    assertEquals(CC_List, $f->eval(|^CC_List<String>(values=['a', 'b', 'c'])->type()));
 }

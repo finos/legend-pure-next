@@ -1,0 +1,88 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::translation::shared::*;
+
+// These tests rely on the Truffle compile pipeline being available at runtime
+// (the parse + compile natives + live-registry fallbacks). Bootstrap registers
+// a different natives surface, so they're effectively Truffle-only.
+
+// Sanity check — parse() produces a PureFile with one section + one element.
+function <<test.Test>> meta::pure::translation::shared::tests::testParseProducesElements(): Boolean[1]
+{
+   let pf = meta::pure::functions::meta::parse(
+      'canonicalRoundTrip.pure',
+      'function canonicalRoundTrip::testFn(): Integer[1] { 1 + 2 }'
+   );
+   assertEquals(1, $pf.sections->size());
+   assertEquals(1, $pf.sections->at(0).elements->size());
+}
+
+// Round-trip: parse a trivial function, recompile with a fresh
+// CompilerContext, verify the new element lands in elementMap. References
+// to already-loaded elements resolve via the compile pipeline's existing
+// native fallbacks (findFunctionsByNameAndArity unions live PDB + local
+// index; pathToElementInContext falls through to lenientPathToElement;
+// findAllTypes seeds the linearization universe). No elementMap seeding
+// needed.
+function <<test.Test>> meta::pure::translation::shared::tests::testLiveContextRoundTrip(): Boolean[1]
+{
+   let pf = meta::pure::functions::meta::parse(
+      'canonicalRoundTrip.pure',
+      'function canonicalRoundTrip::testFn(): Integer[1] { 1 + 2 }'
+   );
+   let result = meta::pure::compiler::compile(
+      [$pf],
+      meta::pure::compiler::newCompilerContext(false),
+      false,
+      true
+   );
+   // UserDefinedFunctions are keyed in elementMap by their mangled signature
+   // (e.g. `canonicalRoundTrip::testFn__Integer_1_`); find by .functionName.
+   let fn = $result.context->toOne().elementMap->values()
+      ->filter(e | $e->instanceOf(UserDefinedFunction))
+      ->cast(@UserDefinedFunction<Any>)
+      ->filter(udf | $udf.functionName == 'testFn')
+      ->toOne('testFn not found; errors=' + $result.errors->joinStrings(' | '));
+   assertEquals('testFn', $fn.functionName->toOne());
+}
+
+// ----------------------------------------------------------------------------
+// makeCanonical / inlineOpenVariables — scalar-capture substitution.
+// A lambda with a captured Integer should canonicalize to an equivalent
+// function whose openVariables is empty and whose body has the literal
+// substituted in place of the variable reference.
+// ----------------------------------------------------------------------------
+
+function <<test.Test>> meta::pure::translation::shared::tests::testMakeCanonicalScalarCapture(): Boolean[1]
+{
+   let x = 5;
+   let lambda = {| $x + 1};
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical();
+   // After canonicalization, openVariables on a LambdaFunction is empty.
+   // (The result is a UserDefinedFunction so it has no openVariables slot
+   //  at all — but it does have expressionSequence, which we evaluate
+   //  indirectly by checking the body is well-formed.)
+   assertEquals(true, $canonical->instanceOf(UserDefinedFunction));
+}
+
+function <<test.Test>> meta::pure::translation::shared::tests::testMakeCanonicalNoOpenVarsPassthrough(): Boolean[1]
+{
+   // No open vars => identity (still a LambdaFunction, not a UserDefinedFunction).
+   let lambda = {| 1 + 2};
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical();
+   assertEquals(true, $canonical->instanceOf(LambdaFunction));
+}

@@ -1,0 +1,142 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::serialization::tests::*;
+
+// =============================================================================
+// Template literals — no substitution
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::templatePlain(): Boolean[1]
+{
+   testExpr('`hello`', tsTemplate('hello'));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::templateEmpty(): Boolean[1]
+{
+   testExpr('``', tsTemplate(''));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::templateMultiline(): Boolean[1]
+{
+   // Note: real newlines in source preserved verbatim.
+   testExpr('`line1\nline2`', tsTemplate('line1\nline2'));
+}
+
+// =============================================================================
+// Template literals — interpolated
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::templateOneSpan(): Boolean[1]
+{
+   testExpr('`Hello, ${name}!`',
+            tsTemplateExpr('Hello, ', [tsTemplateSpan(tsId('name'), '!')]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::templateMultipleSpans(): Boolean[1]
+{
+   testExpr('`${greeting}, ${name}! You are ${age}.`',
+            tsTemplateExpr('',
+               [
+                  tsTemplateSpan(tsId('greeting'), ', '),
+                  tsTemplateSpan(tsId('name'), '! You are '),
+                  tsTemplateSpan(tsId('age'), '.')
+               ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::templateWithExpression(): Boolean[1]
+{
+   testExpr('`Total: ${price * qty}`',
+            tsTemplateExpr('Total: ',
+               [tsTemplateSpan(tsBinary(tsId('price'), '*', tsId('qty')), '')]));
+}
+
+// =============================================================================
+// `as` cast
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::asCastSimple(): Boolean[1]
+{
+   testExpr('value as string', tsAs(tsId('value'), tsString()));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::asCastUnion(): Boolean[1]
+{
+   testExpr('x as string | number',
+            tsAs(tsId('x'), tsUnion([tsString(), tsNumber()])));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::asCastRef(): Boolean[1]
+{
+   testExpr('result as Promise<User>',
+            tsAs(tsId('result'), tsRefGeneric('Promise', [tsRef('User')])));
+}
+
+// =============================================================================
+// `satisfies`
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::satisfiesType(): Boolean[1]
+{
+   testExpr('config satisfies Config',
+            tsSatisfies(tsId('config'), tsRef('Config')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::satisfiesObject(): Boolean[1]
+{
+   testExpr('{ a: 1, b: 2 } satisfies Pair',
+            tsSatisfies(
+               tsObject([tsEntry('a', tsNumLit('1')), tsEntry('b', tsNumLit('2'))]),
+               tsRef('Pair')));
+}
+
+// =============================================================================
+// Non-null assertion
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::nonNullSimple(): Boolean[1]
+{
+   testExpr('user!', tsNonNull(tsId('user')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::nonNullChain(): Boolean[1]
+{
+   testExpr('user!.name', tsAccess(tsNonNull(tsId('user')), 'name'));
+}
+
+// =============================================================================
+// Combined: realistic pattern
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::templateAsReturn(): Boolean[1]
+{
+   testStmt('''
+            class C {
+              greet(name: string): string {
+                return `Hello, ${name}!`;
+              }
+            }''',
+            tsClass('C', [
+               tsMethod('greet',
+                  [tsParam('name', tsString())],
+                  tsString(),
+                  tsBlock([
+                     tsReturn(tsTemplateExpr('Hello, ',
+                        [tsTemplateSpan(tsId('name'), '!')]))
+                  ]))
+            ]));
+}

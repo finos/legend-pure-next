@@ -1,0 +1,200 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::translation::shared::*;
+
+// Decompiler: compiled FunctionDefinition (`meta::pure::metamodel::*`) →
+// protocol grammar form (`meta::pure::protocol::grammar::*`) that the
+// compiler accepts as input. Used by `inlineOpenVariables` to walk a
+// captured lambda and emit an equivalent protocol UserDefinedFunction
+// whose VariableExpressions for open variables have been substituted with
+// the protocol expressions producing their captured values.
+//
+// Two protocol namespaces share short class names with the compiled
+// metamodel (VariableExpression, FunctionExpression, ...). Every reference
+// in this file uses the fully-qualified protocol path to keep both sides
+// unambiguous within the same file.
+
+// ----------------------------------------------------------------------------
+// Top-level: wrap a compiled FunctionDefinition body in a protocol
+// UserDefinedFunction. `captureMap` maps open-variable names to the values
+// captured at runtime — each VariableExpression in the body whose name is
+// in the map gets substituted with the protocol expression representing
+// the captured value (toProtocolFromRuntime).
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::toProtocolUserDefinedFunction(
+   compiledBody: meta::pure::metamodel::valuespecification::ValueSpecification[*],
+   compiledParams: meta::pure::metamodel::valuespecification::VariableExpression[*],
+   captureMap: Map<String, List<Any>>[1],
+   packagePath: String[1],
+   fnName: String[1]
+): meta::pure::protocol::grammar::function::UserDefinedFunction[1]
+{
+   ^meta::pure::protocol::grammar::function::UserDefinedFunction(
+      name              = $fnName,
+      functionName      = $fnName,
+      package           = ^meta::pure::protocol::grammar::Package_Pointer(value = $packagePath),
+      returnGenericType = ^meta::pure::protocol::grammar::type::generics::InferredGenericType(),
+      returnMultiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity(),
+      typeParameters    = [],
+      multiplicityParameters = [],
+      parameters        = $compiledParams->map(p | $p->toProtocolParameter()),
+      expressionSequence = $compiledBody->map(vs | $vs->toProtocolValueSpec($captureMap)),
+      preConstraints    = [],
+      postConstraints   = [],
+      stereotypes       = [],
+      taggedValues      = []
+   );
+}
+
+// ----------------------------------------------------------------------------
+// Parameter — compiled VariableExpression to protocol VariableExpression.
+// Both sides share the same shape; we just drop the resolved type/multiplicity
+// (the recompile will infer them).
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::toProtocolParameter(
+   p: meta::pure::metamodel::valuespecification::VariableExpression[1]
+): meta::pure::protocol::grammar::valuespecification::VariableExpression[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+      name = $p.name,
+      genericType = ^meta::pure::protocol::grammar::type::generics::InferredGenericType(),
+      multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+   );
+}
+
+// ----------------------------------------------------------------------------
+// ValueSpec dispatch — match-based walk over the compiled AST emitting
+// equivalent protocol nodes. Substitution happens at VariableExpression:
+// if the variable's name is in captureMap, emit the protocol expression
+// for the captured value instead of a fresh VariableExpression reference.
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::toProtocolValueSpec(
+   vs: meta::pure::metamodel::valuespecification::ValueSpecification[1],
+   captureMap: Map<String, List<Any>>[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   $vs->match([
+      {ve: meta::pure::metamodel::valuespecification::VariableExpression[1] |
+         let capValue = $captureMap->get($ve.name);
+         if ($capValue->isEmpty(),
+            | ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+                 name = $ve.name,
+                 genericType = ^meta::pure::protocol::grammar::type::generics::InferredGenericType(),
+                 multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+              ),
+            | $capValue->toOne()->captureToProtocol()
+         );
+      },
+      {av: meta::pure::metamodel::valuespecification::AtomicValue[1] |
+         ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+            value = $av.value,
+            genericType = ^meta::pure::protocol::grammar::type::generics::InferredGenericType(),
+            multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+         );
+      },
+      {fe: meta::pure::metamodel::valuespecification::FunctionExpression[1] |
+         // FunctionExpression covers FunctionInvocation / DotApplication /
+         // ArrowInvocation in the compiled metamodel. All of them carry
+         // (functionName, parametersValues) — recurse into args, emit a
+         // protocol FunctionInvocation (the simplest concrete subclass that
+         // satisfies the FunctionExpression contract for the compiler).
+         ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+            functionName = $fe.functionName,
+            parametersValues = $fe.parametersValues->map(p | $p->toProtocolValueSpec($captureMap)),
+            genericType = ^meta::pure::protocol::grammar::type::generics::InferredGenericType(),
+            multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+         );
+      }
+   ]);
+}
+
+// ----------------------------------------------------------------------------
+// Capture → protocol expression. Maps a List<Any> (one open-variable
+// binding) to a protocol ValueSpec the compiler can re-resolve.
+//
+// Scalar single-value captures (Integer, Float, String, Boolean) become
+// AtomicValue literals. Class-instance captures (PureDynamicObjects)
+// become protocol `new`-FunctionExpressions that reconstruct the instance
+// from its property values. Multi-value sequence captures land as
+// protocol Collections.
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::captureToProtocol(
+   values: List<Any>[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let vs = $values.values;
+   if ($vs->size() == 1,
+      | $vs->toOne()->singleValueToProtocol(),
+      | // Multi-value capture — wrap in a Collection of single-value protocol
+        // expressions. The compiler re-resolves each.
+        ^meta::pure::protocol::grammar::valuespecification::Collection(
+           values = $vs->map(v | $v->singleValueToProtocol()),
+           genericType = ^meta::pure::protocol::grammar::type::generics::InferredGenericType(),
+           multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+        )
+   );
+}
+
+// Single captured value → protocol expression. Scalars wrap in AtomicValue;
+// class instances build a `new`-FunctionExpression with key=value pairs.
+function meta::pure::translation::shared::singleValueToProtocol(
+   v: Any[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   // Scalar primitives flow as AtomicValue.value (the protocol AtomicValue
+   // slot is typed `Any[1]` which accepts Pure primitives natively). Anything
+   // not primitive is assumed to be a class-instance PDO and gets the
+   // constructor-literal treatment.
+   if ($v->isPrimitiveValue(),
+      | ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+           value = $v,
+           genericType = ^meta::pure::protocol::grammar::type::generics::InferredGenericType(),
+           multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+        ),
+      | $v->classInstanceToProtocol()
+   );
+}
+
+function meta::pure::translation::shared::isPrimitiveValue(v: Any[1]): Boolean[1]
+{
+   $v->instanceOf(Integer)
+      || $v->instanceOf(Float)
+      || $v->instanceOf(Boolean)
+      || $v->instanceOf(String);
+}
+
+// Class-instance PDO → protocol `new`-FunctionExpression. Reads the
+// instance's properties through reflection (genericType → properties),
+// emits one KeyExpression per property holding its value, wraps in a
+// FunctionInvocation with functionName='new'.
+//
+// TODO: stub for the first slice. Throws unless the captured value is a
+// primitive. The full implementation walks $v's class properties and
+// builds the new-expression — landing in the next iteration.
+function meta::pure::translation::shared::classInstanceToProtocol(
+   v: Any[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   fail('classInstanceToProtocol: class-instance captures not yet supported (value type=' + $v->genericType()->rawType()->toOne()->elementToPath() + ')');
+   ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+      value = '__placeholder__',
+      genericType = ^meta::pure::protocol::grammar::type::generics::InferredGenericType(),
+      multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+   );
+}

@@ -68,7 +68,7 @@ public class PureCLI
         System.err.println();
         System.err.println("Commands:");
         System.err.println("  compile-spec --m3-ttl <file> --output-dir <dir> [--tests <mode>] <sourceDir...>   Compile specification Pure sources into <dir>/core.pdb");
-        System.err.println("  compile --base-pdb <file> --source <dir> --output-dir <dir> [--tests <mode>]   Compile Pure sources against a base PDB (Java compiler)");
+        System.err.println("  compile --base-pdb <file>... --source <dir> --output-dir <dir> [--tests <mode>]   Compile Pure sources against one or more base PDBs (Java compiler)");
         System.err.println("  compile-via-pure --base-pdb <file>... --source <dir> --output-dir <dir> [--tests <mode>]   Compile Pure sources by running compiler-pure on the Java runtime");
         System.err.println();
         System.err.println("  All compile commands auto-discover module.json by walking up from the source dir.");
@@ -311,7 +311,7 @@ public class PureCLI
 
     private static void compile(String[] args) throws Exception
     {
-        String basePdb = null;
+        List<String> basePdbs = new ArrayList<>();
         String source = null;
         String outputDir = null;
         org.finos.legend.pure.m3.module.TestElementFilter.Mode mode =
@@ -321,7 +321,7 @@ public class PureCLI
         {
             switch (args[i])
             {
-                case "--base-pdb" -> basePdb = args[++i];
+                case "--base-pdb" -> basePdbs.add(args[++i]);
                 case "--source" -> source = args[++i];
                 case "--output-dir" -> outputDir = args[++i];
                 case "--tests" -> mode = org.finos.legend.pure.m3.module.TestElementFilter.Mode.parse(args[++i]);
@@ -329,14 +329,20 @@ public class PureCLI
             }
         }
 
-        if (basePdb == null || source == null || outputDir == null)
+        if (basePdbs.isEmpty() || source == null || outputDir == null)
         {
-            System.err.println("Usage: pure-bootstrap compile --base-pdb <file> --source <dir> --output-dir <dir> [--tests {none|with|only|split}]");
+            System.err.println("Usage: pure-bootstrap compile --base-pdb <file>... --source <dir> --output-dir <dir> [--tests {none|with|only|split}]");
+            System.err.println("  Repeat --base-pdb to load multiple dependency PDBs (e.g. core + java).");
             System.err.println("  Output filename comes from the module manifest 'name' field.");
             System.exit(1);
         }
 
-        CompilerBinaryBuilder.compile(Path.of(basePdb), Path.of(source), Path.of(outputDir), mode);
+        List<Path> basePaths = new ArrayList<>(basePdbs.size());
+        for (String b : basePdbs)
+        {
+            basePaths.add(Path.of(b));
+        }
+        CompilerBinaryBuilder.compile(basePaths, Path.of(source), Path.of(outputDir), mode);
     }
 
     /**

@@ -1,0 +1,58 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::translation::*;
+
+// Truffle-runtime bridge: translation.pure produces a SourceFile; this file
+// serialises it, hands the source string to `compileAndExecute` (GraalJS-
+// backed transpile + eval + invoke from the typescript Truffle extension),
+// and surfaces the result for round-trip / PCT tests.
+
+function meta::external::language::typescript::translation::runViaTranslation(
+   f: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
+   args: Any[*]
+): Any[*]
+{
+   let sf     = $f->translateFunction(defaultConvention());
+   let source = $sf->serialize();
+   compileAndExecute($source, 'execute', $args);
+}
+
+// PCT adapter — pluggable into any `<<PCT.test>>`. Takes the test's no-arg
+// lambda, translates it to a TS source file, transpiles + evaluates it via
+// GraalJS, and returns the result for the test's
+// `assertEquals(..., $f->eval(|expr))`.
+function meta::external::language::typescript::translation::testAdapterForTranslatedTypeScript<X|o>(
+   f: meta::pure::metamodel::function::Function<{->X[o]}>[1]
+): X[o]
+{
+   let lambda = $f->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
+   let sf     = $lambda->translateLambda(defaultConvention());
+   let source = $sf->serialize();
+   compileAndExecute($source, 'execute', []);
+}
+
+// Convenience: run every `<<PCT.test>>` under `rootPackagePath` through the
+// translator adapter. Marked <<test.TestDependency>> so it lands in the
+// -tests PDB alongside the core PCT runner.
+function <<test.TestDependency>>
+   meta::external::language::typescript::translation::runPCTTestsViaTranslator(rootPackagePath:String[1]):String[1]
+{
+   meta::pure::test::runPCTTests(
+      $rootPackagePath,
+      testAdapterForTranslatedTypeScript_Function_1__X_o_
+   );
+}

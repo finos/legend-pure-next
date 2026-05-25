@@ -1,0 +1,238 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// v1 factories — ergonomic constructors for the minimal metamodel subset that
+// the v1 serializer can emit. Naming follows TypeScript conventions (no `j*`
+// or Java vocabulary): `tsClass`, `tsMethod`, `tsParam`, `tsId`, `tsCall`.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+
+// =============================================================================
+// Type nodes
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsString(): KeywordTypeNode[1]
+{ ^KeywordTypeNode(keyword='string') }
+
+function meta::external::language::typescript::factories::tsNumber(): KeywordTypeNode[1]
+{ ^KeywordTypeNode(keyword='number') }
+
+function meta::external::language::typescript::factories::tsBoolean(): KeywordTypeNode[1]
+{ ^KeywordTypeNode(keyword='boolean') }
+
+function meta::external::language::typescript::factories::tsVoid(): KeywordTypeNode[1]
+{ ^KeywordTypeNode(keyword='void') }
+
+function meta::external::language::typescript::factories::tsAny(): KeywordTypeNode[1]
+{ ^KeywordTypeNode(keyword='any') }
+
+function meta::external::language::typescript::factories::tsUnknown(): KeywordTypeNode[1]
+{ ^KeywordTypeNode(keyword='unknown') }
+
+function meta::external::language::typescript::factories::tsNever(): KeywordTypeNode[1]
+{ ^KeywordTypeNode(keyword='never') }
+
+function meta::external::language::typescript::factories::tsArrayOf(elementType: TypeNode[1]): ArrayTypeNode[1]
+{ ^ArrayTypeNode(elementType=$elementType) }
+
+function meta::external::language::typescript::factories::tsRef(typeName: String[1]): TypeReferenceNode[1]
+{ ^TypeReferenceNode(typeName=$typeName, typeArguments=[]) }
+
+function meta::external::language::typescript::factories::tsRefGeneric(typeName: String[1], typeArguments: TypeNode[*]): TypeReferenceNode[1]
+{ ^TypeReferenceNode(typeName=$typeName, typeArguments=$typeArguments) }
+
+// Cross-file / external type references — tag the ref with an ImportSource
+// so the resolver can synthesize the correct ImportDeclaration.
+function meta::external::language::typescript::factories::tsRefFrom(typeName: String[1], source: ImportSource[1]): TypeReferenceNode[1]
+{ ^TypeReferenceNode(typeName=$typeName, typeArguments=[], source=$source) }
+
+function meta::external::language::typescript::factories::tsRefGenericFrom(typeName: String[1], typeArguments: TypeNode[*], source: ImportSource[1]): TypeReferenceNode[1]
+{ ^TypeReferenceNode(typeName=$typeName, typeArguments=$typeArguments, source=$source) }
+
+// `tsRefAliased('MyFoo', 'Foo', source)` → local name MyFoo, exported as Foo.
+// Used to resolve collisions when two sources export the same name. Emits
+// `import { Foo as MyFoo } from '...'` and the type reference `MyFoo`.
+function meta::external::language::typescript::factories::tsRefAliased(localName: String[1], originalName: String[1], source: ImportSource[1]): TypeReferenceNode[1]
+{ ^TypeReferenceNode(typeName=$localName, typeArguments=[], source=$source, originalName=$originalName) }
+
+function meta::external::language::typescript::factories::tsLocalSource(target: SourceFile[1]): LocalSource[1]
+{ ^LocalSource(target=$target) }
+
+function meta::external::language::typescript::factories::tsExternalSource(moduleSpecifier: String[1]): ExternalSource[1]
+{ ^ExternalSource(moduleSpecifier=$moduleSpecifier) }
+
+function meta::external::language::typescript::factories::tsUnion(types: TypeNode[1..*]): UnionTypeNode[1]
+{ ^UnionTypeNode(types=$types) }
+
+function meta::external::language::typescript::factories::tsIntersection(types: TypeNode[1..*]): IntersectionTypeNode[1]
+{ ^IntersectionTypeNode(types=$types) }
+
+function meta::external::language::typescript::factories::tsTuple(elements: TypeNode[*]): TupleTypeNode[1]
+{ ^TupleTypeNode(elements=$elements) }
+
+// SpreadElement — `...expr` for use inside array literals and call argument lists.
+function meta::external::language::typescript::factories::tsSpread(expression: Expression[1]): SpreadElement[1]
+{ ^SpreadElement(expression=$expression) }
+
+// SpreadAssignment — `...expr` inside an object literal.
+function meta::external::language::typescript::factories::tsSpreadEntry(expression: Expression[1]): SpreadAssignment[1]
+{ ^SpreadAssignment(expression=$expression) }
+
+// =============================================================================
+// Expressions
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsId(text: String[1]): Identifier[1]
+{ ^Identifier(text=$text) }
+
+function meta::external::language::typescript::factories::tsIdFrom(text: String[1], source: ImportSource[1]): Identifier[1]
+{ ^Identifier(text=$text, source=$source) }
+
+function meta::external::language::typescript::factories::tsIdAliased(localName: String[1], originalName: String[1], source: ImportSource[1]): Identifier[1]
+{ ^Identifier(text=$localName, source=$source, originalName=$originalName) }
+
+function meta::external::language::typescript::factories::tsThis(): ThisExpression[1]
+{ ^ThisExpression() }
+
+function meta::external::language::typescript::factories::tsStrLit(text: String[1]): StringLiteral[1]
+{ ^StringLiteral(text=$text) }
+
+function meta::external::language::typescript::factories::tsNumLit(text: String[1]): NumericLiteral[1]
+{ ^NumericLiteral(text=$text) }
+
+function meta::external::language::typescript::factories::tsBoolLit(value: Boolean[1]): BooleanLiteral[1]
+{ ^BooleanLiteral(value=$value) }
+
+function meta::external::language::typescript::factories::tsNull(): NullLiteral[1]
+{ ^NullLiteral() }
+
+function meta::external::language::typescript::factories::tsAccess(obj: Expression[1], member: String[1]): PropertyAccessExpression[1]
+{ ^PropertyAccessExpression(expression=$obj, name=$member) }
+
+function meta::external::language::typescript::factories::tsOptAccess(obj: Expression[1], member: String[1]): PropertyAccessExpression[1]
+{ ^PropertyAccessExpression(expression=$obj, name=$member, isOptional=true) }
+
+function meta::external::language::typescript::factories::tsCall(callee: Expression[1], arguments: Expression[*]): CallExpression[1]
+{ ^CallExpression(expression=$callee, arguments=$arguments, typeArguments=[]) }
+
+function meta::external::language::typescript::factories::tsOptCall(callee: Expression[1], arguments: Expression[*]): CallExpression[1]
+{ ^CallExpression(expression=$callee, arguments=$arguments, typeArguments=[], isOptional=true) }
+
+// Nullish coalescing `a ?? b` — sugar over tsBinary.
+function meta::external::language::typescript::factories::tsNullishCoalesce(left: Expression[1], right: Expression[1]): BinaryExpression[1]
+{ ^BinaryExpression(left=$left, operatorToken='??', right=$right) }
+
+function meta::external::language::typescript::factories::tsBinary(left: Expression[1], operator: String[1], right: Expression[1]): BinaryExpression[1]
+{ ^BinaryExpression(left=$left, operatorToken=$operator, right=$right) }
+
+// =============================================================================
+// Async / await / Promise.
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsAwait(expression: Expression[1]): AwaitExpression[1]
+{ ^AwaitExpression(expression=$expression) }
+
+// Promise<T> sugar — just a generic type reference. Convenience over
+// tsRefGeneric('Promise', [t]).
+function meta::external::language::typescript::factories::tsPromise(type: TypeNode[1]): TypeReferenceNode[1]
+{ ^TypeReferenceNode(typeName='Promise', typeArguments=[$type]) }
+
+// Function/Method/Arrow async variants — flip the Async modifier (or
+// `isAsync` slot on ArrowFunction, matching ts-morph's shape).
+function meta::external::language::typescript::factories::tsAsyncFunction(name: String[1], parameters: ParameterDeclaration[*], returnType: TypeNode[0..1], body: Block[0..1]): FunctionDeclaration[1]
+{ ^FunctionDeclaration(name=$name, modifiers=[ModifierFlag.Async], typeParameters=[], parameters=$parameters, returnType=$returnType, body=$body) }
+
+function meta::external::language::typescript::factories::tsAsyncMethod(name: String[1], parameters: ParameterDeclaration[*], returnType: TypeNode[0..1], body: Block[0..1]): MethodDeclaration[1]
+{ ^MethodDeclaration(name=$name, modifiers=[ModifierFlag.Async], typeParameters=[], parameters=$parameters, returnType=$returnType, body=$body) }
+
+function meta::external::language::typescript::factories::tsAsyncArrowExpr(parameters: ParameterDeclaration[*], body: Expression[1]): ArrowFunction[1]
+{ ^ArrowFunction(parameters=$parameters, typeParameters=[], expressionBody=$body, isAsync=true) }
+
+function meta::external::language::typescript::factories::tsAsyncArrowBlock(parameters: ParameterDeclaration[*], body: Block[1]): ArrowFunction[1]
+{ ^ArrowFunction(parameters=$parameters, typeParameters=[], body=$body, isAsync=true) }
+
+function meta::external::language::typescript::factories::tsArrowExpr(parameters: ParameterDeclaration[*], body: Expression[1]): ArrowFunction[1]
+{ ^ArrowFunction(parameters=$parameters, typeParameters=[], expressionBody=$body) }
+
+function meta::external::language::typescript::factories::tsArrowBlock(parameters: ParameterDeclaration[*], body: Block[1]): ArrowFunction[1]
+{ ^ArrowFunction(parameters=$parameters, typeParameters=[], body=$body) }
+
+function meta::external::language::typescript::factories::tsParamNoType(name: String[1]): ParameterDeclaration[1]
+{ ^ParameterDeclaration(name=tsId($name)) }
+
+// =============================================================================
+// Statements
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsBlock(statements: Statement[*]): Block[1]
+{ ^Block(statements=$statements) }
+
+function meta::external::language::typescript::factories::tsReturn(expression: Expression[0..1]): ReturnStatement[1]
+{ ^ReturnStatement(expression=$expression) }
+
+function meta::external::language::typescript::factories::tsExprStmt(expression: Expression[1]): ExpressionStatement[1]
+{ ^ExpressionStatement(expression=$expression) }
+
+// =============================================================================
+// Declarations & structure
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsParam(name: String[1], type: TypeNode[0..1]): ParameterDeclaration[1]
+{ ^ParameterDeclaration(name=tsId($name), type=$type) }
+
+function meta::external::language::typescript::factories::tsMethod(name: String[1], parameters: ParameterDeclaration[*], returnType: TypeNode[0..1], body: Block[0..1]): MethodDeclaration[1]
+{ ^MethodDeclaration(name=$name, modifiers=[], typeParameters=[], parameters=$parameters, returnType=$returnType, body=$body) }
+
+function meta::external::language::typescript::factories::tsFunction(name: String[1], parameters: ParameterDeclaration[*], returnType: TypeNode[0..1], body: Block[0..1]): FunctionDeclaration[1]
+{ ^FunctionDeclaration(name=$name, modifiers=[], typeParameters=[], parameters=$parameters, returnType=$returnType, body=$body) }
+
+function meta::external::language::typescript::factories::tsProperty(name: String[1], type: TypeNode[0..1]): PropertyDeclaration[1]
+{ ^PropertyDeclaration(name=$name, modifiers=[], type=$type) }
+
+function meta::external::language::typescript::factories::tsClass(name: String[1], members: ClassMember[*]): ClassDeclaration[1]
+{ ^ClassDeclaration(name=$name, modifiers=[], typeParameters=[], implementsClause=[], members=$members) }
+
+function meta::external::language::typescript::factories::tsGetter(name: String[1], returnType: TypeNode[0..1], body: Block[0..1]): GetAccessor[1]
+{ ^GetAccessor(name=$name, modifiers=[], returnType=$returnType, body=$body) }
+
+function meta::external::language::typescript::factories::tsSetter(name: String[1], parameter: ParameterDeclaration[1], body: Block[0..1]): SetAccessor[1]
+{ ^SetAccessor(name=$name, modifiers=[], parameter=$parameter, body=$body) }
+
+function meta::external::language::typescript::factories::tsEnum(name: String[1], members: EnumMember[*]): EnumDeclaration[1]
+{ ^EnumDeclaration(name=$name, modifiers=[], members=$members) }
+
+function meta::external::language::typescript::factories::tsConstEnum(name: String[1], members: EnumMember[*]): EnumDeclaration[1]
+{ ^EnumDeclaration(name=$name, modifiers=[], isConst=true, members=$members) }
+
+function meta::external::language::typescript::factories::tsEnumMember(name: String[1]): EnumMember[1]
+{ ^EnumMember(name=$name) }
+
+function meta::external::language::typescript::factories::tsEnumMemberInit(name: String[1], value: Expression[1]): EnumMember[1]
+{ ^EnumMember(name=$name, initializer=$value) }
+
+function meta::external::language::typescript::factories::tsExportedClass(name: String[1], members: ClassMember[*]): ClassDeclaration[1]
+{ ^ClassDeclaration(name=$name, modifiers=[ModifierFlag.Export], typeParameters=[], implementsClause=[], members=$members) }
+
+function meta::external::language::typescript::factories::tsImport(moduleSpecifier: String[1], namedImports: ImportSpecifier[*]): ImportDeclaration[1]
+{ ^ImportDeclaration(moduleSpecifier=$moduleSpecifier, namedImports=$namedImports) }
+
+function meta::external::language::typescript::factories::tsNamedImport(name: String[1]): ImportSpecifier[1]
+{ ^ImportSpecifier(name=$name) }
+
+function meta::external::language::typescript::factories::tsNamedImportAliased(name: String[1], alias: String[1]): ImportSpecifier[1]
+{ ^ImportSpecifier(name=$name, alias=$alias) }
+
+function meta::external::language::typescript::factories::tsSourceFile(filePath: String[1], statements: Statement[*]): SourceFile[1]
+{ ^SourceFile(filePath=$filePath, statements=$statements) }

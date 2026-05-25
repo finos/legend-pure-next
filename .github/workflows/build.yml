@@ -26,18 +26,28 @@
 #               ├── bootstrap-self-host     (Temurin 25 — `just bootstrap::test-pure-self-host`: compile
 #               │                            compiler-pure via Pure-on-Java and PDB-diff against Java direct)
 #               ├── truffle-self-host       (GraalVM 25 — `just truffle::test` (mvn surefire + Truffle
-#               │                            compiler-graph spec) followed by `just truffle::test-pure-self-host`
-#               │                            — compiles compiler-pure on Truffle JVM (JIT) and PDB-diffs)
+#               │      │                     compiler-graph spec) followed by `just truffle::test-pure-self-host`
+#               │      │                     — compiles compiler-pure on Truffle JVM (JIT) and PDB-diffs.
+#               │      │                     Uploads platforms/truffle/build/ for downstream language jobs.)
+#               │      │
+#               │      ├── language-java     (GraalVM 25 — `just language::java::test-all`: runs
+#               │      │                     meta::external::language::java tests via pure-truffle.
+#               │      │                     The `compileAndExecute` native is only registered in the
+#               │      │                     truffle Java extension, so this can't run on bootstrap.)
+#               │      │
+#               │      └── language-typescript (GraalVM 25 — same shape for the TypeScript module.)
+#               │
 #               └── truffle-native-self-host (GraalVM 25 — `just truffle::native::test-pure-self-host`:
 #                                            builds native-image binary, compiles compiler-pure via the
 #                                            AOT binary and PDB-diffs against Java direct)
 #
-# The three self-host jobs run in parallel after bootstrap finishes; all three
-# consume bootstrap's outputs via actions/upload-artifact + actions/download-artifact.
-# truffle-self-host and truffle-native-self-host need GraalVM; bootstrap-self-host
-# uses plain Temurin.
+# bootstrap-self-host, truffle-self-host, and truffle-native-self-host run in
+# parallel after bootstrap finishes; language-java and language-typescript run
+# in parallel after truffle-self-host (they need its uploaded truffle CLI jar +
+# extension jars to invoke pure-truffle). All consume upstream outputs via
+# actions/upload-artifact + actions/download-artifact.
 #
-# Finally, `all-green` aggregates the four real jobs. Branch protection on main
+# Finally, `all-green` aggregates every real job. Branch protection on main
 # only needs to require this single check — adding a new parallel job means
 # listing it in `all-green.needs`, no branch-protection edit required.
 
@@ -324,6 +334,19 @@ jobs:
       - name: Truffle self-host
         run: just truffle::test-pure-self-host
 
+      # Pack the truffle CLI fat jar + extension jars (JavaCompileNatives,
+      # TypeScriptCompileNatives + GraalJS runtime). Downstream language-java
+      # and language-typescript jobs need these to run pure-truffle.
+      - name: Tar truffle artifacts
+        run: tar -cf truffle-artifacts.tar platforms/truffle/build/
+
+      - name: Upload truffle artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: truffle-artifacts
+          path: truffle-artifacts.tar
+          retention-days: 1
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v7
@@ -404,6 +427,128 @@ jobs:
       - name: Truffle native self-host
         run: just truffle::native::test-pure-self-host
 
+  # Run the language-java module's full test suite. Depends on truffle-self-host
+  # for the truffle CLI + Java extension jar (where `compileAndExecute` is
+  # registered — bootstrap doesn't have it). The module's `test-all` runs
+  # `runTests meta::external::language::java` via pure-truffle.
+  language-java:
+    name: Language Java module tests (Truffle)
+    needs: truffle-self-host
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v5
+        env:
+          cache-name: cache-mvn-deps
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      # GraalVM (not Temurin): pure-truffle requires JVMCI for real Graal JIT.
+      - name: Set up GraalVM JDK
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: 'graalvm-community'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+
+      - name: Download bootstrap artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bootstrap-artifacts
+
+      - name: Download truffle artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: truffle-artifacts
+
+      - name: Restore artifacts
+        run: |
+          tar -xf bootstrap-artifacts.tar
+          mkdir -p ~/.m2/repository
+          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
+          tar -xf truffle-artifacts.tar
+
+      # `build` uses pure-bootstrap to compile shared/java.pdb;
+      # `test-all` runs `runTests meta::external::language::java` via pure-truffle
+      # (the Java extension's JavaCompileNatives registers `compileAndExecute`).
+      # No `language::*` submodule in the root Justfile — cd into the module.
+      - name: Language Java test
+        working-directory: pure/modules/language/java
+        run: |
+          just build
+          just test-all
+
+  # Run the language-typescript module's full test suite. Same shape as
+  # language-java but using the TypeScript extension's GraalJS-backed
+  # `compileAndExecute`.
+  language-typescript:
+    name: Language TypeScript module tests (Truffle)
+    needs: truffle-self-host
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v5
+        env:
+          cache-name: cache-mvn-deps
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Set up GraalVM JDK
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: 'graalvm-community'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+
+      - name: Download bootstrap artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bootstrap-artifacts
+
+      - name: Download truffle artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: truffle-artifacts
+
+      - name: Restore artifacts
+        run: |
+          tar -xf bootstrap-artifacts.tar
+          mkdir -p ~/.m2/repository
+          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
+          tar -xf truffle-artifacts.tar
+
+      - name: Language TypeScript test
+        working-directory: pure/modules/language/typescript
+        run: |
+          just build
+          just test-all
+
   # Single aggregation job: branch protection only needs to require this one.
   # Adding a new parallel job means listing it in `needs:` here — no changes
   # to branch-protection settings. `if: always()` lets this run even if a
@@ -412,7 +557,7 @@ jobs:
   # but for the wrong reason).
   all-green:
     name: All checks passed
-    needs: [bootstrap, bootstrap-self-host, truffle-self-host, truffle-native-self-host]
+    needs: [bootstrap, bootstrap-self-host, truffle-self-host, truffle-native-self-host, language-java, language-typescript]
     if: always()
     runs-on: ubuntu-24.04
     steps:

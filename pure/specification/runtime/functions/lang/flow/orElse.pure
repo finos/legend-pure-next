@@ -14,30 +14,35 @@
 
 import meta::pure::functions::asserts::*;
 import meta::pure::functions::collection::*;
+import meta::pure::test::pct::*;
 
 function meta::pure::functions::collection::orElse<T>(value:T[0..1], default:T[1]): T[1]
 {
     if($value->isEmpty(), | $default, | $value->toOne());
 }
 
-function <<test.Test>> meta::pure::functions::collection::tests::orElse::testOrElseWithPresent():Boolean[1]
+function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElseWithPresent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(5, 5->orElse(99));
+    assertEquals(5, $f->eval(|5->orElse(99)));
 }
 
-function <<test.Test>> meta::pure::functions::collection::tests::orElse::testOrElseWithEmpty():Boolean[1]
+function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElseWithEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let empty = []->cast(@Integer);
-    assertEquals(99, $empty->orElse(99));
+    assertEquals(99, $f->eval(|
+        let empty = []->cast(@Integer);
+        $empty->orElse(99);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::collection::tests::orElse::testOrElseWithStringPresent():Boolean[1]
+function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElseWithStringPresent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('hello', 'hello'->orElse('default'));
+    assertEquals('hello', $f->eval(|'hello'->orElse('default')));
 }
 
-function <<test.Test>> meta::pure::functions::collection::tests::orElse::testOrElseWithStringEmpty():Boolean[1]
+function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElseWithStringEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let empty = []->cast(@String);
-    assertEquals('default', $empty->orElse('default'));
+    assertEquals('default', $f->eval(|
+        let empty = []->cast(@String);
+        $empty->orElse('default');
+    ));
 }

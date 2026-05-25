@@ -48,76 +48,68 @@ function <<PCT.function>> meta::pure::functions::meta::creation::newClass(typePa
     );
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClassEmpty():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewClassEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let cls = meta::pure::functions::meta::creation::newClass([], []);
-
-    // Should be a Class
-    assert($cls->instanceOf(Class));
-
-    // Self-referencing CGT: Class<cls>
-    let cgt = $cls.classifierGenericType->toOne()->cast(@GenericTypeValue);
-    assertIs(Class, $cgt.type->toOne());
-    let selfGT = $cgt.typeArguments->at(0)->cast(@GenericTypeValue);
-    assertIs($cls, $selfGT.type->toOne());
-
-    // No type parameters or multiplicity parameters
-    assertEquals(0, $cls.typeParameters->size());
-    assertEquals(0, $cls.multiplicityParameters->size());
+    assert($f->eval(|
+        let cls = meta::pure::functions::meta::creation::newClass([], []);
+        // Should be a Class
+        assert($cls->instanceOf(Class));
+        // Self-referencing CGT: Class<cls>
+        let cgt = $cls.classifierGenericType->toOne()->cast(@GenericTypeValue);
+        assertIs(Class, $cgt.type->toOne());
+        assertIs($cls, $cgt.typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+        // No type parameters or multiplicity parameters
+        assertEquals(0, $cls.typeParameters->size());
+        assertEquals(0, $cls.multiplicityParameters->size());
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClassWithTypeParameter():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewClassWithTypeParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let tp = ^TypeParameter(name='T', contravariant=false);
-    let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
-
-    // Type parameters should be set
-    assertEquals(1, $cls.typeParameters->size());
-
-    // TypeParameter owner should be the created class
-    let actualTp = $cls.typeParameters->at(0);
-    assert($actualTp.owner->isNotEmpty(), 'TypeParameter owner should be set');
-    assertIs($cls, $actualTp.owner->toOne());
-
-    // Self-referencing CGT should include the type parameter
-    let cgt = $cls.classifierGenericType->toOne()->cast(@GenericTypeValue);
-    let selfGT = $cgt.typeArguments->at(0)->cast(@GenericTypeValue);
-    assertIs($cls, $selfGT.type->toOne());
-    assertEquals(1, $selfGT.typeArguments->size());
-    let tpGT = $selfGT.typeArguments->at(0)->cast(@GenericTypeValue);
-    assertIs($actualTp, $tpGT.type->toOne());
+    assert($f->eval(|
+        let tp = ^TypeParameter(name='T', contravariant=false);
+        let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
+        // Type parameters should be set
+        assertEquals(1, $cls.typeParameters->size());
+        // TypeParameter owner should be the created class
+        assert($cls.typeParameters->at(0).owner->isNotEmpty(), 'TypeParameter owner should be set');
+        assertIs($cls, $cls.typeParameters->at(0).owner->toOne());
+        // Self-referencing CGT should include the type parameter
+        let selfGT = $cls.classifierGenericType->toOne()->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue);
+        assertIs($cls, $selfGT.type->toOne());
+        assertEquals(1, $selfGT.typeArguments->size());
+        assertIs($cls.typeParameters->at(0), $selfGT.typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClassWithMultipleTypeParameters():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewClassWithMultipleTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let tp1 = ^TypeParameter(name='T', contravariant=false);
-    let tp2 = ^TypeParameter(name='U', contravariant=false);
-    let cls = meta::pure::functions::meta::creation::newClass([$tp1, $tp2], []);
-
-    assertEquals(2, $cls.typeParameters->size());
-
-    // Both TypeParameters should have owner set to cls
-    assertIs($cls, $cls.typeParameters->at(0).owner->toOne());
-    assertIs($cls, $cls.typeParameters->at(1).owner->toOne());
+    assert($f->eval(|
+        let tp1 = ^TypeParameter(name='T', contravariant=false);
+        let tp2 = ^TypeParameter(name='U', contravariant=false);
+        let cls = meta::pure::functions::meta::creation::newClass([$tp1, $tp2], []);
+        assertEquals(2, $cls.typeParameters->size());
+        // Both TypeParameters should have owner set to cls
+        assertIs($cls, $cls.typeParameters->at(0).owner->toOne());
+        assertIs($cls, $cls.typeParameters->at(1).owner->toOne());
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClassWithMultiplicityParameter():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewClassWithMultiplicityParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let tp = ^TypeParameter(name='K', contravariant=false);
-    let mp = ^UserDefinedMultiplicityParameter(name='m');
-    let cls = meta::pure::functions::meta::creation::newClass([$tp], [$mp]);
-
-    assertEquals(1, $cls.typeParameters->size());
-    assertEquals(1, $cls.multiplicityParameters->size());
-
-    // MultiplicityParameter owner should be the created class
-    assertIs($cls, $cls.multiplicityParameters->at(0).owner->toOne());
-
-    // Self-referencing CGT should include both type arg and multiplicity arg
-    let cgt = $cls.classifierGenericType->toOne()->cast(@GenericTypeValue);
-    let selfGT = $cgt.typeArguments->at(0)->cast(@GenericTypeValue);
-    assertIs($cls, $selfGT.type->toOne());
-    assertEquals(1, $selfGT.typeArguments->size(), 'selfGT should have 1 type arg');
-    assertEquals(1, $selfGT.multiplicityArguments->size(), 'selfGT should have 1 multiplicity arg');
+    assert($f->eval(|
+        let tp = ^TypeParameter(name='K', contravariant=false);
+        let mp = ^UserDefinedMultiplicityParameter(name='m');
+        let cls = meta::pure::functions::meta::creation::newClass([$tp], [$mp]);
+        assertEquals(1, $cls.typeParameters->size());
+        assertEquals(1, $cls.multiplicityParameters->size());
+        // MultiplicityParameter owner should be the created class
+        assertIs($cls, $cls.multiplicityParameters->at(0).owner->toOne());
+        // Self-referencing CGT should include both type arg and multiplicity arg
+        let selfGT = $cls.classifierGenericType->toOne()->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue);
+        assertIs($cls, $selfGT.type->toOne());
+        assertEquals(1, $selfGT.typeArguments->size(), 'selfGT should have 1 type arg');
+        assertEquals(1, $selfGT.multiplicityArguments->size(), 'selfGT should have 1 multiplicity arg');
+    ));
 }
 

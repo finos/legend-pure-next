@@ -1,0 +1,7 @@
+Parse error in file function meta::test::probe(xs: Integer[*]): Integer[*]
+{
+   $xs->map(d | {
+      let x = $d + 1;
+      $x * 2;
+   });
+} at line 9:6 - mismatched input '->' expecting {'}', ';', '&&', '||', '==', '!=', '+', '*', '-', '/', '<', '<=', '>', '>='}

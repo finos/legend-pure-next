@@ -1,0 +1,156 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::translation::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::valuespecification::*;
+
+// Minimal Pure -> TypeScript translator. Function-call dispatch goes through
+// a Convention's `functionCoders` map. Adding a new Pure native to the
+// surface is a one-line entry in `defaultConvention()` plus a small coder.
+// Callers that want different behavior pass their own Convention to the
+// public entry points (translateFunction / translateLambda).
+
+// ----------------------------------------------------------------------------
+// Convention — single-slot config holding the coder dispatch table. The
+// coder signature carries `Convention[1]` so coders can recurse via
+// translateExpression with the SAME convention.
+// ----------------------------------------------------------------------------
+
+Class meta::external::language::typescript::translation::Convention
+{
+   functionCoders : Map<String, meta::pure::metamodel::function::Function<{ValueSpecification[*], Convention[1] -> Expression[1]}>>[1];
+}
+
+function meta::external::language::typescript::translation::defaultConvention(): Convention[1]
+{
+   ^Convention(
+      functionCoders = newMap([
+         pair('plus', plusCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+      ])
+   );
+}
+
+// ----------------------------------------------------------------------------
+// Type mapping. TS has one numeric type, so Integer and Float collapse.
+// ----------------------------------------------------------------------------
+
+function meta::external::language::typescript::translation::pureTypeToTypeScriptType(
+   g: meta::pure::metamodel::type::generics::GenericType[1],
+   mult: meta::pure::metamodel::multiplicity::Multiplicity[1]
+): TypeNode[1]
+{
+   let raw = $g->rawType()->toOne('pureTypeToTypeScriptType: unresolved rawType on GenericType');
+   if ($raw == Integer, | tsNumber(),
+   |if ($raw == Float,   | tsNumber(),
+   |if ($raw == Boolean, | tsBoolean(),
+   |if ($raw == String,  | tsString(),
+   | fail('Unsupported Pure type: ' + $raw->elementToPath()); tsAny();
+   ))));
+}
+
+// ----------------------------------------------------------------------------
+// Expression walker. Variables -> TS identifiers; atomic values -> TS literals;
+// function calls -> Convention's coder dispatch.
+// ----------------------------------------------------------------------------
+
+function meta::external::language::typescript::translation::translateExpression(expr: ValueSpecification[1], conv: Convention[1]): Expression[1]
+{
+   $expr->match([
+      v:  VariableExpression[1] | tsId($v.name),
+      a:  AtomicValue[1]        | $a->translateAtomicValue(),
+      fe: FunctionExpression[1] | let coder = $conv.functionCoders->get($fe.functionName)
+                                                                  ->toOne('No translator branch for Pure function: ' + $fe.functionName);
+                                  $coder->eval($fe.parametersValues, $conv);
+   ]);
+}
+
+function meta::external::language::typescript::translation::plusCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   binaryInfix($args, '+', $conv);
+}
+
+function meta::external::language::typescript::translation::binaryInfix(args: ValueSpecification[*], op: String[1], conv: Convention[1]): Expression[1]
+{
+   assert($args->size() == 2, | 'binaryInfix expects exactly 2 arguments, got ' + $args->size()->toString());
+   tsBinary(translateExpression($args->at(0), $conv), $op, translateExpression($args->at(1), $conv));
+}
+
+function meta::external::language::typescript::translation::translateAtomicValue(a: AtomicValue[1]): Expression[1]
+{
+   let v = $a.value;
+   $v->match([
+      i: Integer[1] | tsNumLit($i->toString()),
+      f: Float[1]   | tsNumLit($f->toString()),
+      b: Boolean[1] | tsBoolLit($b),
+      s: String[1]  | tsStrLit($s),
+      x: Any[1]     | fail('Unsupported atomic value type'); tsNull();
+   ]);
+}
+
+// ----------------------------------------------------------------------------
+// Top-level entry: translate a Pure function or lambda into a TS SourceFile
+// containing a single exported `execute(...)` function. The runtime adapter
+// hands the serialized source to `compileAndExecute` and asks for `execute`.
+// ----------------------------------------------------------------------------
+
+function meta::external::language::typescript::translation::translateFunction(
+   f: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
+   conv: Convention[1]
+): SourceFile[1]
+{
+   let returnType = pureTypeToTypeScriptType($f.returnGenericType, $f.returnMultiplicity);
+   buildSourceFile($f, $returnType, $conv);
+}
+
+// Lambda's return type lives on the classifier (LambdaFunction<{params -> ret}>)
+// rather than on dedicated slots — extract it from typeArguments[0].
+function meta::external::language::typescript::translation::translateLambda(
+   f: meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1],
+   conv: Convention[1]
+): SourceFile[1]
+{
+   let funcType   = $f.classifierGenericType.typeArguments->at(0)->rawType()->toOne('translateLambda: lambda missing classifier function type')->cast(@meta::pure::metamodel::type::FunctionType);
+   let returnType = pureTypeToTypeScriptType($funcType.returnType, $funcType.returnMultiplicity);
+   buildSourceFile($f, $returnType, $conv);
+}
+
+// Shared back-end: take a FunctionDefinition + a TS return type, emit a
+// SourceFile holding a single `export function execute(...)`.
+function meta::external::language::typescript::translation::buildSourceFile(
+   f: meta::pure::metamodel::function::FunctionDefinition<meta::pure::metamodel::type::Any>[1],
+   returnType: TypeNode[1],
+   conv: Convention[1]
+): SourceFile[1]
+{
+   let tsParams = $f.parameters->map(p |
+      tsParam($p.name, pureTypeToTypeScriptType($p.genericType, $p.multiplicity))
+   );
+
+   assert($f.expressionSequence->size() == 1, | 'buildSourceFile: only single-expression bodies are supported in the minimal translator, got ' + $f.expressionSequence->size()->toString());
+   let body = tsBlock([tsReturn(translateExpression($f.expressionSequence->toOne(), $conv))]);
+
+   let fn = ^FunctionDeclaration(
+      name           = 'execute',
+      modifiers      = [ModifierFlag.Export],
+      typeParameters = [],
+      parameters     = $tsParams,
+      returnType     = $returnType,
+      body           = $body
+   );
+   tsSourceFile('translated.ts', [$fn]);
+}

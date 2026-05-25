@@ -923,6 +923,41 @@ public class MetaNatives
         });
 
         // newEnumeration is implemented in Pure (see newEnumeration.pure).
+
+        // openVariableValues(LambdaFunction<Any>[1]) : Map<String, List<Any>>[1]
+        //
+        // Returns the lambda's captured open-variable bindings as a Map keyed by
+        // variable name. Lambdas with no captures (no enclosing scope at
+        // definition) are not converted to Closure — they return an empty map.
+        natives.put("openVariableValues_LambdaFunction_1__Map_1_", (args, eval, genericType, multiplicity) ->
+        {
+            java.util.LinkedHashMap<ValueSpecification, ValueSpecification> resultMap = new java.util.LinkedHashMap<>();
+            Object lambdaObj = _E_ValueSpecification.unwrap(args.get(0));
+            if (lambdaObj instanceof org.finos.legend.pure.execution.Closure closure)
+            {
+                org.finos.legend.pure.execution.Scope scope = closure.capturedScope();
+                meta.pure.metamodel.type.generics.GenericType stringGT =
+                        (meta.pure.metamodel.type.generics.GenericType) resolver.getElement(
+                                "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_primitives_String");
+                for (int i = 0; i < scope.localSize(); i++)
+                {
+                    String name = scope.localNameAt(i);
+                    ValueSpecification valueVS = scope.localValueAt(i);
+                    ValueSpecification valuesSlot = valueVS instanceof meta.pure.metamodel.valuespecification.Collection
+                            ? valueVS
+                            : org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(
+                                    java.util.List.of(valueVS), resolver);
+                    DynamicInstance listInstance = new DynamicInstance("meta::pure::functions::collection::List");
+                    listInstance.put("values", valuesSlot);
+                    ValueSpecification keyVS = _E_ValueSpecification.wrap(name, stringGT, null, resolver);
+                    ValueSpecification listVS = _E_ValueSpecification.wrap(listInstance, null, null, resolver);
+                    resultMap.put(keyVS, listVS);
+                }
+            }
+            return _E_ValueSpecification.wrap(
+                    new org.finos.legend.pure.execution.PureMap(resultMap),
+                    genericType, multiplicity, resolver);
+        });
     }
 
     // =========================================================================

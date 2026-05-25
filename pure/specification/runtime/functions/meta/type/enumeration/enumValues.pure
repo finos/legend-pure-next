@@ -16,6 +16,7 @@ import meta::pure::functions::asserts::*;
 import meta::pure::functions::meta::*;
 import meta::pure::functions::meta::tests::enumValues::*;
 import meta::pure::metamodel::type::*;
+import meta::pure::test::pct::*;
 
 // Returns the values of an enumeration as Enum instances.
 //
@@ -36,16 +37,12 @@ Enum meta::pure::functions::meta::tests::enumValues::TestColor
     RED, GREEN, BLUE
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::enumValues::testEnumValuesReturnsAllInOrder():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::enumValues::testEnumValuesReturnsAllInOrder<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let vs = TestColor->enumValues();
-    assertEquals(3, $vs->size());
-    assertEquals('RED', $vs->at(0).name);
-    assertEquals('GREEN', $vs->at(1).name);
-    assertEquals('BLUE', $vs->at(2).name);
+    assertEquals(['RED', 'GREEN', 'BLUE'], $f->eval(|TestColor->enumValues().name));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::enumValues::testEnumValuesMatchLiterals():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::enumValues::testEnumValuesMatchLiterals<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals([TestColor.RED, TestColor.GREEN, TestColor.BLUE], TestColor->enumValues());
+    assertEquals([TestColor.RED, TestColor.GREEN, TestColor.BLUE], $f->eval(|TestColor->enumValues()));
 }

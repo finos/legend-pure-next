@@ -1,0 +1,28 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::translation::*;
+
+// PCT tests for the Pure->TypeScript translator. Each `<<test.Test>>` here
+// invokes an upstream `<<PCT.test>>` from the math/operation specs, passing
+// our `testAdapterForTranslatedTypeScript`. The adapter translates the PCT
+// lambda to TS, transpiles + evaluates it via GraalJS through the Truffle
+// `compileAndExecute` native, and returns the result. If the answer matches
+// the PCT's expected constant, the translator + emitted TS + the JS engine's
+// arithmetic all agree with Pure semantics.
+
+function <<test.Test>> meta::external::language::typescript::translation::tests::pct::testSimplePlus(): Boolean[1]
+{
+   meta::pure::functions::math::tests::plus::testSimplePlus(testAdapterForTranslatedTypeScript_Function_1__X_o_);
+}

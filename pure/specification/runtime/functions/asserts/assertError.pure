@@ -22,24 +22,24 @@ function <<PCT.function, PCT.platformOnly>> meta::pure::functions::asserts::asse
     assertError($f, $message, [], []);
 }
 
-function <<test.Test>> meta::pure::functions::asserts::testSimpleAssertError():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::testSimpleAssertError<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2');
+    assert($f->eval(|assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2')));
 }
 
-function <<test.Test>> meta::pure::functions::asserts::testSimpleAssertErrorLine():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::testSimpleAssertErrorLine<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2', 32, []);
+    assert($f->eval(|assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2', 36, [])));
 }
 
-function <<test.Test>> meta::pure::functions::asserts::testSimpleAssertErrorLineColumn():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::testSimpleAssertErrorLineColumn<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2', 37, 25);
+    assert($f->eval(|assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2', 44, 29)));
 }
 
-function <<test.Test>> meta::pure::functions::asserts::testSimpleAssertErrorColumn():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::testSimpleAssertErrorColumn<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2', [], 25);
+    assert($f->eval(|assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2', [], 29)));
 }
 
 // ----------------------------------------------------------------------------
@@ -95,6 +95,14 @@ function meta::pure::functions::asserts::tests::stackTrace::outer():String[1]
 //     matches bootstrap's `_functionName`-based path
 //   - normalizing Truffle's anonymous lambda name from `lambda@<file>:<l>:<c>`
 //     down to bare `lambda`
+//
+// Stays `<<test.Test>>` (not PCT) on purpose: the pinned substring includes
+// exact `:line:col` offsets of the lambda frame, and wrapping the body in
+// `$f->eval(|outer())` would (a) shift columns and (b) inject extra runner
+// frames between `outer()` and the test, making the stack trace adapter-
+// specific. PCT tests must be backend-agnostic; this one validates the
+// in-process Pure stack-trace format itself, which is inherently bound to
+// the in-memory adapter.
 function <<test.Test>> meta::pure::functions::asserts::tests::stackTrace::testFullPureStackTrace():Boolean[1]
 {
     assertError(
@@ -105,7 +113,7 @@ function <<test.Test>> meta::pure::functions::asserts::tests::stackTrace::testFu
             at meta::pure::functions::asserts::tests::stackTrace::inner (asserts/assertError.pure:61c7)
             at meta::pure::functions::asserts::tests::stackTrace::middle (asserts/assertError.pure:66c5)
             at meta::pure::functions::asserts::tests::stackTrace::outer (asserts/assertError.pure:71c5)
-            at lambda (asserts/assertError.pure:101c11)'''
+            at lambda (asserts/assertError.pure:109c11)'''
     );
 }
 

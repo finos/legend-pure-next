@@ -1,0 +1,151 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::serialization::tests::*;
+
+// =============================================================================
+// Enums
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::emptyEnum(): Boolean[1]
+{
+   testStmt('enum Color {}', tsEnum('Color', []));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::enumMembers(): Boolean[1]
+{
+   testStmt('''
+            enum Color {
+              Red,
+              Green,
+              Blue
+            }''',
+            tsEnum('Color', [
+               tsEnumMember('Red'),
+               tsEnumMember('Green'),
+               tsEnumMember('Blue')
+            ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::enumStringInits(): Boolean[1]
+{
+   testStmt('''
+            enum Status {
+              Active = 'active',
+              Inactive = 'inactive'
+            }''',
+            tsEnum('Status', [
+               tsEnumMemberInit('Active', tsStrLit('active')),
+               tsEnumMemberInit('Inactive', tsStrLit('inactive'))
+            ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::enumNumericInits(): Boolean[1]
+{
+   testStmt('''
+            enum Bits {
+              One = 1,
+              Two = 2,
+              Four = 4
+            }''',
+            tsEnum('Bits', [
+               tsEnumMemberInit('One', tsNumLit('1')),
+               tsEnumMemberInit('Two', tsNumLit('2')),
+               tsEnumMemberInit('Four', tsNumLit('4'))
+            ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constEnum(): Boolean[1]
+{
+   testStmt('''
+            const enum Tag {
+              A,
+              B
+            }''',
+            tsConstEnum('Tag', [
+               tsEnumMember('A'),
+               tsEnumMember('B')
+            ]));
+}
+
+// =============================================================================
+// Get / Set accessors
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::classWithGetter(): Boolean[1]
+{
+   testStmt('''
+            class Box {
+              get value(): number {
+                return 1;
+              }
+            }''',
+            tsClass('Box', [
+               tsGetter('value', tsNumber(), tsBlock([tsReturn(tsNumLit('1'))]))
+            ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::classWithSetter(): Boolean[1]
+{
+   testStmt('''
+            class Box {
+              set value(v: number) {
+                return;
+              }
+            }''',
+            tsClass('Box', [
+               tsSetter('value', tsParam('v', tsNumber()), tsBlock([tsReturn([])]))
+            ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::classWithGetterAndSetter(): Boolean[1]
+{
+   testStmt('''
+            class Box {
+              get value(): number {
+                return this.v;
+              }
+
+              set value(v: number) {
+                return;
+              }
+            }''',
+            tsClass('Box', [
+               tsGetter('value', tsNumber(), tsBlock([tsReturn(tsAccess(tsThis(), 'v'))])),
+               tsSetter('value', tsParam('v', tsNumber()), tsBlock([tsReturn([])]))
+            ]));
+}
+
+// =============================================================================
+// Shorthand property assignment — emits `{ x }`, not `{ x: x }`.
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::shorthandSingle(): Boolean[1]
+{
+   testExpr('{ x }', tsObject([tsEntryShorthand('x')]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::shorthandMixed(): Boolean[1]
+{
+   // Shorthand and long-form sit side by side in the same literal.
+   testExpr('{ x, name: \'Ada\', y }',
+            tsObject([
+               tsEntryShorthand('x'),
+               tsEntry('name', tsStrLit('Ada')),
+               tsEntryShorthand('y')
+            ]));
+}

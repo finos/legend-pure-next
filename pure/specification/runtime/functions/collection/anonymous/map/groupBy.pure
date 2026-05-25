@@ -16,25 +16,24 @@ import meta::pure::test::pct::*;
 import meta::pure::functions::collection::tests::model::*;
 
 native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::collection::groupBy<X,K>(set:X[*], f:Function<{X[1]->K[1]}>[1]):Map<K,List<X>>[1];
-//{
-//   $set->fold({value,map|let key = $f->eval($value);
-//                         let currentList = $map->get($key);
-//                         $map->put($key, ^List<X>(values=if($currentList->isEmpty(), |$value, |$currentList->toOne().values->concatenate($value))));
-//              },^Map<K,List<X>>());
-//}
 
-
-function <<test.Test>> meta::pure::functions::collection::tests::groupBy::testGroupBy():Boolean[1]
+function <<PCT.test>> meta::pure::functions::collection::tests::groupBy::testGroupBy<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    let set = [^CO_Person(firstName='David', lastName='Roe'), ^CO_Person(firstName='John', lastName='Dean'), ^CO_Person(firstName='David', lastName='Miles'), ^CO_Person(firstName='Bob', lastName='Branche')];
-   assertEquals(['Roe', 'Miles'], $set->groupBy(p|$p.firstName)->get('David').values.lastName);
-   assertEquals(['David'], $set->groupBy(p|$p.lastName)->get('Roe').values.firstName);
+   assertEquals(['Roe', 'Miles'], $f->eval(|
+       $set->groupBy(p|$p.firstName)->get('David').values.lastName;
+   ));
+   assertEquals(['David'], $f->eval(|
+       $set->groupBy(p|$p.lastName)->get('Roe').values.firstName;
+   ));
 }
 
-function <<test.Test>> meta::pure::functions::collection::tests::groupBy::testGroupByObj():Boolean[1]
+function <<PCT.test>> meta::pure::functions::collection::tests::groupBy::testGroupByObj<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   let address = ^CO_Address(name='ok1');
-   let address2 = ^CO_Address(name='ok2');
-   let set = [^CO_NPerson(firstName='David', lastName='Roe', address = $address), ^CO_NPerson(firstName='John', lastName='Dean', address = $address2), ^CO_NPerson(firstName='David', lastName='Miles', address = $address), ^CO_NPerson(firstName='Bob', lastName='Branche', address = $address2)];
-   assertEquals(['ok1', 'ok2'], $set->groupBy(p|$p.address->toOne())->keys().name->sort());
+   assertEquals(['ok1', 'ok2'], $f->eval(|
+       let address = ^CO_Address(name='ok1');
+       let address2 = ^CO_Address(name='ok2');
+       let set = [^CO_NPerson(firstName='David', lastName='Roe', address = $address), ^CO_NPerson(firstName='John', lastName='Dean', address = $address2), ^CO_NPerson(firstName='David', lastName='Miles', address = $address), ^CO_NPerson(firstName='Bob', lastName='Branche', address = $address2)];
+       $set->groupBy(p|$p.address->toOne())->keys().name->sort();
+   ));
 }

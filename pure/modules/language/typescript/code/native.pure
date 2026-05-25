@@ -1,0 +1,114 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::*;
+
+// ----------------------------------------------------------------------------
+// Truffle-only: transpile a TypeScript source string via the official
+// `typescript.js` compiler (loaded into a GraalJS polyglot context), evaluate
+// the resulting JavaScript as a CommonJS module, and invoke a named exported
+// function on it. Implementation lives in
+// `legend-pure-next-truffle-extension-typescript`'s `TypeScriptCompileNatives`.
+//
+// `args` are passed positionally to the function. Scalars map across the
+// JS↔Pure boundary directly (Long, Double, Boolean, String). null/undefined
+// becomes the empty Pure sequence.
+//
+// Returns `Any[*]` so callers in generic contexts (e.g. PCT adapters typed
+// `<X|o>(...):X[o]`) can return this value directly — Pure widens `Any[*]`
+// to the caller's `X[o]` at the call site, same pattern as the engine's
+// relational PCT adapter.
+// ----------------------------------------------------------------------------
+
+native function meta::external::language::typescript::compileAndExecute(
+   source: String[1],
+   fnName: String[1],
+   args: Any[*]
+): Any[*];
+
+// ----------------------------------------------------------------------------
+// Tests — exercise the native directly with hand-written TS strings, so
+// failures point at the bridge rather than at any code-generator on top.
+//
+// Truffle-only: these will fail when run on the bootstrap backend (the
+// native is not registered there).
+// ----------------------------------------------------------------------------
+
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteIntegerAdd(): Boolean[1]
+{
+   let source = '''
+                export function execute(a: number, b: number): number
+                {
+                    return a + b;
+                }''';
+   assertEquals(7, compileAndExecute($source, 'execute', [3, 4]));
+}
+
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteDoubleDivide(): Boolean[1]
+{
+   let source = '''
+                export function execute(a: number, b: number): number
+                {
+                    return a / b;
+                }''';
+   assertEquals(2.5, compileAndExecute($source, 'execute', [10.0, 4.0]));
+}
+
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteBooleanReturn(): Boolean[1]
+{
+   let source = '''
+                export function execute(n: number): boolean
+                {
+                    return n > 0;
+                }''';
+   assertEquals(true,  compileAndExecute($source, 'execute', [5]));
+   assertEquals(false, compileAndExecute($source, 'execute', [-3]));
+}
+
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteStringReturn(): Boolean[1]
+{
+   let source = '''
+                export function execute(name: string): string
+                {
+                    return 'hello, ' + name;
+                }''';
+   assertEquals('hello, world', compileAndExecute($source, 'execute', ['world']));
+}
+
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteZeroArgs(): Boolean[1]
+{
+   let source = '''
+                export function execute(): number
+                {
+                    return 42;
+                }''';
+   assertEquals(42, compileAndExecute($source, 'execute', []));
+}
+
+// Compile failure — source has a deliberate parse error. ts.transpileModule
+// runs the parser + emitter (no type-checker), so we need a syntactic break
+// for the diagnostic path to fire; an unbound identifier would pass transpile
+// and then fail at JS execution as a runtime ReferenceError instead.
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteCompileErrorThrows(): Boolean[1]
+{
+   let badSource = '''
+                   export function execute(: number
+                   {
+                       return 1;
+                   }''';
+   assertError(
+      | compileAndExecute($badSource, 'execute', []),
+      'TypeScript compilation failed'
+   );
+}

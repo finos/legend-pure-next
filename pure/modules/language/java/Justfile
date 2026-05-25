@@ -74,18 +74,33 @@ build-tests:
         --output-dir {{shared_out}} \
         --tests split {{err_filter}}
 
-# Run all Pure tests under meta::external::language::java via pure-bootstrap.
+# Run all Pure tests under meta::external::language::java via pure-truffle.
+# The `compileAndExecute` native is implemented in the Truffle Java extension
+# (legend-pure-next-truffle-extension-java's JavaCompileNatives) — the
+# bootstrap CLI does NOT register it, so testCompileAndExecute* tests fail
+# there with "No native implementation for: compileAndExecute".
 # Needs core-tests.pdb because runTests is <<test.TestDependency>>.
-test-all: build-tests
-    @{{banner}} '[language-java]' 'runTests meta::external::language::java'
-    test -f {{shared_out}}/core-tests.pdb || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)
-    {{pure_bootstrap}} execute \
+test-all: build-tests _check-runtime-pdbs
+    @{{banner}} '[language-java]' 'runTests meta::external::language::java (Truffle)'
+    {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/java.pdb \
         --pdb {{shared_out}}/java-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1_" \
         --args "meta::external::language::java" {{err_filter}}
+
+# Internal: fail loudly if PDBs / pure-truffle aren't staged.
+_check-runtime-pdbs:
+    #!/usr/bin/env bash
+    if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
+        echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2
+        exit 1
+    fi
+    if [[ ! -x "{{pure_truffle}}" ]]; then
+        echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" >&2
+        exit 1
+    fi
 
 # Remove shared/java.pdb (and the tests PDB).
 clean:

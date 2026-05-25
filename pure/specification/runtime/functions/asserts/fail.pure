@@ -14,6 +14,7 @@
 
 import meta::pure::functions::asserts::*;
 import meta::pure::functions::lang::*;
+import meta::pure::test::pct::*;
 
 function meta::pure::functions::lang::fail(message:String[1]): Boolean[1]
 {
@@ -25,18 +26,22 @@ function meta::pure::functions::lang::fail(): Boolean[1]
     fail('fail');
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::fail::testFailWithMessage():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::fail::testFailWithMessage<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let result = tryEval(|fail('boom'));
-    assert($result.failure->isNotEmpty(), 'expected failure on fail');
-    let err = $result.failure->toOne();
-    assert($err.message->contains('boom'), 'expected message to contain "boom"; got: ' + $err.message);
+    assert($f->eval(|
+        let result = tryEval(|fail('boom'));
+        assert($result.failure->isNotEmpty(), 'expected failure on fail');
+        let err = $result.failure->toOne();
+        assert($err.message->contains('boom'), 'expected message to contain "boom"; got: ' + $err.message);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::fail::testFailNoArg():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::fail::testFailNoArg<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let result = tryEval(|fail());
-    assert($result.failure->isNotEmpty(), 'expected failure on fail');
-    let err = $result.failure->toOne();
-    assert($err.message->contains('fail'), 'expected message to contain "fail"; got: ' + $err.message);
+    assert($f->eval(|
+        let result = tryEval(|fail());
+        assert($result.failure->isNotEmpty(), 'expected failure on fail');
+        let err = $result.failure->toOne();
+        assert($err.message->contains('fail'), 'expected message to contain "fail"; got: ' + $err.message);
+    ));
 }

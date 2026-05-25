@@ -13,9 +13,10 @@
 #   `build` → `(_mvn "skip-tests")` (mvn install -DskipTests) — fast, no Java tests
 #   `test-java` → `(_mvn "with-tests")` (mvn install)         — surefire runs unit tests inline
 # Maven runs once on the truffle parent pom; the reactor walks
-# parent → codegen → runtime in a single launch. Codegen's pom already
-# removes its generated MapImpl during its own `compile` phase, so no
-# inter-module file shuffling is needed at the Justfile level.
+# parent → platform → pdb-generation → runtime → ide → extension → extension-java
+# in a single launch. pdb-generation's pom already removes its generated
+# MapImpl during its own `compile` phase, so no inter-module file shuffling
+# is needed at the Justfile level.
 
 set quiet := true
 set shell := ["bash", "-c"]
@@ -23,17 +24,21 @@ set shell := ["bash", "-c"]
 # GraalVM native-image build + native-binary test recipes — `just truffle::native::<recipe>`.
 mod native "native.just"
 
-truffle_root    := source_directory()
-repo_root       := truffle_root / ".." / ".."
-truffle         := truffle_root / "legend-pure-next-truffle"
-truffle_runtime := truffle / "legend-pure-next-truffle-runtime"
-spec            := repo_root / "pure" / "specification"
-compiler_src    := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
-truffle_out     := truffle_root / "build"
-shared_out      := repo_root / "shared"
-truffle_cli     := truffle_out / "pure-truffle.jar"
-pure_truffle    := truffle_root / "bin" / "pure-truffle"
-pure_bootstrap  := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+truffle_root      := source_directory()
+repo_root         := truffle_root / ".." / ".."
+truffle           := truffle_root / "legend-pure-next-truffle"
+truffle_platform  := truffle / "legend-pure-next-truffle-platform"
+truffle_runtime   := truffle_platform / "legend-pure-next-truffle-runtime"
+truffle_extension := truffle / "legend-pure-next-truffle-extension"
+truffle_ext_java  := truffle_extension / "legend-pure-next-truffle-extension-java"
+truffle_ext_ts    := truffle_extension / "legend-pure-next-truffle-extension-typescript"
+spec              := repo_root / "pure" / "specification"
+compiler_src      := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
+truffle_out       := truffle_root / "build"
+shared_out        := repo_root / "shared"
+truffle_cli       := truffle_out / "pure-truffle.jar"
+pure_truffle      := truffle_root / "bin" / "pure-truffle"
+pure_bootstrap    := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 
 verbose := ""
 mvnq    := if verbose == "" { "-q" } else { "" }
@@ -141,7 +146,7 @@ bench: (_mvn "skip-tests")
     @{{banner}} '[truffle]' 'PureEvaluatorBenchmark'
     cd {{truffle}} && mvn -Pbench test -Dtest=PureEvaluatorBenchmark
 
-# Remove truffle/build/ and run mvn clean.
+# Remove truffle/build/ and run mvn clean across the unified truffle reactor.
 clean:
     @{{banner}} '[truffle clean]' 'remove truffle/build (jar + native + self-host pdb) and mvn target/'
     rm -rf {{truffle_out}}
@@ -149,9 +154,18 @@ clean:
 
 # Internal: parameterized `mvn install` invocation.
 # `mode` is "skip-tests" (fast, no Java tests) or "with-tests" (surefire runs unit tests).
-# Walks the truffle parent reactor (parent → codegen → runtime) in one launch.
+# Walks the unified truffle reactor in one launch:
+#   parent (legend-pure-next-truffle)
+#     → platform (legend-pure-next-truffle-platform)
+#         → pdb-generation
+#         → runtime
+#     → ide
+#     → extension (legend-pure-next-truffle-extension)
+#         → extension-java
+# Maven derives the build order from compile deps (runtime depends on
+# pdb-generation; extension-java depends on runtime).
 _mvn mode: _check-pdbs _check-graalvm
-    @{{banner}} '[truffle]' '{{ if mode == "skip-tests" { "mvn install -DskipTests (parent → codegen → runtime + fat jar)" } else { "mvn install (parent → codegen → runtime + fat jar + unit tests)" } }}'
+    @{{banner}} '[truffle]' '{{ if mode == "skip-tests" { "mvn install -DskipTests (truffle reactor)" } else { "mvn install (truffle reactor + unit tests)" } }}'
     # `--fail-at-end` so all surefire suites run even when one module's tests
     # fail — surfaces every assertion failure across the reactor in a single
     # `just truffle::test` run instead of discovering them one module at a
@@ -159,6 +173,16 @@ _mvn mode: _check-pdbs _check-graalvm
     cd {{truffle}} && mvn --fail-at-end clean install {{ if mode == "skip-tests" { "-DskipTests" } else { "" } }} {{mvnq}} {{err_filter}}
     mkdir -p {{truffle_out}}
     cp {{truffle_runtime}}/target/pure-truffle-*-fat.jar {{truffle_cli}}
+    # Extensions ship as separate jars next to the fat runtime jar; the
+    # launcher (bin/pure-truffle) globs build/*.jar onto the classpath so
+    # ServiceLoader finds them via META-INF/services.
+    cp {{truffle_ext_java}}/target/legend-pure-next-truffle-extension-java-*.jar {{truffle_out}}/
+    cp {{truffle_ext_ts}}/target/legend-pure-next-truffle-extension-typescript-*.jar {{truffle_out}}/
+    # GraalJS runtime jars (js-language, regex, icu4j, ...) — staged by the
+    # TS extension's maven-dependency-plugin into target/dependency/. Only
+    # the TS extension brings these; copying everything in dependency/ is
+    # safe because version-pinned to truffle.version.
+    cp {{truffle_ext_ts}}/target/dependency/*.jar {{truffle_out}}/ 2>/dev/null || true
 
 # Internal: fail loudly if shared/core.pdb or shared/compiler.pdb is missing.
 _check-pdbs:

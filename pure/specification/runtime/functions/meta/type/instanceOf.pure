@@ -17,81 +17,80 @@ import meta::pure::test::pct::*;
 
 native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::instanceOf(instance:Any[1], type:Type[1]):Boolean[1];
 
-function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfPrimitive():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfPrimitive<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert(1->instanceOf(Integer));
-    assert(1->instanceOf(Number));
-    assert(1->instanceOf(Any));
-    assertFalse(1->instanceOf(String));
-    assertFalse(1->instanceOf(Boolean));
-    assertFalse(1->instanceOf(Date));
-    assertFalse(1->instanceOf(Float));
+    assertEquals(true, $f->eval(|1->instanceOf(Integer)));
+    assertEquals(true, $f->eval(|1->instanceOf(Number)));
+    assertEquals(true, $f->eval(|1->instanceOf(Any)));
+    assertEquals(false, $f->eval(|1->instanceOf(String)));
+    assertEquals(false, $f->eval(|1->instanceOf(Boolean)));
+    assertEquals(false, $f->eval(|1->instanceOf(Date)));
+    assertEquals(false, $f->eval(|1->instanceOf(Float)));
 
-    assert('the quick brown fox jumps over the lazy dog'->instanceOf(String));
-    assert('the quick brown fox jumps over the lazy dog'->instanceOf(Any));
-    assertFalse('the quick brown fox jumps over the lazy dog'->instanceOf(Integer));
-    assertFalse('the quick brown fox jumps over the lazy dog'->instanceOf(Number));
-    assertFalse('the quick brown fox jumps over the lazy dog'->instanceOf(Boolean));
-    assertFalse('the quick brown fox jumps over the lazy dog'->instanceOf(Date));
-    assertFalse('the quick brown fox jumps over the lazy dog'->instanceOf(Float));
+    assertEquals(true, $f->eval(|'the quick brown fox jumps over the lazy dog'->instanceOf(String)));
+    assertEquals(true, $f->eval(|'the quick brown fox jumps over the lazy dog'->instanceOf(Any)));
+    assertEquals(false, $f->eval(|'the quick brown fox jumps over the lazy dog'->instanceOf(Integer)));
+    assertEquals(false, $f->eval(|'the quick brown fox jumps over the lazy dog'->instanceOf(Number)));
+    assertEquals(false, $f->eval(|'the quick brown fox jumps over the lazy dog'->instanceOf(Boolean)));
+    assertEquals(false, $f->eval(|'the quick brown fox jumps over the lazy dog'->instanceOf(Date)));
+    assertEquals(false, $f->eval(|'the quick brown fox jumps over the lazy dog'->instanceOf(Float)));
 
-    assert(true->instanceOf(Boolean));
-    assert(true->instanceOf(Any));
-    assertFalse(true->instanceOf(Integer));
-    assertFalse(true->instanceOf(Number));
-    assertFalse(true->instanceOf(String));
-    assertFalse(true->instanceOf(Date));
-    assertFalse(true->instanceOf(Float));
+    assertEquals(true, $f->eval(|true->instanceOf(Boolean)));
+    assertEquals(true, $f->eval(|true->instanceOf(Any)));
+    assertEquals(false, $f->eval(|true->instanceOf(Integer)));
+    assertEquals(false, $f->eval(|true->instanceOf(Number)));
+    assertEquals(false, $f->eval(|true->instanceOf(String)));
+    assertEquals(false, $f->eval(|true->instanceOf(Date)));
+    assertEquals(false, $f->eval(|true->instanceOf(Float)));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfPrimitiveType():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfPrimitiveType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert(Boolean->instanceOf(PrimitiveType));
-    assert(Date->instanceOf(PrimitiveType));
-    assert(Integer->instanceOf(PrimitiveType));
-    assert(Float->instanceOf(PrimitiveType));
-    assert(Number->instanceOf(PrimitiveType));
-    assert(String->instanceOf(PrimitiveType));
+    assertEquals(true, $f->eval(|Boolean->instanceOf(PrimitiveType)));
+    assertEquals(true, $f->eval(|Date->instanceOf(PrimitiveType)));
+    assertEquals(true, $f->eval(|Integer->instanceOf(PrimitiveType)));
+    assertEquals(true, $f->eval(|Float->instanceOf(PrimitiveType)));
+    assertEquals(true, $f->eval(|Number->instanceOf(PrimitiveType)));
+    assertEquals(true, $f->eval(|String->instanceOf(PrimitiveType)));
 }
 
-function <<test.Test>>   meta::pure::functions::meta::tests::instanceOf::testInstanceOfDate():Boolean[1]
+function <<PCT.test>>   meta::pure::functions::meta::tests::instanceOf::testInstanceOfDate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert(%2015-01-01->instanceOf(Date));
-    assertFalse(1->instanceOf(Date));
+    assertEquals(true, $f->eval(|%2015-01-01->instanceOf(Date)));
+    assertEquals(false, $f->eval(|1->instanceOf(Date)));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfInstance():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let a = ^CC_Address(name='Jersey City', type=CC_GeographicEntityType.CITY);
-    assert($a->instanceOf(CC_Address));
-    assert($a->instanceOf(CC_GeographicEntity));
-    assert($a->instanceOf(Any));
-    assertFalse($a->instanceOf(CC_Person));
-    assertFalse($a->instanceOf(Integer));
+    assertEquals(true, $f->eval(|let a = ^CC_Address(name='Jersey City', type=CC_GeographicEntityType.CITY); $a->instanceOf(CC_Address);));
+    assertEquals(true, $f->eval(|let a = ^CC_Address(name='Jersey City', type=CC_GeographicEntityType.CITY); $a->instanceOf(CC_GeographicEntity);));
+    assertEquals(true, $f->eval(|let a = ^CC_Address(name='Jersey City', type=CC_GeographicEntityType.CITY); $a->instanceOf(Any);));
+    assertEquals(false, $f->eval(|let a = ^CC_Address(name='Jersey City', type=CC_GeographicEntityType.CITY); $a->instanceOf(CC_Person);));
+    assertEquals(false, $f->eval(|let a = ^CC_Address(name='Jersey City', type=CC_GeographicEntityType.CITY); $a->instanceOf(Integer);));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfClass():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfClass<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert(CC_Person->instanceOf(Class));
-    assert(CC_Person->instanceOf(Type));
-    assert(CC_Person->instanceOf(Any));
+    assertEquals(true, $f->eval(|CC_Person->instanceOf(Class)));
+    assertEquals(true, $f->eval(|CC_Person->instanceOf(Type)));
+    assertEquals(true, $f->eval(|CC_Person->instanceOf(Any)));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfEnum():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfEnum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert(CC_GeographicEntityType->instanceOf(Type));
-    assert(CC_GeographicEntityType->instanceOf(Any));
-    assertFalse(CC_GeographicEntityType->instanceOf(Class));
+    assertEquals(true, $f->eval(|CC_GeographicEntityType->instanceOf(Type)));
+    assertEquals(true, $f->eval(|CC_GeographicEntityType->instanceOf(Any)));
+    assertEquals(false, $f->eval(|CC_GeographicEntityType->instanceOf(Class)));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfFromEnumVal():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfFromEnumVal<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert(CC_GeographicEntityType.CITY->instanceOf(CC_GeographicEntityType));
-    assert(CC_GeographicEntityType.CITY->instanceOf(Enum));
-    assert(CC_GeographicEntityType.CITY->instanceOf(Any));
-    assertFalse(CC_GeographicEntityType.CITY->instanceOf(Enumeration));
-    assertFalse(CC_GeographicEntityType.CITY->instanceOf(Type));
-    assertFalse(CC_GeographicEntityType.CITY->instanceOf(Integer));
+    assertEquals(true, $f->eval(|CC_GeographicEntityType.CITY->instanceOf(CC_GeographicEntityType)));
+    assertEquals(true, $f->eval(|CC_GeographicEntityType.CITY->instanceOf(Enum)));
+    assertEquals(true, $f->eval(|CC_GeographicEntityType.CITY->instanceOf(Any)));
+    assertEquals(false, $f->eval(|CC_GeographicEntityType.CITY->instanceOf(Enumeration)));
+    assertEquals(false, $f->eval(|CC_GeographicEntityType.CITY->instanceOf(Type)));
+    assertEquals(false, $f->eval(|CC_GeographicEntityType.CITY->instanceOf(Integer)));
 }
 
 // Pins the runtime-type-preservation expectation across platforms: when a
@@ -113,22 +112,19 @@ Class meta::pure::functions::meta::tests::instanceOf::NumberHolder
     value: Number[1];
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfFromAnyProperty():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfFromAnyProperty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let h1 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = 42);
-    assert($h1.value->instanceOf(Integer));
-    assert($h1.value->instanceOf(Number));
-    assert($h1.value->instanceOf(Any));
-    assertFalse($h1.value->instanceOf(String));
+    assertEquals(true, $f->eval(|let h1 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = 42); $h1.value->instanceOf(Integer);));
+    assertEquals(true, $f->eval(|let h1 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = 42); $h1.value->instanceOf(Number);));
+    assertEquals(true, $f->eval(|let h1 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = 42); $h1.value->instanceOf(Any);));
+    assertEquals(false, $f->eval(|let h1 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = 42); $h1.value->instanceOf(String);));
 
-    let h2 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = 'hello');
-    assert($h2.value->instanceOf(String));
-    assert($h2.value->instanceOf(Any));
-    assertFalse($h2.value->instanceOf(Integer));
+    assertEquals(true, $f->eval(|let h2 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = 'hello'); $h2.value->instanceOf(String);));
+    assertEquals(true, $f->eval(|let h2 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = 'hello'); $h2.value->instanceOf(Any);));
+    assertEquals(false, $f->eval(|let h2 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = 'hello'); $h2.value->instanceOf(Integer);));
 
-    let h3 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = true);
-    assert($h3.value->instanceOf(Boolean));
-    assertFalse($h3.value->instanceOf(Integer));
+    assertEquals(true, $f->eval(|let h3 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = true); $h3.value->instanceOf(Boolean);));
+    assertEquals(false, $f->eval(|let h3 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = true); $h3.value->instanceOf(Integer);));
 }
 
 // Pins runtime-type narrowing through a non-Any supertype property: a Number
@@ -136,28 +132,26 @@ function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInsta
 // Number. Without this, `instanceOf(Integer)` on a value extracted from a
 // Number-typed field would return false even though the runtime value IS an
 // Integer.
-function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfFromSupertypeProperty():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfFromSupertypeProperty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let n = ^meta::pure::functions::meta::tests::instanceOf::NumberHolder(value = 7);
-    assert($n.value->instanceOf(Integer));
-    assert($n.value->instanceOf(Number));
-    assert($n.value->instanceOf(Any));
+    assertEquals(true, $f->eval(|let n = ^meta::pure::functions::meta::tests::instanceOf::NumberHolder(value = 7); $n.value->instanceOf(Integer);));
+    assertEquals(true, $f->eval(|let n = ^meta::pure::functions::meta::tests::instanceOf::NumberHolder(value = 7); $n.value->instanceOf(Number);));
+    assertEquals(true, $f->eval(|let n = ^meta::pure::functions::meta::tests::instanceOf::NumberHolder(value = 7); $n.value->instanceOf(Any);));
 
-    let f = ^meta::pure::functions::meta::tests::instanceOf::NumberHolder(value = 3.14);
-    assert($f.value->instanceOf(Float));
-    assert($f.value->instanceOf(Number));
-    assertFalse($f.value->instanceOf(Integer));
+    assertEquals(true, $f->eval(|let nf = ^meta::pure::functions::meta::tests::instanceOf::NumberHolder(value = 3.14); $nf.value->instanceOf(Float);));
+    assertEquals(true, $f->eval(|let nf = ^meta::pure::functions::meta::tests::instanceOf::NumberHolder(value = 3.14); $nf.value->instanceOf(Number);));
+    assertEquals(false, $f->eval(|let nf = ^meta::pure::functions::meta::tests::instanceOf::NumberHolder(value = 3.14); $nf.value->instanceOf(Integer);));
 }
 
 // Pins that a property declared with a more-specific type than the Java
 // representation is honored over the runtime type: `%2015-03-14` is stored as
 // a Java String, but its declared type is StrictDate (or the property type
 // might be Date). `instanceOf` must return StrictDate, not String.
-function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfDateLiteralKeepsDateType():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfDateLiteralKeepsDateType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert(%2015-03-14->instanceOf(StrictDate));
-    assert(%2015-03-14->instanceOf(Date));
-    assert(%2015-03-14->instanceOf(Any));
-    assertFalse(%2015-03-14->instanceOf(String));
-    assertFalse(%2015-03-14->instanceOf(Integer));
+    assertEquals(true, $f->eval(|%2015-03-14->instanceOf(StrictDate)));
+    assertEquals(true, $f->eval(|%2015-03-14->instanceOf(Date)));
+    assertEquals(true, $f->eval(|%2015-03-14->instanceOf(Any)));
+    assertEquals(false, $f->eval(|%2015-03-14->instanceOf(String)));
+    assertEquals(false, $f->eval(|%2015-03-14->instanceOf(Integer)));
 }

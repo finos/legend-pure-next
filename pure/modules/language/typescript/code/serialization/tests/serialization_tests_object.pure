@@ -1,0 +1,100 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::serialization::tests::*;
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::emptyObject(): Boolean[1]
+{
+   testExpr('{}', tsEmptyObject());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::objectOneEntry(): Boolean[1]
+{
+   testExpr('{ name: \'Ada\' }', tsObject([tsEntry('name', tsStrLit('Ada'))]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::objectMultipleEntries(): Boolean[1]
+{
+   testExpr(
+      '{ name: \'Ada\', age: 36, active: true }',
+      tsObject([
+         tsEntry('name', tsStrLit('Ada')),
+         tsEntry('age', tsNumLit('36')),
+         tsEntry('active', tsBoolLit(true))
+      ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::objectShorthand(): Boolean[1]
+{
+   testExpr('{ x, y }', tsObject([tsEntryShorthand('x'), tsEntryShorthand('y')]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::nestedObject(): Boolean[1]
+{
+   testExpr(
+      '{ user: { name: \'Ada\' }, role: \'admin\' }',
+      tsObject([
+         tsEntry('user', tsObject([tsEntry('name', tsStrLit('Ada'))])),
+         tsEntry('role', tsStrLit('admin'))
+      ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::objectInsideArrayLit(): Boolean[1]
+{
+   testExpr(
+      '[{ id: 1 }, { id: 2 }]',
+      tsArrayLit([
+         tsObject([tsEntry('id', tsNumLit('1'))]),
+         tsObject([tsEntry('id', tsNumLit('2'))])
+      ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::objectInConstDeclaration(): Boolean[1]
+{
+   testStmt(
+      'const user = { name: \'Ada\', age: 36 };',
+      tsConst('user', [],
+         tsObject([
+            tsEntry('name', tsStrLit('Ada')),
+            tsEntry('age', tsNumLit('36'))
+         ])));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::objectAsCallArg(): Boolean[1]
+{
+   testExpr(
+      'configure({ verbose: true, retries: 3 })',
+      tsCall(tsId('configure'),
+         [tsObject([
+            tsEntry('verbose', tsBoolLit(true)),
+            tsEntry('retries', tsNumLit('3'))
+         ])]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::objectFromMapPipeline(): Boolean[1]
+{
+   // Object literals in arrow concise body MUST be parenthesized — pinning
+   // that the serializer emits `({...})`, not `{...}` (which TS would parse
+   // as a block body and reject).
+   testExpr(
+      'users.map((u) => ({ name: u.name, id: u.id }))',
+      tsMap(tsId('users'), 'u',
+         tsObject([
+            tsEntry('name', tsAccess(tsId('u'), 'name')),
+            tsEntry('id', tsAccess(tsId('u'), 'id'))
+         ])));
+}

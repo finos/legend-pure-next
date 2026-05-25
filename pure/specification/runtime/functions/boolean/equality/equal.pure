@@ -217,113 +217,111 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     assert($f->eval(|!equal($otherBot12, $otherBot21)));
 }
 
-// Find a better place... Not a PCT test
-function <<test.Test>> meta::pure::functions::boolean::tests::equality::equal::testEqualPrimitiveCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualPrimitiveCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert(['a', 'b'] == ['a', 'b']);
-    assert(equal(['a', 'b'], ['a', 'b']));
+    assert($f->eval(|['a', 'b'] == ['a', 'b']));
+    assert($f->eval(|equal(['a', 'b'], ['a', 'b'])));
 
-    assert(['a', 'b', 'c'] == ['a', 'b', 'c']);
-    assert(equal(['a', 'b', 'c'], ['a', 'b', 'c']));
+    assert($f->eval(|['a', 'b', 'c'] == ['a', 'b', 'c']));
+    assert($f->eval(|equal(['a', 'b', 'c'], ['a', 'b', 'c'])));
 
-    assertFalse(['a', 'b'] == ['a', 'b', 'c']);
-    assertFalse(equal(['a', 'b'], ['a', 'b', 'c']));
+    assertFalse($f->eval(|['a', 'b'] == ['a', 'b', 'c']));
+    assertFalse($f->eval(|equal(['a', 'b'], ['a', 'b', 'c'])));
 
-    assertFalse(['a', 'b', 'c'] == ['a', 'b']);
-    assertFalse(equal(['a', 'b', 'c'], ['a', 'b']));
+    assertFalse($f->eval(|['a', 'b', 'c'] == ['a', 'b']));
+    assertFalse($f->eval(|equal(['a', 'b', 'c'], ['a', 'b'])));
 
-    assertFalse(['a', 'b'] == ['b', 'a']);
-    assertFalse(equal(['a', 'b'], ['b', 'a']));
+    assertFalse($f->eval(|['a', 'b'] == ['b', 'a']));
+    assertFalse($f->eval(|equal(['a', 'b'], ['b', 'a'])));
 }
 
-// Find a better place... Not a PCT test
-function <<test.Test>> meta::pure::functions::boolean::tests::equality::equal::testEqualRecursivePrimitiveCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualRecursivePrimitiveCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let side1 = ^SideClass(stringId='firstSide', intId=1);
     let side2 = ^SideClass(stringId='firstSide', intId=1);
     let side3 = ^SideClass(stringId='secondSide', intId=1);
-    let side4 = ^SideClass(stringId='secondSide', intId=2);
 
     let bot11 = ^BottomClass(name='left', left=1, right=1, sides=[$side1, $side3]);
     let bot12 = ^BottomClass(name='left', left=1, right=2, sides=[$side2, $side3]);
     let bot21 = ^BottomClass(name='left', left=2, right=1, sides=[$side1, $side3]);
 
-    assert([$bot11, $bot21] == [$bot11, $bot21]);
-    assert(equal([$bot11, $bot21], [$bot11, $bot21]));
+    assert($f->eval(|[$bot11, $bot21] == [$bot11, $bot21]));
+    assert($f->eval(|equal([$bot11, $bot21], [$bot11, $bot21])));
 
-    assert([$bot11, $bot21] == [$bot12, $bot21]);
-    assert(equal([$bot11, $bot21], [$bot12, $bot21]));
+    assert($f->eval(|[$bot11, $bot21] == [$bot12, $bot21]));
+    assert($f->eval(|equal([$bot11, $bot21], [$bot12, $bot21])));
 
-    assertFalse([$bot11, $bot21] == [$bot11, $bot12, $bot21]);
-    assertFalse(equal([$bot11, $bot21], [$bot11, $bot12, $bot21]));
+    assertFalse($f->eval(|[$bot11, $bot21] == [$bot11, $bot12, $bot21]));
+    assertFalse($f->eval(|equal([$bot11, $bot21], [$bot11, $bot12, $bot21])));
 
-    assertFalse([$bot11, $bot12, $bot21] == [$bot11, $bot21]);
-    assertFalse(equal([$bot11, $bot12, $bot21], [$bot11, $bot21]));
+    assertFalse($f->eval(|[$bot11, $bot12, $bot21] == [$bot11, $bot21]));
+    assertFalse($f->eval(|equal([$bot11, $bot12, $bot21], [$bot11, $bot21])));
 
-    assertFalse([$bot11, $bot21] == [$bot11, $bot12]);
-    assertFalse(equal([$bot11, $bot21], [$bot11, $bot12]));
+    assertFalse($f->eval(|[$bot11, $bot21] == [$bot11, $bot12]));
+    assertFalse($f->eval(|equal([$bot11, $bot21], [$bot11, $bot12])));
 }
 
-// Find a better place... Not a PCT test
-function <<test.Test>> meta::pure::functions::boolean::tests::equality::equal::testEqualMixedCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualMixedCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let side1 = ^SideClass(stringId='firstSide', intId=1);
     let side2 = ^SideClass(stringId='firstSide', intId=1);
     let side3 = ^SideClass(stringId='secondSide', intId=1);
-    let side4 = ^SideClass(stringId='secondSide', intId=2);
 
     let bot11 = ^BottomClass(name='left', left=1, right=1, sides=[$side1, $side3]);
     let bot12 = ^BottomClass(name='left', left=1, right=2, sides=[$side2, $side3]);
     let bot21 = ^BottomClass(name='left', left=2, right=1, sides=[$side1, $side3]);
 
-    assert([$bot11, 'a', $bot21] == [$bot11, 'a', $bot21]);
-    assert(equal([$bot11, 'a', $bot21], [$bot11, 'a', $bot21]));
+    assert($f->eval(|[$bot11, 'a', $bot21] == [$bot11, 'a', $bot21]));
+    assert($f->eval(|equal([$bot11, 'a', $bot21], [$bot11, 'a', $bot21])));
 
-    assert([$bot11, 'a', $bot21] == [$bot12, 'a', $bot21]);
-    assert(equal([$bot11, 'a', $bot21], [$bot12, 'a', $bot21]));
+    assert($f->eval(|[$bot11, 'a', $bot21] == [$bot12, 'a', $bot21]));
+    assert($f->eval(|equal([$bot11, 'a', $bot21], [$bot12, 'a', $bot21])));
 
-    assertFalse([$bot11, 'a', $bot21] == [$bot11, $bot12, 'a', $bot21]);
-    assertFalse(equal([$bot11, 'a', $bot21], [$bot11, $bot12, 'a', $bot21]));
+    assertFalse($f->eval(|[$bot11, 'a', $bot21] == [$bot11, $bot12, 'a', $bot21]));
+    assertFalse($f->eval(|equal([$bot11, 'a', $bot21], [$bot11, $bot12, 'a', $bot21])));
 
-    assertFalse([$bot11, $bot12, 'a', $bot21] == [$bot11, 'a', $bot21]);
-    assertFalse(equal([$bot11, $bot12, 'a', $bot21], [$bot11, 'a', $bot21]));
+    assertFalse($f->eval(|[$bot11, $bot12, 'a', $bot21] == [$bot11, 'a', $bot21]));
+    assertFalse($f->eval(|equal([$bot11, $bot12, 'a', $bot21], [$bot11, 'a', $bot21])));
 
-    assertFalse([$bot11, $bot21] == [$bot11, 'a']);
-    assertFalse(equal([$bot11, $bot21], [$bot11, 'a']));
+    assertFalse($f->eval(|[$bot11, $bot21] == [$bot11, 'a']));
+    assertFalse($f->eval(|equal([$bot11, $bot21], [$bot11, 'a'])));
 }
 
-// Find a better place... Not a PCT test
-function <<test.Test>> meta::pure::functions::boolean::tests::equality::equal::testEqualEmptyCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualEmptyCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert([] == []);
-    assert(equal([], []));
+    assert($f->eval(|[] == []));
+    assert($f->eval(|equal([], [])));
 
     let top = ^TopClass(name='top');
 
-    assert($top.sides == []);
-    assert(equal($top.sides, []));
-    assert([] == $top.sides);
-    assert(equal([], $top.sides));
+    assert($f->eval(|$top.sides == []));
+    assert($f->eval(|equal($top.sides, [])));
+    assert($f->eval(|[] == $top.sides));
+    assert($f->eval(|equal([], $top.sides)));
 
-    assert($top.nickName == []);
-    assert(equal($top.nickName, []));
-    assert([] == $top.nickName);
-    assert(equal([], $top.nickName));
+    assert($f->eval(|$top.nickName == []));
+    assert($f->eval(|equal($top.nickName, [])));
+    assert($f->eval(|[] == $top.nickName));
+    assert($f->eval(|equal([], $top.nickName)));
 }
 
 // Instances of a class without <<equality.Key>> properties are never equal
 // (only identity makes them equal). The old fallback incorrectly returned true.
-function <<test.Test>> meta::pure::functions::boolean::tests::equality::equal::testEqualNoKeyClassInstancesNotEqual():Boolean[1]
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualNoKeyClassInstancesNotEqual<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let a = ^NoKeyClass(name='x', value=1);
-    let b = ^NoKeyClass(name='x', value=1);
-    assertFalse($a == $b);
+    assertFalse($f->eval(|
+        let a = ^NoKeyClass(name='x', value=1);
+        let b = ^NoKeyClass(name='x', value=1);
+        $a == $b;
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::boolean::tests::equality::equal::testEqualNoKeyClassSameInstanceEqual():Boolean[1]
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualNoKeyClassSameInstanceEqual<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let a = ^NoKeyClass(name='x', value=1);
-    assert($a == $a);
+    assert($f->eval(|
+        let a = ^NoKeyClass(name='x', value=1);
+        $a == $a;
+    ));
 }
 
 function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualPrimitiveExtension<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]

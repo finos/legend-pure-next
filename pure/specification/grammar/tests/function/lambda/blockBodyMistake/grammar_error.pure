@@ -1,0 +1,12 @@
+// Broken pattern: multi-statement lambda body using `(param | { body })`
+// instead of the correct `{param | body}` form. Multi-statement lambdas
+// need `{param | stmt; expr;}` — the braces wrap the whole lambda, not
+// the body inside a single-expression form.
+
+function meta::test::probe(xs: Integer[*]): Integer[*]
+{
+   $xs->map(d | {
+      let x = $d + 1;
+      $x * 2;
+   });
+}

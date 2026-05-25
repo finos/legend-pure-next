@@ -1,0 +1,88 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Factories for control flow: ternary, if-statement, let/const declarations,
+// and the small unary operators that commonly compose with them.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+
+// =============================================================================
+// Ternary expression.
+//   tsTernary(cond, t, e)  ->  cond ? t : e
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsTernary(condition: Expression[1], whenTrue: Expression[1], whenFalse: Expression[1]): ConditionalExpression[1]
+{
+   ^ConditionalExpression(condition=$condition, whenTrue=$whenTrue, whenFalse=$whenFalse);
+}
+
+// =============================================================================
+// If statement.
+//
+// Pass `[]` as elseStmt for the single-branch form.
+// `thenStmt` / `elseStmt` are arbitrary Statements: typically a Block, but for
+// else-if chains pass another IfStatement as elseStmt.
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsIfStmt(condition: Expression[1], thenStmt: Statement[1], elseStmt: Statement[0..1]): IfStatement[1]
+{
+   ^IfStatement(expression=$condition, thenStatement=$thenStmt, elseStatement=$elseStmt);
+}
+
+// =============================================================================
+// Variable declarations at statement position.
+//   tsLet('x', tsString(), tsStrLit('hi'))  ->  let x: string = 'hi';
+//   tsConst('n', [], tsNumLit('42'))        ->  const n = 42;
+//
+// Pass `[]` for `type` to omit the annotation; pass `[]` for `init` to omit
+// the initializer (rarely used with const, but legal for let).
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsLet(name: String[1], type: TypeNode[0..1], init: Expression[0..1]): VariableStatement[1]
+{
+   ^VariableStatement(
+      modifiers=[],
+      declarationKind=VariableDeclarationKind.Let,
+      declarations=[^VariableDeclaration(name=tsId($name), type=$type, initializer=$init)]
+   );
+}
+
+function meta::external::language::typescript::factories::tsConst(name: String[1], type: TypeNode[0..1], init: Expression[0..1]): VariableStatement[1]
+{
+   ^VariableStatement(
+      modifiers=[],
+      declarationKind=VariableDeclarationKind.Const,
+      declarations=[^VariableDeclaration(name=tsId($name), type=$type, initializer=$init)]
+   );
+}
+
+// =============================================================================
+// Unary operators commonly used with conditionals.
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsNot(operand: Expression[1]): PrefixUnaryExpression[1]
+{
+   ^PrefixUnaryExpression(operator='!', operand=$operand);
+}
+
+function meta::external::language::typescript::factories::tsNeg(operand: Expression[1]): PrefixUnaryExpression[1]
+{
+   ^PrefixUnaryExpression(operator='-', operand=$operand);
+}
+
+function meta::external::language::typescript::factories::tsTypeof(operand: Expression[1]): PrefixUnaryExpression[1]
+{
+   ^PrefixUnaryExpression(operator='typeof ', operand=$operand);
+}

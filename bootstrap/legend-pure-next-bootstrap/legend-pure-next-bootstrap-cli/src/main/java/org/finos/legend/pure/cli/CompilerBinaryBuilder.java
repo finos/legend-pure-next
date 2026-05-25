@@ -44,7 +44,7 @@ public class CompilerBinaryBuilder
 {
     public static void main(String[] args) throws Exception
     {
-        Path corePdb = null;
+        List<Path> basePdbs = new ArrayList<>();
         Path sourceDir = null;
         Path outputDir = null;
         TestElementFilter.Mode mode = TestElementFilter.Mode.NONE;
@@ -52,25 +52,26 @@ public class CompilerBinaryBuilder
         {
             switch (args[i])
             {
-                case "--base-pdb" -> corePdb = Path.of(args[++i]);
+                case "--base-pdb" -> basePdbs.add(Path.of(args[++i]));
                 case "--source" -> sourceDir = Path.of(args[++i]);
                 case "--output-dir" -> outputDir = Path.of(args[++i]);
                 case "--tests" -> mode = TestElementFilter.Mode.parse(args[++i]);
                 default -> throw new IllegalArgumentException("Unknown option: " + args[i]);
             }
         }
-        if (corePdb == null || sourceDir == null || outputDir == null)
+        if (basePdbs.isEmpty() || sourceDir == null || outputDir == null)
         {
-            System.err.println("Usage: CompilerBinaryBuilder --base-pdb <corePdb> --source <sourceDir> --output-dir <dir> [--tests {none|with|only|split}]");
+            System.err.println("Usage: CompilerBinaryBuilder --base-pdb <file>... --source <sourceDir> --output-dir <dir> [--tests {none|with|only|split}]");
+            System.err.println("  Repeat --base-pdb to load multiple dependency PDBs (e.g. core + java).");
             System.err.println("  module.json is auto-discovered by walking up from <sourceDir>.");
             System.err.println("  Output filename comes from module manifest 'name'.");
             System.exit(1);
         }
 
-        compile(corePdb, sourceDir, outputDir, mode);
+        compile(basePdbs, sourceDir, outputDir, mode);
     }
 
-    public static void compile(Path corePdb, Path sourceDir, Path outputDir, TestElementFilter.Mode mode) throws IOException
+    public static void compile(List<Path> basePdbs, Path sourceDir, Path outputDir, TestElementFilter.Mode mode) throws IOException
     {
         ModuleManifest manifest = ModuleManifest.locate(sourceDir);
         Path outputFile = outputDir.resolve(manifest.name() + ".pdb");
@@ -78,22 +79,33 @@ public class CompilerBinaryBuilder
         System.out.println();
         System.out.println("Pure Compiler Binary Builder From Pure Files (PDB)");
         System.out.println("==================================================");
-        System.out.println("  Inputs: " + corePdb);
-        System.out.println("          " + sourceDir);
+        System.out.println("  Inputs: " + sourceDir);
+        for (Path p : basePdbs)
+        {
+            System.out.println("          " + p);
+        }
         System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies());
         System.out.println("  Output dir: " + outputDir);
         System.out.println("  Tests mode: " + mode);
 
-        // Load core.pdb — its identity (name "specification", etc.) comes from
-        // the manifest embedded inside the archive.
-        PDBModule coreModule = new PDBModule(corePdb, PDBModule.Mode.COMPILATION);
-        verifyDependencies(manifest, List.of(coreModule.getName()));
+        // Load each base PDB — identity comes from the manifest embedded inside the archive.
+        List<PDBModule> baseModules = new ArrayList<>(basePdbs.size());
+        List<String> loadedNames = new ArrayList<>(basePdbs.size());
+        for (Path p : basePdbs)
+        {
+            PDBModule mod = new PDBModule(p, PDBModule.Mode.COMPILATION);
+            baseModules.add(mod);
+            loadedNames.add(mod.getName());
+        }
+        verifyDependencies(manifest, loadedNames);
 
-        // Local module for compiler helper files, identity from the source manifest
+        // Local module for the source files, identity from the source manifest
         LocalModule localModule = new LocalModule(
                 manifest.name(), manifest.packagePattern(), manifest.dependencies(), sourceDir);
 
-        MutableList<Module> modules = Lists.mutable.with(coreModule, localModule);
+        MutableList<Module> modules = Lists.mutable.empty();
+        modules.addAll(baseModules);
+        modules.add(localModule);
         MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());
         PureModel model = PureModel.withModules(modules).withExtensions(extensions).build();
         CompilationResult result = model.compile();
@@ -107,17 +119,21 @@ public class CompilerBinaryBuilder
 
         System.out.print(result.statistics().summary());
 
-        // Collect elements from the local module only, excluding those already in core.pdb
+        // Collect elements from the local module only, excluding any already present in a base PDB
         LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();
         for (String path : localModule.elementPaths())
         {
-            if (!elementsByPath.containsKey(path) && !coreModule.hasElement(path))
+            if (elementsByPath.containsKey(path)) continue;
+            boolean inBase = false;
+            for (PDBModule b : baseModules)
             {
-                PackageableElement element = localModule.getElement(path);
-                if (element != null)
-                {
-                    elementsByPath.put(path, element);
-                }
+                if (b.hasElement(path)) { inBase = true; break; }
+            }
+            if (inBase) continue;
+            PackageableElement element = localModule.getElement(path);
+            if (element != null)
+            {
+                elementsByPath.put(path, element);
             }
         }
         List<PackageableElement> elements = new ArrayList<>(elementsByPath.values());

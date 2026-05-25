@@ -16,6 +16,7 @@ import meta::pure::functions::asserts::*;
 import meta::pure::functions::meta::*;
 import meta::pure::functions::meta::tests::value4Tag::*;
 import meta::pure::metamodel::extension::*;
+import meta::pure::test::pct::*;
 
 // Returns the TaggedValue on `element` matching the given (`profile`, `tag`)
 // pair, or empty if none. Argument order mirrors legend-pure: element is the
@@ -39,18 +40,17 @@ meta::pure::functions::meta::tests::value4Tag::TaggedClass
 {
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::value4Tag::testValue4TagPresent():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::value4Tag::testValue4TagPresent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let tv = TaggedClass->value4Tag('doc', TagProfile);
-    assertEquals('sample class', $tv->toOne().value);
+    assertEquals('sample class', $f->eval(|TaggedClass->value4Tag('doc', TagProfile)->toOne().value));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::value4Tag::testValue4TagDistinguishesTags():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::value4Tag::testValue4TagDistinguishesTags<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('pierre', TaggedClass->value4Tag('owner', TagProfile)->toOne().value);
+    assertEquals('pierre', $f->eval(|TaggedClass->value4Tag('owner', TagProfile)->toOne().value));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::value4Tag::testValue4TagMissing():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::value4Tag::testValue4TagMissing<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert(TaggedClass->value4Tag('nonexistent', TagProfile)->isEmpty());
+    assert($f->eval(|TaggedClass->value4Tag('nonexistent', TagProfile)->isEmpty()));
 }

@@ -32,22 +32,22 @@ function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::println(p
 // Tests — reuses TestPerson / TestNested classes defined in `print.pure`.
 // =============================================================================
 
-function <<test.Test>> meta::pure::functions::io::tests::testPrintlnInteger():Boolean[1]
+function <<PCT.test>> meta::pure::functions::io::tests::testPrintlnInteger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('42\n', println(42));
+    assertEquals('42\n', $f->eval(|println(42)));
 }
 
-function <<test.Test>> meta::pure::functions::io::tests::testPrintlnString():Boolean[1]
+function <<PCT.test>> meta::pure::functions::io::tests::testPrintlnString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('hello\n', println('hello'));
+    assertEquals('hello\n', $f->eval(|println('hello')));
 }
 
-function <<test.Test>> meta::pure::functions::io::tests::testPrintlnBoolean():Boolean[1]
+function <<PCT.test>> meta::pure::functions::io::tests::testPrintlnBoolean<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('true\n', println(true));
+    assertEquals('true\n', $f->eval(|println(true)));
 }
 
-function <<test.Test>> meta::pure::functions::io::tests::testPrintlnList():Boolean[1]
+function <<PCT.test>> meta::pure::functions::io::tests::testPrintlnList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(
         '''
@@ -55,16 +55,15 @@ function <<test.Test>> meta::pure::functions::io::tests::testPrintlnList():Boole
         2
         3
         ''',
-        println([1, 2, 3])
+        $f->eval(|println([1, 2, 3]))
     );
 }
 
-function <<test.Test>> meta::pure::functions::io::tests::testPrintlnObject():Boolean[1]
+function <<PCT.test>> meta::pure::functions::io::tests::testPrintlnObject<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let p = ^meta::pure::functions::io::tests::TestPerson(name='Carol', age=40);
     assertEquals(
         'TestPerson\n' +
         '  name: \'Carol\'\n' +
         '  age: 40\n',
-        println($p));
+        $f->eval(|println(^meta::pure::functions::io::tests::TestPerson(name='Carol', age=40))));
 }

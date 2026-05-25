@@ -185,25 +185,29 @@ function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchWithMi
     assertIs(Integer, $z->genericType().type->toOne());
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::match::testMatchEnumValue():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchEnumValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let result = LA_GeographicEntityType.CITY->match([
-        e:LA_GeographicEntityType[1] | 'enum:' + $e->toString(),
-        a:Any[1] | 'other'
-    ]);
-    assertEquals('enum:CITY', $result);
+    assertEquals('enum:CITY', $f->eval(|LA_GeographicEntityType.CITY->match(
+                                                [
+                                                    e:LA_GeographicEntityType[1] | 'enum:' + $e->toString(),
+                                                    a:Any[1] | 'other'
+                                                ]
+                                            )
+                                  )
+    );
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::match::testMatchUserDefinedGenericType():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchUserDefinedGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let cgt = meta::pure::metamodel::type::generics::UserDefinedGenericType.classifierGenericType->toOne()
-        ->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).typeArguments->at(0);
-    let result = $cgt->match([
-        gtv : meta::pure::metamodel::type::generics::GenericTypeValue[1] | 'gtv',
-        u   : meta::pure::metamodel::type::generics::UndefinedGenericType[1] | 'undefined',
-        a   : meta::pure::metamodel::type::generics::GenericType[1] | 'gt-other'
-    ]);
-    assertEquals('gtv', $result);
+    assertEquals('gtv', $f->eval(|
+        let cgt = meta::pure::metamodel::type::generics::UserDefinedGenericType.classifierGenericType->toOne()
+                    ->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).typeArguments->at(0);
+        $cgt->match([
+            gtv : meta::pure::metamodel::type::generics::GenericTypeValue[1] | 'gtv',
+            u   : meta::pure::metamodel::type::generics::UndefinedGenericType[1] | 'undefined',
+            a   : meta::pure::metamodel::type::generics::GenericType[1] | 'gt-other'
+        ]);
+    ));
 }
 
 // Repro for the match [1]-arm leakage bug. The [1] arm of match dispatches
@@ -231,13 +235,17 @@ function <<test.TestDependency>> meta::pure::functions::lang::tests::match::sing
     [^M_Node(name=$name), ^M_Node(name='_decoy_')]->filter(n | $n.name == $name);
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::match::testMatchOneArmFeedsScalarParam():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchOneArmFeedsScalarParam<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let picked = singleNodeNamed('alpha')->match([
-        n0 : M_Node[0] | ^M_Node(name='missing'),
-        n  : M_Node[1] | $n
-    ]);
-    assertEquals('alpha', useNodeAsScalar($picked));
+    assertEquals('alpha', $f->eval(|useNodeAsScalar(singleNodeNamed('alpha')->match(
+                                                [
+                                                    n0 : M_Node[0] | ^M_Node(name='missing'),
+                                                    n  : M_Node[1] | $n
+                                                ]
+                                            )
+                                        )
+                                   )
+   );
 }
 
 // Repro for Truffle AST-build NPE: lowerBody reads expressionSequence as null
@@ -259,11 +267,36 @@ function <<test.TestDependency>> meta::pure::functions::lang::tests::match::sing
     [^MA_Node(name=$name), ^MA_Node(name='_other_')]->filter(n | $n.name == $name);
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::match::testMatchOneArmPassedToScalarParam():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchOneArmPassedToScalarParam<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let picked = singletonSeq('alpha')->match([
+    assertEquals('alpha', $f->eval(|useAsScalar(singletonSeq('alpha')->match([
         n0 : MA_Node[0] | ^MA_Node(name='missing'),
         n  : MA_Node[1] | $n
-    ]);
-    assertEquals('alpha', useAsScalar($picked));
+    ]))));
+}
+
+// Match-on-LambdaFunction should hit the LambdaFunction case, not fall through
+// to the Any catch-all. Sister regression to `testGenericTypeOnLambda` /
+// `testGenericTypeOnCapturingLambda` in meta/type/genericType.pure — both
+// stem from the same root: `classifierGenericType` must be stamped on a
+// lambda PDO for downstream dispatch.
+function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchOnLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('lambda',
+                 $f->eval(|let lambda = {| 1 + 2}; $lambda->match([
+                    lf : meta::pure::metamodel::function::LambdaFunction<Any>[1] | 'lambda',
+                    a  : Any[1] | 'other'
+                 ]);));
+}
+
+// REGRESSION: capturing-lambda match. Currently fails — the runtime path
+// that captures open variables produces a value without classifierGenericType,
+// so the LambdaFunction case is skipped and we hit the Any catch-all.
+function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchOnCapturingLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('lambda',
+                 $f->eval(|let a = 5; let lambda = {| $a + 1}; $lambda->match([
+                    lf : meta::pure::metamodel::function::LambdaFunction<Any>[1] | 'lambda',
+                    any: Any[1] | 'other'
+                 ]);));
 }

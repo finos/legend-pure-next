@@ -1,0 +1,182 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::translation::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::valuespecification::*;
+
+// Ultra-minimal Pure -> Java translator. Models legend-engine's strategy:
+//   - `Conventions` carries config + per-Pure-function coders
+//   - `translateFunction` produces a `FunctionSignature` (owning Java class + method)
+//   - `translateExpression` walks a Pure ValueSpecification, dispatching FunctionExpression
+//     calls through the conventions' coder map.
+// Only enough surface to translate `add(a, b) { $a + $b }` end-to-end.
+
+Class meta::external::language::java::translation::Conventions
+{
+   basePackageName : String[1];
+   functionCoders  : Map<String, meta::pure::metamodel::function::Function<{FunctionExpression[1], Conventions[1] -> Code[1]}>>[1];
+}
+
+Class meta::external::language::java::translation::FunctionSignature
+{
+   class  : meta::external::language::java::metamodel::Class[1];
+   method : meta::external::language::java::metamodel::Method[1];
+}
+
+// ----------------------------------------------------------------------------
+// Conventions construction — built-in arithmetic coders only for now.
+// ----------------------------------------------------------------------------
+
+function meta::external::language::java::translation::defaultConventions(basePackageName: String[1]): Conventions[1]
+{
+   ^Conventions(
+      basePackageName = $basePackageName,
+      functionCoders  = newMap([
+         pair('plus',   plusCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('minus',  minusCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('times',  timesCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('divide', divideCoder_FunctionExpression_1__Conventions_1__Code_1_)
+      ])
+   );
+}
+
+// Shared shape for binary arithmetic: translate the two operand expressions,
+// then hand them to a Java infix factory (j_plus, j_minus, ...).
+function <<access.private>> meta::external::language::java::translation::binaryInfix(
+   fe: FunctionExpression[1],
+   conv: Conventions[1],
+   factory: Function<{Code[1], Code[1] -> Code[1]}>[1]
+): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'binary coder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let left  = $conv->translateExpression($fe.parametersValues->at(0));
+   let right = $conv->translateExpression($fe.parametersValues->at(1));
+   $factory->eval($left, $right);
+}
+
+function <<access.private>> meta::external::language::java::translation::plusCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   binaryInfix($fe, $conv, j_plus_Code_1__Code_1__Code_1_);
+}
+
+function <<access.private>> meta::external::language::java::translation::minusCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   // minus is overloaded: binary `a - b` and unary `-a`. Dispatch on arity.
+   if ($fe.parametersValues->size() == 1,
+       | j_minus($conv->translateExpression($fe.parametersValues->at(0))),
+       | binaryInfix($fe, $conv, j_minus_Code_1__Code_1__Code_1_)
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::timesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   binaryInfix($fe, $conv, j_multiply_Code_1__Code_1__Code_1_);
+}
+
+function <<access.private>> meta::external::language::java::translation::divideCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   binaryInfix($fe, $conv, j_divide_Code_1__Code_1__Code_1_);
+}
+
+// ----------------------------------------------------------------------------
+// Type mapping.
+// ----------------------------------------------------------------------------
+
+function meta::external::language::java::translation::pureTypeToJavaType(conv: Conventions[1], g: meta::pure::metamodel::type::generics::GenericType[1], mult: meta::pure::metamodel::multiplicity::Multiplicity[1]): meta::external::language::java::metamodel::Type[1]
+{
+   let raw = $g->rawType()->toOne('pureTypeToJavaType: unresolved rawType on GenericType');
+   if ($raw == Integer, | javaLong(),
+   |if ($raw == Boolean, | javaBoolean(),
+   |if ($raw == Float,   | javaDouble(),
+   |if ($raw == String,  | javaString(),
+   | fail('Unsupported Pure type: ' + $raw->elementToPath()); javaVoid();
+   ))));
+}
+
+// ----------------------------------------------------------------------------
+// Expression walker. Variables -> Java variable refs; function calls -> dispatch
+// through the conventions' coder map.
+// ----------------------------------------------------------------------------
+
+function meta::external::language::java::translation::translateExpression(conv: Conventions[1], expr: ValueSpecification[1]): Code[1]
+{
+   $expr->match([
+      v: VariableExpression[1] | j_variable($conv->pureTypeToJavaType($v.genericType, $v.multiplicity), $v.name),
+      a: AtomicValue[1]        | $conv->translateAtomicValue($a),
+      fe: FunctionExpression[1] | let coder = $conv.functionCoders->get($fe.functionName)
+                                              ->toOne('No coder for Pure function: ' + $fe.functionName);
+                                  $coder->eval($fe, $conv);
+   ]);
+}
+
+// Literals: dispatch on the Pure primitive type. Integer→j_long mirrors the
+// translator's `Integer→long` type mapping in pureTypeToJavaType so the
+// emitted Java compiles without explicit conversions.
+function <<access.private>> meta::external::language::java::translation::translateAtomicValue(conv: Conventions[1], a: AtomicValue[1]): Code[1]
+{
+   let v = $a.value;
+   $v->match([
+      i: Integer[1] | j_long($i),
+      f: Float[1]   | j_double($f),
+      b: Boolean[1] | j_boolean($b),
+      s: String[1]  | j_string($s),
+      x: Any[1]     | fail('Unsupported atomic value type'); j_null();
+   ]);
+}
+
+// ----------------------------------------------------------------------------
+// Top-level entry point: translate a Pure function definition into a Java class
+// holding a single static method that mirrors the function body.
+// ----------------------------------------------------------------------------
+
+function meta::external::language::java::translation::translateFunction(conv: Conventions[1], f: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]): FunctionSignature[1]
+{
+   let funcName = $f.functionName->toOne('translateFunction: function is missing a name');
+   let className = $funcName->substring(0, 1)->toUpper() + $funcName->substring(1);
+   let returnType = $conv->pureTypeToJavaType($f.returnGenericType, $f.returnMultiplicity);
+   $conv->buildSignature($f, $className, $returnType);
+}
+
+// Translate an anonymous lambda. The lambda's `parameters` and
+// `expressionSequence` come straight from FunctionDefinition; the return
+// type lives on the lambda's classifier (LambdaFunction<{params -> ret}>)
+// rather than on dedicated slots (lambdas aren't PackageableFunctions).
+function meta::external::language::java::translation::translateLambda(conv: Conventions[1], f: meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1], className: String[1]): FunctionSignature[1]
+{
+   let funcType   = $f.classifierGenericType.typeArguments->at(0)->rawType()->toOne('translateLambda: lambda missing classifier function type')->cast(@meta::pure::metamodel::type::FunctionType);
+   let returnType = $conv->pureTypeToJavaType($funcType.returnType, $funcType.returnMultiplicity);
+   $conv->buildSignature($f, $className, $returnType);
+}
+
+// Shared back-end for both translateFunction and translateLambda: turn a
+// FunctionDefinition + a Java return type into a Java class wrapping the
+// translated body as a single `public static execute(...)` method.
+function <<access.private>> meta::external::language::java::translation::buildSignature(conv: Conventions[1], f: meta::pure::metamodel::function::FunctionDefinition<meta::pure::metamodel::type::Any>[1], className: String[1], returnType: meta::external::language::java::metamodel::Type[1]): FunctionSignature[1]
+{
+   let jParams = $f.parameters->map(p |
+      j_parameter($conv->pureTypeToJavaType($p.genericType, $p.multiplicity), $p.name)
+   );
+
+   assert($f.expressionSequence->size() == 1, | 'buildSignature: only single-expression bodies are supported in the minimal translator, got ' + $f.expressionSequence->size()->toString());
+   let bodyStatements = j_return($conv->translateExpression($f.expressionSequence->toOne()));
+
+   let javaCls = javaClass(['public'], $conv.basePackageName + '.' + $className);
+   let javaMtd = javaMethod(['public', 'static'], $returnType, 'execute', $jParams, $bodyStatements);
+
+   ^FunctionSignature(class = $javaCls->addMethod($javaMtd), method = $javaMtd);
+}
