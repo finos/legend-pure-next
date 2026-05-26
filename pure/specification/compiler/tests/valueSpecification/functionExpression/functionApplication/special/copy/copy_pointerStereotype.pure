@@ -3,45 +3,45 @@ import test::copy::support::*;
 
 function test::copy::testPointerStereotype(): Any[*]
 {
-   let p = ^MyPointer(path='a::b::c');
-   let p2 = ^$p(path='d::e::f');
+  let p = ^MyPointer(path = 'a::b::c');
+  let p2 = ^$p(path = 'd::e::f');
 }
 
 Class test::copy::support::MyTarget
 {
-   requiredString: String[1];
-   requiredInt: Integer[1];
+  requiredString: String[1];
+  requiredInt: Integer[1];
 }
 
-Class <<meta::pure::profiles::compiler.pointer>> test::copy::support::MyPointer extends test::copy::support::MyTarget
+Class <<compiler.pointer>> test::copy::support::MyPointer extends MyTarget
 {
-   path: String[1];
+  path: String[1];
 }
 
 ###CompiledGraph
 function test::copy::testPointerStereotype__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @6:4-6:37
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @6:3-6:38
     typeParam T -> #test::copy::support::MyPointer#
     mulParam m -> #[1]#
-    AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @6:8-6:8
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @6:12-6:37
+    AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @6:7-6:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @6:11-6:38
       typeParam T -> test::copy::support::MyPointer
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::support::MyPointer|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::support::MyPointer|1>  @6:12-6:37
-      Collection :#KeyExpression#[1]  ~@Collection@  @6:12-6:37
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:23-6:36
-          AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @6:23-6:36
-          AtomicValue  'a::b::c' :@String@[1]  ~@AtomicValue@  @6:28-6:36
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @7:4-7:31
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::support::MyPointer|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::support::MyPointer|1>  @6:11-6:38
+      Collection :#KeyExpression#[1]  ~@Collection@  @6:11-6:38
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:22-6:37
+          AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @6:22-6:37
+          AtomicValue  'a::b::c' :@String@[1]  ~@AtomicValue@  @6:29-6:37
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @7:3-7:32
     typeParam T -> #test::copy::support::MyPointer#
     mulParam m -> #[1]#
-    AtomicValue  'p2' :@String@[1]  ~@AtomicValue@  @7:8-7:9
-    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @7:13-7:31
+    AtomicValue  'p2' :@String@[1]  ~@AtomicValue@  @7:7-7:8
+    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @7:12-7:32
       typeParam T -> #test::copy::support::MyPointer#
-      Variable p :#test::copy::support::MyPointer##[1]#  ~@VariableExpression@  @7:14-7:15
-      Collection :#KeyExpression#[1]  ~@Collection@  @7:13-7:31
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @7:17-7:30
-          AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @7:17-7:30
-          AtomicValue  'd::e::f' :@String@[1]  ~@AtomicValue@  @7:22-7:30
+      Variable p :#test::copy::support::MyPointer##[1]#  ~@VariableExpression@  @7:13-7:14
+      Collection :#KeyExpression#[1]  ~@Collection@  @7:12-7:32
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @7:16-7:31
+          AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @7:16-7:31
+          AtomicValue  'd::e::f' :@String@[1]  ~@AtomicValue@  @7:23-7:31
 
 class test::copy::support::MyTarget extends Any  ~Class<test::copy::support::MyTarget>  @10:1-14:1
   property requiredString :@String@[1]  ~Property<test::copy::support::MyTarget, @String@|1>

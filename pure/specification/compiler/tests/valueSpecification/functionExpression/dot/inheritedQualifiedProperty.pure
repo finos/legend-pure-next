@@ -1,48 +1,47 @@
 ###Pure
+import test::*;
+
 Class test::SuperClass
 {
-    greet(name:String[1]) {
-        'Hello ' + $name
-    }: String[1];
+  greet(name: String[1]) {'Hello ' + $name}: String[1];
 }
 
-Class test::SubClass extends test::SuperClass
+Class test::SubClass extends SuperClass
 {
-    value : String[1];
+  value: String[1];
 }
 
-function test::use():Any[*]
+function test::use(): Any[*]
 {
-    let x = ^test::SubClass(value='ok');
-    $x.greet('world');
+  let x = ^SubClass(value = 'ok');
+  $x.greet('world');
 }
-
 
 ###CompiledGraph
-class test::SuperClass extends Any  ~Class<test::SuperClass>  @2:1-7:1
+class test::SuperClass extends Any  ~Class<test::SuperClass>  @4:1-7:1
   qualifiedProperty greet(name:@String@[1]) :@String@[1]
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @5:9-5:24
-      AtomicValue  'Hello ' :@String@[1]  ~@AtomicValue@  @5:9-5:16
-      Variable name :#String##[1]#  ~@VariableExpression@  @5:20-5:24
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:27-6:42
+      AtomicValue  'Hello ' :@String@[1]  ~@AtomicValue@  @6:27-6:34
+      Variable name :#String##[1]#  ~@VariableExpression@  @6:38-6:42
 
 class test::SubClass extends test::SuperClass  ~Class<test::SubClass>  @9:1-12:1
   property value :@String@[1]  ~Property<test::SubClass, @String@|1>
 
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::SubClass##[1]#  ~@FunctionInvocation@  @16:5-16:39
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::SubClass##[1]#  ~@FunctionInvocation@  @16:3-16:33
     typeParam T -> #test::SubClass#
     mulParam m -> #[1]#
-    AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @16:9-16:9
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::SubClass##[1]#  ~@FunctionInvocation@  @16:13-16:39
+    AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @16:7-16:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::SubClass##[1]#  ~@FunctionInvocation@  @16:11-16:33
       typeParam T -> test::SubClass
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::SubClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::SubClass|1>  @16:13-16:39
-      Collection :#KeyExpression#[1]  ~@Collection@  @16:13-16:39
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:29-16:38
-          AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @16:29-16:38
-          AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @16:35-16:38
-  DotApplication test::SuperClass.greet(@String@[1]) :#String##[1]#  ~@DotApplication@  @17:7-17:21
-    Variable x :#test::SubClass##[1]#  ~@VariableExpression@  @17:5-17:6
-    AtomicValue  'world' :@String@[1]  ~@AtomicValue@  @17:14-17:20
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::SubClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::SubClass|1>  @16:11-16:33
+      Collection :#KeyExpression#[1]  ~@Collection@  @16:11-16:33
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:21-16:32
+          AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @16:21-16:32
+          AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @16:29-16:32
+  DotApplication test::SuperClass.greet(@String@[1]) :#String##[1]#  ~@DotApplication@  @17:5-17:19
+    Variable x :#test::SubClass##[1]#  ~@VariableExpression@  @17:3-17:4
+    AtomicValue  'world' :@String@[1]  ~@AtomicValue@  @17:12-17:18
 
 ###ReverseIndex
 meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:

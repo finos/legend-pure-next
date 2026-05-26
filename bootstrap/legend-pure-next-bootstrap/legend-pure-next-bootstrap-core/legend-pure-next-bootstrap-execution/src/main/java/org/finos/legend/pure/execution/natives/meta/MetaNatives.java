@@ -485,7 +485,15 @@ public class MetaNatives
                 classPath = resolveClassPathFromCGT(cgt);
             }
 
-            Object copy = createInstanceByPath(classPath);
+            // When source is a DynamicInstance, build a DI target — even when
+            // a typed Impl class is on the classpath. DI sources have DI-valued
+            // nested slots (produced uniformly by `parse()`'s
+            // ProtocolToDynamicInstance conversion), and the typed Impl's
+            // setters reject those. Keeping the target as DI preserves the
+            // runtime's "everything-is-DI" invariant for things that started
+            // life as DI. Freshly `^Type(...)`-constructed values that hit
+            // the typed path naturally stay typed.
+            Object copy = newCopyTargetMatchingSource(original, classPath);
             // Shallow copy all properties (including classifierGenericType from original).
             // We do NOT rewrite self-references (classifierGenericType, TypeParameter.owner,
             // Property.owner, etc.) to point to the copy — that would silently mutate
@@ -566,8 +574,10 @@ public class MetaNatives
             }
 
             // Step 2: Create the copy. No self-reference rewriting — see the
-            // copy(T[1]) variant above for the rationale.
-            Object copy = createInstanceByPath(classPath);
+            // copy(T[1]) variant above for the rationale. Target type tracks
+            // source type (DI source → DI target) — see the matching
+            // newCopyTargetMatchingSource call in copy_T_1__T_1_.
+            Object copy = newCopyTargetMatchingSource(original, classPath);
             shallowCopyProperties(original, copy, cgt, resolver);
             GenericTypeValue copyCgt = cgt;
             if (copyCgt != null)
@@ -1281,6 +1291,23 @@ public class MetaNatives
         {
             return new DynamicInstance(classPath);
         }
+    }
+
+    /**
+     * Create a copy target whose backing form matches the source. When the
+     * source is a {@link DynamicInstance}, the target must also be a DI even
+     * if a typed Impl class is on the classpath — DI sources have DI-valued
+     * nested slots (the parser converts its typed POJO output uniformly to
+     * DI via {@link ProtocolToDynamicInstance}), and the typed Impl's
+     * setters reject DI values. Typed sources stay typed.
+     */
+    public static Object newCopyTargetMatchingSource(Object source, String classPath)
+    {
+        if (source instanceof DynamicInstance)
+        {
+            return new DynamicInstance(classPath);
+        }
+        return createInstanceByPath(classPath);
     }
 
     /**

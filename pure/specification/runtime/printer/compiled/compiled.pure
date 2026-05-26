@@ -1,0 +1,67 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::printer::compiled::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::metamodel::type::*;
+
+// Top-level entry point for the compiled-side printer. Two modes:
+//   FullFQN       — every PE reference uses its full path.
+//   ManageImports — auto-detect unambiguous short names, emit `import pkg::*;`
+//                   statements, shorten references in the body. Ambiguous
+//                   short names (same name in multiple packages) stay FQN.
+function meta::pure::functions::printer::compiled::printCompiledElements(elements: PackageableElement[*], mode: PrintMode[1]): String[1]
+{
+    let ctx = buildPrintContext($elements, $mode);
+    let importsBlock = if ($ctx.imports->isEmpty(),
+                           | '',
+                           | $ctx.imports->map(p | 'import ' + $p + '::*;')->joinStrings('\n') + '\n\n'
+                          );
+    // Skip elements that render as the empty string (synthetic Packages,
+    // canonical-anchor placeholders) so we don't get blank lines between
+    // real elements.
+    let parts = $elements->map(e | printCompiledElement($e, $ctx))->filter(s | $s != '');
+    '###Pure\n' + $importsBlock + $parts->joinStrings('\n');
+}
+
+// Back-compat shim — pre-existing callers default to full-FQN.
+function meta::pure::functions::printer::compiled::printCompiledElements(elements: PackageableElement[*]): String[1]
+{
+    printCompiledElements($elements, PrintMode.FullFQN);
+}
+
+function meta::pure::functions::printer::compiled::printCompiledElement(elem: PackageableElement[1], ctx: PrintContext[1]): String[1]
+{
+    $elem->match([
+        c:   Class<Any>[1] | printCompiledClass($c, $ctx),
+        e:   Enumeration<Any>[1] | printCompiledEnum($e, $ctx),
+        a:   Association[1] | printCompiledAssociation($a, $ctx),
+        pf:  Profile[1] | printCompiledProfile($pf),
+        pt:  PrimitiveType[1] | printCompiledPrimitiveType($pt, $ctx),
+        udf: UserDefinedFunction<Any>[1] | printCompiledUserDefinedFunction($udf, $ctx),
+        nf:  NativeFunction<Any>[1] | printCompiledNativeFunction($nf, $ctx),
+        // Compile() emits synthetic Package PDOs to scaffold the namespace
+        // hierarchy and InferredPackageableGenericType / Multiplicity anchors
+        // for canonical references. None of those round-trip to surface Pure
+        // (they're implementation detail), so they print as nothing.
+        pkg: Package[1] | '',
+        igt: meta::pure::metamodel::type::generics::InferredPackageableGenericType[1] | '',
+        imu: meta::pure::metamodel::multiplicity::InferredPackageableMultiplicity[1] | '',
+        any: PackageableElement[1] | '/* UNSUPPORTED ELEMENT KIND: ' + $any->genericType().type->toOne()->elementToPath() + ' name=' + $any.name->toOne() + ' */\n'
+    ]);
+}

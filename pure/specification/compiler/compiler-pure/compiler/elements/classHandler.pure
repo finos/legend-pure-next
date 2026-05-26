@@ -59,8 +59,8 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
 
     let typeVariables = if($protocolClass.typeVariables->isEmpty(), | [],
         | $protocolClass.typeVariables->map(tv |
-            let genType = $tv.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::protocol::grammar::type::Type_Pointer).value;
-            let mMult = $tv.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+            let genType = $tv.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::protocol::grammar::type::Type_Pointer).value;
+            let mMult = $tv.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
             ^meta::pure::metamodel::valuespecification::VariableExpression(
                 name = $tv.name,
                 // Cross-element ref into a type being compiled — wrap as pointer.

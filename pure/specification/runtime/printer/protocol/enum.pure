@@ -1,0 +1,40 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::printer::protocol::*;
+import meta::pure::protocol::*;
+
+// Protocol printer for `Enumeration` elements. Enum values are carried as
+// `properties[*]` on the Enumeration — the value name is each Property's
+// `.name`. Stereotypes / taggedValues / value-level annotations are TODO.
+//
+// Enumeration / Property names collide with auto-imported M3, so they're FQN
+// inline; no wildcard import for the deeper subpackages.
+
+function meta::pure::functions::printer::protocol::printProtocolEnum(e: meta::pure::protocol::grammar::type::Enumeration[1]): String[1]
+{
+    'Enum ' + printAnnotations($e.stereotypes, $e.taggedValues) + printPackagePointer($e.package) + $e.name +
+    '\n{\n' +
+        $e.properties->map(p | '  ' + printEnumValue($p))->joinStrings(',\n') + '\n' +
+    '}\n';
+}
+
+// Enum value rendered as `<<stereos>> {tags} NAME` — values are carried as
+// Property PDOs on the Enumeration, so stereotypes/taggedValues live on the
+// Property itself.
+function meta::pure::functions::printer::protocol::printEnumValue(p: meta::pure::protocol::grammar::function::property::Property[1]): String[1]
+{
+    printAnnotations($p.stereotypes, $p.taggedValues) + $p.name;
+}

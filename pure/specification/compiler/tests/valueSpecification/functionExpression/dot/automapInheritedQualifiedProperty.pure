@@ -1,58 +1,57 @@
 ###Pure
+import test::*;
+
 Class test::Animal
 {
-    sound() {
-        'unknown'
-    }: String[1];
+  sound() {'unknown'}: String[1];
 }
 
-Class test::Dog extends test::Animal
+Class test::Dog extends Animal
 {
-    breed : String[1];
+  breed: String[1];
 }
 
-function test::use():Any[*]
+function test::use(): Any[*]
 {
-    let dogs = [^test::Dog(breed='Lab'), ^test::Dog(breed='Pug')];
-    $dogs.sound();
+  let dogs = [^Dog(breed = 'Lab'), ^Dog(breed = 'Pug')];
+  $dogs.sound();
 }
-
 
 ###CompiledGraph
-class test::Animal extends Any  ~Class<test::Animal>  @2:1-7:1
+class test::Animal extends Any  ~Class<test::Animal>  @4:1-7:1
   qualifiedProperty sound() :@String@[1]
-    AtomicValue  'unknown' :@String@[1]  ~@AtomicValue@  @5:9-5:17
+    AtomicValue  'unknown' :@String@[1]  ~@AtomicValue@  @6:12-6:20
 
 class test::Dog extends test::Animal  ~Class<test::Dog>  @9:1-12:1
   property breed :@String@[1]  ~Property<test::Dog, @String@|1>
 
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Dog##[2]#  ~@FunctionInvocation@  @16:5-16:65
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Dog##[2]#  ~@FunctionInvocation@  @16:3-16:55
     typeParam T -> #test::Dog#
     mulParam m -> [2]
-    AtomicValue  'dogs' :@String@[1]  ~@AtomicValue@  @16:9-16:12
-    Collection :#test::Dog#[2]  ~@Collection@  @16:16-16:65
-      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Dog##[1]#  ~@FunctionInvocation@  @16:17-16:39
+    AtomicValue  'dogs' :@String@[1]  ~@AtomicValue@  @16:7-16:10
+    Collection :#test::Dog#[2]  ~@Collection@  @16:14-16:55
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Dog##[1]#  ~@FunctionInvocation@  @16:15-16:33
         typeParam T -> test::Dog
-        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>  @16:17-16:39
-        Collection :#KeyExpression#[1]  ~@Collection@  @16:17-16:39
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:28-16:38
-            AtomicValue  'breed' :@String@[1]  ~@AtomicValue@  @16:28-16:38
-            AtomicValue  'Lab' :@String@[1]  ~@AtomicValue@  @16:34-16:38
-      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Dog##[1]#  ~@FunctionInvocation@  @16:42-16:64
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>  @16:15-16:33
+        Collection :#KeyExpression#[1]  ~@Collection@  @16:15-16:33
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:20-16:32
+            AtomicValue  'breed' :@String@[1]  ~@AtomicValue@  @16:20-16:32
+            AtomicValue  'Lab' :@String@[1]  ~@AtomicValue@  @16:28-16:32
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Dog##[1]#  ~@FunctionInvocation@  @16:36-16:54
         typeParam T -> test::Dog
-        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>  @16:42-16:64
-        Collection :#KeyExpression#[1]  ~@Collection@  @16:42-16:64
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:53-16:63
-            AtomicValue  'breed' :@String@[1]  ~@AtomicValue@  @16:53-16:63
-            AtomicValue  'Pug' :@String@[1]  ~@AtomicValue@  @16:59-16:63
-  FunctionInvocation map_T_m__Function_1__V_m_ :#String##[2]#  ~@FunctionInvocation@  @17:10-17:17
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>  @16:36-16:54
+        Collection :#KeyExpression#[1]  ~@Collection@  @16:36-16:54
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:41-16:53
+            AtomicValue  'breed' :@String@[1]  ~@AtomicValue@  @16:41-16:53
+            AtomicValue  'Pug' :@String@[1]  ~@AtomicValue@  @16:49-16:53
+  FunctionInvocation map_T_m__Function_1__V_m_ :#String##[2]#  ~@FunctionInvocation@  @17:8-17:15
     typeParam T -> #test::Dog#
     typeParam V -> #String#
     mulParam m -> #[2]#
-    Variable dogs :#test::Dog##[2]#  ~@VariableExpression@  @17:5-17:9
+    Variable dogs :#test::Dog##[2]#  ~@VariableExpression@  @17:3-17:7
     Lambda(v_automap:#test::Dog#[1]) :#LambdaFunction<#{#test::Dog#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
-      DotApplication test::Animal.sound() :#String##[1]#  ~@DotApplication@  @17:10-17:17
+      DotApplication test::Animal.sound() :#String##[1]#  ~@DotApplication@  @17:8-17:15
         Variable v_automap :#test::Dog##[1]#  ~@VariableExpression@
 
 ###ReverseIndex

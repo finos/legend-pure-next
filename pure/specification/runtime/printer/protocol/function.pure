@@ -1,0 +1,127 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::printer::protocol::*;
+import meta::pure::protocol::*;
+// Wildcard import gives us the protocol-only Pointer types; the conflicting
+// types — UserDefinedFunction, NativeFunction, LambdaFunction, VariableExpression,
+// TypeParameter, MultiplicityParameter, Constraint — collide with auto-imported
+// M3 namesakes, so they stay FQN inline at each use site.
+import meta::pure::protocol::grammar::*;
+
+// Protocol printers for function elements: UserDefinedFunction (with body),
+// NativeFunction (declaration-only), and helpers for the parameter list /
+// type-and-multiplicity parameter list shared by both.
+
+// `function <<stereos>> {tags} pkg::name<T|m>(p:T[m], ...): RetT[mult] [ constraints ]\n{\n  body\n}`
+function meta::pure::functions::printer::protocol::printProtocolUserDefinedFunction(fn: meta::pure::protocol::grammar::function::UserDefinedFunction[1]): String[1]
+{
+    // Statement separator semantics: Pure requires `;` between statements
+    // but only adds a trailing `;` when there are multiple. A single-statement
+    // body like `{ [] }` has no `;`, matching the parser corpus convention.
+    let sep = if ($fn.expressionSequence->size() > 1, | ';', | '');
+    'function ' + printAnnotations($fn.stereotypes, $fn.taggedValues) + printPackagePointer($fn.package) + $fn.functionName->toOne() +
+        printTypeAndMulParams($fn.typeParameters, $fn.multiplicityParameters) +
+        $fn.parameters->map(p | printFunctionParameter($p))->joinStrings('(', ', ', ')') +
+        ': ' + printGenericType($fn.returnGenericType) + printMultiplicity($fn.returnMultiplicity) +
+        printFunctionConstraints($fn.preConstraints, $fn.postConstraints) +
+    '\n{\n' +
+        $fn.expressionSequence->map(e | '  ' + printValueSpec($e) + $sep)->joinStrings('\n') + '\n' +
+    '}\n';
+}
+
+// `native function pkg::name(p:T[m], ...): RetT[mult];`
+function meta::pure::functions::printer::protocol::printProtocolNativeFunction(fn: meta::pure::protocol::grammar::function::NativeFunction[1]): String[1]
+{
+    'native function ' + printAnnotations($fn.stereotypes, $fn.taggedValues) + printPackagePointer($fn.package) + $fn.functionName->toOne() +
+        printTypeAndMulParams($fn.typeParameters, $fn.multiplicityParameters) +
+        $fn.parameters->map(p | printFunctionParameter($p))->joinStrings('(', ', ', ')') +
+        ': ' + printGenericType($fn.returnGenericType) + printMultiplicity($fn.returnMultiplicity) +
+    ';\n';
+}
+
+// `p: Type[mul]` — parameter has the same shape as a property type slot.
+function meta::pure::functions::printer::protocol::printFunctionParameter(p: meta::pure::protocol::grammar::valuespecification::VariableExpression[1]): String[1]
+{
+    let n = $p.name->orElse('');
+    let gt = if ($p.genericType->isEmpty(), | '', | printGenericType($p.genericType->toOne()));
+    let mul = if ($p.multiplicity->isEmpty(), | '', | printMultiplicity($p.multiplicity->toOne()));
+    $n + ': ' + $gt + $mul;
+}
+
+// `<T1, T2|m1, m2>` — emitted only when at least one type/mul param is present.
+function meta::pure::functions::printer::protocol::printTypeAndMulParams(typeParams: meta::pure::protocol::grammar::type::generics::TypeParameter[*], mulParams: meta::pure::protocol::grammar::multiplicity::MultiplicityParameter[*]): String[1]
+{
+    if ($typeParams->isEmpty() && $mulParams->isEmpty(),
+        | '',
+        | let t = $typeParams->map(tp | $tp.name)->joinStrings(',');
+          let m = $mulParams->map(mp | $mp.name)->joinStrings(',');
+          let sep = if ($mulParams->isEmpty(), | '', | '|');
+          '<' + $t + $sep + $m + '>';
+    );
+}
+
+// `[ pre1, pre2: $x > 0, post ]` — empty when no constraints. preConstraints
+// and postConstraints both render as bare expressions; named-constraint syntax
+// (`name: expr`) is TODO and lives in the constraint protocol shape.
+function meta::pure::functions::printer::protocol::printFunctionConstraints(pre: meta::pure::protocol::grammar::constraint::Constraint[*], post: meta::pure::protocol::grammar::constraint::Constraint[*]): String[1]
+{
+    let all = $pre->concatenate($post);
+    if ($all->isEmpty(),
+        | '',
+        | $all->map(c | printConstraint($c))->joinStrings('\n[\n  ', ',\n  ', '\n]')
+    );
+}
+
+// `name: expr` or just `expr` if unnamed.
+function meta::pure::functions::printer::protocol::printConstraint(c: meta::pure::protocol::grammar::constraint::Constraint[1]): String[1]
+{
+    let body = constraintBody($c);
+    let name = $c.name->orElse('');
+    let hasName = $name != '';
+    let hasOwnerOverrides = !$c.owner->isEmpty() || !$c.externalId->isEmpty() || !$c.messageFunction->isEmpty();
+    // GRule-style block form: `name\n(\n  ~owner: …\n  ~externalId: …\n  ~function: …\n  …\n)`.
+    // Triggered when any of owner/externalId/messageFunction is set; produces
+    // the same layout Pure uses for named-with-overrides constraints.
+    if([pair(| $hasOwnerOverrides, | printConstraintGRule($c, $name, $body)),
+        pair(| $hasName,            | $name + ': ' + $body)],
+       | $body);
+}
+
+function meta::pure::functions::printer::protocol::constraintBody(c: meta::pure::protocol::grammar::constraint::Constraint[1]): String[1]
+{
+    if ($c.functionDefinition->isEmpty(),
+        | '',
+        | let lambda = $c.functionDefinition->toOne()->cast(@meta::pure::protocol::grammar::function::LambdaFunction);
+          if ($lambda.expressionSequence->isEmpty(), | '', | printValueSpec($lambda.expressionSequence->at(0)));
+    );
+}
+
+function meta::pure::functions::printer::protocol::printConstraintGRule(c: meta::pure::protocol::grammar::constraint::Constraint[1], name: String[1], body: String[1]): String[1]
+{
+    let owner = if ($c.owner->isEmpty(), | '', | '\n    ~owner: ' + $c.owner->toOne());
+    let externalId = if ($c.externalId->isEmpty(), | '', | '\n    ~externalId: \'' + $c.externalId->toOne() + '\'');
+    let func = if ($body == '', | '', | '\n    ~function: ' + $body);
+    let enforcement = if ($c.enforcementLevel->isEmpty(), | '', | '\n    ~enforcementLevel: ' + $c.enforcementLevel->toOne());
+    let message = if ($c.messageFunction->isEmpty(),
+                       | '',
+                       | let mLambda = $c.messageFunction->toOne()->cast(@meta::pure::protocol::grammar::function::LambdaFunction);
+                         if ($mLambda.expressionSequence->isEmpty(),
+                             | '',
+                             | '\n    ~message: ' + printValueSpec($mLambda.expressionSequence->at(0));
+                         );
+                      );
+    $name + '\n  (' + $owner + $externalId + $func + $enforcement + $message + '\n  )';
+}

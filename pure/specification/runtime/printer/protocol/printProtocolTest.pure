@@ -1,0 +1,166 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::collection::*;
+import meta::pure::functions::io::*;
+import meta::pure::functions::lang::*;
+import meta::pure::functions::printer::protocol::*;
+import meta::pure::functions::printer::protocol::tests::*;
+import meta::pure::functions::string::*;
+import meta::pure::protocol::*;
+import meta::pure::ui::progress::*;
+
+// Grammar-corpus-driven runner for the protocol-side printer. Walks the given
+// directory for `grammar.pure` files (the parser test corpus), and for each:
+//   parse → printProtocolFile → compare normalised print to normalised source
+// (or its `grammar_compare*.pure` override). The grammar corpus IS the
+// canonical printer-target form, so byte-equality vs source is the signal
+// that the printer didn't regress.
+//
+// Mirrors the compiled-side `runCompiledPrinterCorpus` so both printers have
+// the same harness shape and the same Justfile recipe pattern.
+
+function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus(testDir: String[1]): String[1]
+{
+    let allFiles = $testDir->directoryTree();
+    let grammarFiles = $allFiles->filter(p | $p->endsWith('/grammar.pure'));
+    // Skip files that exercise grammar-error paths (not valid Pure to print)
+    // and the `grammar_compare*.pure` variants — those are comparison targets
+    // for the override mechanism, not corpus inputs in their own right.
+    let testable = $grammarFiles->filter(p | !$p->contains('grammar_error') && !$p->contains('grammar_compare'));
+    let total = $testable->size();
+    startProgress('Running ' + $total->toString() + ' protocol printer corpus checks from ' + $testDir + '...');
+    // Strip the testDir prefix from the status-line label. Absolute paths
+    // wrap past the terminal width (≈80 cols), and `[A` only walks up one
+    // VISUAL line — so a wrapped path leaves the cursor on the wrong line
+    // and the bar leaks downward for every subsequent tick.
+    let prefixLen = $testDir->length() + 1;
+    let results = range(0, $total)->map(i |
+        let p = $testable->at($i);
+        let rel = if ($p->length() > $prefixLen, | $p->substring($prefixLen, $p->length()), | $p);
+        tickProgress($i + 1, $total, $rel);
+        withSilencedPrint(| checkProtocolPrinterFile($p));
+    );
+    finishProgress();
+    let mismatches = $results->filter(r | $r.failure->isNotEmpty());
+
+    $mismatches->map(r | println('  MISMATCH: ' + $r.path + ' — ' + $r.failure->toOne()));
+
+    let passed = $total - $mismatches->size();
+    // Return the summary as the function's String[1] result — the CLI's
+    // `execute --function` prints the return value, so adding `println`
+    // here would duplicate the line.
+    'Protocol printer corpus: ' + $passed->toString() + ' / ' + $total->toString() + ' byte-equal to source';
+}
+
+// Discoverable test wrapper — picked up by `runTests over meta::pure::functions`
+// so the runtime suite still covers the protocol printer.
+function <<test.Test>> meta::pure::functions::printer::protocol::tests::testGrammarCorpusCoverage(): Boolean[1]
+{
+    let allFiles = grammarTestsRoot()->directoryTree();
+    let grammarFiles = $allFiles->filter(p | $p->endsWith('/grammar.pure'));
+    let testable = $grammarFiles->filter(p | !$p->contains('grammar_error') && !$p->contains('grammar_compare'));
+    let results = $testable->map(p | checkProtocolPrinterFile($p));
+    let mismatches = $results->filter(r | $r.failure->isNotEmpty());
+    assert($mismatches->isEmpty(),
+        | $mismatches->map(r | '  ' + $r.path + ' — ' + $r.failure->toOne())->joinStrings('Protocol printer mismatches:\n', '\n', '\n')
+    );
+}
+
+Class <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::ProtocolPrinterCheckResult
+{
+    path: String[1];
+    // Non-empty when the printer emitted an UNSUPPORTED sentinel, when
+    // parse/print threw, or when the normalised print does not byte-equal
+    // the normalised source (or its grammar_compare override).
+    failure: String[0..1];
+}
+
+function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::checkProtocolPrinterFile(path: String[1]): ProtocolPrinterCheckResult[1]
+{
+    let comparePath = findCompareOverride($path);
+    let useExplicit = $comparePath->contains('_explicit.pure');
+
+    let res = tryEval(| renderProtocolFile($path, $useExplicit));
+    if ($res.failure->isNotEmpty(),
+        | ^ProtocolPrinterCheckResult(path = $path, failure = 'parse/print threw: ' + $res.failure->toOne().message),
+        | let printed = $res.value->toOne();
+          if ($printed->contains('/* UNSUPPORTED'),
+              | ^ProtocolPrinterCheckResult(path = $path, failure = 'printer emitted UNSUPPORTED sentinel'),
+              | let source = readFile($comparePath);
+                let normSrc = normalizePureSource($source);
+                let normPrint = normalizePureSource($printed);
+                if ($normSrc == $normPrint,
+                    | ^ProtocolPrinterCheckResult(path = $path, failure = []),
+                    | ^ProtocolPrinterCheckResult(path = $path, failure = 'normalised print differs from ' + $comparePath + '\n--- expected ---\n' + $normSrc + '\n--- printed ---\n' + $normPrint);
+                );
+          );
+    );
+}
+
+// parse → printProtocolFile (or its `_explicit` variant). Single pass — the
+// grammar corpus IS the canonical printer-target form, so comparing the
+// print to the source is sufficient; no parse→print→parse→print round-trip.
+function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::renderProtocolFile(path: String[1], explicit: Boolean[1]): String[1]
+{
+    let source = readFile($path);
+    let parsed = meta::pure::functions::meta::parse($path, $source);
+    if ($explicit, | printProtocolFileExplicit($parsed), | printProtocolFile($parsed));
+}
+
+// Some test folders include a `grammar_compare*.pure` sibling that holds the
+// canonical printer-target form — used when the source `grammar.pure` has
+// equivalent shapes the parser collapses (e.g. `!(a == b)` vs `a != b`). Use
+// the override when present; otherwise compare to the source itself.
+function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::findCompareOverride(grammarPath: String[1]): String[1]
+{
+    let dir = $grammarPath->substring(0, $grammarPath->length() - 'grammar.pure'->length());
+    let candidates = [$dir + 'grammar_compare.pure', $dir + 'grammar_compare_explicit.pure'];
+    let existing = $candidates->filter(c | tryEval(| readFile($c)).failure->isEmpty());
+    if ($existing->isEmpty(), | $grammarPath, | $existing->at(0));
+}
+
+// Whitespace-tolerant comparison: trim each line, drop blank lines, strip
+// trailing semicolons (Pure treats `;` as an optional terminator, and the
+// grammar corpus is inconsistent — `[]` vs `1 * 2;` both appear as single-
+// statement function bodies), and join with `\n`.
+function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::normalizePureSource(s: String[1]): String[1]
+{
+    $s->split('\n')->map(l | stripTrailingSemicolon($l->trim()))->filter(l | $l != '')->joinStrings('\n');
+}
+
+function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::stripTrailingSemicolon(s: String[1]): String[1]
+{
+    if ($s->endsWith(';'), | $s->substring(0, $s->length() - 1), | $s);
+}
+
+// Best-effort locate of the grammar tests root for the discoverable test.
+// Runtime CWD varies (repo root, bootstrap/, surefire tmpdirs); walk a few
+// common ancestors and pick the first one whose directoryTree succeeds.
+// `runProtocolPrinterCorpus(testDir)` takes the dir as a parameter so the
+// CLI invocation can pass an absolute path without going through this probe.
+function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::grammarTestsRoot(): String[1]
+{
+    let candidates = [
+        'pure/specification/grammar/tests',
+        '../pure/specification/grammar/tests',
+        '../../pure/specification/grammar/tests',
+        '../../../pure/specification/grammar/tests',
+        '../../../../pure/specification/grammar/tests'
+    ];
+    let working = $candidates->filter(c | tryEval(| $c->directoryTree()).failure->isEmpty());
+    assert($working->isNotEmpty(), 'Cannot locate pure/specification/grammar/tests from CWD');
+    $working->at(0);
+}

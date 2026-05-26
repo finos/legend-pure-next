@@ -308,13 +308,28 @@ public final class PureRuntimeCompilerBinaryBuilder
                 MutableList<PackageableElement> tests = elements.select(TestElementFilter::isTestElement);
                 java.util.Set<String> leanPaths = pathSet(lean);
                 java.util.Set<String> testPaths = pathSet(tests);
-                writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
-                        lean, extensions, lastModule, manifest,
+                // Rewrite Package PDOs in both partitions so each Package's
+                // `_children()` only references paths that live in the SAME
+                // PDB. Without this, the lean Package PDO for a path that
+                // mixes lean + test children would emit dangling pointers to
+                // the test paths — those paths are absent from lean.pdb, so
+                // a runtime that loads only lean would fail to resolve them.
+                // Tests-only gets shadow Package PDOs for any path that has
+                // test children; the runtime registry merges children across
+                // modules at read time (see {@code MergedPackage} / {@code
+                // MergedPackagePDO}), so tests-loaded-alongside-lean sees the
+                // full union.
+                MutableList<PackageableElement> leanFiltered = Lists.mutable.withAll(
+                        org.finos.legend.pure.m3.module.PackageSplitFilter.filterPackageChildren(lean, leanPaths));
+                MutableList<PackageableElement> testsWithShadows = Lists.mutable.withAll(
+                        org.finos.legend.pure.m3.module.PackageSplitFilter.withShadowPackages(tests, lean, testPaths));
+                writePdb("lean (" + leanFiltered.size() + "/" + elements.size() + ")",
+                        leanFiltered, extensions, lastModule, manifest,
                         pureLangExt.archiveSections(filterEntries(functionEntries, leanPaths)),
                         outputFile,
                         org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains));
-                writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
-                        tests, extensions, lastModule, TestElementFilter.testsManifest(manifest),
+                writePdb("tests-only (" + testsWithShadows.size() + "/" + elements.size() + ")",
+                        testsWithShadows, extensions, lastModule, TestElementFilter.testsManifest(manifest),
                         pureLangExt.archiveSections(filterEntries(functionEntries, testPaths)),
                         TestElementFilter.testsOnlyPath(outputFile),
                         org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains));
@@ -351,6 +366,7 @@ public final class PureRuntimeCompilerBinaryBuilder
         }
         return set;
     }
+
 
     private static void writePdb(
             String label,

@@ -147,9 +147,9 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
             );,
         ft:meta::pure::protocol::grammar::type::FunctionType[1] |
             let ftParamAccum = $ft.parameters->fold({fp, acc |
-                let fpType = $fp.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+                let fpType = $fp.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
                 let fpGtResult = $fpType->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext);
-                let fpMult = $fp.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+                let fpMult = $fp.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
                 ^$acc(
                     values += ^VariableExpression(
                         // Anonymous params in `Function<{X[1]->Y[1]}>` have no

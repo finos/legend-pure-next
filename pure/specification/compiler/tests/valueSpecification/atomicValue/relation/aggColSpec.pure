@@ -1,11 +1,11 @@
 ###Pure
-native function test<Z,V,K>(z:Relation<Z>[1], x:AggColSpec<{Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]):Any[1];
+native function test<Z,V,K>(z: Relation<Z>[1], x: AggColSpec<{Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]): Any[1];
 
-native function _sum(x:Integer[*]):Integer[1];
+native function _sum(x: Integer[*]): Integer[1];
 
-function test():Any[1]
+function test(): Any[1]
 {
-   test(''->cast(@Relation<(ok:String[1])>), ~name:x|1:y|$y->_sum());
+  test(''->cast(@Relation<(ok:String)>), ~name : x|1 : y|$y->_sum())
 }
 
 ###CompiledGraph
@@ -14,26 +14,26 @@ native function test_Relation_1__AggColSpec_1__Any_1_(z:Relation<Z~test_Relation
 native function _sum_Integer_MANY__Integer_1_(x:@Integer@[*]):@Integer@[1]  ~NativeFunction<{@Integer@[*]->@Integer@[1]}>
 
 function test__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
-  FunctionInvocation test_Relation_1__AggColSpec_1__Any_1_ :#Any##[1]#  ~@FunctionInvocation@  @8:4-8:68
+  FunctionInvocation test_Relation_1__AggColSpec_1__Any_1_ :#Any##[1]#  ~@FunctionInvocation@  @8:3-8:68
     typeParam K -> #Integer#
     typeParam V -> #Integer#
     typeParam Z -> #(ok:#String##[1]#)#
-    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Relation<(ok:@String@[1])>##[1]#  ~@ArrowInvocation@  @8:11-8:43
+    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Relation<(ok:@String@[1])>##[1]#  ~@ArrowInvocation@  @8:10-8:39
       typeParam T -> Relation<(ok:@String@[1])>
       mulParam m -> [1]
-      AtomicValue  '' :@String@[1]  ~@AtomicValue@  @8:9-8:10
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>  @8:18-8:42
-    FunctionInvocation aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#(ok:#String##[1]#)#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  ~@FunctionInvocation@  @8:47-8:67
+      AtomicValue  '' :@String@[1]  ~@AtomicValue@  @8:8-8:9
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>  @8:17-8:38
+    FunctionInvocation aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#(ok:#String##[1]#)#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  ~@FunctionInvocation@  @8:43-8:67
       typeParam K -> #Integer#
       typeParam T -> #(name:#Integer##[1]#)#
       typeParam U -> #(ok:#String##[1]#)#
       typeParam V -> #Integer#
-      Lambda(x:#(ok:@String@[1])##[1]#) :#LambdaFunction<#{#(ok:@String@[1])##[1]#->@Integer@[1]}#>#[1]  ~@AtomicValue@  @8:52-8:54
-        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @8:54-8:54
+      Lambda(x:#(ok:@String@[1])##[1]#) :#LambdaFunction<#{#(ok:@String@[1])##[1]#->@Integer@[1]}#>#[1]  ~@AtomicValue@  @8:50-8:52
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @8:52-8:52
       Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @8:56-8:67
         ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @8:60-8:67
           Variable y :#Integer##[*]#  ~@VariableExpression@  @8:58-8:59
-      AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @8:47-8:50
+      AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @8:43-8:46
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
 
 ###ReverseIndex

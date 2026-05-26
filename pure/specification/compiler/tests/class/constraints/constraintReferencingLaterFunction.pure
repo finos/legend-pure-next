@@ -1,7 +1,13 @@
 ###Pure
+import test::*;
+
 Class test::MyClass
 [
-  c1(~function: $this.name->test::isValid() ~message: 'not valid')
+  c1
+  (
+    ~function: $this.name->isValid()
+    ~message: 'not valid'
+  )
 ]
 {
   name: String[1];
@@ -9,26 +15,26 @@ Class test::MyClass
 
 function test::isValid(s: String[1]): Boolean[1]
 {
-  $s->length() > 0;
+  $s->length() > 0
 }
 
 ###CompiledGraph
-class test::MyClass extends Any  ~Class<test::MyClass>  @2:1-8:1
+class test::MyClass extends Any  ~Class<test::MyClass>  @4:1-14:1
   property name :@String@[1]  ~Property<test::MyClass, @String@|1>
   constraint c1
     Lambda(this:test::MyClass[1])  ~#LambdaFunction<#{test::MyClass[1]->#Boolean##[1]#}#>#
-      ArrowInvocation test::isValid_String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @4:27-4:43
-        DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @4:22-4:26
-          Variable this :#test::MyClass##[1]#  ~@VariableExpression@  @4:17-4:21
+      ArrowInvocation test::isValid_String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @8:26-8:36
+        DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @8:21-8:25
+          Variable this :#test::MyClass##[1]#  ~@VariableExpression@  @8:16-8:20
     messageFunction
       Lambda(this:test::MyClass[1])  ~#LambdaFunction<#{test::MyClass[1]->@String@[1]}#>#
-        AtomicValue  'not valid' :@String@[1]  ~@AtomicValue@  @4:55-4:65
+        AtomicValue  'not valid' :@String@[1]  ~@AtomicValue@  @9:15-9:25
 
 function test::isValid_String_1__Boolean_1_(s:@String@[1]):@Boolean@[1]  ~UserDefinedFunction<{@String@[1]->@Boolean@[1]}>
-  FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @12:5-12:18
-    ArrowInvocation length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @12:5-12:14
-      Variable s :#String##[1]#  ~@VariableExpression@  @12:3-12:4
-    AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @12:18-12:18
+  FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @18:5-18:18
+    ArrowInvocation length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @18:5-18:14
+      Variable s :#String##[1]#  ~@VariableExpression@  @18:3-18:4
+    AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @18:18-18:18
 
 ###ReverseIndex
 meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:

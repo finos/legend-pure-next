@@ -1,28 +1,30 @@
 ###Pure
+import a::*;
+
 Class a::G<T>
 {
-    p: T[1];
+  p: T[1];
 }
 
-function test():Integer[1]
+function test(): Integer[1]
 {
-    let g = a::G;
-    $g.properties->size();
+  let g = G;
+  $g.properties->size();
 }
 
 ###CompiledGraph
-class a::G extends Any  ~Class<a::G<T~a::G>>  @2:1-5:1
+class a::G extends Any  ~Class<a::G<T~a::G>>  @4:1-7:1
   property p :T~a::G[1]  ~Property<a::G<T~a::G>, T~a::G|1>
 
 function test__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Class<#a::G<?>#>##[1]#  ~@FunctionInvocation@  @9:5-9:16
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Class<#a::G<?>#>##[1]#  ~@FunctionInvocation@  @11:3-11:11
     typeParam T -> #Class<#a::G<?>#>#
     mulParam m -> [1]
-    AtomicValue  'g' :@String@[1]  ~@AtomicValue@  @9:9-9:9
-    AtomicValue  a::G :#Class<#a::G<?>#>#[1]  ~@AtomicValue@  @9:13-9:16
-  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @10:18-10:25
-    DotApplication meta::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @10:7-10:17
-      Variable g :#Class<#a::G<?>#>##[1]#  ~@VariableExpression@  @10:5-10:6
+    AtomicValue  'g' :@String@[1]  ~@AtomicValue@  @11:7-11:7
+    AtomicValue  a::G :#Class<#a::G<?>#>#[1]  ~@AtomicValue@  @11:11-11:11
+  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @12:16-12:23
+    DotApplication meta::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @12:5-12:15
+      Variable g :#Class<#a::G<?>#>##[1]#  ~@VariableExpression@  @12:3-12:4
 
 ###ReverseIndex
 a::G:

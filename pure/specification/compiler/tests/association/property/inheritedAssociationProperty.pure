@@ -1,63 +1,64 @@
 ###Pure
-Class test::Person
+import test::*;
+
+Association test::PersonDept
 {
-    name : String[1];
+  person: Person[*];
+  dept: Department[0..1];
 }
 
-Class test::Employee extends test::Person
+Class test::Person
 {
-    role : String[1];
+  name: String[1];
+}
+
+Class test::Employee extends Person
+{
+  role: String[1];
 }
 
 Class test::Department
 {
-    title : String[1];
+  title: String[1];
 }
 
-Association test::PersonDept
+function test::use(): Any[*]
 {
-    person : test::Person[*];
-    dept : test::Department[0..1];
+  let e = ^Employee(name = 'Alice', role = 'Dev');
+  $e.dept;
 }
-
-function test::use():Any[*]
-{
-    let e = ^test::Employee(name='Alice', role='Dev');
-    $e.dept;
-}
-
 
 ###CompiledGraph
-class test::Person extends Any  ~Class<test::Person>  @2:1-5:1
-  property name :@String@[1]  ~Property<test::Person, @String@|1>
-
-class test::Employee extends test::Person  ~Class<test::Employee>  @7:1-10:1
-  property role :@String@[1]  ~Property<test::Employee, @String@|1>
-
-class test::Department extends Any  ~Class<test::Department>  @12:1-15:1
-  property title :@String@[1]  ~Property<test::Department, @String@|1>
-
-association test::PersonDept  ~@Association@  @17:1-21:1
+association test::PersonDept  ~@Association@  @4:1-8:1
   property person :test::Person[*]  ~Property<test::Department, test::Person|*>
   property dept :test::Department[0..1]  ~Property<test::Person, test::Department|0..1>
 
+class test::Person extends Any  ~Class<test::Person>  @10:1-13:1
+  property name :@String@[1]  ~Property<test::Person, @String@|1>
+
+class test::Employee extends test::Person  ~Class<test::Employee>  @15:1-18:1
+  property role :@String@[1]  ~Property<test::Employee, @String@|1>
+
+class test::Department extends Any  ~Class<test::Department>  @20:1-23:1
+  property title :@String@[1]  ~Property<test::Department, @String@|1>
+
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Employee##[1]#  ~@FunctionInvocation@  @25:5-25:53
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Employee##[1]#  ~@FunctionInvocation@  @27:3-27:49
     typeParam T -> #test::Employee#
     mulParam m -> #[1]#
-    AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @25:9-25:9
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Employee##[1]#  ~@FunctionInvocation@  @25:13-25:53
+    AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @27:7-27:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Employee##[1]#  ~@FunctionInvocation@  @27:11-27:49
       typeParam T -> test::Employee
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Employee|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Employee|1>  @25:13-25:53
-      Collection :#KeyExpression#[2]  ~@Collection@  @25:13-25:53
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @25:29-25:40
-          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @25:29-25:40
-          AtomicValue  'Alice' :@String@[1]  ~@AtomicValue@  @25:34-25:40
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @25:43-25:52
-          AtomicValue  'role' :@String@[1]  ~@AtomicValue@  @25:43-25:52
-          AtomicValue  'Dev' :@String@[1]  ~@AtomicValue@  @25:48-25:52
-  DotApplication test::PersonDept.dept :#test::Department##[0..1]#  ~@DotApplication@  @26:7-26:11
-    Variable e :#test::Employee##[1]#  ~@VariableExpression@  @26:5-26:6
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Employee|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Employee|1>  @27:11-27:49
+      Collection :#KeyExpression#[2]  ~@Collection@  @27:11-27:49
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @27:21-27:34
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @27:21-27:34
+          AtomicValue  'Alice' :@String@[1]  ~@AtomicValue@  @27:28-27:34
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @27:37-27:48
+          AtomicValue  'role' :@String@[1]  ~@AtomicValue@  @27:37-27:48
+          AtomicValue  'Dev' :@String@[1]  ~@AtomicValue@  @27:44-27:48
+  DotApplication test::PersonDept.dept :#test::Department##[0..1]#  ~@DotApplication@  @28:5-28:9
+    Variable e :#test::Employee##[1]#  ~@VariableExpression@  @28:3-28:4
 
 ###ReverseIndex
 meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:

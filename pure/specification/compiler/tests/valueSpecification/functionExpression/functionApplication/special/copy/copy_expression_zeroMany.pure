@@ -1,12 +1,9 @@
 ###Pure
 import test::copy::zeroMany::*;
 
-// Tests `^expr(keys)` where the receiver has multiplicity [*].
-// The compiler rewrites to `expr->map(_automap | ^$_automap(keys))`
-// so the return type stays [*].
-function test::copy::zeroMany::testCopyOfCollection(node:Node[1]): Any[*]
+function test::copy::zeroMany::testCopyOfCollection(node: Node[1]): Any[*]
 {
-  let renamed = ^$node.children(name='renamed');
+  let renamed = ^$node.children(name = 'renamed')
 }
 
 Class test::copy::zeroMany::Node
@@ -17,26 +14,26 @@ Class test::copy::zeroMany::Node
 
 ###CompiledGraph
 function test::copy::zeroMany::testCopyOfCollection_Node_1__Any_MANY_(node:test::copy::zeroMany::Node[1]):@Any@[*]  ~UserDefinedFunction<{test::copy::zeroMany::Node[1]->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::zeroMany::Node##[*]#  ~@FunctionInvocation@  @9:3-9:47
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::zeroMany::Node##[*]#  ~@FunctionInvocation@  @6:3-6:49
     typeParam T -> #test::copy::zeroMany::Node#
     mulParam m -> #[*]#
-    AtomicValue  'renamed' :@String@[1]  ~@AtomicValue@  @9:7-9:13
-    FunctionInvocation map_T_m__Function_1__V_m_ :#test::copy::zeroMany::Node##[*]#  ~@FunctionInvocation@  @9:17-9:47
+    AtomicValue  'renamed' :@String@[1]  ~@AtomicValue@  @6:7-6:13
+    FunctionInvocation map_T_m__Function_1__V_m_ :#test::copy::zeroMany::Node##[*]#  ~@FunctionInvocation@  @6:17-6:49
       typeParam T -> #test::copy::zeroMany::Node#
       typeParam V -> #test::copy::zeroMany::Node#
       mulParam m -> #[*]#
-      DotApplication test::copy::zeroMany::Node.children :#test::copy::zeroMany::Node##[*]#  ~@DotApplication@  @9:23-9:31
-        Variable node :#test::copy::zeroMany::Node##[1]#  ~@VariableExpression@  @9:18-9:22
+      DotApplication test::copy::zeroMany::Node.children :#test::copy::zeroMany::Node##[*]#  ~@DotApplication@  @6:23-6:31
+        Variable node :#test::copy::zeroMany::Node##[1]#  ~@VariableExpression@  @6:18-6:22
       Lambda(_automap:#test::copy::zeroMany::Node#[1]) :#LambdaFunction<#{#test::copy::zeroMany::Node#[1]->#test::copy::zeroMany::Node##[1]#}#>#[1]  ~@AtomicValue@
-        FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::zeroMany::Node##[1]#  ~@FunctionInvocation@  @9:17-9:47
+        FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::zeroMany::Node##[1]#  ~@FunctionInvocation@  @6:17-6:49
           typeParam T -> #test::copy::zeroMany::Node#
           Variable _automap :#test::copy::zeroMany::Node##[1]#  ~@VariableExpression@
-          Collection :#KeyExpression#[1]  ~@Collection@  @9:17-9:47
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @9:33-9:46
-              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @9:33-9:46
-              AtomicValue  'renamed' :@String@[1]  ~@AtomicValue@  @9:38-9:46
+          Collection :#KeyExpression#[1]  ~@Collection@  @6:17-6:49
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:33-6:48
+              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:33-6:48
+              AtomicValue  'renamed' :@String@[1]  ~@AtomicValue@  @6:40-6:48
 
-class test::copy::zeroMany::Node extends Any  ~Class<test::copy::zeroMany::Node>  @12:1-16:1
+class test::copy::zeroMany::Node extends Any  ~Class<test::copy::zeroMany::Node>  @9:1-13:1
   property name :@String@[1]  ~Property<test::copy::zeroMany::Node, @String@|1>
   property children :test::copy::zeroMany::Node[*]  ~Property<test::copy::zeroMany::Node, test::copy::zeroMany::Node|*>
 

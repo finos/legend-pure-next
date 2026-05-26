@@ -1,17 +1,11 @@
 ###Pure
-// Pins the canonical-anchor expectation for a Class with a Relation-typed
-// property. Java direct currently builds a plain UDGT for the RelationType's
-// owner-classifier inner GT, while compile-via-pure produces the canonical
-// UDPGT — exposing a cross-platform divergence first surfaced by
-// `bootstrap::test-self-host` (PDB diff between Java direct compiler.pdb and
-// the compile-via-pure compiler_bootstrap.pdb).
 Class protocol::WithRelation
 {
-  rt: meta::pure::metamodel::relation::Relation<(col1:String, col2:Integer)>[1];
+  rt: Relation<(col1:String, col2:Integer)>[1];
 }
 
 ###CompiledGraph
-class protocol::WithRelation extends Any  ~Class<protocol::WithRelation>  @8:1-11:1
+class protocol::WithRelation extends Any  ~Class<protocol::WithRelation>  @2:1-5:1
   property rt :Relation<(col1:@String@[1], col2:@Integer@[1])>[1]  ~Property<protocol::WithRelation, Relation<(col1:@String@[1], col2:@Integer@[1])>|1>
 
 ###ReverseIndex

@@ -413,12 +413,22 @@ public final class TruffleCompilerBinaryBuilder
                 }
                 java.util.Set<String> leanPaths = elementPaths(lean, resolver);
                 java.util.Set<String> testPaths = elementPaths(tests, resolver);
-                writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
-                        lean, manifest, outputFile,
+                // Rewrite Package PDOs in both partitions so their `children`
+                // slots only reference paths present in the SAME PDB. Without
+                // this, lean.pdb's Package for a path that mixes lean + test
+                // children would emit dangling pointers to test paths; a
+                // runtime that loads only lean would PTR-FAIL them. Tests-only
+                // gets shadow Package PDOs so the runtime registry can union
+                // children across modules via {@link MergedPackagePDO} when
+                // both are loaded.
+                List<Object> leanFiltered = filterPackageChildren(lean, leanPaths, resolver);
+                List<Object> testsWithShadows = withShadowPackages(tests, lean, testPaths, resolver);
+                writePdb("lean (" + leanFiltered.size() + "/" + elements.size() + ")",
+                        leanFiltered, manifest, outputFile,
                         org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains),
                         resolver);
-                writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
-                        tests, TestElementFilter.testsManifest(manifest),
+                writePdb("tests-only (" + testsWithShadows.size() + "/" + elements.size() + ")",
+                        testsWithShadows, TestElementFilter.testsManifest(manifest),
                         TestElementFilter.testsOnlyPath(outputFile),
                         org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains),
                         resolver);
@@ -436,6 +446,126 @@ public final class TruffleCompilerBinaryBuilder
             {
                 out.add(p);
             }
+        }
+        return out;
+    }
+
+    private static boolean isPackagePdo(Object e)
+    {
+        return e instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(e, "meta::pure::metamodel::Package");
+    }
+
+    /**
+     * Clone a Package PDO with a fresh children list. Slots other than
+     * {@code children} are copied from the original (forcing FB-lazy
+     * materialisation where present so the clone carries plain values).
+     */
+    private static org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject clonePackageWithChildren(
+            org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject original, List<Object> newChildren)
+    {
+        org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject copy =
+                new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
+                        original.classInfo, null, original.resolver, original.parent);
+        for (int i = 0; i < copy.slots.length; i++)
+        {
+            copy.slots[i] = original.readSlot(i);
+        }
+        int childrenSlot = original.classInfo.slotIndex("children");
+        if (childrenSlot >= 0 && childrenSlot < copy.slots.length)
+        {
+            copy.slots[childrenSlot] = new org.finos.legend.pure.truffle.types.ObjectSequence(newChildren.toArray());
+        }
+        return copy;
+    }
+
+    /**
+     * Rebuild every Package PDO in {@code partition} so its {@code children}
+     * slot only contains elements whose path is in {@code keepPaths}. Non-
+     * Package elements pass through unchanged.
+     */
+    private static List<Object> filterPackageChildren(
+            List<Object> partition, java.util.Set<String> keepPaths,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        List<Object> out = new ArrayList<>(partition.size());
+        for (Object e : partition)
+        {
+            if (!isPackagePdo(e))
+            {
+                out.add(e);
+                continue;
+            }
+            org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pkg =
+                    (org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject) e;
+            int childrenSlot = pkg.classInfo.slotIndex("children");
+            List<Object> filtered = new ArrayList<>();
+            if (childrenSlot >= 0)
+            {
+                Object kidsObj = pkg.readSlot(childrenSlot);
+                if (kidsObj instanceof PureSequence ps)
+                {
+                    for (int i = 0; i < ps.size(); i++)
+                    {
+                        Object child = ps.getBoxed(i);
+                        if (child == null) continue;
+                        String cp = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(child, resolver);
+                        if (cp != null && keepPaths.contains(cp)) filtered.add(child);
+                    }
+                }
+            }
+            out.add(clonePackageWithChildren(pkg, filtered));
+        }
+        return out;
+    }
+
+    /**
+     * Build the tests partition: start with the test-stereotyped elements,
+     * then add a <em>shadow</em> Package PDO for every parent-package path
+     * that has test children but whose canonical Package lives in the lean
+     * partition. The shadow's metadata is cloned from the canonical Package;
+     * its children list contains only the test children at that path.
+     * Runtime registry merging unions these shadows with the canonical
+     * Package via {@link org.finos.legend.pure.truffle.runtime.dynobj.MergedPackagePDO}
+     * when both PDBs are loaded.
+     */
+    private static List<Object> withShadowPackages(
+            List<Object> testElements, List<Object> allElements,
+            java.util.Set<String> testPaths,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        List<Object> out = new ArrayList<>(testElements);
+        java.util.Map<String, java.util.List<Object>> testKidsByParent = new java.util.LinkedHashMap<>();
+        for (Object t : testElements)
+        {
+            Object parent = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(t, "package");
+            if (parent == null) continue;
+            String parentPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(parent, resolver);
+            if (parentPath == null) continue;
+            testKidsByParent.computeIfAbsent(parentPath, k -> new ArrayList<>()).add(t);
+        }
+        java.util.Map<String, org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject> packageByPath = new java.util.HashMap<>();
+        for (Object e : allElements)
+        {
+            if (!isPackagePdo(e)) continue;
+            String p = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(e, resolver);
+            if (p != null)
+            {
+                packageByPath.put(p, (org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject) e);
+            }
+        }
+        for (java.util.Map.Entry<String, java.util.List<Object>> entry : testKidsByParent.entrySet())
+        {
+            String parentPath = entry.getKey();
+            if (testPaths.contains(parentPath))
+            {
+                // Parent Package itself is a test element — already in `out`
+                // with its full children list; no shadow needed.
+                continue;
+            }
+            org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject canonical = packageByPath.get(parentPath);
+            if (canonical == null) continue;
+            out.add(clonePackageWithChildren(canonical, entry.getValue()));
         }
         return out;
     }

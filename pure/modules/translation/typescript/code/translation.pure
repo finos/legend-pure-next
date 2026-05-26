@@ -117,6 +117,21 @@ function meta::external::language::typescript::translation::translateFunction(
    buildSourceFile($f, $returnType, $conv);
 }
 
+// Unified entry — dispatches on the runtime kind of the FunctionDefinition
+// so the adapter can hand off whatever shape makeCanonical produced (the
+// canonical form is a UserDefinedFunction for capturing-lambda inputs and
+// a passthrough LambdaFunction for non-capturing inputs).
+function meta::external::language::typescript::translation::translateFunctionDef(
+   f: meta::pure::metamodel::function::FunctionDefinition<meta::pure::metamodel::type::Any>[1],
+   conv: Convention[1]
+): SourceFile[1]
+{
+   $f->match([
+      lf:  LambdaFunction<Any>[1]      | $lf->translateLambda($conv),
+      udf: UserDefinedFunction<Any>[1] | $udf->translateFunction($conv)
+   ]);
+}
+
 // Lambda's return type lives on the classifier (LambdaFunction<{params -> ret}>)
 // rather than on dedicated slots — extract it from typeArguments[0].
 function meta::external::language::typescript::translation::translateLambda(

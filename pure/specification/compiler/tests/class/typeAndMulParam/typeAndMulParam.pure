@@ -1,5 +1,5 @@
 ###Pure
-Class meta::pure::test::classWithTypeParams<T, U>
+Class meta::pure::test::classWithTypeParams<T,U>
 {
 }
 

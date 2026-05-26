@@ -1,32 +1,32 @@
 ###Pure
 import protocol::support::*;
 
-Enum <<AProfile.flag, protocol::support::AProfile.newFlag>> {protocol::support::AProfile.tag1 = 'yeah', AProfile.tag2 = 'ok'} protocol::AnEnum
-{
-  Val,
-  <<AProfile.flag, protocol::support::AProfile.newFlag>> {protocol::support::AProfile.tag1 = 'yeah', AProfile.tag2 = 'ok'} Val2
-}
-
 Profile protocol::support::AProfile
 {
   stereotypes: [flag, newFlag];
   tags: [tag1, tag2];
 }
 
-###CompiledGraph
-enumeration protocol::AnEnum extends Enum  ~Enumeration<protocol::AnEnum>  @4:1-8:1
-  <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
-  {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
-  property Val  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum|1>  = ^protocol::AnEnum(name='Val')  ~lambda:#LambdaFunction<#{->protocol::AnEnum[1]}#>#  @6:3-6:5
-  property Val2  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum|1>  = ^protocol::AnEnum(name='Val2')  ~lambda:#LambdaFunction<#{->protocol::AnEnum[1]}#>#  @7:3-7:127
-    <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
-    {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
+Enum <<AProfile.flag, AProfile.newFlag>> {AProfile.tag1 = 'yeah', AProfile.tag2 = 'ok'} protocol::AnEnum
+{
+  Val,
+  <<AProfile.flag, AProfile.newFlag>> {AProfile.tag1 = 'yeah', AProfile.tag2 = 'ok'} Val2
+}
 
-profile protocol::support::AProfile  ~@Profile@  @10:1-14:1
+###CompiledGraph
+profile protocol::support::AProfile  ~@Profile@  @4:1-8:1
   stereotype flag  ~@Stereotype@
   stereotype newFlag  ~@Stereotype@
   tag tag1  ~@Tag@
   tag tag2  ~@Tag@
+
+enumeration protocol::AnEnum extends Enum  ~Enumeration<protocol::AnEnum>  @10:1-14:1
+  <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
+  {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
+  property Val  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum|1>  = ^protocol::AnEnum(name='Val')  ~lambda:#LambdaFunction<#{->protocol::AnEnum[1]}#>#  @12:3-12:5
+  property Val2  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum|1>  = ^protocol::AnEnum(name='Val2')  ~lambda:#LambdaFunction<#{->protocol::AnEnum[1]}#>#  @13:3-13:89
+    <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
+    {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
 
 ###ReverseIndex
 protocol::support::AProfile:

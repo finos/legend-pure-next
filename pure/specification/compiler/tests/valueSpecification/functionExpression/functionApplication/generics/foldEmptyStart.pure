@@ -1,25 +1,25 @@
 ###Pure
-function test::tst():Any[*]
+function test::tst(): Any[*]
 {
-    fold([]->cast(@Integer), {val, acc| add($acc, $val)}, [])
+  fold([]->cast(@Integer), {val, acc|add($acc, $val)}, [])
 }
 
 ###CompiledGraph
 function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation fold_T_MANY__Function_1__V_MANY__V_MANY_ :#Integer##[*]#  ~@FunctionInvocation@  @4:5-4:61
+  FunctionInvocation fold_T_MANY__Function_1__V_MANY__V_MANY_ :#Integer##[*]#  ~@FunctionInvocation@  @4:3-4:58
     typeParam T -> #Integer#
     typeParam V -> #Integer#
-    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Integer##[0]#  ~@ArrowInvocation@  @4:12-4:27
+    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Integer##[0]#  ~@ArrowInvocation@  @4:10-4:25
       typeParam T -> @Integer@
       mulParam m -> [0]
-      Collection :#Nil#[0]  ~@Collection@  @4:10-4:11
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>  @4:19-4:26
-    Lambda(val:#Integer##[1]#, acc:#Nil##[*]#) :#LambdaFunction<#{#Integer##[1]#, #Nil##[*]#->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @4:30-4:56
-      FunctionInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@FunctionInvocation@  @4:41-4:55
+      Collection :#Nil#[0]  ~@Collection@  @4:8-4:9
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>  @4:17-4:24
+    Lambda(val:#Integer##[1]#, acc:#Nil##[*]#) :#LambdaFunction<#{#Integer##[1]#, #Nil##[*]#->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @4:28-4:53
+      FunctionInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@FunctionInvocation@  @4:38-4:52
         typeParam T -> #Integer#
-        Variable acc :#Nil##[*]#  ~@VariableExpression@  @4:45-4:48
-        Variable val :#Integer##[1]#  ~@VariableExpression@  @4:51-4:54
-    Collection :#Nil#[0]  ~@Collection@  @4:59-4:60
+        Variable acc :#Nil##[*]#  ~@VariableExpression@  @4:42-4:45
+        Variable val :#Integer##[1]#  ~@VariableExpression@  @4:48-4:51
+    Collection :#Nil#[0]  ~@Collection@  @4:56-4:57
 
 ###ReverseIndex
 meta::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:

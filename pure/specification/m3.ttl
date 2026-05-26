@@ -1582,7 +1582,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_meta_pure_metamodel_relationship_Generalization ; :specific :ValueSpecification ; :general :GenericType_meta_pure_metamodel_type_Any ] .
 
 :ValueSpecification_genericType a :Property ;
-    :stereotypes :ProtocolInfo_maybePointer ;
+    :stereotypes :ProtocolInfo_maybePointer, :ProtocolInfo_optionalInProtocol ;
     :abstractProperty_name [ :classifierGenericType :GenericType_meta_pure_metamodel_type_primitives_String ; :data "genericType" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_meta_pure_metamodel_valuespecification_ValueSpecification :GenericType_meta_pure_metamodel_type_generics_GenericType ) ; :multiplicityArguments :PureOne ] ;
     :owner :ValueSpecification ;
@@ -1590,7 +1590,7 @@
     :multiplicity :PureOne .
 
 :ValueSpecification_multiplicity a :Property ;
-    :stereotypes :ProtocolInfo_maybePointer ;
+    :stereotypes :ProtocolInfo_maybePointer, :ProtocolInfo_optionalInProtocol ;
     :abstractProperty_name [ :classifierGenericType :GenericType_meta_pure_metamodel_type_primitives_String ; :data "multiplicity" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_meta_pure_metamodel_valuespecification_ValueSpecification :GenericType_meta_pure_metamodel_multiplicity_Multiplicity ) ; :multiplicityArguments :PureOne ] ;
     :owner :ValueSpecification ;
@@ -2363,6 +2363,17 @@
 :ProtocolInfo_pointerSource a :Stereotype ;
     :classifierGenericType :GenericType_meta_pure_metamodel_extension_Stereotype ;
     :stereotype_name [ :classifierGenericType :GenericType_meta_pure_metamodel_type_primitives_String ; :data "pointerSource" ] ;
+    :profile :ProtocolInfo .
+
+# Property carrying this stereotype is REQUIRED on the compiled metamodel side
+# but OPTIONAL on the protocol side: the parser may leave the slot empty when
+# the value isn't known yet (it's the compiler's job to infer/resolve later).
+# M3ProtocolGenerator remaps the property's multiplicity from PureOne to
+# ZeroOne when emitting protocol form, so `^X(...)` construction can omit
+# the slot without violating Pure's multiplicity check.
+:ProtocolInfo_optionalInProtocol a :Stereotype ;
+    :classifierGenericType :GenericType_meta_pure_metamodel_extension_Stereotype ;
+    :stereotype_name [ :classifierGenericType :GenericType_meta_pure_metamodel_type_primitives_String ; :data "optionalInProtocol" ] ;
     :profile :ProtocolInfo .
 
 

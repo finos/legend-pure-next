@@ -1,4 +1,6 @@
 ###Pure
+import test::*;
+
 Class test::Person
 [
   hasName: $this.name->length() > 0
@@ -8,38 +10,38 @@ Class test::Person
   age: Integer[1];
 }
 
-function test::cloneOlder(p: test::Person[1]): test::Person[1]
+function test::cloneOlder(p: Person[1]): Person[1]
 {
-  ^test::Person(name=$p.name, age=$p.age + 1);
+  ^Person(name = $p.name, age = $p.age + 1)
 }
 
 ###CompiledGraph
-class test::Person extends Any  ~Class<test::Person>  @2:1-9:1
+class test::Person extends Any  ~Class<test::Person>  @4:1-11:1
   property name :@String@[1]  ~Property<test::Person, @String@|1>
   property age :@Integer@[1]  ~Property<test::Person, @Integer@|1>
   constraint hasName
     Lambda(this:test::Person[1])  ~#LambdaFunction<#{test::Person[1]->#Boolean##[1]#}#>#
-      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @4:22-4:35
-        ArrowInvocation length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @4:22-4:31
-          DotApplication test::Person.name :#String##[1]#  ~@DotApplication@  @4:17-4:21
-            Variable this :#test::Person##[1]#  ~@VariableExpression@  @4:12-4:16
-        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @4:35-4:35
+      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @6:22-6:35
+        ArrowInvocation length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @6:22-6:31
+          DotApplication test::Person.name :#String##[1]#  ~@DotApplication@  @6:17-6:21
+            Variable this :#test::Person##[1]#  ~@VariableExpression@  @6:12-6:16
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @6:35-6:35
 
 function test::cloneOlder_Person_1__Person_1_(p:test::Person[1]):test::Person[1]  ~UserDefinedFunction<{test::Person[1]->test::Person[1]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Person##[1]#  ~@FunctionInvocation@  @13:3-13:45
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Person##[1]#  ~@FunctionInvocation@  @15:3-15:43
     typeParam T -> test::Person
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Person|1>  @13:3-13:45
-    Collection :#KeyExpression#[2]  ~@Collection@  @13:3-13:45
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @13:17-13:28
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @13:17-13:28
-        DotApplication test::Person.name :#String##[1]#  ~@DotApplication@  @13:24-13:28
-          Variable p :#test::Person##[1]#  ~@VariableExpression@  @13:22-13:23
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @13:31-13:44
-        AtomicValue  'age' :@String@[1]  ~@AtomicValue@  @13:31-13:44
-        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @13:37-13:44
-          DotApplication test::Person.age :#Integer##[1]#  ~@DotApplication@  @13:37-13:40
-            Variable p :#test::Person##[1]#  ~@VariableExpression@  @13:35-13:36
-          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @13:44-13:44
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Person|1>  @15:3-15:43
+    Collection :#KeyExpression#[2]  ~@Collection@  @15:3-15:43
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @15:11-15:24
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @15:11-15:24
+        DotApplication test::Person.name :#String##[1]#  ~@DotApplication@  @15:20-15:24
+          Variable p :#test::Person##[1]#  ~@VariableExpression@  @15:18-15:19
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @15:27-15:42
+        AtomicValue  'age' :@String@[1]  ~@AtomicValue@  @15:27-15:42
+        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @15:35-15:42
+          DotApplication test::Person.age :#Integer##[1]#  ~@DotApplication@  @15:35-15:38
+            Variable p :#test::Person##[1]#  ~@VariableExpression@  @15:33-15:34
+          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @15:42-15:42
 
 ###ReverseIndex
 meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:

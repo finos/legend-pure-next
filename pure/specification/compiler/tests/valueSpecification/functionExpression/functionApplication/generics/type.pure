@@ -1,34 +1,34 @@
 ###Pure
-function f<T>(s:T[1]):T[1]
+function f<T>(s: T[1]): T[1]
 {
-    $s
+  $s
 }
 
-function pl(a:String[1], b:String[1]):String[1]
+function pl(a: String[1], b: String[1]): String[1]
 {
-    $a+$b
+  $a + $b
 }
 
-function test():Any[*]
+function test(): Any[*]
 {
-    f('a')->pl('ok')
+  f('a')->pl('ok')
 }
 
 ###CompiledGraph
 function f_T_1__T_1_(s:T~f_T_1__T_1_[1]):T~f_T_1__T_1_[1]  ~UserDefinedFunction<{T~f_T_1__T_1_[1]->T~f_T_1__T_1_[1]}>
-  Variable s :#T~f_T_1__T_1_##[1]#  ~@VariableExpression@  @4:5-4:6
+  Variable s :#T~f_T_1__T_1_##[1]#  ~@VariableExpression@  @4:3-4:4
 
 function pl_String_1__String_1__String_1_(a:@String@[1], b:@String@[1]):@String@[1]  ~UserDefinedFunction<{@String@[1], @String@[1]->@String@[1]}>
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @9:5-9:9
-    Variable a :#String##[1]#  ~@VariableExpression@  @9:5-9:6
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @9:3-9:9
+    Variable a :#String##[1]#  ~@VariableExpression@  @9:3-9:4
     Variable b :#String##[1]#  ~@VariableExpression@  @9:8-9:9
 
 function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  ArrowInvocation pl_String_1__String_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @14:11-14:20
-    FunctionInvocation f_T_1__T_1_ :#String##[1]#  ~@FunctionInvocation@  @14:5-14:10
+  ArrowInvocation pl_String_1__String_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @14:9-14:18
+    FunctionInvocation f_T_1__T_1_ :#String##[1]#  ~@FunctionInvocation@  @14:3-14:8
       typeParam T -> @String@
-      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @14:7-14:9
-    AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @14:16-14:19
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @14:5-14:7
+    AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @14:14-14:17
 
 ###ReverseIndex
 f_T_1__T_1_:

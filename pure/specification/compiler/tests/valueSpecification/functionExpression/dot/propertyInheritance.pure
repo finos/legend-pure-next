@@ -1,36 +1,36 @@
 ###Pure
 import test::*;
 
-function test::tst():Any[*]
+function test::tst(): Any[*]
 {
-    ^MyClass(name='ok', sup='bla').sup + 'e';
+  ^MyClass(name = 'ok', sup = 'bla').sup + 'e'
 }
 
 Class test::Super
 {
-    sup : String[1];
+  sup: String[1];
 }
 
-Class test::MyClass extends test::Super
+Class test::MyClass extends Super
 {
-    name : String[1];
+  name: String[1];
 }
 
 ###CompiledGraph
 function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:35-6:44
-    DotApplication test::Super.sup :#String##[1]#  ~@DotApplication@  @6:35-6:38
-      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MyClass##[1]#  ~@FunctionInvocation@  @6:5-6:34
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:37-6:46
+    DotApplication test::Super.sup :#String##[1]#  ~@DotApplication@  @6:37-6:40
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MyClass##[1]#  ~@FunctionInvocation@  @6:3-6:36
         typeParam T -> test::MyClass
-        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>  @6:5-6:34
-        Collection :#KeyExpression#[2]  ~@Collection@  @6:5-6:34
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:14-6:22
-            AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:14-6:22
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>  @6:3-6:36
+        Collection :#KeyExpression#[2]  ~@Collection@  @6:3-6:36
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:12-6:22
+            AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:12-6:22
             AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @6:19-6:22
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:25-6:33
-            AtomicValue  'sup' :@String@[1]  ~@AtomicValue@  @6:25-6:33
-            AtomicValue  'bla' :@String@[1]  ~@AtomicValue@  @6:29-6:33
-    AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @6:42-6:44
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:25-6:35
+            AtomicValue  'sup' :@String@[1]  ~@AtomicValue@  @6:25-6:35
+            AtomicValue  'bla' :@String@[1]  ~@AtomicValue@  @6:31-6:35
+    AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @6:44-6:46
 
 class test::Super extends Any  ~Class<test::Super>  @9:1-12:1
   property sup :@String@[1]  ~Property<test::Super, @String@|1>

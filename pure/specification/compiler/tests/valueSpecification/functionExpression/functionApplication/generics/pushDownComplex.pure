@@ -1,14 +1,14 @@
 ###Pure
-// Push-down with nested generic-binding: the outer groupBy needs to bind
-// {T,U,V} from the resolved types of an inner collection of agg<K,L,M>
-// invocations. Each agg call's K/L/M flow into the outer's V/U binding.
-// Exercises multi-candidate dispatch + reverse-match on nested function
-// applications + collection-element type unification.
+import test::*;
 
-Class test::AggregateValue<A, B, C>
+native function sum(s: Number[*]): Number[1];
+
+native function count(s: Any[*]): Integer[1];
+
+Class test::AggregateValue<A,B,C>
 {
-   mapFn : FunctionDefinition<{A[1]->B[1]}>[1];
-   aggregateFn : FunctionDefinition<{B[*]->C[1]}>[1];
+  mapFn: FunctionDefinition<{A[1]->B[1]}>[1];
+  aggregateFn: FunctionDefinition<{B[*]->C[1]}>[1];
 }
 
 Class test::TabularDataSet
@@ -17,34 +17,30 @@ Class test::TabularDataSet
 
 Class Trade
 {
-   tradeId : Integer[1];
-   quantity : Float[1];
+  tradeId: Integer[1];
+  quantity: Float[1];
 }
 
-native function sum(s:Number[*]):Number[1];
-
-native function count(s:Any[*]):Integer[1];
-
-function test::agg<K, L, M>(mapFn:FunctionDefinition<{K[1]->L[1]}>[1], aggregateFn:FunctionDefinition<{L[*]->M[1]}>[1]):test::AggregateValue<K, L, M>[1]
+function test::agg<K,L,M>(mapFn: FunctionDefinition<{K[1]->L[1]}>[1], aggregateFn: FunctionDefinition<{L[*]->M[1]}>[1]): AggregateValue<K, L, M>[1]
 {
-   ^test::AggregateValue<K, L, M>(mapFn=$mapFn, aggregateFn=$aggregateFn)
+  ^AggregateValue<K, L, M>(mapFn = $mapFn, aggregateFn = $aggregateFn)
 }
 
-function test::groupBy<T, U, V>(set:T[*], functions:Function<{T[1]->Any[*]}>[*], aggValues:test::AggregateValue<T, V, U>[*], ids:String[*]):test::TabularDataSet[1]
+function test::groupBy<T,U,V>(set: T[*], functions: Function<{T[1]->Any[*]}>[*], aggValues: AggregateValue<T, V, U>[*], ids: String[*]): TabularDataSet[1]
 {
-   ^test::TabularDataSet()
+  ^TabularDataSet()
 }
 
-function go():Any[*]
+function go(): Any[*]
 {
-   Trade->getAll()
-        ->test::groupBy([f | $f.quantity],
-                        [test::agg(f | $f.tradeId, c | $c->count()),
-                         test::agg(x | $x.quantity, x | $x->sum())],
-                        ['region', 'total', 'count'])
+  Trade->getAll()->groupBy([f|$f.quantity], [agg(f|$f.tradeId, c|$c->count()), agg(x|$x.quantity, x|$x->sum())], ['region', 'total', 'count'])
 }
 
 ###CompiledGraph
+native function sum_Number_MANY__Number_1_(s:@Number@[*]):@Number@[1]  ~NativeFunction<{@Number@[*]->@Number@[1]}>
+
+native function count_Any_MANY__Integer_1_(s:@Any@[*]):@Integer@[1]  ~NativeFunction<{@Any@[*]->@Integer@[1]}>
+
 class test::AggregateValue extends Any  ~Class<test::AggregateValue<A~test::AggregateValue, B~test::AggregateValue, C~test::AggregateValue>>  @8:1-12:1
   property mapFn :FunctionDefinition<{A~test::AggregateValue[1]->B~test::AggregateValue[1]}>[1]  ~Property<test::AggregateValue<A~test::AggregateValue, B~test::AggregateValue, C~test::AggregateValue>, FunctionDefinition<{A~test::AggregateValue[1]->B~test::AggregateValue[1]}>|1>
   property aggregateFn :FunctionDefinition<{B~test::AggregateValue[*]->C~test::AggregateValue[1]}>[1]  ~Property<test::AggregateValue<A~test::AggregateValue, B~test::AggregateValue, C~test::AggregateValue>, FunctionDefinition<{B~test::AggregateValue[*]->C~test::AggregateValue[1]}>|1>
@@ -55,64 +51,60 @@ class Trade extends Any  ~Class<Trade>  @18:1-22:1
   property tradeId :@Integer@[1]  ~Property<Trade, @Integer@|1>
   property quantity :Float[1]  ~Property<Trade, Float|1>
 
-native function sum_Number_MANY__Number_1_(s:@Number@[*]):@Number@[1]  ~NativeFunction<{@Number@[*]->@Number@[1]}>
-
-native function count_Any_MANY__Integer_1_(s:@Any@[*]):@Integer@[1]  ~NativeFunction<{@Any@[*]->@Integer@[1]}>
-
 function test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_(mapFn:FunctionDefinition<{K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]->L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]}>[1], aggregateFn:FunctionDefinition<{L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[*]->M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]}>[1]):test::AggregateValue<K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_>[1]  ~UserDefinedFunction<{FunctionDefinition<{K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]->L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]}>[1], FunctionDefinition<{L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[*]->M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]}>[1]->test::AggregateValue<K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_>[1]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::AggregateValue<K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_>##[1]#  ~@FunctionInvocation@  @30:4-30:73
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::AggregateValue<K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_>##[1]#  ~@FunctionInvocation@  @26:3-26:70
     typeParam T -> test::AggregateValue<K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_>
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::AggregateValue<K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::AggregateValue<K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_>|1>  @30:4-30:73
-    Collection :#KeyExpression#[2]  ~@Collection@  @30:4-30:73
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @30:35-30:46
-        AtomicValue  'mapFn' :@String@[1]  ~@AtomicValue@  @30:35-30:46
-        Variable mapFn :#FunctionDefinition<{K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]->L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]}>##[1]#  ~@VariableExpression@  @30:41-30:46
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @30:49-30:72
-        AtomicValue  'aggregateFn' :@String@[1]  ~@AtomicValue@  @30:49-30:72
-        Variable aggregateFn :#FunctionDefinition<{L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[*]->M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]}>##[1]#  ~@VariableExpression@  @30:61-30:72
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::AggregateValue<K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::AggregateValue<K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_, M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_>|1>  @26:3-26:70
+    Collection :#KeyExpression#[2]  ~@Collection@  @26:3-26:70
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @26:28-26:41
+        AtomicValue  'mapFn' :@String@[1]  ~@AtomicValue@  @26:28-26:41
+        Variable mapFn :#FunctionDefinition<{K~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]->L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]}>##[1]#  ~@VariableExpression@  @26:36-26:41
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @26:44-26:69
+        AtomicValue  'aggregateFn' :@String@[1]  ~@AtomicValue@  @26:44-26:69
+        Variable aggregateFn :#FunctionDefinition<{L~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[*]->M~test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_[1]}>##[1]#  ~@VariableExpression@  @26:58-26:69
 
 function test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_(set:T~test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_[*], functions:Function<{T~test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_[1]->@Any@[*]}>[*], aggValues:test::AggregateValue<T~test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_, V~test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_, U~test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_>[*], ids:@String@[*]):test::TabularDataSet[1]  ~UserDefinedFunction<{T~test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_[*], Function<{T~test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_[1]->@Any@[*]}>[*], test::AggregateValue<T~test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_, V~test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_, U~test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_>[*], @String@[*]->test::TabularDataSet[1]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#test::TabularDataSet##[1]#  ~@FunctionInvocation@  @35:4-35:26
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#test::TabularDataSet##[1]#  ~@FunctionInvocation@  @31:3-31:19
     typeParam T -> test::TabularDataSet
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TabularDataSet|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::TabularDataSet|1>  @35:4-35:26
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TabularDataSet|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::TabularDataSet|1>  @31:3-31:19
 
 function go__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  ArrowInvocation test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_ :#test::TabularDataSet##[1]#  ~@ArrowInvocation@  @40:9-44:53
+  ArrowInvocation test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_ :#test::TabularDataSet##[1]#  ~@ArrowInvocation@  @36:8-36:142
     typeParam T -> #Trade#
     typeParam U -> #Number#
     typeParam V -> #Number#
-    ArrowInvocation getAll_Class_1__T_MANY_ :#Trade##[*]#  ~@ArrowInvocation@  @40:9-44:53
+    ArrowInvocation getAll_Class_1__T_MANY_ :#Trade##[*]#  ~@ArrowInvocation@  @36:8-36:142
       typeParam T -> Trade
-      AtomicValue  Trade :#Class<Trade>#[1]  ~@AtomicValue@  @40:4-40:8
-    Collection :#LambdaFunction<#{#Trade##[1]#->#Float##[1]#}#>#[1]  ~@Collection@  @41:25-41:41
-      Lambda(f:#Trade##[1]#) :#LambdaFunction<#{#Trade##[1]#->#Float##[1]#}#>#[1]  ~@AtomicValue@  @41:26-41:40
-        DotApplication Trade.quantity :#Float##[1]#  ~@DotApplication@  @41:32-41:40
-          Variable f :#Trade##[1]#  ~@VariableExpression@  @41:30-41:31
-    Collection :#test::AggregateValue<#Trade#, #Number#, #Number#>#[2]  ~@Collection@  @42:25-43:67
-      FunctionInvocation test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_ :#test::AggregateValue<#Trade#, #Integer#, #Integer#>##[1]#  ~@FunctionInvocation@  @42:26-42:67
+      AtomicValue  Trade :#Class<Trade>#[1]  ~@AtomicValue@  @36:3-36:7
+    Collection :#LambdaFunction<#{#Trade##[1]#->#Float##[1]#}#>#[1]  ~@Collection@  @36:28-36:42
+      Lambda(f:#Trade##[1]#) :#LambdaFunction<#{#Trade##[1]#->#Float##[1]#}#>#[1]  ~@AtomicValue@  @36:29-36:41
+        DotApplication Trade.quantity :#Float##[1]#  ~@DotApplication@  @36:33-36:41
+          Variable f :#Trade##[1]#  ~@VariableExpression@  @36:31-36:32
+    Collection :#test::AggregateValue<#Trade#, #Number#, #Number#>#[2]  ~@Collection@  @36:45-36:111
+      FunctionInvocation test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_ :#test::AggregateValue<#Trade#, #Integer#, #Integer#>##[1]#  ~@FunctionInvocation@  @36:46-36:77
         typeParam K -> #Trade#
         typeParam L -> #Integer#
         typeParam M -> #Integer#
-        Lambda(f:#Trade##[1]#) :#LambdaFunction<#{#Trade##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @42:36-42:49
-          DotApplication Trade.tradeId :#Integer##[1]#  ~@DotApplication@  @42:42-42:49
-            Variable f :#Trade##[1]#  ~@VariableExpression@  @42:40-42:41
-        Lambda(c:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @42:52-42:66
-          ArrowInvocation count_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @42:58-42:66
-            Variable c :#Integer##[*]#  ~@VariableExpression@  @42:56-42:57
-      FunctionInvocation test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_ :#test::AggregateValue<#Trade#, #Float#, #Number#>##[1]#  ~@FunctionInvocation@  @43:26-43:66
+        Lambda(f:#Trade##[1]#) :#LambdaFunction<#{#Trade##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @36:50-36:61
+          DotApplication Trade.tradeId :#Integer##[1]#  ~@DotApplication@  @36:54-36:61
+            Variable f :#Trade##[1]#  ~@VariableExpression@  @36:52-36:53
+        Lambda(c:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @36:64-36:76
+          ArrowInvocation count_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @36:68-36:76
+            Variable c :#Integer##[*]#  ~@VariableExpression@  @36:66-36:67
+      FunctionInvocation test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_ :#test::AggregateValue<#Trade#, #Float#, #Number#>##[1]#  ~@FunctionInvocation@  @36:80-36:110
         typeParam K -> #Trade#
         typeParam L -> #Float#
         typeParam M -> #Number#
-        Lambda(x:#Trade##[1]#) :#LambdaFunction<#{#Trade##[1]#->#Float##[1]#}#>#[1]  ~@AtomicValue@  @43:36-43:50
-          DotApplication Trade.quantity :#Float##[1]#  ~@DotApplication@  @43:42-43:50
-            Variable x :#Trade##[1]#  ~@VariableExpression@  @43:40-43:41
-        Lambda(x:#Float##[*]#) :#LambdaFunction<#{#Float##[*]#->#Number##[1]#}#>#[1]  ~@AtomicValue@  @43:53-43:65
-          ArrowInvocation sum_Number_MANY__Number_1_ :#Number##[1]#  ~@ArrowInvocation@  @43:59-43:65
-            Variable x :#Float##[*]#  ~@VariableExpression@  @43:57-43:58
-    Collection :#String#[3]  ~@Collection@  @44:25-44:52
-      AtomicValue  'region' :@String@[1]  ~@AtomicValue@  @44:26-44:33
-      AtomicValue  'total' :@String@[1]  ~@AtomicValue@  @44:36-44:42
-      AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @44:45-44:51
+        Lambda(x:#Trade##[1]#) :#LambdaFunction<#{#Trade##[1]#->#Float##[1]#}#>#[1]  ~@AtomicValue@  @36:84-36:96
+          DotApplication Trade.quantity :#Float##[1]#  ~@DotApplication@  @36:88-36:96
+            Variable x :#Trade##[1]#  ~@VariableExpression@  @36:86-36:87
+        Lambda(x:#Float##[*]#) :#LambdaFunction<#{#Float##[*]#->#Number##[1]#}#>#[1]  ~@AtomicValue@  @36:99-36:109
+          ArrowInvocation sum_Number_MANY__Number_1_ :#Number##[1]#  ~@ArrowInvocation@  @36:103-36:109
+            Variable x :#Float##[*]#  ~@VariableExpression@  @36:101-36:102
+    Collection :#String#[3]  ~@Collection@  @36:114-36:141
+      AtomicValue  'region' :@String@[1]  ~@AtomicValue@  @36:115-36:122
+      AtomicValue  'total' :@String@[1]  ~@AtomicValue@  @36:125-36:131
+      AtomicValue  'count' :@String@[1]  ~@AtomicValue@  @36:134-36:140
 
 ###ReverseIndex
 Trade:

@@ -3,18 +3,15 @@ import test::*;
 
 Class test::MPV_Person
 {
-    firstName : String[1];
-    lastName : String[1];
+  firstName: String[1];
+  lastName: String[1];
 }
 
-// map with a Property passed as a variable:
-// the Property<Nil, Any|*> must be resolved to Function<{Nil[1]->Any[*]}>
-// before type parameter binding so that map resolves correctly.
-function test::testMapWithPropertyAsVariable():Boolean[1]
+function test::testMapWithPropertyAsVariable(): Boolean[1]
 {
-    let vals = [^MPV_Person(firstName='a', lastName='a'), ^MPV_Person(firstName='b', lastName='b')];
-    let property = MPV_Person.properties->filter(p | $p.name == 'lastName')->toOne();
-    assertEquals(['a','b'], $vals->map($property));
+  let vals = [^MPV_Person(firstName = 'a', lastName = 'a'), ^MPV_Person(firstName = 'b', lastName = 'b')];
+  let property = MPV_Person.properties->filter(p|$p.name == 'lastName')->toOne();
+  assertEquals(['a', 'b'], $vals->map($property));
 }
 
 ###CompiledGraph
@@ -23,56 +20,56 @@ class test::MPV_Person extends Any  ~Class<test::MPV_Person>  @4:1-8:1
   property lastName :@String@[1]  ~Property<test::MPV_Person, @String@|1>
 
 function test::testMapWithPropertyAsVariable__Boolean_1_():@Boolean@[1]  ~UserDefinedFunction<{->@Boolean@[1]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::MPV_Person##[2]#  ~@FunctionInvocation@  @15:5-15:99
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::MPV_Person##[2]#  ~@FunctionInvocation@  @12:3-12:105
     typeParam T -> #test::MPV_Person#
     mulParam m -> [2]
-    AtomicValue  'vals' :@String@[1]  ~@AtomicValue@  @15:9-15:12
-    Collection :#test::MPV_Person#[2]  ~@Collection@  @15:16-15:99
-      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MPV_Person##[1]#  ~@FunctionInvocation@  @15:17-15:56
+    AtomicValue  'vals' :@String@[1]  ~@AtomicValue@  @12:7-12:10
+    Collection :#test::MPV_Person#[2]  ~@Collection@  @12:14-12:105
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MPV_Person##[1]#  ~@FunctionInvocation@  @12:15-12:58
         typeParam T -> test::MPV_Person
-        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MPV_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MPV_Person|1>  @15:17-15:56
-        Collection :#KeyExpression#[2]  ~@Collection@  @15:17-15:56
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @15:29-15:41
-            AtomicValue  'firstName' :@String@[1]  ~@AtomicValue@  @15:29-15:41
-            AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @15:39-15:41
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @15:44-15:55
-            AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @15:44-15:55
-            AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @15:53-15:55
-      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MPV_Person##[1]#  ~@FunctionInvocation@  @15:59-15:98
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MPV_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MPV_Person|1>  @12:15-12:58
+        Collection :#KeyExpression#[2]  ~@Collection@  @12:15-12:58
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:27-12:41
+            AtomicValue  'firstName' :@String@[1]  ~@AtomicValue@  @12:27-12:41
+            AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @12:39-12:41
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:44-12:57
+            AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @12:44-12:57
+            AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @12:55-12:57
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MPV_Person##[1]#  ~@FunctionInvocation@  @12:61-12:104
         typeParam T -> test::MPV_Person
-        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MPV_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MPV_Person|1>  @15:59-15:98
-        Collection :#KeyExpression#[2]  ~@Collection@  @15:59-15:98
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @15:71-15:83
-            AtomicValue  'firstName' :@String@[1]  ~@AtomicValue@  @15:71-15:83
-            AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @15:81-15:83
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @15:86-15:97
-            AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @15:86-15:97
-            AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @15:95-15:97
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Property<#Nil#, #Any#>##[1]#  ~@FunctionInvocation@  @16:5-16:84
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MPV_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MPV_Person|1>  @12:61-12:104
+        Collection :#KeyExpression#[2]  ~@Collection@  @12:61-12:104
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:73-12:87
+            AtomicValue  'firstName' :@String@[1]  ~@AtomicValue@  @12:73-12:87
+            AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @12:85-12:87
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:90-12:103
+            AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @12:90-12:103
+            AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @12:101-12:103
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Property<#Nil#, #Any#>##[1]#  ~@FunctionInvocation@  @13:3-13:80
     typeParam T -> #Property<#Nil#, #Any#>#
     mulParam m -> #[1]#
-    AtomicValue  'property' :@String@[1]  ~@AtomicValue@  @16:9-16:16
-    ArrowInvocation toOne_T_MANY__T_1_ :#Property<#Nil#, #Any#>##[1]#  ~@ArrowInvocation@  @16:41-16:84
+    AtomicValue  'property' :@String@[1]  ~@AtomicValue@  @13:7-13:14
+    ArrowInvocation toOne_T_MANY__T_1_ :#Property<#Nil#, #Any#>##[1]#  ~@ArrowInvocation@  @13:39-13:80
       typeParam T -> #Property<#Nil#, #Any#>#
-      ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Property<#Nil#, #Any#>##[*]#  ~@ArrowInvocation@  @16:41-16:84
+      ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Property<#Nil#, #Any#>##[*]#  ~@ArrowInvocation@  @13:39-13:80
         typeParam T -> #Property<#Nil#, #Any#>#
-        DotApplication meta::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @16:30-16:40
-          AtomicValue  test::MPV_Person :#Class<test::MPV_Person>#[1]  ~@AtomicValue@  @16:20-16:29
-        Lambda(p:#Property<@Nil@, @Any@|*>##[1]#) :#LambdaFunction<#{#Property<@Nil@, @Any@|*>##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @16:50-16:74
-          FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @16:56-16:74
-            DotApplication meta::pure::metamodel::function::property::AbstractProperty.name :#String##[1]#  ~@DotApplication@  @16:56-16:60
-              Variable p :#Property<@Nil@, @Any@|*>##[1]#  ~@VariableExpression@  @16:54-16:55
-            AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @16:65-16:74
-  FunctionInvocation assertEquals_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @17:5-17:50
-    Collection :#String#[2]  ~@Collection@  @17:18-17:26
-      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @17:19-17:21
-      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @17:23-17:25
-    ArrowInvocation map_T_m__Function_1__V_m_ :#Any##[2]#  ~@ArrowInvocation@  @17:34-17:49
+        DotApplication meta::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @13:28-13:38
+          AtomicValue  test::MPV_Person :#Class<test::MPV_Person>#[1]  ~@AtomicValue@  @13:18-13:27
+        Lambda(p:#Property<@Nil@, @Any@|*>##[1]#) :#LambdaFunction<#{#Property<@Nil@, @Any@|*>##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @13:48-13:70
+          FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @13:52-13:70
+            DotApplication meta::pure::metamodel::function::property::AbstractProperty.name :#String##[1]#  ~@DotApplication@  @13:52-13:56
+              Variable p :#Property<@Nil@, @Any@|*>##[1]#  ~@VariableExpression@  @13:50-13:51
+            AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @13:61-13:70
+  FunctionInvocation assertEquals_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @14:3-14:49
+    Collection :#String#[2]  ~@Collection@  @14:16-14:25
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @14:17-14:19
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @14:22-14:24
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Any##[2]#  ~@ArrowInvocation@  @14:33-14:48
       typeParam T -> #test::MPV_Person#
       typeParam V -> #Any#
       mulParam m -> #[2]#
-      Variable vals :#test::MPV_Person##[2]#  ~@VariableExpression@  @17:29-17:33
-      Variable property :#Property<#Nil#, #Any#>##[1]#  ~@VariableExpression@  @17:40-17:48
+      Variable vals :#test::MPV_Person##[2]#  ~@VariableExpression@  @14:28-14:32
+      Variable property :#Property<#Nil#, #Any#>##[1]#  ~@VariableExpression@  @14:39-14:47
 
 ###ReverseIndex
 meta::pure::functions::asserts::assertEquals_Any_MANY__Any_MANY__Boolean_1_:

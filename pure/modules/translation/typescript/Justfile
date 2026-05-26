@@ -40,6 +40,7 @@ build:
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
         --base-pdb {{shared_out}}/typescript.pdb \
+        --base-pdb {{shared_out}}/translation-shared.pdb \
         --source {{trn_root}} \
         --output-dir {{shared_out}} {{err_filter}}
 
@@ -52,6 +53,7 @@ build-tests:
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
         --base-pdb {{shared_out}}/typescript.pdb \
+        --base-pdb {{shared_out}}/translation-shared.pdb \
         --source {{trn_root}} \
         --output-dir {{shared_out}} \
         --tests split {{err_filter}}
@@ -65,7 +67,9 @@ test-translation: build-tests _check-runtime-pdbs
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
         --pdb {{shared_out}}/typescript-translation.pdb \
         --pdb {{shared_out}}/typescript-translation-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1_" \
@@ -79,7 +83,9 @@ test-pure-runtime-PCTs: build-tests _check-runtime-pdbs
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
         --pdb {{shared_out}}/typescript-translation.pdb \
         --pdb {{shared_out}}/typescript-translation-tests.pdb \
         --function "meta::external::language::typescript::translation::runPCTTestsViaTranslator_String_1__String_1_" \

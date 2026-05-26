@@ -1,23 +1,23 @@
 ###Pure
-function test::tst():Any[*]
+function test::tst(): Any[*]
 {
-    fold([1,2,3], {val, acc| $acc + $val}, 0)
+  fold([1, 2, 3], {val, acc|$acc + $val}, 0)
 }
 
 ###CompiledGraph
 function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation fold_T_MANY__Function_1__V_1__V_1_ :#Integer##[1]#  ~@FunctionInvocation@  @4:5-4:45
+  FunctionInvocation fold_T_MANY__Function_1__V_1__V_1_ :#Integer##[1]#  ~@FunctionInvocation@  @4:3-4:44
     typeParam T -> #Integer#
     typeParam V -> #Integer#
-    Collection :#Integer#[3]  ~@Collection@  @4:10-4:16
-      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @4:11-4:11
-      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @4:13-4:13
+    Collection :#Integer#[3]  ~@Collection@  @4:8-4:16
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @4:9-4:9
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @4:12-4:12
       AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @4:15-4:15
-    Lambda(val:#Integer##[1]#, acc:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#, #Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @4:19-4:41
-      FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @4:30-4:40
-        Variable acc :#Integer##[1]#  ~@VariableExpression@  @4:30-4:33
-        Variable val :#Integer##[1]#  ~@VariableExpression@  @4:37-4:40
-    AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @4:44-4:44
+    Lambda(val:#Integer##[1]#, acc:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#, #Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @4:19-4:40
+      FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @4:29-4:39
+        Variable acc :#Integer##[1]#  ~@VariableExpression@  @4:29-4:32
+        Variable val :#Integer##[1]#  ~@VariableExpression@  @4:36-4:39
+    AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @4:43-4:43
 
 ###ReverseIndex
 meta::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_:

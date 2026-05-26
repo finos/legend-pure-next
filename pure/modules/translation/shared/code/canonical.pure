@@ -96,9 +96,18 @@ function meta::pure::translation::shared::inlineOpenVariablesViaRecompile(lambda
    let captures = $lambda->meta::pure::functions::meta::openVariableValues();
    let canonicalPkg  = '__canonical__';
    let canonicalName = '__canonical__';
+   // Lambda's return type lives on its classifier (LambdaFunction<{params -> ret}>),
+   // not on a dedicated slot — extract from typeArguments[0]->rawType()->cast(@FunctionType).
+   let funcType = $lambda.classifierGenericType.typeArguments
+                     ->at(0)
+                     ->rawType()
+                     ->toOne('inlineOpenVariablesViaRecompile: lambda missing classifier function type')
+                     ->cast(@meta::pure::metamodel::type::FunctionType);
    let protoUDF = toProtocolUserDefinedFunction(
       $lambda.expressionSequence,
       $lambda.parameters,
+      $funcType.returnType,
+      $funcType.returnMultiplicity,
       $captures,
       $canonicalPkg,
       $canonicalName

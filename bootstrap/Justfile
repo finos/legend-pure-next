@@ -76,7 +76,8 @@ build-compiler-pdb:
 # Build + run Java unit tests (surefire) + run Pure compiler-graph spec tests.
 test: test-java stage build-compiler-pdb test-pure-compiler
 
-# `test` plus Pure-on-Java self-host + standalone runtime test suites.
+# `test` plus Pure-on-Java self-host, standalone runtime test suites, and
+# both printer-corpus checks (compiled + protocol).
 test-all: test test-pure-self-host test-pure-runtime
 
 # NB: surefire runs the full JUnit suite, which includes dynamic-test
@@ -96,7 +97,7 @@ test-java: (_mvn "with-tests")
 # remain visible.
 
 # Run both runtime test suites (runTests + PCT) over meta::pure::functions.
-test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
+test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs test-pure-printer-compiled test-pure-printer-protocol
 
 # Needs core-tests.pdb (runTests is <<test.TestDependency>>, classified into the
 # tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
@@ -122,6 +123,38 @@ test-pure-runtime-PCTs:
         --pdb {{shared_out}}/compiler-tests.pdb \
         --function "meta::pure::test::runPCTTests_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
+
+# Compiled-printer corpus check over pure/specification/compiler/tests.
+# Parses + compiles each test source, runs the compiled-side printer, and
+# counts how many render without hitting an /* UNSUPPORTED */ sentinel.
+# Lives separately from test-pure-compiler because its purpose is to track
+# printer coverage, not graph correctness — both run over the same corpus
+# but check different things.
+test-pure-printer-compiled:
+    @{{banner}} '[pure→bootstrap]' 'runCompiledPrinterCorpus over pure/specification/compiler/tests'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "meta::pure::compiler::test::printer::runCompiledPrinterCorpus_String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" {{err_filter}}
+
+# Protocol-printer corpus check over pure/specification/grammar/tests.
+# Mirrors test-pure-printer-corpus for the protocol-side printer: parses each
+# grammar.pure, prints, re-parses, prints again, and counts how many files are
+# round-trip stable (printer is a fixed point of parse∘print) and how many are
+# byte-equal to source. Round-trip failures are real code loss; source-byte
+# mismatches are formatting drift, informational only.
+test-pure-printer-protocol:
+    @{{banner}} '[pure→bootstrap]' 'runProtocolPrinterCorpus over pure/specification/grammar/tests'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "meta::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus_String_1__String_1_" \
+        --args "{{spec}}/grammar/tests" {{err_filter}}
 
 # Pure compiler-graph spec tests over pure/specification/compiler/tests via the bootstrap CLI (Pure-on-Java; assumes `just build` was run). Run as part of `just test`.
 test-pure-compiler:

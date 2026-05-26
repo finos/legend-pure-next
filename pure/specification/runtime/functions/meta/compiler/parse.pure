@@ -54,3 +54,22 @@ function <<PCT.test>> meta::pure::functions::meta::testParseEnumPropertyValues<Z
     assertEquals('meta::pure::metamodel::function::property::AggregationKind', $enumPtr.value);
     assertEquals('Composite', $enumPtr.extraPointerValues->at(0).value);
 }
+
+// Regression: `^$pdo(field = newValue)` copy-with-update on a parser-produced
+// PDO. The parse native uniformly converts its typed POJO output to
+// DynamicInstance via ProtocolToDynamicInstance, so the source PDO and all
+// its nested slots are DI-shaped. The copy code must match target backing
+// form to source — DI source → DI target — instead of promoting to a typed
+// Impl (which would then reject the DI-valued nested slots and throw
+// "Failed to set property X value type: DynamicInstance").
+function <<PCT.test>> meta::pure::functions::meta::testCopyParsedFunctionInvocation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        let file = meta::pure::functions::meta::parse('testSource', '###Pure\nfunction test::f(): Integer[1]\n{\n  1 + 2\n}\n');
+        let udf = $file.sections->at(0).elements->at(0)->cast(@meta::pure::protocol::grammar::function::UserDefinedFunction);
+        let fi = $udf.expressionSequence->at(0)->cast(@meta::pure::protocol::grammar::valuespecification::FunctionInvocation);
+        let copy = ^$fi(functionName = 'renamed');
+        assertEquals('renamed', $copy.functionName);
+        assertEquals('plus', $fi.functionName);
+    ));
+}

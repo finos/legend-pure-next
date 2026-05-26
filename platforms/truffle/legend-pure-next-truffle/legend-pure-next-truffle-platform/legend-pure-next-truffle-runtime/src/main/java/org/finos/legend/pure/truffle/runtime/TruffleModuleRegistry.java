@@ -112,6 +112,15 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
         // already exists in a dep PDB — if this fires, the compile result has
         // a duplicate of a core/compiler element and we want to find the bug,
         // not silently dedup.
+        //
+        // Exception: Package PDOs are allowed to collide — multiple modules
+        // legitimately contribute children to the same package path (lean PDB
+        // owns the canonical Package, companion {@code -tests} PDB contributes
+        // a shadow Package with only test children, or two unrelated modules
+        // happen to share a package path). {@link #getElement(String)} returns
+        // a {@link MergedPackagePDO} that unions the children across all
+        // contributors; the existing Package instances stay live, identity
+        // comparisons still work for non-Package elements.
         java.util.List<String> collisions = new java.util.ArrayList<>();
         java.util.List<String> collisionOwners = new java.util.ArrayList<>();
         for (String path : module.elementPaths())
@@ -120,6 +129,12 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
             {
                 if (existing.hasElement(path))
                 {
+                    Object hereElement = module.getElement(path);
+                    if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(
+                            hereElement, "meta::pure::metamodel::Package"))
+                    {
+                        continue;
+                    }
                     collisions.add(path);
                     collisionOwners.add(existing.name());
                     if (collisions.size() >= 10) break;
@@ -414,17 +429,91 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
         {
             return cached == ABSENT_PATH ? null : cached;
         }
+        // Resolve OUTSIDE any ConcurrentHashMap compute*-lambda. Reason:
+        // {@link #foldChildrenInto} reads the contributing Package PDOs'
+        // children slot, which triggers PointerRef resolution that re-enters
+        // {@code getElement} for child paths. JDK ≥ 9 throws
+        // "Recursive update" on any reentrant compute* call to the same
+        // map, even for a different key, so the lambda form is unusable.
+        // Manual get + putIfAbsent is fine: per-anchor synchronisation in
+        // {@code foldChildrenInto} serialises concurrent merges of the same
+        // path, and re-folding is idempotent (LinkedHashSet dedupe).
+        Object resolved = resolveAndMerge(path);
+        if (resolved == ABSENT_PATH) return null;
+        Object existing = elementCache.putIfAbsent(path, resolved);
+        return existing != null ? (existing == ABSENT_PATH ? null : existing) : resolved;
+    }
+
+    private Object resolveAndMerge(String path)
+    {
+        Object first = null;
+        org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject anchorPdo = null;
         for (TruffleModule m : modules.values())
         {
             Object e = m.getElement(path);
-            if (e != null)
+            if (e == null) continue;
+            if (first == null)
             {
-                elementCache.put(path, e);
-                return e;
+                first = e;
+                // Only Package paths can legitimately stack across modules
+                // (the register() collision check rejects every other
+                // duplicate). Capture the anchor PDO here so additional
+                // contributors fold straight into its children slot.
+                if (e instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo
+                        && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(
+                                pdo, "meta::pure::metamodel::Package"))
+                {
+                    anchorPdo = pdo;
+                }
+                continue;
+            }
+            // Additional contributors beyond the first: every collision
+            // must be a Package (register() enforces this), so fold its
+            // children into the anchor PDO. Identity stays with the
+            // anchor — callers comparing two Packages at this path via
+            // {@code is} continue to see the same instance.
+            if (anchorPdo != null
+                    && e instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject otherPdo
+                    && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(
+                            otherPdo, "meta::pure::metamodel::Package"))
+            {
+                foldChildrenInto(anchorPdo, otherPdo);
             }
         }
-        elementCache.put(path, ABSENT_PATH);
-        return null;
+        return first == null ? ABSENT_PATH : first;
+    }
+
+    private static final int SLOT_CHILDREN =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("children");
+
+    private static void foldChildrenInto(
+            org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject anchor,
+            org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject other)
+    {
+        // Per-anchor synchronisation so two threads racing on the same path
+        // can't interleave reads/writes of the children slot.
+        synchronized (anchor)
+        {
+            Object otherKidsObj = other.readSlot(SLOT_CHILDREN);
+            if (!(otherKidsObj instanceof org.finos.legend.pure.truffle.types.PureSequence otherKids)
+                    || otherKids.size() == 0)
+            {
+                return;
+            }
+            Object anchorKidsObj = anchor.readSlot(SLOT_CHILDREN);
+            java.util.LinkedHashSet<Object> seen = new java.util.LinkedHashSet<>();
+            if (anchorKidsObj instanceof org.finos.legend.pure.truffle.types.PureSequence anchorKids)
+            {
+                for (int i = 0; i < anchorKids.size(); i++) seen.add(anchorKids.getBoxed(i));
+            }
+            for (int i = 0; i < otherKids.size(); i++)
+            {
+                Object k = otherKids.getBoxed(i);
+                if (k != null) seen.add(k);
+            }
+            anchor.writeSlot(SLOT_CHILDREN,
+                    new org.finos.legend.pure.truffle.types.ObjectSequence(seen.toArray()));
+        }
     }
 
     private static final Object ABSENT_PATH = new Object();

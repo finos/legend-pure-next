@@ -1,5 +1,5 @@
 {
   "name": "typescript-translation",
   "packagePattern": "(meta::external::language::typescript::translation)(::.*)?",
-  "dependencies": ["core", "core-tests", "typescript"]
+  "dependencies": ["core", "core-tests", "typescript", "translation-shared"]
 }

@@ -1,0 +1,137 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::*;
+import meta::pure::compiler::test::printer::*;
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::collection::*;
+import meta::pure::functions::io::*;
+import meta::pure::functions::printer::compiled::*;
+import meta::pure::functions::string::*;
+import meta::pure::protocol::*;
+import meta::pure::ui::progress::*;
+
+// Compiler-test-driven corpus runner for the compiled-side printer. Iterates
+// `.pure` files under the given directory (skipping `_E_*` error-case files
+// and files whose content has a `###Error` section), then per file:
+//   parse → compile → printCompiledElements(ManageImports)
+// and compares the normalised printed output to the normalised `###Pure`
+// section of the source. Single compile per file — the on-disk corpus IS the
+// canonical printer-target form, so byte-equality vs source is the signal
+// that the printer didn't regress.
+//
+// Lives in compiler-pure (not runtime/printer) because it needs compile()
+// access; runtime's `core` module can't depend on `compiler`. Invoked via
+// the bootstrap CLI's execute command — same pattern as runCompiledGraphTests.
+
+function <<test.TestDependency>> meta::pure::compiler::test::printer::runCompiledPrinterCorpus(testDir:String[1]):String[1]
+{
+    let files = directoryTree($testDir)->filter(f | $f->endsWith('.pure') && !$f->contains('_E_') && !$f->contains('_noRoundtrip') && !readFile($f)->contains('###' + 'Error'));
+    let total = $files->size();
+    startProgress('Running ' + $total->toString() + ' compiled printer corpus checks from ' + $testDir + '...');
+    // Wrap each check in withSilencedPrint so any stray output from compile()
+    // (already silenced via the 3-arg overload but defence in depth) doesn't
+    // tear the progress bar's ANSI cursor invariants.
+    // Strip the testDir prefix from the status-line label. Absolute paths
+    // wrap past the terminal width (≈80 cols), and `[A` only walks up
+    // one VISUAL line — so a wrapped path leaves the cursor on the wrong
+    // line and the bar leaks downward for every subsequent tick.
+    let prefixLen = $testDir->length() + 1;
+    let results = range(0, $total)->map(i |
+        let f = $files->at($i);
+        let rel = if ($f->length() > $prefixLen, | $f->substring($prefixLen, $f->length()), | $f);
+        tickProgress($i + 1, $total, $rel);
+        withSilencedPrint(| meta::pure::compiler::test::printer::checkCompiledPrinterFile($f));
+    );
+    finishProgress();
+    let mismatches = $results->filter(r | $r.failure->isNotEmpty());
+
+    $mismatches->map(r | println('  MISMATCH: ' + $r.path + ' — ' + $r.failure->toOne()));
+
+    let passed = $total - $mismatches->size();
+    // Return the summary as the function's String[1] result — the CLI's
+    // `execute --function` prints the return value, so adding `println`
+    // here would duplicate the line. Per-file MISMATCH lines still need
+    // their own println (those are side effects, not the return value).
+    'Compiled printer corpus: ' + $passed->toString() + ' / ' + $total->toString() + ' byte-equal to source';
+}
+
+Class <<test.TestDependency>> meta::pure::compiler::test::printer::CompiledPrinterCheckResult
+{
+    path: String[1];
+    // Non-empty when the canonical print does not byte-equal the source
+    // ###Pure section (after normalisation), or when the compile itself
+    // failed.
+    failure: String[0..1];
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::printer::checkCompiledPrinterFile(path:String[1]):meta::pure::compiler::test::printer::CompiledPrinterCheckResult[1]
+{
+    let res = tryEval(| renderCompiledFile($path));
+    if ($res.failure->isNotEmpty(),
+        | ^meta::pure::compiler::test::printer::CompiledPrinterCheckResult(path = $path, failure = 'compile/print threw: ' + $res.failure->toOne().message),
+        | let printed = $res.value->toOne();
+          let sourcePure = extractPureSection(readFile($path));
+          let normSrc = normalizeCompiledSource($sourcePure);
+          let normPrint = normalizeCompiledSource($printed);
+          if ($normSrc == $normPrint,
+              | ^meta::pure::compiler::test::printer::CompiledPrinterCheckResult(path = $path, failure = []),
+              | ^meta::pure::compiler::test::printer::CompiledPrinterCheckResult(path = $path, failure = 'normalised print differs from source\n--- source ---\n' + $normSrc + '\n--- printed ---\n' + $normPrint);
+          );
+    );
+}
+
+// parse → compile → print in ManageImports mode. ManageImports is the form
+// the on-disk corpus is written in, so this is the right baseline to compare
+// against the source.
+function <<test.TestDependency>> meta::pure::compiler::test::printer::renderCompiledFile(path:String[1]):String[1]
+{
+    let source = readFile($path);
+    let parsed = meta::pure::functions::meta::parse($path, $source);
+    let result = meta::pure::compiler::compile($parsed, false, true);
+    assert($result.errors->isEmpty(), | 'compile failed: ' + $result.errors->joinStrings('; '));
+    printCompiledElements($result.elements, meta::pure::functions::printer::compiled::PrintMode.ManageImports);
+}
+
+// Compiler test files have three sections: `###Pure` (source input),
+// `###CompiledGraph` (debug-format snapshot), `###ReverseIndex` (idx debug).
+// Comparison only cares about the surface-Pure section — strip the trailing
+// debug sections before normalising.
+function <<test.TestDependency>> meta::pure::compiler::test::printer::extractPureSection(content:String[1]):String[1]
+{
+    let cgIdx = $content->indexOf('###CompiledGraph');
+    if ($cgIdx < 0, | $content, | $content->substring(0, $cgIdx));
+}
+
+// Whitespace-tolerant comparison: trim each line, collapse internal runs of
+// spaces/tabs, drop blank lines, drop `import …;` lines (the printer emits
+// imports in canonical order which may diverge from the source's), and strip
+// trailing `;` (optional terminator).
+function <<test.TestDependency>> meta::pure::compiler::test::printer::normalizeCompiledSource(s:String[1]):String[1]
+{
+    $s->split('\n')
+        ->map(l | squashSpaces(stripTrailingSemicolon($l->trim())))
+        ->filter(l | $l != '' && !$l->startsWith('import '))
+        ->joinStrings('\n');
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::printer::squashSpaces(s:String[1]):String[1]
+{
+    $s->replace('\t', ' ')->replace('  ', ' ')->replace('  ', ' ')->replace('  ', ' ');
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::printer::stripTrailingSemicolon(s:String[1]):String[1]
+{
+    if ($s->endsWith(';'), | $s->substring(0, $s->length() - 1), | $s);
+}

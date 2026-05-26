@@ -25,6 +25,10 @@
 #               │
 #               ├── bootstrap-self-host     (Temurin 25 — `just bootstrap::test-pure-self-host`: compile
 #               │                            compiler-pure via Pure-on-Java and PDB-diff against Java direct)
+#               ├── printer-compiled        (Temurin 25 — `just bootstrap::test-pure-printer-compiled`:
+#               │                            parse+compile+print each compiler/tests/ file, compare to source)
+#               ├── printer-protocol        (Temurin 25 — `just bootstrap::test-pure-printer-protocol`:
+#               │                            parse+print each grammar/tests/ file, compare to source)
 #               ├── truffle-self-host       (GraalVM 25 — `just truffle::test` (mvn surefire + Truffle
 #               │      │                     compiler-graph spec) followed by `just truffle::test-pure-self-host`
 #               │      │                     — compiles compiler-pure on Truffle JVM (JIT) and PDB-diffs.
@@ -41,11 +45,11 @@
 #                                            builds native-image binary, compiles compiler-pure via the
 #                                            AOT binary and PDB-diffs against Java direct)
 #
-# bootstrap-self-host, truffle-self-host, and truffle-native-self-host run in
-# parallel after bootstrap finishes; language-java and language-typescript run
-# in parallel after truffle-self-host (they need its uploaded truffle CLI jar +
-# extension jars to invoke pure-truffle). All consume upstream outputs via
-# actions/upload-artifact + actions/download-artifact.
+# bootstrap-self-host, printer-compiled, printer-protocol, truffle-self-host,
+# and truffle-native-self-host all run in parallel after bootstrap finishes;
+# language-java and language-typescript run in parallel after truffle-self-host
+# (they need its uploaded truffle CLI jar + extension jars to invoke pure-truffle).
+# All consume upstream outputs via actions/upload-artifact + actions/download-artifact.
 #
 # Finally, `all-green` aggregates every real job. Branch protection on main
 # only needs to require this single check — adding a new parallel job means
@@ -253,6 +257,107 @@ jobs:
 
       - name: Bootstrap self-host
         run: just bootstrap::test-pure-self-host
+
+  printer-compiled:
+    name: Printer corpus — compiled
+    needs: bootstrap
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v5
+        env:
+          cache-name: cache-mvn-deps
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JDK_VERSION }}
+          java-package: jdk
+
+      - name: Install just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+
+      - name: Download bootstrap artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bootstrap-artifacts
+
+      - name: Restore bootstrap artifacts
+        run: |
+          tar -xf bootstrap-artifacts.tar
+          mkdir -p ~/.m2/repository
+          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
+
+      # parse + compile + print(ManageImports) each file in
+      # pure/specification/compiler/tests/, compare normalised print to
+      # source. Single compile per file. Runs in parallel with
+      # printer-protocol since both only depend on the bootstrap CLI jar +
+      # shared PDBs and don't touch each other's artifacts.
+      - name: Compiled printer corpus
+        run: just bootstrap::test-pure-printer-compiled
+
+  printer-protocol:
+    name: Printer corpus — protocol
+    needs: bootstrap
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v5
+        env:
+          cache-name: cache-mvn-deps
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JDK_VERSION }}
+          java-package: jdk
+
+      - name: Install just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+
+      - name: Download bootstrap artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bootstrap-artifacts
+
+      - name: Restore bootstrap artifacts
+        run: |
+          tar -xf bootstrap-artifacts.tar
+          mkdir -p ~/.m2/repository
+          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
+
+      # parse + print each grammar.pure under pure/specification/grammar/tests/,
+      # compare normalised print to source (or its grammar_compare override).
+      # No compile step on this side — protocol printer works directly on
+      # parsed PureFile.
+      - name: Protocol printer corpus
+        run: just bootstrap::test-pure-printer-protocol
 
   truffle-self-host:
     name: Truffle build + self-host (compile-via-pure-on-Truffle vs Java direct)
@@ -557,7 +662,7 @@ jobs:
   # but for the wrong reason).
   all-green:
     name: All checks passed
-    needs: [bootstrap, bootstrap-self-host, truffle-self-host, truffle-native-self-host, language-java, language-typescript]
+    needs: [bootstrap, bootstrap-self-host, printer-compiled, printer-protocol, truffle-self-host, truffle-native-self-host, language-java, language-typescript]
     if: always()
     runs-on: ubuntu-24.04
     steps:

@@ -1,7 +1,7 @@
 ###Pure
 function test::primitive::testDecimal(): Any[*]
 {
-  3.14D;
+  3.14d
 }
 
 ###CompiledGraph

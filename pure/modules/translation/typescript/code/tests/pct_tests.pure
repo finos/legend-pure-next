@@ -26,3 +26,8 @@ function <<test.Test>> meta::external::language::typescript::translation::tests:
 {
    meta::pure::functions::math::tests::plus::testSimplePlus(testAdapterForTranslatedTypeScript_Function_1__X_o_);
 }
+
+function <<test.Test>> meta::external::language::typescript::translation::tests::pct::testFilterInstance(): Boolean[1]
+{
+   meta::pure::functions::collection::tests::filter::testFilterInstance(testAdapterForTranslatedTypeScript_Function_1__X_o_);
+}

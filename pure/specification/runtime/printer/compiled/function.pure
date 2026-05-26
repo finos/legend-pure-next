@@ -1,0 +1,117 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::printer::compiled::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::constraint::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::valuespecification::*;
+
+// Compiled-side printers for function elements: UserDefinedFunction (with
+// body), NativeFunction (declaration-only).
+
+function meta::pure::functions::printer::compiled::printCompiledUserDefinedFunction(fn: UserDefinedFunction<Any>[1], ctx: PrintContext[1]): String[1]
+{
+    // Statement separator: trailing `;` only when multi-statement (matches
+    // protocol-side printer convention).
+    let sep = if ($fn.expressionSequence->size() > 1, | ';', | '');
+    'function ' + printCompiledAnnotations($fn.stereotypes, $fn.taggedValues, $ctx) + printPackagePrefix($fn.package) + $fn.functionName->toOne() +
+        printCompiledTypeAndMulParams($fn.typeParameters, $fn.multiplicityParameters) +
+        $fn.parameters->map(p | printCompiledFunctionParameter($p, $ctx))->joinStrings('(', ', ', ')') +
+        ': ' + printGenericType($fn.returnGenericType->toOne(), $ctx) + printMultiplicity($fn.returnMultiplicity) +
+        printCompiledFunctionConstraints($fn.preConstraints, $fn.postConstraints, $ctx) +
+    '\n{\n' +
+        $fn.expressionSequence->map(e | '  ' + printCompiledValueSpec($e, $ctx) + $sep)->joinStrings('\n') + '\n' +
+    '}\n';
+}
+
+function meta::pure::functions::printer::compiled::printCompiledNativeFunction(fn: NativeFunction<Any>[1], ctx: PrintContext[1]): String[1]
+{
+    'native function ' + printCompiledAnnotations($fn.stereotypes, $fn.taggedValues, $ctx) + printPackagePrefix($fn.package) + $fn.functionName->toOne() +
+        printCompiledTypeAndMulParams($fn.typeParameters, $fn.multiplicityParameters) +
+        $fn.parameters->map(p | printCompiledFunctionParameter($p, $ctx))->joinStrings('(', ', ', ')') +
+        ': ' + printGenericType($fn.returnGenericType->toOne(), $ctx) + printMultiplicity($fn.returnMultiplicity) +
+    ';\n';
+}
+
+// `p: Type[mul]` — parameter is a metamodel `VariableExpression`.
+function meta::pure::functions::printer::compiled::printCompiledFunctionParameter(p: VariableExpression[1], ctx: PrintContext[1]): String[1]
+{
+    $p.name->orElse('') + ': ' + printGenericType($p.genericType->toOne(), $ctx) + printMultiplicity($p.multiplicity->toOne());
+}
+
+// `<T1, T2|m1, m2>` — emitted only when at least one type/mul param present.
+function meta::pure::functions::printer::compiled::printCompiledTypeAndMulParams(typeParams: TypeParameter[*], mulParams: MultiplicityParameter[*]): String[1]
+{
+    if ($typeParams->isEmpty() && $mulParams->isEmpty(),
+        | '',
+        | let t = $typeParams->map(tp | $tp.name)->joinStrings(',');
+          let m = $mulParams->map(mp | $mp.name)->joinStrings(',');
+          let sep = if ($mulParams->isEmpty(), | '', | '|');
+          '<' + $t + $sep + $m + '>';
+    );
+}
+
+// `[ pre1, pre2: $x > 0, post ]` — element-level constraints block. Empty
+// when no constraints. Each rendered via `printCompiledConstraint`.
+function meta::pure::functions::printer::compiled::printCompiledFunctionConstraints(pre: Constraint[*], post: Constraint[*], ctx: PrintContext[1]): String[1]
+{
+    let all = $pre->concatenate($post);
+    if ($all->isEmpty(),
+        | '',
+        | $all->map(c | printCompiledConstraint($c, $ctx))->joinStrings('\n[\n  ', ',\n  ', '\n]')
+    );
+}
+
+function meta::pure::functions::printer::compiled::printCompiledConstraint(c: Constraint[1], ctx: PrintContext[1]): String[1]
+{
+    let body = compiledConstraintBody($c, $ctx);
+    let name = $c.name->orElse('');
+    let hasName = $name != '';
+    let hasOwnerOverrides = !$c.owner->isEmpty() || !$c.externalId->isEmpty() || !$c.messageFunction->isEmpty() || !$c.enforcementLevel->isEmpty();
+    // GRule-style block form for constraints with any owner/externalId/
+    // enforcementLevel/messageFunction override: `name\n(\n  ~owner: …\n  ~externalId: …\n  ~function: body\n  …\n)`.
+    if([pair(| $hasOwnerOverrides, | printCompiledConstraintGRule($c, $name, $body, $ctx)),
+        pair(| $hasName,            | $name + ': ' + $body)],
+       | $body);
+}
+
+function meta::pure::functions::printer::compiled::compiledConstraintBody(c: Constraint[1], ctx: PrintContext[1]): String[1]
+{
+    if ($c.functionDefinition->isEmpty(),
+        | '',
+        | let lambda = $c.functionDefinition->toOne()->cast(@LambdaFunction<Any>);
+          if ($lambda.expressionSequence->isEmpty(), | '', | printCompiledValueSpec($lambda.expressionSequence->at(0), $ctx));
+    );
+}
+
+function meta::pure::functions::printer::compiled::printCompiledConstraintGRule(c: Constraint[1], name: String[1], body: String[1], ctx: PrintContext[1]): String[1]
+{
+    let owner = if ($c.owner->isEmpty(), | '', | '\n    ~owner: ' + $c.owner->toOne());
+    let externalId = if ($c.externalId->isEmpty(), | '', | '\n    ~externalId: \'' + $c.externalId->toOne() + '\'');
+    let func = if ($body == '', | '', | '\n    ~function: ' + $body);
+    let enforcement = if ($c.enforcementLevel->isEmpty(), | '', | '\n    ~enforcementLevel: ' + $c.enforcementLevel->toOne());
+    let message = if ($c.messageFunction->isEmpty(),
+                       | '',
+                       | let mLambda = $c.messageFunction->toOne()->cast(@LambdaFunction<Any>);
+                         if ($mLambda.expressionSequence->isEmpty(),
+                             | '',
+                             | '\n    ~message: ' + printCompiledValueSpec($mLambda.expressionSequence->at(0), $ctx);
+                         );
+                      );
+    $name + '\n  (' + $owner + $externalId + $func + $enforcement + $message + '\n  )';
+}

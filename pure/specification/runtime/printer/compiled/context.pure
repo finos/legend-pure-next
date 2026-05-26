@@ -1,0 +1,360 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::printer::compiled::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::constraint::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::pointer::*;
+import meta::pure::metamodel::relation::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::valuespecification::*;
+
+// Print mode toggles whether PE references get auto-shortened via imports.
+//   FullFQN       — every reference uses its full path; no `import` lines emitted.
+//   ManageImports — pre-walks the elements to compute a shortening map. Short
+//                   names that are unambiguous across all references get
+//                   imported and emitted bare; ambiguous ones stay FQN.
+Enum meta::pure::functions::printer::compiled::PrintMode
+{
+    FullFQN,
+    ManageImports
+}
+
+// PrintContext is threaded through every printer function. The two slots
+// drive the shortening decision at every leaf reference emission:
+//   imports     — packages to emit as `import pkg::*;` at the top.
+//   shortenable — set of FQNs that may be safely emitted as their short name
+//                 (because the short name is unambiguous given `imports`).
+// A FullFQN context has both slots empty, so every leaf emits the full path.
+Class meta::pure::functions::printer::compiled::PrintContext
+{
+    mode: PrintMode[1];
+    imports: String[*];
+    shortenable: String[*];
+}
+
+// Build the context for a print run. FullFQN returns an empty context (no
+// imports, no shortenable refs). ManageImports walks the elements to collect
+// every reference FQN, groups by short name, and shortens whichever the
+// resolver can resolve unambiguously.
+function meta::pure::functions::printer::compiled::buildPrintContext(elements: PackageableElement[*], mode: PrintMode[1]): PrintContext[1]
+{
+    if ($mode == PrintMode.FullFQN,
+        | ^PrintContext(mode = $mode, imports = [], shortenable = []),
+        | let collected = $elements->map(e | collectElementRefs($e));
+          let allRefs = $collected->removeDuplicates();
+          // Step 1: candidate-shortenable = refs whose short name is unique
+          // among ALL collected refs.
+          let candidates = $allRefs->filter(fqn: String[1] | hasUniqueShortName($fqn, $allRefs));
+          // Step 2: candidate user packages — packages we'd add an `import`
+          // line for. Skip packages that are already in the parser's
+          // DEFAULT_IMPORTS list (the import would be redundant).
+          let candidatePkgs = $candidates->map(fqn: String[1] | packagePartOf($fqn))
+                                ->filter(p: String[1] | $p != '' && $p != 'Root' && !defaultImports()->contains($p))
+                                ->removeDuplicates();
+          // Step 3: a package is import-safe only if every collected ref from
+          // it has a unique short name AND that short name doesn't collide
+          // with a same-named PE in any auto-imported package.
+          let imports = $candidatePkgs->filter(p: String[1] | packageIsImportSafe($p, $allRefs))->sort();
+          // Step 4: shortenable = candidate refs whose package is either in
+          // DEFAULT_IMPORTS (auto-imported) or in our `imports` list.
+          let shortenable = $candidates->filter(fqn: String[1] | isPackageShortenable($fqn, $imports));
+          ^PrintContext(mode = $mode, imports = $imports, shortenable = $shortenable);
+    );
+}
+
+// Mirror of bootstrap's TopLevelCompiler.DEFAULT_IMPORTS — the packages
+// every Pure source file gets implicitly. Keep this in sync.
+function meta::pure::functions::printer::compiled::defaultImports(): String[*]
+{
+    [
+        'meta::pure::metamodel::type::primitives',
+        'meta::pure::metamodel',
+        'meta::pure::metamodel::function::property',
+        'meta::pure::metamodel::type',
+        'meta::pure::metamodel::type::generics',
+        'meta::pure::metamodel::function',
+        'meta::pure::metamodel::multiplicity',
+        'meta::pure::metamodel::relation',
+        'meta::pure::metamodel::valuespecification',
+        'meta::pure::functions::math',
+        'meta::pure::functions::lang',
+        'meta::pure::functions::string',
+        'meta::pure::functions::collection',
+        'meta::pure::functions::boolean',
+        'meta::pure::functions::relation',
+        'meta::pure::functions::multiplicity',
+        'meta::pure::functions::asserts',
+        'meta::pure::functions::meta',
+        'meta::pure::functions::io',
+        'meta::pure::profiles'
+    ];
+}
+
+function meta::pure::functions::printer::compiled::hasUniqueShortName(fqn: String[1], allRefs: String[*]): Boolean[1]
+{
+    let short = shortNameOf($fqn);
+    $allRefs->filter(other: String[1] | shortNameOf($other) == $short)->size() == 1;
+}
+
+function meta::pure::functions::printer::compiled::isPackageShortenable(fqn: String[1], imports: String[*]): Boolean[1]
+{
+    let pkg = packagePartOf($fqn);
+    defaultImports()->contains($pkg) || $imports->contains($pkg);
+}
+
+// A package `pkg` is import-safe iff every collected ref from `pkg` has a
+// unique short name — otherwise `import pkg::*;` would let the resolver see
+// the non-unique short names as ambiguous candidates.
+function meta::pure::functions::printer::compiled::packageIsImportSafe(pkg: String[1], allRefs: String[*]): Boolean[1]
+{
+    let pkgRefs = $allRefs->filter(fqn: String[1] | packagePartOf($fqn) == $pkg);
+    $pkgRefs->forAll(fqn: String[1] | hasUniqueShortName($fqn, $allRefs) && !shortNameClashesWithAutoImport(shortNameOf($fqn)));
+}
+
+// Short names that are present in the parser's auto-imported `meta::pure::*`
+// packages and would collide with a same-named user class if we let the user
+// package be import-shortened. Conservative — extend as needed.
+function meta::pure::functions::printer::compiled::shortNameClashesWithAutoImport(short: String[1]): Boolean[1]
+{
+    $short == 'Pair' || $short == 'Map' || $short == 'List' || $short == 'Set'
+        || $short == 'Tuple' || $short == 'Function' || $short == 'Property'
+        || $short == 'Any' || $short == 'Nil' || $short == 'String' || $short == 'Integer'
+        || $short == 'Float' || $short == 'Decimal' || $short == 'Boolean' || $short == 'Date'
+        || $short == 'DateTime' || $short == 'StrictDate' || $short == 'LatestDate' || $short == 'Number'
+        || $short == 'Byte' || $short == 'Relation' || $short == 'Column' || $short == 'ColSpec'
+        || $short == 'ColSpecArray' || $short == 'FuncColSpec' || $short == 'FuncColSpecArray'
+        || $short == 'AggColSpec' || $short == 'AggColSpecArray' || $short == 'Window'
+        || $short == 'Frame' || $short == 'RowMapper';
+}
+
+// Lookup: does this context want this FQN emitted as its short name?
+function meta::pure::functions::printer::compiled::ctxShortenIfPossible(fqn: String[1], ctx: PrintContext[1]): String[1]
+{
+    if ($ctx.shortenable->contains($fqn),
+        | shortNameOf($fqn),
+        | $fqn
+    );
+}
+
+function meta::pure::functions::printer::compiled::shortNameOf(path: String[1]): String[1]
+{
+    $path->split('::')->last()->toOne();
+}
+
+function meta::pure::functions::printer::compiled::packagePartOf(path: String[1]): String[1]
+{
+    let idx = $path->lastIndexOf('::');
+    if ($idx < 0, | '', | $path->substring(0, $idx));
+}
+
+// ---------------------------------------------------------------------------
+// Reference collection: walk each element gathering FQNs of PE references.
+// "Reference" means used at a position that surface-Pure could shorten via
+// an `import pkg::*;` clause — type slots, function-call targets, profile
+// members, etc. Declarations (the element being defined) are NOT included,
+// since their FQN must stay full.
+// ---------------------------------------------------------------------------
+
+function meta::pure::functions::printer::compiled::collectElementRefs(e: PackageableElement[1]): String[*]
+{
+    $e->match([
+        c: Class<Any>[1] | collectClassRefs($c),
+        // Enumeration extends Type but not Class — its values are stored as
+        // properties; reuse the annotation walk and skip everything else.
+        en: Enumeration<Any>[1] | collectAnnotationRefs($en.stereotypes, $en.taggedValues),
+        a: Association[1] | $a.properties->map(p | collectPropertyRefs($p))->concatenate($a.qualifiedProperties->map(qp | collectQualifiedPropertyRefs($qp)))->concatenate(collectAnnotationRefs($a.stereotypes, $a.taggedValues)),
+        pf: Profile[1] | [],
+        pt: PrimitiveType[1] | $pt.constraints->map(con | collectConstraintRefs($con))->concatenate(collectAnnotationRefs($pt.stereotypes, $pt.taggedValues)),
+        udf: UserDefinedFunction<Any>[1] | collectFunctionRefs($udf),
+        nf: NativeFunction<Any>[1] | collectFunctionRefs($nf->cast(@Function<Any>)),
+        any: PackageableElement[1] | []
+    ]);
+}
+
+function meta::pure::functions::printer::compiled::collectClassRefs(c: Class<Any>[1]): String[*]
+{
+    $c.generalizations->map(g | if ($g.general->isEmpty(), | [], | collectGenericTypeRefs($g.general->toOne())))
+        ->concatenate($c.properties->map(p | collectPropertyRefs($p)))
+        ->concatenate($c.qualifiedProperties->map(qp | collectQualifiedPropertyRefs($qp)))
+        ->concatenate($c.constraints->map(con | collectConstraintRefs($con)))
+        ->concatenate(collectAnnotationRefs($c.stereotypes, $c.taggedValues));
+}
+
+function meta::pure::functions::printer::compiled::collectPropertyRefs(p: Property<Nil, Any|*>[1]): String[*]
+{
+    let gtRefs = if ($p.genericType->isEmpty(), | [], | collectGenericTypeRefs($p.genericType->toOne()));
+    let defaultRefs = if ($p.defaultValue->isEmpty(),
+                           | [],
+                           | let lambda = $p.defaultValue->toOne();
+                             $lambda.expressionSequence->map(e | collectVSRefs($e));
+                          );
+    $gtRefs->concatenate($defaultRefs)->concatenate(collectAnnotationRefs($p.stereotypes, $p.taggedValues));
+}
+
+function meta::pure::functions::printer::compiled::collectQualifiedPropertyRefs(qp: QualifiedProperty<Any>[1]): String[*]
+{
+    let gtRefs = if ($qp.genericType->isEmpty(), | [], | collectGenericTypeRefs($qp.genericType->toOne()));
+    let paramRefs = $qp.parameters->map(p | if ($p.genericType->isEmpty(), | [], | collectGenericTypeRefs($p.genericType->toOne())));
+    let bodyRefs = $qp.expressionSequence->map(e | collectVSRefs($e));
+    $gtRefs->concatenate($paramRefs)->concatenate($bodyRefs)->concatenate(collectAnnotationRefs($qp.stereotypes, $qp.taggedValues));
+}
+
+function meta::pure::functions::printer::compiled::collectConstraintRefs(c: Constraint[1]): String[*]
+{
+    if ($c.functionDefinition->isEmpty(),
+        | [],
+        | let lambda = $c.functionDefinition->toOne()->cast(@LambdaFunction<Any>);
+          $lambda.expressionSequence->map(e | collectVSRefs($e));
+    );
+}
+
+function meta::pure::functions::printer::compiled::collectFunctionRefs(fn: Function<Any>[1]): String[*]
+{
+    let f = $fn->cast(@PackageableFunction<Any>);
+    let paramRefs = $f.parameters->map(p | if ($p.genericType->isEmpty(), | [], | collectGenericTypeRefs($p.genericType->toOne())));
+    let retRefs = if ($f.returnGenericType->isEmpty(), | [], | collectGenericTypeRefs($f.returnGenericType->toOne()));
+    let bodyRefs = $fn->match([
+        udf: UserDefinedFunction<Any>[1] | $udf.expressionSequence->map(e | collectVSRefs($e)),
+        any: Function<Any>[1] | []
+    ]);
+    // Function extends PackageableElement (via PackageableFunction) but the
+    // stereotype/tag slots live on PackageableElement — cast first.
+    let pe = $fn->cast(@PackageableElement);
+    $paramRefs->concatenate($retRefs)->concatenate($bodyRefs)->concatenate(collectAnnotationRefs($pe.stereotypes, $pe.taggedValues));
+}
+
+function meta::pure::functions::printer::compiled::collectGenericTypeRefs(g: GenericType[1]): String[*]
+{
+    $g->match([
+        gtv: GenericTypeValue[1] | collectTypeRefs($gtv.type->toOne())
+                                    ->concatenate($gtv.typeArguments->map(t | collectGenericTypeRefs($t)))
+                                    ->concatenate($gtv.typeVariableValues->map(v | collectVSRefs($v))),
+        gto: GenericTypeOperation[1] | if ($gto.left->isEmpty(), | [], | collectGenericTypeRefs($gto.left->toOne()))
+                                         ->concatenate(if ($gto.right->isEmpty(), | [], | collectGenericTypeRefs($gto.right->toOne()))),
+        any: GenericType[1] | []
+    ]);
+}
+
+function meta::pure::functions::printer::compiled::collectTypeRefs(t: Type[1]): String[*]
+{
+    $t->match([
+        tp: TypeParameter[1] | [],
+        rt: RelationType<Any>[1] | $rt.columns->map(c | collectColumnRefs($c)),
+        ft: FunctionType[1] | $ft.parameters->map(p | if ($p.genericType->isEmpty(), | [], | collectGenericTypeRefs($p.genericType->toOne())))
+                                ->concatenate(if ($ft.returnType->isEmpty(), | [], | collectGenericTypeRefs($ft.returnType->toOne()))),
+        pe: PackageableElement[1] | [$pe->elementToPath()],
+        any: Type[1] | []
+    ]);
+}
+
+function meta::pure::functions::printer::compiled::collectColumnRefs(c: Column<Nil, Any|*>[1]): String[*]
+{
+    let cgt = $c->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
+    if ($cgt.typeArguments->size() < 2, | [], | collectGenericTypeRefs($cgt.typeArguments->at(1)));
+}
+
+function meta::pure::functions::printer::compiled::collectAnnotationRefs(stereotypes: Stereotype[*], taggedValues: TaggedValue[*]): String[*]
+{
+    let stRefs = $stereotypes->map(s | if ($s.profile->isEmpty(), | [], | [$s.profile->toOne()->elementToPath()]));
+    let tvRefs = $taggedValues->map(tv | collectTaggedValueRefs($tv));
+    $stRefs->concatenate($tvRefs);
+}
+
+function meta::pure::functions::printer::compiled::collectTaggedValueRefs(tv: TaggedValue[1]): String[*]
+{
+    let tag = $tv.tag->toOne();
+    if ($tag.profile->isEmpty(), | [], | [$tag.profile->toOne()->elementToPath()]);
+}
+
+function meta::pure::functions::printer::compiled::collectVSRefs(vs: ValueSpecification[1]): String[*]
+{
+    $vs->match([
+        v: VariableExpression[1] | if ($v.genericType->isEmpty(), | [], | collectGenericTypeRefs($v.genericType->toOne())),
+        a: AtomicValue[1] | collectAtomicValueRefs($a),
+        c: Collection[1] | $c.values->map(v | collectVSRefs($v)),
+        // FunctionExpression covers FunctionInvocation / ArrowInvocation /
+        // DotApplication and the M3 `func` + `functionName` + parametersValues
+        // shape they share. Keep a more specific DotApplication arm earlier in
+        // the dispatcher so DotApp's property-access shape (no func ref to
+        // collect) doesn't fall into the FE arm and double-count.
+        dot: DotApplication[1] | $dot.parametersValues->map(p | collectVSRefs($p)),
+        fe: FunctionExpression[1] | collectFunctionExprRefs($fe),
+        l: LambdaFunction<Any>[1] | collectLambdaRefs($l),
+        h: GenericTypeAndMultiplicityHolder<Any>[1] | collectHolderRefs($h),
+        any: ValueSpecification[1] | []
+    ]);
+}
+
+function meta::pure::functions::printer::compiled::collectAtomicValueRefs(a: AtomicValue[1]): String[*]
+{
+    if ($a.value->isEmpty(),
+        | [],
+        | $a.value->toOne()->match([
+              pe: PackageableElement[1] | [$pe->elementToPath()],
+              vsInner: ValueSpecification[1] | collectVSRefs($vsInner),
+              lf: LambdaFunction<Any>[1] | collectLambdaRefs($lf),
+              any: Any[1] | []
+          ])
+    );
+}
+
+function meta::pure::functions::printer::compiled::collectHolderRefs(h: GenericTypeAndMultiplicityHolder<Any>[1]): String[*]
+{
+    let cgt = $h->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
+    $cgt.typeArguments->map(t | collectGenericTypeRefs($t));
+}
+
+function meta::pure::functions::printer::compiled::collectLambdaRefs(l: LambdaFunction<Any>[1]): String[*]
+{
+    let paramRefs = $l.parameters->map(p | if ($p.genericType->isEmpty(), | [], | collectGenericTypeRefs($p.genericType->toOne())));
+    let bodyRefs = $l.expressionSequence->map(e | collectVSRefs($e));
+    $paramRefs->concatenate($bodyRefs);
+}
+
+function meta::pure::functions::printer::compiled::collectFunctionExprRefs(fe: FunctionExpression[1]): String[*]
+{
+    // The "rendered" form of a function ref at a call site is
+    // `pkgPath::bareName` (unmangled, since the parser does overload
+    // resolution by the bare name). That's what the shortenable lookup
+    // needs to match, so we store the unmangled form even though the
+    // metamodel-side path is the mangled `myFunc_String_1_` form.
+    let funcRefs = collectFunctionExprFuncRefs($fe);
+    let argRefs = $fe.parametersValues->map(p | collectVSRefs($p));
+    $funcRefs->concatenate($argRefs);
+}
+
+function meta::pure::functions::printer::compiled::collectFunctionExprFuncRefs(fe: FunctionExpression[1]): String[*]
+{
+    let n = $fe.functionName;
+    if ($fe.func->isEmpty(),
+        | [],
+        | // The source may have used a bare name (`length`) — in which case
+          // `functionName` is bare and we have to combine with the resolved
+          // function's package — or already used a qualified name
+          // (`meta::pure::functions::string::length`) — in which case
+          // `functionName` already includes the package. Both round-trip to
+          // the same printer output (`<pkg>::<bare>`), so collect that form.
+          if ($n->contains('::'),
+              | [$n],
+              | let pkgPath = compiledFunctionPackagePath($fe.func->toOne());
+                if ($pkgPath == '' || $pkgPath == 'Root', | [$n], | [$pkgPath + '::' + $n]);
+          );
+    );
+}

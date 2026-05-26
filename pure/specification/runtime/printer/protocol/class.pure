@@ -1,0 +1,112 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::printer::protocol::*;
+import meta::pure::protocol::*;
+// Wildcard import gives us the protocol-only Pointer types (Package_Pointer,
+// Enum_Pointer, ...) for free. The conflicting protocol types — Class, Property,
+// QualifiedProperty, Generalization, Constraint — would each collide with the
+// auto-imported M3 metamodel, so they stay FQN inline.
+import meta::pure::protocol::grammar::*;
+
+// Protocol printer for `Class` elements. First cut: name, package, simple
+// properties (primitive type + pointer multiplicity). Stereotypes / tagged
+// values / qualifiedProperties / constraints / typeParameters / generalizations
+// are TODO — they currently fall through silently because the printer only
+// touches the fields it understands.
+
+// Emit `Class <pkg::>Name { props }` for a Class. Uses the same multi-line
+// shape for empty and populated classes — the body is always on its own line
+// so the layout is stable as properties are added/removed.
+function meta::pure::functions::printer::protocol::printProtocolClass(c: meta::pure::protocol::grammar::type::Class[1]): String[1]
+{
+    'Class ' + printAnnotations($c.stereotypes, $c.taggedValues) + printPackagePointer($c.package) + $c.name +
+        printTypeAndMulParams($c.typeParameters, $c.multiplicityParameters) +
+        printGeneralizations($c.generalizations) +
+        printElementConstraints($c.constraints) +
+    '\n{\n' +
+        [
+            $c.properties->map(p | '  ' + printProperty($p))->joinStrings('\n'),
+            $c.qualifiedProperties->map(qp | '  ' + printQualifiedProperty($qp))->joinStrings('\n')
+        ]->joinStrings('\n') + '\n' +
+    '}\n';
+}
+
+// Emit a single property line:
+//   `<<stereos>> {tags} (aggKind) name: Type[mult] = defaultValue;`
+// Annotation / aggregation / default-value pieces are omitted when absent.
+function meta::pure::functions::printer::protocol::printProperty(p: meta::pure::protocol::grammar::function::property::Property[1]): String[1]
+{
+    let annotations = printAnnotations($p.stereotypes, $p.taggedValues);
+    let agg = printAggregationKind($p.aggregation);
+    let defaultPart = if ($p.defaultValue->isEmpty(),
+                          | '',
+                          | let lambda = $p.defaultValue->toOne();
+                            if ($lambda.expressionSequence->isEmpty(), | '', | ' = ' + printValueSpec($lambda.expressionSequence->at(0)));
+                         );
+    $annotations + $agg + $p.name + ': ' + printGenericType($p.genericType) + printMultiplicity($p.multiplicity) + $defaultPart + ';';
+}
+
+// Aggregation prefix matches the parser: `(composite) `, `(shared) `, `(none) `.
+// Slot is an Enum_Pointer whose extraPointerValues[0] holds the enum name
+// (Composite / Shared / None). Empty/missing → no prefix.
+function meta::pure::functions::printer::protocol::printAggregationKind(a: Enum_Pointer[0..1]): String[1]
+{
+    if ($a->isEmpty(),
+        | '',
+        | let name = $a->toOne().extraPointerValues->at(0).value;
+          '(' + $name->toLower() + ') ';
+    );
+}
+
+// `<<stereos>> {tags} name(p1: T1[m1], ...) { body }: ReturnType[mult];`
+function meta::pure::functions::printer::protocol::printQualifiedProperty(qp: meta::pure::protocol::grammar::function::property::QualifiedProperty[1]): String[1]
+{
+    let annotations = printAnnotations($qp.stereotypes, $qp.taggedValues);
+    // Body layout matches the parser corpus: single-statement QPs render inline
+    // (`{ expr }`), multi-statement ones use a multi-line block with one
+    // statement per line.
+    let body = if ($qp.expressionSequence->isEmpty(),
+                    | '',
+                    | if ($qp.expressionSequence->size() == 1,
+                          | printValueSpec($qp.expressionSequence->at(0)),
+                          | $qp.expressionSequence->map(e | '    ' + printValueSpec($e) + ';')->joinStrings('\n', '\n', '\n  ')
+                      );
+                   );
+    $annotations + $qp.name + $qp.parameters->map(p | printFunctionParameter($p))->joinStrings('(', ', ', ')') + ' {' + $body + '}: ' + printGenericType($qp.genericType) + printMultiplicity($qp.multiplicity) + ';';
+}
+
+// `extends Super1, Super2` — generalizations are a list of GenericTypes
+// (each carrying a Type_Pointer or richer Type). `extends ` prefix added
+// only when at least one parent is present. The implicit Any parent is
+// skipped at parser level and never appears here.
+function meta::pure::functions::printer::protocol::printGeneralizations(gens: meta::pure::protocol::grammar::relationship::Generalization[*]): String[1]
+{
+    if ($gens->isEmpty(),
+        | '',
+        | ' extends ' + $gens->map(g | printGenericType($g.general->toOne()))->joinStrings(', ')
+    );
+}
+
+// `[ constraint1, constraint2, ... ]` — element-level constraint block used
+// by Class and PrimitiveType. Distinct from `printFunctionConstraints`
+// (function pre/post), but renders each Constraint with the same helper.
+function meta::pure::functions::printer::protocol::printElementConstraints(constraints: meta::pure::protocol::grammar::constraint::Constraint[*]): String[1]
+{
+    if ($constraints->isEmpty(),
+        | '',
+        | '\n[\n  ' + $constraints->map(c | printConstraint($c))->joinStrings(',\n  ') + '\n]'
+    );
+}

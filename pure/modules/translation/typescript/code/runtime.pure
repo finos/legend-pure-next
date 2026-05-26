@@ -15,6 +15,7 @@
 import meta::external::language::typescript::*;
 import meta::external::language::typescript::serialization::*;
 import meta::external::language::typescript::translation::*;
+import meta::pure::translation::shared::*;
 
 // Truffle-runtime bridge: translation.pure produces a SourceFile; this file
 // serialises it, hands the source string to `compileAndExecute` (GraalJS-
@@ -32,16 +33,23 @@ function meta::external::language::typescript::translation::runViaTranslation(
 }
 
 // PCT adapter — pluggable into any `<<PCT.test>>`. Takes the test's no-arg
-// lambda, translates it to a TS source file, transpiles + evaluates it via
-// GraalJS, and returns the result for the test's
+// lambda, canonicalizes it via the shared translation pipeline (inlines open
+// variables), translates the canonical form to a TS source file, transpiles
+// + evaluates it via GraalJS, and returns the result for the test's
 // `assertEquals(..., $f->eval(|expr))`.
+//
+// The canonicalize step expands a capturing lambda into an open-variable-free
+// FunctionDefinition; downstream `translateFunction` consumes any
+// FunctionDefinition (UserDefinedFunction OR LambdaFunction), so both
+// shapes are handled by the same dispatch.
 function meta::external::language::typescript::translation::testAdapterForTranslatedTypeScript<X|o>(
    f: meta::pure::metamodel::function::Function<{->X[o]}>[1]
 ): X[o]
 {
-   let lambda = $f->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
-   let sf     = $lambda->translateLambda(defaultConvention());
-   let source = $sf->serialize();
+   let lambda    = $f->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical();
+   let sf        = $canonical->translateFunctionDef(defaultConvention());
+   let source    = $sf->serialize();
    compileAndExecute($source, 'execute', []);
 }
 

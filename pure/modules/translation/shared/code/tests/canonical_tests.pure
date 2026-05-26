@@ -15,6 +15,15 @@
 import meta::pure::functions::asserts::*;
 import meta::pure::metamodel::function::*;
 import meta::pure::translation::shared::*;
+import meta::pure::translation::shared::tests::model::*;
+
+// Local test fixture — keep canonical tests self-contained instead of pulling
+// in test-model classes from core-tests.
+Class <<test.TestDependency>> meta::pure::translation::shared::tests::model::TS_Person
+{
+   firstName : String[1];
+   lastName  : String[1];
+}
 
 // These tests rely on the Truffle compile pipeline being available at runtime
 // (the parse + compile natives + live-registry fallbacks). Bootstrap registers
@@ -85,4 +94,69 @@ function <<test.Test>> meta::pure::translation::shared::tests::testMakeCanonical
    let lambda = {| 1 + 2};
    let canonical = $lambda->meta::pure::translation::shared::makeCanonical();
    assertEquals(true, $canonical->instanceOf(LambdaFunction));
+}
+
+// Class-instance capture: a lambda capturing `^CC_Person(...)` should
+// canonicalize to a UserDefinedFunction with the PDO inlined as an
+// AtomicValue. Exercises the classInstanceToProtocol path.
+function <<test.Test>> meta::pure::translation::shared::tests::testMakeCanonicalClassInstanceCapture(): Boolean[1]
+{
+   let smith = ^TS_Person(firstName='Fabrice', lastName='Smith');
+   let lambda = {| $smith.firstName};
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical();
+   assertEquals(true, $canonical->instanceOf(UserDefinedFunction));
+}
+
+// ----------------------------------------------------------------------------
+// Parser-shape inspector. The decompiler's protocol output has to look like
+// what the parser actually emits — otherwise the compile pipeline's casts to
+// concrete subtypes (e.g. `genericType->cast(@GenericTypeValue)`) fail. These
+// tests parse representative snippets and pin the slot shapes so the
+// decompiler can mirror them.
+// ----------------------------------------------------------------------------
+
+// The parser leaves `Collection.genericType` empty (slot is `[0..1]` via the
+// `ProtocolInfo_optionalInProtocol` stereotype). Pinned so a future schema
+// regression that re-requires this slot fails loudly here.
+function <<test.Test>> meta::pure::translation::shared::tests::inspectParserCollectionGenericType(): Boolean[1]
+{
+   let pf = meta::pure::functions::meta::parse(
+      'inspectColl.pure',
+      'function inspectColl::foo(): Integer[*] { [1, 2, 3] }'
+   );
+   let udf = $pf.sections->at(0).elements->at(0)
+               ->cast(@meta::pure::protocol::grammar::function::UserDefinedFunction);
+   let coll = $udf.expressionSequence->at(0)
+               ->cast(@meta::pure::protocol::grammar::valuespecification::Collection);
+   assertEquals(true, $coll.genericType->isEmpty());
+}
+
+// What protocol type does the parser put in an `AtomicValue.genericType` slot
+// (e.g. for the integer literal `1`)?
+function <<test.Test>> meta::pure::translation::shared::tests::inspectParserAtomicValueGenericType(): Boolean[1]
+{
+   let pf = meta::pure::functions::meta::parse(
+      'inspectAV.pure',
+      'function inspectAV::foo(): Integer[1] { 1 }'
+   );
+   let udf = $pf.sections->at(0).elements->at(0)
+               ->cast(@meta::pure::protocol::grammar::function::UserDefinedFunction);
+   let av = $udf.expressionSequence->at(0)
+               ->cast(@meta::pure::protocol::grammar::valuespecification::AtomicValue);
+   assertEquals(true, $av.genericType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue));
+}
+
+// The parser leaves `FunctionExpression.genericType` empty too — same
+// `optionalInProtocol` story as Collection.
+function <<test.Test>> meta::pure::translation::shared::tests::inspectParserFunctionExpressionGenericType(): Boolean[1]
+{
+   let pf = meta::pure::functions::meta::parse(
+      'inspectFE.pure',
+      'function inspectFE::foo(): Integer[1] { 1 + 2 }'
+   );
+   let udf = $pf.sections->at(0).elements->at(0)
+               ->cast(@meta::pure::protocol::grammar::function::UserDefinedFunction);
+   let fe = $udf.expressionSequence->at(0)
+               ->cast(@meta::pure::protocol::grammar::valuespecification::FunctionExpression);
+   assertEquals(true, $fe.genericType->isEmpty());
 }

@@ -1,41 +1,43 @@
 ###Pure
+import test::*;
+
 Class test::Base
 {
-  info(){1}:Number[1];
+  info() {1}: Number[1];
 }
 
-Class test::Child extends test::Base
+Class test::Child extends Base
 {
-  info(){42}:Integer[1];
+  info() {42}: Integer[1];
 }
 
-function test::use():Any[*]
+function test::use(): Any[*]
 {
-  let c = ^test::Child();
+  let c = ^Child();
   $c.info() + 1;
 }
 
 ###CompiledGraph
-class test::Base extends Any  ~Class<test::Base>  @2:1-5:1
+class test::Base extends Any  ~Class<test::Base>  @4:1-7:1
   qualifiedProperty info() :@Number@[1]
-    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @4:10-4:10
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:11-6:11
 
-class test::Child extends test::Base  ~Class<test::Child>  @7:1-10:1
+class test::Child extends test::Base  ~Class<test::Child>  @9:1-12:1
   qualifiedProperty info() :@Integer@[1]
-    AtomicValue  42 :@Integer@[1]  ~@AtomicValue@  @9:10-9:11
+    AtomicValue  42 :@Integer@[1]  ~@AtomicValue@  @11:11-11:12
 
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Child##[1]#  ~@FunctionInvocation@  @14:3-14:24
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Child##[1]#  ~@FunctionInvocation@  @16:3-16:18
     typeParam T -> #test::Child#
     mulParam m -> #[1]#
-    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @14:7-14:7
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#test::Child##[1]#  ~@FunctionInvocation@  @14:11-14:24
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @16:7-16:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#test::Child##[1]#  ~@FunctionInvocation@  @16:11-16:18
       typeParam T -> test::Child
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>  @14:11-14:24
-  FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @15:5-15:15
-    DotApplication test::Child.info() :#Integer##[1]#  ~@DotApplication@  @15:5-15:11
-      Variable c :#test::Child##[1]#  ~@VariableExpression@  @15:3-15:4
-    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @15:15-15:15
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>  @16:11-16:18
+  FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @17:5-17:15
+    DotApplication test::Child.info() :#Integer##[1]#  ~@DotApplication@  @17:5-17:11
+      Variable c :#test::Child##[1]#  ~@VariableExpression@  @17:3-17:4
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @17:15-17:15
 
 ###ReverseIndex
 meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:

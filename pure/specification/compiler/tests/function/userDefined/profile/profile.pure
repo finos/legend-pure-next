@@ -1,28 +1,28 @@
 ###Pure
 import protocol::support::*;
 
-function <<AProfile.flag, protocol::support::AProfile.newFlag>> {protocol::support::AProfile.tag1 = 'yeah', AProfile.tag2 = 'ok'} protocol::myFunc(x: Integer[1]): Integer[1]
-{
-  $x
-}
-
 Profile protocol::support::AProfile
 {
   stereotypes: [flag, newFlag];
   tags: [tag1, tag2];
 }
 
-###CompiledGraph
-function protocol::myFunc_Integer_1__Integer_1_(x:@Integer@[1]):@Integer@[1]  ~UserDefinedFunction<{@Integer@[1]->@Integer@[1]}>
-  <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
-  {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
-  Variable x :#Integer##[1]#  ~@VariableExpression@  @6:3-6:4
+function <<AProfile.flag, AProfile.newFlag>> {AProfile.tag1 = 'yeah', AProfile.tag2 = 'ok'} protocol::myFunc(x: Integer[1]): Integer[1]
+{
+  $x
+}
 
-profile protocol::support::AProfile  ~@Profile@  @9:1-13:1
+###CompiledGraph
+profile protocol::support::AProfile  ~@Profile@  @4:1-8:1
   stereotype flag  ~@Stereotype@
   stereotype newFlag  ~@Stereotype@
   tag tag1  ~@Tag@
   tag tag2  ~@Tag@
+
+function protocol::myFunc_Integer_1__Integer_1_(x:@Integer@[1]):@Integer@[1]  ~UserDefinedFunction<{@Integer@[1]->@Integer@[1]}>
+  <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
+  {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
+  Variable x :#Integer##[1]#  ~@VariableExpression@  @12:3-12:4
 
 ###ReverseIndex
 protocol::support::AProfile:

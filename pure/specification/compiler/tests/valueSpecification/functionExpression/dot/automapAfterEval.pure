@@ -3,15 +3,13 @@ import test::*;
 
 Class test::TPR_Person
 {
-    firstName : String[1];
-    lastName : String[1];
+  firstName: String[1];
+  lastName: String[1];
 }
 
-//native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::eval<T,V|m,n>(func:Function<{T[n]->V[m]}>[1], param:T[n]):V[m];
-
-function test::testTypeParamResolution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Any[*]
+function test::testTypeParamResolution<Z|y>(f: Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]): Any[*]
 {
-    $f->eval(|^TPR_Person(firstName='A', lastName='B')->head()).lastName;
+  $f->eval(|^TPR_Person(firstName = 'A', lastName = 'B')->head()).lastName
 }
 
 ###CompiledGraph
@@ -20,31 +18,31 @@ class test::TPR_Person extends Any  ~Class<test::TPR_Person>  @4:1-8:1
   property lastName :@String@[1]  ~Property<test::TPR_Person, @String@|1>
 
 function test::testTypeParamResolution_Function_1__Any_MANY_(f:Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]):@Any@[*]  ~UserDefinedFunction<{Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->@Any@[*]}>
-  FunctionInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@FunctionInvocation@  @14:64-14:72
+  FunctionInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@FunctionInvocation@  @12:66-12:74
     typeParam T -> #test::TPR_Person#
     typeParam V -> #String#
     mulParam m -> #[*]#
-    ArrowInvocation eval_Function_1__T_n__V_m_ :#test::TPR_Person##[*]#  ~@ArrowInvocation@  @14:7-14:63
+    ArrowInvocation eval_Function_1__T_n__V_m_ :#test::TPR_Person##[*]#  ~@ArrowInvocation@  @12:5-12:65
       typeParam T -> #Function<#{->#test::TPR_Person##[*]#}#>#
       typeParam V -> #test::TPR_Person#
       mulParam m -> #[*]#
       mulParam n -> #[1]#
-      Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>##[1]#  ~@VariableExpression@  @14:5-14:6
-      Lambda :#LambdaFunction<#{->#test::TPR_Person##[0..1]#}#>#[1]  ~@AtomicValue@  @14:14-14:62
-        ArrowInvocation head_T_MANY__T_$0_1$_ :#test::TPR_Person##[0..1]#  ~@ArrowInvocation@  @14:55-14:62
+      Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>##[1]#  ~@VariableExpression@  @12:3-12:4
+      Lambda :#LambdaFunction<#{->#test::TPR_Person##[0..1]#}#>#[1]  ~@AtomicValue@  @12:12-12:64
+        ArrowInvocation head_T_MANY__T_$0_1$_ :#test::TPR_Person##[0..1]#  ~@ArrowInvocation@  @12:57-12:64
           typeParam T -> #test::TPR_Person#
-          FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  ~@FunctionInvocation@  @14:15-14:54
+          FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  ~@FunctionInvocation@  @12:13-12:56
             typeParam T -> test::TPR_Person
-            TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>  @14:15-14:54
-            Collection :#KeyExpression#[2]  ~@Collection@  @14:15-14:54
-              FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @14:27-14:39
-                AtomicValue  'firstName' :@String@[1]  ~@AtomicValue@  @14:27-14:39
-                AtomicValue  'A' :@String@[1]  ~@AtomicValue@  @14:37-14:39
-              FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @14:42-14:53
-                AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @14:42-14:53
-                AtomicValue  'B' :@String@[1]  ~@AtomicValue@  @14:51-14:53
+            TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>  @12:13-12:56
+            Collection :#KeyExpression#[2]  ~@Collection@  @12:13-12:56
+              FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:25-12:39
+                AtomicValue  'firstName' :@String@[1]  ~@AtomicValue@  @12:25-12:39
+                AtomicValue  'A' :@String@[1]  ~@AtomicValue@  @12:37-12:39
+              FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:42-12:55
+                AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @12:42-12:55
+                AtomicValue  'B' :@String@[1]  ~@AtomicValue@  @12:53-12:55
     Lambda(v_automap:#test::TPR_Person#[1]) :#LambdaFunction<#{#test::TPR_Person#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
-      DotApplication test::TPR_Person.lastName :#String##[1]#  ~@DotApplication@  @14:64-14:72
+      DotApplication test::TPR_Person.lastName :#String##[1]#  ~@DotApplication@  @12:66-12:74
         Variable v_automap :#test::TPR_Person##[1]#  ~@VariableExpression@
 
 ###ReverseIndex
