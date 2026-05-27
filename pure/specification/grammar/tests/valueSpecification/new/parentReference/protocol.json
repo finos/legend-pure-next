@@ -446,15 +446,26 @@
                     },
                     "value" : "next"
                   }, {
-                    "_type" : "VariableExpression",
-                    "name" : "~.~",
+                    "_type" : "DotApplication",
+                    "functionName" : "~",
                     "p_sourceInformation" : {
                       "_type" : "SourceInformation",
                       "endColumn" : 65,
                       "endLine" : 11,
                       "startColumn" : 63,
                       "startLine" : 11
-                    }
+                    },
+                    "parametersValues" : [ {
+                      "_type" : "VariableExpression",
+                      "name" : "~",
+                      "p_sourceInformation" : {
+                        "_type" : "SourceInformation",
+                        "endColumn" : 65,
+                        "endLine" : 11,
+                        "startColumn" : 63,
+                        "startLine" : 11
+                      }
+                    } ]
                   } ]
                 } ]
               } ]

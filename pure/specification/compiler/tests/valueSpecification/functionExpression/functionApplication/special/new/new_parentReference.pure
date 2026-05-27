@@ -71,7 +71,8 @@ function test::new::parentRef::testNewNestedParentReference__Any_MANY_():@Any@[*
               AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @11:41-11:41
             FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:44-11:53
               AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @11:44-11:53
-              Variable ~.~ :#test::new::parentRef::Node##[1]#  ~@VariableExpression@  @11:51-11:53
+              DotApplication ~ :#test::new::parentRef::Node##[1]#  ~@DotApplication@  @11:51-11:53
+                Variable ~ :#test::new::parentRef::Node##[1]#  ~@VariableExpression@  @11:51-11:53
 
 function test::new::parentRef::testNewPropertyAccess__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
   FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Container##[1]#  ~@FunctionInvocation@  @16:3-16:66

@@ -527,6 +527,17 @@ public final class FunctionExpressionResolver
             registerLetVariable(updated, model, context);
             return updated;
         }
+        // Parent-reference chain step (`~.~`, `~.~.~`, …): DotApplicationResolver
+        // already stamped the GenericType + Multiplicity from the construction-
+        // type stack lookup, but there's no `_func` to set — "~" isn't a real
+        // function. Skip the unresolved-function error and return the typed
+        // node unchanged.
+        else if (resolved instanceof DotApplication da && "~".equals(da._functionName())
+                && resolved._genericType() != null
+                && !(resolved._genericType() instanceof CompilerNotSetGenericType))
+        {
+            return resolved;
+        }
         else
         {
             FunctionExpression updated = (FunctionExpression) ((FunctionExpression) resolved._copy())

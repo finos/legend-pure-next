@@ -1,0 +1,24 @@
+###Error
+Parent reference '~' must appear at the start of a chain; mid-chain `~` (e.g. `~.foo.~`) is not supported. (at valueSpecification/functionExpression/functionApplication/special/new/new_parentReference_E_midChainTilde:12c46-12c53)
+
+###Pure
+import test::new::parentRefMidChain::*;
+
+function test::new::parentRefMidChain::testMidChainTilde(): Container[1]
+{
+  // `~.name.~` is a tilde STEP whose receiver is a property access (`.name`),
+  // not another tilde or the base `~`. Disallowed: `~` may only appear at
+  // the start of a chain (followed by more `.~` or property/QP steps).
+  ^Container(name='outer', child=^Inner(name=~.name.~))
+}
+
+Class test::new::parentRefMidChain::Container
+{
+  name: String[1];
+  child: Inner[0..1];
+}
+
+Class test::new::parentRefMidChain::Inner
+{
+  name: String[1];
+}

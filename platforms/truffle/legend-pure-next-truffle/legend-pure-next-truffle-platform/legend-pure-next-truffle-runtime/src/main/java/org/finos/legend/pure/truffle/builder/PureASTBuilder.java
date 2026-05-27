@@ -241,6 +241,23 @@ public final class PureASTBuilder
 
     private PureNode lowerFunctionExpression(Object fe)
     {
+        // Parent-reference chain step (`~.~`, `~.~.~`, …): DotApplication
+        // with functionName="~". "~" isn't a real function, so {@code _func}
+        // is intentionally null. Count the chain depth and emit the same
+        // ParentReferenceReadNode as the bare-`~` VariableExpression path
+        // (which already peeks the construction stack at runtime).
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fe,
+                "meta::pure::metamodel::valuespecification::DotApplication"))
+        {
+            Object fnNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNCTION_NAME);
+            if ("~".equals(fnNameObj))
+            {
+                int depth = countParentReferenceChainDepth(fe);
+                StringBuilder sb = new StringBuilder("~");
+                for (int i = 1; i < depth; i++) sb.append(".~");
+                return new org.finos.legend.pure.truffle.ast.ParentReferenceReadNode(depth - 1, sb.toString());
+            }
+        }
         Object funcObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNC);
         if (funcObj == null)
         {
@@ -1101,6 +1118,36 @@ public final class PureASTBuilder
             return new FrameVariableReadNode(slot, veName);
         }
         return new FrameVariableReadNode(-1, veName);
+    }
+
+    /**
+     * Total parent depth of a {@code DotApplication(functionName="~", …)}
+     * chain. Walks every {@code DotApplication("~", …)} receiver and counts;
+     * the base must be {@code VariableExpression(name="~")} for the chain to
+     * be valid. Returns {@code -1} for an invalid chain (mid-chain `~` after
+     * a property step like `~.foo.~`).
+     */
+    private static int countParentReferenceChainDepth(Object root)
+    {
+        int depth = 0;
+        Object cur = root;
+        while (cur != null
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(cur,
+                        "meta::pure::metamodel::valuespecification::DotApplication")
+                && "~".equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(cur, SLOT_FUNCTION_NAME)))
+        {
+            depth++;
+            Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(cur, SLOT_PARAMETERS_VALUES);
+            cur = paramsObj instanceof PureSequence ps && ps.size() > 0 ? ps.getBoxed(0) : null;
+        }
+        if (cur != null
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(cur,
+                        "meta::pure::metamodel::valuespecification::VariableExpression")
+                && "~".equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(cur, SLOT_NAME)))
+        {
+            return depth + 1;
+        }
+        return -1;
     }
 
     /** Tilde-pattern count: {@code "~"} → 1, {@code "~.~"} → 2, …; 0 for non-parent-ref names. */

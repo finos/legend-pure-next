@@ -1342,7 +1342,11 @@ public class RdfFbsJavaGenerator
             // instance whose constraint exercises this branch.
             if (extendsFunctionExpression(classInfo.name))
             {
-                sb.append("        if (obj._func() == null) { throw new IllegalArgumentException(\"Validation error: Property 'func' on resolved '").append(classInfo.name).append("' is null (functionName='\" + obj._functionName() + \"') — compile-pure left an unresolved call: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
+                // Parent-reference chain steps (`~.~`, `~.~.~`, …) parse as
+                // DotApplication(functionName="~", parametersValues=[...]) with
+                // `_func` intentionally null — "~" isn't a real function, the
+                // type is stamped from the construction stack at compile time.
+                sb.append("        if (obj._func() == null && !\"~\".equals(obj._functionName())) { throw new IllegalArgumentException(\"Validation error: Property 'func' on resolved '").append(classInfo.name).append("' is null (functionName='\" + obj._functionName() + \"') — compile-pure left an unresolved call: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
             }
 
 

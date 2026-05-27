@@ -1393,7 +1393,11 @@ public class PdbJavaGenerator
         // crash at lazy Truffle walk. NEVER silent-fail — catch it here.
         if (extendsFunctionExpression(cr))
         {
-            sb.append("        if (validateRequired && readProp(obj, \"func\") == null) { throw new IllegalArgumentException(")
+            // Parent-reference chain steps (`~.~`, `~.~.~`, …) parse as
+            // DotApplication(functionName="~", parametersValues=[...]) with
+            // `_func` intentionally null — "~" isn't a real function, the
+            // type is stamped from the construction stack at compile time.
+            sb.append("        if (validateRequired && readProp(obj, \"func\") == null && !\"~\".equals(readProp(obj, \"functionName\"))) { throw new IllegalArgumentException(")
               .append("\"Validation error: Property 'func' on resolved '").append(cr.name)
               .append("' is null (functionName='\" + readProp(obj, \"functionName\") + \"') — compile-pure left an unresolved call: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
         }

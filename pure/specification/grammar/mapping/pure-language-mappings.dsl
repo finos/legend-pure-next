@@ -333,20 +333,27 @@ rule atomicExpression as ValueSpecification {
   else error("Unsupported atomicExpression")
 }
 
-# Build a VariableExpression-style AST for `~`, `~.~`, `~.foo`, `~.~.foo.bar`, etc.
-# The tilde-only prefix becomes a VariableExpression whose name is the literal
-# tilde sequence ("~", "~.~", …) — the compiler binds these names in the
-# enclosing `^X(...)` scope so they carry the correct static type.
-# Each propertyName after the tildes is wrapped as a DotApplication around the
-# growing receiver, mirroring how `$x.foo.bar` parses.
+# Build the AST for `~`, `~.~`, `~.foo`, `~.~.foo.bar`, etc. as a uniform
+# chain: the leading `~` is a VariableExpression(name="~"); every subsequent
+# `.~` or `.propertyName` wraps the accumulator in a DotApplication. Parent
+# steps use functionName="~" (not a valid identifier — unambiguous marker);
+# property steps use functionName=propertyName.text. Compilers/runtimes that
+# see DotApplication(functionName="~", ...) treat it as one more parent
+# level than its receiver resolved to.
 rule parentReference as ValueSpecification {
   chain_fold from newImpl(VariableExpression,
                           sourceInformation=buildSourceInfo($ctx),
-                          name=joinTextWith($ctx.TILDE, "."))
-                over $ctx.propertyName {
+                          name="~")
+                over $ctx.parentReferenceStep {
+    alt when $it.TILDE {
+      step newImpl(DotApplication,
+                   sourceInformation=buildSourceInfo($ctx),
+                   functionName="~",
+                   parametersValues=listOf(acc))
+    }
     else step newImpl(DotApplication,
                        sourceInformation=buildSourceInfo($ctx),
-                       functionName=$it.text,
+                       functionName=$it.propertyName.text,
                        parametersValues=listOf(acc))
   }
 }

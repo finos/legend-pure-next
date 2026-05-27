@@ -176,6 +176,34 @@ public class ValueSpecificationEvaluator
     }
 
     /**
+     * Total parent depth of a {@code DotApplication(functionName="~", …)}
+     * chain: walks each {@code DotApplication("~", …)} receiver and adds 1,
+     * plus 1 for the base {@code VariableExpression(name="~")}. Returns
+     * {@code -1} when the chain doesn't bottom out at the base — i.e., a
+     * mid-chain `~` after a property step (`~.foo.~`). The compiler rejects
+     * such chains, so callers in well-formed programs only see ≥ 1; the
+     * defensive check guards against a runtime cycle through unvetted PDBs.
+     */
+    public static int countParentReferenceDepth(meta.pure.metamodel.valuespecification.DotApplication root)
+    {
+        int depth = 1;
+        meta.pure.metamodel.valuespecification.ValueSpecification next =
+                root._parametersValues().get(0);
+        while (next instanceof meta.pure.metamodel.valuespecification.DotApplication d
+                && "~".equals(d._functionName()))
+        {
+            depth++;
+            next = d._parametersValues().get(0);
+        }
+        if (next instanceof meta.pure.metamodel.valuespecification.VariableExpression v
+                && "~".equals(v._name()))
+        {
+            return depth + 1;
+        }
+        return -1;
+    }
+
+    /**
      * Push an instance onto the construction stack.
      * Used by {@code new} and {@code copy} natives to track the instance hierarchy
      * during construction, enabling parent-reference ({@code ~}) resolution.
@@ -476,6 +504,27 @@ public class ValueSpecificationEvaluator
         executingFnStack.push(fnEvalStack.peek());
         try
         {
+            // Parent-reference chain step (`~.~`, `~.~.~`, …): parses as
+            // DotApplication(functionName="~", parametersValues=[<chain>])
+            // with `_func` intentionally null — "~" isn't a real function.
+            // Count the chain's total parent depth and peek the construction
+            // stack, same way the bare `~` VariableExpression evaluator does.
+            if (fe instanceof meta.pure.metamodel.valuespecification.DotApplication da
+                    && "~".equals(fe._functionName()))
+            {
+                int depth = countParentReferenceDepth(da);
+                Object target = peekConstruction(depth - 1);
+                if (target == null)
+                {
+                    StringBuilder sb = new StringBuilder("~");
+                    for (int i = 1; i < depth; i++) sb.append(".~");
+                    throw new RuntimeException("Parent reference '" + sb
+                            + "' is out of bounds — no enclosing `^X(...)` construction at depth "
+                            + (depth - 1) + ".");
+                }
+                return _E_ValueSpecification.wrap(target, fe._genericType(), fe._multiplicity(),
+                        this.natives.resolver());
+            }
             meta.pure.metamodel.function.Function func = fe._func();
             if (func == null)
             {

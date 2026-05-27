@@ -288,7 +288,15 @@ expressionInstance: NEW_SYMBOL
 expressionInstanceRightSide: expressionInstanceAtomicRightSide
 ;
 
-parentReference: TILDE (DOT TILDE)* (DOT propertyName (DOT propertyName)*)?
+parentReference: TILDE parentReferenceStep*
+;
+
+// Each step after the leading ~ is either another tilde (one more parent
+// level) or a property name. Splitting them as distinct alt branches lets
+// the DSL fold uniformly: VariableExpression(name="~") as the seed, and a
+// DotApplication wrapping the accumulator per step — functionName="~" for
+// the parent step, functionName=propertyName.text for the property step.
+parentReferenceStep: DOT (TILDE | propertyName)
 ;
 
 // parentReference is now an atomicExpression alternative so chains like
