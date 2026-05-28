@@ -40,6 +40,19 @@ public interface TruffleTypeCache
      */
     Set<?> ancestors(Object type);
 
+    /**
+     * Resolver-aware variant of {@link #ancestors(Object)}. The no-arg form
+     * pulls the resolver from {@code PureLanguage.get(null)}, which is null on
+     * threads/contexts outside an active Pure execution (e.g. the GraalJS
+     * TypeScript bridge invoking {@code __metadataSubtypeOf}). Pass the
+     * caller's resolver so a first-time {@code compute} for an uncached type
+     * doesn't NPE there. Default delegates to the no-arg form.
+     */
+    default Set<?> ancestors(Object type, TruffleMetadataAccess resolver)
+    {
+        return ancestors(type);
+    }
+
     /** Names of properties stereotyped {@code <<meta::pure::profiles::equality.Key>>}. */
     Set<String> equalityKeyProperties(Object type);
 

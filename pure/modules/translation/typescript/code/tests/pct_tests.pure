@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::external::language::typescript::*;
 import meta::external::language::typescript::translation::*;
 import meta::external::language::typescript::serialization::*;
 import meta::pure::translation::shared::*;
@@ -32,6 +33,16 @@ function <<test.Test>> meta::external::language::typescript::translation::tests:
 function <<test.Test>> meta::external::language::typescript::translation::tests::pct::testFilterInstance(): Boolean[1]
 {
    meta::pure::functions::collection::tests::filter::testFilterInstance(testAdapterForTranslatedTypeScript_Function_1__X_o_);
+}
+
+// Meta PCT — exercises metamodel reflection through the translator:
+//   instance.genericType() → class metadata → .properties /
+//   .propertiesFromAssociations / .generalizations.general traversal.
+// First test to actually hit the address-walker + __metadataRead path
+// end-to-end with real metamodel reads.
+function <<test.Test>> meta::external::language::typescript::translation::tests::pct::testMetaProperties(): Boolean[1]
+{
+   meta::pure::functions::meta::tests::properties::testProperties(testAdapterForTranslatedTypeScript_Function_1__X_o_);
 }
 
 // Phase-2 orientation: a tiny lambda example. Pair it with `renderTinyLambdaTs`
@@ -79,6 +90,18 @@ meta::external::language::typescript::translation::tests::renderFilterTestTs(): 
    $sf->serialize();
 }
 
+function <<test.TestDependency>>
+meta::external::language::typescript::translation::tests::renderMetaPropertiesTs(): String[1]
+{
+   let lambda = {| ^meta::pure::functions::meta::tests::model::CC_Address(name='Hoboken',
+                       type=meta::pure::functions::meta::tests::model::CC_GeographicEntityType.CITY)
+                     ->genericType()->meta::pure::functions::meta::properties()};
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
+                       [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
+   let sf = $canonical->translateFunctionDef(conventionForRoot($canonical));
+   $sf->serialize();
+}
+
 // Diagnostic: verify the round-tripped PDO has the right field values, even
 // if the assertEquals comparator rejects them. Pin firstName / lastName /
 // classifierGenericType type-path on the actual result.
@@ -96,4 +119,3 @@ function <<test.Test>> meta::external::language::typescript::translation::tests:
    assertEquals('Pierre',  $result->at(1).firstName);
    assertEquals('Doe',     $result->at(1).lastName);
 }
-

@@ -80,30 +80,29 @@ function meta::external::language::typescript::translation::gallery::renderTestC
 {
     let path    = $test->elementToPath();
     let pureSrc = printCompiledElement($test, $ctx);
-    let lambdas = $test.expressionSequence->collectAdapterEvalLambdas();
-    // The test's let-bindings are referenced as `$col` etc. inside each
-    // $f->eval lambda. The adapter inlines them at runtime (the outer test
-    // runs first, binds the value, then constructs the lambda which captures
-    // the bound value), but here we're statically extracting lambdas before
-    // any runtime closure exists — `makeCanonical` finds no captures to
-    // substitute. Prefix each translated lambda's body with the test's
-    // letFunction statements so the resulting TS is self-contained.
-    let letPreamble = $test->collectLetPreamble();
-    let tsParts = $lambdas->map(l | $l->translateOneLambda($letPreamble));
-    let anyOk    = $tsParts->exists(p | $p.first);
-    let anyFail  = $tsParts->exists(p | !$p.first);
-    let tsSrc = if ($tsParts->isEmpty(),
-                    | '// no $f->eval(...) call found in this test',
-                    | $tsParts->map(p | $p.second)->joinStrings('\n\n// -----\n\n'));
-    let translationStatus = if ($tsParts->isEmpty(), | 'failed',
-                                |if ($anyFail && $anyOk, | 'partial',
-                                |if ($anyFail,           | 'failed',
-                                                         | 'ok')));
+    // Display the EXACT TypeScript that the PCT adapter compiled + executed.
+    // `runTestViaAdapter` runs the test through `testAdapterForTranslatedTypeScript`;
+    // each `$f->eval(...)` inside it serializes a TS module and hands it to the
+    // `compile` native, which records it in a capture buffer. We then drain that
+    // buffer to obtain the real source(s), in compile order. This keeps the
+    // displayed TS 100% in sync with what the PCT run actually ran — including
+    // runtime-inlined open-variable captures — instead of re-deriving source
+    // through a separate static-translation path that can diverge.
+    //
+    // The buffer is empty at card entry: each card drains it here, and nothing
+    // between cards compiles TS (the Pure printer + HTML chrome do not).
     let runResult = $test->runTestViaAdapter();
+    let sources   = drainCompiledSources();
     let runtimeStatus = if ($runResult.first, | 'pass', | 'fail');
     let runtimeMsg = $runResult.second;
+    let translationStatus = if ($sources->isEmpty(), | 'failed', | 'ok');
+    let tsSrc = if ($sources->isEmpty(),
+                    | if ($runtimeMsg->length() > 0,
+                          | '// adapter produced no TS (translation threw before compile):\n// ' + $runtimeMsg,
+                          | '// no $f->eval(...) call reached the translator'),
+                    | $sources->joinStrings('\n\n// -----\n\n'));
     let sourceId = $test->sourceIdOf();
-    let suffix = if ($lambdas->size() > 1, | ' (' + $lambdas->size()->toString() + ' evals)', | '');
+    let suffix = if ($sources->size() > 1, | ' (' + $sources->size()->toString() + ' evals)', | '');
     let badge = if ($runtimeStatus == 'pass', | '&#10003;', | '&#10007;');
     let runMsgHtml = if ($runtimeStatus == 'fail' && $runtimeMsg->length() > 0,
                          | '<div class="run-msg">' + escapeHtml($runtimeMsg) + '</div>',
@@ -146,140 +145,4 @@ function meta::external::language::typescript::translation::gallery::sourceIdOf(
 {
     let sids = $el.sourceInformation->map(si | $si.sourceId);
     if ($sids->isEmpty(), | '', | $sids->toOne());
-}
-
-// Translate one captured lambda. Returns (ok, source-or-error) so the
-// renderer can mark partially-translated cards distinctly from fully OK
-// or fully failed ones.
-function meta::external::language::typescript::translation::gallery::translateOneLambda(
-    lambda: meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1],
-    letPreamble: String[1]
-): meta::pure::functions::collection::Pair<Boolean, String>[1]
-{
-    let attempt = tryEval(| translateLambdaToTsSource($lambda, $letPreamble));
-    if ($attempt.failure->isNotEmpty(),
-        | pair(false, '// translation failed: ' + $attempt.failure->toOne().message),
-        | pair(true, $attempt.value));
-}
-
-function meta::external::language::typescript::translation::gallery::translateLambdaToTsSource(
-    lambda: meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1],
-    letPreamble: String[1]
-): String[1]
-{
-    // Gallery: keep the body verbatim — inline open variables only, no
-    // partial-evaluation. Readers comparing the Pure source and translated
-    // TS side-by-side expect a 1:1 expression mapping. Splice the outer
-    // test's let-bindings (which the adapter would inline at runtime) as
-    // `const`s on the result so each card is self-contained JS.
-    let canonical = $lambda->makeCanonical(
-                        [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
-    let sf        = $canonical->translateFunctionDef(defaultConvention());
-    let serialized = $sf->serialize();
-    splicePreamble($serialized, $letPreamble);
-}
-
-// Inject `letPreamble` after the first `{` in the serialized function
-// declaration so the gallery card's TS looks like
-// `export function execute(): T { <let preamble>; <body> }`.
-function meta::external::language::typescript::translation::gallery::splicePreamble(
-    serialized: String[1], letPreamble: String[1]
-): String[1]
-{
-    let hasPreamble = $letPreamble->length() > 0;
-    let openIdx = $serialized->indexOf('{');
-    let canSplice = $hasPreamble && $openIdx >= 0;
-    if (!$canSplice,
-        | $serialized,
-        | $serialized->substring(0, $openIdx + 1) + '\n  ' + $letPreamble + '\n' + $serialized->substring($openIdx + 1));
-}
-
-// Walk the test's expressionSequence collecting every `letFunction(name, value)`
-// top-level statement, render each as a TS `const name = value;` line, and
-// concatenate. The result is spliced into the gallery card's translated lambda
-// so the JS shown to readers includes the bindings that would otherwise be
-// resolved by closure at runtime.
-function meta::external::language::typescript::translation::gallery::collectLetPreamble(
-    test: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]
-): String[1]
-{
-    let conv = defaultConvention();
-    let lets = $test.expressionSequence
-                  ->filter(vs | $vs->instanceOf(meta::pure::metamodel::valuespecification::FunctionExpression))
-                  ->cast(@meta::pure::metamodel::valuespecification::FunctionExpression)
-                  ->filter(fe | $fe.functionName == 'letFunction'
-                             && $fe.parametersValues->size() == 2
-                             && $fe.parametersValues->at(0)->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue));
-    let stmts = $lets->map(fe |
-       let name = $fe.parametersValues->at(0)
-                     ->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value
-                     ->cast(@String);
-       let valueExpr = translateExpression($fe.parametersValues->at(1), $conv);
-       'const ' + $name + ' = ' + $valueExpr->serializeExpression() + ';';
-    );
-    $stmts->joinStrings('\n  ');
-}
-
-// Recursively walk a tree of value specifications collecting the lambda
-// argument of every `eval` call (these are the `$f->eval(|expr...)` calls
-// the PCT tests use to defer to the adapter). We don't bother filtering
-// the eval receiver — any `eval` with at least one arg whose first param
-// is a lambda-bearing AtomicValue counts. False positives are vanishingly
-// rare in practice and would only widen the gallery, not break it.
-function meta::external::language::typescript::translation::gallery::collectAdapterEvalLambdas(
-    exprs: meta::pure::metamodel::valuespecification::ValueSpecification[*]
-): meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[*]
-{
-    $exprs->map(e | $e->collectAdapterEvalLambdasOne());
-}
-
-function meta::external::language::typescript::translation::gallery::collectAdapterEvalLambdasOne(
-    vs: meta::pure::metamodel::valuespecification::ValueSpecification[1]
-): meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[*]
-{
-    $vs->match([
-        fe: FunctionExpression[1] |
-            let self = if ($fe.functionName == 'eval' && $fe.parametersValues->size() >= 2,
-                | extractLambdaArg($fe.parametersValues->at($fe.parametersValues->size() - 1)),
-                | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
-            );
-            concatenate($self, $fe.parametersValues->collectAdapterEvalLambdas());,
-        // AtomicValue wrapping a LambdaFunction — common when a thunk is
-        // passed to `assertError(|thunkBody, msg)` or similar. Recurse into
-        // the inner lambda's expressionSequence so its nested `$f->eval(...)`
-        // calls are still captured.
-        {av: AtomicValue[1] |
-            if ($av.value->isNotEmpty()
-                && $av.value->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction),
-                | $av.value->toOne()
-                    ->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
-                    .expressionSequence->collectAdapterEvalLambdas(),
-                | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
-            );
-        },
-        // Bare LambdaFunction in expression position — recurse into its body.
-        {lf: meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1] |
-            $lf.expressionSequence->collectAdapterEvalLambdas();
-        },
-        // Inline `[expr, expr, ...]` Collection literals can also house
-        // lambdas (match arms, multi-if pair-lists). Recurse into values.
-        {col: meta::pure::metamodel::valuespecification::Collection[1] |
-            $col.values->collectAdapterEvalLambdas();
-        },
-        other: ValueSpecification[1] | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
-    ])
-}
-
-function meta::external::language::typescript::translation::gallery::extractLambdaArg(
-    vs: meta::pure::metamodel::valuespecification::ValueSpecification[1]
-): meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[*]
-{
-    if ($vs->instanceOf(AtomicValue),
-        | let val = $vs->cast(@AtomicValue).value;
-          if ($val->size() == 1 && $val->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction),
-              | $val->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>),
-              | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
-          );,
-        | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
-    );
 }

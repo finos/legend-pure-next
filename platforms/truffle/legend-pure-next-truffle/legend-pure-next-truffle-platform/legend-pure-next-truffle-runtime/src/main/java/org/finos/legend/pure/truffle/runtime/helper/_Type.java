@@ -49,7 +49,7 @@ public final class _Type
         // replaces a linear scan over the linearization List that JFR
         // identified as the dominant subtypeOf hot path (~7% of warm CPU
         // on the metamodel_factories.pure self-host).
-        return ((java.util.Set<Object>) resolver.typeCache().ancestors(sub)).contains(sup);
+        return ((java.util.Set<Object>) resolver.typeCache().ancestors(sub, resolver)).contains(sup);
     }
 
 

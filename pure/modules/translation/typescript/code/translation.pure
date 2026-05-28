@@ -150,7 +150,8 @@ function meta::external::language::typescript::translation::defaultConvention():
          // type info — pure runtime introspection in JS is best-effort
          pair('cast',              castCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('instanceOf',        instanceOfCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('type',              typeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+         // `type` has no coder — it is a platformOnly UDF (`$any->genericType().type->toOne()`)
+         // and translates as a real UDF call, like `properties`.
          pair('genericType',       genericTypeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('compare',           compareCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          // display
@@ -172,8 +173,11 @@ function meta::external::language::typescript::translation::defaultConvention():
          pair('match',             matchCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('pathToElement',     pathToElementCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('elementToPath',     elementToPathCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('value4Tag',         value4TagCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('list',              listCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+         // `value4Tag` has no coder — it is a platformOnly UDF that filters
+         // `element.taggedValues`, so it translates as a real UDF call.
+         // `list` has no coder — it is a platformOnly UDF (`^List(values=...)`)
+         // whose translation carries the classifierGenericType, so the result
+         // lifts to a real Pure List (a bare `{values}` would lift to a Map).
          pair('put',               putCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('putAll',            putAllCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('remove',            removeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
@@ -183,7 +187,9 @@ function meta::external::language::typescript::translation::defaultConvention():
          pair('groupBy',           groupByCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('newMap',            newMapCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('parseDate',         parseDateCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('newClass',          newClassCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+         // `newClass` / `newEnumeration` have no coder — they are UDFs that
+         // construct metamodel elements via `~` parent-references, translated
+         // as real UDF calls (construction-stack form).
          pair('pair',              pairCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('adjust',            adjustCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('dateDiff',          dateDiffCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
@@ -241,9 +247,17 @@ function meta::external::language::typescript::translation::defaultConvention():
          pair('castAsTM',          castAsTMCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('castViaSeq',        castViaSeqCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('letFunction',       letFunctionCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('isToOne',           isToOneCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('enumValues',        enumValuesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('properties',        propertiesStubCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+         // `isToOne(Multiplicity)` has no coder — it is a platformOnly UDF
+         // that inspects the multiplicity's bounds, translated as a UDF call.
+         // `enumValues` has no coder — it is a platformOnly UDF that reflects
+         // over `Enumeration.properties[i].defaultValue`, so it translates as
+         // a real UDF call (like `properties`/`type`).
+         // `properties` is a Pure UserDefinedFunction (meta::pure::functions::
+         // meta::properties) that walks the class hierarchy via metamodel
+         // reflection. With the path-keyed metadata bridge in place
+         // (__pureResolve / __pdo / __metadataRead), its body translates and
+         // runs against live metadata, so it no longer needs a stub — it
+         // falls through to the UDF-call dispatch in translateExpression.
          // Remaining natives — easy time / map / string / reflection stubs.
          pair('currentTimeMillis', currentTimeMillisCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('random',            randomCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
@@ -259,7 +273,6 @@ function meta::external::language::typescript::translation::defaultConvention():
          pair('parse',             parseCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('readFile',          readFileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('directoryTree',     directoryTreeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('newEnumeration',    newEnumerationCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('useNodeAsScalar',   identityCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('useAsScalar',       identityCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('tagAs',             identityCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
@@ -281,9 +294,15 @@ function meta::external::language::typescript::translation::conventionForRoot(
    let base = defaultConvention();
    // For PE-backed roots use their resolver path; for in-memory canonicals
    // (no PE backing — typical of test adapter flows) fall back to the
-   // sentinel address the Java side routes to the injected graph.
+   // sentinel address the Java side routes to the injected graph. The
+   // makeCanonical recompile wraps the body in a synthetic UDF under the
+   // `__canonical__` package; that PE isn't registered with the resolver, so
+   // it must use the sentinel too (otherwise lambda-reflection addresses like
+   // `__canonical__::__canonical__$lambda/0` fail to resolve).
    let path = $root->match([
-      pe: meta::pure::metamodel::PackageableElement[1] | $pe->elementToPath(),
+      pe: meta::pure::metamodel::PackageableElement[1] |
+         let p = $pe->elementToPath();
+         if ($p->startsWith('__canonical__'), | '__local::root', | $p);,
       x:  meta::pure::metamodel::type::Any[1]          | '__local::root'
    ]);
    ^$base(
@@ -420,23 +439,65 @@ function meta::external::language::typescript::translation::wrapLambdaWithAst(
    let idx = if ($conv.lambdaIndex->isEmpty(),
                  | -1,
                  | $conv.lambdaIndex->indexOf($lam));
+   // Snapshot the lambda's open variables {name: name} so the wrapped arrow can
+   // report them via openVariableValues(). The value references the enclosing
+   // JS binding of the same name (captured eagerly at lambda construction).
+   let ovEntries = $lam.openVariables->map(n | tsEntry($n.name, tsId(safeJsName($n.name))));
+   let ovArgs = if ($ovEntries->isEmpty(), | []->cast(@Expression), | [tsObject($ovEntries)]);
    if ($idx < 0 || $conv.rootPath->isEmpty(),
        | $arrow,
        | tsCall(tsId('__lambda'),
-                [$arrow, tsStrLit($conv.rootPath->toOne() + '$lambda/' + $idx->toString())]));
+                [$arrow, tsStrLit($conv.rootPath->toOne() + '$lambda/' + $idx->toString())]->concatenate($ovArgs)));
+}
+
+// Depth of a pure parent-reference chain (`~` -> 0, `~.~` -> 1, `~.~.~` -> 2),
+// or empty if `vs` is not a chain of only `~`s. `~.~` is a DotApplication with
+// functionName `~` over the inner chain.
+function meta::external::language::typescript::translation::parentRefDepth(vs: ValueSpecification[1]): Integer[0..1]
+{
+   $vs->match([
+      v: VariableExpression[1] | if ($v.name->startsWith('~'), | 0, | []->cast(@Integer)),
+      {fe: FunctionExpression[1] |
+         if ($fe.functionName == '~' && $fe.parametersValues->size() == 1,
+            | $fe.parametersValues->at(0)->parentRefDepth()->map(d | $d + 1),
+            | []->cast(@Integer)); },
+      other: ValueSpecification[1] | []->cast(@Integer)
+   ]);
+}
+
+// True if any expression in the tree references `~` (a parent-reference to an
+// enclosing `^Class(...)` construction). Used by newCoder/copyCoder to decide
+// whether to emit the construction-stack form so `~` resolves at runtime.
+function meta::external::language::typescript::translation::containsParentRef(exprs: ValueSpecification[*]): Boolean[1]
+{
+   $exprs->fold({e, acc | $acc || $e->containsParentRefOne()}, false);
+}
+
+function meta::external::language::typescript::translation::containsParentRefOne(vs: ValueSpecification[1]): Boolean[1]
+{
+   $vs->match([
+      v:  VariableExpression[1] | $v.name->startsWith('~'),
+      fe: FunctionExpression[1] | $fe.parametersValues->containsParentRef(),
+      {av: AtomicValue[1] |
+         if ($av.value->isNotEmpty() && $av.value->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction),
+            | $av.value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+                 .expressionSequence->containsParentRef(),
+            | false); },
+      lf: meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1] | $lf.expressionSequence->containsParentRef(),
+      col: meta::pure::metamodel::valuespecification::Collection[1] | $col.values->containsParentRef(),
+      other: ValueSpecification[1] | false
+   ]);
 }
 
 function meta::external::language::typescript::translation::translateExpression(expr: ValueSpecification[1], conv: Convention[1]): Expression[1]
 {
    $expr->match([
       {v: VariableExpression[1] |
-         // `~` and chained forms (`~.~`, `~.foo`) are Pure's parent-reference
-         // syntax for the surrounding `^Class(...)` construction. The runtime
-         // bookkeeping that resolves these isn't available in plain JS, so we
-         // emit `undefined` as a placeholder — tests that rely on the loop
-         // semantics will fail equality, but the generated source still parses.
+         // `~` is Pure's parent-reference: the current `^Class(...)` being
+         // built. newCoder/copyCoder push that instance onto __ctorStack, so
+         // `~` reads the top (`__ctorAt(0)`).
          if ($v.name->startsWith('~'),
-             | tsId('undefined'),
+             | tsCall(tsId('__ctorAt'), [tsNumLit('0')]),
              | tsId(safeJsName($v.name)));
       },
       a:  AtomicValue[1]        | $a->translateAtomicValue($conv),
@@ -457,6 +518,12 @@ function meta::external::language::typescript::translation::translateExpression(
       // Compiled Collection literal -> TS array literal.
       col: meta::pure::metamodel::valuespecification::Collection[1] | tsArrayLit($col.values->map(v | $v->translateExpression($conv))),
       {fe: FunctionExpression[1] |
+         // Parent-reference chains. `~.~.~` (a chain of `~` DotApplications) →
+         // `__ctorAt(depth)`; `<~-chain>.prop` → `__ctorAt(depth).prop`. The
+         // construction-stack (pushed by newCoder/copyCoder) resolves these to
+         // the enclosing `^Class(...)` instance(s) at runtime.
+         let selfDepth  = $fe->parentRefDepth();
+         let recvDepth  = if ($fe.parametersValues->isEmpty(), | []->cast(@Integer), | $fe.parametersValues->at(0)->parentRefDepth());
          // Property access (`$p.lastName`) shows up either as a
          // DotApplication (the runtime classifier subtype) or as a generic
          // FunctionExpression with `func` set to an AbstractProperty. Both
@@ -464,14 +531,19 @@ function meta::external::language::typescript::translation::translateExpression(
          // name would need its own coder entry.
          let isProperty = $fe->instanceOf(meta::pure::metamodel::valuespecification::DotApplication)
                           || ($fe.func->isNotEmpty() && $fe.func->toOne()->instanceOf(AbstractProperty));
-         if ($isProperty,
-             // Wrap the receiver with __pdo so a tagged-lambda receiver
-             // (or any value carrying __purePath) gets resolved to its
-             // Pure PDO proxy before property access. __pdo is a
-             // pass-through on non-tagged values, so this is safe to apply
-             // unconditionally — non-Pure receivers (already-proxied PE
-             // refs, plain values) flow through unchanged.
-             | tsAccess(tsCall(tsId('__pdo'), [translateExpression($fe.parametersValues->at(0), $conv)]), $fe.functionName),
+         let enumAccess = $fe->enumValueAccess();
+         if ($selfDepth->isNotEmpty(),
+             | tsCall(tsId('__ctorAt'), [tsNumLit($selfDepth->toOne()->toString())]),
+             |if ($recvDepth->isNotEmpty(),
+             | tsAccess(tsCall(tsId('__ctorAt'), [tsNumLit($recvDepth->toOne()->toString())]), $fe.functionName),
+             |if ($isProperty,
+             // Enum-value access (`SomeEnumeration.VALUE`) reads the generated
+             // `const <ShortName>` member rather than reflecting the property
+             // off the metaobject — the const carries the self-describing
+             // value (name + classifierGenericType) for downstream reflection.
+             | if ($enumAccess->isNotEmpty(),
+                  | tsAccess(tsId(safeJsName($enumAccess->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->split('::')->last()->toOne())), $fe.functionName),
+                  | tsAccess(tsCall(tsId('__pdo'), [translateExpression($fe.parametersValues->at(0), $conv)]), $fe.functionName)),
              | // Coder dispatch tolerates fully-qualified function names by
              //   falling back to the last `::`-separated segment. The canonical
              //   recompile occasionally produces FQNs (`meta::pure::functions::
@@ -495,7 +567,7 @@ function meta::external::language::typescript::translation::translateExpression(
                        tsId('undefined');
                  )
              );
-         );
+         )));
       }
    ]);
 }
@@ -579,25 +651,19 @@ function meta::external::language::typescript::translation::filterCoder(args: Va
 function meta::external::language::typescript::translation::isEmptyCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 1, | 'isEmptyCoder expects exactly 1 argument');
-   let x = translateExpression($args->at(0), $conv);
-   tsBinary(
-      tsBinary($x, '===', tsId('undefined')),
-      '||',
-      tsBinary(
-         tsCall(tsAccess(tsId('Array'), 'isArray'), [$x]),
-         '&&',
-         tsBinary(tsAccess($x, 'length'), '===', tsNumLit('0'))
-      )
-   );
+   // __isEmpty coerces via __asArr so undefined/null/[] all read as empty
+   // (a non-array scalar is size 1). Avoids the double-eval of inlining.
+   tsCall(tsId('__isEmpty'), [translateExpression($args->at(0), $conv)]);
 }
 
-// toOne(x) -> identity in JS (the value already IS the underlying scalar at
-// runtime; the [0..1] vs [1] distinction is a type-level concept that
-// disappears at runtime).
+// toOne(x) -> __toOne(x): unwraps a 1-element array to its element (scalars
+// pass through). A bare identity would leave `coll.filter(...).toOne()` as an
+// array, so a following `.prop` read would hit the array (undefined) instead
+// of the element.
 function meta::external::language::typescript::translation::toOneCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 1, | 'toOneCoder expects exactly 1 argument');
-   translateExpression($args->at(0), $conv);
+   tsCall(tsId('__toOne'), [translateExpression($args->at(0), $conv)]);
 }
 
 function meta::external::language::typescript::translation::lengthCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -610,8 +676,10 @@ function meta::external::language::typescript::translation::lengthCoder(args: Va
 function meta::external::language::typescript::translation::mapCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 2, | 'mapCoder expects exactly 2 arguments');
-   tsCall(tsAccess(translateExpression($args->at(0), $conv), 'map'),
-          [translateExpression($args->at(1), $conv)]);
+   // __map coerces the receiver to an array and flattens multi-valued fn
+   // results (Pure map returns V[n*m]); native JS `.map` would nest arrays.
+   tsCall(tsId('__map'),
+          [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv)]);
 }
 
 // fold(collection, fn, seed) — Pure fold passes (item, acc); JS reduce passes
@@ -629,16 +697,14 @@ function meta::external::language::typescript::translation::foldCoder(args: Valu
 function meta::external::language::typescript::translation::takeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 2, | 'takeCoder expects exactly 2 arguments');
-   tsCall(tsAccess(translateExpression($args->at(0), $conv), 'slice'),
-          [tsNumLit('0'), translateExpression($args->at(1), $conv)]);
+   tsCall(tsId('__take'), [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv)]);
 }
 
 // drop(collection, n) -> `collection.slice(n)`.
 function meta::external::language::typescript::translation::dropCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 2, | 'dropCoder expects exactly 2 arguments');
-   tsCall(tsAccess(translateExpression($args->at(0), $conv), 'slice'),
-          [translateExpression($args->at(1), $conv)]);
+   tsCall(tsId('__drop'), [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv)]);
 }
 
 // toString(x) — delegate to runtime helper that recognizes Pair (`<a, b>`),
@@ -647,7 +713,21 @@ function meta::external::language::typescript::translation::dropCoder(args: Valu
 function meta::external::language::typescript::translation::toStringCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 1, | 'toStringCoder expects exactly 1 argument');
-   tsCall(tsId('__toString'), [translateExpression($args->at(0), $conv)]);
+   // Float toString needs the "always a decimal point, never exponential"
+   // formatting — and Float vs Integer is only knowable statically (both are
+   // JS number at runtime), so dispatch on the argument's declared type.
+   if ($args->at(0)->isFloatTyped(),
+      | tsCall(tsId('__floatStr'), [translateExpression($args->at(0), $conv)]),
+      | tsCall(tsId('__toString'), [translateExpression($args->at(0), $conv)]));
+}
+
+// True if the value specification's declared type is Float.
+function meta::external::language::typescript::translation::isFloatTyped(vs: ValueSpecification[1]): Boolean[1]
+{
+   let rt = $vs.genericType->rawType();
+   $rt->isNotEmpty()
+      && $rt->toOne()->instanceOf(meta::pure::metamodel::PackageableElement)
+      && $rt->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath() == 'meta::pure::metamodel::type::primitives::Float';
 }
 
 // eval(fn, args...) -> `fn(args...)`. Pure's eval invokes a function value
@@ -673,35 +753,71 @@ function meta::external::language::typescript::translation::evalCoder(args: Valu
 function meta::external::language::typescript::translation::newCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() >= 1, | 'newCoder expects at least 1 argument (the type holder)');
-   let keyExprs = if ($args->size() >= 2,
-      | $args->at(1)->cast(@meta::pure::metamodel::valuespecification::Collection).values,
-      | []->cast(@ValueSpecification));
-   let entries = $keyExprs->map(ke | $ke->extractKeyEntry($conv));
-   // `classifierGenericType` is the canonical self-describing tag — the Java
-   // lift uses it to pick the right class, and JS-side `__instanceOf` walks
-   // the classifier chain via `__pureHost.instanceOf`. The older `_type`
-   // chain is redundant (and walking `cls.generalizations` here would choke
-   // on cross-module ClassPointers).
-   let cgtEntry   = $args->at(0)->classifierGenericTypeEntry();
-   tsObject($entries->concatenate($cgtEntry));
+   // `^X(...)` always passes a UserDefinedGenericTypeAndMultiplicityHolder as
+   // arg[0]. A non-holder arg[0] is the `new(GenericType[1])` reflection form
+   // (e.g. `new(^UserDefinedGenericType(type=...))`): the instance's
+   // classifierGenericType IS the supplied GenericType.
+   if (!$args->at(0)->instanceOf(meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder),
+      | tsObject([tsEntry('classifierGenericType', translateExpression($args->at(0), $conv))]),
+      | let keyExprs = if ($args->size() >= 2,
+           | $args->at(1)->cast(@meta::pure::metamodel::valuespecification::Collection).values,
+           | []->cast(@ValueSpecification));
+        let entries = $keyExprs->map(ke | $ke->extractKeyEntry($conv));
+        // `classifierGenericType` is the canonical self-describing tag the Java
+        // lift reads to pick the class. Skip the auto-tag when the construction
+        // sets `classifierGenericType` explicitly (metamodel constructions like
+        // `^Class(classifierGenericType=...)`) — its own `.type` drives the lift.
+        let hasExplicitCgt = $entries->exists(e | $e.name == 'classifierGenericType');
+        let cgtEntry = if ($hasExplicitCgt, | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment), | $args->at(0)->classifierGenericTypeEntry());
+        let allEntries = $entries->concatenate($cgtEntry);
+        // When any key references `~` (parent-reference to the instance being
+        // built), emit the construction-stack form: `__newObj({}, self => {
+        // self.k = v; ... })`. __newObj pushes `self` so `~` (-> __ctorAt)
+        // resolves, and keys are assigned in source order so a later key can
+        // read an earlier one.
+        let assigns = $allEntries->map(e |
+           tsExprStmt(tsBinary(tsAccess(tsId('self'), $e.name), '=', $e.initializer))->cast(@meta::external::language::typescript::metamodel::Statement));
+        if ($keyExprs->containsParentRef(),
+           | tsCall(tsId('__newObj'), [tsObject([]), tsArrowBlock([tsParamNoType('self')], tsBlock($assigns))]),
+           | tsObject($allEntries));
+   );
 }
 
-// Emit `classifierGenericType: { rawType: __ptr('classPath') }` for the class
-// being instantiated. Self-describing tag the Java-side toPureValue reads to
-// decide which Pure class to lift the JS object into — without relying on the
-// caller threading a `returnClass`. Same shape Pure's metamodel uses (every
-// instance has a classifierGenericType slot), so Pure code reading
-// `$obj.classifierGenericType.rawType` finds the canonical class via the
-// `__ptr` resolver.
+// Emit `classifierGenericType: { type: __pureResolve('classPath') }` for the
+// class being instantiated. Self-describing tag the Java-side toPureValue
+// reads to decide which Pure class to lift the JS object into — without
+// relying on the caller threading a `returnClass`. Uses the `type` key to
+// match Pure's `GenericTypeValue.type` slot, so Pure code reading
+// `$obj.classifierGenericType.type` (and `$obj->genericType().type`) reaches
+// the canonical class via the resolver.
 function meta::external::language::typescript::translation::classifierGenericTypeEntry(holder: ValueSpecification[1]): meta::external::language::typescript::metamodel::PropertyAssignment[*]
 {
-   let rawType = $holder->holderTargetType();
-   if ($rawType->isEmpty() || !$rawType->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
-      | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment),
-      | let pe = $rawType->toOne()->cast(@meta::pure::metamodel::PackageableElement);
-        [tsEntry('classifierGenericType',
-                 tsObject([tsEntry('rawType', encodePeRef($pe))]))];
-   );
+   $holder->holderUserGenericType()
+      ->filter(g | $g->rawType()->isNotEmpty()
+                   && $g->rawType()->toOne()->instanceOf(meta::pure::metamodel::PackageableElement))
+      ->map(g | tsEntry('classifierGenericType', $g->genericTypeToCgtObject()));
+}
+
+// Render a GenericType as the self-describing `{ type: __pureResolve(path),
+// typeArguments: [...] }` object the translator embeds as classifierGenericType.
+// Recurses through `typeArguments` so generic instances (`^CC_List<String>`)
+// carry their argument types for reflection (`genericType().typeArguments`).
+function meta::external::language::typescript::translation::genericTypeToCgtObject(
+   gt: meta::pure::metamodel::type::generics::GenericType[1]
+): Expression[1]
+{
+   let rt       = $gt->rawType();
+   let typeArgs = $gt->match([
+      gtv: meta::pure::metamodel::type::generics::GenericTypeValue[1] | $gtv.typeArguments,
+      e:   meta::pure::metamodel::type::generics::GenericType[*]      | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+   ]);
+   let typeEntry = if ($rt->isEmpty() || !$rt->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
+                       | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment),
+                       | [tsEntry('type', encodePeRef($rt->toOne()))]);
+   let taEntry   = if ($typeArgs->isEmpty(),
+                       | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment),
+                       | [tsEntry('typeArguments', tsArrayLit($typeArgs->map(ta | $ta->genericTypeToCgtObject())))]);
+   tsObject($typeEntry->concatenate($taEntry));
 }
 
 // Build the `_type: [path, super1, super2, ..., Any]` entry from the holder.
@@ -746,6 +862,26 @@ function meta::external::language::typescript::translation::holderTargetType(hol
    if ($typeArgs->isEmpty(),
        | []->cast(@meta::pure::metamodel::type::Type),
        | $typeArgs->at(0)->rawType());
+}
+
+// The user GenericType the holder wraps (`holder.genericType.typeArguments[0]`),
+// i.e. the type being instantiated WITH its own type arguments. Same path as
+// holderTargetType but returns the GenericType, not just its rawType — so
+// generic instances keep their `<...>` arguments for classifierGenericType.
+function meta::external::language::typescript::translation::holderUserGenericType(
+   holder: ValueSpecification[1]
+): meta::pure::metamodel::type::generics::GenericType[0..1]
+{
+   let isUdgmh = $holder->instanceOf(meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder);
+   let cast = $holder->cast(@meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder);
+   let gt = if ($isUdgmh && $cast.genericType->isNotEmpty(),
+                | $cast.genericType->toOne(),
+                | []->cast(@meta::pure::metamodel::type::generics::GenericType));
+   let typeArgs = $gt->match([
+      gtv: meta::pure::metamodel::type::generics::GenericTypeValue[1] | $gtv.typeArguments,
+      e:   meta::pure::metamodel::type::generics::GenericType[*]      | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+   ]);
+   if ($typeArgs->isEmpty(), | [], | $typeArgs->at(0));
 }
 
 // Walk a Class's generalization chain, collecting paths from the class
@@ -830,7 +966,10 @@ function meta::external::language::typescript::translation::atCoder(args: ValueS
 function meta::external::language::typescript::translation::sizeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 1, | 'sizeCoder expects exactly 1 argument');
-   tsAccess(translateExpression($args->at(0), $conv), 'length');
+   // __size coerces via __asArr, so a single value (slot assigned a scalar
+   // PDO, e.g. `expressionSequence = ^AtomicValue(...)`) reports 1 rather
+   // than `undefined` (a raw `.length` on a non-array object).
+   tsCall(tsId('__size'), [translateExpression($args->at(0), $conv)]);
 }
 
 function meta::external::language::typescript::translation::headCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -871,19 +1010,9 @@ function meta::external::language::typescript::translation::reverseCoder(args: V
 function meta::external::language::typescript::translation::isNotEmptyCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 1, | 'isNotEmptyCoder expects exactly 1 argument');
-   // Pure semantics: a value is non-empty if it's not undefined AND, when an array, length > 0.
-   // For arrays in JS, `arr.length > 0` is correct; for [1] scalar slot, the value is a non-array.
-   // Conservative: `x !== undefined && (Array.isArray(x) ? x.length > 0 : true)`.
-   let x = translateExpression($args->at(0), $conv);
-   tsBinary(
-      tsBinary($x, '!==', tsId('undefined')),
-      '&&',
-      tsTernary(
-         tsCall(tsAccess(tsId('Array'), 'isArray'), [$x]),
-         tsBinary(tsAccess($x, 'length'), '>', tsNumLit('0')),
-         tsBoolLit(true)
-      )
-   );
+   // __isNotEmpty coerces via __asArr: undefined/null/[] are empty, a non-array
+   // scalar (a [1] slot value) is size 1. Single eval of the argument.
+   tsCall(tsId('__isNotEmpty'), [translateExpression($args->at(0), $conv)]);
 }
 
 function meta::external::language::typescript::translation::containsCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -926,16 +1055,23 @@ function meta::external::language::typescript::translation::addCoder(args: Value
 function meta::external::language::typescript::translation::sliceCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() >= 2, | 'sliceCoder expects at least 2 arguments');
-   methodCall($args, 'slice', $conv);
+   // Pure slice clamps bounds to [0, size]; JS Array.slice treats a negative
+   // start as an offset from the end. Route through __slice for Pure semantics.
+   tsCall(tsId('__slice'), $args->map(a | $a->translateExpression($conv)));
 }
 
 function meta::external::language::typescript::translation::sortCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // sort(coll) -> [...coll].sort(); sort(coll, cmpFn) -> [...coll].sort(cmpFn).
+   // Overloads: sort(coll) | sort(coll, comp) | sort(coll, key, comp). The
+   // 2-arg form's extra arg is the COMPARATOR (not a key), so pass it as
+   // __sort's third arg. __sort applies Pure natural ordering by default
+   // (JS `.sort()` is lexicographic). comp returns Pure's compare (-1/0/1).
    let coll = translateExpression($args->at(0), $conv);
-   let copy = tsArrayLit([tsSpread($coll)]);
-   let rest = $args->slice(1, $args->size())->map(a | $a->translateExpression($conv));
-   tsCall(tsAccess($copy, 'sort'), $rest);
+   if ($args->size() <= 1,
+      | tsCall(tsId('__sort'), [$coll]),
+      |if ($args->size() == 2,
+         | tsCall(tsId('__sort'), [$coll, tsId('undefined'), translateExpression($args->at(1), $conv)]),
+         | tsCall(tsId('__sort'), [$coll, translateExpression($args->at(1), $conv), translateExpression($args->at(2), $conv)])));
 }
 
 function meta::external::language::typescript::translation::removeDuplicatesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1049,7 +1185,10 @@ function meta::external::language::typescript::translation::parseFloatCoder(args
 
 function meta::external::language::typescript::translation::parseDecimalCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   tsCall(tsId('parseFloat'), [translateExpression($args->at(0), $conv)]);
+   // parseDecimal(s) -> float; parseDecimal(s, precision, scale) rounds to scale.
+   if ($args->size() >= 3,
+      | tsCall(tsId('__parseDecimalScaled'), [translateExpression($args->at(0), $conv), translateExpression($args->at(2), $conv)]),
+      | tsCall(tsId('parseFloat'), [translateExpression($args->at(0), $conv)]));
 }
 
 // ----------------------------------------------------------------------------
@@ -1290,18 +1429,15 @@ function meta::external::language::typescript::translation::instanceOfCoder(args
                                   translateExpression($args->at(1), $conv)]);
 }
 
-// type(x) / genericType(x) -> identity. Pure tests downstream may extract
-// `.type` or `.classifierGenericType`; without classifier metadata in JS
-// those property reads return undefined. Returning $x lets the access
-// chain at least not crash for primitive-style introspection.
-function meta::external::language::typescript::translation::typeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   translateExpression($args->at(0), $conv);
-}
-
 function meta::external::language::typescript::translation::genericTypeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   translateExpression($args->at(0), $conv);
+   // `$v->genericType()` returns a GenericTypeValue {type: <classifier>}.
+   // Object values carry classifierGenericType directly (self-describing
+   // instances) or expose it via the resolver proxy (element refs); JS
+   // primitives (number/string/boolean/Date) carry no metadata, so the
+   // `__genericType` runtime helper maps the JS runtime type to the Pure
+   // primitive type. Matches Pure's `GenericTypeValue.type` slot downstream.
+   tsCall(tsId('__genericType'), [translateExpression($args->at(0), $conv)]);
 }
 
 function meta::external::language::typescript::translation::compareCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1360,7 +1496,11 @@ function meta::external::language::typescript::translation::formatCoder(args: Va
 // toRepresentation(x) -> JSON.stringify or a primitive's literal form.
 function meta::external::language::typescript::translation::toRepresentationCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   tsCall(tsId('__toRepresentation'), [translateExpression($args->at(0), $conv)]);
+   // Float representation is the same as its toString (decimal point, no
+   // exponential) — quotes only apply to String. See isFloatTyped/toStringCoder.
+   if ($args->at(0)->isFloatTyped(),
+      | tsCall(tsId('__floatStr'), [translateExpression($args->at(0), $conv)]),
+      | tsCall(tsId('__toRepresentation'), [translateExpression($args->at(0), $conv)]));
 }
 
 // copy(obj, kvList) -> { ...obj, k1: v1, ... }. The spread must come FIRST so
@@ -1377,9 +1517,27 @@ function meta::external::language::typescript::translation::copyCoder(args: Valu
       let kfe = $ke->cast(@FunctionExpression);
       let name  = $kfe.parametersValues->at(0)->cast(@AtomicValue).value->cast(@String);
       let value = translateExpression($kfe.parametersValues->at(1), $conv);
-      tsEntry($name, $value);
+      // 3-arg keyExpression(name, value, add) with add=true encodes Pure's
+      // `^$x(name += value)` — append to the existing slot rather than
+      // replace. Emit `name: [...__asArr(base.name), ...__asArr(value)]` so
+      // the copy accumulates instead of overwriting (which `{ ...base, name:
+      // value }` would do). 2-arg form stays a plain replace.
+      let isAdd = $kfe.parametersValues->size() >= 3
+                  && $kfe.parametersValues->at(2)->cast(@AtomicValue).value->cast(@Boolean);
+      if ($isAdd,
+          | let baseSlot = tsAccess(tsCall(tsId('__pdo'), [$base]), $name);
+            tsEntry($name, tsArrayLit([tsSpread(tsCall(tsId('__asArr'), [$baseSlot])),
+                                       tsSpread(tsCall(tsId('__asArr'), [$value]))]));,
+          | tsEntry($name, $value));
    );
-   tsObject([tsSpreadEntry($base)]->concatenate($entries));
+   // Copies whose key values reference `~` use the construction-stack form
+   // (`^$x(owner = ~.~)`): copy `base`, push it, assign keys so `~` resolves
+   // to the copy / enclosing instances.
+   let assigns = $entries->map(e |
+      tsExprStmt(tsBinary(tsAccess(tsId('self'), $e.name), '=', $e.initializer))->cast(@meta::external::language::typescript::metamodel::Statement));
+   if ($keyExprs->containsParentRef(),
+      | tsCall(tsId('__copyCtx'), [$base, tsArrowBlock([tsParamNoType('self')], tsBlock($assigns))]),
+      | tsObject([tsSpreadEntry($base)]->concatenate($entries)));
 }
 
 function meta::external::language::typescript::translation::regexpLikeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1480,7 +1638,9 @@ function meta::external::language::typescript::translation::chunkCoder(args: Val
 function meta::external::language::typescript::translation::orElseCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 2, | 'orElseCoder expects 2 args');
-   tsNullishCoalesce(translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv));
+   // Pure orElse falls back on an EMPTY sequence (not on null/falsiness), so
+   // `[]`/empty -> default while a present '' or 0 is kept. `??` wouldn't.
+   tsCall(tsId('__orElse'), [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv)]);
 }
 
 // zip(a, b) -> a.map((x,i) => [x, b[i]]).slice(0, Math.min(a.length, b.length))
@@ -1581,21 +1741,9 @@ function meta::external::language::typescript::translation::elementToPathCoder(a
    translateExpression($args->at(0), $conv);
 }
 
-// value4Tag(taggedValueElement, tagName) -> empty string. Tag introspection
-// isn't translated; return '' so consumers don't crash on `.value`.
-function meta::external::language::typescript::translation::value4TagCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   tsStrLit('');
-}
-
 // list(values...) -> `{ values: [...args] }` matches Pure's List wrapper. Some
 // tests build a List from a sequence and access `.values` afterward, so
 // emitting a JS object with a `values` array keeps that read working.
-function meta::external::language::typescript::translation::listCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   let elems = $args->map(a | $a->translateExpression($conv));
-   tsObject([tsEntry('values', tsArrayLit($elems))]);
-}
 
 // Map ops: model Pure's Map<K, V> as a JS object whose keys are stringified.
 // newMap accepts either a single Pair, a sequence of Pairs, or empty —
@@ -1624,12 +1772,12 @@ function meta::external::language::typescript::translation::removeCoder(args: Va
 
 function meta::external::language::typescript::translation::keysCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   tsCall(tsAccess(tsId('Object'), 'keys'), [translateExpression($args->at(0), $conv)]);
+   tsCall(tsId('__mapKeys'), [translateExpression($args->at(0), $conv)]);
 }
 
 function meta::external::language::typescript::translation::valuesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   tsCall(tsAccess(tsId('Object'), 'values'), [translateExpression($args->at(0), $conv)]);
+   tsCall(tsId('__mapValues'), [translateExpression($args->at(0), $conv)]);
 }
 
 function meta::external::language::typescript::translation::getCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1656,10 +1804,6 @@ function meta::external::language::typescript::translation::parseDateCoder(args:
 // newClass — reflective class creation. Stubbed pass-through since JS has no
 // equivalent of a Pure Class object; tests that depend on this will still
 // fail downstream when they try to instantiate, but at least the call resolves.
-function meta::external::language::typescript::translation::newClassCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   tsObject([tsEntry('name', translateExpression($args->at(0), $conv))]);
-}
 
 // pair(first, second) -> `{ first, second }` matches Pure's Pair shape. Used
 // inside multi-if's [pair(|cond, |val), ...] form and elsewhere.
@@ -1890,24 +2034,6 @@ function meta::external::language::typescript::translation::letFunctionCoder(arg
    tsCall(tsArrowExpr([tsParamNoType($name)], tsId($name)), [$value]);
 }
 
-// isToOne(x) — Pure invariant assertion that x is single-valued; stub `true`.
-function meta::external::language::typescript::translation::isToOneCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   tsBoolLit(true);
-}
-
-// enumValues(enumeration) — runtime reflection that JS can't reproduce
-// without a registry; return [] as a safe stub.
-function meta::external::language::typescript::translation::enumValuesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   tsArrayLit([]);
-}
-
-// properties(class) — same as enumValues; return [].
-function meta::external::language::typescript::translation::propertiesStubCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   tsArrayLit([]);
-}
 
 // ----------------------------------------------------------------------------
 // Remaining-native coders.
@@ -1955,7 +2081,7 @@ function meta::external::language::typescript::translation::getIfAbsentPutWithKe
 function meta::external::language::typescript::translation::getMapStatsCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    tsObject([
-      tsEntry('size', tsAccess(tsCall(tsAccess(tsId('Object'), 'keys'),
+      tsEntry('size', tsAccess(tsCall(tsId('__mapKeys'),
                                        [translateExpression($args->at(0), $conv)]), 'length'))
    ]);
 }
@@ -1975,7 +2101,16 @@ function meta::external::language::typescript::translation::keyExpressionCoder(a
 // type anchor.
 function meta::external::language::typescript::translation::genericTypeHolderCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   translateExpression($args->at(0), $conv);
+   // genericTypeHolder(x) -> GenericTypeAndMultiplicityHolder<typeof x>. Emit a
+   // holder whose classifierGenericType is `{ type: GTMH, typeArguments:
+   // [genericType(x)] }`, so `holder->genericType().typeArguments[0].type`
+   // recovers x's type (the holder is consumed in JS — it isn't lifted).
+   let arg = translateExpression($args->at(0), $conv);
+   tsObject([tsEntry('classifierGenericType', tsObject([
+      tsEntry('type', tsCall(tsId('__pureResolve'),
+                             [tsStrLit('meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder')])),
+      tsEntry('typeArguments', tsArrayLit([tsCall(tsId('__genericType'), [$arg])]))
+   ]))]);
 }
 
 // parse(src) — runtime reflection over Pure source; emit a stub object.
@@ -1996,18 +2131,6 @@ function meta::external::language::typescript::translation::directoryTreeCoder(a
    tsArrayLit([]);
 }
 
-// newEnumeration(name, values) — runtime reflection stub; emit an object with
-// the name + values so downstream `.values` reads return something sensible.
-function meta::external::language::typescript::translation::newEnumerationCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   let nameExpr = if ($args->size() >= 1,
-      | translateExpression($args->at(0), $conv),
-      | tsStrLit(''));
-   let valuesExpr = if ($args->size() >= 2,
-      | translateExpression($args->at(1), $conv),
-      | tsArrayLit([]));
-   tsObject([tsEntry('name', $nameExpr), tsEntry('values', $valuesExpr)]);
-}
 
 // identityCoder — generic pass-through for metadata helpers
 // (useNodeAsScalar, useAsScalar, tagAs, castAsHint) where the JS runtime
@@ -2017,13 +2140,11 @@ function meta::external::language::typescript::translation::identityCoder(args: 
    translateExpression($args->at(0), $conv);
 }
 
-// openVariableValues(lambda) — returns an empty Map placeholder. JS arrow
-// functions don't carry the captured-variable metadata that Pure relies on,
-// so the introspection result is necessarily approximate; we emit `{}` so
-// downstream `.keys()`/`.get()` calls don't crash.
+// openVariableValues(lambda) -> Map<String, List<Any>> built from the open
+// variables captured on the wrapped arrow (see wrapLambdaWithAst / __lambda).
 function meta::external::language::typescript::translation::openVariableValuesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   tsObject([]);
+   tsCall(tsId('__openVariableValues'), [translateExpression($args->at(0), $conv)]);
 }
 
 function meta::external::language::typescript::translation::extractMatchArmLambda(
@@ -2071,11 +2192,11 @@ function meta::external::language::typescript::translation::translateAtomicValue
    if ($isDate && $a.value->toOne()->instanceOf(String),
       | let raw = $a.value->toOne()->cast(@String);
         let iso = if ($raw->startsWith('%'), | $raw->substring(1), | $raw);
-        ^meta::external::language::typescript::metamodel::NewExpression(
-            expression    = tsId('Date'),
-            arguments     = tsStrLit($iso),
-            typeArguments = []->cast(@meta::external::language::typescript::metamodel::TypeNode)
-        );,
+        // __pdate keeps a real JS Date (so arithmetic / getters work) but
+        // attaches the original literal so toString/toRepresentation can
+        // reproduce Pure's granularity (sub-second digit count, date-only vs
+        // datetime) and timezone-to-UTC conversion.
+        tsCall(tsId('__pdate'), [tsStrLit($iso)]);,
       | $a.value->translatePureValueToTs($conv)
    );
 }
@@ -2162,24 +2283,43 @@ function meta::external::language::typescript::translation::functionRefToArrowFr
 {
    let arity = $funcType.parameters->size();
    let argNames = range(0, $arity)->map(i | '__a' + $i->toString());
-   // Build synthetic VariableExpressions for the coder to consume.
-   let fakeArgs = $argNames->map(n |
-      ^meta::pure::metamodel::valuespecification::VariableExpression(
-         name = $n,
-         genericType = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
-         multiplicity = meta::pure::metamodel::multiplicity::PureOne
-      )
-   );
    // Resolve coder by short name (strip `_TypeSig` suffix).
    let funcName = if ($f->instanceOf(meta::pure::metamodel::PackageableElement),
       | $f->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->split('::')->last()->toOne(),
       | 'unknown');
    let shortName = $funcName->split('_')->at(0);
    let coder = $conv.functionCoders->get($shortName);
-   let body = if ($coder->isEmpty(),
-                  | tsId('undefined'),
-                  | $coder->toOne()->eval($fakeArgs->cast(@ValueSpecification), $conv));
-   tsArrowExpr($argNames->map(n | tsParamNoType($n)), $body);
+   let arrow = if ($coder->isNotEmpty(),
+      | // Native function with a coder: feed it synthetic `__aN`
+        // VariableExpressions so the coder renders its inline form.
+        let fakeArgs = $argNames->map(n |
+           ^meta::pure::metamodel::valuespecification::VariableExpression(
+              name = $n,
+              genericType = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
+              multiplicity = meta::pure::metamodel::multiplicity::PureOne));
+        tsArrowExpr($argNames->map(n | tsParamNoType($n)), $coder->toOne()->eval($fakeArgs->cast(@ValueSpecification), $conv));,
+      | // No coder. A user-defined function (e.g. a comparator passed by name
+        // to `removeDuplicates`/`contains`) — inline its body as an arrow,
+        // using the function's OWN parameter names so the translated body's
+        // `$a`/`$b` references resolve to the arrow params.
+        if ($f->instanceOf(meta::pure::metamodel::function::FunctionDefinition)
+             && $f->cast(@meta::pure::metamodel::function::FunctionDefinition<meta::pure::metamodel::type::Any>).expressionSequence->isNotEmpty(),
+           | let fd = $f->cast(@meta::pure::metamodel::function::FunctionDefinition<meta::pure::metamodel::type::Any>);
+             let params = $fd.parameters->map(p | tsParamNoType(safeJsName($p.name)));
+             if ($fd.expressionSequence->size() == 1,
+                | tsArrowExpr($params, translateExpression($fd.expressionSequence->toOne(), $conv)),
+                | tsArrowBlock($params, $fd.expressionSequence->buildTsFunctionBody($conv)));,
+           | // Truly unknown shape — no-arg arrow returning undefined.
+             tsArrowExpr($argNames->map(n | tsParamNoType($n)), tsId('undefined'))));
+   // Tag the arrow with the function's full path so `funcRef->toRepresentation()`
+   // can report it (`__lambda` stashes it as `__purePath`; the arrow stays
+   // callable for `funcRef->eval(...)`).
+   let fullPath = if ($f->instanceOf(meta::pure::metamodel::PackageableElement),
+      | $f->cast(@meta::pure::metamodel::PackageableElement)->elementToPath(),
+      | '');
+   if ($fullPath == '',
+      | $arrow,
+      | tsCall(tsId('__lambda'), [$arrow, tsStrLit($fullPath)]));
 }
 
 function meta::external::language::typescript::translation::classInstanceToObjectLiteral(v: Any[1]): Expression[1]
@@ -2204,15 +2344,14 @@ function meta::external::language::typescript::translation::classInstanceToObjec
    if ($v->instanceOf(meta::pure::metamodel::type::Enumeration),
       | encodePeRef($v),
    // Case 2: `v` is an enum VALUE (e.g. `LA_GeographicEntityType.CITY`).
-   // Resolve to `__ptr(enumPath).valueName` so the runtime fetches the
-   // canonical enum value via the resolver — same identity as if the value
-   // had been accessed directly in source. Two references to the same enum
-   // value end up `=== ` because the host hands back the canonical PDO.
+   // Reference the generated `const <ShortName>` member (`ShortName.VALUE`);
+   // buildSourceFile emits a self-describing const for every referenced
+   // Enumeration via collectReferencedEnumerations + translateEnumerationDecl.
    |if ($rawType->instanceOf(meta::pure::metamodel::type::Enumeration),
       | let enumValue = $v->cast(@meta::pure::metamodel::type::Enum);
-        let enumPath = $rawType->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
-        tsAccess(tsCall(tsId('__pureResolve'), [tsStrLit($enumPath)]),
-                 $enumValue.name->toOne());,
+        let shortName = safeJsName($rawType->cast(@meta::pure::metamodel::PackageableElement)
+                           ->elementToPath()->split('::')->last()->toOne());
+        tsAccess(tsId($shortName), $enumValue.name->toOne());,
    // Case 3: `v` is a regular Class object itself (e.g. `LA_Person` or
    // metamodel class like `PrimitiveType`). Emit as a `__ptr` so property
    // reads like `LA_Person.properties` lazily dereference via the resolver
@@ -2259,7 +2398,13 @@ function meta::external::language::typescript::translation::classInstanceToObjec
            let propValue = $p->eval($v);
            tsEntry($propName, $propValue->translatePureValuesToTs($conv));
         );
-        tsObject($entries);
+        // Self-describing classifier tag — same as newCoder emits for `^X(...)`
+        // literals — so the Java lift turns this object into a typed PDO of
+        // `$rawType` (not a bare LinkedHashMap). Without it, a captured class
+        // instance round-trips as an untyped Map and fails structural equality
+        // against the Pure-side PDO (find/filter/head/relationship tests).
+        let cgtEntry = tsEntry('classifierGenericType', $v->genericType()->genericTypeToCgtObject());
+        tsObject($entries->concatenate($cgtEntry));
    ))))));
 }
 
@@ -2353,7 +2498,21 @@ function meta::external::language::typescript::translation::buildSourceFile(
       []->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>));
    let udfDecls = $udfs->map(u | $u->translateUdf($conv));
 
-   tsSourceFile('translated.ts', $udfDecls->concatenate($fn));
+   // Generate a `const <EnumName> = { VALUE: {...}, ... }` declaration for
+   // each Enumeration whose values are referenced. Enum-value references
+   // (`EnumName.VALUE`) read these consts; the members are self-describing
+   // (name + classifierGenericType) so reflection — `type()`, `instanceOf`,
+   // `.name` — works on them. Enum *operations* (`enumValues`, `properties`)
+   // stay reflective UDFs/natives over the metaobject `__pureResolve(path)`.
+   // Walk the collected UDF bodies too, not just the entry body — an enum
+   // value referenced only inside a helper UDF (e.g. `AggregationKind.None`
+   // in `newEnumeration`) still needs its `const` emitted.
+   let enumScanExprs = $f.expressionSequence->concatenate($udfs->map(u | $u.expressionSequence));
+   let enums = $enumScanExprs->collectReferencedEnumerations(
+      []->cast(@meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>));
+   let enumDecls = $enums->map(e | $e->translateEnumerationDecl($conv));
+
+   tsSourceFile('translated.ts', $enumDecls->concatenate($udfDecls)->concatenate($fn));
 }
 
 // Walk an expression tree collecting every UserDefinedFunction reached via
@@ -2430,6 +2589,122 @@ function meta::external::language::typescript::translation::translateUdf(
       returnType     = $returnType,
       body           = $body
    );
+}
+
+// If `fe` is an enum-value access (`SomeEnumeration.VALUE`) — a property
+// access whose receiver is an Enumeration PE — return that Enumeration; else
+// empty. Enum values are modelled as `Enumeration.properties`, so `.CITY`
+// shows up as a property access on the enumeration metaobject rather than as
+// a standalone value.
+function meta::external::language::typescript::translation::enumValueAccess(
+   fe: FunctionExpression[1]
+): meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[0..1]
+{
+   $fe.parametersValues->filter(r | $r->instanceOf(AtomicValue))
+                       ->map(r | $r->cast(@AtomicValue).value)
+                       ->filter(v | $v->instanceOf(meta::pure::metamodel::type::Enumeration))
+                       ->map(v | $v->cast(@meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>))
+                       ->last();
+}
+
+// Walk an expression tree collecting every Enumeration whose values are
+// referenced (`CC_GeographicEntityType.CITY`). `seen` is the dedup set.
+// Mirrors `collectReferencedUdfs`.
+function meta::external::language::typescript::translation::collectReferencedEnumerations(
+   exprs: ValueSpecification[*],
+   seen: meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[*]
+): meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[*]
+{
+   $exprs->fold({e, acc | $e->collectReferencedEnumerationsOne($acc)}, $seen);
+}
+
+function meta::external::language::typescript::translation::collectReferencedEnumerationsOne(
+   vs: ValueSpecification[1],
+   seen: meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[*]
+): meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[*]
+{
+   $vs->match([
+      {fe: FunctionExpression[1] |
+         let fromArgs = $fe.parametersValues->collectReferencedEnumerations($seen);
+         $fe->enumValueAccess()->fold({en, acc | $acc->addEnum($en)}, $fromArgs);
+      },
+      {av: AtomicValue[1] |
+         $av.value->fold({v, acc | $v->collectEnumFromValue($acc)}, $seen);
+      },
+      {lf: meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1] |
+         $lf.expressionSequence->collectReferencedEnumerations($seen);
+      },
+      {col: meta::pure::metamodel::valuespecification::Collection[1] |
+         $col.values->collectReferencedEnumerations($seen);
+      },
+      other: ValueSpecification[1] | $seen
+   ]);
+}
+
+// Add an Enumeration to the dedup set if not already present.
+function meta::external::language::typescript::translation::addEnum(
+   seen: meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[*],
+   en: meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[1]
+): meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[*]
+{
+   if ($seen->contains($en), | $seen, | $seen->concatenate($en));
+}
+
+// Collect the Enumeration of a runtime value if it is an Enum instance;
+// recurse into LambdaFunction bodies; otherwise pass `seen` through.
+function meta::external::language::typescript::translation::collectEnumFromValue(
+   v: Any[1],
+   seen: meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[*]
+): meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[*]
+{
+   // Dispatch on the value's classifier (rawType), mirroring
+   // classInstanceToObjectLiteral: an enum VALUE is detected via its
+   // Enumeration classifier (not `instanceOf(Enum)`, which does not hold for
+   // every runtime enum representation). LambdaFunction is checked first so a
+   // lambda (whose classifier is itself a Class) is not mistaken for a PDO.
+   if ($v->instanceOf(meta::pure::metamodel::function::LambdaFunction),
+      | $v->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+           .expressionSequence->collectReferencedEnumerations($seen),
+      | let rawType = $v->genericType().type->toOne();
+        if ($rawType->instanceOf(meta::pure::metamodel::type::Enumeration),
+           | $seen->addEnum($rawType->cast(@meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>)),
+           // A captured user-class instance (PDO) inlined into the lambda
+           // (e.g. `^M_Address(type=M_GeographicEntityType.CITY)`): its enum
+           // value lives in a property slot, unreachable from the AST walk.
+           // Mirror classInstanceToObjectLiteral's Case-7 property walk so the
+           // enum const gets generated. Guard out metamodel PEs (handled by
+           // encodePeRef) to avoid recursing into the metamodel graph.
+           | if ($rawType->instanceOf(meta::pure::metamodel::type::Class)
+                  && !$v->instanceOf(meta::pure::metamodel::PackageableElement),
+                | $rawType->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>).properties
+                     ->fold({p, acc | $p->eval($v)->fold({pv, a | $pv->collectEnumFromValue($a)}, $acc)}, $seen),
+                | $seen));
+        );
+}
+
+// Emit `const <ShortName> = { VALUE: {name:'VALUE', classifierGenericType:
+// {type: __pureResolve('enumPath')}}, ... }` for an Enumeration. Members are
+// self-describing so `EnumName.VALUE`-shaped reads support reflection.
+function meta::external::language::typescript::translation::translateEnumerationDecl(
+   en: meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[1],
+   conv: Convention[1]
+): meta::external::language::typescript::metamodel::VariableStatement[1]
+{
+   let pe        = $en->cast(@meta::pure::metamodel::PackageableElement);
+   let shortName = safeJsName($pe->elementToPath()->split('::')->last()->toOne());
+   // Self-describing members: `{ name, classifierGenericType: { type } }` so an
+   // enum-value reference (`E.CITY`) carries its name AND enum type, supporting
+   // reflection — `$v.name`, `genericType()`, `instanceOf` — and distinguishing
+   // same-named values across different enumerations. (A bare string can do
+   // neither.)
+   let members   = $en.properties->map(p |
+      let vname = $p.name->toOne();
+      tsEntry($vname,
+              tsObject([tsEntry('name', tsStrLit($vname)),
+                        tsEntry('classifierGenericType',
+                                tsObject([tsEntry('type', encodePeRef($en))]))]));
+   );
+   tsConst($shortName, [], tsObject($members));
 }
 
 // Render a Pure expressionSequence as a TS Block. All but the last statement

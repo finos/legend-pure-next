@@ -56,6 +56,13 @@ native function meta::external::language::typescript::compile(
    source: String[1]
 ): Any[1];
 
+// Drains (and clears) the buffer of TS module sources that `compile` has been
+// handed since the last drain. The translation gallery calls this right after
+// running a test through the PCT adapter, so the displayed TypeScript is the
+// EXACT source that was compiled + executed — keeping the gallery 100% in sync
+// with the PCT run rather than re-deriving source through a separate path.
+native function meta::external::language::typescript::drainCompiledSources(): String[*];
+
 native function meta::external::language::typescript::execute(
    ctx: Any[1],
    fnName: String[1],
@@ -144,6 +151,56 @@ function <<test.Test>> meta::external::language::typescript::tests::testLambdaPd
                 }''';
    let result = $source->compile()->execute('execute', [], [], [], []);
    assertEquals(1, $result->size());
+}
+
+// Smoke-test: self-describing JS object with classifierGenericType pointing at
+// a Pure class via __pureResolve. Java toPureValue should detect the self-tag
+// and lift to a PDO of CC_Person rather than returning a raw Java Map.
+function <<test.Test>> meta::external::language::typescript::tests::testSelfDescribingLift(): Boolean[1]
+{
+   let source = '''
+                export function execute(): any {
+                    return {
+                        firstName: 'Pierre',
+                        lastName: 'Doe',
+                        classifierGenericType: {
+                            type: __pureResolve('meta::pure::functions::collection::tests::model::CO_Person')
+                        }
+                    };
+                }''';
+   let result = $source->compile()->execute('execute', [], [], [], []);
+   // If the lift worked, the result is a CO_Person PDO and we can read
+   // firstName as a String. If not, it's a Map and reading the property
+   // through Pure's typed slot will fail.
+   assertEquals('Pierre', $result->cast(@meta::pure::functions::collection::tests::model::CO_Person).firstName);
+}
+
+// Same self-describing pattern but returned as an ARRAY from JS, mirroring
+// what `.filter(...)` produces. Tests that lift-per-element works after
+// the JS array is marshaled element-by-element.
+function <<test.Test>> meta::external::language::typescript::tests::testSelfDescribingArrayLift(): Boolean[1]
+{
+   let source = '''
+                export function execute(): any[] {
+                    return [{
+                        firstName: 'A',
+                        lastName: 'X',
+                        classifierGenericType: {
+                            type: __pureResolve('meta::pure::functions::collection::tests::model::CO_Person')
+                        }
+                    }, {
+                        firstName: 'B',
+                        lastName: 'Y',
+                        classifierGenericType: {
+                            type: __pureResolve('meta::pure::functions::collection::tests::model::CO_Person')
+                        }
+                    }];
+                }''';
+   let result = $source->compile()->execute('execute', [], [], [], []);
+   let persons = $result->cast(@meta::pure::functions::collection::tests::model::CO_Person);
+   assertEquals(2, $persons->size());
+   assertEquals('A', $persons->at(0).firstName);
+   assertEquals('B', $persons->at(1).firstName);
 }
 
 // Compile failure — source has a deliberate parse error. ts.transpileModule

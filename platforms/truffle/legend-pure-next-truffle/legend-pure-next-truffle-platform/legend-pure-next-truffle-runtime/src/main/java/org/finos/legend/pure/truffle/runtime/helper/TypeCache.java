@@ -102,21 +102,28 @@ public final class TypeCache implements TruffleTypeCache
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public List<Object> linearization(Object type)
     {
-        return entryFor(type).linearization;
+        return entryFor(type, null).linearization;
     }
 
     @Override
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public Set<String> equalityKeyProperties(Object type)
     {
-        return entryFor(type).equalityKeys;
+        return entryFor(type, null).equalityKeys;
     }
 
     @Override
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public Set<Object> ancestors(Object type)
     {
-        return entryFor(type).ancestors;
+        return entryFor(type, null).ancestors;
+    }
+
+    @Override
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    public Set<Object> ancestors(Object type, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        return entryFor(type, resolver).ancestors;
     }
 
     @Override
@@ -171,7 +178,7 @@ public final class TypeCache implements TruffleTypeCache
         }
     }
 
-    private Entry entryFor(Object type)
+    private Entry entryFor(Object type, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (type == null)
         {
@@ -185,10 +192,10 @@ public final class TypeCache implements TruffleTypeCache
         {
             return hit;
         }
-        return computeAndCache(type);
+        return computeAndCache(type, resolver);
     }
 
-    private synchronized Entry computeAndCache(Object t)
+    private synchronized Entry computeAndCache(Object t, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         // Re-check inside the lock — another thread may have populated.
         Entry hit = entries.get(t);
@@ -196,21 +203,25 @@ public final class TypeCache implements TruffleTypeCache
         {
             return hit;
         }
-        Entry computed = compute(t);
+        Entry computed = compute(t, resolver);
         IdentityHashMap<Object, Entry> next = new IdentityHashMap<>(entries);
         next.put(t, computed);
         entries = next;
         return computed;
     }
 
-    private static Entry compute(Object type)
+    private static Entry compute(Object type, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolverOrNull)
     {
-        // Resolver is pulled per-compute rather than stored on TypeCache to
-        // keep TypeCache's no-arg construction in place. Linearization needs
-        // the resolver to dereference {@link
+        // Prefer the caller's resolver; only fall back to PureLanguage.get(null)
+        // when none was threaded in. The fallback is null on threads outside an
+        // active Pure execution (e.g. the GraalJS TypeScript bridge), so the
+        // resolver-aware ancestors(type, resolver) path must be used there.
+        // Linearization needs the resolver to dereference {@link
         // meta.pure.metamodel.pointer.TempCompilerPointer} subtypes that
         // compile-pure emits in {@code generalizations.general.type}.
-        var resolver = org.finos.legend.pure.truffle.PureLanguage.get(null).resolver();
+        var resolver = resolverOrNull != null
+                ? resolverOrNull
+                : org.finos.legend.pure.truffle.PureLanguage.get(null).resolver();
         List<Object> lin = new ArrayList<>();
         linearizeInto(type, lin, resolver);
         Set<String> keys = new LinkedHashSet<>();

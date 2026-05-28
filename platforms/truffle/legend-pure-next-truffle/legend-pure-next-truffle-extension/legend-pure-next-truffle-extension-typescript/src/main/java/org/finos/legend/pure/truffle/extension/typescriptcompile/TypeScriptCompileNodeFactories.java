@@ -36,5 +36,7 @@ public final class TypeScriptCompileNodeFactories implements TruffleNativesExten
                 (args, gt, mul, fe) -> new CompileNode(args[0]));
         registry.register("execute_Any_1__String_1__Any_MANY__GenericType_$0_1$__Multiplicity_$0_1$__Any_$0_1$__Any_MANY_",
                 (args, gt, mul, fe) -> new ExecuteNode(args[0], args[1], args[2], args[3], args[4], args[5]));
+        registry.register("drainCompiledSources__String_MANY_",
+                (args, gt, mul, fe) -> new DrainSourcesNode());
     }
 }

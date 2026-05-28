@@ -19,6 +19,7 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.proxy.ProxyObject;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -71,10 +72,40 @@ final class TypeScriptCompileNatives
      *  {@code __metadataRead} sees it during the call's lifetime. */
     private static final ThreadLocal<Object> INJECTED_GRAPH = new ThreadLocal<>();
 
+    /** Resolver captured at {@link #invoke} time. The {@code __metadataRead}
+     *  callbacks fire mid-{@code fn.execute()}, where
+     *  {@code PureLanguage.get(null)} can return null — so we snapshot the
+     *  resolver here (on the Pure execution thread, where it's reliably
+     *  available) and read it from the callbacks. */
+    private static final ThreadLocal<org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess> ACTIVE_RESOLVER =
+            new ThreadLocal<>();
+
+    /** Every TS module string handed to {@link #compile} is appended here so
+     *  the translation gallery can display the EXACT source that the PCT
+     *  adapter compiled and executed (rather than re-deriving it through a
+     *  divergent static-translation path). The list is drained per gallery
+     *  card via {@link #drainCapturedSources}; non-gallery callers simply let
+     *  it accumulate harmlessly (small strings, bounded by test count). */
+    private static final java.util.List<String> CAPTURED_SOURCES =
+            java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+
     private TypeScriptCompileNatives() {}
+
+    /** Snapshot the captured sources (in compile order) and clear the buffer.
+     *  Returned as a Pure {@code String[*]} sequence. */
+    static Object drainCapturedSources()
+    {
+        synchronized (CAPTURED_SOURCES)
+        {
+            Object[] out = CAPTURED_SOURCES.toArray();
+            CAPTURED_SOURCES.clear();
+            return new org.finos.legend.pure.truffle.types.ObjectSequence(out);
+        }
+    }
 
     static TypeScriptCompilationContext compile(String source)
     {
+        CAPTURED_SOURCES.add(source);
         synchronized (LOCK)
         {
             Context ctx = context();
@@ -99,14 +130,17 @@ final class TypeScriptCompileNatives
                 throw new RuntimeException("Export '" + fnName + "' is not a function (got "
                         + (fn == null ? "undefined" : fn) + ")");
             }
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver = currentResolver();
             INJECTED_GRAPH.set(graph);
+            ACTIVE_RESOLVER.set(resolver);
             try
             {
-                return toPureValue(fn.execute(args), currentResolver());
+                return toPureValue(fn.execute(args), resolver);
             }
             finally
             {
                 INJECTED_GRAPH.remove();
+                ACTIVE_RESOLVER.remove();
             }
         }
     }
@@ -150,13 +184,13 @@ final class TypeScriptCompileNatives
             // an in-JS PDB reader (standalone TS platform).
             c.getBindings("js").putMember("__metadataRead",
                     (java.util.function.BiFunction<Object, Object, Object>)
-                            (Object addr, Object prop) -> metadataRead(addr, prop, currentResolver()));
+                            (Object addr, Object prop) -> metadataRead(addr, prop, activeResolver()));
             c.getBindings("js").putMember("__metadataSubtypeOf",
                     (java.util.function.BiFunction<Object, Object, Object>)
-                            (Object sub, Object sup) -> metadataSubtypeOf(sub, sup, currentResolver()));
+                            (Object sub, Object sup) -> metadataSubtypeOf(sub, sup, activeResolver()));
             c.getBindings("js").putMember("__metadataInstanceOf",
                     (java.util.function.BiFunction<Object, Object, Object>)
-                            (Object valuePath, Object typePath) -> metadataInstanceOf(valuePath, typePath, currentResolver()));
+                            (Object valuePath, Object typePath) -> metadataInstanceOf(valuePath, typePath, activeResolver()));
             jsContext = c;
         }
         return jsContext;
@@ -165,6 +199,19 @@ final class TypeScriptCompileNatives
     private static org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess currentResolver()
     {
         return org.finos.legend.pure.truffle.PureLanguage.get(null).resolver();
+    }
+
+    /** Resolver snapshot for the active {@code invoke} call. Used by the
+     *  __metadata* callbacks, which fire on a thread/context where
+     *  {@code PureLanguage.get(null)} may be null. */
+    private static org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess activeResolver()
+    {
+        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess r = ACTIVE_RESOLVER.get();
+        if (r == null)
+        {
+            throw new RuntimeException("__metadata* called outside an active execute(...) — no resolver in scope");
+        }
+        return r;
     }
 
     /**
@@ -220,13 +267,44 @@ final class TypeScriptCompileNatives
     }
 
     /**
-     * {@code __metadataInstanceOf(valuePath, typePath)} — same walk as
-     * subtypeOf, expressed value-to-type for ergonomics.
+     * {@code __metadataInstanceOf(valuePath, typePath)} — does the value at
+     * {@code valuePath} have a runtime type that is a subtype of the type at
+     * {@code typePath}? Unlike a plain {@code subtypeOf(value, type)}, this
+     * does the classifier hop Pure's {@code instanceOf} native requires: read
+     * the value-element's classifier (its {@code classifierGenericType.type})
+     * and check THAT against {@code typePath}. So {@code CC_Person->instanceOf(Class)}
+     * is {@code subtypeOf(classifierOf(CC_Person)=Class, Class)=true}, not
+     * {@code subtypeOf(CC_Person, Class)=false}.
      */
     private static Object metadataInstanceOf(Object valuePathRaw, Object typePathRaw,
                                              org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        return metadataSubtypeOf(valuePathRaw, typePathRaw, resolver);
+        Object value = resolveAddress((String) valuePathRaw, resolver);
+        if (value == null) return false;
+        String classifierPath = classifierPathOf(value, resolver);
+        if (classifierPath == null) return false;
+        return metadataSubtypeOf(classifierPath, typePathRaw, resolver);
+    }
+
+    /** The path of the value's classifier, via {@code classifierGenericType.type}. */
+    private static String classifierPathOf(Object element,
+                                           org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        Object cgt = unwrapSingle(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(element, "classifierGenericType"));
+        if (cgt == null) return null;
+        Object type = unwrapSingle(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(cgt, "type"));
+        if (type == null) return null;
+        return org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(type, resolver);
+    }
+
+    /** Collapse a 1-element {@link PureSequence} to its element; pass scalars through. */
+    private static Object unwrapSingle(Object v)
+    {
+        if (v instanceof org.finos.legend.pure.truffle.types.PureSequence ps)
+        {
+            return ps.size() == 0 ? null : ps.getBoxed(0);
+        }
+        return v;
     }
 
     /**
@@ -268,13 +346,69 @@ final class TypeScriptCompileNatives
             return pe;
         }
         String subPath = address.substring(dollar + 1);
+        // Backwards-compat short-form for inline lambdas (positional walker).
+        // `lambda/<idx>` resolves the idx-th lambda; any trailing segments
+        // (e.g. `lambda/0/classifierGenericType/...`) are walked from there,
+        // so reflection can chain past the lambda PDO.
         if (subPath.startsWith("lambda/"))
         {
-            int idx = Integer.parseInt(subPath.substring("lambda/".length()));
-            return findLambdaByIndex(pe, idx);
+            String rest = subPath.substring("lambda/".length());
+            int slash = rest.indexOf('/');
+            String idxStr = slash < 0 ? rest : rest.substring(0, slash);
+            Object lambda = findLambdaByIndex(pe, Integer.parseInt(idxStr));
+            return slash < 0 ? lambda : walkSubPath(lambda, rest.substring(slash + 1));
         }
-        throw new RuntimeException("__metadataRead: sub-path not yet supported: '" + subPath
-                + "' (only `lambda/<idx>` for now)");
+        return walkSubPath(pe, subPath);
+    }
+
+    /**
+     * Walk a JSON-pointer-like sub-path from {@code root}. Segments are
+     * separated by {@code /}. Each segment is either:
+     * <ul>
+     *   <li>A digit string (e.g. {@code 0}) — index into the current
+     *       {@link org.finos.legend.pure.truffle.types.PureSequence}.</li>
+     *   <li>A {@code @TypeName} cast assertion — no-op for the walker
+     *       (consumer's responsibility to ensure the runtime class matches).</li>
+     *   <li>A property name — {@link
+     *       org.finos.legend.pure.truffle.runtime.dynobj.PureObj#read} on
+     *       the current node.</li>
+     * </ul>
+     */
+    private static Object walkSubPath(Object root, String subPath)
+    {
+        Object current = root;
+        for (String seg : subPath.split("/"))
+        {
+            if (seg.isEmpty()) continue;
+            if (seg.startsWith("@"))
+            {
+                // Cast assertion — pass through without action.
+                continue;
+            }
+            if (seg.chars().allMatch(Character::isDigit))
+            {
+                int idx = Integer.parseInt(seg);
+                if (current instanceof org.finos.legend.pure.truffle.types.PureSequence ps)
+                {
+                    if (idx < 0 || idx >= ps.size())
+                    {
+                        throw new RuntimeException("walkSubPath: index " + idx + " out of range (size "
+                                + ps.size() + ") in '" + subPath + "'");
+                    }
+                    current = ps.getBoxed(idx);
+                    continue;
+                }
+                throw new RuntimeException("walkSubPath: index segment '" + seg
+                        + "' but current node is not a sequence: " + current.getClass().getName());
+            }
+            current = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(current, seg);
+            if (current == null)
+            {
+                throw new RuntimeException("walkSubPath: property '" + seg
+                        + "' is null while walking '" + subPath + "'");
+            }
+        }
+        return current;
     }
 
     /**
@@ -308,7 +442,7 @@ final class TypeScriptCompileNatives
         if (val != null)
         {
             if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(val,
-                    "meta::pure::metamodel::function::LambdaFunction", currentResolver()))
+                    "meta::pure::metamodel::function::LambdaFunction", activeResolver()))
             {
                 out.add(val);
                 collectLambdasInOrder(val, out);
@@ -347,6 +481,8 @@ final class TypeScriptCompileNatives
         if (value == null) return null;
         if (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps)
         {
+            // Java Object[] — GraalJS treats it as a JS array (Array.isArray
+            // true, indexable), so __rewrapStubs maps over it natively.
             Object[] arr = new Object[ps.size()];
             for (int i = 0; i < ps.size(); i++)
             {
@@ -385,7 +521,10 @@ final class TypeScriptCompileNatives
                     : childAddr;
             java.util.Map<String, Object> stub = new java.util.HashMap<>();
             stub.put("__purePath", address);
-            return stub;
+            // ProxyObject so `stub.__purePath` reads as a JS member (a raw
+            // Java Map exposes entries via get(), not member access, so
+            // __rewrapStubs wouldn't detect it).
+            return ProxyObject.fromMap(stub);
         }
         // Unknown shape — return as-is and hope GraalJS interop handles it.
         return value;
@@ -502,6 +641,50 @@ final class TypeScriptCompileNatives
         }
         if (v.hasMembers())
         {
+            // Pure Map: the translator emits `{ __mapEntries: [[k, v], ...] }`
+            // (a JS-native entries list, so non-string keys survive). Lift to a
+            // MapImpl via plain member/array access — no JS Map / hash interop.
+            if (v.hasMember("__mapEntries"))
+            {
+                Value entries = v.getMember("__mapEntries");
+                org.finos.legend.pure.truffle.ast.natives.collection.MapImpl map =
+                        new org.finos.legend.pure.truffle.ast.natives.collection.MapImpl();
+                long count = entries.getArraySize();
+                for (long i = 0; i < count; i++)
+                {
+                    Value entry = entries.getArrayElement(i);
+                    map.put(toPureValue(entry.getArrayElement(0), resolver),
+                            toPureValue(entry.getArrayElement(1), resolver));
+                }
+                return map;
+            }
+            // Address-proxy (from __pureResolve): carries `__purePath`, a PE
+            // path or sub-PE address. Resolve via the address walker — NOT
+            // resolver.getElement, which only handles top-level PE paths and
+            // would return null for sub-addresses like `CC_Address$properties/0`.
+            // This is how reflected PDOs (class properties, generalizations,
+            // …) round-trip back to Pure as live PDOs.
+            if (v.hasMember("__purePath"))
+            {
+                Value addrVal = v.getMember("__purePath");
+                if (addrVal != null && addrVal.isString())
+                {
+                    return resolveAddress(addrVal.asString(), resolver);
+                }
+            }
+            // Date marker (`__pdate`): `__fmt` is the canonical Pure date string
+            // (UTC, granularity-preserved). Lift to a PureDate so it compares by
+            // value against Pure date literals (PureDate.equals is dateString-based).
+            if (v.hasMember("__fmt"))
+            {
+                Value fmtVal = v.getMember("__fmt");
+                if (fmtVal != null && fmtVal.isString())
+                {
+                    String ds = fmtVal.asString();
+                    String typeName = ds.indexOf('T') >= 0 ? "DateTime" : "StrictDate";
+                    return org.finos.legend.pure.truffle.types.PureDate.of(ds, typeName);
+                }
+            }
             // Class-ref shape: JS object with a `path` String member —
             // resolve via the metadata resolver. Keeps identity-stable
             // (e.g. `assertIs(Boolean, pathToElement('...::Boolean'))`).
@@ -510,7 +693,16 @@ final class TypeScriptCompileNatives
                 Value pathVal = v.getMember("path");
                 if (pathVal != null && pathVal.isString())
                 {
-                    Object pe = resolver.getElement(pathVal.asString());
+                    String path = pathVal.asString();
+                    Object pe = resolver.getElement(path);
+                    // Root package: `pathToElement('::')` / `('')` normalise to
+                    // an empty or `::` path. Mirror PathToElementNode — the root
+                    // is registered under "" (fall back to "::").
+                    if (pe == null && (path.isEmpty() || "::".equals(path)))
+                    {
+                        pe = resolver.getElement("");
+                        if (pe == null) pe = resolver.getElement("::");
+                    }
                     return pe != null ? pe : PureSequence.EMPTY;
                 }
             }
@@ -540,8 +732,9 @@ final class TypeScriptCompileNatives
     {
         if (!v.hasMember("classifierGenericType")) return null;
         Value cgt = v.getMember("classifierGenericType");
-        if (cgt == null || !cgt.hasMembers() || !cgt.hasMember("rawType")) return null;
-        Value rt = cgt.getMember("rawType");
+        // Self-tag uses `type` to mirror Pure's GenericTypeValue.type slot.
+        if (cgt == null || !cgt.hasMembers() || !cgt.hasMember("type")) return null;
+        Value rt = cgt.getMember("type");
         if (rt == null || !rt.hasMembers() || !rt.hasMember("path")) return null;
         Value pathVal = rt.getMember("path");
         if (pathVal == null || !pathVal.isString()) return null;

@@ -199,18 +199,29 @@ public final class EqualNode extends PureNode
             }
             return true;
         }
-        // Map comparison — deep equality by entries
-        if (a instanceof MapImpl ma
-                && b instanceof MapImpl mb)
+        // Map comparison — deep equality by entries. A Pure Map is a MapImpl;
+        // a translated TS map object round-trips through toPureValue as a plain
+        // java.util.Map (LinkedHashMap). Compare either-shape against a MapImpl
+        // by entries so a round-tripped map equals a Pure-built one. Guard on
+        // "at least one MapImpl" so we don't change plain-Map-vs-Map semantics.
+        if ((a instanceof MapImpl || b instanceof MapImpl)
+                && (a instanceof MapImpl || a instanceof java.util.Map)
+                && (b instanceof MapImpl || b instanceof java.util.Map))
         {
+            java.util.Map<Object, Object> ma = asEntryMap(a);
+            java.util.Map<Object, Object> mb = asEntryMap(b);
             if (ma.size() != mb.size())
             {
                 return false;
             }
-            for (var entry : ma.getMap().entrySet())
+            for (var entry : ma.entrySet())
             {
-                Object bVal = mb.get(entry.getKey());
-                if (!callPureEquals(entry.getValue(), bVal, resolver))
+                if (!mb.containsKey(entry.getKey()))
+                {
+                    return false;
+                }
+                if (!callPureEquals(normalizeForEquals(entry.getValue()),
+                        normalizeForEquals(mb.get(entry.getKey())), resolver))
                 {
                     return false;
                 }
@@ -349,6 +360,17 @@ public final class EqualNode extends PureNode
             return pathA != null && pathA.equals(pathB);
         }
         return false;
+    }
+
+    /** View a Pure Map (MapImpl) or a plain java.util.Map as an entry map for comparison. */
+    @SuppressWarnings("unchecked")
+    private static java.util.Map<Object, Object> asEntryMap(Object o)
+    {
+        if (o instanceof MapImpl m)
+        {
+            return m.getMap();
+        }
+        return (java.util.Map<Object, Object>) o;
     }
 
     /** Extract just the value name from an enum value string like "pkg::EnumType.VALUE" → "VALUE". */
