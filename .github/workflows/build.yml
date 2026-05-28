@@ -79,6 +79,12 @@ env:
   MAVEN_VERSION: '3.9.11'
   JUST_VERSION: '1.49.0'
   FLATC_VERSION: '25.2.10'
+  #   NODE_VERSION      ↔ node on PATH locally; the TS Truffle extension needs
+  #                       node + pnpm to fetch the tsc compiler (typescript.js)
+  #   PNPM_VERSION      ↔ `pnpm --version` locally; major must match
+  #                       platforms/typescript/pnpm-lock.yaml's lockfileVersion
+  NODE_VERSION: '22'
+  PNPM_VERSION: '9'
 
 on: [push, pull_request]
 
@@ -415,6 +421,27 @@ jobs:
         uses: extractions/setup-just@v4
         with:
           just-version: ${{ env.JUST_VERSION }}
+
+      # The TypeScript Truffle extension jar bundles typescript.js (the tsc
+      # compiler) as a classpath resource, copied from
+      # platforms/typescript/node_modules at maven process-resources time.
+      # node_modules must be populated before the reactor build below, or
+      # maven-resources-plugin silently skips the missing source dir, the jar
+      # ships without typescript.js, and language-typescript's compileAndExecute
+      # tests fail at runtime with "typescript.js not found on classpath".
+      - name: Set up Node
+        uses: actions/setup-node@v4.3.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install TypeScript compiler (provides typescript.js for the TS extension jar)
+        working-directory: platforms/typescript
+        run: pnpm install --frozen-lockfile
 
       - name: Download bootstrap artifacts
         uses: actions/download-artifact@v8

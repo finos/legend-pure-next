@@ -60,11 +60,11 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::runCompile
     $mismatches->map(r | println('  MISMATCH: ' + $r.path + ' — ' + $r.failure->toOne()));
 
     let passed = $total - $mismatches->size();
-    // Return the summary as the function's String[1] result — the CLI's
-    // `execute --function` prints the return value, so adding `println`
-    // here would duplicate the line. Per-file MISMATCH lines still need
-    // their own println (those are side effects, not the return value).
-    'Compiled printer corpus: ' + $passed->toString() + ' / ' + $total->toString() + ' byte-equal to source';
+    let summary = 'Compiled printer corpus: ' + $passed->toString() + ' / ' + $total->toString() + ' byte-equal to source';
+    // Throw on any mismatch so the CLI's exit code reflects corpus status —
+    // returning just the summary lets the bootstrap CLI swallow failures.
+    assert($mismatches->isEmpty(), $summary);
+    $summary;
 }
 
 Class <<test.TestDependency>> meta::pure::compiler::test::printer::CompiledPrinterCheckResult

@@ -59,10 +59,11 @@ function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests
     $mismatches->map(r | println('  MISMATCH: ' + $r.path + ' — ' + $r.failure->toOne()));
 
     let passed = $total - $mismatches->size();
-    // Return the summary as the function's String[1] result — the CLI's
-    // `execute --function` prints the return value, so adding `println`
-    // here would duplicate the line.
-    'Protocol printer corpus: ' + $passed->toString() + ' / ' + $total->toString() + ' byte-equal to source';
+    let summary = 'Protocol printer corpus: ' + $passed->toString() + ' / ' + $total->toString() + ' byte-equal to source';
+    // Throw on any mismatch so the CLI's exit code reflects corpus status —
+    // returning just the summary lets the bootstrap CLI swallow failures.
+    assert($mismatches->isEmpty(), $summary);
+    $summary;
 }
 
 // Discoverable test wrapper — picked up by `runTests over meta::pure::functions`

@@ -15,7 +15,7 @@
 import meta::pure::functions::asserts::*;
 import meta::pure::test::pct::*;
 
-native function meta::pure::functions::asserts::assert(condition:Boolean[1], messageFunction:Function<{->String[1]}>[1]):Boolean[1];
+native function <<functionType.SideEffectFunction>> meta::pure::functions::asserts::assert(condition:Boolean[1], messageFunction:Function<{->String[1]}>[1]):Boolean[1];
 
 
 function meta::pure::functions::asserts::assert(condition:Boolean[1]):Boolean[1]

@@ -317,33 +317,38 @@ public final class _Type
 
     /**
      * Check if a type is the top type (Any).
+     *
+     * <p>Pointer-aware via {@link _PackageableElement#simpleName}: a
+     * {@code TempCompilerPointer}'s inherited {@code _name} is unset
+     * (PointerAccessGuard throws), so resolve through the pointer's
+     * {@code _path} tail instead.</p>
      */
     public static boolean isTopType(Type type)
     {
-        if (type instanceof PackageableElement pe)
-        {
-            return "Any".equals(pe._name());
-        }
-        return false;
+        return type instanceof PackageableElement pe && "Any".equals(_PackageableElement.simpleName(pe));
     }
 
     /**
      * Check if a type is the bottom type (Nil).
      * Nil is a subtype of every type.
+     *
+     * <p>Pointer-aware via {@link _PackageableElement#simpleName}.</p>
      */
     public static boolean isBottomType(Type type)
     {
-        return type instanceof PackageableElement pe && "Nil".equals(pe._name());
+        return type instanceof PackageableElement pe && "Nil".equals(_PackageableElement.simpleName(pe));
     }
 
     /**
      * Check if a type is in the Function hierarchy (i.e. Function or a subtype
      * of Function like FunctionDefinition, LambdaFunction, etc.).
+     *
+     * <p>Pointer-aware via {@link _PackageableElement#simpleName}.</p>
      */
     public static boolean isFunctionType(Type type, MetadataAccess model)
     {
         return linearize(type, model).anySatisfy(t ->
-                t instanceof PackageableElement pe && "Function".equals(pe._name()));
+                t instanceof PackageableElement pe && "Function".equals(_PackageableElement.simpleName(pe)));
     }
 
     /**

@@ -18,18 +18,20 @@ import meta::external::language::typescript::translation::*;
 import meta::pure::translation::shared::*;
 
 // Truffle-runtime bridge: translation.pure produces a SourceFile; this file
-// serialises it, hands the source string to `compileAndExecute` (GraalJS-
-// backed transpile + eval + invoke from the typescript Truffle extension),
-// and surfaces the result for round-trip / PCT tests.
+// serialises it, runs it through `compile` (GraalJS-backed transpile + eval
+// from the typescript Truffle extension), then `execute`s the `execute`
+// export and surfaces the result for round-trip / PCT tests.
 
 function meta::external::language::typescript::translation::runViaTranslation(
    f: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
    args: Any[*]
 ): Any[*]
 {
+   // PE-backed root — addresses resolve via the resolver; no graph
+   // injection needed.
    let sf     = $f->translateFunction(defaultConvention());
    let source = $sf->serialize();
-   compileAndExecute($source, 'execute', $args);
+   $source->compile()->execute('execute', $args, [$f.returnGenericType], [$f.returnMultiplicity], []);
 }
 
 // PCT adapter — pluggable into any `<<PCT.test>>`. Takes the test's no-arg
@@ -47,10 +49,29 @@ function meta::external::language::typescript::translation::testAdapterForTransl
 ): X[o]
 {
    let lambda    = $f->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
-   let canonical = $lambda->meta::pure::translation::shared::makeCanonical();
-   let sf        = $canonical->translateFunctionDef(defaultConvention());
-   let source    = $sf->serialize();
-   compileAndExecute($source, 'execute', []);
+   // Inline open variables only — keep the rest of the lambda body untouched
+   // so the per-test gallery / PCT diffs stay readable. Partial-evaluation
+   // is opt-in via the explicit-modes overload elsewhere.
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
+                       [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
+   let conv      = conventionForRoot($canonical);
+   let sf        = $canonical->translateFunctionDef($conv);
+   // The TypeScript Truffle extension automatically prepends `runtime-lib.ts`
+   // (shipped as a classpath resource) to every source, so `__assert`,
+   // `__eq`, `__fold`, `__instanceOf`, ... are all in scope when the
+   // translator emits calls to them. No string-glue here.
+   //
+   // Metadata access — lambda PDOs, cross-PE type lookups — lives in the
+   // emitted source: the translator generates uniform
+   // `__pureResolve(address)` calls. For addresses targeting sub-nodes of
+   // the in-memory canonical (no PDB backing), we inject the canonical as
+   // the `graph` argument to execute; the Java host routes
+   // `__local::root$...` addresses to it during the call.
+   let source     = $sf->serialize();
+   let funcType   = $canonical.classifierGenericType.typeArguments
+                       ->at(0)->rawType()->toOne()
+                       ->cast(@meta::pure::metamodel::type::FunctionType);
+   $source->compile()->execute('execute', [], $funcType.returnType, $funcType.returnMultiplicity, [$canonical]);
 }
 
 // Convenience: run every `<<PCT.test>>` under `rootPackagePath` through the

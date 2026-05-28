@@ -217,7 +217,18 @@ public final class TypeCache implements TruffleTypeCache
         // Type IS-A SimplePropertyOwner in Pure (Class, Association, etc.) —
         // PureObj.read returns null for the absent slot when this isn't true,
         // and collectEqualityKeysInto gracefully no-ops on a null _properties.
-        collectEqualityKeysInto(type, keys, new LinkedHashSet<>(), 0, resolver);
+        //
+        // Pointer types are path-only stand-ins — `==` semantics for them is
+        // path equality, not user-property equality. There are no user
+        // equality keys to walk. Skip — otherwise `collectEqualityKeysInto`
+        // reads `.properties` on the pointer instance and trips the strict
+        // pointer guard (which correctly rejects user-data reads on
+        // pointers).
+        boolean isPointer = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.pointerPath(type) != null;
+        if (!isPointer)
+        {
+            collectEqualityKeysInto(type, keys, new LinkedHashSet<>(), 0, resolver);
+        }
         // Identity-keyed set of ancestors for O(1) subtypeOf check. We can't
         // use HashSet (Type's structural equals/hashCode recurse through
         // generalisations and blow the stack on cyclic shapes); identity is

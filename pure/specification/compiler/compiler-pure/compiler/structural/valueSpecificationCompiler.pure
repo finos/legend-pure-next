@@ -538,7 +538,12 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileCo
           let collMult = if($c.multiplicity->isEmpty(),
                             | ^CompilerNotSetMultiplicity(),
                             | $c.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity());
-          let collGenTypeR = if($c.genericType->isNotEmpty(),
+          // Only descend into compileGenericType when the slot is BOTH non-empty
+          // AND a GenericTypeValue subtype. CompilerNotSetGenericType (carried
+          // through by callers that don't yet know the type) is non-empty but
+          // NOT a GenericTypeValue — pass it through to downstream resolution.
+          let collGenTypeR = if($c.genericType->isNotEmpty()
+                                && $c.genericType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
               | $c.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctxAfterElems, '', []),
               | ^CompilerResult<GenericType>(value = ^CompilerNotSetGenericType(), context = $ctxAfterElems)
           );

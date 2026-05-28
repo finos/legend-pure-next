@@ -15,11 +15,10 @@
 package org.finos.legend.pure.m3.pointer;
 
 /**
- * Runtime guard for {@code TempCompilerPointer} subtypes: when
- * {@link #STRICT} is enabled, reading any non-pointer-native property on a
- * pointer instance throws — surfacing the bug where compile-pure produced
- * an unresolved pointer and a downstream consumer dereferenced into it as
- * if it were a real element.
+ * Runtime guard for {@code TempCompilerPointer} subtypes: reading any
+ * non-pointer-native property on a pointer instance throws — surfacing the
+ * bug where compile-pure produced an unresolved pointer and a downstream
+ * consumer dereferenced into it as if it were a real element.
  *
  * <p>"Native" here means properties declared on {@code TempCompilerPointer}
  * or one of its descendants (the pointer hierarchy): {@code path} on
@@ -27,16 +26,16 @@ package org.finos.legend.pure.m3.pointer;
  * and {@code QualifiedPropertyPointer}, etc. Properties inherited from a
  * non-pointer parent ({@code Property._name}, {@code Property._genericType}
  * and the like) are <em>not</em> native — they exist on a real Property
- * instance but are unset on the pointer wrapper. Strict mode throws on
- * those accesses, soft mode (default) returns the field's null/empty
- * default.</p>
+ * instance but are unset on the pointer wrapper. Reading those always
+ * throws, in every backend, in every build.</p>
  *
- * <p>Strict mode is enabled via the system property
- * {@code legend.pure.strictPointerAccess=true}, set automatically by
- * surefire for {@code mvn test} runs. Production CLI / IDE runs leave the
- * flag off — the JIT folds the {@code if (STRICT) throw} check away once
- * the static-final boolean is observed as false, so there's no hot-path
- * cost.</p>
+ * <p>The guard is unconditional by design: a toggle would let buggy code
+ * paths silently bypass it (which is exactly how the
+ * {@code test-pure-self-host} regression hid a class of compile-pure bugs
+ * until 2026-05-27). Any access that lands here is a real bug — fix at the
+ * producer (wrap the right pointer type at construction) or at the consumer
+ * (dereference via {@code PointerGraphResolver} / {@code derefTypeIfPointer}
+ * before reading).</p>
  *
  * <p>Generated impl classes (see {@code RdfJavaGenerator}) emit a
  * {@link #checkAccess} call at the top of every getter for an inherited
@@ -44,31 +43,37 @@ package org.finos.legend.pure.m3.pointer;
  */
 public final class PointerAccessGuard
 {
-    /**
-     * When {@code true}, accessing a non-pointer-native property on a
-     * {@code TempCompilerPointer} subtype throws. Set via system property
-     * {@code -Dlegend.pure.strictPointerAccess=true} (surefire sets this
-     * for {@code mvn test}).
-     */
-    public static final boolean STRICT = Boolean.getBoolean("legend.pure.strictPointerAccess");
-
     private PointerAccessGuard() {}
 
     /**
      * Called from generated pointer-impl getters for inherited properties.
-     * Throws when strict mode is on; no-op otherwise. The static-final
-     * {@link #STRICT} read is JIT-folded in production, so the call site
-     * is dead in non-strict runs.
+     * Throws unless the property is framework-required (currently only
+     * {@code classifierGenericType}, needed by every dispatch — match /
+     * genericType / subtypeOf — even on pointer instances). All other
+     * inherited reads on a pointer indicate a missing upstream deref.
      */
     public static void checkAccess(String pointerClass, String property)
     {
-        if (STRICT)
+        // Framework-required slots — dispatch + subtypeOf need to read these
+        // on every value, pointer included. Mirrors the Truffle whitelist in
+        // PureDynamicObject.isPointerNativeSlot.
+        //   - classifierGenericType: returns whatever the producer set (null
+        //     on bare to*Pointer() instances); downstream getRawValueType
+        //     falls back to Any.
+        //   - generalizations: returns empty on a bare pointer — the
+        //     semantically correct answer (a pointer instance has no real
+        //     ancestors at the Pure-data level; its metaclass hierarchy is
+        //     walked separately when the live target is reached). subtypeOf
+        //     on a pointer thus correctly returns false for non-trivial sup,
+        //     matching the pre-strict-guard behavior.
+        if ("classifierGenericType".equals(property) || "generalizations".equals(property))
         {
-            throw new IllegalStateException(
-                    "Inherited property '" + property + "' read on pointer '"
-                            + pointerClass
-                            + "' — pointer must be dereferenced before non-pointer-native fields are read."
-                            + " (See PointerAccessGuard for the strict-mode rationale.)");
+            return;
         }
+        throw new IllegalStateException(
+                "Inherited property '" + property + "' read on pointer '"
+                        + pointerClass
+                        + "' — pointer must be dereferenced before non-pointer-native fields are read."
+                        + " (See PointerAccessGuard for the rationale.)");
     }
 }

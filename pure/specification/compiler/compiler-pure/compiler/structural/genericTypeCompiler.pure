@@ -215,7 +215,13 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
     // Mirrors Java GenericTypeCompiler.java lines 99-117.
     let canonicalAnchor = $resultGT->match([
         gtv : GenericTypeValue[1] |
-            if($typeArgResult.values->isEmpty() && $mulArgs->isEmpty() && $typeVarValues->isEmpty() && $gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(PackageableElement) && $gtv.type->toOne()->cast(@PackageableElement).name->isNotEmpty(),
+            // Use {@code elementToPath} (pointer-aware) instead of reading
+            // `.name` directly — compileType wraps resolved leaf types as
+            // {@link TempCompilerPointer} (see line ~122), and reading `.name`
+            // on a pointer throws under the runtime's pointer-access guard.
+            // The path is the right identity key here anyway; canonicalAnchorFor
+            // itself derives its lookup key from `elementToPath`.
+            if($typeArgResult.values->isEmpty() && $mulArgs->isEmpty() && $typeVarValues->isEmpty() && $gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(PackageableElement) && $gtv.type->toOne()->cast(@PackageableElement)->meta::pure::functions::meta::elementToPath()->length() > 0,
                 | meta::pure::compiler::helper::genericType::canonicalAnchorFor($gtv.type->toOne(), [], [], [], $resultGT, $typeArgResult.context),
                 | []->cast(@GenericType)
             ),

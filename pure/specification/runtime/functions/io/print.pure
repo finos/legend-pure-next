@@ -21,9 +21,9 @@ import meta::pure::test::pct::*;
 //
 // `max` is the recursion-depth bound used when formatting nested objects;
 // current backends ignore it.
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::print(param:Any[*], max:Integer[1]):String[1];
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::io::print(param:Any[*], max:Integer[1]):String[1];
 
-function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::print(param:Any[*]):String[1]
+function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::io::print(param:Any[*]):String[1]
 {
     print($param, 1);
 }

@@ -91,6 +91,73 @@ test-pure-runtime-PCTs: build-tests _check-runtime-pdbs
         --function "meta::external::language::typescript::translation::runPCTTestsViaTranslator_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
 
+# Render the Pure -> TypeScript translation gallery: every PCT test in
+# `meta::pure::functions` printed side-by-side (Pure source on the left,
+# TS translation on the right). Writes shared/typescript-translation-gallery.html.
+#
+# pure-truffle prints the returned String to stdout verbatim, so a plain
+# redirect is enough.
+# Translate every PackageableElement under `root` (UDF, Class, Enumeration)
+# to one bundled TypeScript source file. The bundle contains TS interfaces
+# for Pure Classes, const-maps for Pure Enumerations, and `export function`
+# decls for Pure UDFs. Default root: `meta::pure::functions`.
+translate-pdb root="meta::pure::functions": build-tests _check-runtime-pdbs
+    @{{banner}} '[typescript-translation]' 'translate Pure PDB -> shared/typescript-translation-{{ replace(root, "::", "_") }}.ts'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
+        --pdb {{shared_out}}/typescript-translation.pdb \
+        --pdb {{shared_out}}/typescript-translation-tests.pdb \
+        --function "meta::external::language::typescript::translation::pdb::translatePdbToTs_String_1__String_1_" \
+        --args "{{root}}" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
+        | grep -v '^\[graal-tripwire\]' \
+        > {{shared_out}}/typescript-translation-{{ replace(root, "::", "_") }}.ts
+    @echo "wrote {{shared_out}}/typescript-translation-{{ replace(root, "::", "_") }}.ts ($(wc -c < {{shared_out}}/typescript-translation-{{ replace(root, "::", "_") }}.ts) bytes)"
+
+# Reflect the Pure metamodel graph under `root` as TypeScript data: emits
+# typed object literals (PClass, PEnumeration, PFunction) for every PE,
+# plus an `elements` array and `byPath` lookup map. Companion to
+# `translate-pdb` — that one emits RUNNABLE TS code; this one emits
+# READABLE TS data describing the Pure graph.
+reflect-graph root="meta::pure::functions": build-tests _check-runtime-pdbs
+    @{{banner}} '[typescript-translation]' 'reflect Pure graph -> shared/typescript-translation-graph-{{ replace(root, "::", "_") }}.ts'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
+        --pdb {{shared_out}}/typescript-translation.pdb \
+        --pdb {{shared_out}}/typescript-translation-tests.pdb \
+        --function "meta::external::language::typescript::translation::reflect::reflectGraphToTs_String_1__String_1_" \
+        --args "{{root}}" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
+        | grep -v '^\[graal-tripwire\]' \
+        > {{shared_out}}/typescript-translation-graph-{{ replace(root, "::", "_") }}.ts
+    @echo "wrote {{shared_out}}/typescript-translation-graph-{{ replace(root, "::", "_") }}.ts ($(wc -c < {{shared_out}}/typescript-translation-graph-{{ replace(root, "::", "_") }}.ts) bytes)"
+
+gallery: build-tests _check-runtime-pdbs
+    @{{banner}} '[typescript-translation]' 'render Pure -> TypeScript gallery -> shared/typescript-translation-gallery.html'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
+        --pdb {{shared_out}}/typescript-translation.pdb \
+        --pdb {{shared_out}}/typescript-translation-tests.pdb \
+        --function "meta::external::language::typescript::translation::gallery::renderGallery_String_1__String_1_" \
+        --args "meta::pure::functions" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
+        | grep -v '^\[graal-tripwire\]' \
+        | awk '/<!DOCTYPE/{p=1} p' \
+        > {{shared_out}}/typescript-translation-gallery.html
+    @echo "wrote {{shared_out}}/typescript-translation-gallery.html ($(wc -c < {{shared_out}}/typescript-translation-gallery.html) bytes)"
+
 # Internal: fail loudly if PDBs / pure-truffle aren't staged.
 _check-runtime-pdbs:
     #!/usr/bin/env bash

@@ -227,7 +227,43 @@ function meta::pure::functions::printer::protocol::printInfix(name: String[1], l
                  pair(| $name == 'and',              | '&&'),
                  pair(| $name == 'or',               | '||')],
                 | $name);
-    printValueSpec($lhs) + ' ' + $op + ' ' + printValueSpec($rhs);
+    printInfixOperand($lhs, $name, true) + ' ' + $op + ' ' + printInfixOperand($rhs, $name, false);
+}
+
+// MINIMAL-mode operator precedence. Higher value = binds tighter. Mirrors
+// PureLanguageSerializer.precedenceOf — keep the two in sync. Returns -1
+// for non-operator names so callers can short-circuit.
+function meta::pure::functions::printer::protocol::infixPrecedence(name: String[1]): Integer[1]
+{
+    if([pair(| $name == 'or',                                                                      | 1),
+        pair(| $name == 'and',                                                                     | 2),
+        pair(| $name == 'equal' || $name == 'notEqual',                                            | 3),
+        pair(| $name == 'lessThan' || $name == 'lessThanEqual'
+                || $name == 'greaterThan' || $name == 'greaterThanEqual',                          | 4),
+        pair(| $name == 'plus' || $name == 'minus',                                                | 5),
+        pair(| $name == 'times' || $name == 'divide',                                              | 6)],
+       | -1);
+}
+
+// MINIMAL-mode parenthesization for a binary operand. Left side: same or
+// higher precedence keeps no parens (left-associative). Right side: only
+// strictly-higher precedence keeps no parens — equal precedence on the
+// right would re-associate on re-parse (e.g. `9 / (18 / 6)` ≠ `9 / 18 / 6`).
+// Mirrors PureLanguageSerializer.possiblyAddParenthesisLeft/Right.
+function meta::pure::functions::printer::protocol::printInfixOperand(operand: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], outerName: String[1], isLeft: Boolean[1]): String[1]
+{
+    let rendered = printValueSpec($operand);
+    $operand->match([
+        fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+            if (isInfixOperator($fi.functionName) && $fi.parametersValues->size() == 2,
+                | let outerPrec = infixPrecedence($outerName);
+                  let innerPrec = infixPrecedence($fi.functionName);
+                  let keepBare = if ($isLeft, | $innerPrec >= $outerPrec, | $innerPrec > $outerPrec);
+                  if ($keepBare, | $rendered, | '(' + $rendered + ')');,
+                | $rendered
+            ),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | $rendered
+    ]);
 }
 
 // `copy(receiver, [keyExpression(...), ...])` → `^receiver(k=v, ...)`. Used

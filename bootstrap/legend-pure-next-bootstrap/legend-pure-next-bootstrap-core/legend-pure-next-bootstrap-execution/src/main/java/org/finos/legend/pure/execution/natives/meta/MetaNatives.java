@@ -1143,6 +1143,18 @@ public class MetaNatives
         {
             return;
         }
+        // Pointer-typed receiver carries no user constraints — `constraints`
+        // is declared on {@code ElementWithConstraints}, which only {@code
+        // Class<T>} and {@code PrimitiveType} extend. Enum / Enumeration /
+        // their pointers can't have constraints by the metamodel. More
+        // generally, a pointer is a stand-in: the live target will be
+        // validated when something actually casts to it via the canonical
+        // element. Skip — the alternative is reading `._generalizations()`
+        // on the pointer, which trips {@link PointerAccessGuard}.
+        if (type instanceof meta.pure.metamodel.pointer.TempCompilerPointer)
+        {
+            return;
+        }
         validateConstraintsOnType(type, targetGT, value, eval, resolver);
         if (type._generalizations() != null)
         {
@@ -1644,6 +1656,19 @@ public class MetaNatives
         {
             return;
         }
+        // Compile-pure pass-1 pattern: proposedType is a {@link TempCompilerPointer}
+        // whose target is being built right now and isn't yet in the elementMap
+        // (e.g. {@code buildEnumerationSkeleton} wires an enum value's classifier
+        // as a pointer to the enum it's about to register). The pointer carries
+        // the path the producer intends; the post-processor canonicalises it at
+        // module construction. Accept — a pointer is compile-pure-internal, not
+        // a user-supplied raw type swap. Must run before the generalization
+        // walk: pointers carry only `path`, so reading `._generalizations()`
+        // on one trips {@link PointerAccessGuard}.
+        if (proposedType instanceof meta.pure.metamodel.pointer.TempCompilerPointer)
+        {
+            return;
+        }
         // Allow proposed to be a *subtype* of expected — covers the enum-value
         // pattern where {@code ^Enum(...)} is intentionally re-classified as a
         // specific user enumeration. Walks generalizations directly; safer than
@@ -1651,17 +1676,6 @@ public class MetaNatives
         // the cache yet. Mirrors {@code NewWithKeysNode.isSubtypeViaGeneralizations}
         // on the Truffle side.
         if (expected != null && proposedType != null && isSubtypeViaGeneralizations(proposedType, expected))
-        {
-            return;
-        }
-        // Compile-pure pass-1 pattern: proposedType is a {@link TempCompilerPointer}
-        // whose target is being built right now and isn't yet in the elementMap
-        // (e.g. {@code buildEnumerationSkeleton} wires an enum value's classifier
-        // as a pointer to the enum it's about to register). The pointer carries
-        // the path the producer intends; the post-processor canonicalises it at
-        // module construction. Accept — a pointer is compile-pure-internal, not
-        // a user-supplied raw type swap.
-        if (proposedType instanceof meta.pure.metamodel.pointer.TempCompilerPointer)
         {
             return;
         }

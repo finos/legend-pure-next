@@ -15,7 +15,7 @@
 import meta::pure::functions::asserts::*;
 import meta::pure::test::pct::*;
 
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::asserts::assertError(f:Function<{->Any[*]}>[1], message:String[1], line:Integer[0..1], column:Integer[0..1]):Boolean[1];
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::asserts::assertError(f:Function<{->Any[*]}>[1], message:String[1], line:Integer[0..1], column:Integer[0..1]):Boolean[1];
 
 function <<PCT.function, PCT.platformOnly>> meta::pure::functions::asserts::assertError(f:Function<{->Any[*]}>[1], message:String[1]):Boolean[1]
 {

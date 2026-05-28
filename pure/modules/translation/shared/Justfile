@@ -21,6 +21,7 @@ shared_root    := source_directory()
 repo_root      := shared_root / ".." / ".." / ".." / ".."
 shared_out     := repo_root / "shared"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
 
 verbose := ""
 err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
@@ -51,6 +52,22 @@ build-tests:
         --source {{shared_root}} \
         --output-dir {{shared_out}} \
         --tests split {{err_filter}}
+
+# Run the canonical_tests.pure suite via Truffle. These tests exercise the
+# decompile + makeCanonical pipeline; bootstrap doesn't register the same
+# natives surface so they're effectively Truffle-only (see comment at top
+# of canonical_tests.pure).
+test: build-tests
+    @{{banner}} '[translation-shared]' 'runTests meta::pure::translation::shared::tests (Truffle)'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
+        --pdb {{shared_out}}/translation-shared-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::pure::translation::shared::tests" {{err_filter}}
 
 clean:
     @{{banner}} '[translation-shared clean]' 'remove shared/translation-shared.pdb + translation-shared-tests.pdb'

@@ -24,5 +24,5 @@ import meta::pure::test::pct::*;
 // test body so individual tests can't pollute the runner's progress UI.
 // The suppression is thread-local and only active for the duration of the
 // closure — surrounding code (progress prints, prompts) is unaffected.
-native function <<PCT.function, PCT.platformOnly>>
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>>
     meta::pure::functions::io::withSilencedPrint<T|m>(body:Function<{->T[m]}>[1]):T[m];

@@ -242,7 +242,13 @@ public class TruffleCompileToPdbTest
             }
             catch (Exception e)
             {
-                issues.add("truffle compile threw: " + e.getClass().getSimpleName() + " " + e.getMessage());
+                // Include the Pure-level frames — Truffle attaches them as
+                // "Suppressed: Attached Guest Language Frames" and
+                // PureStackFormatter turns them into readable `foo.pure:NcM`
+                // lines. Without this the failure surface is just the Java
+                // exception class + message; the Pure callsite is lost.
+                issues.add("truffle compile threw: " + e.getClass().getSimpleName() + " " + e.getMessage()
+                        + org.finos.legend.pure.truffle.runtime.PureStackFormatter.format(e));
             }
             if (result == null && issues.stream().noneMatch(s -> s.startsWith("truffle compile threw")))
             {

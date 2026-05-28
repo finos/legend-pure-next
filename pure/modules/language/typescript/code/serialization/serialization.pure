@@ -430,17 +430,17 @@ function meta::external::language::typescript::serialization::serializeExpressio
       t:    ThisExpression[1]            | 'this',
       su:   SuperExpression[1]           | 'super',
       p:    PropertyAccessExpression[1]  | $p.expression->serializeExpression() + if($p.isOptional == true, | '?.', | '.') + $p.name,
-      c:    CallExpression[1]            | $c.expression->serializeExpression() + if($c.isOptional == true, | '?.', | '') + $c.typeArguments->serializeTypeArgs() + '(' + $c.arguments->map(a | $a->serializeExpression())->joinStrings(', ') + ')',
+      c:    CallExpression[1]            | $c.expression->serializeCallee() + if($c.isOptional == true, | '?.', | '') + $c.typeArguments->serializeTypeArgs() + '(' + $c.arguments->map(a | $a->serializeExpression())->joinStrings(', ') + ')',
       n:    NewExpression[1]             | 'new ' + $n.expression->serializeExpression() + $n.typeArguments->serializeTypeArgs() + '(' + $n.arguments->map(a | $a->serializeExpression())->joinStrings(', ') + ')',
-      b:    BinaryExpression[1]          | $b.left->serializeExpression() + ' ' + $b.operatorToken + ' ' + $b.right->serializeExpression(),
+      b:    BinaryExpression[1]          | $b.left->serializeBinaryOperand() + ' ' + $b.operatorToken + ' ' + $b.right->serializeBinaryOperand(),
       ce:   ConditionalExpression[1]     | $ce.condition->serializeExpression() + ' ? ' + $ce.whenTrue->serializeExpression() + ' : ' + $ce.whenFalse->serializeExpression(),
       sp:   SpreadElement[1]             | '...' + $sp.expression->serializeExpression(),
-      pre:  PrefixUnaryExpression[1]     | $pre.operator + $pre.operand->serializeExpression(),
+      pre:  PrefixUnaryExpression[1]     | $pre.operator + $pre.operand->serializePrefixOperand(),
       post: PostfixUnaryExpression[1]    | $post.operand->serializeExpression() + $post.operator,
       af:   ArrowFunction[1]             | $af->serializeArrow(),
       ol:   ObjectLiteralExpression[1]   | if($ol.properties->isEmpty(), | '{}', | '{ ' + $ol.properties->map(prop | $prop->serializeObjectLiteralElement())->joinStrings(', ') + ' }'),
       al:   ArrayLiteralExpression[1]    | '[' + $al.elements->map(x | $x->serializeExpression())->joinStrings(', ') + ']',
-      str:  StringLiteral[1]             | '\'' + $str.text + '\'',
+      str:  StringLiteral[1]             | '\'' + $str.text->escapeJsString() + '\'',
       num:  NumericLiteral[1]            | $num.text,
       bl:   BooleanLiteral[1]            | if($bl.value, | 'true', | 'false'),
       nl:   NullLiteral[1]               | 'null',
@@ -475,6 +475,71 @@ function meta::external::language::typescript::serialization::serializePropAssig
 {
    let key = if($pa.computed == true, | '[' + $pa.name + ']', | $pa.name);
    $key + ': ' + $pa.initializer->serializeExpression();
+}
+
+// Operand serialization for prefix-unary operators (`!`, `-`, `+`, `~`, ...).
+// Compound operands (binary, ternary, as/satisfies) bind less tightly than
+// the unary prefix in JS, so we MUST parenthesize them to preserve intent.
+// `!x === y` parses as `(!x) === y` (wrong); we want `!(x === y)` for an
+// expression like `!isEmpty(x)`.
+function meta::external::language::typescript::serialization::serializePrefixOperand(e: Expression[1]): String[1]
+{
+   $e->match([
+      b:    BinaryExpression[1]      | '(' + $b->serializeExpression() + ')',
+      ce:   ConditionalExpression[1] | '(' + $ce->serializeExpression() + ')',
+      asx:  AsExpression[1]          | '(' + $asx->serializeExpression() + ')',
+      sat:  SatisfiesExpression[1]   | '(' + $sat->serializeExpression() + ')',
+      other: Expression[1]           | $other->serializeExpression()
+   ]);
+}
+
+// Binary-operand position: wrap forms that bind looser than the surrounding
+// binary, otherwise the rendered text reparses with different grouping.
+// Concrete trap: a `<` between `compare(...)` (which we emit as a ternary)
+// and `0` rendered as `a < b ? -1 : ... < 0` rebinds the rightmost `<`
+// into the ternary's else-branch, turning a Boolean result into a Number.
+// Arrow functions in operand position are equally hazardous and always
+// require parens.
+function meta::external::language::typescript::serialization::serializeBinaryOperand(e: Expression[1]): String[1]
+{
+   $e->match([
+      ce:  ConditionalExpression[1]  | '(' + $ce->serializeExpression() + ')',
+      af:  ArrowFunction[1]          | '(' + $af->serializeExpression() + ')',
+      asx: AsExpression[1]           | '(' + $asx->serializeExpression() + ')',
+      sat: SatisfiesExpression[1]    | '(' + $sat->serializeExpression() + ')',
+      other: Expression[1]           | $other->serializeExpression()
+   ]);
+}
+
+// Escape a Pure string for inclusion in a TS single-quoted string literal.
+// Order matters: backslash first (otherwise later replacements re-introduce
+// unescaped backslashes via their own escape sequences).
+function meta::external::language::typescript::serialization::escapeJsString(s: String[1]): String[1]
+{
+   $s->replace('\\', '\\\\')
+     ->replace('\'', '\\\'')
+     ->replace('\n', '\\n')
+     ->replace('\r', '\\r')
+     ->replace('\t', '\\t');
+}
+
+// Callee position needs parens around forms whose unparenthesized rendering
+// would either reparse as part of the previous token or change precedence:
+//   - `() => 'x'()`  : without parens, parsed as the arrow returning the
+//                       result of calling `'x'`, not the result of calling
+//                       the arrow.
+//   - `(a ? f : g)()`: ternary needs grouping or `f()` is invoked unconditionally.
+// Identifiers, property accesses, and other call expressions don't need wrapping.
+function meta::external::language::typescript::serialization::serializeCallee(e: Expression[1]): String[1]
+{
+   $e->match([
+      af:  ArrowFunction[1]          | '(' + $af->serializeExpression() + ')',
+      ce:  ConditionalExpression[1]  | '(' + $ce->serializeExpression() + ')',
+      b:   BinaryExpression[1]       | '(' + $b->serializeExpression() + ')',
+      asx: AsExpression[1]           | '(' + $asx->serializeExpression() + ')',
+      sat: SatisfiesExpression[1]    | '(' + $sat->serializeExpression() + ')',
+      other: Expression[1]           | $other->serializeExpression()
+   ]);
 }
 
 function meta::external::language::typescript::serialization::serializeObjectLiteralElement(e: ObjectLiteralElement[1]): String[1]

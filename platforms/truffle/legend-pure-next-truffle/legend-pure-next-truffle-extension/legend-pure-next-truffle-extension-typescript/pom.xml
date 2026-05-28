@@ -108,8 +108,9 @@
                 </configuration>
             </plugin>
             <!-- Copies `typescript.js` from platforms/typescript/node_modules
-                 into target/classes so it ships inside the extension jar as a
-                 classpath resource. Requires that `pnpm install` has run in
+                 and `runtime-lib.ts` from pure/modules/translation/typescript/code
+                 into target/classes so they ship inside the extension jar as
+                 classpath resources. Requires that `pnpm install` has run in
                  platforms/typescript first; fail loudly if not. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -129,6 +130,12 @@
                                     <directory>${project.basedir}/../../../../typescript/node_modules/typescript/lib</directory>
                                     <includes>
                                         <include>typescript.js</include>
+                                    </includes>
+                                </resource>
+                                <resource>
+                                    <directory>${project.basedir}/../../../../../pure/modules/translation/typescript/code</directory>
+                                    <includes>
+                                        <include>runtime-lib.ts</include>
                                     </includes>
                                 </resource>
                             </resources>

@@ -13,36 +13,70 @@
 // limitations under the License.
 
 import meta::external::language::typescript::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::multiplicity::*;
 
 // ----------------------------------------------------------------------------
-// Truffle-only: transpile a TypeScript source string via the official
-// `typescript.js` compiler (loaded into a GraalJS polyglot context), evaluate
-// the resulting JavaScript as a CommonJS module, and invoke a named exported
-// function on it. Implementation lives in
-// `legend-pure-next-truffle-extension-typescript`'s `TypeScriptCompileNatives`.
+// Truffle-only TypeScript runtime bridge. Implementation lives in
+// `legend-pure-next-truffle-extension-typescript`'s
+// `TypeScriptCompileNatives`. Two natives, split by phase:
 //
-// `args` are passed positionally to the function. Scalars map across the
-// JS↔Pure boundary directly (Long, Double, Boolean, String). null/undefined
-// becomes the empty Pure sequence.
+//   compile(source)                                           → ctx
+//   execute(ctx, fnName, args, pureReturnType, pureMultiplicity) → Any[*]
 //
-// Returns `Any[*]` so callers in generic contexts (e.g. PCT adapters typed
-// `<X|o>(...):X[o]`) can return this value directly — Pure widens `Any[*]`
-// to the caller's `X[o]` at the call site, same pattern as the engine's
-// relational PCT adapter.
+// `compile` runs the official `typescript.js` compiler (loaded into a
+// long-lived GraalJS context) on the source, then evaluates the resulting
+// JavaScript as a CommonJS module. The returned `ctx` is opaque — a JVM-side
+// handle wrapping the evaluated module's `exports`. Pass it from `compile`
+// straight into `execute` without inspecting.
+//
+// `execute` looks up `fnName` on the captured module's exports and invokes
+// it with `args` (passed positionally). Scalars map across the JS↔Pure
+// boundary directly (Long, Double, Boolean, String); null/undefined becomes
+// the empty Pure sequence. The return is `Any[*]` so callers in generic
+// contexts (e.g. PCT adapters typed `<X|o>(...):X[o]`) can return this
+// value directly — Pure widens `Any[*]` to the caller's `X[o]` at the call
+// site.
+//
+// `pureReturnType` / `pureMultiplicity` (both optional) tell the native how
+// to map the JS return value back into Pure shape: a Class-typed return
+// gets its JS objects lifted into PDOs of that class; multiplicity guides
+// the empty/single/many sequence wrapping. Omit both for hand-written-TS
+// where the JS already returns scalars (no Pure-shape coercion needed).
+//
+// Metadata access (lambda PDOs, type lookups, etc.) is embedded in the
+// emitted TypeScript by the translator — calls to a globally-scoped
+// `__pureResolve(path)` helper that the native sets up once on the GraalJS
+// context. The translator owns the strategy; the native is just a
+// transpile-and-eval pipe plus a resolver bridge.
 // ----------------------------------------------------------------------------
 
-native function meta::external::language::typescript::compileAndExecute(
-   source: String[1],
+native function meta::external::language::typescript::compile(
+   source: String[1]
+): Any[1];
+
+native function meta::external::language::typescript::execute(
+   ctx: Any[1],
    fnName: String[1],
-   args: Any[*]
+   args: Any[*],
+   pureReturnType: GenericType[0..1],
+   pureMultiplicity: Multiplicity[0..1],
+   // Optional in-memory graph injected for reflection lookups during this
+   // execute call. The translator generates uniform `__pureResolve(address)`
+   // calls; for addresses targeting nodes that don't live in any loaded
+   // PDB (e.g., a canonical lambda built in memory by a test adapter),
+   // those reads route to this graph instead. Cleaned up after execute
+   // returns — same lifetime as the call.
+   graph: meta::pure::metamodel::type::Any[0..1]
 ): Any[*];
 
 // ----------------------------------------------------------------------------
-// Tests — exercise the native directly with hand-written TS strings, so
-// failures point at the bridge rather than at any code-generator on top.
+// Tests — exercise the native pair directly with hand-written TS strings,
+// so failures point at the bridge rather than at any code-generator on top.
 //
 // Truffle-only: these will fail when run on the bootstrap backend (the
-// native is not registered there).
+// natives are not registered there).
 // ----------------------------------------------------------------------------
 
 function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteIntegerAdd(): Boolean[1]
@@ -52,7 +86,7 @@ function <<test.Test>> meta::external::language::typescript::tests::testCompileA
                 {
                     return a + b;
                 }''';
-   assertEquals(7, compileAndExecute($source, 'execute', [3, 4]));
+   assertEquals(7, $source->compile()->execute('execute', [3, 4], [], [], []));
 }
 
 function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteDoubleDivide(): Boolean[1]
@@ -62,7 +96,7 @@ function <<test.Test>> meta::external::language::typescript::tests::testCompileA
                 {
                     return a / b;
                 }''';
-   assertEquals(2.5, compileAndExecute($source, 'execute', [10.0, 4.0]));
+   assertEquals(2.5, $source->compile()->execute('execute', [10.0, 4.0], [], [], []));
 }
 
 function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteBooleanReturn(): Boolean[1]
@@ -72,8 +106,9 @@ function <<test.Test>> meta::external::language::typescript::tests::testCompileA
                 {
                     return n > 0;
                 }''';
-   assertEquals(true,  compileAndExecute($source, 'execute', [5]));
-   assertEquals(false, compileAndExecute($source, 'execute', [-3]));
+   let ctx = $source->compile();
+   assertEquals(true,  $ctx->execute('execute', [5], [], [], []));
+   assertEquals(false, $ctx->execute('execute', [-3], [], [], []));
 }
 
 function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteStringReturn(): Boolean[1]
@@ -83,7 +118,7 @@ function <<test.Test>> meta::external::language::typescript::tests::testCompileA
                 {
                     return 'hello, ' + name;
                 }''';
-   assertEquals('hello, world', compileAndExecute($source, 'execute', ['world']));
+   assertEquals('hello, world', $source->compile()->execute('execute', ['world'], [], [], []));
 }
 
 function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteZeroArgs(): Boolean[1]
@@ -93,7 +128,22 @@ function <<test.Test>> meta::external::language::typescript::tests::testCompileA
                 {
                     return 42;
                 }''';
-   assertEquals(42, compileAndExecute($source, 'execute', []));
+   assertEquals(42, $source->compile()->execute('execute', [], [], [], []));
+}
+
+// Smoke-test: __lambda + __pdo wired through a real filter in JS.
+// Mirrors what the translator emits for a Pure `.filter(p | $p.name == 'a')`
+// without any of the translator's complexity.
+function <<test.Test>> meta::external::language::typescript::tests::testLambdaPdoFilter(): Boolean[1]
+{
+   let source = '''
+                export function execute(): any[] {
+                    return [{name: 'a'}, {name: 'b'}].filter(
+                        __lambda((p: any) => __pdo(p).name === 'a', '__local::root$lambda/0')
+                    );
+                }''';
+   let result = $source->compile()->execute('execute', [], [], [], []);
+   assertEquals(1, $result->size());
 }
 
 // Compile failure — source has a deliberate parse error. ts.transpileModule
@@ -108,7 +158,7 @@ function <<test.Test>> meta::external::language::typescript::tests::testCompileA
                        return 1;
                    }''';
    assertError(
-      | compileAndExecute($badSource, 'execute', []),
+      | $badSource->compile()->execute('execute', [], [], [], []),
       'TypeScript compilation failed'
    );
 }

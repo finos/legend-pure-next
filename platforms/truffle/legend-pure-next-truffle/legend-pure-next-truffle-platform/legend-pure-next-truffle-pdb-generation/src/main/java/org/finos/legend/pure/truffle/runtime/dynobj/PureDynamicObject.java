@@ -98,6 +98,29 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
      */
     public Object readSlot(int slotIdx)
     {
+        // Pointer-access contract (see feature_pointerAccess.pure). Mirror
+        // the readProperty check here because PropertyReadNode's bound-slot
+        // fast path (compile-time-resolved slot index) calls readSlot
+        // directly, bypassing readProperty. Matches the bootstrap
+        // {@code PointerAccessGuard} rule: reading anything on a pointer
+        // except its pointer-native slots ({@code path} on every pointer,
+        // {@code element} on PropertyPointer/EnumPointer/TagPointer/…) means
+        // a consumer skipped upstream resolution — throw.
+        if (classInfo.purePath != null
+                && classInfo.purePath.startsWith("meta::pure::metamodel::pointer::"))
+        {
+            String[] names = classInfo.nameBySlot();
+            if (slotIdx < names.length)
+            {
+                String slotName = names[slotIdx];
+                if (!isPointerNativeSlot(slotName))
+                {
+                    throw new IllegalStateException(
+                            "Unresolved pointer access: " + classInfo.purePath + "." + slotName
+                                    + " — dereference upstream via PointerGraphResolver or derefTypeIfPointer");
+                }
+            }
+        }
         if (slotIdx >= slots.length)
         {
             // Two cases collapse here:
@@ -150,12 +173,50 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
     @Override
     public Object readProperty(String name)
     {
+        // Pointer-access contract (see feature_pointerAccess.pure) — see
+        // readSlot for the rationale and pointer-native whitelist.
+        if (classInfo.purePath != null
+                && classInfo.purePath.startsWith("meta::pure::metamodel::pointer::")
+                && !isPointerNativeSlot(name))
+        {
+            throw new IllegalStateException(
+                    "Unresolved pointer access: " + classInfo.purePath + "." + name
+                            + " — dereference upstream via PointerGraphResolver or derefTypeIfPointer");
+        }
         int slot = classInfo.slotIndex(name);
         if (slot >= 0 && slot < slots.length)
         {
             return readSlot(slot);
         }
         return fb != null ? decodeFromFb(name) : PropertyAccessor.ABSENT;
+    }
+
+    // Slots readable on a pointer without tripping the strict guard.
+    //   - `path` / `element`: pointer-native identity per m3.pure pointer
+    //     hierarchy (`path` on TempCompilerPointer; `element` on
+    //     PropertyPointer / QualifiedPropertyPointer / ColumnPointer /
+    //     TagPointer / StereotypePointer / EnumPointer).
+    //   - `classifierGenericType`: framework-required for every dispatch
+    //     (match / genericType / subtypeOf). Reading it on a pointer
+    //     returns whatever the producer set; a pointer with no CGT reads
+    //     null and downstream getRawValueType correctly falls back to Any.
+    //     Denying it would force every dispatch site to special-case
+    //     pointers, which defeats the dispatch layer's purpose.
+    //   - `generalizations`: framework-required for subtypeOf / linearization
+    //     walks. A pointer's instance has no real ancestors at the Pure-data
+    //     level (its hierarchy is metaclass-level, walked separately), so
+    //     reading empty here gives the semantically correct answer (pointer
+    //     IS its own type, no ancestor walk needed). Truffle's match
+    //     dispatch goes through subtypeOf for every arm — bootstrap dodges
+    //     it via Java instanceof on per-class generated impls — so the
+    //     trip-on-pointer fires for Truffle uniquely. Silent-empty matches
+    //     the pre-strict-guard working behavior here.
+    private static boolean isPointerNativeSlot(String slotName)
+    {
+        return "path".equals(slotName)
+                || "element".equals(slotName)
+                || "classifierGenericType".equals(slotName)
+                || "generalizations".equals(slotName);
     }
 
     @Override

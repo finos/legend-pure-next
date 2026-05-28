@@ -330,6 +330,18 @@ public final class CastNode extends PureNode
                                             TruffleMetadataAccess resolver,
                                             RawLambdaCallNode constraintCallNode)
     {
+        // Pointer-typed receiver carries no user constraints — `constraints`
+        // is declared on {@code ElementWithConstraints}, which only {@code
+        // Class<T>} and {@code PrimitiveType} extend. Enum / Enumeration /
+        // their pointers can't have constraints by the metamodel. More
+        // generally, a pointer is a stand-in: the live target will be
+        // validated when something actually casts to it via the canonical
+        // element. Skip — the alternative is walking `.generalizations` on
+        // the pointer, which trips the strict guard.
+        if (org.finos.legend.pure.truffle.runtime.helper._PackageableElement.pointerPath(type) != null)
+        {
+            return;
+        }
         // Cache hit avoids the recursive generalization walk entirely for
         // the common "no constraints in hierarchy" case (~95% of types).
         if (!needsConstraintValidation(type))

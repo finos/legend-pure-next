@@ -101,14 +101,19 @@ function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:S
     let failed = $failures->size();
     let passed = $total - $failed;
 
-    if($failed > 0,
-        | $failures->map(r:meta::pure::test::TestResult[1] |
-              let err = $r.error->toOne();
-              println('  FAIL: ' + $r.name);
-              println('    ' + $err.message);
-              $err.stack->map(frame:String[1] | println('      at ' + $frame));
-          );
-          'FAIL: ' + $passed->toString() + ' / ' + $total->toString() + ' <<PCT.test>> tests passed (' + $failed->toString() + ' failed) in ' + $elapsedMs->toString() + ' ms';,
+    $failures->map(r:meta::pure::test::TestResult[1] |
+        let err = $r.error->toOne();
+        println('  FAIL: ' + $r.name);
+        println('    ' + $err.message);
+        $err.stack->map(frame:String[1] | println('      at ' + $frame));
+    );
+    let summary = if($failed > 0,
+        | 'FAIL: ' + $passed->toString() + ' / ' + $total->toString() + ' <<PCT.test>> tests passed (' + $failed->toString() + ' failed) in ' + $elapsedMs->toString() + ' ms',
         | 'OK: ' + $total->toString() + ' / ' + $total->toString() + ' <<PCT.test>> tests passed in ' + $elapsedMs->toString() + ' ms'
     );
+    // Throw on any failure so the CLI's exit code reflects test status —
+    // returning the summary string lets the bootstrap CLI swallow failures
+    // (it just prints the result), so callers never see a non-zero exit.
+    assert($failed == 0, $summary);
+    $summary;
 }

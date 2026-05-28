@@ -392,6 +392,21 @@ public final class NewWithKeysNode extends PureNode
         {
             return;
         }
+        // Compile-pure pass-1 pattern: the proposed classifier's type is a
+        // {@link TempCompilerPointer} whose target is being built right now
+        // and isn't yet in the resolver (e.g. {@code buildEnumerationSkeleton}
+        // wires an enum value's classifier as a pointer to the enum it's
+        // about to register). The pointer carries the path the producer
+        // intends, and {@code PointerGraphResolver} canonicalises it at
+        // module construction. Accept — a pointer is by construction
+        // compile-pure-internal, not a user-supplied raw type swap. Must
+        // run before the generalization walk: pointers carry only `path`,
+        // so reading `.generalizations` on one trips the strict guard.
+        if (proposedType != null
+                && org.finos.legend.pure.truffle.runtime.helper._PackageableElement.pointerPath(proposedType) != null)
+        {
+            return;
+        }
         // Allow proposed to be a *subtype* of expected — covers the
         // enum-value pattern, where an {@code ^Enum(...)} instance is
         // intentionally re-classified as a specific user enumeration
@@ -408,19 +423,6 @@ public final class NewWithKeysNode extends PureNode
         // directly, dereferencing pointer types as we go — the chain is short
         // (user enum → Enum → PackageableElement → …) so the walk is cheap.
         if (expected != null && proposedType != null && isSubtypeViaGeneralizations(proposedType, expected, resolver))
-        {
-            return;
-        }
-        // Compile-pure pass-1 pattern: the proposed classifier's type is a
-        // {@link TempCompilerPointer} whose target is being built right now
-        // and isn't yet in the resolver (e.g. {@code buildEnumerationSkeleton}
-        // wires an enum value's classifier as a pointer to the enum it's
-        // about to register). The pointer carries the path the producer
-        // intends, and {@code PointerGraphResolver} canonicalises it at
-        // module construction. Accept — a pointer is by construction
-        // compile-pure-internal, not a user-supplied raw type swap.
-        if (proposedType != null
-                && org.finos.legend.pure.truffle.runtime.helper._PackageableElement.pointerPath(proposedType) != null)
         {
             return;
         }

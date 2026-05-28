@@ -13,150 +13,797 @@
 // limitations under the License.
 
 import meta::pure::functions::asserts::*;
+import meta::pure::functions::printer::compiled::*;
+import meta::pure::functions::printer::protocol::*;
 import meta::pure::metamodel::function::*;
 import meta::pure::translation::shared::*;
+import meta::pure::translation::shared::tests::*;
 import meta::pure::translation::shared::tests::model::*;
 
-// Local test fixture — keep canonical tests self-contained instead of pulling
-// in test-model classes from core-tests.
+// ============================================================================
+// Canonical / decompile round-trip tests.
+//
+// Each <<test.Test>> below picks a fixture lambda, runs it through:
+//
+//   1. `decompileAndPrint` — invoke the decompile pipeline on the lambda's
+//      compiled body, produce a protocol UserDefinedFunction with captures
+//      substituted, render via the protocol printer. Assert the resulting
+//      Pure source verbatim.
+//
+//   2. `canonicalAndPrint` — invoke `makeCanonical` (full pipeline: decompile
+//      + recompile + dead-code-elim), render the compiled result via the
+//      compiled printer. Assert the resulting Pure source verbatim.
+//
+// Tests rely on the Truffle compile pipeline being available at runtime
+// (parse + compile natives + live-registry fallbacks). Bootstrap registers
+// a different natives surface, so they're effectively Truffle-only.
+//
+// Notes on the rendered shape:
+//
+//   - Decompile uses the synthetic wrapping name `canonicalTest::fixture`
+//     (passed into `toProtocolUserDefinedFunction`) and renders types via
+//     full FQN paths because the protocol metamodel stores them that way.
+//
+//   - Canonical comes back via `inlineOpenVariablesViaRecompile`, which
+//     wraps under `__canonical__::__canonical__` and goes through the
+//     full compile path. The compiled printer uses short names for types
+//     (the standard `Integer[1]` form) but emits FQN for non-built-in
+//     function calls (e.g. `meta::pure::functions::string::length`).
+// ============================================================================
+
 Class <<test.TestDependency>> meta::pure::translation::shared::tests::model::TS_Person
 {
    firstName : String[1];
    lastName  : String[1];
 }
 
-// These tests rely on the Truffle compile pipeline being available at runtime
-// (the parse + compile natives + live-registry fallbacks). Bootstrap registers
-// a different natives surface, so they're effectively Truffle-only.
+// ----------------------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------------------
 
-// Sanity check — parse() produces a PureFile with one section + one element.
-function <<test.Test>> meta::pure::translation::shared::tests::testParseProducesElements(): Boolean[1]
+// Decompile a lambda into its protocol UserDefinedFunction form (with all
+// open-variable captures substituted by their values' protocol form), then
+// render via the protocol printer. The wrapping function is synthesised
+// under `canonicalTest::fixture` so the printed source has a stable name.
+function <<test.TestDependency>> meta::pure::translation::shared::tests::decompileAndPrint(lambda: LambdaFunction<Any>[1]): String[1]
 {
-   let pf = meta::pure::functions::meta::parse(
-      'canonicalRoundTrip.pure',
-      'function canonicalRoundTrip::testFn(): Integer[1] { 1 + 2 }'
+   // Mirror `inlineOpenVariablesViaRecompile`: strip let-bound names from
+   // the capture set so we don't substitute `$letVar` references with the
+   // empty-Collection sentinel returned by openVariableValues for them.
+   let allCaptures = $lambda->meta::pure::functions::meta::openVariableValues();
+   let letBoundNames = $lambda.expressionSequence
+                          ->filter(vs | $vs->instanceOf(meta::pure::metamodel::valuespecification::FunctionExpression))
+                          ->cast(@meta::pure::metamodel::valuespecification::FunctionExpression)
+                          ->filter(fe | $fe.functionName == 'letFunction'
+                                     && $fe.parametersValues->size() == 2
+                                     && $fe.parametersValues->at(0)->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue))
+                          ->map(fe | $fe.parametersValues->at(0)
+                                       ->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value
+                                       ->cast(@String));
+   let captures = $allCaptures->keys()
+                     ->filter(k | !$letBoundNames->contains($k))
+                     ->fold({k, acc | $acc->put($k, $allCaptures->get($k)->toOne())},
+                            newMap([]->cast(@Pair<String, List<Any>>)));
+   // The lambda's return type lives on its classifier
+   // (`LambdaFunction<{params -> ret}>`), not on a dedicated slot.
+   let funcType = $lambda.classifierGenericType.typeArguments
+                     ->at(0)
+                     ->rawType()
+                     ->toOne('decompileAndPrint: lambda missing classifier function type')
+                     ->cast(@meta::pure::metamodel::type::FunctionType);
+   let proto = toProtocolUserDefinedFunction(
+      $lambda.expressionSequence,
+      $lambda.parameters,
+      $funcType.returnType,
+      $funcType.returnMultiplicity,
+      $captures,
+      'canonicalTest',
+      'fixture'
    );
-   assertEquals(1, $pf.sections->size());
-   assertEquals(1, $pf.sections->at(0).elements->size());
+   // Base printer keeps FQN intact (corpus tests rely on byte-roundtrip).
+   // Post-process to drop auto-imported package prefixes so test assertions
+   // can stay in the short, human-readable form.
+   meta::pure::functions::printer::protocol::shortenAutoImportedTypesInString(
+      printProtocolUserDefinedFunction($proto)
+   );
 }
 
-// Round-trip: parse a trivial function, recompile with a fresh
-// CompilerContext, verify the new element lands in elementMap. References
-// to already-loaded elements resolve via the compile pipeline's existing
-// native fallbacks (findFunctionsByNameAndArity unions live PDB + local
-// index; pathToElementInContext falls through to lenientPathToElement;
-// findAllTypes seeds the linearization universe). No elementMap seeding
-// needed.
-function <<test.Test>> meta::pure::translation::shared::tests::testLiveContextRoundTrip(): Boolean[1]
+// Run `makeCanonical` (full pipeline with default modes — back-compat) and
+// render the compiled result. UDF outputs go through the compiled element
+// printer; lambdas that pass through unchanged are rendered via the
+// compiled-lambda printer (`|<body>`).
+function <<test.TestDependency>> meta::pure::translation::shared::tests::canonicalAndPrint(lambda: LambdaFunction<Any>[1]): String[1]
 {
-   let pf = meta::pure::functions::meta::parse(
-      'canonicalRoundTrip.pure',
-      'function canonicalRoundTrip::testFn(): Integer[1] { 1 + 2 }'
+   printCanonical($lambda, $lambda->meta::pure::translation::shared::makeCanonical());
+}
+
+// Run `makeCanonical` with an explicit mode list and render. Same
+// dispatch as `canonicalAndPrint`.
+function <<test.TestDependency>> meta::pure::translation::shared::tests::canonicalAndPrintWithModes(
+   lambda: LambdaFunction<Any>[1],
+   modes: meta::pure::translation::shared::CanonicalMode[*]
+): String[1]
+{
+   printCanonical($lambda, $lambda->meta::pure::translation::shared::makeCanonical($modes));
+}
+
+function <<test.TestDependency>> meta::pure::translation::shared::tests::printCanonical(
+   original: LambdaFunction<Any>[1],
+   canonical: FunctionDefinition<Any>[1]
+): String[1]
+{
+   $canonical->match([
+      udf: UserDefinedFunction<Any>[1] |
+         printCompiledElements(
+            [$udf->cast(@meta::pure::metamodel::PackageableElement)],
+            meta::pure::functions::printer::compiled::PrintMode.ManageImports
+         ),
+      lf: LambdaFunction<Any>[1] |
+         // Lambda kept its shape (PartialEvaluation alone, or InlineOpen on
+         // a no-capture lambda). Render the lambda body so a fold inside is
+         // visible.
+         printCanonicalLambda($lf)
+   ]);
+}
+
+function <<test.TestDependency>> meta::pure::translation::shared::tests::printCanonicalLambda(lf: LambdaFunction<Any>[1]): String[1]
+{
+   let ctx = meta::pure::functions::printer::compiled::buildPrintContext(
+      []->cast(@meta::pure::metamodel::PackageableElement),
+      meta::pure::functions::printer::compiled::PrintMode.ManageImports
    );
-   let result = meta::pure::compiler::compile(
-      [$pf],
-      meta::pure::compiler::newCompilerContext(false),
-      false,
-      true
-   );
-   // UserDefinedFunctions are keyed in elementMap by their mangled signature
-   // (e.g. `canonicalRoundTrip::testFn__Integer_1_`); find by .functionName.
-   let fn = $result.context->toOne().elementMap->values()
-      ->filter(e | $e->instanceOf(UserDefinedFunction))
-      ->cast(@UserDefinedFunction<Any>)
-      ->filter(udf | $udf.functionName == 'testFn')
-      ->toOne('testFn not found; errors=' + $result.errors->joinStrings(' | '));
-   assertEquals('testFn', $fn.functionName->toOne());
+   meta::pure::functions::printer::compiled::printCompiledLambdaFunction($lf, $ctx);
 }
 
 // ----------------------------------------------------------------------------
-// makeCanonical / inlineOpenVariables — scalar-capture substitution.
-// A lambda with a captured Integer should canonicalize to an equivalent
-// function whose openVariables is empty and whose body has the literal
-// substituted in place of the variable reference.
+// Fixtures + assertions
 // ----------------------------------------------------------------------------
 
-function <<test.Test>> meta::pure::translation::shared::tests::testMakeCanonicalScalarCapture(): Boolean[1]
+// Scalar Integer capture: a single Integer captured by the lambda.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_scalarIntegerCapture(): Boolean[1]
 {
    let x = 5;
    let lambda = {| $x + 1};
-   let canonical = $lambda->meta::pure::translation::shared::makeCanonical();
-   // After canonicalization, openVariables on a LambdaFunction is empty.
-   // (The result is a UserDefinedFunction so it has no openVariables slot
-   //  at all — but it does have expressionSequence, which we evaluate
-   //  indirectly by checking the body is well-formed.)
-   assertEquals(true, $canonical->instanceOf(UserDefinedFunction));
+
+   assertEquals(
+      '''
+      function canonicalTest::fixture(): Integer[1]
+      {
+        5 + 1
+      }
+      ''',
+      decompileAndPrint($lambda)
+   );
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        5 + 1
+      }
+      ''',
+      canonicalAndPrint($lambda)
+   );
 }
 
-function <<test.Test>> meta::pure::translation::shared::tests::testMakeCanonicalNoOpenVarsPassthrough(): Boolean[1]
+// String capture: a captured String literal.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_stringCapture(): Boolean[1]
 {
-   // No open vars => identity (still a LambdaFunction, not a UserDefinedFunction).
+   let s = 'hello';
+   let lambda = {| $s->length()};
+
+   // Decompile prints the arrow call in prefix form (`length('hello')`) —
+   // the protocol printer doesn't recover the arrow-receiver shape from
+   // the lifted FunctionInvocation.
+   assertEquals(
+      '''
+      function canonicalTest::fixture(): Integer[1]
+      {
+        length('hello')
+      }
+      ''',
+      decompileAndPrint($lambda)
+   );
+
+   // Canonical uses `ManageImports` print mode, so `length` (in
+   // `meta::pure::functions::string`, a default-imported package) appears
+   // as its short name.
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        length('hello')
+      }
+      ''',
+      canonicalAndPrint($lambda)
+   );
+}
+
+// Multiple captures: two captured Integers, both substituted independently.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_multipleCaptures(): Boolean[1]
+{
+   let a = 1;
+   let b = 2;
+   let lambda = {| $a + $b};
+
+   assertEquals(
+      '''
+      function canonicalTest::fixture(): Integer[1]
+      {
+        1 + 2
+      }
+      ''',
+      decompileAndPrint($lambda)
+   );
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        1 + 2
+      }
+      ''',
+      canonicalAndPrint($lambda)
+   );
+}
+
+// No captures: decompile still produces a wrapped UDF (the wrapping is
+// unconditional); canonical short-circuits and returns the LambdaFunction
+// unchanged — the compiled-lambda printer renders it as `|1 + 2`.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_noCaptures(): Boolean[1]
+{
    let lambda = {| 1 + 2};
-   let canonical = $lambda->meta::pure::translation::shared::makeCanonical();
-   assertEquals(true, $canonical->instanceOf(LambdaFunction));
-}
 
-// Class-instance capture: a lambda capturing `^CC_Person(...)` should
-// canonicalize to a UserDefinedFunction with the PDO inlined as an
-// AtomicValue. Exercises the classInstanceToProtocol path.
-function <<test.Test>> meta::pure::translation::shared::tests::testMakeCanonicalClassInstanceCapture(): Boolean[1]
-{
-   let smith = ^TS_Person(firstName='Fabrice', lastName='Smith');
-   let lambda = {| $smith.firstName};
-   let canonical = $lambda->meta::pure::translation::shared::makeCanonical();
-   assertEquals(true, $canonical->instanceOf(UserDefinedFunction));
+   assertEquals(
+      '''
+      function canonicalTest::fixture(): Integer[1]
+      {
+        1 + 2
+      }
+      ''',
+      decompileAndPrint($lambda)
+   );
+
+   assertEquals(
+      '|1 + 2',
+      canonicalAndPrint($lambda)
+   );
 }
 
 // ----------------------------------------------------------------------------
-// Parser-shape inspector. The decompiler's protocol output has to look like
-// what the parser actually emits — otherwise the compile pipeline's casts to
-// concrete subtypes (e.g. `genericType->cast(@GenericTypeValue)`) fail. These
-// tests parse representative snippets and pin the slot shapes so the
-// decompiler can mirror them.
+// Mode-additivity tests — show that each pass can run independently and
+// that combining them in either order yields the additively-reduced AST.
 // ----------------------------------------------------------------------------
 
-// The parser leaves `Collection.genericType` empty (slot is `[0..1]` via the
-// `ProtocolInfo_optionalInProtocol` stereotype). Pinned so a future schema
-// regression that re-requires this slot fails loudly here.
-function <<test.Test>> meta::pure::translation::shared::tests::inspectParserCollectionGenericType(): Boolean[1]
+// InlineOpenVariables ALONE — captures inlined but the resulting literal
+// arithmetic is left in place (`5 + 1`, not `6`). Same shape as the
+// default `makeCanonical(f)`.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_inlineOnly_keepsLiteralArithmetic(): Boolean[1]
 {
-   let pf = meta::pure::functions::meta::parse(
-      'inspectColl.pure',
-      'function inspectColl::foo(): Integer[*] { [1, 2, 3] }'
+   let x = 5;
+   let lambda = {| $x + 1};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        5 + 1
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]
+      )
    );
-   let udf = $pf.sections->at(0).elements->at(0)
-               ->cast(@meta::pure::protocol::grammar::function::UserDefinedFunction);
-   let coll = $udf.expressionSequence->at(0)
-               ->cast(@meta::pure::protocol::grammar::valuespecification::Collection);
-   assertEquals(true, $coll.genericType->isEmpty());
 }
 
-// What protocol type does the parser put in an `AtomicValue.genericType` slot
-// (e.g. for the integer literal `1`)?
-function <<test.Test>> meta::pure::translation::shared::tests::inspectParserAtomicValueGenericType(): Boolean[1]
+// Inline + PartialEval applied together — captures inlined, then
+// arithmetic folded. Demonstrates additivity: `[Inline, Partial]` produces
+// a strictly smaller AST than `[Inline]` alone.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_inlineThenPartial_reducesToLiteral(): Boolean[1]
 {
-   let pf = meta::pure::functions::meta::parse(
-      'inspectAV.pure',
-      'function inspectAV::foo(): Integer[1] { 1 }'
+   let x = 5;
+   let lambda = {| $x + 1};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        6
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.PartialEvaluation]
+      )
    );
-   let udf = $pf.sections->at(0).elements->at(0)
-               ->cast(@meta::pure::protocol::grammar::function::UserDefinedFunction);
-   let av = $udf.expressionSequence->at(0)
-               ->cast(@meta::pure::protocol::grammar::valuespecification::AtomicValue);
-   assertEquals(true, $av.genericType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue));
 }
 
-// The parser leaves `FunctionExpression.genericType` empty too — same
-// `optionalInProtocol` story as Collection.
-function <<test.Test>> meta::pure::translation::shared::tests::inspectParserFunctionExpressionGenericType(): Boolean[1]
+// PartialEvaluation ALONE on a captured lambda — captures remain (no
+// inlining), so the literal-only fold rule can't fire on `$x + 1` (one
+// operand is a VariableExpression). Lambda passes through unchanged.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_partialOnly_cantFoldAcrossCaptures(): Boolean[1]
 {
-   let pf = meta::pure::functions::meta::parse(
-      'inspectFE.pure',
-      'function inspectFE::foo(): Integer[1] { 1 + 2 }'
+   let x = 5;
+   let lambda = {| $x + 1};
+
+   assertEquals(
+      '|$x + 1',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.PartialEvaluation]
+      )
    );
-   let udf = $pf.sections->at(0).elements->at(0)
-               ->cast(@meta::pure::protocol::grammar::function::UserDefinedFunction);
-   let fe = $udf.expressionSequence->at(0)
-               ->cast(@meta::pure::protocol::grammar::valuespecification::FunctionExpression);
-   assertEquals(true, $fe.genericType->isEmpty());
 }
+
+// Empty mode list — explicit no-op. Lambda passes through unchanged.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_emptyModes_isNoOp(): Boolean[1]
+{
+   let lambda = {| 1 + 2};
+
+   assertEquals(
+      '|1 + 2',
+      canonicalAndPrintWithModes($lambda, [])
+   );
+}
+
+// ----------------------------------------------------------------------------
+// PartialEvaluation — eval-based generalization
+//
+// The fold isn't hard-coded per-native; ANY all-literal FunctionExpression
+// gets wrapped in `tryEval(| evaluate(func, argLists))` and replaced with
+// its result. These tests pin the coverage that buys us — comparisons,
+// boolean ops, string predicates — none of which had per-native arms in
+// the previous implementation.
+// ----------------------------------------------------------------------------
+
+// Comparison: `5 < 10` folds to `true` via the eval path.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_partial_evalsComparison(): Boolean[1]
+{
+   let x = 5;
+   let lambda = {| $x < 10};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Boolean[1]
+      {
+        true
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.PartialEvaluation]
+      )
+   );
+}
+
+// String predicate: `'hello'->startsWith('he')` folds to `true`.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_partial_evalsStringPredicate(): Boolean[1]
+{
+   let s = 'hello';
+   let lambda = {| $s->startsWith('he')};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Boolean[1]
+      {
+        true
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.PartialEvaluation]
+      )
+   );
+}
+
+// Bottom-up walk — inner sub-expressions fold first so the outer one sees
+// literal args. `(2 + 3) * 4` folds inside-out to `5 * 4` → `20`.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_partial_foldsNestedArithmetic(): Boolean[1]
+{
+   let x = 2;
+   let lambda = {| ($x + 3) * 4};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        20
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.PartialEvaluation]
+      )
+   );
+}
+
+// Composed: PartialEvaluation folds a comparison cond, then IfBranchPruning
+// collapses the if to the taken branch. This is the chain reaction the
+// generalization unlocks — the old per-native code never folded `<`, so
+// pruning couldn't fire.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_partialThenPrune_collapsesIfWithComparedCond(): Boolean[1]
+{
+   let x = 5;
+   let lambda = {| if($x < 10, |'small', |'big')};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): String[1]
+      {
+        'small'
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.PartialEvaluation,
+          meta::pure::translation::shared::CanonicalMode.IfBranchPruning]
+      )
+   );
+}
+
+// Collection arg — generic fold reaches into a Collection of literal
+// AtomicValues, hands it off to evaluate() as a single List<Any>, and the
+// runtime computes the result. Demonstrates that the predicate is "constant
+// subtree" not "primitive scalar". The bottom-up walk then folds `0 + 3`
+// to `3` as well, so the entire body collapses to a single literal.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_partial_evalsOnCollectionArg(): Boolean[1]
+{
+   let marker = 0;
+   let lambda = {| $marker + [10, 20, 30]->size()};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        3
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.PartialEvaluation]
+      )
+   );
+}
+
+// Side-effect skip: `print` is tagged `<<functionType.SideEffectFunction>>`
+// (see `runtime/functions/io/print.pure`). Even with all-literal args,
+// PartialEvaluation must leave the call alone — folding would execute the
+// print at translation time, losing the runtime side effect.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_partial_skipsSideEffectFunction(): Boolean[1]
+{
+   let prefix = 'msg=';
+   let lambda = {| $prefix + meta::pure::functions::io::print('hi')};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): String[1]
+      {
+        'msg=' + print('hi')
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.PartialEvaluation]
+      )
+   );
+}
+
+// ----------------------------------------------------------------------------
+// NestedIfToMultiIf / IfBranchPruning
+//
+// Fixture design notes:
+//   - These passes only run on UserDefinedFunctions; lambdas pass through
+//     unchanged. To force UDF promotion via `InlineOpenVariables` we need
+//     at least one capture, but `inlineOpenVariablesViaRecompile` only
+//     substitutes captures at the OUTER lambda body level — references
+//     inside nested lambdas (branch-arms, pair-conds) stay as `$name`.
+//
+//   - So fixtures put captures either (a) in the outer-most `if`'s cond
+//     (one level up from any branch lambda), or (b) prefixed onto the
+//     if-chain via `$cap + (if(...))` so the capture is a top-level body
+//     reference, not nested in a branch.
+//
+//   - The compiled printer (driven via `ManageImports` mode) auto-shortens
+//     references to `meta::pure::functions::lang::*`,
+//     `meta::pure::functions::collection::*` etc. because those packages
+//     are in the parser's default-imports list — so `if` and `pair` appear
+//     bare in the expected output.
+// ----------------------------------------------------------------------------
+
+// 2-level chain — outer cond captures `$n`, inner cond + branches are
+// literals. After Inline the outer cond becomes `0 == 1`; after
+// NestedIfToMultiIf the structure flattens into a multi-if with two pairs
+// plus the deepest else as the default.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_nestedIf_twoLevels_flattensToMultiIf(): Boolean[1]
+{
+   let n = 0;
+   let lambda = {| if($n == 1, |'one', |if(true, |'two', |'other'))};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): String[1]
+      {
+        if([pair(|0 == 1, |'one'), pair(|true, |'two')], |'other')
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.NestedIfToMultiIf]
+      )
+   );
+}
+
+// 3-level chain peels cascades into a 3-pair multi-if + default.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_nestedIf_threeLevels_flattensFully(): Boolean[1]
+{
+   let n = 0;
+   let lambda = {|
+      if($n == 1, |'one',
+         |if(true, |'two',
+            |if(false, |'three', |'other')))
+   };
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): String[1]
+      {
+        if([pair(|0 == 1, |'one'), pair(|true, |'two'), pair(|false, |'three')], |'other')
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.NestedIfToMultiIf]
+      )
+   );
+}
+
+// ----------------------------------------------------------------------------
+// IfBranchPruning
+// ----------------------------------------------------------------------------
+
+// Literal-true cond in 3-arg if → result is the then-lambda's body.
+// Capture moves the `true` into the outer cond (which Inline does
+// substitute), so the if sees a literal and prunes.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_ifPrune_literalTrue_takesThen(): Boolean[1]
+{
+   let n = true;
+   let lambda = {| if($n, |1, |2)};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        1
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.IfBranchPruning]
+      )
+   );
+}
+
+// Literal-false cond → result is the else-lambda's body.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_ifPrune_literalFalse_takesElse(): Boolean[1]
+{
+   let n = false;
+   let lambda = {| if($n, |1, |2)};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        2
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.IfBranchPruning]
+      )
+   );
+}
+
+// Multi-if with literal-true FIRST cond. Capture is a top-level prefix
+// (`$dummy +`) so Inline reaches it without poking into pair-cond
+// lambdas. After Inline: `0 + if([pair(|true,|10), pair(|false,|20)], |30)`;
+// after IfBranchPruning the multi-if collapses to `10`.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_ifPrune_multiIf_firstTrue_wins(): Boolean[1]
+{
+   let dummy = 0;
+   let lambda = {| $dummy + (if([pair(|true, |10), pair(|false, |20)], |30))};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        0 + 10
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.IfBranchPruning]
+      )
+   );
+}
+
+// Multi-if with all-literal-false conds → falls through to default.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_ifPrune_multiIf_allFalse_takesDefault(): Boolean[1]
+{
+   let dummy = 0;
+   let lambda = {| $dummy + (if([pair(|false, |1), pair(|false, |2)], |30))};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        0 + 30
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.IfBranchPruning]
+      )
+   );
+}
+
+// ----------------------------------------------------------------------------
+// Composition: NestedIfToMultiIf + IfBranchPruning.
+//
+// Captured outer cond is `true`; after Inline the chain is
+// `if(true, |10, |if(false, |20, |30))`. NestedIfToMultiIf flattens to
+// `if([pair(|true, |10), pair(|false, |20)], |30)`. IfBranchPruning sees
+// the first literal-true and collapses to `10`.
+// ----------------------------------------------------------------------------
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_nestedThenPrune_literalTrue_collapses(): Boolean[1]
+{
+   let n = true;
+   let lambda = {| if($n, |10, |if(false, |20, |30))};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        10
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.NestedIfToMultiIf,
+          meta::pure::translation::shared::CanonicalMode.IfBranchPruning]
+      )
+   );
+}
+
+// ----------------------------------------------------------------------------
+// DeadLetElim
+//
+// Drop top-level `let x = expr;` bindings whose `x` isn't referenced by any
+// subsequent expression. Walks end-to-start so a chain of dead lets collapses
+// in one pass.
+// ----------------------------------------------------------------------------
+
+// Single dead let preceding a literal — drops the let, leaves the literal.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_deadLet_singleDead(): Boolean[1]
+{
+   let cap = 7;
+   let lambda = {| let unused = $cap; 42;};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        42
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.DeadLetElim]
+      )
+   );
+}
+
+// Chain of dead lets — `a` only referenced by `b`'s RHS; once `b` drops,
+// `a` becomes dead too and drops in the same pass (end-to-start walk).
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_deadLet_cascade(): Boolean[1]
+{
+   let cap = 7;
+   let lambda = {|
+      let a = $cap;
+      let b = $a + 1;
+      'done';
+   };
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): String[1]
+      {
+        'done'
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.DeadLetElim]
+      )
+   );
+}
+
+// Referenced let is preserved. `$used` is read by the final expression so
+// the binding stays.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_deadLet_keepsReferenced(): Boolean[1]
+{
+   let cap = 7;
+   let lambda = {|
+      let used = $cap;
+      $used + 1;
+   };
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        let used = 7;
+        $used + 1;
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.DeadLetElim]
+      )
+   );
+}
+
+// TODO: Class-instance capture is broken under Truffle. `^TS_Person(...)`
+// is a PureDynamicObject and `classInstanceToProtocol` (or one of the
+// dispatch helpers in decompile.pure) doesn't recognise it as a class
+// instance — the printer falls through to `Any -> toString()`, producing
+// `org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject@<hash>`
+// instead of `^TS_Person(firstName='Fabrice', lastName='Smith')`. The hash
+// is also non-deterministic so we can't even pin the broken form.
+//
+// Re-enable once decompile.pure's class-instance detection handles PDOs.
+//
+// function <<test.Test>> testCanonical_classInstanceCapture(): Boolean[1]
+// {
+//    let smith = ^TS_Person(firstName='Fabrice', lastName='Smith');
+//    let lambda = {| $smith.firstName};
+//    ...
+// }

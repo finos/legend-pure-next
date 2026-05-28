@@ -18,16 +18,23 @@ import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
 import org.finos.legend.pure.truffle.builder.TruffleNativesExtension;
 
 /**
- * Registers the {@code meta::external::language::typescript::compileAndExecute}
- * native. Discovered via the {@link TruffleNativesExtension} SPI (META-INF/services
- * entry alongside this class).
+ * Registers the {@code meta::external::language::typescript::compile} and
+ * {@code meta::external::language::typescript::execute} natives. Discovered
+ * via the {@link TruffleNativesExtension} SPI (META-INF/services entry
+ * alongside this class).
+ *
+ * <p>{@code compileAndExecute} (the one-shot convenience) is implemented in
+ * Pure as a wrapper around {@code compile()->execute()}; not registered
+ * here as a native.</p>
  */
 public final class TypeScriptCompileNodeFactories implements TruffleNativesExtension
 {
     @Override
     public void registerAll(NativeNodeRegistry registry)
     {
-        registry.register("compileAndExecute_String_1__String_1__Any_MANY__Any_MANY_",
-                (args, gt, mul, fe) -> new CompileAndExecuteNode(args[0], args[1], args[2]));
+        registry.register("compile_String_1__Any_1_",
+                (args, gt, mul, fe) -> new CompileNode(args[0]));
+        registry.register("execute_Any_1__String_1__Any_MANY__GenericType_$0_1$__Multiplicity_$0_1$__Any_$0_1$__Any_MANY_",
+                (args, gt, mul, fe) -> new ExecuteNode(args[0], args[1], args[2], args[3], args[4], args[5]));
     }
 }

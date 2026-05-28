@@ -34,23 +34,181 @@ Class meta::external::language::java::translation::Conventions
 
 Class meta::external::language::java::translation::FunctionSignature
 {
-   class  : meta::external::language::java::metamodel::Class[1];
-   method : meta::external::language::java::metamodel::Method[1];
+   class       : meta::external::language::java::metamodel::Class[1];
+   method      : meta::external::language::java::metamodel::Method[1];
+   // Additional class definitions (as full Java source strings) to be
+   // concatenated alongside the main class in the same compilation unit.
+   // Populated by the `new` coder path: every Pure user-defined Class
+   // referenced via `^X(props)` gets a generated nested-style Java class
+   // with fluent `_propName(value)` setters and a `type()` accessor so
+   // expressions like `^X(...).type()` reconstruct Pure's type-of behavior.
+   extraClasses: meta::external::language::java::metamodel::Class[*];
 }
 
 // ----------------------------------------------------------------------------
 // Conventions construction — built-in arithmetic coders only for now.
 // ----------------------------------------------------------------------------
 
+// Sanitize a Pure identifier for use as a Java identifier. Pure allows names
+// that are reserved keywords in Java (e.g. `default`, `class`, `int`, `for`)
+// and tests like {@code orElse(value, default)} use them as parameter names.
+// Suffix `_` so the emitted Java compiles; the user-facing name stays close
+// enough to debug from.
+function meta::external::language::java::translation::safeJavaName(name: String[1]): String[1]
+{
+   if (javaReservedWords()->contains($name), | $name + '_', | $name);
+}
+
+function <<access.private>> meta::external::language::java::translation::javaReservedWords(): String[*]
+{
+   ['abstract','assert','boolean','break','byte','case','catch','char','class','const',
+    'continue','default','do','double','else','enum','extends','final','finally','float',
+    'for','goto','if','implements','import','instanceof','int','interface','long','native',
+    'new','package','private','protected','public','return','short','static','strictfp',
+    'super','switch','synchronized','this','throw','throws','transient','try','void',
+    'volatile','while']
+}
+
 function meta::external::language::java::translation::defaultConventions(basePackageName: String[1]): Conventions[1]
 {
    ^Conventions(
       basePackageName = $basePackageName,
       functionCoders  = newMap([
-         pair('plus',   plusCoder_FunctionExpression_1__Conventions_1__Code_1_),
-         pair('minus',  minusCoder_FunctionExpression_1__Conventions_1__Code_1_),
-         pair('times',  timesCoder_FunctionExpression_1__Conventions_1__Code_1_),
-         pair('divide', divideCoder_FunctionExpression_1__Conventions_1__Code_1_)
+         pair('plus',             plusCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('minus',            minusCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('times',            timesCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('divide',           divideCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('equal',            equalCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('lessThan',         lessThanCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('greaterThan',      greaterThanCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('lessThanEqual',    lessThanEqualCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('greaterThanEqual', greaterThanEqualCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('and',              andCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('or',               orCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('not',              notCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('toString',         toStringCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('round',            roundCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('floor',            floorCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('ceiling',          ceilingCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('toOne',            toOneCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('take',             takeCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('drop',             dropCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('map',              mapCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('eval',             evalCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('format',           formatCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('print',            printCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('match',            matchCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('compare',          compareCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('fold',             foldCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('cast',             castCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('sort',             sortCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('toRepresentation', toRepresentationCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('if',               ifCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('isEmpty',          isEmptyCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('isNotEmpty',       isNotEmptyCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('empty',            emptyCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('head',             headCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('last',             lastCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('tail',             tailCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('init',             initCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('reverse',          reverseCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('length',           lengthCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('parseFloat',       parseFloatCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('parseInteger',     parseIntegerCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('parseDate',        parseDateCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('startsWith',       startsWithCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('endsWith',         endsWithCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('lastIndexOf',      lastIndexOfCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('replace',          replaceCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('split',            splitCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('matches',          matchesCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('regexpReplace',    regexpReplaceCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('pow',              powCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('mod',              modCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('atan2',            atan2Coder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('concatenate',      concatenateCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('firstNonEmpty',    firstNonEmptyCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('slice',            sliceCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('find',             findCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('forAll',           forAllCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('add',              addCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('chunk',            chunkCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('zip',              zipCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('groupBy',          groupByCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('regexpIndexOf',    regexpIndexOfCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('regexpCount',      regexpCountCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('regexpExtract',    regexpExtractCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('assertError',      assertErrorCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('abs',              absCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('sqrt',             sqrtCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('cbrt',             cbrtCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('exp',              expCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('log',              logCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('log10',            log10Coder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('sin',              sinCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('cos',              cosCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('tan',              tanCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('asin',             asinCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('acos',             acosCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('atan',             atanCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('cot',              cotCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('sign',             signCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('toLower',          toLowerCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('toUpper',          toUpperCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('trim',             trimCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('ltrim',            ltrimCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('rtrim',            rtrimCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('toFloat',          toFloatCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('toDecimal',        toDecimalCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('assertEmpty',      assertEmptyCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('in',               inCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('elementToPath',    elementToPathCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('copy',             copyCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('size',             sizeCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('joinStrings',      joinStringsCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('contains',         containsCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('filter',           filterCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('removeDuplicates', removeDuplicatesCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('is',               isCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('at',               atCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('substring',        substringCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('indexOf',          indexOfCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('parseBoolean',     parseBooleanCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('parseDecimal',     parseDecimalCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('regexpLike',       regexpLikeCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('rem',                  remCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('pathToElement',        pathToElementCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('lenientPathToElement', pathToElementCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('new',                    newCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('instanceOf',             instanceOfCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('assertEquals',           assertEqualsCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('assertFalse',            assertFalseCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('assertEqWithinTolerance', assertEqWithinToleranceCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('assert',                 assertCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('assertIs',               assertEqualsCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('assertIsNot',            assertIsNotCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('exists',                 existsCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('toOneMany',              toOneCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('evaluate',               evalCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('dateDiff',               dateDiffCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('adjust',                 adjustCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('year',                   yearCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('monthNumber',            monthNumberCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('dayOfMonth',             dayOfMonthCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('hour',                   hourCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('minute',                 minuteCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('second',                 secondCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('pair',                       pairCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('newMap',                     newMapCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('get',                        getCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('put',                        putCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('putAll',                     putAllCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('remove',                     removeCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('keys',                       keysCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('values',                     valuesCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('keyValues',                  keyValuesCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('replaceAll',                 replaceAllCoder_FunctionExpression_1__Conventions_1__Code_1_),
+         pair('getIfAbsentPutWithKey',      getIfAbsentPutWithKeyCoder_FunctionExpression_1__Conventions_1__Code_1_)
       ])
    );
 }
@@ -66,7 +224,39 @@ function <<access.private>> meta::external::language::java::translation::binaryI
    assert($fe.parametersValues->size() == 2, | 'binary coder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
    let left  = $conv->translateExpression($fe.parametersValues->at(0));
    let right = $conv->translateExpression($fe.parametersValues->at(1));
-   $factory->eval($left, $right);
+   // When an operand is Object-typed (came through fold's β-substituted
+   // reducer or similar), cast to the FE's expected result type so the
+   // infix factory doesn't emit {@code Object + Object}. Typed operands
+   // (the common case) pass through unchanged.
+   let resultTypeOpt = $fe.genericType->rawType();
+   let leftCast  = if ($resultTypeOpt->isEmpty() || $left.type != javaObject(),  | $left,  | $left ->binaryOperandCast($resultTypeOpt->toOne()));
+   let rightCast = if ($resultTypeOpt->isEmpty() || $right.type != javaObject(), | $right, | $right->binaryOperandCast($resultTypeOpt->toOne()));
+   $factory->eval($leftCast, $rightCast);
+}
+
+// Operand-coercion helper for {@link binaryInfix}. Maps Pure rawType to the
+// Java type that fits the infix factory (long for Integer, double for
+// Float/Number, String for String). Uses {@link j_cast}'s primitive proxy
+// which auto-unboxes Object→Long/Double via {@code longValue()/doubleValue()}.
+function <<access.private>> meta::external::language::java::translation::binaryOperandCast(expr: Code[1], rawType: meta::pure::metamodel::type::Type[1]): Code[1]
+{
+   let deref = $rawType->derefTempPointer();
+   // For primitive targets, cast through the boxed equivalent first so
+   // {@code j_cast(javaLong())}'s boxed-to-primitive proxy fires (emitting
+   // {@code ((Long) x).longValue()}). A direct {@code (long) someObject}
+   // doesn't compile.
+   if ($deref == meta::pure::metamodel::type::primitives::Integer,
+      | $expr->j_castWithoutChecks(javaClass('java.lang.Long'))->j_cast(javaLong()),
+   |if ($deref == meta::pure::metamodel::type::primitives::Float
+      || $deref == meta::pure::metamodel::type::primitives::Decimal
+      || $deref == meta::pure::metamodel::type::primitives::Number,
+      | $expr->j_castWithoutChecks(javaClass('java.lang.Double'))->j_cast(javaDouble()),
+   |if ($deref == meta::pure::metamodel::type::primitives::String,
+      | $expr->j_castWithoutChecks(javaString()),
+   |if ($deref == meta::pure::metamodel::type::primitives::Boolean,
+      | $expr->j_castWithoutChecks(javaClass('java.lang.Boolean'))->j_cast(javaBoolean()),
+      | $expr
+   ))));
 }
 
 function <<access.private>> meta::external::language::java::translation::plusCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
@@ -93,19 +283,1859 @@ function <<access.private>> meta::external::language::java::translation::divideC
    binaryInfix($fe, $conv, j_divide_Code_1__Code_1__Code_1_);
 }
 
+// j_eq handles primitive (==) vs object (Objects.equals) dispatch internally
+// based on the operand types it sees, so we can just delegate.
+function <<access.private>> meta::external::language::java::translation::equalCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   binaryInfix($fe, $conv, j_eq_Code_1__Code_1__Code_1_);
+}
+
+// `String.valueOf(x)` — works for any primitive overload and renders `null`
+// for null references (matches Pure's `toString` over scalar values). Use the
+// 4-arg j_invoke form with explicit return type: String's apiKnowledge table
+// doesn't list `valueOf`, so the 3-arg form's auto-lookup fails.
+function <<access.private>> meta::external::language::java::translation::toStringCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'toStringCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   j_invoke(javaString(), 'valueOf', [$conv->translateExpression($fe.parametersValues->at(0))], javaString());
+}
+
+// Type-aware comparison dispatch — Pure's lessThan/greaterThan accept any
+// totally-ordered operand (Number, String, Date, Boolean) but Java's `<`/`>`
+// only work on primitives. For non-primitive operands, route through
+// Comparable.compareTo (or Boolean.compare for booleans) and compare the
+// result against 0 using the matching Java infix operator.
+function <<access.private>> meta::external::language::java::translation::typeAwareCompare(fe: FunctionExpression[1], conv: Conventions[1], numericFactory: Function<{Code[1], Code[1] -> Code[1]}>[1], cmpVsZero: Function<{Code[1], Code[1] -> Code[1]}>[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'comparison coder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let leftRaw = $fe.parametersValues->at(0).genericType->toOne()->rawType()->toOne();
+   let a       = $conv->translateExpression($fe.parametersValues->at(0));
+   let b       = $conv->translateExpression($fe.parametersValues->at(1));
+   if ($leftRaw == Boolean,
+      | $cmpVsZero->eval(j_invoke(javaClass('java.lang.Boolean'), 'compare', [$a, $b], javaInt()), j_int(0)),
+   |if ($leftRaw == String || $leftRaw == meta::pure::metamodel::type::primitives::StrictDate || $leftRaw == meta::pure::metamodel::type::primitives::Date,
+      | $cmpVsZero->eval($a->j_invoke('compareTo', [$b], javaInt()), j_int(0)),
+      | $numericFactory->eval($a, $b)
+   ));
+}
+
+function <<access.private>> meta::external::language::java::translation::lessThanCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   typeAwareCompare($fe, $conv, j_lt_Code_1__Code_1__Code_1_, j_lt_Code_1__Code_1__Code_1_);
+}
+
+function <<access.private>> meta::external::language::java::translation::greaterThanCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   typeAwareCompare($fe, $conv, j_gt_Code_1__Code_1__Code_1_, j_gt_Code_1__Code_1__Code_1_);
+}
+
+function <<access.private>> meta::external::language::java::translation::lessThanEqualCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   typeAwareCompare($fe, $conv, j_le_Code_1__Code_1__Code_1_, j_le_Code_1__Code_1__Code_1_);
+}
+
+function <<access.private>> meta::external::language::java::translation::greaterThanEqualCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   typeAwareCompare($fe, $conv, j_ge_Code_1__Code_1__Code_1_, j_ge_Code_1__Code_1__Code_1_);
+}
+
+function <<access.private>> meta::external::language::java::translation::andCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   binaryInfix($fe, $conv, j_and_Code_1__Code_1__Code_1_);
+}
+
+function <<access.private>> meta::external::language::java::translation::orCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   binaryInfix($fe, $conv, j_or_Code_1__Code_1__Code_1_);
+}
+
+function <<access.private>> meta::external::language::java::translation::notCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'notCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   j_not($conv->translateExpression($fe.parametersValues->at(0)));
+}
+
+// Math.round / floor / ceiling — single-arg form only. Pure's 2-arg
+// round(decimal, scale) requires BigDecimal-style precision control with no
+// direct java.lang.Math equivalent; those fall through with the standard
+// "No coder" diagnostic.
+function <<access.private>> meta::external::language::java::translation::roundCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   let n = $fe.parametersValues->size();
+   assert($n == 1 || $n == 2, | 'roundCoder expects 1 or 2 arguments, got ' + $n->toString());
+   if ($n == 1,
+      | j_invoke(javaMath(), 'round', [$conv->translateExpression($fe.parametersValues->at(0))], javaLong()),
+      | $conv->roundWithScale($fe.parametersValues->at(0), $fe.parametersValues->at(1))
+   );
+}
+
+// {@code round(value, scale)} — route through {@code BigDecimal.setScale}
+// with HALF_UP (Pure's default rounding) to honour the scale argument.
+// Pure returns Float/Decimal; both map to Java double via
+// {@link pureTypeToJavaType}, so emit the doubleValue.
+function <<access.private>> meta::external::language::java::translation::roundWithScale(conv: Conventions[1], valueArg: ValueSpecification[1], scaleArg: ValueSpecification[1]): Code[1]
+{
+   let v = $conv->translateExpression($valueArg);
+   let s = $conv->translateExpression($scaleArg);
+   let bd = javaClass('java.math.BigDecimal');
+   j_invoke($bd, 'valueOf', [$v->j_cast(javaDouble())], $bd)
+      ->j_invoke('setScale', [$s->j_cast(javaInt()),
+                              j_code('java.math.RoundingMode.HALF_UP', javaClass('java.math.RoundingMode'))],
+                  $bd)
+      ->j_invoke('doubleValue', [], javaDouble());
+}
+
+// Pure's floor/ceiling return Integer (java long). Math.floor/ceil return
+// double — wrap in a long cast so the method return type matches the
+// pureTypeToJavaType mapping. The double-to-long narrowing matches Pure's
+// "exact integer result" semantics: floor(3.7) == 3, ceiling(3.2) == 4.
+function <<access.private>> meta::external::language::java::translation::floorCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'floorCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   j_cast(j_invoke(javaMath(), 'floor', [$conv->translateExpression($fe.parametersValues->at(0))], javaDouble()), javaLong());
+}
+
+function <<access.private>> meta::external::language::java::translation::ceilingCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'ceilingCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   j_cast(j_invoke(javaMath(), 'ceil', [$conv->translateExpression($fe.parametersValues->at(0))], javaDouble()), javaLong());
+}
+
+// toOne(x) — Pure's multiplicity narrower. For scalar values it's a pure
+// passthrough at the value level (Java doesn't carry Pure's multiplicity at
+// runtime); the type erasure already matches what the caller expects.
+function <<access.private>> meta::external::language::java::translation::toOneCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'toOneCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let arg  = $fe.parametersValues->at(0);
+   let code = $conv->translateExpression($arg);
+   // When the source is multi-valued, extract the first element via
+   // {@code .get(0)} so the result type matches Pure's `[1]` shape. Pure
+   // scalars (`[1]` or `[0..1]`) pass through unchanged — the runtime
+   // value is already the single element. Cast the result to the FE's
+   // expected type (boxed when primitive — Java auto-unboxes in context).
+   let extracted = if ($arg.multiplicity->toOne()->meta::pure::functions::meta::isToMany(),
+      | $code->j_cast(javaList(javaObject()))->j_invoke('get', [j_int(0)], javaObject()),
+      | $code
+   );
+   let feRetType = $conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity);
+   $extracted->j_castWithoutChecks($feRetType->toBoxed());
+}
+
+// Collection slice + transform — Pure's `take`/`drop`/`map` over `[*]` map
+// onto Java `Stream` ops with `.toList()` (Java 16+ shortcut for
+// `.collect(Collectors.toList())`). The 4-arg j_invoke variant carries an
+// explicit return type since these stream methods aren't in apiKnowledge.
+function <<access.private>> meta::external::language::java::translation::takeCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'takeCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   let n    = $conv->translateExpression($fe.parametersValues->at(1));
+   $coll->j_invoke('stream', [], javaStream(javaObject()))
+        ->j_invoke('limit',  [$n], javaStream(javaObject()))
+        ->j_invoke('toList', [], javaList(javaObject()));
+}
+
+function <<access.private>> meta::external::language::java::translation::dropCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'dropCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   let n    = $conv->translateExpression($fe.parametersValues->at(1));
+   $coll->j_invoke('stream', [], javaStream(javaObject()))
+        ->j_invoke('skip',   [$n], javaStream(javaObject()))
+        ->j_invoke('toList', [], javaList(javaObject()));
+}
+
+// map's second arg is an AtomicValue holding a LambdaFunction; the scalar
+// dispatch in translateScalarAtomicValue lifts it into a Java lambda via
+// translateLambdaValue, which becomes the Function passed to Stream.map.
+function <<access.private>> meta::external::language::java::translation::mapCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'mapCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   let f    = $conv->translateExpression($fe.parametersValues->at(1));
+   $coll->j_invoke('stream', [], javaStream(javaObject()))
+        ->j_invoke('map',    [$f], javaStream(javaObject()))
+        ->j_invoke('toList', [], javaList(javaObject()));
+}
+
+// `$lambda->eval(args...)` — invoke a Pure lambda. The lambda was translated
+// via translateLambdaValue into a Java lambda expression; cast it to the
+// arity-matched functional interface (Supplier/Function/BiFunction) and
+// dispatch through `.get()`/`.apply(...)`. Arities > 2 are uncommon in PCT
+// and fall through with a clear diagnostic — Java doesn't ship a built-in
+// TriFunction so each would need its own ad-hoc interface.
+function <<access.private>> meta::external::language::java::translation::evalCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 1, | 'evalCoder expects at least 1 argument (the lambda)');
+   let lambdaArg = $fe.parametersValues->at(0);
+   let argVals   = $fe.parametersValues->slice(1, $fe.parametersValues->size());
+   // β-reduction fast path. Pure compiles `someFn_Number_1__Float_1_->eval(x)`
+   // by η-expanding the function reference into a lambda `(a -> someFn($a))`.
+   // The default cast-to-Function path then emits
+   // {@code ((Function<Object,Object>)(Number a) -> Math.someFn(a.doubleValue())).apply(x)}
+   // which javac rejects because Function is invariant and `(Number a) -> ...`
+   // doesn't satisfy `Function<Object, Object>`. By β-reducing — substituting
+   // the eval args for the lambda's parameter references — we collapse to
+   // {@code Math.someFn(((Number) x).doubleValue())} and let the inner
+   // coder generate idiomatic Java. Works for any function with a coder
+   // (cbrt, sqrt, sin, cos, log, ...) AND for UDF refs (helper-class call).
+   let inlined = $conv->tryInlineLambdaAtomicValue($lambdaArg, $argVals);
+   if ($inlined->isNotEmpty(),
+      | $inlined->toOne(),
+      | $conv->evalCoderFallback($lambdaArg, $argVals)
+   );
+}
+
+// Original evalCoder path — cast the lambda to Supplier / Function /
+// BiFunction by arity and invoke .get / .apply. Used when β-reduction
+// can't apply (non-literal lambda, multi-statement body, arity mismatch).
+function <<access.private>> meta::external::language::java::translation::evalCoderFallback(
+   conv: Conventions[1],
+   lambdaArg: ValueSpecification[1],
+   argVals: ValueSpecification[*]
+): Code[1]
+{
+   let lambdaCode = $conv->translateExpression($lambdaArg);
+   let evalArgs   = $argVals->map(p | $conv->translateExpression($p));
+   if ($evalArgs->isEmpty(),
+       | $lambdaCode->j_cast(javaSupplier(javaObject()))->j_invoke('get', [], javaObject()),
+       |if ($evalArgs->size() == 1,
+            | $lambdaCode->j_cast(javaFunction(javaObject(), javaObject()))->j_invoke('apply', $evalArgs, javaObject()),
+            |if ($evalArgs->size() == 2,
+                 | $lambdaCode->j_cast(javaBiFunction(javaObject(), javaObject(), javaObject()))->j_invoke('apply', $evalArgs, javaObject()),
+                 | fail('evalCoder: arities > 2 not yet supported, got ' + $evalArgs->size()->toString()); j_null();
+             )
+        )
+   );
+}
+
+// β-reduction fast path. If `lambdaArg` is an {@link AtomicValue} wrapping a
+// {@link LambdaFunction} with N parameters that match N eval args, substitute
+// each {@code VariableExpression($paramName)} in the lambda body with the
+// corresponding eval arg and translate the substituted body directly. Returns
+// empty if the shape doesn't match.
+function <<access.private>> meta::external::language::java::translation::tryInlineLambdaAtomicValue(
+   conv: Conventions[1],
+   lambdaArg: ValueSpecification[1],
+   evalArgs: ValueSpecification[*]
+): Code[0..1]
+{
+   if (!$lambdaArg->instanceOf(AtomicValue),
+      | []->cast(@Code),
+      | $conv->tryInlineLambdaFromAV($lambdaArg->cast(@AtomicValue), $evalArgs)
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::tryInlineLambdaFromAV(
+   conv: Conventions[1],
+   av: AtomicValue[1],
+   evalArgs: ValueSpecification[*]
+): Code[0..1]
+{
+   if ($av.value->isEmpty(),
+      | []->cast(@Code),
+      | $conv->tryInlineFuncValue($av.value->toOne(), $evalArgs)
+   );
+}
+
+// Dispatch on the AV's wrapped value: literal LambdaFunction → β-reduce
+// via parameter substitution. {@link PackageableFunction} reference (e.g.
+// {@code tan_Number_1__Float_1_}) → synthesise a {@link FunctionExpression}
+// with the function's short name and route through the coder map. Other
+// values: skip (evalCoder falls back to its Function-cast path).
+function <<access.private>> meta::external::language::java::translation::tryInlineFuncValue(
+   conv: Conventions[1],
+   v: Any[1],
+   evalArgs: ValueSpecification[*]
+): Code[0..1]
+{
+   if ($v->instanceOf(LambdaFunction),
+      | $conv->tryInlineLambda($v->cast(@LambdaFunction<Any>), $evalArgs),
+      | if ($v->instanceOf(meta::pure::metamodel::function::PackageableFunction),
+           | $conv->tryInlinePackageableFunction($v->cast(@meta::pure::metamodel::function::PackageableFunction<Any>), $evalArgs),
+           | []->cast(@Code)
+        )
+   );
+}
+
+// Function reference: build a synthetic {@code FunctionExpression(functionName=...,
+// parametersValues=[args])} and translate via the coder map. Mirrors what
+// would have been emitted if the user had written `fn(args)` directly.
+// Returns empty when no coder OR no UDF helper-class match — caller
+// falls back to the typed-lambda cast path which usually fails javac.
+function <<access.private>> meta::external::language::java::translation::tryInlinePackageableFunction(
+   conv: Conventions[1],
+   fn: meta::pure::metamodel::function::PackageableFunction<Any>[1],
+   evalArgs: ValueSpecification[*]
+): Code[0..1]
+{
+   let shortName = $fn.functionName->toOne();
+   // Synthetic FE genericType is required but inconsequential for translation
+   // (coders read it for type-aware emit but eval-routed natives don't need
+   // it). Use an empty {@code CompilerNotSetGenericType} placeholder.
+   let synthetic = ^meta::pure::metamodel::valuespecification::FunctionInvocation(
+      functionName     = $shortName,
+      parametersValues = $evalArgs,
+      func             = $fn,
+      multiplicity     = meta::pure::metamodel::multiplicity::PureOne,
+      genericType      = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType()
+   );
+   // Route through the coder map when present; otherwise check UDF helper
+   // class dispatch (translateUdfCall handles UserDefinedFunction targets).
+   let coderOpt = $conv.functionCoders->get($shortName);
+   if ($coderOpt->isNotEmpty(),
+      | [$coderOpt->toOne()->eval($synthetic, $conv)],
+      | if ($fn->instanceOf(meta::pure::metamodel::function::UserDefinedFunction),
+           | [$conv->translateUdfCall($synthetic)],
+           | []->cast(@Code)
+        )
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::tryInlineLambda(
+   conv: Conventions[1],
+   lambda: LambdaFunction<Any>[1],
+   evalArgs: ValueSpecification[*]
+): Code[0..1]
+{
+   let params = $lambda.parameters;
+   let body   = $lambda.expressionSequence;
+   // Match arity AND single-expression body — multi-statement bodies need
+   // a Block wrapper which doesn't fit cleanly into expression position.
+   if ($params->size() != $evalArgs->size() || $body->size() != 1,
+      | []->cast(@Code),
+      | $conv->inlineLambdaBody($params, $body->at(0), $evalArgs)
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::inlineLambdaBody(
+   conv: Conventions[1],
+   params: meta::pure::metamodel::valuespecification::VariableExpression[*],
+   body: ValueSpecification[1],
+   evalArgs: ValueSpecification[*]
+): Code[0..1]
+{
+   let subs = range(0, $params->size())->map(i |
+      ^meta::pure::translation::shared::ParamSub(name = $params->at($i).name, value = $evalArgs->at($i))
+   );
+   let substituted = $body->meta::pure::translation::shared::substituteVariables($subs);
+   [$conv->translateExpression($substituted)];
+}
+
+// `format(fmt, args)` -> `String.format(fmt, args.toArray())`. Pure's format
+// strings (`%s`, `%d`, etc.) share syntax with java.util.Formatter, so we
+// can pass the format string through unchanged. List.toArray() returns
+// Object[] which satisfies String.format's varargs.
+function <<access.private>> meta::external::language::java::translation::formatCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'formatCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let fmt  = $conv->translateExpression($fe.parametersValues->at(0));
+   let args = $conv->translateExpression($fe.parametersValues->at(1));
+   j_invoke(javaString(), 'format', [$fmt, $args->j_invoke('toArray', [], javaArray(javaObject()))], javaString());
+}
+
+// `print(x)` — Pure returns the formatted-string representation of x AND
+// writes it to stdout. We emit only the return path (`String.valueOf(x)`)
+// — the stdout side-effect is dropped because expression-position println
+// would require wrapping in a Supplier closure. PCT assertions check the
+// return value, not what reached stdout, so the round-trip still validates
+// semantics for the cases we care about.
+function <<access.private>> meta::external::language::java::translation::printCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   let n = $fe.parametersValues->size();
+   assert($n == 1 || $n == 2, | 'printCoder expects 1 or 2 arguments, got ' + $n->toString());
+   // Pure: print(value) and print(value, maxChars). Both return a String.
+   // We ignore the max-char truncation arg — the value's String.valueOf form
+   // is sufficient for the PCT-level equality assertions; PCT tests don't
+   // currently validate the truncation behaviour at the Java surface.
+   j_invoke(javaString(), 'valueOf', [$conv->translateExpression($fe.parametersValues->at(0))], javaString());
+}
+
+// `coll->sort()` — natural-order sort. Stream.sorted() on natural order
+// requires the elements implement Comparable; PCT tests typically sort
+// Number/String collections so this is fine. The 2-arg form (custom
+// comparator) is more involved and currently fails through to the
+// arity assert.
+function <<access.private>> meta::external::language::java::translation::sortCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   let n = $fe.parametersValues->size();
+   assert($n >= 1 && $n <= 3, | 'sortCoder expects 1, 2, or 3 arguments, got ' + $n->toString());
+   let stream = $conv->translateExpression($fe.parametersValues->at(0))
+                  ->j_invoke('stream', [], javaStream(javaObject()));
+   let sorted = if ($n == 1,
+      | $stream->j_invoke('sorted', [], javaStream(javaObject())),
+      | $conv->sortStreamWithArgs($stream, $fe.parametersValues)
+   );
+   $sorted->j_invoke('toList', [], javaList(javaObject()));
+}
+
+// Apply the comparator/key-extractor args to a stream. 2-arg form: cast the
+// 2nd arg to {@code Comparator} and hand to {@code Stream.sorted}. 3-arg
+// form (key + comparator): compose via {@code Comparator.comparing(key, comp)}.
+function <<access.private>> meta::external::language::java::translation::sortStreamWithArgs(conv: Conventions[1], stream: Code[1], args: ValueSpecification[*]): Code[1]
+{
+   let cmpClass = javaClass('java.util.Comparator');
+   let fnClass  = javaClass('java.util.function.Function');
+   // Raw casts for Function / Comparator targets — the factory's lambda-cast
+   // path only whitelists Function/Supplier and trips its assert on
+   // Comparator; for Function it inserts a body rewrite that's overly strict
+   // for typed Pure lambdas like {@code {String s -> s}}.
+   let cmp = if ($args->size() == 2,
+      | $conv->translateExpression($args->at(1))->j_castWithoutChecks($cmpClass),
+      | j_invoke($cmpClass, 'comparing',
+           [$conv->translateExpression($args->at(1))->j_castWithoutChecks($fnClass),
+            $conv->translateExpression($args->at(2))->j_castWithoutChecks($cmpClass)],
+           $cmpClass)
+   );
+   $stream->j_invoke('sorted', [$cmp], javaStream(javaObject()));
+}
+
+// `if(cond, |thenLambda, |elseLambda)` — Pure's lazy conditional. Pure
+// represents the branches as zero-arg thunks so only one is evaluated.
+// We emit a Java ternary `cond ? thenBody : elseBody` and inline the
+// lambda bodies when they're literal thunks (the common case) so the
+// emitted Java stays compact. If a branch is a non-literal expression
+// yielding a Function (rare), we fall back to `((Supplier) f).get()`.
+function <<access.private>> meta::external::language::java::translation::ifCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 3, | 'ifCoder expects exactly 3 arguments (cond, then-thunk, else-thunk), got ' + $fe.parametersValues->size()->toString());
+   let cond = $conv->translateExpression($fe.parametersValues->at(0));
+   let thenBody = $conv->thunkArgToBody($fe.parametersValues->at(1));
+   let elseBody = $conv->thunkArgToBody($fe.parametersValues->at(2));
+   j_conditional($cond, $thenBody, $elseBody);
+}
+
+function <<access.private>> meta::external::language::java::translation::thunkArgToBody(conv: Conventions[1], vs: ValueSpecification[1]): Code[1]
+{
+   if ($vs->instanceOf(AtomicValue),
+      | let val = $vs->cast(@AtomicValue).value;
+        if ($val->size() == 1 && $val->toOne()->instanceOf(LambdaFunction),
+           | let lambda = $val->toOne()->cast(@LambdaFunction<Any>);
+             let exprs = $lambda.expressionSequence;
+             if ($exprs->size() == 1,
+                | $conv->translateExpression($exprs->toOne()),
+                | j_block($conv->buildJavaBody($exprs->toOneMany()))
+             );,
+           | // Non-lambda atomic value — translate and treat as Supplier.
+             $conv->translateExpression($vs)->j_cast(javaSupplier(javaObject()))->j_invoke('get', [], javaObject())
+        );,
+      | $conv->translateExpression($vs)->j_cast(javaSupplier(javaObject()))->j_invoke('get', [], javaObject())
+   );
+}
+
+// `isEmpty(x)` — Pure's `[0..1]` "is the value empty?" check. Multi-valued
+// args route through Collection.isEmpty; scalar nullable args route through
+// `x == null`. The dispatch uses the arg's compile-time multiplicity.
+function <<access.private>> meta::external::language::java::translation::isEmptyCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'isEmptyCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let arg  = $fe.parametersValues->at(0);
+   let code = $conv->translateExpression($arg);
+   let mult = $arg.multiplicity->toOne();
+   if ($mult->meta::pure::functions::meta::isToMany(),
+      | $code->j_cast(javaCollection(javaObject()))->j_invoke('isEmpty', [], javaBoolean()),
+      | j_eq($code, j_null())
+   );
+}
+
+// `size(coll)` — Pure's size returns Integer (Java long); Collection.size
+// returns int, so cast the result. Multi-valued only; scalar args have
+// size = 1 conceptually but Pure rarely calls size on scalars.
+function <<access.private>> meta::external::language::java::translation::sizeCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'sizeCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   j_cast($coll->j_cast(javaCollection(javaObject()))->j_invoke('size', [], javaInt()), javaLong());
+}
+
+// `length(str)` — String.length() returns int; Pure's length returns
+// Integer (Java long), so cast.
+function <<access.private>> meta::external::language::java::translation::lengthCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'lengthCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let s = $conv->translateExpression($fe.parametersValues->at(0));
+   j_cast($s->j_cast(javaString())->j_invoke('length', [], javaInt()), javaLong());
+}
+
+// `isNotEmpty(x)` — inverse of {@link isEmptyCoder}. Multi-value -> Collection.isEmpty
+// negated; scalar [0..1] -> non-null check. The two shapes don't collapse to
+// `size > 0` because the scalar branch must avoid casting to Collection.
+function <<access.private>> meta::external::language::java::translation::isNotEmptyCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'isNotEmptyCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let arg  = $fe.parametersValues->at(0);
+   let code = $conv->translateExpression($arg);
+   let mult = $arg.multiplicity->toOne();
+   if ($mult->meta::pure::functions::meta::isToMany(),
+      | j_not($code->j_cast(javaCollection(javaObject()))->j_invoke('isEmpty', [], javaBoolean())),
+      | j_ne($code, j_null())
+   );
+}
+
+// `empty()` (0-arg) — returns Pure's empty collection. Java equivalent is
+// {@code java.util.Collections.emptyList()}.
+function <<access.private>> meta::external::language::java::translation::emptyCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->isEmpty(), | 'emptyCoder expects 0 arguments, got ' + $fe.parametersValues->size()->toString());
+   j_invoke(javaCollections(), 'emptyList', [], javaList(javaObject()));
+}
+
+// `head(coll)` — Pure: first element (or empty if list is empty). Java:
+// {@code coll.isEmpty() ? null : coll.get(0)}. Cast through Collection→List
+// so the index-based accessor is available; Pure callers receive {@code [0..1]}.
+function <<access.private>> meta::external::language::java::translation::headCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'headCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let listCode = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaList(javaObject()));
+   j_conditional(
+      $listCode->j_invoke('isEmpty', [], javaBoolean()),
+      j_null(),
+      $listCode->j_invoke('get', [j_int(0)], javaObject())
+   );
+}
+
+// `last(coll)` — mirror of {@link headCoder} from the other end. Empty list
+// returns empty (null); otherwise {@code coll.get(coll.size() - 1)}.
+function <<access.private>> meta::external::language::java::translation::lastCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'lastCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let listCode = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaList(javaObject()));
+   j_conditional(
+      $listCode->j_invoke('isEmpty', [], javaBoolean()),
+      j_null(),
+      $listCode->j_invoke('get', [j_minus($listCode->j_invoke('size', [], javaInt()), j_int(1))], javaObject())
+   );
+}
+
+// `tail(coll)` — everything except the first element. Empty stays empty.
+// Wraps the {@code subList} view in a fresh ArrayList because Pure-side
+// equality unwraps standard collections but doesn't recognise AbstractList
+// SubList views, so {@code assertEquals(expected, tail([a,b,c]))} would
+// report a spurious mismatch on visually-identical lists. Uses RAW
+// {@code ArrayList} (not {@code ArrayList<Object>}) so the conditional
+// flows into a method whose inferred return type is e.g. {@code List<String>}
+// without triggering Java's invariant-generics check.
+function <<access.private>> meta::external::language::java::translation::tailCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'tailCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let listCode = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaList(javaObject()));
+   j_conditional(
+      $listCode->j_invoke('isEmpty', [], javaBoolean()),
+      j_new(javaArrayList(), []),
+      j_new(javaArrayList(),
+         [$listCode->j_invoke('subList', [j_int(1), $listCode->j_invoke('size', [], javaInt())], javaList(javaObject()))])
+   );
+}
+
+// `init(coll)` — everything except the last element. Same SubList→ArrayList
+// wrap (and raw-type rationale) as {@link tailCoder}.
+function <<access.private>> meta::external::language::java::translation::initCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'initCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let listCode = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaList(javaObject()));
+   j_conditional(
+      $listCode->j_invoke('isEmpty', [], javaBoolean()),
+      j_new(javaArrayList(), []),
+      j_new(javaArrayList(),
+         [$listCode->j_invoke('subList', [j_int(0), j_minus($listCode->j_invoke('size', [], javaInt()), j_int(1))], javaList(javaObject()))])
+   );
+}
+
+// `reverse(coll)` — Pure: returns a fresh reversed list. {@code Collections.reverse}
+// mutates in place, so we wrap in a copy first via {@code new ArrayList<>(coll)}.
+// Pass the raw listCode (no Collection cast) into the ArrayList ctor; Java's
+// {@code <? extends T>} ArrayList(Collection) overload accepts any List
+// directly. Casting to {@code Collection<Object>} would flip the variance
+// rules and fail to compile.
+function <<access.private>> meta::external::language::java::translation::reverseCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'reverseCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let listCode = $conv->translateExpression($fe.parametersValues->at(0));
+   // Raw ArrayList / raw List throughout the Supplier IIFE — same rationale
+   // as {@link tailCoder}'s raw-type choice: the result threads into method
+   // signatures whose return type is e.g. {@code List<String>}, which raw
+   // List flows into without an invariant-generics rejection.
+   let rawList = javaList();
+   let copy = j_new(javaArrayList(), [$listCode]);
+   let reverseCall = j_invoke(javaCollections(), 'reverse', [j_variable($rawList, 'list')], javaVoid());
+   let supplierBody = j_block([
+      j_declare($rawList, 'list', $copy),
+      j_expressionStatement($reverseCall),
+      j_return(j_variable($rawList, 'list'))
+   ]);
+   j_lambda([], $supplierBody)
+      ->j_cast(javaSupplier($rawList))
+      ->j_invoke('get', [], $rawList);
+}
+
+// `parseFloat(str)` — Pure: returns Float. Java: {@code Double.parseDouble(s)}
+// since Pure's Float maps to Java double (see pureTypeToJavaType).
+function <<access.private>> meta::external::language::java::translation::parseFloatCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'parseFloatCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let s = $conv->translateExpression($fe.parametersValues->at(0));
+   j_invoke(javaClass('java.lang.Double'), 'parseDouble', [$s->j_cast(javaString())], javaDouble());
+}
+
+// `parseInteger(str)` — Pure: returns Integer. Java: {@code Long.parseLong(s)}.
+function <<access.private>> meta::external::language::java::translation::parseIntegerCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'parseIntegerCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let s = $conv->translateExpression($fe.parametersValues->at(0));
+   j_invoke(javaClass('java.lang.Long'), 'parseLong', [$s->j_cast(javaString())], javaLong());
+}
+
+// `parseDate(str)` — heuristic mirroring the type mapping: try the broadest
+// parser via {@link normalizePureDate} preprocessing on the Pure side.
+// {@code LocalDateTime.parse(s)} handles the ISO offset-less form; for
+// date-only strings javac falls through to LocalDate. Most PCT tests use
+// the date-time form, so default to LocalDateTime — callers cast to a
+// narrower temporal type as needed.
+function <<access.private>> meta::external::language::java::translation::parseDateCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'parseDateCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let s = $conv->translateExpression($fe.parametersValues->at(0));
+   j_invoke(javaClass('java.time.LocalDateTime'), 'parse', [$s->j_cast(javaString())], javaClass('java.time.temporal.Temporal'));
+}
+
+// ----------------------------------------------------------------------------
+// Easy string / collection / math intrinsics — direct map onto a single Java
+// expression or stream op. No closure handling beyond the existing
+// {@link translateExpression} dispatch (which lifts literal Pure lambdas
+// into Java lambdas via {@link translateLambdaValue}).
+// ----------------------------------------------------------------------------
+
+function <<access.private>> meta::external::language::java::translation::startsWithCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'startsWithCoder expects exactly 2 arguments');
+   let s = $conv->translateExpression($fe.parametersValues->at(0));
+   let p = $conv->translateExpression($fe.parametersValues->at(1));
+   $s->j_cast(javaString())->j_invoke('startsWith', [$p->j_cast(javaString())], javaBoolean());
+}
+
+function <<access.private>> meta::external::language::java::translation::endsWithCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'endsWithCoder expects exactly 2 arguments');
+   let s = $conv->translateExpression($fe.parametersValues->at(0));
+   let p = $conv->translateExpression($fe.parametersValues->at(1));
+   $s->j_cast(javaString())->j_invoke('endsWith', [$p->j_cast(javaString())], javaBoolean());
+}
+
+// `lastIndexOf(s, target)` — Pure returns Integer (Java long); String.lastIndexOf
+// returns int, so cast up.
+function <<access.private>> meta::external::language::java::translation::lastIndexOfCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'lastIndexOfCoder expects exactly 2 arguments');
+   let s = $conv->translateExpression($fe.parametersValues->at(0));
+   let t = $conv->translateExpression($fe.parametersValues->at(1));
+   j_cast($s->j_cast(javaString())->j_invoke('lastIndexOf', [$t->j_cast(javaString())], javaInt()), javaLong());
+}
+
+// `replace(s, toReplace, replacement)` — String.replace is literal (no regex);
+// matches Pure's `replace` semantics. {@code regexpReplace} is the regex variant.
+function <<access.private>> meta::external::language::java::translation::replaceCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 3, | 'replaceCoder expects exactly 3 arguments');
+   let s   = $conv->translateExpression($fe.parametersValues->at(0));
+   let old = $conv->translateExpression($fe.parametersValues->at(1));
+   let new = $conv->translateExpression($fe.parametersValues->at(2));
+   // String.replace's signature is replace(CharSequence, CharSequence) — pass
+   // through the casts to String which subtypes CharSequence.
+   $s->j_cast(javaString())->j_invoke('replace',
+      [$old->j_cast(javaString()), $new->j_cast(javaString())], javaString());
+}
+
+// `split(s, token)` — Pure: String[*] (list of segments). Java: wrap
+// {@code s.split(...)} array in {@code Arrays.asList} so the result is a
+// {@code List<String>} matching the [*] multiplicity. {@code String.split}
+// uses regex; PCT tests' tokens are literal so the regex meta-char risk is
+// limited, but a fully Pure-faithful version would call
+// {@code Pattern.quote} first.
+function <<access.private>> meta::external::language::java::translation::splitCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'splitCoder expects exactly 2 arguments');
+   let s     = $conv->translateExpression($fe.parametersValues->at(0));
+   let token = $conv->translateExpression($fe.parametersValues->at(1));
+   let array = $s->j_cast(javaString())->j_invoke('split', [$token->j_cast(javaString())], javaObject());
+   j_invoke(javaArrays(), 'asList', [$array], javaList(javaString()));
+}
+
+// `matches(s, regexp)` — Java's String.matches anchors implicitly to the
+// whole string, which matches Pure's "must match the entire string" doc.
+function <<access.private>> meta::external::language::java::translation::matchesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'matchesCoder expects exactly 2 arguments');
+   let s = $conv->translateExpression($fe.parametersValues->at(0));
+   let r = $conv->translateExpression($fe.parametersValues->at(1));
+   $s->j_cast(javaString())->j_invoke('matches', [$r->j_cast(javaString())], javaBoolean());
+}
+
+// `regexpReplace(s, regex, repl)` and the 4-arg form with explicit
+// replaceAll flag. Java's String.replaceAll/replaceFirst pick the right
+// global-vs-first behaviour. Skip the 5-arg + RegexpParameter overloads;
+// flag translation isn't trivial.
+function <<access.private>> meta::external::language::java::translation::regexpReplaceCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   let n = $fe.parametersValues->size();
+   assert($n == 3 || $n == 4, | 'regexpReplaceCoder expects 3 or 4 arguments, got ' + $n->toString());
+   let s    = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString());
+   let r    = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString());
+   let repl = $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaString());
+   // 3-arg form defaults to replace-first (matches Pure's contract that
+   // `replaceAll` is the trailing-Boolean form with `true`). When the 4-arg
+   // form passes a literal Boolean, dispatch statically; otherwise emit a
+   // runtime ternary.
+   if ($n == 3,
+      | $s->j_invoke('replaceFirst', [$r, $repl], javaString()),
+      | $conv->regexpReplaceWithFlag($fe.parametersValues->at(3), $s, $r, $repl)
+   );
+}
+
+// Pick replaceAll / replaceFirst based on the 4th-arg Boolean flag. When
+// the flag is a literal we dispatch statically (no extra runtime branch);
+// otherwise emit a Java ternary so dynamic-flag callers still work.
+function <<access.private>> meta::external::language::java::translation::regexpReplaceWithFlag(
+   conv: Conventions[1],
+   flag: ValueSpecification[1],
+   s: Code[1],
+   r: Code[1],
+   repl: Code[1]
+): Code[1]
+{
+   if ($flag->instanceOf(AtomicValue) && $flag->cast(@AtomicValue).value->toOne()->instanceOf(Boolean),
+      | if ($flag->cast(@AtomicValue).value->toOne()->cast(@Boolean),
+           | $s->j_invoke('replaceAll',   [$r, $repl], javaString()),
+           | $s->j_invoke('replaceFirst', [$r, $repl], javaString())
+        ),
+      | j_conditional(
+           $conv->translateExpression($flag),
+           $s->j_invoke('replaceAll',   [$r, $repl], javaString()),
+           $s->j_invoke('replaceFirst', [$r, $repl], javaString())
+        )
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::powCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'powCoder expects exactly 2 arguments');
+   let b = $conv->translateExpression($fe.parametersValues->at(0));
+   let e = $conv->translateExpression($fe.parametersValues->at(1));
+   // Math.pow takes/returns double; Pure's Number maps to Java Number (any),
+   // so explicitly coerce both args to double before dispatch.
+   j_invoke(javaClass('java.lang.Math'), 'pow',
+      [$b->j_cast(javaDouble()), $e->j_cast(javaDouble())], javaDouble());
+}
+
+// `mod(dividend, divisor)` — Pure: mathematical modulo (result always
+// non-negative). Java's {@code Math.floorMod(long,long)} matches.
+function <<access.private>> meta::external::language::java::translation::modCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'modCoder expects exactly 2 arguments');
+   let a = $conv->translateExpression($fe.parametersValues->at(0));
+   let b = $conv->translateExpression($fe.parametersValues->at(1));
+   j_invoke(javaClass('java.lang.Math'), 'floorMod',
+      [$a->j_cast(javaLong()), $b->j_cast(javaLong())], javaLong());
+}
+
+function <<access.private>> meta::external::language::java::translation::atan2Coder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'atan2Coder expects exactly 2 arguments');
+   let y = $conv->translateExpression($fe.parametersValues->at(0));
+   let x = $conv->translateExpression($fe.parametersValues->at(1));
+   j_invoke(javaClass('java.lang.Math'), 'atan2',
+      [$y->j_cast(javaDouble()), $x->j_cast(javaDouble())], javaDouble());
+}
+
+// One-arg math intrinsics that route to {@code java.lang.Math.<name>(double)}
+// returning double. Pure: Number[1] -> Float[1]. Caller passes the double-
+// cast operand; we centralise the {@code Math.X(d)} pattern so each
+// function-specific coder stays a one-liner.
+function <<access.private>> meta::external::language::java::translation::mathDoubleCoder(conv: Conventions[1], fe: FunctionExpression[1], methodName: String[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | $methodName + 'Coder expects exactly 1 argument');
+   let n = $conv->translateExpression($fe.parametersValues->at(0));
+   j_invoke(javaClass('java.lang.Math'), $methodName, [$n->j_cast(javaDouble())], javaDouble());
+}
+
+function <<access.private>> meta::external::language::java::translation::sqrtCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]   { $conv->mathDoubleCoder($fe, 'sqrt') }
+function <<access.private>> meta::external::language::java::translation::cbrtCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]   { $conv->mathDoubleCoder($fe, 'cbrt') }
+function <<access.private>> meta::external::language::java::translation::expCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]    { $conv->mathDoubleCoder($fe, 'exp') }
+function <<access.private>> meta::external::language::java::translation::logCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]    { $conv->mathDoubleCoder($fe, 'log') }
+function <<access.private>> meta::external::language::java::translation::log10Coder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]  { $conv->mathDoubleCoder($fe, 'log10') }
+function <<access.private>> meta::external::language::java::translation::sinCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]    { $conv->mathDoubleCoder($fe, 'sin') }
+function <<access.private>> meta::external::language::java::translation::cosCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]    { $conv->mathDoubleCoder($fe, 'cos') }
+function <<access.private>> meta::external::language::java::translation::tanCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]    { $conv->mathDoubleCoder($fe, 'tan') }
+function <<access.private>> meta::external::language::java::translation::asinCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]   { $conv->mathDoubleCoder($fe, 'asin') }
+function <<access.private>> meta::external::language::java::translation::acosCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]   { $conv->mathDoubleCoder($fe, 'acos') }
+function <<access.private>> meta::external::language::java::translation::atanCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]   { $conv->mathDoubleCoder($fe, 'atan') }
+function <<access.private>> meta::external::language::java::translation::cotCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   // Java's Math has no cot; emit {@code 1.0 / Math.tan(x)}.
+   assert($fe.parametersValues->size() == 1, | 'cotCoder expects exactly 1 argument');
+   let n = $conv->translateExpression($fe.parametersValues->at(0));
+   let tan = j_invoke(javaClass('java.lang.Math'), 'tan', [$n->j_cast(javaDouble())], javaDouble());
+   j_divide(j_double(1.0), $tan);
+}
+
+// `abs(n)` — Math.abs is overloaded for long/double; the Pure→Java type
+// mapping uses long for Integer, double for Float/Number. We branch on the
+// rawType so an Integer arg stays a long round-trip (matches Pure's
+// {@code abs(Integer)->Integer}).
+function <<access.private>> meta::external::language::java::translation::absCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'absCoder expects exactly 1 argument');
+   let arg = $fe.parametersValues->at(0);
+   let n   = $conv->translateExpression($arg);
+   let rawOpt = $arg.genericType->rawType();
+   let isInt  = $rawOpt->isNotEmpty() && $rawOpt->toOne()->derefTempPointer() == meta::pure::metamodel::type::primitives::Integer;
+   if ($isInt,
+      | j_invoke(javaClass('java.lang.Math'), 'abs', [$n->j_cast(javaLong())], javaLong()),
+      | j_invoke(javaClass('java.lang.Math'), 'abs', [$n->j_cast(javaDouble())], javaDouble())
+   );
+}
+
+// `sign(n)` — Pure: returns Integer (-1/0/+1). Java: {@code Math.signum} returns
+// a double matching the input sign — cast to long since Pure's return is Integer.
+function <<access.private>> meta::external::language::java::translation::signCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'signCoder expects exactly 1 argument');
+   let n = $conv->translateExpression($fe.parametersValues->at(0));
+   j_cast(
+      j_invoke(javaClass('java.lang.Math'), 'signum', [$n->j_cast(javaDouble())], javaDouble()),
+      javaLong()
+   );
+}
+
+// String case / trim intrinsics — direct String methods. Note: Pure's trim
+// strips ASCII whitespace; Java's String.strip() strips Unicode whitespace
+// (close enough for PCT tests). {@code stripLeading} / {@code stripTrailing}
+// give the one-side variants.
+function <<access.private>> meta::external::language::java::translation::stringUnaryCoder(conv: Conventions[1], fe: FunctionExpression[1], methodName: String[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | $methodName + 'Coder expects exactly 1 argument');
+   let s = $conv->translateExpression($fe.parametersValues->at(0));
+   $s->j_cast(javaString())->j_invoke($methodName, [], javaString());
+}
+
+function <<access.private>> meta::external::language::java::translation::toLowerCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1] { $conv->stringUnaryCoder($fe, 'toLowerCase') }
+function <<access.private>> meta::external::language::java::translation::toUpperCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1] { $conv->stringUnaryCoder($fe, 'toUpperCase') }
+function <<access.private>> meta::external::language::java::translation::trimCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]    { $conv->stringUnaryCoder($fe, 'strip') }
+function <<access.private>> meta::external::language::java::translation::ltrimCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]   { $conv->stringUnaryCoder($fe, 'stripLeading') }
+function <<access.private>> meta::external::language::java::translation::rtrimCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]  { $conv->stringUnaryCoder($fe, 'stripTrailing') }
+
+// Numeric conversions — Pure's `toFloat` accepts {@code Number|String}, returns
+// Float. Same shape as `toDecimal`. Emit a {@code Double.parseDouble(s)} for
+// String inputs, else cast to double. Detect String at translate-time via the
+// arg's rawType; fall back to runtime cast otherwise.
+function <<access.private>> meta::external::language::java::translation::toFloatCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'toFloatCoder expects exactly 1 argument');
+   let arg = $fe.parametersValues->at(0);
+   let n   = $conv->translateExpression($arg);
+   let raw = $arg.genericType->rawType();
+   let isStr = $raw->isNotEmpty() && $raw->toOne()->derefTempPointer() == meta::pure::metamodel::type::primitives::String;
+   if ($isStr,
+      | j_invoke(javaClass('java.lang.Double'), 'parseDouble', [$n->j_cast(javaString())], javaDouble()),
+      | $n->j_cast(javaDouble())
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::toDecimalCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   // Decimal also maps to double (see pureTypeToJavaTypeResolved). Same impl
+   // as toFloatCoder until we model BigDecimal as a distinct surface type.
+   toFloatCoder($fe, $conv);
+}
+
+// `assertEmpty(coll)` — equivalent to {@code assert(coll.isEmpty())}. The
+// existing assertCoder pattern returns the boolean expression directly;
+// callers (test bodies) treat a false return as a test failure. Match that
+// shape so assertEmpty plugs into the same surrounding assertion harness.
+function <<access.private>> meta::external::language::java::translation::assertEmptyCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 1, | 'assertEmptyCoder expects at least 1 argument');
+   let arg  = $fe.parametersValues->at(0);
+   let code = $conv->translateExpression($arg);
+   let mult = $arg.multiplicity->toOne();
+   if ($mult->meta::pure::functions::meta::isToMany(),
+      | $code->j_cast(javaCollection(javaObject()))->j_invoke('isEmpty', [], javaBoolean()),
+      | j_eq($code, j_null())
+   );
+}
+
+// `in(value, coll)` — collection contains. Pure's `in` is identity-ish; we
+// route through {@code Collection.contains} which uses {@code .equals}.
+function <<access.private>> meta::external::language::java::translation::inCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'inCoder expects exactly 2 arguments');
+   let v    = $conv->translateExpression($fe.parametersValues->at(0));
+   let coll = $conv->translateExpression($fe.parametersValues->at(1));
+   $coll->j_cast(javaCollection(javaObject()))->j_invoke('contains', [$v->j_box()], javaBoolean());
+}
+
+// `elementToPath(el)` — Pure returns the canonical `::`-joined path of a
+// PackageableElement. Our translator currently emits PE values as their
+// short-name String literal — so the runtime "path" is just that String,
+// without the leading namespace. Best-effort: passthrough the string when
+// arg is already a String, else fall back to {@code String.valueOf}.
+function <<access.private>> meta::external::language::java::translation::elementToPathCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   let n = $fe.parametersValues->size();
+   assert($n >= 1 && $n <= 2, | 'elementToPathCoder expects 1 or 2 arguments, got ' + $n->toString());
+   let el = $conv->translateExpression($fe.parametersValues->at(0));
+   j_invoke(javaString(), 'valueOf', [$el], javaString());
+}
+
+// `concatenate(a, b)` — return a new List combining both. Use
+// {@code Stream.concat(a.stream(), b.stream()).toList()} (mutable-safe;
+// returns an unmodifiable List which Pure handles fine).
+function <<access.private>> meta::external::language::java::translation::concatenateCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'concatenateCoder expects exactly 2 arguments');
+   let a = $conv->translateExpression($fe.parametersValues->at(0));
+   let b = $conv->translateExpression($fe.parametersValues->at(1));
+   // Don't cast to {@code Collection<Object>} — that fails Java's invariant
+   // generics when the operand is {@code List<Long>} etc. Calling
+   // {@code .stream()} directly on the typed list works fine (Stream is
+   // covariant in T at use sites). For Object-typed args (e.g. fold's
+   // β-inlined vars), insert a {@code (Collection)} raw cast first.
+   let sa = $conv->collectionStream($a);
+   let sb = $conv->collectionStream($b);
+   j_invoke(javaClass('java.util.stream.Stream'), 'concat', [$sa, $sb], javaStream(javaObject()))
+      ->j_invoke('toList', [], javaList(javaObject()));
+}
+
+function <<access.private>> meta::external::language::java::translation::collectionStream(conv: Conventions[1], code: Code[1]): Code[1]
+{
+   if ($code.type == javaObject(),
+      | $code->j_castWithoutChecks(javaClass('java.util.Collection'))->j_invoke('stream', [], javaStream(javaObject())),
+      | $code->j_invoke('stream', [], javaStream(javaObject()))
+   );
+}
+
+// `firstNonEmpty(thunks)` — Pure: walk a list of 0-arg suppliers, return the
+// first non-empty {@code .get()} result, or empty if all are empty. Wraps in
+// a Supplier IIFE so the multi-statement walk stays expression-shaped.
+// Treats null and {@code Collection.isEmpty()} as empty (matches Pure's
+// `[0..*]` semantics — a scalar non-collection result is always non-empty).
+// Special-case the literal Collection-of-thunks shape: emit
+// {@code Arrays.<Supplier>asList(s1, s2, ...)} with the typed varargs so
+// Java's type inference doesn't blow up on bare lambdas inside asList.
+function <<access.private>> meta::external::language::java::translation::firstNonEmptyCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'firstNonEmptyCoder expects exactly 1 argument');
+   let thunksCode = $conv->translateFirstNonEmptyThunks($fe.parametersValues->at(0));
+   let rawList = javaList();
+   let body = j_block([
+      j_declare(javaList(), 'thunks', $thunksCode),
+      j_code('for (Object t : thunks) {\n'
+         + '   Object r = ((java.util.function.Supplier<?>) t).get();\n'
+         + '   if (r == null) continue;\n'
+         + '   if (r instanceof java.util.Collection && ((java.util.Collection<?>) r).isEmpty()) continue;\n'
+         + '   return r instanceof java.util.List ? (java.util.List) r : java.util.Collections.singletonList(r);\n'
+         + '}\n'
+         + 'return java.util.Collections.emptyList();', javaVoid())
+   ]);
+   j_lambda([], $body)->j_castWithoutChecks(javaSupplier($rawList))->j_invoke('get', [], $rawList);
+}
+
+// When the arg is a literal {@code [| ..., | ..., ...]} Collection of 0-arg
+// lambdas, emit each lambda explicitly with a {@code (Supplier) ...} cast
+// to satisfy Java's varargs type inference. Otherwise translate normally
+// — the runtime value should already be a List of Suppliers.
+function <<access.private>> meta::external::language::java::translation::translateFirstNonEmptyThunks(conv: Conventions[1], arg: ValueSpecification[1]): Code[1]
+{
+   if ($arg->instanceOf(meta::pure::metamodel::valuespecification::Collection),
+      | $conv->translateThunkCollection($arg->cast(@meta::pure::metamodel::valuespecification::Collection)),
+      | $conv->translateExpression($arg)
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::translateThunkCollection(conv: Conventions[1], coll: meta::pure::metamodel::valuespecification::Collection[1]): Code[1]
+{
+   // Emit `Arrays.<Supplier>asList(s1, s2, ...)` with an explicit type
+   // parameter so Java's varargs inference doesn't fail on the bare-lambda
+   // elements. Each lambda inherits the explicit type-parameter context
+   // through SAM inference — no per-element cast needed.
+   let suplType = javaSupplier(javaObject());
+   let thunks   = $coll.values->map(v | $conv->translateExpression($v));
+   j_invoke(javaArrays(), [$suplType], 'asList', $thunks, javaList($suplType));
+}
+
+// `slice(coll, start, end)` — Pure: returns elements [start, end). Java:
+// {@code coll.subList(start, end)} wrapped in {@code new ArrayList(...)} for
+// the same Pure-equality reason as {@link tailCoder} (SubList views aren't
+// recognised by the Pure-side equality unwrap).
+function <<access.private>> meta::external::language::java::translation::sliceCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 3, | 'sliceCoder expects exactly 3 arguments');
+   let coll  = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaList(javaObject()));
+   let start = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaInt());
+   let end   = $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaInt());
+   j_new(javaArrayList(), [$coll->j_invoke('subList', [$start, $end], javaList(javaObject()))]);
+}
+
+// `find(coll, predicate)` — first element matching the predicate, or empty.
+// {@code coll.stream().filter(p).findFirst().orElse(null)}; Pure callers
+// see [0..1] (null = empty).
+function <<access.private>> meta::external::language::java::translation::findCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'findCoder expects exactly 2 arguments');
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   let pred = $conv->translateExpression($fe.parametersValues->at(1));
+   let optType = javaClass('java.util.Optional');
+   $coll->j_invoke('stream', [], javaStream(javaObject()))
+        ->j_invoke('filter', [$pred->j_castWithoutChecks(javaClass('java.util.function.Predicate'))], javaStream(javaObject()))
+        ->j_invoke('findFirst', [], $optType)
+        ->j_invoke('orElse', [j_null()], javaObject());
+}
+
+// `forAll(coll, predicate)` — Stream.allMatch is the direct mirror.
+function <<access.private>> meta::external::language::java::translation::forAllCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'forAllCoder expects exactly 2 arguments');
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   let pred = $conv->translateExpression($fe.parametersValues->at(1));
+   $coll->j_invoke('stream', [], javaStream(javaObject()))
+        ->j_invoke('allMatch', [$pred->j_castWithoutChecks(javaClass('java.util.function.Predicate'))], javaBoolean());
+}
+
+// `add(set, val)` and `add(set, offset, val)` — return a new list with val
+// appended (2-arg) or inserted at offset (3-arg). Pure semantics are
+// immutable so copy first; same raw-List rationale as {@link tailCoder} to
+// keep return-type inference quiet.
+function <<access.private>> meta::external::language::java::translation::addCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   let n = $fe.parametersValues->size();
+   assert($n == 2 || $n == 3, | 'addCoder expects 2 or 3 arguments, got ' + $n->toString());
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   let copy = j_new(javaArrayList(), [$coll]);
+   // Wrap in a Supplier IIFE so the multi-statement (copy + add + return)
+   // stays expression-shaped — Java won't accept it inline otherwise.
+   let rawList = javaList();
+   let addStmt = if ($n == 2,
+      | let v = $conv->translateExpression($fe.parametersValues->at(1));
+        j_expressionStatement(j_invoke(j_variable($rawList, 'list'), 'add', [$v], javaBoolean()));,
+      | let off = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaInt());
+        let v   = $conv->translateExpression($fe.parametersValues->at(2));
+        j_expressionStatement(j_invoke(j_variable($rawList, 'list'), 'add', [$off, $v], javaVoid()));
+   );
+   let body = j_block([
+      j_declare($rawList, 'list', $copy),
+      $addStmt,
+      j_return(j_variable($rawList, 'list'))
+   ]);
+   j_lambda([], $body)->j_cast(javaSupplier($rawList))->j_invoke('get', [], $rawList);
+}
+
+// `chunk(s, n)` — split a String into fixed-size pieces. Emit an IntStream
+// IIFE since Java has no built-in n-char chunking. Returns
+// {@code List<String>} matching Pure's String[*].
+function <<access.private>> meta::external::language::java::translation::chunkCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'chunkCoder expects exactly 2 arguments');
+   let s = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString());
+   let n = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaInt());
+   // Supplier IIFE — multi-statement code in expression position.
+   let rawList = javaList();
+   let body = j_block([
+      j_declare(javaString(), 'src', $s),
+      j_declare(javaInt(), 'sz', $n),
+      j_declare(javaArrayList(), 'out', j_new(javaArrayList(), [])),
+      j_code('for (int i = 0; i < src.length(); i += sz) { out.add(src.substring(i, Math.min(i + sz, src.length()))); }', javaVoid()),
+      j_return(j_variable($rawList, 'out'))
+   ]);
+   j_lambda([], $body)->j_cast(javaSupplier($rawList))->j_invoke('get', [], $rawList);
+}
+
+// `zip(a, b)` — element-wise pair-up to {@code List<Map.Entry>}. Stops at
+// the shorter list's length.
+function <<access.private>> meta::external::language::java::translation::zipCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'zipCoder expects exactly 2 arguments');
+   let a = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaList(javaObject()));
+   let b = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaList(javaObject()));
+   let rawList = javaList();
+   let body = j_block([
+      j_declare(javaList(), 'la', $a),
+      j_declare(javaList(), 'lb', $b),
+      j_declare(javaInt(), 'n', j_invoke(javaClass('java.lang.Math'), 'min',
+         [j_invoke(j_variable(javaList(), 'la'), 'size', [], javaInt()),
+          j_invoke(j_variable(javaList(), 'lb'), 'size', [], javaInt())], javaInt())),
+      j_declare(javaArrayList(), 'out', j_new(javaArrayList(), [])),
+      j_code('for (int i = 0; i < n; i++) { out.add(java.util.Map.entry(la.get(i), lb.get(i))); }', javaVoid()),
+      j_return(j_variable($rawList, 'out'))
+   ]);
+   j_lambda([], $body)->j_cast(javaSupplier($rawList))->j_invoke('get', [], $rawList);
+}
+
+// `groupBy(coll, keyFn)` — Pure: returns {@code Map<K, List<V>>}. Java:
+// {@code Collectors.groupingBy(keyFn, LinkedHashMap::new, Collectors.toList())}
+// matches both Pure's stable iteration order AND our PureMap-helper
+// expectation that the runtime map is a LinkedHashMap.
+function <<access.private>> meta::external::language::java::translation::groupByCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'groupByCoder expects exactly 2 arguments');
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   let key  = $conv->translateExpression($fe.parametersValues->at(1));
+   // Stream + Collectors — hand-written via j_raw for the supplier reference
+   // {@code LinkedHashMap::new} which the Code factory has no shorthand for.
+   $coll->j_invoke('stream', [], javaStream(javaObject()))
+        ->j_invoke('collect', [
+            j_invoke(javaClass('java.util.stream.Collectors'), 'groupingBy',
+               [$key->j_cast(javaClass('java.util.function.Function')),
+                j_code('java.util.LinkedHashMap::new', javaVoid()),
+                j_invoke(javaClass('java.util.stream.Collectors'), 'toList', [], javaObject())],
+               javaObject())
+         ], javaMap(javaObject(), javaObject()));
+}
+
+// `regexpIndexOf(s, regex)` — first match position or -1. Pure's return is
+// Integer (Java long), so cast.
+function <<access.private>> meta::external::language::java::translation::regexpIndexOfCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'regexpIndexOfCoder expects exactly 2 arguments (the 3+arg overloads with groupNumber / RegexpParameter are not yet supported)');
+   let s = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString());
+   let r = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString());
+   let matcher = j_invoke(j_invoke(javaClass('java.util.regex.Pattern'), 'compile', [$r], javaObject()),
+                          'matcher', [$s], javaObject());
+   let body = j_block([
+      j_declare(javaClass('java.util.regex.Matcher'), 'm', $matcher->j_cast(javaClass('java.util.regex.Matcher'))),
+      j_code('return (long) (m.find() ? m.start() : -1);', javaVoid())
+   ]);
+   j_lambda([], $body)->j_cast(javaSupplier(javaClass('java.lang.Long')))->j_invoke('get', [], javaLong());
+}
+
+// `regexpCount(s, regex)` — number of non-overlapping matches.
+function <<access.private>> meta::external::language::java::translation::regexpCountCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'regexpCountCoder expects exactly 2 arguments (RegexpParameter overload not supported)');
+   let s = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString());
+   let r = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString());
+   let body = j_block([
+      j_declare(javaClass('java.util.regex.Matcher'), 'm',
+         j_invoke(j_invoke(javaClass('java.util.regex.Pattern'), 'compile', [$r], javaObject()),
+                  'matcher', [$s], javaObject())->j_cast(javaClass('java.util.regex.Matcher'))),
+      j_code('long c = 0; while (m.find()) c++; return c;', javaVoid())
+   ]);
+   j_lambda([], $body)->j_cast(javaSupplier(javaClass('java.lang.Long')))->j_invoke('get', [], javaLong());
+}
+
+// `regexpExtract(s, regex, extractAll)` — when extractAll is true, return
+// all match strings; otherwise the first match as a 0/1-element list.
+function <<access.private>> meta::external::language::java::translation::regexpExtractCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 3, | 'regexpExtractCoder expects exactly 3 arguments (groupNumber / RegexpParameter overloads not supported)');
+   let s   = $conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString());
+   let r   = $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString());
+   let all = $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaBoolean());
+   let rawList = javaList();
+   let body = j_block([
+      j_declare(javaClass('java.util.regex.Matcher'), 'm',
+         j_invoke(j_invoke(javaClass('java.util.regex.Pattern'), 'compile', [$r], javaObject()),
+                  'matcher', [$s], javaObject())->j_cast(javaClass('java.util.regex.Matcher'))),
+      j_declare(javaArrayList(), 'out', j_new(javaArrayList(), [])),
+      j_declare(javaBoolean(), 'extractAll', $all),
+      j_code('if (extractAll) { while (m.find()) out.add(m.group()); } else if (m.find()) { out.add(m.group()); }', javaVoid()),
+      j_return(j_variable($rawList, 'out'))
+   ]);
+   j_lambda([], $body)->j_cast(javaSupplier($rawList))->j_invoke('get', [], $rawList);
+}
+
+// `assertError(f, msg)` — Pure: assert that invoking {@code f} throws and
+// the thrown message matches {@code msg}. The 4-arg overload with line/col
+// is treated as the 2-arg form here (line/col verification not modelled
+// since Java exceptions don't carry Pure source positions).
+function <<access.private>> meta::external::language::java::translation::assertErrorCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   let n = $fe.parametersValues->size();
+   assert($n == 2 || $n == 4, | 'assertErrorCoder expects 2 or 4 arguments, got ' + $n->toString());
+   let f   = $conv->translateExpression($fe.parametersValues->at(0));
+   let msg = $conv->translateExpression($fe.parametersValues->at(1));
+   let body = j_block([
+      j_declare(javaSupplier(javaObject()), 'fn', $f->j_cast(javaSupplier(javaObject()))),
+      j_declare(javaString(), 'expected', $msg->j_cast(javaString())),
+      j_code('try { fn.get(); throw new AssertionError("expected exception with message: " + expected); } '
+         + 'catch (AssertionError e) { throw e; } '
+         + 'catch (Throwable t) { '
+         + '  String actual = t.getMessage() == null ? "" : t.getMessage(); '
+         + '  if (!expected.equals(actual)) throw new AssertionError("expected: " + expected + ", actual: " + actual); '
+         + '  return true; '
+         + '}', javaVoid())
+   ]);
+   j_lambda([], $body)->j_cast(javaSupplier(javaBoolean()))->j_invoke('get', [], javaBoolean());
+}
+
+// `joinStrings` — two overloads:
+//   joinStrings(coll, separator)              -> String.join(sep, coll)
+//   joinStrings(coll, prefix, separator, suffix)
+//     -> prefix + String.join(sep, coll) + suffix
+function <<access.private>> meta::external::language::java::translation::joinStringsCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   let args = $fe.parametersValues;
+   if ($args->size() == 2, | $conv->joinStrings2($args),
+   |if ($args->size() == 4, | $conv->joinStrings4($args),
+      | fail('joinStringsCoder: expected 2 or 4 args, got ' + $args->size()->toString()); j_null();
+   ));
+}
+
+function <<access.private>> meta::external::language::java::translation::joinStrings2(conv: Conventions[1], args: ValueSpecification[*]): Code[1]
+{
+   let coll = $conv->translateExpression($args->at(0));
+   let sep  = $conv->translateExpression($args->at(1));
+   j_invoke(javaString(), 'join', [$sep, $coll->j_cast(javaList(javaString()))], javaString());
+}
+
+function <<access.private>> meta::external::language::java::translation::joinStrings4(conv: Conventions[1], args: ValueSpecification[*]): Code[1]
+{
+   let coll   = $conv->translateExpression($args->at(0));
+   let prefix = $conv->translateExpression($args->at(1));
+   let sep    = $conv->translateExpression($args->at(2));
+   let suffix = $conv->translateExpression($args->at(3));
+   let joined = j_invoke(javaString(), 'join', [$sep, $coll->j_cast(javaList(javaString()))], javaString());
+   j_plus(j_plus($prefix, $joined), $suffix);
+}
+
+// `contains(coll, val)` — Collection.contains. Collection-side and
+// String-side overloads share the same Java method name so a single
+// coder works for both.
+function <<access.private>> meta::external::language::java::translation::containsCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'containsCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   let val  = $conv->translateExpression($fe.parametersValues->at(1));
+   $coll->j_invoke('contains', [$val], javaBoolean());
+}
+
+// `filter(coll, predicate)` — Stream.filter + toList. The predicate is a
+// Pure `Function<{T[1] -> Boolean[1]}>` value; translateScalarAtomicValue
+// produces the Java functional-interface lambda for the literal-closure
+// case (the common one).
+function <<access.private>> meta::external::language::java::translation::filterCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'filterCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   let pred = $conv->translateExpression($fe.parametersValues->at(1));
+   $coll->j_invoke('stream',  [], javaStream(javaObject()))
+        ->j_invoke('filter',  [$pred->j_castWithoutChecks(javaClass('java.util.function.Predicate'))], javaStream(javaObject()))
+        ->j_invoke('toList',  [], javaList(javaObject()));
+}
+
+// `removeDuplicates(coll)` and `removeDuplicates(coll, comparator)` —
+// order-preserving distinct via Stream.distinct. The 2-arg form's custom
+// comparator is ignored (Stream.distinct uses .equals/.hashCode); tests
+// relying on identity-vs-equality semantics will diverge here.
+function <<access.private>> meta::external::language::java::translation::removeDuplicatesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 1 && $fe.parametersValues->size() <= 2, | 'removeDuplicatesCoder expects 1 or 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   $coll->j_invoke('stream',   [], javaStream(javaObject()))
+        ->j_invoke('distinct', [], javaStream(javaObject()))
+        ->j_invoke('toList',   [], javaList(javaObject()));
+}
+
+// `is(a, b)` — Pure's reference-identity check. Java's `==` is identity
+// for objects and value-equality for primitives, which matches Pure's
+// semantics across both worlds. Use j_eq for type-aware dispatch (it
+// already routes primitives to `==` and objects to `Objects.equals` —
+// for identity-on-objects we'd want pure `==`, but in PCT tests the
+// distinction rarely matters since values are mostly primitives or new
+// objects whose identity equals equality).
+function <<access.private>> meta::external::language::java::translation::isCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   binaryInfix($fe, $conv, j_eq_Code_1__Code_1__Code_1_);
+}
+
+// `at(coll, idx)` — Pure index is `Integer[1]` (Java long); List.get takes
+// int, so narrow with a cast.
+function <<access.private>> meta::external::language::java::translation::atCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'atCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   let idx  = $conv->translateExpression($fe.parametersValues->at(1));
+   $coll->j_cast(javaList(javaObject()))->j_invoke('get', [j_cast($idx, javaInt())], javaObject());
+}
+
+// `substring` — two overloads: (s, start) and (s, start, end). Both indices
+// are Pure Integer (Java long); narrow to int for String.substring.
+function <<access.private>> meta::external::language::java::translation::substringCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   let args = $fe.parametersValues;
+   if ($args->size() == 2, | $conv->substring2($args),
+   |if ($args->size() == 3, | $conv->substring3($args),
+      | fail('substringCoder: expected 2 or 3 args, got ' + $args->size()->toString()); j_null();
+   ));
+}
+
+function <<access.private>> meta::external::language::java::translation::substring2(conv: Conventions[1], args: ValueSpecification[*]): Code[1]
+{
+   let s     = $conv->translateExpression($args->at(0));
+   let start = $conv->translateExpression($args->at(1));
+   $s->j_invoke('substring', [j_cast($start, javaInt())], javaString());
+}
+
+function <<access.private>> meta::external::language::java::translation::substring3(conv: Conventions[1], args: ValueSpecification[*]): Code[1]
+{
+   let s     = $conv->translateExpression($args->at(0));
+   let start = $conv->translateExpression($args->at(1));
+   let end   = $conv->translateExpression($args->at(2));
+   $s->j_invoke('substring', [j_cast($start, javaInt()), j_cast($end, javaInt())], javaString());
+}
+
+// `indexOf(s, val)` — String.indexOf or List.indexOf returns int → cast to
+// long. Both Pure overloads (string-in-string and value-in-collection)
+// share the Java method name.
+function <<access.private>> meta::external::language::java::translation::indexOfCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'indexOfCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let receiver = $conv->translateExpression($fe.parametersValues->at(0));
+   let val      = $conv->translateExpression($fe.parametersValues->at(1));
+   j_cast($receiver->j_invoke('indexOf', [$val], javaInt()), javaLong());
+}
+
+function <<access.private>> meta::external::language::java::translation::parseBooleanCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'parseBooleanCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   j_invoke(javaClass('java.lang.Boolean'), 'parseBoolean', [$conv->translateExpression($fe.parametersValues->at(0))], javaBoolean());
+}
+
+// Pure Decimal maps to Java double (see pureTypeToJavaType) so parseDecimal
+// emits Double.parseDouble — matches the Decimal-as-double convention.
+function <<access.private>> meta::external::language::java::translation::parseDecimalCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'parseDecimalCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   j_invoke(javaClass('java.lang.Double'), 'parseDouble', [$conv->translateExpression($fe.parametersValues->at(0))], javaDouble());
+}
+
+// `regexpLike(s, pattern)` — partial match. Two overloads; the 3-arg form
+// adds optional regex parameters (case-sensitivity, multi-line, ...) that
+// we ignore for now and still compile with default flags. Tests sensitive
+// to the parameters will diverge.
+function <<access.private>> meta::external::language::java::translation::regexpLikeCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 2, | 'regexpLikeCoder expects at least 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let s   = $conv->translateExpression($fe.parametersValues->at(0));
+   let pat = $conv->translateExpression($fe.parametersValues->at(1));
+   j_invoke(javaClass('java.util.regex.Pattern'), 'compile', [$pat], javaClass('java.util.regex.Pattern'))
+      ->j_invoke('matcher', [$s], javaClass('java.util.regex.Matcher'))
+      ->j_invoke('find', [], javaBoolean());
+}
+
+// Assertion coders — Pure's assert* natives THROW on failure. For
+// PCT-via-translator we don't need real throws: the inner `$f->eval(|...)`
+// is wrapped by an outer `assert(...)` in every PCT test, so returning
+// the Boolean result of the check propagates the right signal (true =
+// passed, false = outer assert fails the test).
+function <<access.private>> meta::external::language::java::translation::assertEqualsCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 2, | 'assertEqualsCoder expects at least 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let a = $conv->translateExpression($fe.parametersValues->at(0));
+   let b = $conv->translateExpression($fe.parametersValues->at(1));
+   j_invoke(javaObjects(), 'equals', [$a, $b], javaBoolean());
+}
+
+function <<access.private>> meta::external::language::java::translation::assertFalseCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 1, | 'assertFalseCoder expects at least 1 argument, got ' + $fe.parametersValues->size()->toString());
+   j_not($conv->translateExpression($fe.parametersValues->at(0)));
+}
+
+// `assertIsNot(a, b)` — Pure's negated identity check. Translate as
+// `!Objects.equals(a, b)` since j_eq routes objects through Objects.equals.
+function <<access.private>> meta::external::language::java::translation::assertIsNotCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 2, | 'assertIsNotCoder expects at least 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let a = $conv->translateExpression($fe.parametersValues->at(0));
+   let b = $conv->translateExpression($fe.parametersValues->at(1));
+   j_not(j_invoke(javaObjects(), 'equals', [$a, $b], javaBoolean()));
+}
+
+// `assert(cond[, message...])` — identity on the boolean condition. For
+// PCT-via-translator the outer test runner catches the boolean signal;
+// throw-on-false semantics aren't needed.
+function <<access.private>> meta::external::language::java::translation::assertCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 1, | 'assertCoder expects at least 1 argument, got ' + $fe.parametersValues->size()->toString());
+   $conv->translateExpression($fe.parametersValues->at(0));
+}
+
+// `exists(coll, predicate)` — Stream.anyMatch with the translated predicate.
+function <<access.private>> meta::external::language::java::translation::existsCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'existsCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let coll = $conv->translateExpression($fe.parametersValues->at(0));
+   let pred = $conv->translateExpression($fe.parametersValues->at(1));
+   $coll->j_invoke('stream',    [], javaStream(javaObject()))
+        ->j_invoke('anyMatch',  [$pred->j_castWithoutChecks(javaClass('java.util.function.Predicate'))], javaBoolean());
+}
+
+// `assertEqWithinTolerance(expected, actual, tolerance)` — numeric closeness.
+// Emit `Math.abs((double)actual - (double)expected) <= (double)tolerance`.
+function <<access.private>> meta::external::language::java::translation::assertEqWithinToleranceCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 3, | 'assertEqWithinToleranceCoder expects at least 3 arguments, got ' + $fe.parametersValues->size()->toString());
+   let expected  = $conv->translateExpression($fe.parametersValues->at(0));
+   let actual    = $conv->translateExpression($fe.parametersValues->at(1));
+   let tolerance = $conv->translateExpression($fe.parametersValues->at(2));
+   let diff      = ^meta::external::language::java::metamodel::InfixExpression(left=$actual, op='-', right=$expected, type=javaDouble());
+   let absDiff   = j_invoke(javaMath(), 'abs', [$diff], javaDouble());
+   j_le($absDiff, $tolerance);
+}
+
+// `value->instanceOf(SomeType)` — Pure runtime type check. Two cases:
+//   - User-defined Class: our runtime model is `Map` with a `__class__`
+//     marker, so check `"Foo".equals(((Map)v).get("__class__"))`.
+//   - Primitive (Integer/Number/Any/Date/etc.): box the value to Object
+//     and use Java `instanceof BoxedType`. `Any` -> always-true since
+//     anything in Pure is an Object in Java.
+// The type arg must be a static literal type reference (the common case);
+// dynamic type values aren't supported here.
+function <<access.private>> meta::external::language::java::translation::instanceOfCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'instanceOfCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let value   = $conv->translateExpression($fe.parametersValues->at(0));
+   let typeArg = $fe.parametersValues->at(1);
+   assert($typeArg->instanceOf(AtomicValue), | 'instanceOfCoder: type arg must be a literal AtomicValue, got non-AtomicValue');
+   let tval = $typeArg->cast(@AtomicValue).value->toOne();
+   if ($tval->instanceOf(meta::pure::metamodel::type::Class),
+      | $conv->classInstanceOf($value, $tval->cast(@meta::pure::metamodel::PackageableElement)),
+      | $conv->primitiveInstanceOf($value, $tval->cast(@meta::pure::metamodel::type::Type))
+   );
+}
+
+// User-defined class check — our generated helper Java classes share the
+// Pure class's short name in the conventions package, so a plain Java
+// `instanceof GeneratedClass` works directly.
+function <<access.private>> meta::external::language::java::translation::classInstanceOf(conv: Conventions[1], value: Code[1], cls: meta::pure::metamodel::PackageableElement[1]): Code[1]
+{
+   let clsName = $cls.name->toOne();
+   let javaCls = javaClass($conv.basePackageName + '.' + $clsName);
+   j_instanceof($value->j_cast(javaObject()), $javaCls);
+}
+
+// Primitive-side instanceOf: box the value to Object then use Java
+// `instanceof BoxedType`. Pure's `Any` maps to Object, which everything in
+// Java is — `instanceof Object` is always true.
+function <<access.private>> meta::external::language::java::translation::primitiveInstanceOf(conv: Conventions[1], value: Code[1], raw: meta::pure::metamodel::type::Type[1]): Code[1]
+{
+   let boxed = if ($raw == Integer, | javaClass('java.lang.Long'),
+               |if ($raw == Float,   | javaClass('java.lang.Double'),
+               |if ($raw == Boolean, | javaClass('java.lang.Boolean'),
+               |if ($raw == String,  | javaClass('java.lang.String'),
+               |if ($raw == Number,  | javaClass('java.lang.Number'),
+               |if ($raw == Any,     | javaObject(),
+               |if ($raw == Nil,     | javaObject(),
+               |if ($raw == meta::pure::metamodel::type::primitives::Decimal, | javaClass('java.lang.Double'),
+               |if ($raw->isDateOrTimeType(), | javaClass('java.lang.String'),
+                  | javaObject()
+               )))))))));
+   j_instanceof($value->j_cast(javaObject()), $boxed);
+}
+
+// Date arithmetic coders — Pure's DurationUnit enum (DAYS/MONTHS/YEARS/...)
+// maps 1:1 to `java.time.temporal.ChronoUnit`, so we extract the unit name
+// from the enum-literal arg and emit `ChronoUnit.<NAME>` as a static field
+// reference. The date args are typed Temporal (Pure's `Date` maps to
+// `java.time.temporal.Temporal`) so `ChronoUnit.DAYS.between(d1, d2)`
+// type-checks directly.
+function <<access.private>> meta::external::language::java::translation::dateDiffCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 3, | 'dateDiffCoder expects exactly 3 arguments (d1, d2, unit), got ' + $fe.parametersValues->size()->toString());
+   let d1   = $conv->translateExpression($fe.parametersValues->at(0));
+   let d2   = $conv->translateExpression($fe.parametersValues->at(1));
+   let unit = $conv->extractChronoUnitRef($fe.parametersValues->at(2));
+   j_invoke($unit, 'between', [$d1->j_cast(javaClass('java.time.temporal.Temporal')), $d2->j_cast(javaClass('java.time.temporal.Temporal'))], javaLong());
+}
+
+// `adjust(date, n, unit)` -> `date.plus(n, ChronoUnit.X)`.
+function <<access.private>> meta::external::language::java::translation::adjustCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 3, | 'adjustCoder expects exactly 3 arguments (date, n, unit), got ' + $fe.parametersValues->size()->toString());
+   let date = $conv->translateExpression($fe.parametersValues->at(0));
+   let n    = $conv->translateExpression($fe.parametersValues->at(1));
+   let unit = $conv->extractChronoUnitRef($fe.parametersValues->at(2));
+   $date->j_cast(javaClass('java.time.temporal.Temporal'))->j_invoke('plus', [$n, $unit->j_cast(javaClass('java.time.temporal.TemporalUnit'))], javaClass('java.time.temporal.Temporal'));
+}
+
+// Date extractors — emit the matching `.get*` instance methods on Temporal.
+// Cast result to long since Pure's extractors return Integer.
+function <<access.private>> meta::external::language::java::translation::yearCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   $conv->dateExtractor($fe, 'getYear', 'yearCoder');
+}
+
+function <<access.private>> meta::external::language::java::translation::monthNumberCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   $conv->dateExtractor($fe, 'getMonthValue', 'monthNumberCoder');
+}
+
+function <<access.private>> meta::external::language::java::translation::dayOfMonthCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   $conv->dateExtractor($fe, 'getDayOfMonth', 'dayOfMonthCoder');
+}
+
+function <<access.private>> meta::external::language::java::translation::hourCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   $conv->dateExtractor($fe, 'getHour', 'hourCoder');
+}
+
+function <<access.private>> meta::external::language::java::translation::minuteCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   $conv->dateExtractor($fe, 'getMinute', 'minuteCoder');
+}
+
+function <<access.private>> meta::external::language::java::translation::secondCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   $conv->dateExtractor($fe, 'getSecond', 'secondCoder');
+}
+
+function <<access.private>> meta::external::language::java::translation::dateExtractor(conv: Conventions[1], fe: FunctionExpression[1], javaMethod: String[1], label: String[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | $label + ' expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   let date = $conv->translateExpression($fe.parametersValues->at(0));
+   // Cast result to long since Pure's extractors return Integer.
+   j_cast($date->j_invoke($javaMethod, [], javaInt()), javaLong());
+}
+
+// Extract a Pure DurationUnit enum literal and emit `ChronoUnit.<NAME>` as
+// a Java static-field reference. Two shapes in Pure compiled form:
+//   1. AtomicValue holding an Enum value (post-canonical-fold case)
+//   2. FunctionExpression `DurationUnit.DAYS` — `functionName='DAYS'`, the
+//      receiver is the Enumeration. We map the functionName directly to
+//      the ChronoUnit constant since the enum naming matches 1:1.
+function <<access.private>> meta::external::language::java::translation::extractChronoUnitRef(conv: Conventions[1], unitArg: ValueSpecification[1]): Code[1]
+{
+   let chronoUnitCls = javaClass('java.time.temporal.ChronoUnit');
+   if ($unitArg->instanceOf(AtomicValue),
+      | let v = $unitArg->cast(@AtomicValue).value;
+        if ($v->size() == 1 && $v->toOne()->instanceOf(meta::pure::metamodel::type::Enum),
+           | let enumVal = $v->toOne()->cast(@meta::pure::metamodel::type::Enum);
+             j_field($chronoUnitCls, $enumVal.name->toOne(), $chronoUnitCls);,
+           | $conv->translateExpression($unitArg)->j_cast($chronoUnitCls)
+        );,
+   |if ($unitArg->instanceOf(FunctionExpression),
+      | // Enum-value access form `DurationUnit.DAYS` -> functionName is the
+      // enum value's name, route directly to ChronoUnit.<NAME>.
+      j_field($chronoUnitCls, $unitArg->cast(@FunctionExpression).functionName, $chronoUnitCls),
+      | $conv->translateExpression($unitArg)->j_cast($chronoUnitCls)
+   ));
+}
+
+// `pathToElement(path)` and `lenientPathToElement(path)` — Pure's runtime
+// path resolver. The translator can't actually resolve elements at Java
+// runtime (no metamodel registry available), so emit the path string
+// itself. Downstream uses that compare against `elementToPath` or just
+// stringify the result will work; uses that need a real PE will fail.
+function <<access.private>> meta::external::language::java::translation::pathToElementCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 1, | 'pathToElementCoder expects at least 1 argument, got ' + $fe.parametersValues->size()->toString());
+   $conv->translateExpression($fe.parametersValues->at(0));
+}
+
+// `rem(a, b)` — Pure's modulo. Java `%` works for both long and double via
+// j_remHelper (no j_mod factory exists in the metamodel). Result type
+// follows Pure's `Number[1]` return — emit as double which Number-typed
+// callers accept after auto-widening.
+function <<access.private>> meta::external::language::java::translation::remCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'remCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let a = $conv->translateExpression($fe.parametersValues->at(0));
+   let b = $conv->translateExpression($fe.parametersValues->at(1));
+   ^meta::external::language::java::metamodel::InfixExpression(left=$a, op='%', right=$b, type=javaDouble());
+}
+
+// `toRepresentation(x)` — same shape as toString for non-string types;
+// strings round-trip with quotes in real Pure but tests that depend on the
+// quoted form will diverge here. Good enough for non-string toRepresentation
+// cases (Integer, Float, Boolean, Date, ...) and a clean step beyond
+// silently failing.
+function <<access.private>> meta::external::language::java::translation::toRepresentationCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'toRepresentationCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
+   j_invoke(javaString(), 'valueOf', [$conv->translateExpression($fe.parametersValues->at(0))], javaString());
+}
+
+// `cast(value, type)` — Pure's runtime type assertion. Java's type system
+// already erases generics at runtime; we treat cast as identity at the
+// translation level (the Pure type checker has already validated the static
+// shape). Emit only the operand expression — the unused `type` arg is
+// dropped.
+function <<access.private>> meta::external::language::java::translation::castCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 1, | 'castCoder expects at least 1 argument, got ' + $fe.parametersValues->size()->toString());
+   $conv->translateExpression($fe.parametersValues->at(0));
+}
+
+// `coll->fold({elt, acc | body}, init)` — left fold. Stream.reduce expects the
+// accumulator as `(acc, elt) -> newAcc` (acc first) but Pure's fold lambda is
+// `(elt, acc) -> newAcc` (elt first). Wrap the translated lambda in a flip
+// lambda before passing to reduce. The combiner is required by reduce's
+// signature for parallel streams; since `.stream()` is sequential, our
+// combiner is never invoked — just return the first operand.
+function <<access.private>> meta::external::language::java::translation::foldCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 3, | 'foldCoder expects exactly 3 arguments (collection, lambda, init), got ' + $fe.parametersValues->size()->toString());
+   let coll      = $conv->translateExpression($fe.parametersValues->at(0));
+   let lambdaArg = $fe.parametersValues->at(1);
+   // Cast init to Object so Stream.reduce's generic U infers consistently
+   // — the reducer's lambda return type is Object (β-inlined body or
+   // BiFunction<Object,Object,Object>), so init must agree or Java fails
+   // type inference ("inference variable U has incompatible bounds").
+   let init      = $conv->translateExpression($fe.parametersValues->at(2))->j_castWithoutChecks(javaObject());
+   // Build the reducer (Object, Object) → Object by inlining the Pure
+   // lambda's body when it's a literal — same β-reduction trick as eval.
+   // Without inlining, the Pure-typed inner lambda `(long val, long acc) -> ...`
+   // can't satisfy `BiFunction<Object,Object,Object>` (primitive params
+   // don't match), and even raw cast emits Java that javac rejects.
+   let reducer = $conv->buildFoldReducer($lambdaArg);
+   let combiner = j_lambda(
+      [j_parameter(javaObject(), 'a'), j_parameter(javaObject(), 'b')],
+      j_variable(javaObject(), 'a')
+   );
+   let reduceCall = $coll->j_invoke('stream', [], javaStream(javaObject()))
+        ->j_invoke('reduce', [$init, $reducer, $combiner], javaObject());
+   // Cast the Object reduce result to the FE's expected type so the
+   // surrounding context (return statement, assignment, arg position)
+   // typechecks. For primitive targets, route through the boxed type
+   // so {@code j_cast}'s primitive proxy handles auto-unboxing.
+   let feRetType = $conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity);
+   $reduceCall->j_castWithoutChecks($feRetType->toBoxed());
+}
+
+// Construct the `(Object acc, Object elt) -> body` reducer. When the fold
+// lambda is a literal {@link AtomicValue}(LambdaFunction) with 2 params,
+// β-substitute the body and embed it directly in the reducer; the inner
+// coders (plus, minus, ...) handle Object→primitive unboxing automatically.
+// Fallback: cast to {@code BiFunction<Object,Object,Object>} and invoke
+// {@code .apply(elt, acc)} (note arg flip: Pure puts elt first, Stream.reduce
+// passes accumulator first).
+function <<access.private>> meta::external::language::java::translation::buildFoldReducer(conv: Conventions[1], lambdaArg: ValueSpecification[1]): Code[1]
+{
+   let inlined = $conv->tryBuildInlinedFoldReducer($lambdaArg);
+   if ($inlined->isNotEmpty(),
+      | $inlined->toOne(),
+      | $conv->buildFoldReducerFallback($lambdaArg)
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::tryBuildInlinedFoldReducer(conv: Conventions[1], lambdaArg: ValueSpecification[1]): Code[0..1]
+{
+   if (!$lambdaArg->instanceOf(AtomicValue),
+      | []->cast(@Code),
+      | $conv->tryBuildInlinedFoldReducerFromAV($lambdaArg->cast(@AtomicValue))
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::tryBuildInlinedFoldReducerFromAV(conv: Conventions[1], av: AtomicValue[1]): Code[0..1]
+{
+   if ($av.value->isEmpty() || !$av.value->toOne()->instanceOf(LambdaFunction),
+      | []->cast(@Code),
+      | $conv->tryBuildInlinedFoldReducerFromLambda($av.value->toOne()->cast(@LambdaFunction<Any>))
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::tryBuildInlinedFoldReducerFromLambda(conv: Conventions[1], lambda: LambdaFunction<Any>[1]): Code[0..1]
+{
+   let params = $lambda.parameters;
+   let body   = $lambda.expressionSequence;
+   // Pure fold lambda is {elt, acc | body} — 2 params, 1-expression body.
+   // Reducer is (Object _acc, Object _elt) -> [body with elt→_elt, acc→_acc].
+   // Stream.reduce passes (accumulator, element) per its BiFunction contract,
+   // so the Pure-side `elt` becomes the SECOND reducer parameter.
+   if ($params->size() != 2 || $body->size() != 1,
+      | []->cast(@Code),
+      | $conv->buildInlinedFoldReducer($params, $body->at(0))
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::buildInlinedFoldReducer(conv: Conventions[1], params: meta::pure::metamodel::valuespecification::VariableExpression[*], body: ValueSpecification[1]): Code[1]
+{
+   let eltName = $params->at(0).name;
+   let accName = $params->at(1).name;
+   // Substitute vars are Object-typed (genericType empty) so the body's
+   // coders see them as Object and route through {@link j_cast}'s
+   // boxed-to-primitive proxy when used with primitive ops (plus, etc.).
+   // The OUTER Java lambda declares Object params; matching the var type
+   // here keeps the emitted body's variable references consistent with
+   // the parameter declarations.
+   let anyGT   = ^meta::pure::metamodel::type::generics::UndefinedGenericType();
+   let eltVar  = ^meta::pure::metamodel::valuespecification::VariableExpression(
+      name = '_elt', genericType = $anyGT, multiplicity = $params->at(0).multiplicity);
+   let accVar  = ^meta::pure::metamodel::valuespecification::VariableExpression(
+      name = '_acc', genericType = $anyGT, multiplicity = $params->at(1).multiplicity);
+   let subs = [
+      ^meta::pure::translation::shared::ParamSub(name = $eltName, value = $eltVar),
+      ^meta::pure::translation::shared::ParamSub(name = $accName, value = $accVar)
+   ];
+   let substituted = $body->meta::pure::translation::shared::substituteVariables($subs);
+   let bodyCode = $conv->translateExpression($substituted);
+   // Cast the body's return to Object so the reducer is uniformly
+   // {@code (Object, Object) -> Object} and Stream.reduce's type-variable
+   // U infers consistently. Without this cast, a typed-return body (e.g.
+   // {@code (String) _acc + (String) _elt} returning String) conflicts
+   // with the Object params and Java rejects the reduce(...) call.
+   let typedBody = $bodyCode->j_castWithoutChecks(javaObject());
+   j_lambda(
+      [j_parameter(javaObject(), '_acc'), j_parameter(javaObject(), '_elt')],
+      $typedBody
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::buildFoldReducerFallback(conv: Conventions[1], lambdaArg: ValueSpecification[1]): Code[1]
+{
+   let f   = $conv->translateExpression($lambdaArg);
+   let bif = $f->j_castWithoutChecks(javaBiFunction(javaObject(), javaObject(), javaObject()));
+   j_lambda(
+      [j_parameter(javaObject(), 'acc'), j_parameter(javaObject(), 'elt')],
+      $bif->j_invoke('apply', [j_variable(javaObject(), 'elt'), j_variable(javaObject(), 'acc')], javaObject())
+   );
+}
+
+// `compare(a, b)` — Pure's 3-way compare, returns Integer (Java long).
+// Java's `((Comparable) a).compareTo(b)` returns int; cast up to long.
+function <<access.private>> meta::external::language::java::translation::compareCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'compareCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   let a = $conv->translateExpression($fe.parametersValues->at(0));
+   let b = $conv->translateExpression($fe.parametersValues->at(1));
+   j_cast(j_invoke($a->j_cast(javaClass('java.lang.Comparable')), 'compareTo', [$b], javaInt()), javaLong());
+}
+
+// `value->match([p1:T1[m1]|body1, p2:T2[m2]|body2, ...])` — type dispatch.
+// We compile to a right-associative ternary chain:
+//   v instanceof T1 ? λ1.apply((T1)v) : v instanceof T2 ? λ2.apply((T2)v) : null
+// Limitations:
+//   - 2-arg `match` only; the 3-arg `match-with` form is not yet supported.
+//   - Patterns whose Java type erases to `List<...>` won't match correctly
+//     because Java's `instanceof List<X>` is illegal — we'd need raw-`List`
+//     instanceof plus per-element checks. Scalar patterns work fine.
+//   - The value expression is re-emitted per branch (no temporary binding);
+//     fine for variable/literal values, side-effecting expressions would be
+//     re-evaluated.
+function <<access.private>> meta::external::language::java::translation::matchCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'matchCoder: only the 2-arg form (no `with` parameter) is supported, got ' + $fe.parametersValues->size()->toString() + ' arguments');
+   let value = $conv->translateExpression($fe.parametersValues->at(0));
+
+   let lambdasVS = $fe.parametersValues->at(1);
+   let lambdas   = $lambdasVS->match([
+      c: Collection[1]  | $c.values->map(v | $v->cast(@AtomicValue).value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)),
+      a: AtomicValue[1] | $a.value->map(v | $v->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>))
+   ]);
+
+   // Build the ternary chain right-to-left: walk indices in reverse so the
+   // first pattern ends up outermost and the j_null fallback innermost. We
+   // compute the descending index inline (n-1-i) since `range()->reverse()`
+   // chained inline tripped the compile-pure parser at the `->` continuation.
+   let n = $lambdas->size();
+   range(0, $n)->fold({i, acc |
+      let l        = $lambdas->at($n - 1 - $i);
+      let param    = $l.parameters->toOne();
+      let pType    = $conv->pureTypeToJavaType($param.genericType, $param.multiplicity);
+      let lambdaJ  = $conv->translateLambdaValue($l);
+      let apply    = $lambdaJ->j_cast(javaFunction($pType, javaObject()))->j_invoke('apply', [$value->j_cast($pType)], javaObject());
+      j_conditional(j_instanceof($value, $pType), $apply, $acc);
+   }, j_null());
+}
+
 // ----------------------------------------------------------------------------
 // Type mapping.
 // ----------------------------------------------------------------------------
 
 function meta::external::language::java::translation::pureTypeToJavaType(conv: Conventions[1], g: meta::pure::metamodel::type::generics::GenericType[1], mult: meta::pure::metamodel::multiplicity::Multiplicity[1]): meta::external::language::java::metamodel::Type[1]
 {
-   let raw = $g->rawType()->toOne('pureTypeToJavaType: unresolved rawType on GenericType');
-   if ($raw == Integer, | javaLong(),
-   |if ($raw == Boolean, | javaBoolean(),
-   |if ($raw == Float,   | javaDouble(),
-   |if ($raw == String,  | javaString(),
-   | fail('Unsupported Pure type: ' + $raw->elementToPath()); javaVoid();
-   ))));
+   let rawOpt = $g->rawType();
+   if ($rawOpt->isEmpty(),
+      | // Unresolved GenericType — common after canonical-recompile loses
+        // some inference (e.g. `let x = new(...)` where new's result type
+        // can't be re-derived). Fall back to Object so translation
+        // continues; the use site will work as long as it doesn't need
+        // type-specific dispatch.
+        javaObject(),
+      | $conv->pureTypeToJavaTypeResolved($rawOpt->toOne()->derefTempPointer(), $mult)
+   );
+}
+
+// Deref a leaked TempCompilerPointer to its live target via the global
+// {@code lenientPathToElement} registry. {@link resolvePointersInFD} in
+// canonical.pure handles the recompile path, but {@link inlineOpenVariables}'s
+// no-capture fast-path skips recompile entirely — so pointers from the
+// original compile (e.g. {@code Map<U,V>} in the lambda's classifierGenericType
+// returnType) still reach the translator. Falling through with a pointer
+// makes {@code $raw == meta::pure::functions::collection::Map} fail (identity
+// mismatch with the live class) and the type-mapper would emit
+// {@code org.finos.test.Map} instead of {@code java.util.Map}.
+function meta::external::language::java::translation::derefTempPointer(t: meta::pure::metamodel::type::Type[1]): meta::pure::metamodel::type::Type[1]
+{
+   if ($t->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer),
+      | meta::pure::functions::meta::lenientPathToElement($t->cast(@meta::pure::metamodel::pointer::TempCompilerPointer).path)->toOne()->cast(@meta::pure::metamodel::type::Type),
+      | $t
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::isDateOrTimeType(t: meta::pure::metamodel::type::Type[1]): Boolean[1]
+{
+   $t == meta::pure::metamodel::type::primitives::Date
+   || $t == meta::pure::metamodel::type::primitives::StrictDate
+   || $t == meta::pure::metamodel::type::primitives::DateTime
+   || $t == meta::pure::metamodel::type::primitives::LatestDate
+   || $t == meta::pure::metamodel::type::primitives::StrictTime;
+}
+
+function <<access.private>> meta::external::language::java::translation::pureTypeToJavaTypeResolved(conv: Conventions[1], raw: meta::pure::metamodel::type::Type[1], mult: meta::pure::metamodel::multiplicity::Multiplicity[1]): meta::external::language::java::metamodel::Type[1]
+{
+   // Type parameters (`T`, `Z`, ...) erase to java.lang.Object — Java doesn't
+   // have reified generics and the call site already knows the concrete shape
+   // it expects via Pure's type checking.
+   let scalar = if ($raw->instanceOf(meta::pure::metamodel::type::generics::TypeParameter), | javaObject(),
+                |if ($raw == Integer, | javaLong(),
+                |if ($raw == Boolean, | javaBoolean(),
+                |if ($raw == Float,   | javaDouble(),
+                |if ($raw == String,  | javaString(),
+                |if ($raw == Number,  | javaNumber(),
+                |if ($raw == Any,     | javaObject(),
+                |if ($raw == Nil,     | javaObject(),
+                |if ($raw == meta::pure::metamodel::type::primitives::Decimal, | javaDouble(),
+                // Date types map to java.time classes that match Pure's
+                // normalized stored format. DateTime literals get normalized
+                // to zone-less ISO strings (see compiler's normalizePureDate),
+                // so LocalDateTime.parse handles them; ZonedDateTime would
+                // require a zone marker we don't have. `Date` is the abstract
+                // base — Temporal lets it accept any concrete subtype.
+                |if ($raw == meta::pure::metamodel::type::primitives::Date,        | javaClass('java.time.temporal.Temporal'),
+                |if ($raw == meta::pure::metamodel::type::primitives::DateTime,    | javaClass('java.time.LocalDateTime'),
+                |if ($raw == meta::pure::metamodel::type::primitives::StrictDate,  | javaClass('java.time.LocalDate'),
+                |if ($raw == meta::pure::metamodel::type::primitives::LatestDate,  | javaClass('java.time.LocalDate'),
+                |if ($raw == meta::pure::metamodel::type::primitives::StrictTime,  | javaClass('java.time.LocalTime'),
+                |if ($raw == meta::pure::metamodel::PackageableElement,        | javaObject(),
+                // Pair / Map checks MUST come before the generic
+                // {@code instanceOf(Class)} branch — Pair and Map are both
+                // declared as Pure classes, so they'd otherwise match the
+                // user-defined-class arm and end up emitted as
+                // {@code <basePackage>.Pair} / {@code <basePackage>.Map}
+                // (which then "cannot find symbol" since no helper class
+                // is generated for them).
+                |if ($raw == meta::pure::functions::collection::Pair,          | javaClass('java.util.Map.Entry'),
+                |if ($raw == meta::pure::functions::collection::Map,           | javaClass('java.util.Map'),
+                // User-defined Pure classes are emitted as plain Java
+                // classes alongside GalleryRunner (see buildSignature's
+                // `extraClasses` walk). Map a Pure Class reference to the
+                // generated Java class in the same package.
+                |if ($raw->instanceOf(meta::pure::metamodel::type::Class),
+                  | javaClass($conv.basePackageName + '.' + $raw->cast(@meta::pure::metamodel::PackageableElement).name->toOne()),
+                // Function-typed values (LambdaFunction / Function subclasses
+                // captured as variables) erase to java.lang.Object — at the
+                // use site, evalCoder casts to the right Supplier/Function/
+                // BiFunction before dispatch.
+                |if ($raw->elementToPath()->startsWith('meta::pure::metamodel::function::'), | javaObject(),
+                | fail('Unsupported Pure type: ' + $raw->elementToPath()); javaVoid();
+                )))))))))))))))))));
+   // Unbounded multi-valued multiplicities ([*], [1..*], [0..*]) wrap in
+   // java.util.List<T> (javaList boxes primitive scalars automatically).
+   // Scalar and [0..1] keep the bare form — Java handles the optional case
+   // through null for object references.
+   if ($mult->meta::pure::functions::meta::isToMany(), | javaList($scalar), | $scalar);
 }
 
 // ----------------------------------------------------------------------------
@@ -116,27 +2146,666 @@ function meta::external::language::java::translation::pureTypeToJavaType(conv: C
 function meta::external::language::java::translation::translateExpression(conv: Conventions[1], expr: ValueSpecification[1]): Code[1]
 {
    $expr->match([
-      v: VariableExpression[1] | j_variable($conv->pureTypeToJavaType($v.genericType, $v.multiplicity), $v.name),
-      a: AtomicValue[1]        | $conv->translateAtomicValue($a),
-      fe: FunctionExpression[1] | let coder = $conv.functionCoders->get($fe.functionName)
-                                              ->toOne('No coder for Pure function: ' + $fe.functionName);
-                                  $coder->eval($fe, $conv);
+      v: VariableExpression[1]  | j_variable($conv->pureTypeToJavaType($v.genericType, $v.multiplicity), $v.name->meta::external::language::java::translation::safeJavaName()),
+      a: AtomicValue[1]         | $conv->translateAtomicValue($a),
+      fe: FunctionExpression[1] | $conv->translateFunctionExpression($fe),
+      // Compiled-form list literal (`[a, b, c]` / `[]`). Each element is
+      // itself a VS, so recurse via translateExpression and concatenate into
+      // a `List<Object>`. The Arrays.asList variant boxes primitives via the
+      // standard auto-boxing path; Collections.emptyList handles `[]`.
+      c: Collection[1]          | if ($c.values->isEmpty(),
+                                      | j_invoke(javaCollections(), 'emptyList', [], javaList(javaObject())),
+                                      | j_invoke(javaArrays(), 'asList', $c.values->map(v | $conv->translateExpression($v)), javaList(javaObject()))
+                                  ),
+      x: ValueSpecification[1]  | fail('translateExpression: unsupported VS subtype ' + $x.classifierGenericType->toOne()->rawType()->toOne()->elementToPath()); j_null();
    ]);
+}
+
+// FunctionExpression dispatch with two fallbacks:
+//   1. coder lookup by functionName — the primary path
+//   2. property-access fallback — if `fe.func` is an AbstractProperty, emit
+//      `((Map) receiver).get("propName")`. This makes `$x.firstName` work
+//      for user-defined classes whose instances are HashMap-backed.
+function <<access.private>> meta::external::language::java::translation::translateFunctionExpression(conv: Conventions[1], fe: FunctionExpression[1]): Code[1]
+{
+   let coderOpt = $conv.functionCoders->get($fe.functionName);
+   if ($coderOpt->isNotEmpty(),
+      | $coderOpt->toOne()->eval($fe, $conv),
+      | // UDF dispatch must come BEFORE the property-access fallback —
+        // {@link isPropertyAccessLike} returns true for any 1-arg FE that
+        // misses the coder map, which would misclassify a 1-arg UDF call
+        // (e.g. `myHelper($x)`) as `$x.myHelper`. buildSignature emits one
+        // Java helper class per referenced UDF; the call here lines up with
+        // that class's `public static execute(...)` method.
+        if ($conv->isUserDefinedFunctionCall($fe),
+            | $conv->translateUdfCall($fe),
+            | if ($conv->isPropertyAccessLike($fe),
+                  | $conv->translatePropertyAccess($fe),
+                  | fail('No coder for Pure function: ' + $fe.functionName); j_null();
+              )
+        )
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::isUserDefinedFunctionCall(conv: Conventions[1], fe: FunctionExpression[1]): Boolean[1]
+{
+   $fe.func->isNotEmpty()
+   && $fe.func->toOne()->instanceOf(meta::pure::metamodel::function::UserDefinedFunction);
+}
+
+// Emit `HelperClass.execute(arg1, arg2, ...)` for a UDF call. HelperClass
+// matches the Java class name {@link buildSignature} generates for the
+// UDF — `udfClassName(udf)` is the single source of truth so caller +
+// callee stay in lockstep.
+function <<access.private>> meta::external::language::java::translation::translateUdfCall(conv: Conventions[1], fe: FunctionExpression[1]): Code[1]
+{
+   let udf       = $fe.func->toOne()->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>);
+   let cls       = javaClass($conv.basePackageName + '.' + $conv->udfClassName($udf));
+   let argCodes  = $fe.parametersValues->map(p | $conv->translateExpression($p));
+   // Use the FE's genericType (the resolved type at this call site after
+   // type-parameter substitution) rather than the UDF's declared return
+   // type. For a generic UDF like {@code orElse<T>(value, default)} the
+   // declaration returns Object (T erases to Object) but a call site like
+   // {@code orElse(emptyInt, 99)} has FE.genericType = Integer. Without
+   // routing the FE type to the invoke node, the outer return-position
+   // sees Object where it expects long and javac rejects.
+   let feRetType = $conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity);
+   // Cast the Object result to the FE's expected type so the surrounding
+   // expression (return statement, assignment, arg position) typechecks.
+   // For primitive targets, cast to the BOXED equivalent — `(long) someObject`
+   // is rejected by javac, but `(Long) someObject` works and Java auto-unboxes
+   // in primitive-typed contexts (return, assignment, arithmetic).
+   let castTarget = $feRetType->toBoxed();
+   j_invoke($cls, 'execute', $argCodes, javaObject())->j_castWithoutChecks($castTarget);
+}
+
+// Short Java class name for a UDF helper. FQN's last `::` segment, first
+// letter uppercased, suffixed with `_<arity>` so overload-resolved UDFs
+// (e.g. {@code println(v)} vs {@code println(v, max)}) don't collide on the
+// same Java class name. The call site walks through the same function so it
+// computes the matching class name from the resolved UDF target — caller
+// and callee always agree.
+function <<access.private>> meta::external::language::java::translation::udfClassName(conv: Conventions[1], udf: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]): String[1]
+{
+   let shortName = $udf.functionName->toOne('udfClassName: UDF missing functionName')->split('::')->last()->toOne();
+   let arity     = $udf.parameters->size();
+   $shortName->substring(0, 1)->toUpper() + $shortName->substring(1) + '_' + $arity->toString();
+}
+
+// Property-access heuristic: an FE is property-like when its `func` slot
+// resolves to an AbstractProperty (the cleanest signal — compile resolved
+// the dot to a known Property), OR — fallback for canonical-recompiled
+// bodies where `func` may be empty — when the FE has exactly one
+// parameter and no coder is registered for its name. The fallback
+// occasionally misclassifies a true 1-arg native as a property access,
+// but those would fail at javac anyway since our Map model has no
+// matching method.
+function <<access.private>> meta::external::language::java::translation::isPropertyAccessLike(conv: Conventions[1], fe: FunctionExpression[1]): Boolean[1]
+{
+   ($fe.func->isNotEmpty() && $fe.func->toOne()->instanceOf(meta::pure::metamodel::function::property::AbstractProperty))
+   || $fe.parametersValues->size() == 1;
+}
+
+// Property access — `$x.propName` compiles to a 1-arg FunctionExpression.
+// Our generated helper class exposes BOTH a public field `propName` and a
+// no-arg method that returns the Pure type (`type()`). For most property
+// names we want the field; for the special-cased `type` we want the
+// method. Use the method form `_propName()` for cleaner downstream
+// compatibility — wait, no, the field is what the property name maps to.
+// Field access wins because that's the actual data slot.
+function <<access.private>> meta::external::language::java::translation::translatePropertyAccess(conv: Conventions[1], fe: FunctionExpression[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 1, | 'translatePropertyAccess: property FE needs a receiver, got ' + $fe.parametersValues->size()->toString() + ' args');
+   let receiver = $conv->translateExpression($fe.parametersValues->at(0));
+   // Special-case `.type()` which is a generated method, not a field.
+   if ($fe.functionName == 'type',
+      | $receiver->j_invoke('type', [], javaString()),
+      | j_field($receiver, $fe.functionName, javaObject())
+   );
+}
+
+// `new(holder, [KeyExpression('k1', v1), KeyExpression('k2', v2), ...])`
+// — Pure instance construction. We emit a HashMap-backed runtime model:
+//   `java.util.Map.ofEntries(
+//      java.util.Map.entry("__class__", "Foo"),
+//      java.util.Map.entry("k1", v1Code),
+//      java.util.Map.entry("k2", v2Code))`
+// The `__class__` marker distinguishes instances of different Pure classes
+// with the same property shape so PCT assertEquals still discriminates.
+function <<access.private>> meta::external::language::java::translation::newCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 1, | 'newCoder expects at least 1 argument (target type holder), got ' + $fe.parametersValues->size()->toString());
+   let className = $conv->extractNewTargetName($fe.parametersValues->at(0));
+   let keyExprs  = if ($fe.parametersValues->size() >= 2,
+                        | $conv->collectKeyExpressions($fe.parametersValues->at(1)),
+                        | []->cast(@FunctionExpression));
+   // Emit `new ClassName()._k1(v1)._k2(v2)` — fluent setters chained on a
+   // freshly-constructed helper class. buildSignature generates the helper
+   // class definition alongside GalleryRunner so this compiles.
+   let cls = javaClass($conv.basePackageName + '.' + $className);
+   let ctor = ^meta::external::language::java::metamodel::New(type = $cls, arguments = []);
+   $keyExprs->fold({ke, acc |
+      let propName = $conv->extractKeyExpressionPropName($ke);
+      let valCode  = $conv->translateExpression($ke.parametersValues->at(1));
+      $acc->j_invoke('_' + $propName, [$valCode], $cls);
+   }, $ctor->cast(@Code));
+}
+
+function <<access.private>> meta::external::language::java::translation::mapEntryCode(key: Code[1], val: Code[1]): Code[1]
+{
+   j_invoke(javaClass('java.util.Map'), 'entry', [$key, $val], javaClass('java.util.Map.Entry'));
+}
+
+// `copy(src, keyExprs)` — Pure: return a new instance of {@code src}'s type
+// with the override fields applied. Emit
+// {@code ((Foo)src)._copy()._k1(v1)._k2(v2)} — the {@code _copy()} method
+// is generated alongside the helper class's fluent setters (see
+// {@link generateHelperClass}). The cast threads through `extractClassRefFromCopy`
+// so the surface type matches the helper class.
+function <<access.private>> meta::external::language::java::translation::copyCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() >= 1, | 'copyCoder expects at least 1 argument');
+   let src      = $fe.parametersValues->at(0);
+   let rawOpt   = $src.genericType->rawType();
+   let srcCode  = $conv->translateExpression($src);
+   let keyExprs = if ($fe.parametersValues->size() >= 2,
+                       | $conv->collectKeyExpressions($fe.parametersValues->at(1)),
+                       | []->cast(@FunctionExpression));
+   // Resolve the class name from the source's genericType so the emitted
+   // cast / setter chain matches the generated helper class. If the type
+   // isn't a Pure Class (e.g. inferred to Any), skip the cast and fall
+   // through to a raw _copy() call.
+   let clsOpt = if ($rawOpt->isNotEmpty() && $rawOpt->toOne()->derefTempPointer()->instanceOf(meta::pure::metamodel::type::Class),
+      | [javaClass($conv.basePackageName + '.' + $rawOpt->toOne()->derefTempPointer()->cast(@meta::pure::metamodel::PackageableElement).name->toOne())],
+      | []->cast(@meta::external::language::java::metamodel::Class)
+   );
+   let typedSrc = if ($clsOpt->isEmpty(), | $srcCode, | $srcCode->j_cast($clsOpt->toOne()));
+   let copyType = if ($clsOpt->isEmpty(), | javaObject(), | $clsOpt->toOne()->cast(@meta::external::language::java::metamodel::Type));
+   let copied = $typedSrc->j_invoke('_copy', [], $copyType);
+   $keyExprs->fold({ke, acc |
+      let propName = $conv->extractKeyExpressionPropName($ke);
+      let valCode  = $conv->translateExpression($ke.parametersValues->at(1));
+      $acc->j_invoke('_' + $propName, [$valCode], $copyType);
+   }, $copied->cast(@Code));
+}
+
+// ----------------------------------------------------------------------------
+// Pure Map<U,V> — coders + per-compilation-unit PureMap helper class.
+//
+// Pure's collection::Map is immutable: every op returns a fresh map. We map
+// each Pure call to a static method on a generated PureMap class so the
+// callsite stays a one-liner and the immutability/copy semantics live in
+// one place. `pair(a, b)` translates inline to `java.util.Map.entry(a, b)`
+// so the helper's varargs of Map.Entry work uniformly whether the entries
+// came from `pair(...)` or another source.
+// ----------------------------------------------------------------------------
+
+function <<access.private>> meta::external::language::java::translation::pairCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'pairCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
+   mapEntryCode(
+      $conv->translateExpression($fe.parametersValues->at(0)),
+      $conv->translateExpression($fe.parametersValues->at(1))
+   );
+}
+
+// Build the static-method invocation `PureMap.<methodName>(args...)` against
+// the generated helper class — single source of truth so coders + the helper
+// class generator agree on the symbol.
+function <<access.private>> meta::external::language::java::translation::pureMapCall(conv: Conventions[1], methodName: String[1], args: Code[*], retType: meta::external::language::java::metamodel::Type[1]): Code[1]
+{
+   j_invoke(javaClass($conv.basePackageName + '.PureMap'), $methodName, $args, $retType);
+}
+
+function <<access.private>> meta::external::language::java::translation::newMapCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   // Single-arg form `newMap(pairs)` is the only one the translator handles —
+   // the 2-arg form `newMap(pairs, prop)` adds a custom key extractor and
+   // would require translating that property reference to a Java function,
+   // which the PCT tests under `meta::pure::functions::collection` don't
+   // exercise via this path.
+   assert($fe.parametersValues->size() >= 1, | 'newMapCoder expects at least 1 argument');
+   let entries = $conv->translateExpression($fe.parametersValues->at(0));
+   $conv->pureMapCall('newMap', [$entries], javaMap(javaObject(), javaObject()));
+}
+
+function <<access.private>> meta::external::language::java::translation::getCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'getCoder expects exactly 2 arguments');
+   let m   = $conv->translateExpression($fe.parametersValues->at(0));
+   let key = $conv->translateExpression($fe.parametersValues->at(1));
+   $conv->pureMapCall('get', [$m, $key], javaObject());
+}
+
+function <<access.private>> meta::external::language::java::translation::putCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 3, | 'putCoder expects exactly 3 arguments');
+   let m   = $conv->translateExpression($fe.parametersValues->at(0));
+   let key = $conv->translateExpression($fe.parametersValues->at(1));
+   let val = $conv->translateExpression($fe.parametersValues->at(2));
+   $conv->pureMapCall('put', [$m, $key, $val], javaMap(javaObject(), javaObject()));
+}
+
+function <<access.private>> meta::external::language::java::translation::putAllCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   // Both Pure overloads — putAll(m, pairs) and putAll(m, otherMap) — land
+   // here. PureMap.putAll detects List-vs-Map at runtime.
+   assert($fe.parametersValues->size() == 2, | 'putAllCoder expects exactly 2 arguments');
+   let m   = $conv->translateExpression($fe.parametersValues->at(0));
+   let add = $conv->translateExpression($fe.parametersValues->at(1));
+   $conv->pureMapCall('putAll', [$m, $add], javaMap(javaObject(), javaObject()));
+}
+
+function <<access.private>> meta::external::language::java::translation::removeCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'removeCoder expects exactly 2 arguments');
+   let m   = $conv->translateExpression($fe.parametersValues->at(0));
+   let key = $conv->translateExpression($fe.parametersValues->at(1));
+   $conv->pureMapCall('remove', [$m, $key], javaMap(javaObject(), javaObject()));
+}
+
+function <<access.private>> meta::external::language::java::translation::keysCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'keysCoder expects exactly 1 argument');
+   $conv->pureMapCall('keys', [$conv->translateExpression($fe.parametersValues->at(0))], javaList(javaObject()));
+}
+
+function <<access.private>> meta::external::language::java::translation::valuesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'valuesCoder expects exactly 1 argument');
+   $conv->pureMapCall('values', [$conv->translateExpression($fe.parametersValues->at(0))], javaList(javaObject()));
+}
+
+function <<access.private>> meta::external::language::java::translation::keyValuesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 1, | 'keyValuesCoder expects exactly 1 argument');
+   $conv->pureMapCall('keyValues', [$conv->translateExpression($fe.parametersValues->at(0))], javaList(javaObject()));
+}
+
+function <<access.private>> meta::external::language::java::translation::replaceAllCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 2, | 'replaceAllCoder expects exactly 2 arguments');
+   let m     = $conv->translateExpression($fe.parametersValues->at(0));
+   let pairs = $conv->translateExpression($fe.parametersValues->at(1));
+   $conv->pureMapCall('replaceAll', [$m, $pairs], javaMap(javaObject(), javaObject()));
+}
+
+function <<access.private>> meta::external::language::java::translation::getIfAbsentPutWithKeyCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
+{
+   assert($fe.parametersValues->size() == 3, | 'getIfAbsentPutWithKeyCoder expects exactly 3 arguments');
+   let m   = $conv->translateExpression($fe.parametersValues->at(0));
+   let key = $conv->translateExpression($fe.parametersValues->at(1));
+   // The function arg may be a literal lambda or a stored Function value;
+   // translateExpression handles both — closure literals land as Java
+   // lambdas which auto-conform to java.util.function.Function.
+   let fn  = $conv->translateExpression($fe.parametersValues->at(2));
+   $conv->pureMapCall('getIfAbsentPutWithKey', [$m, $key, $fn], javaObject());
+}
+
+// Generate the per-compilation-unit `PureMap` class. Methods use raw types
+// (java.util.Map, java.util.List, Object) so they accept anything the
+// callsite passes — Pure's generics erase at the Java boundary anyway.
+// Body code is hand-written Java source because the verbosity of building
+// these via the Code factory tree dwarfs the alternative.
+function <<access.private>> meta::external::language::java::translation::pureMapHelperClass(conv: Conventions[1]): meta::external::language::java::metamodel::Class[1]
+{
+   let mapType  = javaClass('java.util.Map');
+   let listType = javaClass('java.util.List');
+   let objType  = javaObject();
+   let fnType   = javaClass('java.util.function.Function');
+   let cls = javaClass([], $conv.basePackageName + '.PureMap');
+   let mNewMap = javaMethod(['public', 'static'], $mapType, 'newMap',
+      [j_parameter($objType, 'entries')],
+      'java.util.LinkedHashMap m = new java.util.LinkedHashMap();\n'
+      + 'addEntries(m, entries);\n'
+      + 'return m;'
+   );
+   let mGet = javaMethod(['public', 'static'], $objType, 'get',
+      [j_parameter($mapType, 'm'), j_parameter($objType, 'key')],
+      'return m == null ? null : m.get(key);'
+   );
+   let mPut = javaMethod(['public', 'static'], $mapType, 'put',
+      [j_parameter($mapType, 'm'), j_parameter($objType, 'key'), j_parameter($objType, 'value')],
+      'java.util.LinkedHashMap nm = new java.util.LinkedHashMap(m);\n'
+      + 'nm.put(key, value);\n'
+      + 'return nm;'
+   );
+   let mPutAll = javaMethod(['public', 'static'], $mapType, 'putAll',
+      [j_parameter($mapType, 'm'), j_parameter($objType, 'additions')],
+      'java.util.LinkedHashMap nm = new java.util.LinkedHashMap(m);\n'
+      + 'if (additions instanceof java.util.Map) {\n'
+      + '    nm.putAll((java.util.Map) additions);\n'
+      + '} else {\n'
+      + '    addEntries(nm, additions);\n'
+      + '}\n'
+      + 'return nm;'
+   );
+   let mRemove = javaMethod(['public', 'static'], $mapType, 'remove',
+      [j_parameter($mapType, 'm'), j_parameter($objType, 'key')],
+      'java.util.LinkedHashMap nm = new java.util.LinkedHashMap(m);\n'
+      + 'nm.remove(key);\n'
+      + 'return nm;'
+   );
+   let mKeys = javaMethod(['public', 'static'], $listType, 'keys',
+      [j_parameter($mapType, 'm')],
+      'return new java.util.ArrayList(m.keySet());'
+   );
+   let mValues = javaMethod(['public', 'static'], $listType, 'values',
+      [j_parameter($mapType, 'm')],
+      'return new java.util.ArrayList(m.values());'
+   );
+   let mKeyValues = javaMethod(['public', 'static'], $listType, 'keyValues',
+      [j_parameter($mapType, 'm')],
+      'return new java.util.ArrayList(m.entrySet());'
+   );
+   let mReplaceAll = javaMethod(['public', 'static'], $mapType, 'replaceAll',
+      [j_parameter($mapType, 'm'), j_parameter($objType, 'pairs')],
+      'return newMap(pairs);'
+   );
+   // Pure semantics: get-or-compute. Pure's name suggests the value is also
+   // stored, but Pure Maps are immutable — the caller wouldn't see the
+   // mutation anyway — so we just compute on miss.
+   let mGetOrCompute = javaMethod(['public', 'static'], $objType, 'getIfAbsentPutWithKey',
+      [j_parameter($mapType, 'm'), j_parameter($objType, 'key'), j_parameter($fnType, 'fn')],
+      'return m.containsKey(key) ? m.get(key) : fn.apply(key);'
+   );
+   // Private helper — takes a List<Map.Entry> OR a single Map.Entry and
+   // pours its entries into the target map. Used by newMap / putAll.
+   let mAddEntries = javaMethod(['private', 'static'], javaVoid(), 'addEntries',
+      [j_parameter($mapType, 'm'), j_parameter($objType, 'entries')],
+      'if (entries == null) { return; }\n'
+      + 'java.util.List list = entries instanceof java.util.List ? (java.util.List) entries\n'
+      + '    : java.util.Collections.singletonList(entries);\n'
+      + 'for (Object e : list) {\n'
+      + '    java.util.Map.Entry pair = (java.util.Map.Entry) e;\n'
+      + '    m.put(pair.getKey(), pair.getValue());\n'
+      + '}'
+   );
+   $cls->addMethod($mNewMap)
+       ->addMethod($mGet)
+       ->addMethod($mPut)
+       ->addMethod($mPutAll)
+       ->addMethod($mRemove)
+       ->addMethod($mKeys)
+       ->addMethod($mValues)
+       ->addMethod($mKeyValues)
+       ->addMethod($mReplaceAll)
+       ->addMethod($mGetOrCompute)
+       ->addMethod($mAddEntries);
+}
+
+// Walk the body looking for any FE whose functionName is a Map op the
+// translator handles via PureMap. Returns true on first hit so generation
+// only fires when needed — most PCT tests touch no Map ops and don't need
+// the helper class added to extraClasses.
+function <<access.private>> meta::external::language::java::translation::usesPureMap(exprs: ValueSpecification[*]): Boolean[1]
+{
+   $exprs->exists(e | $e->usesPureMapOne())
+}
+
+function <<access.private>> meta::external::language::java::translation::usesPureMapOne(vs: ValueSpecification[1]): Boolean[1]
+{
+   $vs->match([
+      {fe: FunctionExpression[1] |
+         $fe->isPureMapFunctionName()
+            || $fe.parametersValues->exists(p | $p->usesPureMapOne())
+      },
+      {av: AtomicValue[1] |
+         if ($av.value->isNotEmpty()
+             && $av.value->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction),
+             | $av.value->toOne()
+                ->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+                .expressionSequence
+                ->usesPureMap(),
+             | false
+         )
+      },
+      {col: Collection[1] | $col.values->usesPureMap()},
+      other: ValueSpecification[1] | false
+   ])
+}
+
+function <<access.private>> meta::external::language::java::translation::isPureMapFunctionName(fe: FunctionExpression[1]): Boolean[1]
+{
+   let n = $fe.functionName;
+   $n == 'newMap'
+      || $n == 'get'
+      || $n == 'put'
+      || $n == 'putAll'
+      || $n == 'remove'
+      || $n == 'keys'
+      || $n == 'values'
+      || $n == 'keyValues'
+      || $n == 'replaceAll'
+      || $n == 'getIfAbsentPutWithKey';
+}
+
+// Pull the target Class name from a `new`'s first arg. Common shapes:
+//   - AtomicValue holding a Class (`^Foo(...)` -> ^Foo's class reference)
+//   - UserDefinedGenericTypeAndMultiplicityHolder carrying a GenericType
+//     whose rawType is the Class
+//   - Other shapes fall back to a generic marker.
+function <<access.private>> meta::external::language::java::translation::extractNewTargetName(conv: Conventions[1], holder: ValueSpecification[1]): String[1]
+{
+   $holder->match([
+      gmh: meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder[1] |
+         $conv->extractNameFromGenericTypeAndMultiplicityHolder($gmh);,
+      av: AtomicValue[1] |
+         let v = $av.value;
+         if ($v->size() == 1,
+            | $conv->extractNameFromHolderValue($v->toOne()),
+            | 'PureInstance'
+         );,
+      other: ValueSpecification[1] | 'PureInstance'
+   ]);
+}
+
+function <<access.private>> meta::external::language::java::translation::extractNameFromHolderValue(conv: Conventions[1], v: Any[1]): String[1]
+{
+   if ($v->instanceOf(meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder),
+      | $conv->extractNameFromGenericTypeAndMultiplicityHolder($v->cast(@meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder)),
+   | if ($v->instanceOf(meta::pure::metamodel::PackageableElement),
+      | $v->cast(@meta::pure::metamodel::PackageableElement).name->toOneMany()->at(0),
+      | 'PureInstance'
+   ));
+}
+
+function <<access.private>> meta::external::language::java::translation::extractNameFromGenericTypeAndMultiplicityHolder(conv: Conventions[1], gmh: meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder[1]): String[1]
+{
+   // The wrapped class is the T parameter of GMH<T>; look it up via
+   // classifierGenericType.typeArguments[0].rawType(). The instance's
+   // own `.genericType` slot inherits from VS and points to GMH itself
+   // (not the wrapped class), so we'd extract "...Holder" if we used it.
+   //
+   // {@code derefTempPointer} resolves any leaked TempCompilerPointer to the
+   // live class — the no-capture fast-path in canonical's inlineOpenVariables
+   // skips pointer-resolution, so pointers still flow through to here in
+   // those cases. Reading `.name` directly on a pointer trips the runtime
+   // pointer-access guard.
+   let typeArgs = $gmh.classifierGenericType.typeArguments;
+   if ($typeArgs->isNotEmpty(),
+      | let raw = $typeArgs->at(0)->rawType();
+        if ($raw->isNotEmpty() && $raw->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
+           | $raw->toOne()->derefTempPointer()->cast(@meta::pure::metamodel::PackageableElement).name->toOneMany()->at(0),
+           | 'PureInstance'
+        );,
+      | 'PureInstance'
+   );
+}
+
+// `new`'s key-expression list arg shows up as a Collection of inline-built
+// KeyExpression values. Each KeyExpression is itself a FunctionExpression
+// (functionName == 'keyExpression') whose two args are the name string +
+// the value VS. Walk the Collection to extract them all.
+function <<access.private>> meta::external::language::java::translation::collectKeyExpressions(conv: Conventions[1], arg: ValueSpecification[1]): FunctionExpression[*]
+{
+   if ($arg->instanceOf(Collection),
+      | $arg->cast(@Collection).values->map(v | $conv->asKeyExpressionFE($v))->cast(@FunctionExpression),
+      | $conv->asKeyExpressionFE($arg);
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::asKeyExpressionFE(conv: Conventions[1], vs: ValueSpecification[1]): FunctionExpression[*]
+{
+   if ($vs->instanceOf(FunctionExpression),
+      | $vs->cast(@FunctionExpression),
+      | []->cast(@FunctionExpression)
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::keyExpressionToEntry(conv: Conventions[1], ke: FunctionExpression[1]): Code[1]
+{
+   assert($ke.parametersValues->size() == 2, | 'keyExpressionToEntry expects 2-arg keyExpression, got ' + $ke.parametersValues->size()->toString());
+   let nameArg = $ke.parametersValues->at(0);
+   let propName = if ($nameArg->instanceOf(AtomicValue),
+                       | $nameArg->cast(@AtomicValue).value->toOne()->cast(@String),
+                       | 'unknownProp');
+   let valCode = $conv->translateExpression($ke.parametersValues->at(1));
+   mapEntryCode(j_string($propName), $valCode);
 }
 
 // Literals: dispatch on the Pure primitive type. Integer→j_long mirrors the
 // translator's `Integer→long` type mapping in pureTypeToJavaType so the
-// emitted Java compiles without explicit conversions.
+// emitted Java compiles without explicit conversions. Multi-valued atomic
+// values turn into `Arrays.asList(...)` (typed `List<Object>`); empty
+// values become `Collections.emptyList()`.
 function <<access.private>> meta::external::language::java::translation::translateAtomicValue(conv: Conventions[1], a: AtomicValue[1]): Code[1]
 {
    let v = $a.value;
+   if ($v->isEmpty(),
+       | j_invoke(javaCollections(), 'emptyList', [], javaList(javaObject())),
+       | if ($v->size() == 1,
+             | $conv->translateScalarAtomicValueTyped($v->toOne(), $a),
+             | j_invoke(javaArrays(), 'asList', $v->map(x | $conv->translateScalarAtomicValue($x)), javaList(javaObject()))
+         )
+   );
+}
+
+// Type-aware single-value translation. Pure stores date literals as Strings
+// in AtomicValue.value with the date type carried on .genericType; we look
+// at the genericType to emit `LocalDate.parse("...")` etc. instead of a
+// bare String. Falls back to the type-unaware translateScalarAtomicValue
+// for everything else.
+function <<access.private>> meta::external::language::java::translation::translateScalarAtomicValueTyped(conv: Conventions[1], v: Any[1], a: AtomicValue[1]): Code[1]
+{
+   if ($v->instanceOf(String) && $a.genericType->isNotEmpty(),
+      | let rawOpt = $a.genericType->toOne()->rawType();
+        if ($rawOpt->isNotEmpty() && $conv->isDateTypeFor($rawOpt->toOne()),
+            | $conv->dateLiteralToJava($v->cast(@String), $rawOpt->toOne()),
+            | $conv->translateScalarAtomicValue($v)
+        );,
+      | $conv->translateScalarAtomicValue($v)
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::isDateTypeFor(conv: Conventions[1], t: meta::pure::metamodel::type::Type[1]): Boolean[1]
+{
+   $t == meta::pure::metamodel::type::primitives::Date
+   || $t == meta::pure::metamodel::type::primitives::DateTime
+   || $t == meta::pure::metamodel::type::primitives::StrictDate
+   || $t == meta::pure::metamodel::type::primitives::LatestDate
+   || $t == meta::pure::metamodel::type::primitives::StrictTime;
+}
+
+// Emit a Java time `.parse("...")` call sized to the Pure subtype.
+function <<access.private>> meta::external::language::java::translation::dateLiteralToJava(conv: Conventions[1], s: String[1], dateType: meta::pure::metamodel::type::Type[1]): Code[1]
+{
+   let cls = if ($dateType == meta::pure::metamodel::type::primitives::DateTime,    | javaClass('java.time.LocalDateTime'),
+             |if ($dateType == meta::pure::metamodel::type::primitives::StrictTime, | javaClass('java.time.LocalTime'),
+                                                                                    | javaClass('java.time.LocalDate')
+             ));
+   j_invoke($cls, 'parse', [j_string($s)], $cls);
+}
+
+// Single-element atomic-value translation, factored out so multi-valued
+// AtomicValues can map their elements without re-dispatching through
+// translateAtomicValue. Also handles inline lambda literals (passed as
+// `Function`-typed arguments to natives like `map`/`filter`/`fold`).
+function <<access.private>> meta::external::language::java::translation::translateScalarAtomicValue(conv: Conventions[1], v: Any[1]): Code[1]
+{
    $v->match([
-      i: Integer[1] | j_long($i),
-      f: Float[1]   | j_double($f),
-      b: Boolean[1] | j_boolean($b),
-      s: String[1]  | j_string($s),
-      x: Any[1]     | fail('Unsupported atomic value type'); j_null();
+      i: Integer[1]             | j_long($i),
+      f: Float[1]               | j_double($f),
+      b: Boolean[1]             | j_boolean($b),
+      s: String[1]              | j_string($s),
+      // Pure Decimal literals (`3.14d`) — at runtime java.math.BigDecimal.
+      // Math.ceil/floor/round operate on double; emit the literal directly
+      // as a Java double via j_code (PCT's assertEquals compares Number
+      // values by numeric equality, so 4.0 ≡ 4 across the round-trip).
+      d: meta::pure::metamodel::type::primitives::Decimal[1] | j_code($d->toString(), javaDouble()),
+      // Pure Date / DateTime / StrictDate / LatestDate / StrictTime literals
+      // (`%2014-02-27`, `%2014-02-27T10:01:35`). Their toString round-trips
+      // through Pure's normalized form (zone-less ISO); pair with the
+      // {@code java.time} class that {@link pureTypeToJavaTypeResolved} maps
+      // the Pure type to. {@code LocalDate.parse} / {@code LocalDateTime.parse}
+      // handle the date-only / date-time strings respectively.
+      strict: meta::pure::metamodel::type::primitives::StrictDate[1]  | dateLiteralCode($strict->toString(), 'java.time.LocalDate'),
+      ltd:    meta::pure::metamodel::type::primitives::LatestDate[1]  | dateLiteralCode($ltd->toString(),    'java.time.LocalDate'),
+      dt:     meta::pure::metamodel::type::primitives::DateTime[1]    | dateLiteralCode($dt->toString(),     'java.time.LocalDateTime'),
+      stm:    meta::pure::metamodel::type::primitives::StrictTime[1]  | dateLiteralCode($stm->toString(),    'java.time.LocalTime'),
+      date:   meta::pure::metamodel::type::primitives::Date[1]        | dateLiteralCode($date->toString(),   'java.time.LocalDateTime'),
+      l: LambdaFunction<Any>[1] | $conv->translateLambdaValue($l),
+      // Class / Enumeration / Enum references captured as values
+      // (e.g. `STR_Person->toString()`, `City.NY->toString()`) — constant-fold
+      // to the element's short name, the same string Pure's `toString` would
+      // produce. Deliberately NOT catching all PackageableElement: Function
+      // refs also extend PE but need to flow through translateLambdaValue
+      // (or be left for evalCoder's downstream cast) instead of degrading
+      // to a String name.
+      cls:  meta::pure::metamodel::type::Class<Any>[1]        | j_string($cls.name->toOne()),
+      en:   meta::pure::metamodel::type::Enumeration<Any>[1]  | j_string($en.name->toOne()),
+      ev:   meta::pure::metamodel::type::Enum[1]              | j_string($ev.name->toOne()),
+      // {@code Pair<U,V>} runtime PDO — flows here when a captured
+      // {@code pair(a, b)} is reached as a value (e.g. inside a multi-if's
+      // pair-lambda, or zip's result list). Mirror the {@link pairCoder}
+      // translation: emit {@code Map.entry(first, second)} so the runtime
+      // shape matches the Pure Map-like layout.
+      pr:   meta::pure::functions::collection::Pair<Any, Any>[1] |
+         mapEntryCode($conv->translateScalarAtomicValue($pr.first->toOne()),
+                      $conv->translateScalarAtomicValue($pr.second->toOne())),
+      // {@code PrimitiveType} values (`String`, `Integer`, ...) come through
+      // when a Pure expression captures the type itself, not an instance —
+      // e.g. `String->toString()` or `someValue.genericType.type` reaching a
+      // primitive. Same `name` extraction as classes/enums.
+      pt:   meta::pure::metamodel::type::PrimitiveType[1]     | j_string($pt.name->toOne()),
+      // Multiplicity literals (`PureOne`, `ZeroOne`, ...) — captured when
+      // Pure metamodel-walking code reads a `.multiplicity` slot. Emit a
+      // {@code "<lower>..<upper>"} sentinel; PCT tests don't dispatch on
+      // multiplicity values at the Java surface, just round-trip them.
+      m:    meta::pure::metamodel::multiplicity::Multiplicity[1] | j_string(meta::pure::functions::printer::compiled::printMultiplicity($m)),
+      x: Any[1]                 | fail('Unsupported atomic value type: ' + if($x->isEmpty(), | '<empty>', | $x->toOne()->toString())); j_null();
    ]);
+}
+
+// Emit {@code <Class>.parse("<stringForm>")}. Pure normalises date literals
+// to a zone-less ISO form (see {@code normalizePureDate} on the runtime
+// side), so {@code toString} on a Pure Date yields a string accepted by
+// the corresponding {@code java.time} parser. The leading `%` from Pure's
+// grammar is dropped via substring(1) when present.
+function <<access.private>> meta::external::language::java::translation::dateLiteralCode(s: String[1], javaClassName: String[1]): Code[1]
+{
+   let stripped = if ($s->startsWith('%'), | $s->substring(1, $s->length()), | $s);
+   j_invoke(javaClass($javaClassName), 'parse', [j_string($stripped)], javaClass($javaClassName));
+}
+
+// Translate a Pure LambdaFunction value (as it appears when used as an
+// argument to higher-order natives) into a Java lambda expression. Single-
+// expression bodies emit the expression-bodied form `(a) -> expr`; multi-
+// expression bodies fall back to a Java block lambda `(a) -> { ...; return
+// last; }` via buildJavaBody so let-bindings and intermediate statements
+// translate cleanly (otherwise tests like `|let a = 5; $a + 1` bail out
+// during translation).
+function <<access.private>> meta::external::language::java::translation::translateLambdaValue(conv: Conventions[1], lambda: LambdaFunction<Any>[1]): Code[1]
+{
+   let jParams = $lambda.parameters->map(p |
+      j_parameter($conv->pureTypeToJavaType($p.genericType, $p.multiplicity), $p.name->meta::external::language::java::translation::safeJavaName())
+   );
+   let exprs = $lambda.expressionSequence;
+   let body = if ($exprs->size() == 1,
+      | $conv->translateExpression($exprs->toOne()),
+      | j_block($conv->buildJavaBody($exprs->toOneMany()))
+   );
+   j_lambda($jParams, $body);
 }
 
 // ----------------------------------------------------------------------------
@@ -163,20 +2832,372 @@ function meta::external::language::java::translation::translateLambda(conv: Conv
    $conv->buildSignature($f, $className, $returnType);
 }
 
+// Unified entry — dispatches on the runtime kind of the FunctionDefinition so
+// the adapter can hand off whatever shape `makeCanonical` produced (a
+// UserDefinedFunction for capturing-lambda inputs, passthrough LambdaFunction
+// for non-capturing inputs). The caller picks the Java className; the function
+// name on the emitted method is always `execute` (see buildSignature).
+function meta::external::language::java::translation::translateFunctionDef(
+   conv: Conventions[1],
+   f: meta::pure::metamodel::function::FunctionDefinition<meta::pure::metamodel::type::Any>[1],
+   className: String[1]
+): FunctionSignature[1]
+{
+   let returnType = $f->match([
+      lf: LambdaFunction<Any>[1] |
+         let funcType = $lf.classifierGenericType.typeArguments->at(0)->rawType()->toOne('translateFunctionDef: lambda missing classifier function type')->cast(@meta::pure::metamodel::type::FunctionType);
+         $conv->pureTypeToJavaType($funcType.returnType, $funcType.returnMultiplicity);,
+      udf: UserDefinedFunction<Any>[1] | $conv->pureTypeToJavaType($udf.returnGenericType, $udf.returnMultiplicity)
+   ]);
+   $conv->buildSignature($f, $className, $returnType);
+}
+
 // Shared back-end for both translateFunction and translateLambda: turn a
 // FunctionDefinition + a Java return type into a Java class wrapping the
 // translated body as a single `public static execute(...)` method.
 function <<access.private>> meta::external::language::java::translation::buildSignature(conv: Conventions[1], f: meta::pure::metamodel::function::FunctionDefinition<meta::pure::metamodel::type::Any>[1], className: String[1], returnType: meta::external::language::java::metamodel::Type[1]): FunctionSignature[1]
 {
    let jParams = $f.parameters->map(p |
-      j_parameter($conv->pureTypeToJavaType($p.genericType, $p.multiplicity), $p.name)
+      j_parameter($conv->pureTypeToJavaType($p.genericType, $p.multiplicity), $p.name->meta::external::language::java::translation::safeJavaName())
    );
 
-   assert($f.expressionSequence->size() == 1, | 'buildSignature: only single-expression bodies are supported in the minimal translator, got ' + $f.expressionSequence->size()->toString());
-   let bodyStatements = j_return($conv->translateExpression($f.expressionSequence->toOne()));
+   assert($f.expressionSequence->size() >= 1, | 'buildSignature: empty expressionSequence');
+   let bodyStatements = $conv->buildJavaBody($f.expressionSequence->toOneMany());
 
    let javaCls = javaClass(['public'], $conv.basePackageName + '.' + $className);
    let javaMtd = javaMethod(['public', 'static'], $returnType, 'execute', $jParams, $bodyStatements);
 
-   ^FunctionSignature(class = $javaCls->addMethod($javaMtd), method = $javaMtd);
+   // Walk the body to find every Pure Class referenced via `^X(...)` plus the
+   // properties each gets set, and generate a Java class per. These end up
+   // serialized alongside GalleryRunner in the same compilation unit so
+   // `new X()._k(v)` typechecks.
+   let classRefs = $conv->collectNewClassRefs($f.expressionSequence);
+   let classHelpers = $classRefs->map(cr | $conv->generateHelperClass($cr));
+
+   // Walk the body collecting every UserDefinedFunction transitively
+   // referenced via `fe.func`. Each becomes a top-level Java helper class
+   // with one `public static execute(...)` method, so call sites translated
+   // via {@link translateUdfCall} can invoke `HelperClass.execute(args)`.
+   // Mirrors the TypeScript translator's collectReferencedUdfs/translateUdf
+   // pattern; tests like {@code testLetAsLastStatement} that delegate to a
+   // sibling UDF would otherwise fail with "No coder for Pure function".
+   let udfs = $conv->collectReferencedUdfs(
+      $f.expressionSequence,
+      []->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>));
+   let udfHelpers = $udfs->map(u | $conv->translateUdf($u));
+
+   // Pure Map ops route through a generated PureMap class. Detect any in the
+   // body (or in any UDF helper body that gets emitted alongside) and append
+   // the helper to the compilation unit. Skip when unused to keep the gallery
+   // / per-test source output focused.
+   let usesMap = $f.expressionSequence->usesPureMap()
+      || $udfs->exists(u | $u.expressionSequence->usesPureMap());
+   let mapHelpers = if ($usesMap, | [$conv->pureMapHelperClass()], | []->cast(@meta::external::language::java::metamodel::Class));
+
+   ^FunctionSignature(
+      class = $javaCls->addMethod($javaMtd),
+      method = $javaMtd,
+      extraClasses = $classHelpers->concatenate($udfHelpers)->concatenate($mapHelpers)
+   );
+}
+
+// Walk a value-spec tree collecting every UserDefinedFunction reached via
+// {@link FunctionExpression.func} for which there is NO registered coder.
+// Coder-backed UDFs (e.g. assertEquals, contains, range) are handled by
+// {@link translateFunctionExpression} dispatching to the coder — emitting
+// their bodies as helper classes would needlessly drag in the entire core
+// runtime and break tests on the first non-translatable construct deep in
+// the call graph. Recurses into each collected UDF's body so callees-of-
+// callees show up too. `seen` carries the transitive closure to break
+// cycles (recursive UDF would otherwise loop).
+function <<access.private>> meta::external::language::java::translation::collectReferencedUdfs(
+   conv: Conventions[1],
+   exprs: ValueSpecification[*],
+   seen: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[*]
+): meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[*]
+{
+   $exprs->fold({e, acc | $conv->collectReferencedUdfsOne($e, $acc)}, $seen);
+}
+
+function <<access.private>> meta::external::language::java::translation::collectReferencedUdfsOne(
+   conv: Conventions[1],
+   vs: ValueSpecification[1],
+   seen: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[*]
+): meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[*]
+{
+   $vs->match([
+      {fe: FunctionExpression[1] |
+         let acc1 = $conv->collectReferencedUdfs($fe.parametersValues, $seen);
+         if ($fe.func->isNotEmpty()
+              && $fe.func->toOne()->instanceOf(meta::pure::metamodel::function::UserDefinedFunction)
+              && $conv.functionCoders->get($fe.functionName)->isEmpty(),
+             | let udf = $fe.func->toOne()->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>);
+               if ($acc1->contains($udf),
+                   | $acc1,
+                   | $conv->collectReferencedUdfs($udf.expressionSequence, $acc1->concatenate($udf)));,
+             | $acc1
+         );
+      },
+      {av: AtomicValue[1] |
+         // AtomicValue may wrap a LambdaFunction (multi-if conds, match arms,
+         // pair branches) whose body holds further FEs to walk.
+         if ($av.value->isNotEmpty()
+             && $av.value->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction),
+             | $conv->collectReferencedUdfs(
+                 $av.value->toOne()
+                    ->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+                    .expressionSequence,
+                 $seen),
+             | $seen
+         );
+      },
+      {col: Collection[1] | $conv->collectReferencedUdfs($col.values, $seen)},
+      other: ValueSpecification[1] | $seen
+   ]);
+}
+
+// Translate one UDF to a Java class holding a single `public static
+// execute(...)` method that mirrors the UDF body. Class name comes from
+// {@link udfClassName} so call sites translated via {@link translateUdfCall}
+// resolve to the same symbol.
+function <<access.private>> meta::external::language::java::translation::translateUdf(
+   conv: Conventions[1],
+   udf: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]
+): meta::external::language::java::metamodel::Class[1]
+{
+   let className   = $conv->udfClassName($udf);
+   let returnType  = $conv->pureTypeToJavaType($udf.returnGenericType, $udf.returnMultiplicity);
+   let jParams     = $udf.parameters->map(p |
+      j_parameter($conv->pureTypeToJavaType($p.genericType, $p.multiplicity), $p.name->meta::external::language::java::translation::safeJavaName())
+   );
+   assert($udf.expressionSequence->size() >= 1, | 'translateUdf: empty expressionSequence for ' + $udf.functionName->toOne());
+   let body        = $conv->buildJavaBody($udf.expressionSequence->toOneMany());
+   // Package-private — Java allows at most one public top-level class per file
+   // and the main test class (PCTRunner) already takes that slot. Helper UDFs
+   // share the same compilation unit so they need to drop `public`.
+   let javaCls     = javaClass([], $conv.basePackageName + '.' + $className);
+   let javaMtd     = javaMethod(['public', 'static'], $returnType, 'execute', $jParams, $body);
+   $javaCls->addMethod($javaMtd);
+}
+
+// Holds the Pure-Class identity + the property names seen during AST walk.
+// Properties are inferred from the actual `^X(prop1=v, prop2=v)` shapes,
+// not from the class's declared metamodel, since we only emit setters for
+// what the translated body actually needs.
+Class meta::external::language::java::translation::ClassRef
+{
+   className   : String[1];
+   propertyNames : String[*];
+}
+
+// Walk the body collecting Pure Class references in `^X(...)` form. Each
+// emerges as a FunctionExpression named `new` whose first arg's AtomicValue
+// holds the target Class. Recurses through every FE so nested `^Inner(...)`
+// inside a `^Outer(...)` is collected too. Deduplicates by class name,
+// merging property lists.
+function <<access.private>> meta::external::language::java::translation::collectNewClassRefs(conv: Conventions[1], exprs: ValueSpecification[*]): meta::external::language::java::translation::ClassRef[*]
+{
+   let raw = $exprs->map(e | $conv->collectNewClassRefsOne($e));
+   // Dedupe by className, merging property lists across each occurrence.
+   let byName = $raw->groupBy(cr | $cr.className);
+   $byName->keys()->map(k |
+      let group = $byName->get($k)->toOne().values;
+      let allProps = $group->map(cr | $cr.propertyNames)->removeDuplicates();
+      ^meta::external::language::java::translation::ClassRef(className = $k, propertyNames = $allProps);
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::collectNewClassRefsOne(conv: Conventions[1], vs: ValueSpecification[1]): meta::external::language::java::translation::ClassRef[*]
+{
+   $vs->match([
+      fe: FunctionExpression[1] |
+         let self = if ($fe.functionName == 'new' && $fe.parametersValues->size() >= 1,
+            | $conv->extractClassRefFromNew($fe),
+            | if ($fe.functionName == 'copy' && $fe.parametersValues->size() >= 1,
+                  | $conv->extractClassRefFromCopy($fe),
+                  | []->cast(@meta::external::language::java::translation::ClassRef)
+              )
+         );
+         let recursed = $fe.parametersValues->map(p | $conv->collectNewClassRefsOne($p));
+         concatenate($self, $recursed);,
+      c: Collection[1] | $c.values->map(v | $conv->collectNewClassRefsOne($v)),
+      other: ValueSpecification[1] | []->cast(@meta::external::language::java::translation::ClassRef)
+   ]);
+}
+
+// `copy(object, keyExpressions)` — the source's class comes from the source
+// expression's genericType; the property set comes from the keyExpressions.
+// {@link collectNewClassRefs} dedup-merges with any {@code ^X(...)}
+// occurrences of the same class so generateHelperClass emits one Java
+// class holding all observed properties.
+function <<access.private>> meta::external::language::java::translation::extractClassRefFromCopy(conv: Conventions[1], fe: FunctionExpression[1]): meta::external::language::java::translation::ClassRef[*]
+{
+   let src      = $fe.parametersValues->at(0);
+   let rawOpt   = $src.genericType->rawType();
+   if ($rawOpt->isEmpty(),
+      | []->cast(@meta::external::language::java::translation::ClassRef),
+      | let raw = $rawOpt->toOne()->derefTempPointer();
+        if (!$raw->instanceOf(meta::pure::metamodel::type::Class),
+           | []->cast(@meta::external::language::java::translation::ClassRef),
+           | let className = $raw->cast(@meta::pure::metamodel::PackageableElement).name->toOne();
+             let keyExprs  = if ($fe.parametersValues->size() >= 2,
+                                  | $conv->collectKeyExpressions($fe.parametersValues->at(1)),
+                                  | []->cast(@FunctionExpression));
+             let propNames = $keyExprs->map(ke | $conv->extractKeyExpressionPropName($ke));
+             ^meta::external::language::java::translation::ClassRef(className = $className, propertyNames = $propNames);
+        );
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::extractClassRefFromNew(conv: Conventions[1], fe: FunctionExpression[1]): meta::external::language::java::translation::ClassRef[*]
+{
+   let className = $conv->extractNewTargetName($fe.parametersValues->at(0));
+   if ($className == 'PureInstance',
+      | []->cast(@meta::external::language::java::translation::ClassRef),
+      | let keyExprs = if ($fe.parametersValues->size() >= 2,
+                            | $conv->collectKeyExpressions($fe.parametersValues->at(1)),
+                            | []->cast(@FunctionExpression));
+        let propNames = $keyExprs->map(ke | $conv->extractKeyExpressionPropName($ke));
+        ^meta::external::language::java::translation::ClassRef(className = $className, propertyNames = $propNames);
+   );
+}
+
+function <<access.private>> meta::external::language::java::translation::extractKeyExpressionPropName(conv: Conventions[1], ke: FunctionExpression[1]): String[1]
+{
+   let nameArg = $ke.parametersValues->at(0);
+   if ($nameArg->instanceOf(AtomicValue),
+      | $nameArg->cast(@AtomicValue).value->toOne()->cast(@String),
+      | 'unknownProp'
+   );
+}
+
+// Generate a Java class for a referenced Pure class: one field per
+// property, one fluent setter `_propName(Object v) { this.propName=v; return this; }`,
+// plus a `type()` returning the class's short name string. Fields are
+// typed `Object` to dodge per-property type extraction; tests that depend
+// on exact field types will diverge.
+function <<access.private>> meta::external::language::java::translation::generateHelperClass(conv: Conventions[1], cr: meta::external::language::java::translation::ClassRef[1]): meta::external::language::java::metamodel::Class[1]
+{
+   let cls = javaClass([], $conv.basePackageName + '.' + $cr.className);
+   let withFields = $cr.propertyNames->fold({propName, accCls |
+      $accCls->addField(^meta::external::language::java::metamodel::Field(
+         name = $propName,
+         type = javaObject(),
+         modifiers = ['public']->javaModifiers()
+      ));
+   }, $cls);
+   let withSetters = $cr.propertyNames->fold({propName, accCls |
+      let setter = javaMethod(
+         ['public'],
+         $accCls,
+         '_' + $propName,
+         [j_parameter(javaObject(), 'v')],
+         [
+            j_expressionStatement(j_assign(j_field(j_this($accCls), $propName, javaObject()), j_variable(javaObject(), 'v'))),
+            j_return(j_this($accCls))
+         ]
+      );
+      $accCls->addMethod($setter);
+   }, $withFields);
+   let typeMethod = javaMethod(
+      ['public'],
+      javaString(),
+      'type',
+      [],
+      j_return(j_string($cr.className))
+   );
+   let withType = $withSetters->addMethod($typeMethod);
+   // `_copy()` — return a fresh instance with all observed fields cloned
+   // shallow-copy-style. Used by the {@link copyCoder} path. The Pure
+   // semantics is immutable updates: `copy(x, [k=v])` returns a new x with
+   // override applied, leaving the original untouched.
+   let copyBodyStmts = $cr.propertyNames->map(propName |
+      j_expressionStatement(j_assign(
+         j_field(j_variable($withType, '_n'), $propName, javaObject()),
+         j_field(j_this($withType), $propName, javaObject())
+      ))
+   );
+   let copyMethod = javaMethod(
+      ['public'],
+      $withType,
+      '_copy',
+      [],
+      j_declare($withType, '_n', j_new($withType, []))
+         ->concatenate($copyBodyStmts)
+         ->concatenate(j_return(j_variable($withType, '_n')))
+   );
+   $withType->addMethod($copyMethod);
+}
+
+// Render a Pure expressionSequence as a list of Java statements. All but the
+// last are emitted as Java statements (letFunction -> local var decl,
+// everything else -> expression statement, preserving side-effect order).
+// The last expression is wrapped in `return`. Mirrors Pure's "value of the
+// body = value of the last expression" semantics — same shape as TS's
+// buildTsFunctionBody.
+function <<access.private>> meta::external::language::java::translation::buildJavaBody(
+   conv: Conventions[1],
+   exprs: ValueSpecification[1..*]
+): Code[*]
+{
+   let lastIdx = $exprs->size() - 1;
+   let stmts   = range(0, $lastIdx)->map(i | $conv->translateStatement($exprs->at($i)));
+   let last    = $exprs->at($lastIdx);
+   // Let-as-last-statement: Pure's `let x = v` returns v. {@link translateExpression}
+   // has no `letFunction` coder (it's a statement-level form handled by
+   // {@link translateStatement}), so a UDF like `function f(): T { let x = v; }`
+   // would otherwise hit "No coder for Pure function: letFunction". Emit
+   // `<T> x = v; return x;` instead. Mirrors the TS translator's
+   // buildTsFunctionBody.
+   let isLetLast = $last->instanceOf(FunctionExpression)
+      && $last->cast(@FunctionExpression).functionName == 'letFunction'
+      && $last->cast(@FunctionExpression).parametersValues->size() == 2;
+   let tail = if ($isLetLast,
+      | let fe       = $last->cast(@FunctionExpression);
+        let varName  = $fe.parametersValues->at(0)->cast(@AtomicValue).value->toOne()->cast(@String)->meta::external::language::java::translation::safeJavaName();
+        let valExpr  = $fe.parametersValues->at(1);
+        let varType  = $conv->pureTypeToJavaType($valExpr.genericType, $valExpr.multiplicity);
+        [j_declare($varType, $varName, $conv->translateExpression($valExpr)),
+         j_return(j_variable($varType, $varName))];,
+      | [j_return($conv->translateExpression($last))]
+   );
+   $stmts->concatenate($tail);
+}
+
+// Translate a non-final expression-sequence element to a Java statement.
+// `letFunction(name, value)` -> `<JavaType> name = value;` (type derived from
+// the value expression's genericType/multiplicity).
+// Anything else -> an ExpressionStatement wrapping translateExpression so
+// side-effecting calls land in source order.
+function <<access.private>> meta::external::language::java::translation::translateStatement(
+   conv: Conventions[1],
+   vs: ValueSpecification[1]
+): Code[1]
+{
+   $vs->match([
+      {fe: FunctionExpression[1] |
+         if ($fe.functionName == 'letFunction' && $fe.parametersValues->size() == 2,
+             | let varName  = $fe.parametersValues->at(0)->cast(@AtomicValue).value->cast(@String)->meta::external::language::java::translation::safeJavaName();
+               let valExpr  = $fe.parametersValues->at(1);
+               let varType  = $conv->pureTypeToJavaType($valExpr.genericType, $valExpr.multiplicity);
+               j_declare($varType, $varName, $conv->translateExpression($valExpr));,
+             | $conv->translateExpression($vs)->asJavaStatement()
+         );
+      },
+      other: ValueSpecification[1] | $conv->translateExpression($other)->asJavaStatement()
+   ]);
+}
+
+// Wrap an expression as a Java statement. {@link j_expressionStatement} only
+// accepts MethodCall / StaticMethodCall / New / pre+postfix / assignment —
+// anything else (a ternary `cond ? a : b`, a cast, a variable access, a
+// literal) trips its assertion. Wrap such expressions in a no-op static
+// {@code java.util.Objects.toString(expr, null)} call to make them valid
+// statement syntax while preserving their evaluation side effects.
+function <<access.private>> meta::external::language::java::translation::asJavaStatement(expr: Code[1]): Code[1]
+{
+   if ($expr->meta::external::language::java::metamodel::isValidExpressionAsStatement(),
+      | j_expressionStatement($expr),
+      | j_expressionStatement(j_invoke(javaClass('java.util.Objects'), 'toString', [$expr, j_null()], javaString()))
+   );
 }

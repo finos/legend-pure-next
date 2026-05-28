@@ -15,6 +15,7 @@
 import meta::external::language::java::*;
 import meta::external::language::java::serialization::*;
 import meta::external::language::java::translation::*;
+import meta::pure::translation::shared::*;
 
 // JVM-runtime bridge for the Pure->Java translator: `translation.pure`
 // produces a Java metamodel Class; this file serialises that to source,
@@ -33,24 +34,56 @@ function meta::external::language::java::translation::runViaTranslation(
 ): Any[*]
 {
    let sig       = $conv->translateFunction($f);
-   let source    = $sig.class->classToString();
+   let source    = $sig->renderFullSource();
    let className = $sig.class->qualifiedClassName();
    compileAndExecute($source, $className, $sig.method.name, $args);
 }
 
-// PCT adapter — pluggable into any `<<PCT.test>>`. Takes the test's
-// no-arg lambda, translates it to a Java class, compiles + executes it,
-// and returns the result for the test's `assertEquals(..., $f->eval(|expr))`.
+// PCT adapter — pluggable into any `<<PCT.test>>`. Takes the test's no-arg
+// lambda, canonicalizes it via the shared translation pipeline (inlines open
+// variables into the body), translates the canonical FunctionDefinition to a
+// Java class, compiles + executes it, and returns the result for the test's
+// `assertEquals(..., $f->eval(|expr))`.
+//
+// makeCanonical returns a UserDefinedFunction when the input lambda has
+// captures (recompiled with each capture substituted as a literal) and the
+// original LambdaFunction when it doesn't. translateFunctionDef dispatches on
+// that shape, so both paths land in the same buildSignature back-end.
 function meta::external::language::java::translation::testAdapterForTranslatedJava<X|o>(
    f: meta::pure::metamodel::function::Function<{->X[o]}>[1]
 ): X[o]
 {
    let conv      = defaultConventions('org.finos.test');
    let lambda    = $f->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
-   let sig       = $conv->translateLambda($lambda, 'PCTRunner');
-   let source    = $sig.class->classToString();
+   let canonical = $lambda->makeCanonical();
+   let sig       = $conv->translateFunctionDef($canonical, 'PCTRunner');
+   let source    = $sig->renderFullSource();
    let className = $sig.class->qualifiedClassName();
    compileAndExecute($source, $className, $sig.method.name, []);
+}
+
+// Render the main GalleryRunner class source plus every helper class
+// (Pure user-defined classes generated alongside it) into a single
+// compilation unit. classToString emits `package X;\npublic class Y { ... }`
+// for the main class; we append each helper using the same serializer but
+// strip its leading `package X;\n\n` so javac sees one package declaration.
+function meta::external::language::java::translation::renderFullSource(sig: FunctionSignature[1]): String[1]
+{
+   let mainSrc = $sig.class->classToString();
+   let helpers = $sig.extraClasses->map(h | $h->classToString()->stripPackageHeader());
+   $mainSrc + '\n\n' + $helpers->joinStrings('\n\n');
+}
+
+function meta::external::language::java::translation::stripPackageHeader(src: String[1]): String[1]
+{
+   // Drop the leading `package X;` line plus the blank line that follows.
+   let firstNewline = $src->indexOf('\n');
+   if ($firstNewline < 0,
+      | $src,
+      | let rest = $src->substring($firstNewline + 1, $src->length());
+        // strip leading blank lines
+        if ($rest->startsWith('\n'), | $rest->substring(1, $rest->length()), | $rest);
+   );
 }
 
 // Convenience: run every `<<PCT.test>>` under `rootPackagePath` through the
