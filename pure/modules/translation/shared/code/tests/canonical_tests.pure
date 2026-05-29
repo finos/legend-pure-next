@@ -354,6 +354,59 @@ function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_emp
 }
 
 // ----------------------------------------------------------------------------
+// LocalizeOpenVariables — keep captured `$name` references and bind each one
+// with a `let name = <value>;` at the top of the body, rather than inlining
+// the value at every use site (the InlineOpenVariables behaviour).
+// ----------------------------------------------------------------------------
+
+// Scalar Integer capture: instead of `5 + 1` (inline), the capture stays a
+// variable and a leading `let x = 5;` binds it. Contrast with
+// testCanonical_scalarIntegerCapture / testCanonical_inlineOnly_*.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_localize_scalarCapture(): Boolean[1]
+{
+   let x = 5;
+   let lambda = {| $x + 1};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        let x = 5;
+        $x + 1;
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]
+      )
+   );
+}
+
+// String capture: the binding RHS is lowered the same way inline lowers it
+// (`'hi'`), but `$s` survives in the body as a let-bound reference.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_localize_stringCapture(): Boolean[1]
+{
+   let s = 'hi';
+   let lambda = {| $s->length()};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        let s = 'hi';
+        length($s);
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]
+      )
+   );
+}
+
+// ----------------------------------------------------------------------------
 // PartialEvaluation — eval-based generalization
 //
 // The fold isn't hard-coded per-native; ANY all-literal FunctionExpression

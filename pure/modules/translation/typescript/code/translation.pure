@@ -47,6 +47,20 @@ Class meta::external::language::typescript::translation::Convention
    // lambda addresses. Empty when no root is set (sub-translations,
    // gallery, etc.); wrapLambdaWithAst falls back to a bare arrow then.
    rootPath : String[0..1];
+   // Function-level `<T>` bindings for the body being translated: type-parameter
+   // name -> the param that witnesses it. `cast(@T)` resolves T from that
+   // param's runtime value (static-bind, runtime-value — mirrors Truffle's
+   // frame type-var binding). Empty outside a generic function body.
+   typeVarWitness : Map<String, TypeVarBinding>[0..1];
+}
+
+// Records that a function param witnesses a type parameter: the cast site reads
+// the type off `witnessVar` at runtime (a scalar yields `__pureTypeOf`, a
+// collection the common supertype `__commonType`).
+Class meta::external::language::typescript::translation::TypeVarBinding
+{
+   witnessVar   : String[1];
+   isCollection : Boolean[1];
 }
 
 function meta::external::language::typescript::translation::defaultConvention(): Convention[1]
@@ -244,8 +258,9 @@ function meta::external::language::typescript::translation::defaultConvention():
          pair('fail',              failCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('assertEqWithinTolerance', assertEqWithinToleranceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('toOneMany',         toOneManyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('castAsTM',          castAsTMCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('castViaSeq',        castViaSeqCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+         // castAsTM / castViaSeq / castAsHint / tagAs are generic cast helpers —
+         // NO stub coder. They translate as real UDFs so their `cast(@T)` body
+         // resolves T from the witness param at runtime (see withTypeVarWitness).
          pair('letFunction',       letFunctionCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          // `isToOne(Multiplicity)` has no coder — it is a platformOnly UDF
          // that inspects the multiplicity's bounds, translated as a UDF call.
@@ -274,9 +289,7 @@ function meta::external::language::typescript::translation::defaultConvention():
          pair('readFile',          readFileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('directoryTree',     directoryTreeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('useNodeAsScalar',   identityCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('useAsScalar',       identityCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('tagAs',             identityCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('castAsHint',        identityCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+         pair('useAsScalar',       identityCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
       ]),
       lambdaIndex = []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
    );
@@ -489,6 +502,28 @@ function meta::external::language::typescript::translation::containsParentRefOne
    ]);
 }
 
+// Resolve a FunctionExpression's target UserDefinedFunction. `fe.func` may be a
+// PackageableFunctionPointer after compile (the load-time PointerGraphResolver
+// doesn't cover every recompiled/nested call site), so deref via `pathToElement`
+// — the same resolution canonical.pure's partial-eval uses. Empty when func is
+// absent or doesn't resolve to a UDF (e.g. a native).
+function meta::external::language::typescript::translation::resolveUdf(fe: FunctionExpression[1]): meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[0..1]
+{
+   if ($fe.func->isEmpty(), | [], | $fe.func->toOne()->derefFuncToUdf());
+}
+function meta::external::language::typescript::translation::derefFuncToUdf(f: meta::pure::metamodel::function::Function<meta::pure::metamodel::type::Any>[1]): meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[0..1]
+{
+   // `f` may be any TempCompilerPointer subtype (PackageableFunctionPointer, or a
+   // generic compile pointer) — every pointer carries `.path`; resolve it to the
+   // live element. Non-pointers pass through.
+   let real = if ($f->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer),
+                  | meta::pure::functions::meta::pathToElement($f->cast(@meta::pure::metamodel::pointer::TempCompilerPointer).path),
+                  | $f);
+   if ($real->instanceOf(meta::pure::metamodel::function::UserDefinedFunction),
+      | $real->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>),
+      | []->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>));
+}
+
 function meta::external::language::typescript::translation::translateExpression(expr: ValueSpecification[1], conv: Convention[1]): Expression[1]
 {
    $expr->match([
@@ -559,7 +594,7 @@ function meta::external::language::typescript::translation::translateExpression(
                  //   the UDF by its short name. The UDF's body is collected
                  //   in `buildSourceFile` and emitted as a top-level
                  //   declaration alongside `execute`.
-                 if ($fe.func->isNotEmpty() && $fe.func->toOne()->instanceOf(meta::pure::metamodel::function::UserDefinedFunction),
+                 if ($fe->resolveUdf()->isNotEmpty(),
                      | let udfName = safeJsName($fe.functionName->split('::')->last()->toOne());
                        tsCall(tsId($udfName),
                               $fe.parametersValues->map(p | $p->translateExpression($conv)));,
@@ -572,36 +607,40 @@ function meta::external::language::typescript::translation::translateExpression(
    ]);
 }
 
+// Pure Integer is a JS bigint; arithmetic routes through runtime helpers that
+// keep Integer+Integer exact (bigint) and coerce to Number when a Float is
+// involved (`bigint <op> number` would throw). `__add` also does Pure string `+`.
 function meta::external::language::typescript::translation::plusCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   binaryInfix($args, '+', $conv);
+   tsCall(tsId('__add'), $args->map(a | $a->translateExpression($conv)));
 }
 
 // minus is overloaded: binary `a - b` and unary `-a`. Dispatch on arity.
+// Unary `-x` works for both bigint and number; binary routes through __sub.
 function meta::external::language::typescript::translation::minusCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    if ($args->size() == 1,
       | tsNeg(translateExpression($args->at(0), $conv)),
-      | binaryInfix($args, '-', $conv));
+      | tsCall(tsId('__sub'), $args->map(a | $a->translateExpression($conv))));
 }
 
 function meta::external::language::typescript::translation::timesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   binaryInfix($args, '*', $conv);
+   tsCall(tsId('__mul'), $args->map(a | $a->translateExpression($conv)));
 }
 
 function meta::external::language::typescript::translation::divideCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // 2-arg: `a / b`. 3-arg `divide(Decimal, Decimal, scale)` ignores `scale`
-   // because JS Number has no precision-scale concept.
-   let left  = translateExpression($args->at(0), $conv);
-   let right = translateExpression($args->at(1), $conv);
-   tsBinary($left, '/', $right);
+   // 2-arg `divide` always returns Float (coerce operands to Number); 3-arg
+   // `divide(Decimal, Decimal, scale)` returns a Decimal rounded to `scale`.
+   if ($args->size() >= 3,
+      | tsCall(tsId('__divScale'), [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv), translateExpression($args->at(2), $conv)]),
+      | tsCall(tsId('__div'), [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv)]));
 }
 
 function meta::external::language::typescript::translation::remCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   binaryInfix($args, '%', $conv);
+   tsCall(tsId('__rem'), $args->map(a | $a->translateExpression($conv)));
 }
 
 function meta::external::language::typescript::translation::equalCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -669,7 +708,8 @@ function meta::external::language::typescript::translation::toOneCoder(args: Val
 function meta::external::language::typescript::translation::lengthCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 1, | 'lengthCoder expects exactly 1 argument');
-   tsAccess(translateExpression($args->at(0), $conv), 'length');
+   // Pure length -> Integer (bigint).
+   tsCall(tsId('__bi'), [tsAccess(translateExpression($args->at(0), $conv), 'length')]);
 }
 
 // map(collection, fn) -> `collection.map(fn)`.
@@ -817,7 +857,67 @@ function meta::external::language::typescript::translation::genericTypeToCgtObje
    let taEntry   = if ($typeArgs->isEmpty(),
                        | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment),
                        | [tsEntry('typeArguments', tsArrayLit($typeArgs->map(ta | $ta->genericTypeToCgtObject())))]);
-   tsObject($typeEntry->concatenate($taEntry));
+   // Stamp `__equalityKeys` so the runtime `__eq` compares instances by Pure's
+   // <<equality.Key>> contract (an EMPTY list means "no keys → identity"). Only
+   // for NON-metamodel user/platform classes (Pair, List, model classes, …);
+   // `meta::pure::metamodel::*` classes are left unstamped so they keep their
+   // existing (pointer/structural) equality — they're reference-compared.
+   //
+   // The rawType is often a ClassPointer (compile-time reference) whose
+   // `.properties` are unresolved; resolve it to the live class via its
+   // pointer-aware path so `^X(...)` literals stamp the SAME keys as captured
+   // PDOs (otherwise their CGT shapes diverge and equality breaks). The `__`
+   // prefix keeps the key out of `__eq`'s structural compare and the Java lift.
+   let eqEntry   = if ($rt->isEmpty() || !$rt->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+                       | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment),
+                       | let path = $rt->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
+                         if ($path == '' || $path->startsWith('meta::pure::metamodel::'),
+                            | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment),
+                            | let cls = meta::pure::functions::meta::pathToElement($path)->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>);
+                              [tsEntry('__equalityKeys', tsArrayLit($cls->equalityKeyNames()->map(k | tsStrLit($k))))];
+                         );
+                       );
+   tsObject($typeEntry->concatenate($taEntry)->concatenate($eqEntry));
+}
+
+// Collect a class's `<<equality.Key>>` property names, including inherited
+// ones. Collect ALL properties first (allUserProperties dedups by name so a
+// subclass override wins), THEN filter by the key stereotype — so a subclass
+// that re-declares an inherited property WITHOUT the stereotype removes it from
+// the key set (e.g. OtherBottomClass re-declares `sides` un-keyed to drop the
+// key it would otherwise inherit from TopClass). Empty when the class has no keys.
+function meta::external::language::typescript::translation::equalityKeyNames(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]
+): String[*]
+{
+   $cls->allUserProperties()
+       ->filter(p | $p.stereotypes->exists(s |
+              $s.profile->isNotEmpty()
+              && $s.profile->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath() == 'meta::pure::profiles::equality'
+              && $s.value->isNotEmpty()
+              && $s.value->toOne() == 'Key'))
+       ->map(p | $p.name->toOne());
+}
+
+// Collect a class's properties INCLUDING those inherited from user
+// superclasses. `$cls.properties` is the direct slot (own declared only);
+// fold in each user-ancestor's properties so e.g. `name`/`sides` declared on a
+// TopClass surface on a captured RightClass instance. Stop at metamodel/pointer
+// ancestors — their `.properties` are metamodel slots / unresolved and must not
+// leak into an instance literal. Deduped by name so a subclass override wins.
+function meta::external::language::typescript::translation::allUserProperties(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]
+): meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Any, meta::pure::metamodel::type::Any>[*]
+{
+   let supers = $cls.generalizations
+                    ->map(g | $g.general->rawType())
+                    ->filter(t | $t->isNotEmpty()
+                                 && $t->toOne()->instanceOf(meta::pure::metamodel::type::Class)
+                                 && !$t->toOne()->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer)
+                                 && !$t->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->startsWith('meta::pure::metamodel::'))
+                    ->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>);
+   let inherited = $supers->map(s | $s->allUserProperties());
+   $cls.properties->concatenate($inherited)->removeDuplicatesBy(p | $p.name->toOne());
 }
 
 // Build the `_type: [path, super1, super2, ..., Any]` entry from the holder.
@@ -940,12 +1040,15 @@ function meta::external::language::typescript::translation::methodCall(
    tsCall(tsAccess($recv, $method), $rest);
 }
 
-// Helper: emit `Math.method(...args)`.
+// Helper: emit `Math.method(__num(...args))`. Used by the Float-returning math
+// (trig/exp/log/...); `__num` coerces a bigint Integer arg to Number since
+// `Math.*` throws on a BigInt. Integer-returning math (abs/floor/ceil/round/
+// sign) does NOT go through here — it uses bigint-preserving helpers.
 function meta::external::language::typescript::translation::mathCall(
    args: ValueSpecification[*], method: String[1], conv: Convention[1]
 ): Expression[1]
 {
-   let tsArgs = $args->map(a | $a->translateExpression($conv));
+   let tsArgs = $args->map(a | tsCall(tsId('__num'), [$a->translateExpression($conv)]));
    tsCall(tsAccess(tsId('Math'), $method), $tsArgs);
 }
 
@@ -1042,7 +1145,8 @@ function meta::external::language::typescript::translation::addCoder(args: Value
         let elt  = translateExpression($args->at(1), $conv);
         tsArrayLit([tsSpread($coll), $elt]);,
       | let coll = translateExpression($args->at(0), $conv);
-        let idx  = translateExpression($args->at(1), $conv);
+        // idx is a Pure Integer (bigint); Array.slice throws on a bigint arg.
+        let idx  = tsCall(tsId('__num'), [translateExpression($args->at(1), $conv)]);
         let elt  = translateExpression($args->at(2), $conv);
         tsArrayLit([
            tsSpread(tsCall(tsAccess($coll, 'slice'), [tsNumLit('0'), $idx])),
@@ -1087,15 +1191,21 @@ function meta::external::language::typescript::translation::removeDuplicatesCode
 
 function meta::external::language::typescript::translation::indexOfCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // String.indexOf / Array.indexOf both accept (search) or (search, fromIdx) —
-   // forward all args via methodCall.
-   methodCall($args, 'indexOf', $conv);
+   // indexOf(coll/str, search[, fromIdx]) — search stays as-is; fromIdx is a Pure
+   // Integer (bigint) and must be coerced (String/Array.indexOf throws on bigint).
+   // Pure indexOf -> Integer (bigint), so wrap the result in __bi.
+   let recv   = translateExpression($args->at(0), $conv);
+   let search = translateExpression($args->at(1), $conv);
+   let rest   = if ($args->size() >= 3,
+                   | [tsCall(tsId('__num'), [translateExpression($args->at(2), $conv)])],
+                   | []->cast(@meta::external::language::typescript::metamodel::Expression));
+   tsCall(tsId('__bi'), [tsCall(tsAccess($recv, 'indexOf'), [$search]->concatenate($rest))]);
 }
 
 function meta::external::language::typescript::translation::lastIndexOfCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 2, | 'lastIndexOfCoder expects exactly 2 arguments');
-   methodCall($args, 'lastIndexOf', $conv);
+   tsCall(tsId('__bi'), [methodCall($args, 'lastIndexOf', $conv)]);
 }
 
 function meta::external::language::typescript::translation::findCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1140,7 +1250,11 @@ function meta::external::language::typescript::translation::joinStringsCoder(arg
 
 function meta::external::language::typescript::translation::substringCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   methodCall($args, 'substring', $conv);
+   // start/end are Pure Integers (bigint); `String.substring` does ToNumber on
+   // its args and throws on a bigint, so coerce them via __num.
+   let recv = translateExpression($args->at(0), $conv);
+   let idxs = $args->slice(1, $args->size())->map(a | tsCall(tsId('__num'), [$a->translateExpression($conv)]));
+   tsCall(tsAccess($recv, 'substring'), $idxs);
 }
 
 function meta::external::language::typescript::translation::startsWithCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1185,34 +1299,42 @@ function meta::external::language::typescript::translation::parseFloatCoder(args
 
 function meta::external::language::typescript::translation::parseDecimalCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // parseDecimal(s) -> float; parseDecimal(s, precision, scale) rounds to scale.
+   // parseDecimal -> Decimal (Big), lenient (`3.14d`/`+`/leading zeros).
+   // parseDecimal(s, precision, scale) rounds to scale.
    if ($args->size() >= 3,
-      | tsCall(tsId('__parseDecimalScaled'), [translateExpression($args->at(0), $conv), translateExpression($args->at(2), $conv)]),
-      | tsCall(tsId('parseFloat'), [translateExpression($args->at(0), $conv)]));
+      | tsCall(tsId('__round2'), [tsCall(tsId('__parseDec'), [translateExpression($args->at(0), $conv)]), translateExpression($args->at(2), $conv)]),
+      | tsCall(tsId('__parseDec'), [translateExpression($args->at(0), $conv)]));
 }
 
 // ----------------------------------------------------------------------------
 // Math coders.
 // ----------------------------------------------------------------------------
 
+// abs/floor/ceiling/round(1-arg)/sign return Pure Integer for Integer input, so
+// they use bigint-preserving helpers (Math.* throws on bigint). abs(Float)/
+// round(Float,scale) stay Float — handled inside the helpers / by arity.
 function meta::external::language::typescript::translation::absCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   mathCall($args, 'abs', $conv);
+   tsCall(tsId('__abs'), [translateExpression($args->at(0), $conv)]);
 }
 
 function meta::external::language::typescript::translation::floorCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   mathCall($args, 'floor', $conv);
+   tsCall(tsId('__floorI'), [translateExpression($args->at(0), $conv)]);
 }
 
 function meta::external::language::typescript::translation::ceilingCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   mathCall($args, 'ceil', $conv);
+   tsCall(tsId('__ceilI'), [translateExpression($args->at(0), $conv)]);
 }
 
 function meta::external::language::typescript::translation::roundCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   mathCall($args, 'round', $conv);
+   // round(x) -> Integer (bigint); round(x, scale) -> rounded to scale, preserving
+   // the operand's domain (Decimal -> Decimal, Float -> Float) via __round2.
+   if ($args->size() == 1,
+      | tsCall(tsId('__round1'), [translateExpression($args->at(0), $conv)]),
+      | tsCall(tsId('__round2'), [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv)]));
 }
 
 function meta::external::language::typescript::translation::powCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1227,48 +1349,35 @@ function meta::external::language::typescript::translation::sqrtCoder(args: Valu
 
 function meta::external::language::typescript::translation::minNativeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // min over a collection: Math.min(...coll)
+   // Bigint-safe min (Math.min throws on bigint): __minColl over a collection,
+   // __min2 for the 2-arg form. Both preserve the operand type (Integer/Float).
    if ($args->size() == 1,
-      | tsCall(tsAccess(tsId('Math'), 'min'), [tsSpread(translateExpression($args->at(0), $conv))]),
-      | mathCall($args, 'min', $conv));
+      | tsCall(tsId('__minColl'), [translateExpression($args->at(0), $conv)]),
+      | tsCall(tsId('__min2'), $args->map(a | $a->translateExpression($conv))));
 }
 
 function meta::external::language::typescript::translation::maxNativeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    if ($args->size() == 1,
-      | tsCall(tsAccess(tsId('Math'), 'max'), [tsSpread(translateExpression($args->at(0), $conv))]),
-      | mathCall($args, 'max', $conv));
+      | tsCall(tsId('__maxColl'), [translateExpression($args->at(0), $conv)]),
+      | tsCall(tsId('__max2'), $args->map(a | $a->translateExpression($conv))));
 }
 
 function meta::external::language::typescript::translation::modCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   binaryInfix($args, '%', $conv);
+   tsCall(tsId('__mod'), $args->map(a | $a->translateExpression($conv)));
 }
 
 function meta::external::language::typescript::translation::sumCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // sum(coll) -> coll.reduce((a,b) => a+b, 0)
-   let coll = translateExpression($args->at(0), $conv);
-   let fn = tsArrowExpr(
-      [tsParamNoType('__a'), tsParamNoType('__b')],
-      tsBinary(tsId('__a'), '+', tsId('__b'))
-   );
-   tsCall(tsAccess($coll, 'reduce'), [$fn, tsNumLit('0')]);
+   // sum(coll): bigint-safe (Integer seed stays bigint, Float stays number).
+   tsCall(tsId('__sumColl'), [translateExpression($args->at(0), $conv)]);
 }
 
 function meta::external::language::typescript::translation::averageCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // average(coll) -> coll.reduce((a,b)=>a+b, 0) / coll.length
-   let coll = translateExpression($args->at(0), $conv);
-   let fn = tsArrowExpr(
-      [tsParamNoType('__a'), tsParamNoType('__b')],
-      tsBinary(tsId('__a'), '+', tsId('__b'))
-   );
-   tsBinary(
-      tsCall(tsAccess($coll, 'reduce'), [$fn, tsNumLit('0')]),
-      '/',
-      tsAccess($coll, 'length')
-   );
+   // average(coll) -> Float; coerces bigint elements to Number internally.
+   tsCall(tsId('__avgColl'), [translateExpression($args->at(0), $conv)]);
 }
 
 // ----------------------------------------------------------------------------
@@ -1352,10 +1461,12 @@ function meta::external::language::typescript::translation::assertEqualsCoder(ar
    assert($args->size() >= 2, | 'assertEqualsCoder needs at least 2 args');
    let expected = translateExpression($args->at(0), $conv);
    let actual   = translateExpression($args->at(1), $conv);
+   // __json is JSON.stringify with a bigint-safe replacer (raw JSON.stringify
+   // throws on a BigInt; this message is built eagerly even when the assert passes).
    let msg = tsBinary(
-      tsBinary(tsStrLit('expected '), '+', tsCall(tsAccess(tsId('JSON'), 'stringify'), [$expected])),
+      tsBinary(tsStrLit('expected '), '+', tsCall(tsId('__json'), [$expected])),
       '+',
-      tsBinary(tsStrLit(', got '), '+', tsCall(tsAccess(tsId('JSON'), 'stringify'), [$actual]))
+      tsBinary(tsStrLit(', got '), '+', tsCall(tsId('__json'), [$actual]))
    );
    assertHelper(tsCall(tsId('__eq'), [$expected, $actual]), $msg);
 }
@@ -1413,9 +1524,74 @@ function meta::external::language::typescript::translation::assertFalseCoder(arg
 // cast(x, type) -> identity in JS (no runtime type check). Pure's cast either
 // succeeds or throws; we lose the throw-on-mismatch behavior but most PCTs
 // pass a correctly-typed value.
+// True when the multiplicity is a concrete `[*]`/`[1..*]` (to-many). Non-concrete
+// multiplicities (a `[m]` parameter) are treated as scalar here.
+function meta::external::language::typescript::translation::isToManyMult(m: meta::pure::metamodel::multiplicity::Multiplicity[1]): Boolean[1]
+{
+   if (!$m->instanceOf(meta::pure::metamodel::multiplicity::ConcreteMultiplicity),
+      | false,
+      | let cm = $m->cast(@meta::pure::metamodel::multiplicity::ConcreteMultiplicity);
+        $cm.upperBound->isEmpty() || $cm.upperBound->toOne().value->toOne() > 1;
+   );
+}
+
+// Return `conv` with its `typeVarWitness` set from a function's parameters:
+// each param whose declared type IS a type parameter `T` witnesses `T`, so a
+// `cast(@T)` in the body resolves T off that param's runtime value.
+function meta::external::language::typescript::translation::withTypeVarWitness(conv: Convention[1], params: meta::pure::metamodel::valuespecification::VariableExpression[*]): Convention[1]
+{
+   let witness = $params->map(p |
+      let rt = $p.genericType->rawType();
+      if ($rt->isEmpty() || !$rt->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter),
+         | []->cast(@meta::pure::functions::collection::Pair<String, TypeVarBinding>),
+         | pair($rt->toOne()->cast(@meta::pure::metamodel::type::generics::TypeParameter).name->toOne(),
+                ^TypeVarBinding(witnessVar = safeJsName($p.name), isCollection = $p.multiplicity->isToManyMult())));
+   );
+   if ($witness->isEmpty(), | $conv, | ^$conv(typeVarWitness = newMap($witness)));
+}
+
 function meta::external::language::typescript::translation::castCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   translateExpression($args->at(0), $conv);
+   // `cast(source, @T)`. Three cases (dispatched in the helpers below):
+   //  - concrete USER target -> `__cast(src, 'path')` runtime type-check;
+   //  - type-parameter target -> resolve T from its witness param at runtime;
+   //  - metamodel target (`@Type`/`@Any`/…) or unresolved -> pass through.
+   let src = translateExpression($args->at(0), $conv);
+   let tgt = if ($args->size() >= 2, | $args->at(1)->holderTargetType(), | []->cast(@meta::pure::metamodel::type::Type));
+   if ($tgt->isEmpty(), | $src, | $tgt->toOne()->castResolvedExpr($src, $conv));
+}
+
+// A concrete (non-type-parameter) cast target: emit a runtime type-check for a
+// user type; pass through for metamodel targets (`@Type`/`@Any`/… reflection).
+function meta::external::language::typescript::translation::castConcreteExpr(t: meta::pure::metamodel::type::Type[1], src: Expression[1]): Expression[1]
+{
+   if (!$t->instanceOf(meta::pure::metamodel::PackageableElement),
+      | $src,
+      | let p = $t->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
+        if ($p == '' || $p->startsWith('meta::pure::metamodel::'),
+           | $src,
+           | tsCall(tsId('__cast'), [$src, tsStrLit($p)])););
+}
+
+// A type-parameter cast target `@T`: resolve T from its witness param at runtime
+// (scalar witness -> __pureTypeOf, collection witness -> __commonType). Pass
+// through when there's no witness binding (no static type to resolve).
+function meta::external::language::typescript::translation::castTypeParamExpr(tp: meta::pure::metamodel::type::generics::TypeParameter[1], src: Expression[1], conv: Convention[1]): Expression[1]
+{
+   let binding = if ($conv.typeVarWitness->isEmpty(), | [], | $conv.typeVarWitness->toOne()->get($tp.name->toOne()));
+   if ($binding->isEmpty(),
+      | $src,
+      | let b = $binding->toOne();
+        // __commonType is collection-safe (single witness -> its own type), so use
+        // it for any witness multiplicity (scalar T[1], sequence T[*], or param T[m]).
+        tsCall(tsId('__cast'), [$src, tsCall(tsId('__commonType'), [tsId($b.witnessVar)])]););
+}
+
+function meta::external::language::typescript::translation::castResolvedExpr(t: meta::pure::metamodel::type::Type[1], src: Expression[1], conv: Convention[1]): Expression[1]
+{
+   if ($t->instanceOf(meta::pure::metamodel::type::generics::TypeParameter),
+      | $t->cast(@meta::pure::metamodel::type::generics::TypeParameter)->castTypeParamExpr($src, $conv),
+      | $t->castConcreteExpr($src));
 }
 
 // instanceOf(v, type) -> runtime helper that walks the metamodel
@@ -1442,15 +1618,10 @@ function meta::external::language::typescript::translation::genericTypeCoder(arg
 
 function meta::external::language::typescript::translation::compareCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // compare(a, b) -> a < b ? -1 : a > b ? 1 : 0
+   // compare(a, b) -> __compare(a, b): type-aware (values of different types
+   // order by type, like Pure — JS `<`/`>` would coerce, e.g. 5 < '5').
    assert($args->size() == 2, | 'compareCoder expects exactly 2 arguments');
-   let a = translateExpression($args->at(0), $conv);
-   let b = translateExpression($args->at(1), $conv);
-   tsTernary(
-      tsBinary($a, '<', $b),
-      tsNumLit('-1'),
-      tsTernary(tsBinary($a, '>', $b), tsNumLit('1'), tsNumLit('0'))
-   );
+   tsCall(tsId('__compare'), [translateExpression($args->at(0), $conv), translateExpression($args->at(1), $conv)]);
 }
 
 // ----------------------------------------------------------------------------
@@ -1592,16 +1763,17 @@ function meta::external::language::typescript::translation::assertSizeCoder(args
    assert($args->size() >= 2, | 'assertSizeCoder expects at least 2 args');
    let coll = translateExpression($args->at(0), $conv);
    let n    = translateExpression($args->at(1), $conv);
+   // n is a Pure Integer (bigint); the length side is a JS number, so compare
+   // via __eq (numeric-aware) rather than `===` (bigint !== number).
    assertHelper(
-      tsBinary(
+      tsCall(tsId('__eq'), [
          tsTernary(
             tsCall(tsAccess(tsId('Array'), 'isArray'), [$coll]),
             tsAccess($coll, 'length'),
             tsNumLit('1')
          ),
-         '===',
          $n
-      ),
+      ]),
       tsStrLit('assertSize failed')
    );
 }
@@ -1669,16 +1841,22 @@ function meta::external::language::typescript::translation::matchCoder(args: Val
    assert($args->size() >= 2, | 'matchCoder expects at least 2 args (value, arms)');
    let value = translateExpression($args->at(0), $conv);
    let armsValue = $args->at(1);
-   // Arms can come as a Collection literal or a single arm (the lambdas
-   // collection might be a VariableExpression bound to a list).
-   let armSpecs = if ($armsValue->instanceOf(meta::pure::metamodel::valuespecification::Collection),
-      | $armsValue->cast(@meta::pure::metamodel::valuespecification::Collection).values,
-      | [$armsValue]);
-   let armObjs = $armSpecs->map(arm | $arm->matchArmEntry($conv));
    let withArg = if ($args->size() >= 3,
       | translateExpression($args->at(2), $conv),
       | tsId('undefined'));
-   tsCall(tsId('__match'), [$value, tsArrayLit($armObjs), $withArg]);
+   // When the arms are a VariableExpression (e.g. a localized `let lambdas =
+   // [...]; x->match($lambdas)`), the arm shapes aren't visible statically — so
+   // dispatch at runtime via `__matchDynamic`, reflecting each lambda's
+   // parameter type/multiplicity. Inline arms (a Collection literal, or a single
+   // inline lambda) keep the static `__match` path with build-time type checks.
+   if ($armsValue->instanceOf(meta::pure::metamodel::valuespecification::VariableExpression),
+      | tsCall(tsId('__matchDynamic'), [$value, translateExpression($armsValue, $conv), $withArg]),
+      | let armSpecs = if ($armsValue->instanceOf(meta::pure::metamodel::valuespecification::Collection),
+           | $armsValue->cast(@meta::pure::metamodel::valuespecification::Collection).values,
+           | [$armsValue]);
+        let armObjs = $armSpecs->map(arm | $arm->matchArmEntry($conv));
+        tsCall(tsId('__match'), [$value, tsArrayLit($armObjs), $withArg]);
+   );
 }
 
 // Build the { check, run } object for one match arm. Arms typically appear
@@ -1872,11 +2050,13 @@ function meta::external::language::typescript::translation::toFloatCoder(args: V
 }
 function meta::external::language::typescript::translation::toDecimalCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   tsCall(tsId('Number'), [translateExpression($args->at(0), $conv)]);
+   // Pure toDecimal -> Decimal (Big).
+   tsCall(tsId('__dec'), [translateExpression($args->at(0), $conv)]);
 }
 function meta::external::language::typescript::translation::toIntegerCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   tsCall(tsAccess(tsId('Math'), 'trunc'), [translateExpression($args->at(0), $conv)]);
+   // Pure toInteger -> Integer (bigint); __bi truncates a Float/String to bigint.
+   tsCall(tsId('__bi'), [translateExpression($args->at(0), $conv)]);
 }
 
 // ----------------------------------------------------------------------------
@@ -1959,7 +2139,8 @@ function meta::external::language::typescript::translation::reverseStringCoder(a
 
 function meta::external::language::typescript::translation::signCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   mathCall($args, 'sign', $conv);
+   // Pure sign -> Integer (bigint): -1/0/1.
+   tsCall(tsId('__sign'), [translateExpression($args->at(0), $conv)]);
 }
 
 // parseBoolean(s) -> JSON-style truthy parse.
@@ -1994,27 +2175,18 @@ function meta::external::language::typescript::translation::assertEqWithinTolera
    let expected = translateExpression($args->at(0), $conv);
    let actual   = translateExpression($args->at(1), $conv);
    let tol      = translateExpression($args->at(2), $conv);
+   // Coerce operands to Number (tolerance compare is Float-domain); Math.abs and
+   // `bigint - number` both throw on a bigint Integer operand.
    let cond = tsBinary(
-      tsCall(tsAccess(tsId('Math'), 'abs'), [tsBinary($expected, '-', $actual)]),
+      tsCall(tsAccess(tsId('Math'), 'abs'), [tsBinary(tsCall(tsId('__num'), [$expected]), '-', tsCall(tsId('__num'), [$actual]))]),
       '<=',
-      $tol
+      tsCall(tsId('__num'), [$tol])
    );
    assertHelper($cond, tsStrLit('assertEqWithinTolerance failed'));
 }
 
 // toOneMany(coll) -> identity in JS (Pure asserts the coll has >= 1 element).
 function meta::external::language::typescript::translation::toOneManyCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   translateExpression($args->at(0), $conv);
-}
-
-// castAsTM(x, multHolder) / castViaSeq(x) -> identity (cast is a no-op in JS).
-function meta::external::language::typescript::translation::castAsTMCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
-{
-   translateExpression($args->at(0), $conv);
-}
-
-function meta::external::language::typescript::translation::castViaSeqCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    translateExpression($args->at(0), $conv);
 }
@@ -2168,10 +2340,10 @@ function meta::external::language::typescript::translation::assertSameElementsCo
    let expected = translateExpression($args->at(0), $conv);
    let actual   = translateExpression($args->at(1), $conv);
    let cond = tsBinary(
-      tsCall(tsAccess(tsId('JSON'), 'stringify'),
+      tsCall(tsId('__json'),
              [tsCall(tsAccess(tsArrayLit([tsSpread($expected)]), 'sort'), [])]),
       '===',
-      tsCall(tsAccess(tsId('JSON'), 'stringify'),
+      tsCall(tsId('__json'),
              [tsCall(tsAccess(tsArrayLit([tsSpread($actual)]), 'sort'), [])])
    );
    assertHelper($cond, tsStrLit('assertSameElements failed'));
@@ -2239,9 +2411,9 @@ function meta::external::language::typescript::translation::translatePureValueTo
            // beyond Number.MAX_SAFE_INTEGER lose precision (known JS
            // limitation) but representing them as a number is what lets JS
            // arithmetic operate on the value.
-           i:   Integer[1] | tsNumLit($i->toString()),
+           i:   Integer[1] | tsNumLit($i->toString() + 'n'),
            f:   Float[1]   | tsNumLit($f->toString()),
-           d:   Decimal[1] | tsNumLit($d->toString()),
+           d:   Decimal[1] | tsCall(tsId('__dec'), [tsStrLit($d->toString())]),
            b:   Boolean[1] | tsBoolLit($b),
            s:   String[1]  | tsStrLit($s),
            // Class-instance PDO -> TS object literal. Walk the class's direct
@@ -2390,10 +2562,14 @@ function meta::external::language::typescript::translation::classInstanceToObjec
    |if ($v->instanceOf(meta::pure::metamodel::PackageableElement)
         && $v->cast(@meta::pure::metamodel::PackageableElement).package->isNotEmpty(),
       | encodePeRef($v),
-   // Case 7 (default): user-class instance — walk the class's properties.
+   // Case 7 (default): user-class instance — walk the class's properties,
+   // INCLUDING those inherited from user superclasses (e.g. `name`/`sides`
+   // declared on a TopClass and inherited by RightClass). `$cls.properties` is
+   // the direct slot (own only); allUserProperties also folds in user-ancestor
+   // properties while stopping at metamodel/pointer ancestors.
       | let cls = $rawType->cast(@Class<Any>);
         let conv = defaultConvention();
-        let entries = $cls.properties->map(p |
+        let entries = $cls->allUserProperties()->map(p |
            let propName  = $p.name->toOne();
            let propValue = $p->eval($v);
            tsEntry($propName, $propValue->translatePureValuesToTs($conv));
@@ -2535,14 +2711,15 @@ function meta::external::language::typescript::translation::collectReferencedUdf
    $vs->match([
       {fe: FunctionExpression[1] |
          // Recurse into the args first, then check if this FE calls a UDF.
+         // `fe.func` may be a PackageableFunctionPointer — resolveUdf derefs it.
          let acc1 = $fe.parametersValues->collectReferencedUdfs($seen);
-         if ($fe.func->isNotEmpty()
-              && $fe.func->toOne()->instanceOf(meta::pure::metamodel::function::UserDefinedFunction),
-             | let udf = $fe.func->toOne()->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>);
+         let udfOpt = $fe->resolveUdf();
+         if ($udfOpt->isEmpty(),
+             | $acc1,
+             | let udf = $udfOpt->toOne();
                if ($acc1->contains($udf),
                    | $acc1,
-                   | $udf.expressionSequence->collectReferencedUdfs($acc1->concatenate($udf)));,
-             | $acc1
+                   | $udf.expressionSequence->collectReferencedUdfs($acc1->concatenate($udf)));
          );
       },
       {av: AtomicValue[1] |
@@ -2580,7 +2757,9 @@ function meta::external::language::typescript::translation::translateUdf(
       tsParam(safeJsName($p.name), pureTypeToTypeScriptType($p.genericType, $p.multiplicity))
    );
    let returnType = pureTypeToTypeScriptType($udf.returnGenericType, $udf.returnMultiplicity);
-   let body = $udf.expressionSequence->buildTsFunctionBody($conv);
+   // Bind the function's `<T>` parameters to their witness params so a
+   // `cast(@T)` in the body resolves T from that param's runtime value.
+   let body = $udf.expressionSequence->buildTsFunctionBody($conv->withTypeVarWitness($udf.parameters));
    ^FunctionDeclaration(
       name           = $shortName,
       modifiers      = [],
@@ -2676,7 +2855,7 @@ function meta::external::language::typescript::translation::collectEnumFromValue
            // encodePeRef) to avoid recursing into the metamodel graph.
            | if ($rawType->instanceOf(meta::pure::metamodel::type::Class)
                   && !$v->instanceOf(meta::pure::metamodel::PackageableElement),
-                | $rawType->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>).properties
+                | $rawType->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>)->allUserProperties()
                      ->fold({p, acc | $p->eval($v)->fold({pv, a | $pv->collectEnumFromValue($a)}, $acc)}, $seen),
                 | $seen));
         );
@@ -2720,7 +2899,12 @@ function meta::external::language::typescript::translation::buildTsFunctionBody(
    assert($exprs->size() >= 1, | 'buildTsFunctionBody: empty expressionSequence');
    let lastIdx = $exprs->size() - 1;
    let last    = $exprs->at($lastIdx);
-   let stmts = range(0, $lastIdx)->map(i | $exprs->at($i)->translateStatement($conv));
+   // Drop spurious `let ~ = ...` bindings: `~` is the parent/self reference,
+   // resolved inside a construction via __ctorAt — never a real JS variable
+   // (`const ~ = []` is invalid TS). makeCanonical's localize pass can emit one.
+   let stmts = range(0, $lastIdx)->map(i | $exprs->at($i))
+                  ->filter(e | !$e->isParentRefLet())
+                  ->map(e | $e->translateStatement($conv));
    // If the last expression is `letFunction(name, value)`, Pure's "let-as-last"
    // semantics is that the let's value becomes the function's return. Emit
    // `const name = value; return name;`. Match-dispatch via if to keep the
@@ -2736,6 +2920,20 @@ function meta::external::language::typescript::translation::buildTsFunctionBody(
       | [tsReturn(translateExpression($last, $conv))->cast(@Statement)]
    );
    tsBlock($stmts->concatenate($tail));
+}
+
+// True when `vs` is a `let ~ = ...` (parent/self-reference binding). Such a
+// binding is spurious in the emitted JS — `~` references resolve via the
+// construction stack (__ctorAt), and `const ~` is not valid TypeScript.
+function meta::external::language::typescript::translation::isParentRefLet(vs: ValueSpecification[1]): Boolean[1]
+{
+   if (!$vs->instanceOf(FunctionExpression),
+      | false,
+      | let fe = $vs->cast(@FunctionExpression);
+        if ($fe.functionName != 'letFunction' || $fe.parametersValues->size() != 2,
+           | false,
+           | $fe.parametersValues->at(0)->cast(@AtomicValue).value->cast(@String)->startsWith('~'));
+   );
 }
 
 // Translate a non-last expression-sequence element to a TS Statement.

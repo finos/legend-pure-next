@@ -193,7 +193,7 @@ function meta::external::language::typescript::translation::pdb::renderUdfTs(
       tsParam($p.name, pureTypeToTypeScriptType($p.genericType, $p.multiplicity))
    );
    let returnType = pureTypeToTypeScriptType($udf.returnGenericType, $udf.returnMultiplicity);
-   let body = $udf.expressionSequence->buildTsFunctionBody(defaultConvention());
+   let body = $udf.expressionSequence->buildTsFunctionBody(defaultConvention()->withTypeVarWitness($udf.parameters));
    let fn = ^FunctionDeclaration(
       name           = $shortName,
       modifiers      = [ModifierFlag.Export],

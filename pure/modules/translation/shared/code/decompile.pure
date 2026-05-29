@@ -108,19 +108,17 @@ function meta::pure::translation::shared::toProtocolMultiplicity(
    m: meta::pure::metamodel::multiplicity::Multiplicity[1]
 ): meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]
 {
-   if ($m->instanceOf(meta::pure::metamodel::PackageableElement),
-      | // Named multiplicities (PureOne, ZeroMany, OneMany, ZeroOne, PureZero)
-        // — reference by path.
-        let path = $m->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
-        ^meta::pure::protocol::grammar::multiplicity::Multiplicity_Pointer(value = $path)
-           ->cast(@meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol);,
-   |if ($m->instanceOf(meta::pure::metamodel::multiplicity::MultiplicityParameter),
+   if ($m->instanceOf(meta::pure::metamodel::multiplicity::MultiplicityParameter),
       | // Parameter multiplicities — `T[m]`, lambda `{-> X[y]}` return slot, etc.
         let mp = $m->cast(@meta::pure::metamodel::multiplicity::MultiplicityParameter);
         ^meta::pure::protocol::grammar::multiplicity::UserDefinedMultiplicityParameter(name = $mp.name->toOne())
            ->cast(@meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol);,
-      | // ConcreteMultiplicity with custom bounds (e.g. `[2..5]`) — emit the
-        // UserDefinedAdHocMultiplicity protocol form with lowerBound/upperBound.
+   |if ($m->instanceOf(meta::pure::metamodel::multiplicity::ConcreteMultiplicity),
+      | // Every concrete multiplicity — named (PureOne/ZeroMany/OneMany/ZeroOne/
+        // PureZero, all PackageableMultiplicity which IS-A ConcreteMultiplicity)
+        // or ad-hoc `[2..5]` — is emitted as bounds. This matches what the
+        // grammar parser produces for `[..]`; compileMultiplicity has NO arm for
+        // Multiplicity_Pointer and would silently collapse a pointer to [1].
         let cm = $m->cast(@meta::pure::metamodel::multiplicity::ConcreteMultiplicity);
         ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
            lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(
@@ -132,7 +130,10 @@ function meta::pure::translation::shared::toProtocolMultiplicity(
                     value = $cm.upperBound->toOne().value
                  )]
            )
-        )->cast(@meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol);
+        )->cast(@meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol);,
+      | // Undefined / not-yet-resolved — leave undefined for the recompile to infer.
+        ^meta::pure::protocol::grammar::multiplicity::UndefinedMultiplicity()
+           ->cast(@meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol);
    ));
 }
 
@@ -246,10 +247,18 @@ function meta::pure::translation::shared::toProtocolValueSpec(
       },
       {col: meta::pure::metamodel::valuespecification::Collection[1] |
          // Compiled-form Collection (`[a, b, c]` literal) -> protocol Collection
-         // of recursed elements. Parser leaves genericType+multiplicity empty
-         // here as well.
+         // of recursed elements. The grammar parser sets an explicit
+         // `multiplicity = [count..count]` on every `[..]` literal; omitting it
+         // leaves the Collection arg unresolved, which (e.g. as the
+         // KeyExpression[*] arg of `new`) prevents the call from fully resolving
+         // and collapses `new`'s inferred return to its raw type parameter.
+         let n = $col.values->size();
          ^meta::pure::protocol::grammar::valuespecification::Collection(
-            values = $col.values->map(v | $v->toProtocolValueSpec($captureMap))
+            values = $col.values->map(v | $v->toProtocolValueSpec($captureMap)),
+            multiplicity = ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+               lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n),
+               upperBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n)
+            )
          );
       },
       {gmh: meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder[1] |

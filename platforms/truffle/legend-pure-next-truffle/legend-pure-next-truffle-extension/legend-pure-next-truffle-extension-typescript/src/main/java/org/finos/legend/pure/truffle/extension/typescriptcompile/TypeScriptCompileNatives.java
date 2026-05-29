@@ -614,20 +614,29 @@ final class TypeScriptCompileNatives
         {
             return v.asString();
         }
+        // GraalJS reports both JS number and JS BigInt as `isNumber()`. Pure
+        // Integer is a BigInt; Float/Decimal are JS numbers. Map to Pure's Long
+        // vs Double split. NOTE: do NOT call asDouble() to test integrality —
+        // it throws on a large BigInt ("lossy primitive coercion"). fitsInLong()
+        // already implies an integral value within signed-64 range (a fractional
+        // number does not fit a long), so asLong() is safe there.
         if (v.isNumber())
         {
-            // Mirror Pure's Long vs Double split: integer-valued numbers
-            // come back as Long so they line up with Pure Integer slots;
-            // anything fractional becomes Double.
             if (v.fitsInLong())
             {
-                double d = v.asDouble();
-                if (d == Math.floor(d) && !Double.isInfinite(d))
-                {
-                    return v.asLong();
-                }
+                return v.asLong();          // Integer (or integral Float) in long range
             }
-            return v.asDouble();
+            if (v.fitsInBigInteger())
+            {
+                return v.asBigInteger();    // Integer beyond long range (large BigInt)
+            }
+            return v.asDouble();            // Float (fractional)
+        }
+        // Pure Decimal is a vendored big.js Big, branded `__isDec` on its prototype.
+        // Its toString() is a plain (or scientific) decimal string BigDecimal parses.
+        if (v.hasMember("__isDec"))
+        {
+            return new java.math.BigDecimal(v.invokeMember("toString").asString());
         }
         if (v.hasArrayElements())
         {

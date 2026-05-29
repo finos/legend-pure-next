@@ -46,6 +46,18 @@ import meta::pure::translation::shared::*;
 //     FunctionDefinition has openVariables = [] and every VariableExpression
 //     refers to a local parameter or a let-binding inside the body.
 //
+//   LocalizeOpenVariables — like InlineOpenVariables, but instead of
+//     substituting each captured VariableExpression with its value inline,
+//     KEEP the `$name` references and prepend a `let name = <value>;`
+//     binding for each capture as the first expressions of the body. Same
+//     decompile -> recompile strategy, but decompile runs with an EMPTY
+//     substitution map (so `$name` survives) and the captured values are
+//     emitted as synthesised `letFunction` statements (lowered the same way
+//     InlineOpenVariables lowers them, via captureToProtocol). After this
+//     pass openVariables = [] and every former capture is a local
+//     let-binding — useful when a downstream consumer wants the captured
+//     values named once at the top rather than duplicated at every use site.
+//
 //   PartialEvaluation — fold every FunctionExpression whose params are
 //     ALL literal AtomicValues by invoking the function via
 //     {@code evaluate(func, argLists)} and replacing the FE with its
@@ -99,6 +111,7 @@ import meta::pure::translation::shared::*;
 Enum meta::pure::translation::shared::CanonicalMode
 {
    InlineOpenVariables,
+   LocalizeOpenVariables,
    PartialEvaluation,
    NestedIfToMultiIf,
    IfBranchPruning,
@@ -134,6 +147,12 @@ function meta::pure::translation::shared::applyCanonicalPass(
       pair(| $mode == meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
            | $f->match([
                 lf: LambdaFunction<Any>[1] | $lf->inlineOpenVariables(),
+                // UserDefinedFunctions have no captures by construction — passthrough.
+                other: FunctionDefinition<Any>[1] | $other
+             ])),
+      pair(| $mode == meta::pure::translation::shared::CanonicalMode.LocalizeOpenVariables,
+           | $f->match([
+                lf: LambdaFunction<Any>[1] | $lf->localizeOpenVariables(),
                 // UserDefinedFunctions have no captures by construction — passthrough.
                 other: FunctionDefinition<Any>[1] | $other
              ])),
@@ -245,6 +264,228 @@ function meta::pure::translation::shared::inlineOpenVariablesViaRecompile(lambda
    // pointer's empty .name/.package slots. PointerGraphResolver runs at
    // Truffle module load, not on recompile-derived ASTs, so resolve here.
    $canonical->resolvePointersInFD($result.context->toOne())->cast(@UserDefinedFunction<Any>);
+}
+
+// ----------------------------------------------------------------------------
+// Pass — localizeOpenVariables.
+//
+// Same decompile -> recompile machinery as inlineOpenVariables, but the
+// captures are NOT substituted into the body. Instead:
+//   1. Fast path: no open variables -> already canonical, return as-is.
+//   2. Decompile the body with an EMPTY captureMap, so every captured
+//      VariableExpression survives as `$name` (rather than being replaced
+//      by its value's protocol form).
+//   3. Synthesise a `let name = <capturedValue>;` for each capture and
+//      prepend them to the body's expressionSequence. The captured value
+//      is lowered via the SAME captureToProtocol path InlineOpenVariables
+//      uses, so scalars become literals, class instances become PDO-bearing
+//      AtomicValues, multi-values become Collections.
+//   4. Recompile, extract by name, resolve pointers — identical to inline.
+//
+// Result: a UserDefinedFunction with openVariables = [], where every former
+// capture is a top-of-body let-binding and all original `$name` references
+// resolve to those bindings.
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::localizeOpenVariables(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
+{
+   if ($lambda.openVariables->isEmpty(),
+      | $lambda,
+      | $lambda->localizeOpenVariablesViaRecompile()
+   );
+}
+
+// True outer-scope captures of `lambda` — its open-variable values with the
+// let-bound locals stripped out (those are not captures, just body bindings).
+function meta::pure::translation::shared::realOpenVariableCaptures(lambda: LambdaFunction<Any>[1]): Map<String, List<Any>>[1]
+{
+   let allCaptures = $lambda->meta::pure::functions::meta::openVariableValues();
+   let letBoundNames = $lambda.expressionSequence
+                          ->filter(vs | $vs->instanceOf(meta::pure::metamodel::valuespecification::FunctionExpression))
+                          ->cast(@meta::pure::metamodel::valuespecification::FunctionExpression)
+                          ->filter(fe | $fe.functionName == 'letFunction'
+                                     && $fe.parametersValues->size() == 2
+                                     && $fe.parametersValues->at(0)->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue))
+                          ->map(fe | $fe.parametersValues->at(0)
+                                       ->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value
+                                       ->cast(@String));
+   $allCaptures->keys()
+      ->filter(k | !$letBoundNames->contains($k))
+      ->fold({k, acc | $acc->put($k, $allCaptures->get($k)->toOne())},
+             newMap([]->cast(@Pair<String, List<Any>>)));
+}
+
+// The packages of every function called in `exprs` — used to populate the
+// canonical-recompile PureFile's `imports` so short function names (e.g. a
+// `<<test.TestDependency>>` helper like `castViaSeq`) resolve. Without this the
+// recompile fails with "function ... not in scope" and leaves a broken func ref.
+function meta::pure::translation::shared::referencedFnPackages(exprs: meta::pure::metamodel::valuespecification::ValueSpecification[*]): String[*]
+{
+   $exprs->map(e | $e->referencedFnPackagesOne())->removeDuplicates()->filter(p | $p != '');
+}
+function meta::pure::translation::shared::referencedFnPackagesOne(vs: meta::pure::metamodel::valuespecification::ValueSpecification[1]): String[*]
+{
+   $vs->match([
+      fe:  meta::pure::metamodel::valuespecification::FunctionExpression[1] | $fe->feFnPackage()->concatenate($fe.parametersValues->map(p | $p->referencedFnPackagesOne())),
+      av:  meta::pure::metamodel::valuespecification::AtomicValue[1]        | $av->avFnPackages(),
+      lf:  meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1] | $lf.expressionSequence->map(e | $e->referencedFnPackagesOne()),
+      col: meta::pure::metamodel::valuespecification::Collection[1]         | $col.values->map(e | $e->referencedFnPackagesOne()),
+      o:   meta::pure::metamodel::valuespecification::ValueSpecification[1] | []->cast(@String)
+   ]);
+}
+function meta::pure::translation::shared::avFnPackages(av: meta::pure::metamodel::valuespecification::AtomicValue[1]): String[*]
+{
+   if ($av.value->isNotEmpty() && $av.value->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction),
+      | $av.value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>).expressionSequence->map(e | $e->referencedFnPackagesOne()),
+      | []->cast(@String));
+}
+function meta::pure::translation::shared::feFnPackage(fe: meta::pure::metamodel::valuespecification::FunctionExpression[1]): String[*]
+{
+   if ($fe.func->isEmpty() || !$fe.func->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
+      | []->cast(@String),
+      | $fe.func->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->packageOfPath());
+}
+function meta::pure::translation::shared::packageOfPath(path: String[1]): String[1]
+{
+   let segs = $path->split('::');
+   $segs->take($segs->size() - 1)->joinStrings('::');
+}
+
+
+function meta::pure::translation::shared::localizeOpenVariablesViaRecompile(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
+{
+   // True outer-scope captures (let-bound locals stripped) — each becomes a
+   // top-of-body `let name = value` binding so its `$name` references survive.
+   let captures = $lambda->realOpenVariableCaptures();
+   let canonicalPkg  = '__canonical__';
+   let canonicalName = '__canonical__';
+   let funcType = $lambda.classifierGenericType.typeArguments
+                     ->at(0)
+                     ->rawType()
+                     ->toOne('localizeOpenVariablesViaRecompile: lambda missing classifier function type')
+                     ->cast(@meta::pure::metamodel::type::FunctionType);
+   // Decompile WITHOUT substitution (empty capture map) so captured
+   // `$name` references survive in the body. The return type/mult passed here
+   // are overridden to Any[*] on $withLets below — the lambda's classifier
+   // return is frequently the enclosing test's type/mult PARAMETERS (e.g.
+   // `eval`'s `{->Z[y]}`), which are unbound in the canonical UDF and resolve
+   // to [1], spuriously clashing with the body's concrete inferred return.
+   let protoUDF = toProtocolUserDefinedFunction(
+      $lambda.expressionSequence,
+      $lambda.parameters,
+      $funcType.returnType,
+      $funcType.returnMultiplicity,
+      newMap([]->cast(@Pair<String, List<Any>>)),
+      $canonicalPkg,
+      $canonicalName
+   );
+   // One `let <name> = <capturedValue>;` per capture, prepended to the body
+   // so each surviving `$name` resolves to the local binding at recompile.
+   let letStmts = $captures->keys()->map(k | buildProtocolLet($k, $captures->get($k)->toOne()));
+   // The canonical body is a recompiled copy of a (possibly test) lambda, so it
+   // may legitimately reference test-only helpers (e.g. a `<<test.TestDependency>>`
+   // cast helper). Mark it `<<test.TestDependency>>` so the lean-references
+   // validator doesn't flag it as a non-test element referencing test-only code.
+   let withLets = ^$protoUDF(
+      expressionSequence = $letStmts->concatenate($protoUDF.expressionSequence),
+      stereotypes        = [^meta::pure::protocol::grammar::extension::Stereotype_Pointer(
+                              value              = 'meta::pure::profiles::test',
+                              extraPointerValues = [^meta::pure::protocol::grammar::PointerValue(value = 'TestDependency')]
+                           )],
+      // Permissive declared return: Any[*] is compatible with whatever the body
+      // infers, so the recompile never raises a spurious "Return type/multiplicity
+      // error". The accurate return type/mult is read back from the recompiled
+      // body's last expression (post-compile, reliable) and restamped below.
+      returnGenericType  = ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+                              type = ^meta::pure::protocol::grammar::type::Type_Pointer(value = 'meta::pure::metamodel::type::Any'),
+                              typeArguments = [], multiplicityArguments = [], typeVariableValues = []
+                           ),
+      // [*] must be encoded as a ConcreteMultiplicity (lowerBound 0, unbounded
+      // upper) — compileMultiplicity has no arm for Multiplicity_Pointer and
+      // would silently default a pointer to [1].
+      returnMultiplicity = ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+                              lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = 0),
+                              upperBound = []
+                           )
+   );
+   let pf = ^meta::pure::protocol::PureFile(
+      sourceId = '__canonical__.pure',
+      sections = [^meta::pure::protocol::Section(
+         parserName = 'Pure',
+         imports    = $lambda.expressionSequence->referencedFnPackages(),
+         elements   = [$withLets]
+      )]
+   );
+   let result = meta::pure::compiler::compile(
+      [$pf],
+      meta::pure::compiler::newCompilerContext(false),
+      false,
+      true
+   );
+   // Fail hard on a broken canonical recompile — otherwise unresolved refs
+   // (e.g. an unresolved function pointer for a called UDF) leak silently into
+   // translation as a malformed func slot.
+   assert($result.errors->isEmpty(), | 'localizeOpenVariables: canonical recompile errors: ' + $result.errors->joinStrings(' | '));
+   let canonical = $result.context->toOne().elementMap->values()
+      ->filter(e | $e->instanceOf(UserDefinedFunction))
+      ->cast(@UserDefinedFunction<Any>)
+      ->filter(udf | $udf.functionName == $canonicalName)
+      ->toOne('localizeOpenVariables: canonicalized function not found after recompile; errors=' + $result.errors->joinStrings(' | '));
+   // Same pointer-resolution rationale as inlineOpenVariablesViaRecompile.
+   let resolved = $canonical->resolvePointersInFD($result.context->toOne())->cast(@UserDefinedFunction<Any>);
+   // Restamp the return type/mult from the recompiled body's last expression.
+   // We declared Any[*] before compiling (so the recompile couldn't fail on a
+   // return mismatch); now that the body is a freshly-compiled metamodel element
+   // its last expression carries the accurate inferred genericType/multiplicity,
+   // which is the canonical function's real return contract.
+   $resolved->restampReturnFromBody();
+}
+
+// Replace a recompiled UDF's declared Any[*] return with its body's last
+// expression's inferred genericType/multiplicity. Restamps both the
+// PackageableFunction return slots and the classifier's inner FunctionType
+// (which the translator adapter reads as the real return contract). Leaves the
+// function unchanged when the body is empty or its last expression lacks
+// inferred type/mult.
+function meta::pure::translation::shared::restampReturnFromBody(udf: UserDefinedFunction<Any>[1]): UserDefinedFunction<Any>[1]
+{
+   let last = $udf.expressionSequence->last();
+   if ($last->isEmpty()
+          || $last->toOne().genericType->isEmpty()
+          || $last->toOne().multiplicity->isEmpty(),
+      | $udf,
+      | let bodyGT  = $last->toOne().genericType->toOne();
+        let bodyMul = $last->toOne().multiplicity->toOne();
+        let cgt     = $udf.classifierGenericType;
+        let ftGT    = $cgt.typeArguments->at(0)->cast(@meta::pure::metamodel::type::generics::GenericTypeValue);
+        let ft      = $ftGT.type->cast(@meta::pure::metamodel::type::FunctionType);
+        let newFt   = ^$ft(returnType = $bodyGT, returnMultiplicity = $bodyMul);
+        ^$udf(
+           returnGenericType     = $bodyGT,
+           returnMultiplicity    = $bodyMul,
+           classifierGenericType = ^$cgt(typeArguments = [^$ftGT(type = $newFt)])
+        );
+   );
+}
+
+// Build a protocol `letFunction('name', <value>)` invocation — the parser's
+// canonical form for `let name = value`. The name is emitted as a String
+// AtomicValue (compileExpressionSequence reads it via
+// `parametersValues->at(0)->cast(@AtomicValue<String>).value`); the value
+// reuses InlineOpenVariables' capture lowering so the binding RHS matches
+// exactly what inlining would have substituted at each use site.
+function meta::pure::translation::shared::buildProtocolLet(
+   name: String[1],
+   value: List<Any>[1]
+): meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      functionName     = 'letFunction',
+      parametersValues = [
+         $name->singleValueToProtocol(),
+         $value->captureToProtocol()
+      ]
+   );
 }
 
 // ----------------------------------------------------------------------------

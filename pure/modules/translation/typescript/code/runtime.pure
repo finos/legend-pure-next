@@ -49,11 +49,13 @@ function meta::external::language::typescript::translation::testAdapterForTransl
 ): X[o]
 {
    let lambda    = $f->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
-   // Inline open variables only — keep the rest of the lambda body untouched
-   // so the per-test gallery / PCT diffs stay readable. Partial-evaluation
-   // is opt-in via the explicit-modes overload elsewhere.
+   // Localize open variables: each capture becomes a single `let name = <value>;`
+   // binding at the top of the body, and `$name` references survive. This names
+   // each captured value once (so `is($x, $x)` is the same reference, and a
+   // capture used inside a thunk resolves to the local binding) instead of
+   // duplicating the value at every use site as InlineOpenVariables would.
    let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
-                       [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
+                       [meta::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]);
    let conv      = conventionForRoot($canonical);
    let sf        = $canonical->translateFunctionDef($conv);
    // The TypeScript Truffle extension automatically prepends `runtime-lib.ts`

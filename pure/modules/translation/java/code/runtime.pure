@@ -55,7 +55,11 @@ function meta::external::language::java::translation::testAdapterForTranslatedJa
 {
    let conv      = defaultConventions('org.finos.test');
    let lambda    = $f->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
-   let canonical = $lambda->makeCanonical();
+   // Localize open variables — each capture becomes a single `let name = <value>;`
+   // binding at the top of the body (named once; `$name` references survive),
+   // rather than inlining the value at every use site.
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
+                       [meta::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]);
    let sig       = $conv->translateFunctionDef($canonical, 'PCTRunner');
    let source    = $sig->renderFullSource();
    let className = $sig.class->qualifiedClassName();
