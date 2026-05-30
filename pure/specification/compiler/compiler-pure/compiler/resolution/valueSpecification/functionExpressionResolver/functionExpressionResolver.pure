@@ -179,7 +179,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::topoSortKeyExpressions(fi:FunctionExpression[1], col:Collection[1], items:ValueSpecification[*], context:CompilerContext[1]):Pair<FunctionExpression, CompilerContext>[1]
 {
     let names = $items->map(it | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractKeyExpressionName($it));
-    let depLists = $items->map(it | ^List<Integer>(values = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractSiblingDeps($it, $names)));
+    // Drop self-edges: a key whose value reads `~.<its-own-name>` (e.g.
+    // `items = ~.items->map(...)`, including the compiler-synthesised
+    // `map(~.opt, closure)` from `^~.opt(...)` on an optional property) is
+    // reading the receiver/parent's value of that property — available before
+    // construction — not the in-progress sibling. It is never a genuine
+    // ordering cycle, so it must not register as one. Cross-edges (a -> b ->
+    // a) are preserved, so real cycles still error.
+    let depLists = range(0, $items->size())->map(i |
+        ^List<Integer>(values = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractSiblingDeps($items->at($i), $names)->filter(d | $d != $i)));
     let anyDep = $depLists->exists(d | $d.values->isNotEmpty());
     if(!$anyDep,
         | pair($fi, $context),
@@ -318,8 +326,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                               && $fi.parametersValues->isNotEmpty()
                               && $fi.parametersValues->at(0).genericType->isNotEmpty()
                               && !$fi.parametersValues->at(0).genericType->toOne()->instanceOf(CompilerNotSetGenericType)
-                              && $fi.parametersValues->at(0).genericType->toOne()->genericTypeRawType()->isNotEmpty()
-                              && $fi.parametersValues->at(0).genericType->toOne()->genericTypeRawType()->toOne()->instanceOf(Class);
+                              && $fi.parametersValues->at(0).genericType->toOne()->rawType()->isNotEmpty()
+                              && $fi.parametersValues->at(0).genericType->toOne()->rawType()->toOne()->instanceOf(Class);
           let bindings = if($classBindingsAvailable,
               | let receiverGT = $fi.parametersValues->at(0).genericType->toOne();
                 // Deref the raw type so we read typeParameters off the live class,
@@ -327,7 +335,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                 // Without this, T binding for Wrapper<Box<String>>.inner is lost on
                 // the finalize pass and the dot's genericType is overwritten with
                 // unresolved T — see propertyGenericTypeChained.
-                let rawOwner = $receiverGT->genericTypeRawType()->toOne()->derefTypeIfPointer($context)->toOne()->cast(@Class<Any>);
+                let rawOwner = $receiverGT->rawType()->toOne()->derefTypeIfPointer($context)->toOne()->cast(@Class<Any>);
                 buildBindingsFromGenericType($rawOwner, $receiverGT);,
               | $baseBindings
           );
@@ -355,28 +363,30 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                         | $context
                      );
           ^CompilerResult<ValueSpecification>(value = $updated, context = $ctx1);,
-        | // func not resolved — set genericType AND multiplicity to NotSet markers,
-          // mirroring Java FunctionExpressionResolver lines 161-163 which sets both
-          // (`new CompilerNotSetGenericTypeImpl()` and `new CompilerNotSetMultiplicityImpl()`).
-          // Pure was leaving the multiplicity at whatever the receiver/expected slot
-          // started with — typically PureOne — which then propagated up: when this
-          // expression appears as the body of a match-arm lambda, the lambda's
-          // classifierGenericType becomes `LambdaFunction<{...->NotSet[1]}>` instead of
-          // `LambdaFunction<{...->NotSet[*]}>`. The collection's common-type then
-          // narrows to `[1]` instead of widening to `[*]`, and the outer function's
-          // return-multiplicity validation no longer fires (because `m` binds to PureOne
-          // rather than ZeroMany). Setting NotSet here keeps the Java-equivalent
-          // "Return multiplicity error: expected [1], got [*]" surfacing for
-          // functions like `isAssignment` whose match arms include unresolved
-          // `$inf.op->in(...)` calls.
-          let updated = ^$fi(genericType = ^CompilerNotSetGenericType(), multiplicity = ^CompilerNotSetMultiplicity());
-          let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
-          let ctx1 = if($context.errors->size() == $checkpoint,
-              | ^$context(errors += 'Can\'t resolve the function \'' + $fi.functionName->toOne() + '\'' + $siCtx),
-              | $context
+        | // Parent-reference chain step (`~.~`, `~.~.~`, …): DotApplicationResolver
+          // already stamped the GenericType + Multiplicity from the construction-
+          // type stack lookup, but there's no `func` to set — "~" isn't a real
+          // function. Return the typed node unchanged.
+          if($fi->instanceOf(DotApplication) && $fi.functionName->toOne() == '~'
+                && $fi.genericType->isNotEmpty()
+                && !$fi.genericType->toOne()->instanceOf(CompilerNotSetGenericType),
+              | ^CompilerResult<ValueSpecification>(value = $fi, context = $context),
+              | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::reportUnresolvedFunction($fi, $checkpoint, $context)
           );
-          ^CompilerResult<ValueSpecification>(value = $updated, context = $ctx1);
     );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::reportUnresolvedFunction(fi:FunctionExpression[1], checkpoint:Integer[1], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+{
+    // func not resolved — set genericType AND multiplicity to NotSet markers,
+    // mirroring Java FunctionExpressionResolver lines 161-163.
+    let updated = ^$fi(genericType = ^CompilerNotSetGenericType(), multiplicity = ^CompilerNotSetMultiplicity());
+    let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
+    let ctx1 = if($context.errors->size() == $checkpoint,
+        | ^$context(errors += 'Can\'t resolve the function \'' + $fi.functionName->toOne() + '\'' + $siCtx),
+        | $context
+    );
+    ^CompilerResult<ValueSpecification>(value = $updated, context = $ctx1);
 }
 
 // If `fi` is a `copy(receiver, [keys])` call whose receiver's resolved multiplicity

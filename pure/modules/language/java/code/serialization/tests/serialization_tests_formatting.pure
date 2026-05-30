@@ -1,0 +1,207 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::*;
+import meta::external::language::java::factory::project::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::metamodel::annotations::java::validation::constraints::*;
+import meta::external::language::java::metamodel::annotations::json::*;
+import meta::external::language::java::metamodel::project::*;
+import meta::external::language::java::serialization::*;
+import meta::external::language::java::serialization::tests::*;
+
+function <<test.Test>> meta::external::language::java::serialization::tests::preformattedText():Boolean[1]
+{
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public void test(String text)
+            {
+                if (text.length() > 30)
+                {
+                   String s2 = text.replace("aa", "a");
+                   if (text.length() > 30)
+                   {
+                       System.out.println(text);
+                   }
+                   else
+                   {
+                       System.out.println(s2);
+                   }
+                }
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaVoid(), 'test', j_parameter(javaString(), 'text'), 
+                       '''
+                       if (text.length() > 30)
+                       {
+                          String s2 = text.replace("aa", "a");
+                          if (text.length() > 30)
+                          {
+                              System.out.println(text);
+                          }
+                          else
+                          {
+                              System.out.println(s2);
+                          }
+                       }'''
+            ))
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::folding():Boolean[1]
+{
+   let list    = j_parameter(javaList(javaString()), 'list');
+   let p1      = j_parameter(javaList(javaString()), 'someParameterThatsNotUsed');
+   let p2      = j_parameter(javaList(javaString()), 'andAnother');
+   let p3      = j_parameter(javaList(javaString()), 'andYetAnother');
+   let s       = j_parameter(javaString(), 's');
+   let i       = j_parameter(javaInt(), 'i');
+   let i2      = j_parameter(javaInt(), 'i2');
+   let rtnType = javaList(javaInt()->toBoxed());
+
+   test('''
+        package org.finos.test;
+        
+        import java.util.List;
+        import java.util.stream.Stream;
+        
+        class Test
+        {
+            public List<Integer> test(List<String> list,
+                                      List<String> someParameterThatsNotUsed,
+                                      List<String> andAnother,
+                                      List<String> andYetAnother)
+            {
+                return list.stream()
+                           .map((String s) -> s.length())
+                           .map((int i) -> i + 1)
+                           .map((int i) -> i + 2)
+                           .map((int i) -> i + 3)
+                           .map((int i) -> i - 6)
+                           .reduce(0,
+                                   (int i, int i2) -> i % 2 == 0 ? (i + i2) * 32 - 1
+                                                                 : i % 3 == 0 ? (i + i2) / 128 - 1 / 2
+                                                                              : ((i - i2) * 16 + 1) / 5);
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', $rtnType, 'test', [$list, $p1, $p2, $p3],
+                           j_return($list->j_streamOf()
+                              ->js_map(j_lambda($s, $s->j_invoke('length', [])))
+                              ->js_map(j_lambda($i, $i->j_plus(j_int(1))))
+                              ->js_map(j_lambda($i, $i->j_plus(j_int(2))))
+                              ->js_map(j_lambda($i, $i->j_plus(j_int(3))))
+                              ->js_map(j_lambda($i, $i->j_minus(j_int(6))))
+                              ->js_reduce(j_int(0), j_lambda([$i, $i2],
+                                                             j_conditional($i->j_remainder(j_int(2))->j_eq(j_int(0)),
+                                                                           $i->j_plus($i2)->j_multiply(j_int(32))->j_minus(j_int(1)),
+                                                                           j_conditional($i->j_remainder(j_int(3))->j_eq(j_int(0)),
+                                                                                         $i->j_plus($i2)->j_divide(j_int(128))->j_minus(j_int(1)->j_divide(j_int(2))),
+                                                                                         $i->j_minus($i2)->j_multiply(j_int(16))->j_plus(j_int(1))->j_divide(j_int(5))))
+                                         ))
+                           )
+                       ))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::foldMethodCallsInConditional():Boolean[1]
+{
+   let list    = j_parameter(javaList(javaString()), 'list');
+   let p1      = j_parameter(javaList(javaString()), 'someParameterThatsNotUsed');
+   let p2      = j_parameter(javaList(javaString()), 'andAnother');
+   let p3      = j_parameter(javaList(javaString()), 'andYetAnother');
+   let s       = j_parameter(javaString(), 's');
+   let i       = j_parameter(javaInt(), 'i');
+   let rtnType = javaList(javaInt()->toBoxed());
+
+   test('''
+        package org.finos.test;
+        
+        import java.util.Collections;
+        import java.util.List;
+        import java.util.stream.Collectors;
+        import java.util.stream.Stream;
+        
+        class Test
+        {
+            public List<Integer> test(List<String> list,
+                                      List<String> someParameterThatsNotUsed,
+                                      List<String> andAnother,
+                                      List<String> andYetAnother)
+            {
+                return i % 2 == 0 ? Collections.<Integer>emptyList()
+                                  : list.stream()
+                                        .map((String s) -> s.length())
+                                        .map((int i) -> i + 1)
+                                        .map((int i) -> i + 2)
+                                        .map((int i) -> i + 3)
+                                        .map((int i) -> i - 6)
+                                        .collect(Collectors.toList());
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', $rtnType, 'test', [$list, $p1, $p2, $p3],
+                           j_return(
+                              j_conditional($i->j_remainder(j_int(2))->j_eq(j_int(0)),
+                                 j_emptyList($rtnType),
+                                 $list->j_streamOf()
+                                      ->js_map(j_lambda($s, $s->j_invoke('length', [])))
+                                      ->js_map(j_lambda($i, $i->j_plus(j_int(1))))
+                                      ->js_map(j_lambda($i, $i->j_plus(j_int(2))))
+                                      ->js_map(j_lambda($i, $i->j_plus(j_int(3))))
+                                      ->js_map(j_lambda($i, $i->j_minus(j_int(6))))
+                                      ->js_resolve($rtnType)
+                              )
+                           )))
+           ->inferImports()
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::longString():Boolean[1]
+{
+   let as1k  = range(1000)->map(n| 'a')->joinStrings('');
+   let as80k = range(80)->map(n| $as1k)->joinStrings('');
+
+   let class = javaClass('org.finos.test.Test')
+                  ->addMethod(javaMethod('public', javaString(), 'test', [],
+                       j_return(j_string($as80k))
+                    ));
+
+   let text  = newStringifier()->ofClass($class);
+   let lineOfInterest = $text->split('\n')->filter(l| $l->contains('return '))->at(0);
+
+   assert($lineOfInterest->contains('" + "'));
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::emptyString():Boolean[1]
+{
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public String test()
+            {
+                return "";
+            }
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addMethod(javaMethod('public', javaString(), 'test', [], j_return(j_string(''))))
+   );
+}

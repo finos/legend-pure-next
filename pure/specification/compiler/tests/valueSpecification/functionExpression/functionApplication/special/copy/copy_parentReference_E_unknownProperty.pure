@@ -17,3 +17,9 @@ Class test::copy::parentRefError::Container
   items:  String[*];
   echoed: String[*];
 }
+
+###CompilerStats
+inferenceRollbacks: 2
+candidateEvaluations: 6
+rollbackSites:
+  PARAM_UNRESOLVED = 2

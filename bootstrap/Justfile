@@ -45,7 +45,8 @@ verbose := ""
 mvnq    := if verbose == "" { "-q" } else { "" }
 err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
 
-banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+header := "h(){ s=\"[bootstrap::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
 
 # Default: build + run all tests.
 default: test
@@ -55,18 +56,21 @@ build: (_mvn "skip-tests") stage build-compiler-pdb
 
 # Copy bootstrap CLI jar to bootstrap/build/ and core.pdb / core-tests.pdb / generated specs to shared/.
 stage:
-    @{{banner}} '[stage]' 'copy bootstrap jar + core.pdb + core-tests.pdb + generated specs'
+    @{{header}} 'stage'
+    @{{substep}} 'copy bootstrap jar + core.pdb + core-tests.pdb + generated specs'
     mkdir -p {{boot_out}} {{shared_out}}/specification/protocol
     cp {{boot}}/legend-pure-next-bootstrap-cli/target/pure-bootstrap-*-fat.jar {{cli}}
     cp {{bcore}}/legend-pure-next-bootstrap-compiler/target/classes/core.pdb {{shared_out}}/core.pdb
     cp {{bcore}}/legend-pure-next-bootstrap-compiler/target/classes/core-tests.pdb {{shared_out}}/core-tests.pdb
     cp -r {{bcore}}/legend-pure-next-bootstrap-generators/target/generated-specification/* {{shared_out}}/specification/
 
-# Compile compiler-pure → shared/compiler.pdb (lean) + shared/compiler-tests.pdb
-# (companion with the compiler-pure tests) via the bootstrap CLI. Mirrors
-# the core.pdb/core-tests.pdb split so the same test discovery path works.
+# Companion compiler-tests.pdb holds the compiler-pure tests; mirrors the
+# core.pdb/core-tests.pdb split so the same test discovery path works.
+
+# Compile compiler-pure -> shared/compiler.pdb (lean) + compiler-tests.pdb via the bootstrap CLI.
 build-compiler-pdb:
-    @{{banner}} '[bootstrap]' 'compile compiler.pdb + compiler-tests.pdb against core.pdb'
+    @{{header}} 'build-compiler-pdb'
+    @{{substep}} 'compile compiler.pdb + compiler-tests.pdb against core.pdb'
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --source {{compiler_src}} \
@@ -76,7 +80,7 @@ build-compiler-pdb:
 # Build + run Java unit tests (surefire) + run Pure compiler-graph spec tests.
 test: test-java stage build-compiler-pdb test-pure-compiler
 
-# `test` plus Pure-on-Java self-host + standalone runtime test suites.
+# `test` plus Pure-on-Java self-host, standalone runtime suites, and both printer-corpus checks (compiled + protocol).
 test-all: test test-pure-self-host test-pure-runtime
 
 # NB: surefire runs the full JUnit suite, which includes dynamic-test
@@ -96,13 +100,14 @@ test-java: (_mvn "with-tests")
 # remain visible.
 
 # Run both runtime test suites (runTests + PCT) over meta::pure::functions.
-test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
+test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs test-pure-printer-compiled test-pure-printer-protocol
 
 # Needs core-tests.pdb (runTests is <<test.TestDependency>>, classified into the
 # tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
 # Standalone Pure runTests over meta::pure::functions (also covered by `test-java` via TestPureExecution; assumes `just build` was run).
 test-pure-runtime-testFunctions:
-    @{{banner}} '[pure→bootstrap]' 'runTests over meta::pure::functions (assumes `just build` was run)'
+    @{{header}} 'test-pure-runtime-testFunctions'
+    @{{substep}} 'runTests over meta::pure::functions (assumes `just build` was run)'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -114,7 +119,8 @@ test-pure-runtime-testFunctions:
 # Needs core-tests.pdb and compiler-tests.pdb for the same reason as test-pure-runtime-testFunctions.
 # Standalone Pure PCT tests over meta::pure::functions (also covered by `test-java` via TestPCT; assumes `just build` was run).
 test-pure-runtime-PCTs:
-    @{{banner}} '[pure→bootstrap]' 'runPCTTests over meta::pure::functions (assumes `just build` was run)'
+    @{{header}} 'test-pure-runtime-PCTs'
+    @{{substep}} 'runPCTTests over meta::pure::functions (assumes `just build` was run)'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -123,9 +129,46 @@ test-pure-runtime-PCTs:
         --function "meta::pure::test::runPCTTests_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
 
+# Parses + compiles each test source, runs the compiled-side printer, and
+# counts how many render without hitting an /* UNSUPPORTED */ sentinel.
+# Lives separately from test-pure-compiler because its purpose is to track
+# printer coverage, not graph correctness — both run over the same corpus
+# but check different things.
+
+# Compiled-printer corpus check over pure/specification/compiler/tests.
+test-pure-printer-compiled:
+    @{{header}} 'test-pure-printer-compiled'
+    @{{substep}} 'runCompiledPrinterCorpus over pure/specification/compiler/tests'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "meta::pure::compiler::test::printer::runCompiledPrinterCorpus_String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" {{err_filter}}
+
+# Mirrors test-pure-printer-compiled for the protocol-side printer: parses each
+# grammar.pure, prints, re-parses, prints again, and counts how many files are
+# round-trip stable (printer is a fixed point of parse∘print) and how many are
+# byte-equal to source. Round-trip failures are real code loss; source-byte
+# mismatches are formatting drift, informational only.
+
+# Protocol-printer corpus check over pure/specification/grammar/tests.
+test-pure-printer-protocol:
+    @{{header}} 'test-pure-printer-protocol'
+    @{{substep}} 'runProtocolPrinterCorpus over pure/specification/grammar/tests'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "meta::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus_String_1__String_1_" \
+        --args "{{spec}}/grammar/tests" {{err_filter}}
+
 # Pure compiler-graph spec tests over pure/specification/compiler/tests via the bootstrap CLI (Pure-on-Java; assumes `just build` was run). Run as part of `just test`.
 test-pure-compiler:
-    @{{banner}} '[pure→bootstrap]' 'runCompiledGraphTests over pure/specification/compiler/tests'
+    @{{header}} 'test-pure-compiler'
+    @{{substep}} 'runCompiledGraphTests over pure/specification/compiler/tests'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -136,7 +179,8 @@ test-pure-compiler:
 
 # Self-host: compile compiler-pure on Pure-on-Java, run compiler tests, then diff PDBs vs Java direct (and Truffle if present; assumes `just build` was run).
 test-pure-self-host:
-    @{{banner}} '[self-host-java]' 'compiler-pure → compiler.pdb (Pure-compiled) (Pure compiler)'
+    @{{header}} 'test-pure-self-host'
+    @{{substep}} 'compiler-pure → compiler.pdb (Pure-compiled) (Pure compiler)'
     {{pure_bootstrap}} compile-via-pure \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
@@ -144,7 +188,7 @@ test-pure-self-host:
         --source {{compiler_src}} \
         --output-dir {{boot_out}} \
         --tests split {{err_filter}}
-    @{{banner}} '[self-host-java]' 'runCompiledGraphTests (from compiler-tests.pdb) against Pure-compiled compiler.pdb'
+    @{{substep}} 'runCompiledGraphTests (from compiler-tests.pdb) against Pure-compiled compiler.pdb'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -152,14 +196,15 @@ test-pure-self-host:
         --pdb {{boot_out}}/compiler-tests.pdb \
         --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
-    @{{banner}} '[self-host-java]' 'diff Java compiler.pdb ↔ Pure-compiled compiler.pdb (both lean)'
+    @{{substep}} 'diff Java compiler.pdb ↔ Pure-compiled compiler.pdb (both lean)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
         {{shared_out}}/compiler.pdb \
         {{boot_out}}/compiler.pdb {{err_filter}}
 
 # Launch the Pure IDE via the bootstrap CLI.
 ide: build-compiler-pdb
-    @{{banner}} '[ide]' 'launch IDE via bootstrap CLI'
+    @{{header}} 'ide'
+    @{{substep}} 'launch IDE via bootstrap CLI'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/compiler.pdb \
@@ -167,7 +212,8 @@ ide: build-compiler-pdb
 
 # Remove bootstrap/build/ and run mvn clean.
 clean:
-    @{{banner}} '[bootstrap clean]' 'remove bootstrap/build + mvn target/'
+    @{{header}} 'clean'
+    @{{substep}} 'remove bootstrap/build + mvn target/'
     rm -rf {{boot_out}}
     cd {{boot}} && mvn clean {{mvnq}}
 
@@ -176,6 +222,7 @@ clean:
 # just dedupes by (recipe, args), so the same mode invoked twice via different deps in one
 # `just` run executes once.
 _mvn mode:
-    @{{banner}} '[bootstrap]' '{{ if mode == "skip-tests" { "mvn clean install -DskipTests (Java + core.pdb)" } else { "mvn clean install (Java + core.pdb + unit tests)" } }}'
+    @{{header}} '_mvn'
+    @{{substep}} '{{ if mode == "skip-tests" { "mvn clean install -DskipTests (Java + core.pdb)" } else { "mvn clean install (Java + core.pdb + unit tests)" } }}'
     rm -rf {{boot_out}}
     cd {{boot}} && mvn clean install {{ if mode == "skip-tests" { "-DskipTests" } else { "" } }} {{mvnq}} {{err_filter}}

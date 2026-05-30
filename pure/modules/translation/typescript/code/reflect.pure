@@ -1,0 +1,177 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::translation::pdb::*;
+import meta::external::language::typescript::translation::reflect::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::type::*;
+
+// ============================================================================
+// Pure graph → TypeScript reflection. Same walk as `translatePdbToTs` (works
+// against either a loaded PDB or an in-memory compiled registry), but emits
+// the metamodel itself as TS DATA — typed object literals describing each
+// PackageableElement — rather than translated executable code.
+//
+// Use case: a TS consumer that needs to introspect Pure's class graph
+// (`model.classes['LA_Person'].properties[0].name`, etc.) without going
+// through Pure's runtime. Companion to `translatePdbToTs`: that one
+// produces RUNNABLE TS code; this one produces READABLE TS data.
+//
+// Output shape (all under `meta::external::language::typescript::translation::reflect`):
+//
+//   export interface PMultiplicity { lowerBound: number; upperBound: number | null; }
+//   export interface PGenericType { rawType: string; typeArguments: PGenericType[]; }
+//   export interface PProperty { name: string; genericType: PGenericType; multiplicity: PMultiplicity; }
+//   export interface PFunctionParameter { name: string; genericType: PGenericType; multiplicity: PMultiplicity; }
+//   export interface PClass { kind: 'Class'; path: string; name: string; properties: PProperty[]; superTypes: string[]; }
+//   export interface PEnumeration { kind: 'Enumeration'; path: string; name: string; values: string[]; }
+//   export interface PFunction { kind: 'Function'; path: string; name: string; parameters: PFunctionParameter[]; returnGenericType: PGenericType; returnMultiplicity: PMultiplicity; }
+//   export type PElement = PClass | PEnumeration | PFunction;
+//   export const elements: PElement[] = [ ... ];
+//   export const byPath: Record<string, PElement> = Object.fromEntries(elements.map(e => [e.path, e]));
+//
+// Entry point: `reflectGraphToTs(rootPackagePath)`. Justfile recipe
+// `just reflect-graph <root>` writes to
+// `shared/typescript-translation-graph-<root>.ts`.
+// ============================================================================
+
+function <<test.TestDependency>> meta::external::language::typescript::translation::reflect::reflectGraphToTs(rootPackagePath: String[1]): String[1]
+{
+   let root = pathToElement($rootPackagePath)->cast(@meta::pure::metamodel::Package);
+   let elements = $root->collectAllElements();
+   let entries = $elements->map(e | $e->reflectElement());
+   let nonEmpty = $entries->filter(s | $s != '');
+   let header  = '// Auto-generated Pure graph reflection rooted at ' + $rootPackagePath + '\n' +
+                 '// Source: pure/modules/translation/typescript/code/reflect.pure\n\n';
+   let metaTypes = $header + reflectMetaTypes() + '\n\n';
+   let body  = 'export const elements: PElement[] = [\n' + $nonEmpty->joinStrings(',\n') + '\n];\n\n' +
+               'export const byPath: Record<string, PElement> = Object.fromEntries(elements.map(e => [e.path, e]));\n';
+   $metaTypes + $body;
+}
+
+// Stable preamble — TS interfaces that every reflected `PElement` literal
+// conforms to. Hand-written so the type signatures don't drift.
+function meta::external::language::typescript::translation::reflect::reflectMetaTypes(): String[1]
+{
+   'export interface PMultiplicity { lowerBound: number; upperBound: number | null; }\n' +
+   'export interface PGenericType { rawType: string; typeArguments: PGenericType[]; }\n' +
+   'export interface PProperty { name: string; genericType: PGenericType; multiplicity: PMultiplicity; }\n' +
+   'export interface PFunctionParameter { name: string; genericType: PGenericType; multiplicity: PMultiplicity; }\n' +
+   'export interface PClass { kind: \'Class\'; path: string; name: string; properties: PProperty[]; superTypes: string[]; }\n' +
+   'export interface PEnumeration { kind: \'Enumeration\'; path: string; name: string; values: string[]; }\n' +
+   'export interface PFunction { kind: \'Function\'; path: string; name: string; parameters: PFunctionParameter[]; returnGenericType: PGenericType; returnMultiplicity: PMultiplicity; }\n' +
+   'export type PElement = PClass | PEnumeration | PFunction;';
+}
+
+function meta::external::language::typescript::translation::reflect::reflectElement(
+   e: meta::pure::metamodel::PackageableElement[1]
+): String[1]
+{
+   if ($e->instanceOf(meta::pure::metamodel::type::Enumeration),
+      | $e->cast(@meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>)->reflectEnumeration();,
+   |if ($e->instanceOf(meta::pure::metamodel::type::Class),
+      | $e->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>)->reflectClass();,
+   |if ($e->instanceOf(meta::pure::metamodel::function::UserDefinedFunction),
+      | $e->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>)->reflectFunction();,
+      | ''
+   )));
+}
+
+function meta::external::language::typescript::translation::reflect::reflectClass(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   let path = $cls->elementToPath();
+   let name = $path->split('::')->last()->toOne();
+   let propsArr = $cls.properties->map(p | $p->reflectProperty());
+   let supers = $cls.generalizations->map(g | $g.general->rawType()->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath());
+   '  { kind: \'Class\', path: \'' + $path + '\', name: \'' + $name + '\', ' +
+   'properties: [' + $propsArr->joinStrings(', ') + '], ' +
+   'superTypes: [' + $supers->map(s | '\'' + $s + '\'')->joinStrings(', ') + '] }';
+}
+
+function meta::external::language::typescript::translation::reflect::reflectEnumeration(
+   en: meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   let path = $en->elementToPath();
+   let name = $path->split('::')->last()->toOne();
+   let valuesArr = $en.properties->map(p | '\'' + $p.name->toOne() + '\'');
+   '  { kind: \'Enumeration\', path: \'' + $path + '\', name: \'' + $name + '\', ' +
+   'values: [' + $valuesArr->joinStrings(', ') + '] }';
+}
+
+function meta::external::language::typescript::translation::reflect::reflectFunction(
+   f: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   let path = $f->elementToPath();
+   let name = $f.functionName->toOne();
+   let paramsArr = $f.parameters->map(p | $p->reflectFunctionParameter());
+   let returnGT = $f.returnGenericType->reflectGenericType();
+   let returnMul = $f.returnMultiplicity->reflectMultiplicity();
+   '  { kind: \'Function\', path: \'' + $path + '\', name: \'' + $name + '\', ' +
+   'parameters: [' + $paramsArr->joinStrings(', ') + '], ' +
+   'returnGenericType: ' + $returnGT + ', returnMultiplicity: ' + $returnMul + ' }';
+}
+
+function meta::external::language::typescript::translation::reflect::reflectProperty(
+   p: meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Any, meta::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   '{ name: \'' + $p.name->toOne() + '\', ' +
+   'genericType: ' + $p.genericType->reflectGenericType() + ', ' +
+   'multiplicity: ' + $p.multiplicity->reflectMultiplicity() + ' }'
+}
+
+function meta::external::language::typescript::translation::reflect::reflectFunctionParameter(
+   p: meta::pure::metamodel::valuespecification::VariableExpression[1]
+): String[1]
+{
+   '{ name: \'' + $p.name + '\', ' +
+   'genericType: ' + $p.genericType->toOne()->reflectGenericType() + ', ' +
+   'multiplicity: ' + $p.multiplicity->toOne()->reflectMultiplicity() + ' }'
+}
+
+function meta::external::language::typescript::translation::reflect::reflectGenericType(
+   gt: meta::pure::metamodel::type::generics::GenericType[1]
+): String[1]
+{
+   let raw = $gt->rawType();
+   let rawPath = if ($raw->isEmpty(),
+                     | 'meta::pure::metamodel::type::Any',
+                     | $raw->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath());
+   // Drop type-argument recursion for now — many GenericType subtypes don't
+   // expose a typeArguments accessor; rather than special-case each, emit
+   // an empty list. Consumers can post-process the rawType chain if they
+   // need deeper introspection.
+   '{ rawType: \'' + $rawPath + '\', typeArguments: [] }';
+}
+
+function meta::external::language::typescript::translation::reflect::reflectMultiplicity(
+   m: meta::pure::metamodel::multiplicity::Multiplicity[1]
+): String[1]
+{
+   if ($m->instanceOf(meta::pure::metamodel::multiplicity::ConcreteMultiplicity),
+      | let cm = $m->cast(@meta::pure::metamodel::multiplicity::ConcreteMultiplicity);
+        let lower = $cm.lowerBound.value->toOne()->toString();
+        let upper = if ($cm.upperBound->isEmpty(),
+                        | 'null',
+                        | $cm.upperBound->toOne().value->toOne()->toString());
+        '{ lowerBound: ' + $lower + ', upperBound: ' + $upper + ' }';,
+      | // Parameter multiplicity (T[m]) — emit a 0..* stub; the consumer
+        // can refine later if needed.
+        '{ lowerBound: 0, upperBound: null }'
+   );
+}

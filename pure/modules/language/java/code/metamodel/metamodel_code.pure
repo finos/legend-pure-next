@@ -1,0 +1,284 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::metamodel::project::*;
+
+Class meta::external::language::java::metamodel::Code
+{
+   <<equality.Key>> type : meta::external::language::java::metamodel::Type[1];
+   requires              : CodeDependency[*];
+}
+
+Class meta::external::language::java::metamodel::SimpleCode extends Code
+{
+   <<equality.Key>> code : String[1];
+}
+
+Class meta::external::language::java::metamodel::Statement extends Code
+{
+}
+
+Class meta::external::language::java::metamodel::Null extends Code
+{
+}
+
+Class meta::external::language::java::metamodel::This extends Code
+{
+}
+
+Class meta::external::language::java::metamodel::Super extends Code
+{
+}
+
+Class meta::external::language::java::metamodel::Literal extends Code
+{
+   <<equality.Key>> literal : String[1];
+}
+
+Class meta::external::language::java::metamodel::Block extends Statement
+{
+   <<equality.Key>> statements : Code[*];
+}
+
+Class meta::external::language::java::metamodel::ExpressionStatement extends Statement
+{
+   <<equality.Key>> expression : Code[1];
+}
+
+Class meta::external::language::java::metamodel::Variable extends Code
+{
+   <<equality.Key>> name : String[1];
+}
+
+Class meta::external::language::java::metamodel::CodeParameter extends Variable, meta::external::language::java::metamodel::Parameter
+{
+}
+
+Class meta::external::language::java::metamodel::InfixExpression extends Code
+{
+   <<equality.Key>> left  : Code[1];
+   <<equality.Key>> op    : String[1];
+   <<equality.Key>> right : Code[1];
+}
+
+Class meta::external::language::java::metamodel::PrefixExpression extends Code
+{
+   <<equality.Key>> op         : String[1];
+   <<equality.Key>> expression : Code[1];
+}
+
+Class meta::external::language::java::metamodel::PostfixExpression extends Code
+{
+   <<equality.Key>> expression : Code[1];
+   <<equality.Key>> op         : String[1];
+}
+
+Class meta::external::language::java::metamodel::Conditional extends Code
+{
+   <<equality.Key>> test : Code[1];
+   <<equality.Key>> then : Code[1];
+   <<equality.Key>> else : Code[1];
+}
+
+Class meta::external::language::java::metamodel::InstanceOf extends Code
+{
+   <<equality.Key>> expression : Code[1];
+   <<equality.Key>> class      : meta::external::language::java::metamodel::Class[1];
+}
+
+Class meta::external::language::java::metamodel::LocalVariableDeclaration extends Statement
+{
+   <<equality.Key>> modifiers    : meta::external::language::java::metamodel::Modifier[*];
+   <<equality.Key>> variableName : String[1];
+   <<equality.Key>> initializer  : Code[0..1];
+}
+
+Class meta::external::language::java::metamodel::If extends Statement
+{
+   <<equality.Key>> test : Code[1];
+   <<equality.Key>> then : Code[1];
+   <<equality.Key>> else : Code[0..1];
+}
+
+Class meta::external::language::java::metamodel::For extends Statement
+{
+   <<equality.Key>> init   : Code[0..1];
+   <<equality.Key>> test   : Code[0..1];
+   <<equality.Key>> update : Code[0..1];
+   <<equality.Key>> body   : Code[1];
+}
+
+Class meta::external::language::java::metamodel::ForEach extends Statement
+{
+   <<equality.Key>> parameter  : meta::external::language::java::metamodel::CodeParameter[1];
+   <<equality.Key>> collection : Code[1];
+   <<equality.Key>> body       : Code[1];
+}
+
+Class meta::external::language::java::metamodel::While extends Statement
+{
+   <<equality.Key>> test : Code[1];
+   <<equality.Key>> then : Code[1];
+}
+
+Class meta::external::language::java::metamodel::DoWhile extends Statement
+{
+   <<equality.Key>> do    : Code[1];
+   <<equality.Key>> while : Code[1];
+}
+
+Class meta::external::language::java::metamodel::Try extends Statement
+{
+   <<equality.Key>> try     : Code[1];
+   <<equality.Key>> catches : Catch[*];
+   <<equality.Key>> finally : Finally[0..1];
+}
+
+Class meta::external::language::java::metamodel::Catch extends Code
+{
+   <<equality.Key>> parameter : meta::external::language::java::metamodel::CodeParameter[1];
+   <<equality.Key>> clause    : Code[1];
+}
+
+Class meta::external::language::java::metamodel::Finally extends Code
+{
+   <<equality.Key>> clause    : Code[1];
+}
+
+Class meta::external::language::java::metamodel::Return extends Statement
+{
+   <<equality.Key>> expression : Code[0..1];
+}
+
+Class meta::external::language::java::metamodel::Throw extends Statement
+{
+   <<equality.Key>> expression : Code[1];
+}
+
+Class meta::external::language::java::metamodel::New extends Code
+{
+   <<equality.Key>> typeArguments  : meta::external::language::java::metamodel::Type[*];
+   <<equality.Key>> arguments      : Code[*];
+}
+
+Class meta::external::language::java::metamodel::NewArray extends Code
+{
+   <<equality.Key>> arguments      : Code[*];
+}
+
+Class meta::external::language::java::metamodel::NewAnonymous extends New
+{
+   <<equality.Key>> methods  : meta::external::language::java::metamodel::CodeMethod[*];
+}
+
+Class meta::external::language::java::metamodel::CodeMethod extends Code
+{
+   <<equality.Key>> modifiers  : meta::external::language::java::metamodel::Modifier[*];
+   <<equality.Key>> name       : String[1];
+   <<equality.Key>> parameters : meta::external::language::java::metamodel::CodeParameter[*];
+   <<equality.Key>> body       : Code[1];
+}
+
+Class meta::external::language::java::metamodel::ArrayAccess extends Code
+{
+   <<equality.Key>> array : Code[1];
+   <<equality.Key>> index : Code[1];
+}
+
+Class meta::external::language::java::metamodel::Cast extends Code
+{
+   <<equality.Key>> expression : Code[1];
+}
+
+Class meta::external::language::java::metamodel::CastProxy extends Cast
+{
+   <<equality.Key>> proxy : Code[1];
+}
+
+Class meta::external::language::java::metamodel::MethodCall extends Code
+{
+   <<equality.Key>> instance       : Code[1];
+   <<equality.Key>> typeArguments  : meta::external::language::java::metamodel::Type[*];
+   <<equality.Key>> methodName     : String[1];
+   <<equality.Key>> arguments      : Code[*];
+}
+
+Class meta::external::language::java::metamodel::ConstructorCall extends Statement
+{
+   <<equality.Key>> arguments      : Code[*];
+}
+
+Class meta::external::language::java::metamodel::ThisConstructorCall extends ConstructorCall
+{
+}
+
+Class meta::external::language::java::metamodel::SuperConstructorCall extends ConstructorCall
+{
+}
+
+Class meta::external::language::java::metamodel::FieldAccess extends Code
+{
+   <<equality.Key>> instance  : Code[1];
+   <<equality.Key>> fieldName : String[1];
+}
+
+Class meta::external::language::java::metamodel::MethodReference extends Code
+{
+   <<equality.Key>> instance   : Code[1];
+   <<equality.Key>> methodName : String[1];
+}
+
+Class meta::external::language::java::metamodel::StaticMethodCall extends Code
+{
+   <<equality.Key>> class          : meta::external::language::java::metamodel::Type[1];
+   <<equality.Key>> typeArguments  : meta::external::language::java::metamodel::Type[*];
+   <<equality.Key>> methodName     : String[1];
+   <<equality.Key>> arguments      : Code[*];
+}
+
+Class meta::external::language::java::metamodel::StaticFieldAccess extends Code
+{
+   <<equality.Key>> class     : meta::external::language::java::metamodel::Type[1];
+   <<equality.Key>> fieldName : String[1];
+}
+
+Class meta::external::language::java::metamodel::StaticMethodReference extends Code
+{
+   <<equality.Key>> class      : meta::external::language::java::metamodel::Type[1];
+   <<equality.Key>> methodName : String[1];
+}
+
+Class meta::external::language::java::metamodel::Lambda extends Code
+{
+   <<equality.Key>> parameters : meta::external::language::java::metamodel::CodeParameter[*];
+   <<equality.Key>> expression : Code[1];
+}
+
+Class meta::external::language::java::metamodel::DeferredStreamResolve extends Code
+{
+   <<equality.Key>> stream : Code[1];
+}
+
+Class meta::external::language::java::metamodel::CodeDependency
+{
+   <<equality.Key>> name : String[1];
+   stateUpdater          : Function<{CodeDependencyResolutionState[1]->CodeDependencyResolutionState[1]}>[1];
+}
+
+Class meta::external::language::java::metamodel::CodeDependencyResolutionState
+{
+   visitedFunctions: String[*];
+   projectsByDependency : Map<String, Project>[1];
+}

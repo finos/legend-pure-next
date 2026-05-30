@@ -1,12 +1,13 @@
 ###Pure
 import test::*;
 
-native function test::fl<T>(x:T[*], f:Function<{T[1]->Boolean[1]}>[1]):T[*];
-native function test::sw(x:Integer[1], y:String[1]):Boolean[1];
+native function test::fl<T>(x: T[*], f: Function<{T[1]->Boolean[1]}>[1]): T[*];
 
-function test::tst():Any[*]
+native function test::sw(x: Integer[1], y: String[1]): Boolean[1];
+
+function test::tst(): Any[*]
 {
-    [1, 2]->fl(x:Integer[1]|$x->sw('ok'));
+  [1, 2]->fl(x:Integer[1]|$x->sw('ok'))
 }
 
 ###CompiledGraph
@@ -15,15 +16,15 @@ native function test::fl_T_MANY__Function_1__T_MANY_(x:T~test::fl_T_MANY__Functi
 native function test::sw_Integer_1__String_1__Boolean_1_(x:@Integer@[1], y:@String@[1]):@Boolean@[1]  ~NativeFunction<{@Integer@[1], @String@[1]->@Boolean@[1]}>
 
 function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  ArrowInvocation test::fl_T_MANY__Function_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @9:11-9:41
+  ArrowInvocation test::fl_T_MANY__Function_1__T_MANY_ :#Integer##[*]#  ~@ArrowInvocation@  @10:9-10:39
     typeParam T -> #Integer#
-    Collection :#Integer#[2]  ~@Collection@  @9:5-9:10
-      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @9:6-9:6
-      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @9:9-9:9
-    Lambda(x:@Integer@[1]) :#LambdaFunction<#{@Integer@[1]->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @9:16-9:40
-      ArrowInvocation test::sw_Integer_1__String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @9:31-9:40
-        Variable x :#Integer##[1]#  ~@VariableExpression@  @9:29-9:30
-        AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @9:36-9:39
+    Collection :#Integer#[2]  ~@Collection@  @10:3-10:8
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @10:4-10:4
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @10:7-10:7
+    Lambda(x:@Integer@[1]) :#LambdaFunction<#{@Integer@[1]->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @10:14-10:38
+      ArrowInvocation test::sw_Integer_1__String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @10:29-10:38
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @10:27-10:28
+        AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @10:34-10:37
 
 ###ReverseIndex
 test::fl_T_MANY__Function_1__T_MANY_:

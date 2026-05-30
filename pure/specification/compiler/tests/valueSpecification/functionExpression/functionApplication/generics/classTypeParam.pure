@@ -1,17 +1,17 @@
 ###Pure
 Class MyClass<Z>
 {
-    value:Z[1];
+  value: Z[1];
 }
 
-function f<T>(s:T[*]):MyClass<T>[1]
+function f<T>(s: T[*]): MyClass<T>[1]
 {
-    ^MyClass<T>(value='ok')
+  ^MyClass<T>(value = 'ok')
 }
 
-function test():Any[*]
+function test(): Any[*]
 {
-    f(['a','b']).value+'ee';
+  f(['a', 'b']).value + 'ee'
 }
 
 ###CompiledGraph
@@ -19,23 +19,23 @@ class MyClass extends Any  ~Class<MyClass<Z~MyClass>>  @2:1-5:1
   property value :Z~MyClass[1]  ~Property<MyClass<Z~MyClass>, Z~MyClass|1>
 
 function f_T_MANY__MyClass_1_(s:T~f_T_MANY__MyClass_1_[*]):MyClass<T~f_T_MANY__MyClass_1_>[1]  ~UserDefinedFunction<{T~f_T_MANY__MyClass_1_[*]->MyClass<T~f_T_MANY__MyClass_1_>[1]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#MyClass<T~f_T_MANY__MyClass_1_>##[1]#  ~@FunctionInvocation@  @9:5-9:27
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#MyClass<T~f_T_MANY__MyClass_1_>##[1]#  ~@FunctionInvocation@  @9:3-9:27
     typeParam T -> MyClass<T~f_T_MANY__MyClass_1_>
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<MyClass<T~f_T_MANY__MyClass_1_>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<MyClass<T~f_T_MANY__MyClass_1_>|1>  @9:5-9:27
-    Collection :#KeyExpression#[1]  ~@Collection@  @9:5-9:27
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @9:17-9:26
-        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @9:17-9:26
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<MyClass<T~f_T_MANY__MyClass_1_>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<MyClass<T~f_T_MANY__MyClass_1_>|1>  @9:3-9:27
+    Collection :#KeyExpression#[1]  ~@Collection@  @9:3-9:27
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @9:15-9:26
+        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @9:15-9:26
         AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @9:23-9:26
 
 function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @14:17-14:27
-    DotApplication MyClass.value :#String##[1]#  ~@DotApplication@  @14:17-14:22
-      FunctionInvocation f_T_MANY__MyClass_1_ :#MyClass<#String#>##[1]#  ~@FunctionInvocation@  @14:5-14:16
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @14:16-14:28
+    DotApplication MyClass.value :#String##[1]#  ~@DotApplication@  @14:16-14:21
+      FunctionInvocation f_T_MANY__MyClass_1_ :#MyClass<#String#>##[1]#  ~@FunctionInvocation@  @14:3-14:15
         typeParam T -> #String#
-        Collection :#String#[2]  ~@Collection@  @14:7-14:15
-          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @14:8-14:10
-          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @14:12-14:14
-    AtomicValue  'ee' :@String@[1]  ~@AtomicValue@  @14:24-14:27
+        Collection :#String#[2]  ~@Collection@  @14:5-14:14
+          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @14:6-14:8
+          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @14:11-14:13
+    AtomicValue  'ee' :@String@[1]  ~@AtomicValue@  @14:25-14:28
 
 ###ReverseIndex
 MyClass:

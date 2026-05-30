@@ -62,23 +62,31 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::conjunctions::and::
     assertFalse($f->eval(|false && (12/0 > 0)));
 }
 
-function <<test.Test>> meta::pure::functions::boolean::tests::conjunctions::and::testShortCircuit():Boolean[1]
+function <<PCT.test>> meta::pure::functions::boolean::tests::conjunctions::and::testShortCircuit<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let val1 = ^List<String>(values=['Claudius', 'Ptolemy']);
-    let val2 = 'Claudius Ptolemy';
-    assert($val1->instanceOf(List) && ($val1->cast(@List<String>).values == ['Claudius', 'Ptolemy']));
-    assertFalse($val2->instanceOf(List) && ($val2->cast(@List<String>).values == ['Claudius', 'Ptolemy']));
+    assert($f->eval(|
+        let val1 = ^List<String>(values=['Claudius', 'Ptolemy']);
+        $val1->instanceOf(List) && ($val1->cast(@List<String>).values == ['Claudius', 'Ptolemy']);
+    ));
+    assertFalse($f->eval(|
+        let val2 = 'Claudius Ptolemy';
+        $val2->instanceOf(List) && ($val2->cast(@List<String>).values == ['Claudius', 'Ptolemy']);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::boolean::tests::conjunctions::and::testShortCircuitInDynamicEvaluation():Boolean[1]
+function <<PCT.test>> meta::pure::functions::boolean::tests::conjunctions::and::testShortCircuitInDynamicEvaluation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let fn1 = {|let val1 = ^List<String>(values=['Claudius', 'Ptolemy']);
-                $val1->instanceOf(List) && ($val1->cast(@List<String>).values == ['Claudius', 'Ptolemy']);};
-    let lambda1 = ^LambdaFunction<{->Boolean[1]}>(expressionSequence = $fn1.expressionSequence);
-    assertEquals(true, $lambda1->evaluate([]));
+    assertEquals(true, $f->eval(|
+        let fn1 = {|let val1 = ^List<String>(values=['Claudius', 'Ptolemy']);
+                    $val1->instanceOf(List) && ($val1->cast(@List<String>).values == ['Claudius', 'Ptolemy']);};
+        let lambda1 = ^LambdaFunction<{->Boolean[1]}>(expressionSequence = $fn1.expressionSequence);
+        $lambda1->evaluate([]);
+    ));
 
-    let fn2 = {|let val2 = 'Claudius Ptolemy';
-                $val2->instanceOf(List) && ($val2->cast(@List<String>).values == ['Claudius', 'Ptolemy']);};
-    let lambda2 = ^LambdaFunction<{->Boolean[1]}>(expressionSequence = $fn2.expressionSequence);
-    assertEquals(false, $lambda2->evaluate([]));
+    assertEquals(false, $f->eval(|
+        let fn2 = {|let val2 = 'Claudius Ptolemy';
+                    $val2->instanceOf(List) && ($val2->cast(@List<String>).values == ['Claudius', 'Ptolemy']);};
+        let lambda2 = ^LambdaFunction<{->Boolean[1]}>(expressionSequence = $fn2.expressionSequence);
+        $lambda2->evaluate([]);
+    ));
 }

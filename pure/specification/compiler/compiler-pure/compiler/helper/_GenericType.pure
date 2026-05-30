@@ -213,9 +213,9 @@ function meta::pure::compiler::helper::genericType::printGenericType(genericType
             ugt : UndefinedGenericType[1] | '?',
             gto : GenericTypeOperation[1] | $gto->printGenericTypeOperation($fullPath),
             gtv : GenericTypeValue[1]     | $gtv->printGenericTypeValue($fullPath),
-            a   : Any[1]                  | if($genericType->genericTypeRawType()->isEmpty(),
+            a   : Any[1]                  | if($genericType->rawType()->isEmpty(),
                                                | 'Unknown',
-                                               | $genericType->genericTypeRawType()->toOne()->cast(@PackageableElement).name->toOne()
+                                               | $genericType->rawType()->toOne()->cast(@PackageableElement).name->toOne()
                                                  + if($genericType->genericTypeTypeArguments()->isEmpty(),
                                                       | '',
                                                       | '<' + $genericType->genericTypeTypeArguments()->map(t | $t->printGenericType($fullPath))->joinStrings(', ') + '>'
@@ -741,7 +741,9 @@ function meta::pure::compiler::helper::genericType::resolveForTarget_GenericType
                       // all Class-defined types but false for PrimitiveType instances.
                       let targetIsSubtype = $targetType->instanceOf(Class) && $targetType->subtypeOf($sourceType, $context);
                       if($targetIsSubtype,
-                          | let targetCls = $targetType->cast(@Class<Any>);
+                          | // $targetType may be a ClassPointer (recompile contexts where
+                            // PointerGraphResolver hasn't run); deref before reading slots.
+                            let targetCls = $targetType->derefTypeIfPointer($context)->toOne()->cast(@Class<Any>);
                             let templateTypeArgs = $targetCls.typeParameters->map(tp | buildUserDefinedGenericType($tp));
                             let templateMulArgs = $targetCls.multiplicityParameters->map(mp | $mp->cast(@Multiplicity));
                             let templateGT0 = buildUserDefinedGenericType($targetType);
@@ -779,7 +781,9 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType_Args(r
     if($withArgs->size() == $projectedValues->size() && $withArgs->isNotEmpty(),
         | let argCount = $withArgs->at(0).typeArguments->size();
           if($withArgs->forAll(gt | $gt.typeArguments->size() == $argCount) && $argCount > 0,
-              | let typeParams = $common->match([cls : Class<Any>[1] | $cls.typeParameters, other : Type[1] | []]);
+              | // Deref pointer types — ClassPointer carries only `path`,
+                // so `cls.typeParameters` trips the strict pointer guard.
+                let typeParams = $common->derefTypeIfPointer($context)->toOne()->match([cls : Class<Any>[1] | $cls.typeParameters, other : Type[1] | []]);
                 let commonArgs = range($argCount)->map({i |
                     let argsAtPos = $withArgs->map(gt | $gt.typeArguments->at($i));
                     let argContravariant = if($i < $typeParams->size() && $typeParams->at($i).contravariant == true, | !$contravariant, | $contravariant);
@@ -999,7 +1003,11 @@ function meta::pure::compiler::helper::genericType::isCompatibleGenericTypeValue
             if($declared.typeArguments->isNotEmpty() && $resolvedActualV.typeArguments->isNotEmpty(),
                 | if($declared.typeArguments->size() != $resolvedActualV.typeArguments->size(),
                       | false,
-                      | let typeParams = $declaredType->match([cls : Class<Any>[1] | $cls.typeParameters, other : Type[1] | []]);
+                      | // Deref pointer types — ClassPointer carries only `path`,
+                        // so `cls.typeParameters` triggers the strict pointer guard.
+                        // typeParameters lives on the live Class — fetch it via the
+                        // canonical element.
+                        let typeParams = $declaredType->derefTypeIfPointer($context)->toOne()->match([cls : Class<Any>[1] | $cls.typeParameters, other : Type[1] | []]);
                         range($declared.typeArguments->size())->forAll({i |
                             let argContravariant = if($i < $typeParams->size() && $typeParams->at($i).contravariant == true, | !$contravariant, | $contravariant);
                             isCompatibleGenericType($declared.typeArguments->at($i), $resolvedActualV.typeArguments->at($i), $argContravariant, $context);

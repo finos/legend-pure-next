@@ -1,7 +1,9 @@
 ###Pure
+import test::new::*;
+
 function test::new::testNew(): Any[*]
 {
-  ^test::new::Holder(item=^test::new::Dog(breed='Lab'));
+  ^Holder(item = ^Dog(breed = 'Lab'))
 }
 
 Class test::new::Animal
@@ -9,39 +11,39 @@ Class test::new::Animal
   name: String[0..1];
 }
 
-Class test::new::Dog extends test::new::Animal
+Class test::new::Dog extends Animal
 {
   breed: String[1];
 }
 
 Class test::new::Holder
 {
-  item: test::new::Animal[1];
+  item: Animal[1];
 }
 
 ###CompiledGraph
 function test::new::testNew__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::Holder##[1]#  ~@FunctionInvocation@  @4:3-4:55
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::Holder##[1]#  ~@FunctionInvocation@  @6:3-6:37
     typeParam T -> test::new::Holder
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::Holder|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::Holder|1>  @4:3-4:55
-    Collection :#KeyExpression#[1]  ~@Collection@  @4:3-4:55
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @4:22-4:54
-        AtomicValue  'item' :@String@[1]  ~@AtomicValue@  @4:22-4:54
-        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::Dog##[1]#  ~@FunctionInvocation@  @4:27-4:54
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::Holder|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::Holder|1>  @6:3-6:37
+    Collection :#KeyExpression#[1]  ~@Collection@  @6:3-6:37
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:11-6:36
+        AtomicValue  'item' :@String@[1]  ~@AtomicValue@  @6:11-6:36
+        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::Dog##[1]#  ~@FunctionInvocation@  @6:18-6:36
           typeParam T -> test::new::Dog
-          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::Dog|1>  @4:27-4:54
-          Collection :#KeyExpression#[1]  ~@Collection@  @4:27-4:54
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @4:43-4:53
-              AtomicValue  'breed' :@String@[1]  ~@AtomicValue@  @4:43-4:53
-              AtomicValue  'Lab' :@String@[1]  ~@AtomicValue@  @4:49-4:53
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::Dog|1>  @6:18-6:36
+          Collection :#KeyExpression#[1]  ~@Collection@  @6:18-6:36
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:23-6:35
+              AtomicValue  'breed' :@String@[1]  ~@AtomicValue@  @6:23-6:35
+              AtomicValue  'Lab' :@String@[1]  ~@AtomicValue@  @6:31-6:35
 
-class test::new::Animal extends Any  ~Class<test::new::Animal>  @7:1-10:1
+class test::new::Animal extends Any  ~Class<test::new::Animal>  @9:1-12:1
   property name :@String@[0..1]  ~Property<test::new::Animal, @String@|0..1>
 
-class test::new::Dog extends test::new::Animal  ~Class<test::new::Dog>  @12:1-15:1
+class test::new::Dog extends test::new::Animal  ~Class<test::new::Dog>  @14:1-17:1
   property breed :@String@[1]  ~Property<test::new::Dog, @String@|1>
 
-class test::new::Holder extends Any  ~Class<test::new::Holder>  @17:1-20:1
+class test::new::Holder extends Any  ~Class<test::new::Holder>  @19:1-22:1
   property item :test::new::Animal[1]  ~Property<test::new::Holder, test::new::Animal|1>
 
 ###ReverseIndex

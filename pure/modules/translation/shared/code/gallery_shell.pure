@@ -1,0 +1,330 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::translation::shared::gallery::*;
+
+// ============================================================================
+// Shared HTML chrome for the Pure -> {Java, TypeScript, ...} translation
+// galleries. Provides the two-pane layout: a collapsible tree of PCT functions
+// on the left (built from each test's sourceInformation.sourceId), and the
+// per-test side-by-side cards on the right.
+//
+// Each gallery emits its own <section class="pair ..."> cards for tests (Pure
+// source on the left of the card, translated source on the right). The shell
+// expects every section to carry these data attributes:
+//   data-path        meta::pure::functions::lang::tests::match::testMatchXxx
+//   data-source      raw sourceInformation.sourceId for the test file
+//   data-runtime     "pass" | "fail" — did the test return without throwing
+//                    when executed through the translator adapter
+//   data-translation "ok" | "partial" | "failed"
+//
+// The shell's JS walks those attributes at load time to build the tree, with
+// pass/fail icons aggregated up each branch. Clicking a tree node filters the
+// right pane to show only that subtree's cards. There is no server: the whole
+// file is a single self-contained HTML document.
+// ============================================================================
+
+function meta::pure::translation::shared::gallery::renderGalleryShell(
+    title: String[1],
+    accentName: String[1],
+    accentClass: String[1],
+    accentColor: String[1],
+    rootPath: String[1],
+    galleryFilePath: String[1],
+    total: Integer[1],
+    sectionsHtml: String[1]
+): String[1]
+{
+    let css = renderGalleryShellCss($accentColor, $accentClass);
+    let js  = renderGalleryShellJs();
+    '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>' + $title + '</title><style>' + $css + '</style></head>' +
+    '<body>' +
+        '<aside id="sidebar">' +
+            '<h1>' + $title + '</h1>' +
+            '<div id="summary" class="summary">Loading...</div>' +
+            '<input id="search" type="text" placeholder="Filter tests..." autocomplete="off">' +
+            '<div id="tree" class="tree"></div>' +
+        '</aside>' +
+        '<main id="content">' +
+            '<header>' +
+                '<div class="crumb" id="crumb">All tests</div>' +
+                '<p class="subtitle">' + $total->toString() + ' &lt;&lt;PCT.test&gt;&gt; tests from <code>' + $rootPath +
+                    '</code>. Auto-generated from <code>' + $galleryFilePath + '</code>.</p>' +
+            '</header>' +
+            '<div id="cards">' + $sectionsHtml + '</div>' +
+            '<div id="empty" class="empty" hidden>No tests match.</div>' +
+        '</main>' +
+        '<script>' + $js + '</script>' +
+    '</body></html>';
+}
+
+function meta::pure::translation::shared::gallery::renderGalleryShellCss(accentColor: String[1], accentClass: String[1]): String[1]
+{
+    [
+        ':root{',
+            '--bg:#1e1e1e;--bg2:#252526;--bg3:#2d2d2d;--bg4:#37373d;',
+            '--bd:#3c3c3c;--fg:#ccc;--fg2:#969696;',
+            '--p:#a371f7;--accent:', $accentColor, ';',
+            '--pass:#3fb950;--fail:#f48771;--warn:#e3b341;',
+            '--mono:"JetBrains Mono","Fira Code","Consolas",monospace;',
+        '}',
+        '*{box-sizing:border-box;}',
+        'html,body{height:100%;margin:0;padding:0;}',
+        'body{display:flex;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;}',
+        // --- sidebar -----------------------------------------------------
+        '#sidebar{width:340px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--bd);overflow-y:auto;padding:16px 12px;}',
+        '#sidebar h1{background:linear-gradient(135deg,var(--p),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:16px;margin:0 0 12px 0;letter-spacing:0.3px;}',
+        '.summary{color:var(--fg2);font-size:12px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--bd);font-family:var(--mono);}',
+        '.summary .pass{color:var(--pass);}.summary .fail{color:var(--fail);}',
+        '#search{width:100%;padding:6px 8px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;color:var(--fg);font-size:12px;margin-bottom:12px;font-family:inherit;}',
+        '#search:focus{outline:none;border-color:var(--accent);}',
+        // --- tree --------------------------------------------------------
+        '.tree ul{list-style:none;padding:0;margin:0;}',
+        '.tree li{margin:0;padding:0;}',
+        '.tree li > ul{padding-left:14px;border-left:1px dotted var(--bd);margin-left:8px;}',
+        '.tree .node{cursor:pointer;display:flex;align-items:center;gap:4px;padding:2px 6px;border-radius:3px;user-select:none;}',
+        '.tree .node:hover{background:var(--bg3);}',
+        '.tree .node.selected{background:var(--bg4);}',
+        '.tree .caret{width:10px;text-align:center;color:var(--fg2);font-size:8px;flex-shrink:0;}',
+        '.tree li.leaf > .node .caret{visibility:hidden;}',
+        '.tree li.collapsed > ul{display:none;}',
+        '.tree .icon{width:14px;text-align:center;font-weight:bold;flex-shrink:0;}',
+        '.tree .icon.pass{color:var(--pass);}',
+        '.tree .icon.fail{color:var(--fail);}',
+        '.tree .icon.partial{color:var(--warn);}',
+        '.tree .icon.na{color:var(--fg2);}',
+        '.tree .label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+        '.tree li.leaf > .node .label{color:var(--fg);}',
+        '.tree li > .node .label{color:var(--fg);}',
+        '.tree .count{color:var(--fg2);font-size:10px;font-family:var(--mono);margin-left:4px;flex-shrink:0;}',
+        // --- content -----------------------------------------------------
+        '#content{flex:1;overflow-y:auto;padding:24px 32px;}',
+        '#content > header{margin-bottom:20px;}',
+        '#content .crumb{font-family:var(--mono);font-size:14px;color:var(--accent);margin-bottom:4px;word-break:break-all;}',
+        '#content .subtitle{color:var(--fg2);font-size:12px;margin:0;}',
+        // --- card --------------------------------------------------------
+        'section.pair{margin-bottom:24px;scroll-margin-top:20px;}',
+        'section.pair h2{font-size:12px;font-weight:600;color:var(--fg2);margin:0 0 8px 0;font-family:var(--mono);display:flex;align-items:center;gap:6px;word-break:break-all;}',
+        'section.pair .runtime-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:3px;font-size:12px;font-weight:bold;flex-shrink:0;}',
+        'section.pair.runtime-pass .runtime-badge{background:rgba(63,185,80,0.15);color:var(--pass);}',
+        'section.pair.runtime-fail .runtime-badge{background:rgba(244,135,113,0.15);color:var(--fail);}',
+        'section.pair.runtime-na .runtime-badge{background:var(--bg3);color:var(--fg2);}',
+        'section.pair.failed h2::after{content:" (translation failed)";color:var(--fail);font-weight:400;}',
+        'section.pair.partial h2::after{content:" (partial translation)";color:var(--warn);font-weight:400;}',
+        'section.pair .run-msg{background:var(--bg2);border:1px solid var(--fail);border-radius:4px;padding:8px 12px;margin-bottom:8px;font-family:var(--mono);font-size:11px;color:var(--fail);white-space:pre-wrap;max-height:200px;overflow:auto;}',
+        '.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;}',
+        '.col{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;overflow:hidden;}',
+        'section.pair.failed .col.', $accentClass, '{border-color:var(--fail);}',
+        'section.pair.partial .col.', $accentClass, '{border-color:var(--warn);}',
+        '.lang-tag{padding:6px 12px;font-size:11px;font-weight:600;letter-spacing:1px;background:var(--bg3);border-bottom:1px solid var(--bd);}',
+        '.col.pure .lang-tag{color:var(--p);}',
+        '.col.', $accentClass, ' .lang-tag{color:var(--accent);}',
+        'section.pair.failed .col.', $accentClass, ' .lang-tag{color:var(--fail);}',
+        'section.pair.partial .col.', $accentClass, ' .lang-tag{color:var(--warn);}',
+        'pre{margin:0;padding:14px;overflow-x:auto;max-height:480px;}',
+        'code{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--fg);white-space:pre;}',
+        '.empty{color:var(--fg2);text-align:center;padding:40px;font-style:italic;}',
+        '@media(max-width:900px){.cols{grid-template-columns:1fr;}#sidebar{width:280px;}}'
+    ]->joinStrings('')
+}
+
+// All JS for the tree UI. Uses only double-quoted strings + backticks so the
+// surrounding Pure single-quote string does not need character escaping.
+function meta::pure::translation::shared::gallery::renderGalleryShellJs(): String[1]
+{
+    [
+        '(function(){',
+        '  const allSections = Array.from(document.querySelectorAll("section.pair"));',
+        '  const treeEl = document.getElementById("tree");',
+        '  const summaryEl = document.getElementById("summary");',
+        '  const searchEl = document.getElementById("search");',
+        '  const crumbEl = document.getElementById("crumb");',
+        '  const emptyEl = document.getElementById("empty");',
+        // --- derive relative source path -------------------------------
+        '  function relSource(src){',
+        '    if (!src) return "";',
+        '    const idx = src.indexOf("/functions/");',
+        '    if (idx >= 0) return src.substring(idx + "/functions/".length);',
+        // fallback: try "functions/" without leading slash, otherwise raw
+        '    const idx2 = src.indexOf("functions/");',
+        '    if (idx2 >= 0) return src.substring(idx2 + "functions/".length);',
+        '    return src.replace(/^\\/+/, "");',
+        '  }',
+        // --- build tree from sections ----------------------------------
+        '  function makeNode(name, path){',
+        '    return { name: name, path: path, children: new Map(), sections: [] };',
+        '  }',
+        '  const root = makeNode("functions", "");',
+        '  for (const s of allSections){',
+        '    const rel = relSource(s.dataset.source || "");',
+        '    const parts = rel ? rel.split("/").filter(Boolean) : ["(no source)"];',
+        '    let node = root;',
+        '    for (const p of parts){',
+        '      if (!node.children.has(p)){',
+        '        node.children.set(p, makeNode(p, node.path ? (node.path + "/" + p) : p));',
+        '      }',
+        '      node = node.children.get(p);',
+        '    }',
+        '    node.sections.push(s);',
+        '    s.__relPath = rel;',
+        '  }',
+        // --- aggregate pass/fail counts ---------------------------------
+        '  function agg(node){',
+        '    let pass = 0, fail = 0;',
+        '    (function walk(n){',
+        '      for (const s of n.sections){',
+        '        if (s.dataset.runtime === "pass") pass++; else fail++;',
+        '      }',
+        '      for (const c of n.children.values()) walk(c);',
+        '    })(node);',
+        '    const total = pass + fail;',
+        '    let state = "na";',
+        '    if (total > 0){',
+        '      if (fail === 0) state = "pass";',
+        '      else if (pass === 0) state = "fail";',
+        '      else state = "partial";',
+        '    }',
+        '    return { pass: pass, fail: fail, total: total, state: state };',
+        '  }',
+        '  function iconChar(state){',
+        '    return state === "pass" ? "\\u2713" : state === "fail" ? "\\u2717" : state === "partial" ? "\\u26A0" : "\\u00B7";',
+        '  }',
+        '  function sortedChildren(node){',
+        '    return Array.from(node.children.values()).sort((a,b) => {',
+        '      const aLeaf = a.children.size === 0, bLeaf = b.children.size === 0;',
+        '      if (aLeaf !== bLeaf) return aLeaf ? 1 : -1;',
+        '      return a.name.localeCompare(b.name);',
+        '    });',
+        '  }',
+        '  function renderNode(node, parentUl){',
+        '    const isLeaf = node.children.size === 0;',
+        '    const a = agg(node);',
+        '    const li = document.createElement("li");',
+        '    li.className = isLeaf ? "leaf" : "branch";',
+        '    const labelText = node.name.endsWith(".pure") ? node.name.slice(0,-5) : node.name;',
+        '    const nodeDiv = document.createElement("div");',
+        '    nodeDiv.className = "node";',
+        '    nodeDiv.dataset.path = node.path;',
+        '    nodeDiv.innerHTML =',
+        '      `<span class="caret">${isLeaf ? "" : "\\u25BC"}</span>` +',
+        '      `<span class="icon ${a.state}">${iconChar(a.state)}</span>` +',
+        '      `<span class="label"></span>` +',
+        '      `<span class="count">${a.pass}/${a.total}</span>`;',
+        '    nodeDiv.querySelector(".label").textContent = labelText;',
+        '    li.appendChild(nodeDiv);',
+        '    if (!isLeaf){',
+        '      const ul = document.createElement("ul");',
+        '      for (const c of sortedChildren(node)) renderNode(c, ul);',
+        '      li.appendChild(ul);',
+        '    }',
+        '    parentUl.appendChild(li);',
+        '  }',
+        '  const rootUl = document.createElement("ul");',
+        '  for (const c of sortedChildren(root)) renderNode(c, rootUl);',
+        '  treeEl.appendChild(rootUl);',
+        // --- summary ---------------------------------------------------
+        '  const total = allSections.length;',
+        '  const passCount = allSections.filter(s => s.dataset.runtime === "pass").length;',
+        '  const failCount = total - passCount;',
+        '  summaryEl.innerHTML = total + " tests \\u00B7 <span class=\\"pass\\">" + passCount + " pass</span> \\u00B7 <span class=\\"fail\\">" + failCount + " fail</span>";',
+        // --- selection / filtering -------------------------------------
+        '  function selectPath(path){',
+        '    let visible = 0;',
+        '    for (const s of allSections){',
+        '      const sp = s.__relPath || "";',
+        '      const matches = !path || sp === path || sp.startsWith(path + "/");',
+        '      s.hidden = !matches;',
+        '      if (matches) visible++;',
+        '    }',
+        '    emptyEl.hidden = visible !== 0;',
+        '    crumbEl.textContent = path ? path : "All tests";',
+        '    treeEl.querySelectorAll(".node.selected").forEach(n => n.classList.remove("selected"));',
+        '    if (path){',
+        '      const sel = treeEl.querySelector(`.node[data-path="${CSS.escape(path)}"]`);',
+        '      if (sel) sel.classList.add("selected");',
+        '    }',
+        // when selecting a folder, also expand its ancestors so it is visible
+        '    if (path){',
+        '      const sel = treeEl.querySelector(`.node[data-path="${CSS.escape(path)}"]`);',
+        '      if (sel){',
+        '        let li = sel.closest("li");',
+        '        while (li){',
+        '          li.classList.remove("collapsed");',
+        '          const caret = li.querySelector(":scope > .node .caret");',
+        '          if (caret && caret.textContent !== "") caret.textContent = "\\u25BC";',
+        '          li = li.parentElement && li.parentElement.closest("li");',
+        '        }',
+        '        sel.scrollIntoView({ block: "nearest" });',
+        '      }',
+        '    }',
+        '  }',
+        // --- click handler ---------------------------------------------
+        '  treeEl.addEventListener("click", (e) => {',
+        '    const caretClick = e.target.closest(".caret");',
+        '    const nodeDiv = e.target.closest(".node");',
+        '    if (!nodeDiv) return;',
+        '    const li = nodeDiv.parentElement;',
+        '    if (caretClick && !li.classList.contains("leaf")){',
+        '      const collapsed = li.classList.toggle("collapsed");',
+        '      const caretSpan = nodeDiv.querySelector(".caret");',
+        '      caretSpan.textContent = collapsed ? "\\u25B6" : "\\u25BC";',
+        '      return;',
+        '    }',
+        '    selectPath(nodeDiv.dataset.path);',
+        '  });',
+        // --- search ----------------------------------------------------
+        '  searchEl.addEventListener("input", () => {',
+        '    const q = searchEl.value.trim().toLowerCase();',
+        '    if (!q){',
+        '      treeEl.querySelectorAll("li").forEach(li => li.hidden = false);',
+        '      return;',
+        '    }',
+        '    function visit(li){',
+        '      const labelText = li.querySelector(":scope > .node .label").textContent.toLowerCase();',
+        '      const sub = li.querySelector(":scope > ul");',
+        '      let anyChild = false;',
+        '      if (sub){',
+        '        for (const c of Array.from(sub.children)){',
+        '          if (visit(c)) anyChild = true;',
+        '        }',
+        '      }',
+        '      const match = labelText.includes(q) || anyChild;',
+        '      li.hidden = !match;',
+        '      if (anyChild) li.classList.remove("collapsed");',
+        '      return match;',
+        '    }',
+        '    for (const li of Array.from(rootUl.children)) visit(li);',
+        '  });',
+        // --- initial state: show all + collapse all branches -----------
+        '  treeEl.querySelectorAll("li.branch").forEach(li => {',
+        '    li.classList.add("collapsed");',
+        '    const caret = li.querySelector(":scope > .node .caret");',
+        '    if (caret) caret.textContent = "\\u25B6";',
+        '  });',
+        '  selectPath("");',
+        '})();'
+    ]->joinStrings('\n')
+}
+
+// Escape a string for use inside an HTML attribute value (double-quoted).
+function meta::pure::translation::shared::gallery::escapeAttr(s: String[1]): String[1]
+{
+    $s->replace('&', '&amp;')->replace('<', '&lt;')->replace('>', '&gt;')->replace('"', '&quot;');
+}
+
+// Escape a string for use inside HTML text content.
+function meta::pure::translation::shared::gallery::escapeHtml(s: String[1]): String[1]
+{
+    $s->replace('&', '&amp;')->replace('<', '&lt;')->replace('>', '&gt;');
+}

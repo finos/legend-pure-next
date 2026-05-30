@@ -1,0 +1,139 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::*;
+
+// ----------------------------------------------------------------------------
+// JVM-runtime bridge: compile a Java source string in-process (via
+// `javax.tools.JavaCompiler`), load the resulting class through a throw-away
+// `ClassLoader`, and invoke a named static method on it. Truffle-only —
+// the bootstrap backend does not register this native. Implementation lives
+// in `legend-pure-next-truffle-extension-java`'s `JavaCompileNatives`.
+//
+// `args` are passed positionally to the static method. Auto-boxing maps
+// Pure Long → Java long/Long, Pure Double → double/Double, etc.
+//
+// Returns `Any[*]` so callers in generic contexts (e.g. PCT adapters typed
+// `<X|o>(...):X[o]`) can return this value directly — Pure widens `Any[*]`
+// to the caller's `X[o]` the same way the engine's relational PCT adapter
+// returns `Any[*]` from `resultToType` into an `X[o]` slot.
+// ----------------------------------------------------------------------------
+
+native function meta::external::language::java::compileAndExecute(
+   source: String[1],
+   className: String[1],
+   methodName: String[1],
+   args: Any[*]
+): Any[*];
+
+// ----------------------------------------------------------------------------
+// Tests — exercise the native directly with hand-written Java strings, so
+// failures point at the bridge rather than at any code-generator on top.
+// ----------------------------------------------------------------------------
+
+function <<test.Test>> meta::external::language::java::tests::testCompileAndExecuteIntegerAdd(): Boolean[1]
+{
+   let source = '''
+                package org.finos.test;
+
+                public class Add
+                {
+                    public static long execute(long a, long b)
+                    {
+                        return a + b;
+                    }
+                }''';
+   assertEquals(7, compileAndExecute($source, 'org.finos.test.Add', 'execute', [3, 4]));
+}
+
+function <<test.Test>> meta::external::language::java::tests::testCompileAndExecuteDoubleDivide(): Boolean[1]
+{
+   let source = '''
+                package org.finos.test;
+
+                public class Div
+                {
+                    public static double execute(double a, double b)
+                    {
+                        return a / b;
+                    }
+                }''';
+   assertEquals(2.5, compileAndExecute($source, 'org.finos.test.Div', 'execute', [10.0, 4.0]));
+}
+
+function <<test.Test>> meta::external::language::java::tests::testCompileAndExecuteBooleanReturn(): Boolean[1]
+{
+   let source = '''
+                package org.finos.test;
+
+                public class IsPositive
+                {
+                    public static boolean execute(long n)
+                    {
+                        return n > 0;
+                    }
+                }''';
+   assertEquals(true,  compileAndExecute($source, 'org.finos.test.IsPositive', 'execute', [5]));
+   assertEquals(false, compileAndExecute($source, 'org.finos.test.IsPositive', 'execute', [-3]));
+}
+
+function <<test.Test>> meta::external::language::java::tests::testCompileAndExecuteStringReturn(): Boolean[1]
+{
+   let source = '''
+                package org.finos.test;
+
+                public class Greet
+                {
+                    public static String execute(String name)
+                    {
+                        return "hello, " + name;
+                    }
+                }''';
+   assertEquals('hello, world', compileAndExecute($source, 'org.finos.test.Greet', 'execute', ['world']));
+}
+
+function <<test.Test>> meta::external::language::java::tests::testCompileAndExecuteZeroArgs(): Boolean[1]
+{
+   let source = '''
+                package org.finos.test;
+
+                public class Answer
+                {
+                    public static long execute()
+                    {
+                        return 42L;
+                    }
+                }''';
+   assertEquals(42, compileAndExecute($source, 'org.finos.test.Answer', 'execute', []));
+}
+
+// Compile failure — source has a deliberate unresolved identifier. The
+// native must throw with a message containing 'Java compilation failed'.
+function <<test.Test>> meta::external::language::java::tests::testCompileAndExecuteCompileErrorThrows(): Boolean[1]
+{
+   let badSource = '''
+                   package org.finos.test;
+
+                   public class Broken
+                   {
+                       public static long execute()
+                       {
+                           return wat;
+                       }
+                   }''';
+   assertError(
+      | compileAndExecute($badSource, 'org.finos.test.Broken', 'execute', []),
+      'Java compilation failed'
+   );
+}

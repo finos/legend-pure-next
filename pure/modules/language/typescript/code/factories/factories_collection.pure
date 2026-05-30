@@ -1,0 +1,151 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Factories for TypeScript Array operations.
+//
+// Each helper emits a method call on a collection expression:
+//   tsMap(items, 'x', expr)    -> items.map(x => expr)
+//   tsReduce(items, 'a', 'v',
+//            expr, init)       -> items.reduce((a, v) => expr, init)
+//   tsLength(items)            -> items.length
+//
+// Naming policy: each factory is named after the TypeScript Array method
+// it emits (map / filter / reduce / find / some / every / flatMap / forEach
+// / includes / indexOf / concat / join / slice / reverse / sort). No
+// language-foreign aliases ('exists', 'fold', 'contains') — the goal is
+// that what the user types is what the output reads as.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+
+// =============================================================================
+// Lambda-taking methods, single parameter.
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsMap(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'map'), [tsArrowExpr([tsParamNoType($param)], $body)]);
+}
+
+function meta::external::language::typescript::factories::tsFilter(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'filter'), [tsArrowExpr([tsParamNoType($param)], $body)]);
+}
+
+function meta::external::language::typescript::factories::tsForEach(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'forEach'), [tsArrowExpr([tsParamNoType($param)], $body)]);
+}
+
+function meta::external::language::typescript::factories::tsFind(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'find'), [tsArrowExpr([tsParamNoType($param)], $body)]);
+}
+
+function meta::external::language::typescript::factories::tsSome(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'some'), [tsArrowExpr([tsParamNoType($param)], $body)]);
+}
+
+function meta::external::language::typescript::factories::tsEvery(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'every'), [tsArrowExpr([tsParamNoType($param)], $body)]);
+}
+
+function meta::external::language::typescript::factories::tsFlatMap(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'flatMap'), [tsArrowExpr([tsParamNoType($param)], $body)]);
+}
+
+// =============================================================================
+// Lambda-taking methods, two parameters.
+// =============================================================================
+
+// items.reduce((acc, val) => body, init)
+function meta::external::language::typescript::factories::tsReduce(collection: Expression[1], accName: String[1], valName: String[1], body: Expression[1], init: Expression[1]): CallExpression[1]
+{
+   tsCall(
+      tsAccess($collection, 'reduce'),
+      [
+         tsArrowExpr([tsParamNoType($accName), tsParamNoType($valName)], $body),
+         $init
+      ]
+   );
+}
+
+// items.sort((a, b) => body)   -- custom comparator
+function meta::external::language::typescript::factories::tsSortBy(collection: Expression[1], aName: String[1], bName: String[1], body: Expression[1]): CallExpression[1]
+{
+   tsCall(
+      tsAccess($collection, 'sort'),
+      [tsArrowExpr([tsParamNoType($aName), tsParamNoType($bName)], $body)]
+   );
+}
+
+// =============================================================================
+// Value-argument methods (no lambda).
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsIncludes(collection: Expression[1], value: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'includes'), [$value]);
+}
+
+function meta::external::language::typescript::factories::tsIndexOf(collection: Expression[1], value: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'indexOf'), [$value]);
+}
+
+function meta::external::language::typescript::factories::tsConcat(collection: Expression[1], other: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'concat'), [$other]);
+}
+
+function meta::external::language::typescript::factories::tsJoin(collection: Expression[1], separator: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'join'), [$separator]);
+}
+
+function meta::external::language::typescript::factories::tsSlice(collection: Expression[1], start: Expression[1], end: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'slice'), [$start, $end]);
+}
+
+// =============================================================================
+// No-argument methods and property.
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsLength(collection: Expression[1]): PropertyAccessExpression[1]
+{
+   tsAccess($collection, 'length');
+}
+
+function meta::external::language::typescript::factories::tsReverse(collection: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'reverse'), []);
+}
+
+function meta::external::language::typescript::factories::tsSort(collection: Expression[1]): CallExpression[1]
+{
+   tsCall(tsAccess($collection, 'sort'), []);
+}
+
+// =============================================================================
+// Array literal helper — fully-typed convenience for emitting `[a, b, c]`.
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsArrayLit(elements: Expression[*]): ArrayLiteralExpression[1]
+{
+   ^ArrayLiteralExpression(elements=$elements);
+}

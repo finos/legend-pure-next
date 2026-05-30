@@ -1,0 +1,221 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::multiplicity::*;
+
+// ----------------------------------------------------------------------------
+// Truffle-only TypeScript runtime bridge. Implementation lives in
+// `legend-pure-next-truffle-extension-typescript`'s
+// `TypeScriptCompileNatives`. Two natives, split by phase:
+//
+//   compile(source)                                           → ctx
+//   execute(ctx, fnName, args, pureReturnType, pureMultiplicity) → Any[*]
+//
+// `compile` runs the official `typescript.js` compiler (loaded into a
+// long-lived GraalJS context) on the source, then evaluates the resulting
+// JavaScript as a CommonJS module. The returned `ctx` is opaque — a JVM-side
+// handle wrapping the evaluated module's `exports`. Pass it from `compile`
+// straight into `execute` without inspecting.
+//
+// `execute` looks up `fnName` on the captured module's exports and invokes
+// it with `args` (passed positionally). Scalars map across the JS↔Pure
+// boundary directly (Long, Double, Boolean, String); null/undefined becomes
+// the empty Pure sequence. The return is `Any[*]` so callers in generic
+// contexts (e.g. PCT adapters typed `<X|o>(...):X[o]`) can return this
+// value directly — Pure widens `Any[*]` to the caller's `X[o]` at the call
+// site.
+//
+// `pureReturnType` / `pureMultiplicity` (both optional) tell the native how
+// to map the JS return value back into Pure shape: a Class-typed return
+// gets its JS objects lifted into PDOs of that class; multiplicity guides
+// the empty/single/many sequence wrapping. Omit both for hand-written-TS
+// where the JS already returns scalars (no Pure-shape coercion needed).
+//
+// Metadata access (lambda PDOs, type lookups, etc.) is embedded in the
+// emitted TypeScript by the translator — calls to a globally-scoped
+// `__pureResolve(path)` helper that the native sets up once on the GraalJS
+// context. The translator owns the strategy; the native is just a
+// transpile-and-eval pipe plus a resolver bridge.
+// ----------------------------------------------------------------------------
+
+native function meta::external::language::typescript::compile(
+   source: String[1]
+): Any[1];
+
+// Drains (and clears) the buffer of TS module sources that `compile` has been
+// handed since the last drain. The translation gallery calls this right after
+// running a test through the PCT adapter, so the displayed TypeScript is the
+// EXACT source that was compiled + executed — keeping the gallery 100% in sync
+// with the PCT run rather than re-deriving source through a separate path.
+native function meta::external::language::typescript::drainCompiledSources(): String[*];
+
+native function meta::external::language::typescript::execute(
+   ctx: Any[1],
+   fnName: String[1],
+   args: Any[*],
+   pureReturnType: GenericType[0..1],
+   pureMultiplicity: Multiplicity[0..1],
+   // Optional in-memory graph injected for reflection lookups during this
+   // execute call. The translator generates uniform `__pureResolve(address)`
+   // calls; for addresses targeting nodes that don't live in any loaded
+   // PDB (e.g., a canonical lambda built in memory by a test adapter),
+   // those reads route to this graph instead. Cleaned up after execute
+   // returns — same lifetime as the call.
+   graph: meta::pure::metamodel::type::Any[0..1]
+): Any[*];
+
+// ----------------------------------------------------------------------------
+// Tests — exercise the native pair directly with hand-written TS strings,
+// so failures point at the bridge rather than at any code-generator on top.
+//
+// Truffle-only: these will fail when run on the bootstrap backend (the
+// natives are not registered there).
+// ----------------------------------------------------------------------------
+
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteIntegerAdd(): Boolean[1]
+{
+   let source = '''
+                export function execute(a: number, b: number): number
+                {
+                    return a + b;
+                }''';
+   assertEquals(7, $source->compile()->execute('execute', [3, 4], [], [], []));
+}
+
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteDoubleDivide(): Boolean[1]
+{
+   let source = '''
+                export function execute(a: number, b: number): number
+                {
+                    return a / b;
+                }''';
+   assertEquals(2.5, $source->compile()->execute('execute', [10.0, 4.0], [], [], []));
+}
+
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteBooleanReturn(): Boolean[1]
+{
+   let source = '''
+                export function execute(n: number): boolean
+                {
+                    return n > 0;
+                }''';
+   let ctx = $source->compile();
+   assertEquals(true,  $ctx->execute('execute', [5], [], [], []));
+   assertEquals(false, $ctx->execute('execute', [-3], [], [], []));
+}
+
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteStringReturn(): Boolean[1]
+{
+   let source = '''
+                export function execute(name: string): string
+                {
+                    return 'hello, ' + name;
+                }''';
+   assertEquals('hello, world', $source->compile()->execute('execute', ['world'], [], [], []));
+}
+
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteZeroArgs(): Boolean[1]
+{
+   let source = '''
+                export function execute(): number
+                {
+                    return 42;
+                }''';
+   assertEquals(42, $source->compile()->execute('execute', [], [], [], []));
+}
+
+// Smoke-test: __lambda + __pdo wired through a real filter in JS.
+// Mirrors what the translator emits for a Pure `.filter(p | $p.name == 'a')`
+// without any of the translator's complexity.
+function <<test.Test>> meta::external::language::typescript::tests::testLambdaPdoFilter(): Boolean[1]
+{
+   let source = '''
+                export function execute(): any[] {
+                    return [{name: 'a'}, {name: 'b'}].filter(
+                        __lambda((p: any) => __pdo(p).name === 'a', '__local::root$lambda/0')
+                    );
+                }''';
+   let result = $source->compile()->execute('execute', [], [], [], []);
+   assertEquals(1, $result->size());
+}
+
+// Smoke-test: self-describing JS object with classifierGenericType pointing at
+// a Pure class via __pureResolve. Java toPureValue should detect the self-tag
+// and lift to a PDO of CC_Person rather than returning a raw Java Map.
+function <<test.Test>> meta::external::language::typescript::tests::testSelfDescribingLift(): Boolean[1]
+{
+   let source = '''
+                export function execute(): any {
+                    return {
+                        firstName: 'Pierre',
+                        lastName: 'Doe',
+                        classifierGenericType: {
+                            type: __pureResolve('meta::pure::functions::collection::tests::model::CO_Person')
+                        }
+                    };
+                }''';
+   let result = $source->compile()->execute('execute', [], [], [], []);
+   // If the lift worked, the result is a CO_Person PDO and we can read
+   // firstName as a String. If not, it's a Map and reading the property
+   // through Pure's typed slot will fail.
+   assertEquals('Pierre', $result->cast(@meta::pure::functions::collection::tests::model::CO_Person).firstName);
+}
+
+// Same self-describing pattern but returned as an ARRAY from JS, mirroring
+// what `.filter(...)` produces. Tests that lift-per-element works after
+// the JS array is marshaled element-by-element.
+function <<test.Test>> meta::external::language::typescript::tests::testSelfDescribingArrayLift(): Boolean[1]
+{
+   let source = '''
+                export function execute(): any[] {
+                    return [{
+                        firstName: 'A',
+                        lastName: 'X',
+                        classifierGenericType: {
+                            type: __pureResolve('meta::pure::functions::collection::tests::model::CO_Person')
+                        }
+                    }, {
+                        firstName: 'B',
+                        lastName: 'Y',
+                        classifierGenericType: {
+                            type: __pureResolve('meta::pure::functions::collection::tests::model::CO_Person')
+                        }
+                    }];
+                }''';
+   let result = $source->compile()->execute('execute', [], [], [], []);
+   let persons = $result->cast(@meta::pure::functions::collection::tests::model::CO_Person);
+   assertEquals(2, $persons->size());
+   assertEquals('A', $persons->at(0).firstName);
+   assertEquals('B', $persons->at(1).firstName);
+}
+
+// Compile failure — source has a deliberate parse error. ts.transpileModule
+// runs the parser + emitter (no type-checker), so we need a syntactic break
+// for the diagnostic path to fire; an unbound identifier would pass transpile
+// and then fail at JS execution as a runtime ReferenceError instead.
+function <<test.Test>> meta::external::language::typescript::tests::testCompileAndExecuteCompileErrorThrows(): Boolean[1]
+{
+   let badSource = '''
+                   export function execute(: number
+                   {
+                       return 1;
+                   }''';
+   assertError(
+      | $badSource->compile()->execute('execute', [], [], [], []),
+      'TypeScript compilation failed'
+   );
+}

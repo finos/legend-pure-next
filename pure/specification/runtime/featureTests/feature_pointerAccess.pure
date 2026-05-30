@@ -1,0 +1,68 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// ----------------------------------------------------------------------------
+// Pointer access contract: an unresolved `TempCompilerPointer` (e.g.
+// `ClassPointer`, `PrimitiveTypePointer`, `EnumerationPointer`) must be
+// dereferenced via {@link meta::pure::compiler::helper::type::derefTypeIfPointer}
+// (or a runtime-specific PointerGraphResolver) before any of its inherited
+// data slots are read. Reading `.name` / `.package` / `.properties` / etc.
+// directly on a live pointer indicates the upstream resolution pass was
+// skipped — usually a sign that a canonical-recompile output or a deserialized
+// PDB element leaked through without post-processing.
+//
+// All runtimes (java-direct, Truffle, TypeScript) must surface this as a
+// hard crash with a context-bearing message, not return an empty/default
+// value silently. The tests below pin that contract.
+// ----------------------------------------------------------------------------
+
+import meta::pure::functions::asserts::*;
+import meta::pure::metamodel::pointer::*;
+
+// 1. A freshly-constructed ClassPointer carries only its `path`; the
+//    inherited `.name` slot is empty (since `^ClassPointer(path=...)`
+//    only sets path). Reading `.name` directly should crash, not return
+//    the empty list.
+function <<test.Test>> meta::pure::functions::tests::pointerAccess::testUnresolvedClassPointerNameAccessCrashes(): Boolean[1]
+{
+    let ptr = ^ClassPointer<Any>(path = 'meta::pure::metamodel::type::Any');
+    let result = tryEval(| $ptr.name);
+    assert(
+        $result.failure->isNotEmpty(),
+        'Expected reading .name on an unresolved ClassPointer to throw. ' +
+        'Got: ' + $result.value->toString()
+    );
+}
+
+// 2. The same crash applies to other pointer subtypes — PrimitiveTypePointer,
+//    EnumerationPointer, FunctionPointer. We only spot-check ClassPointer
+//    above; the contract is on the `TempCompilerPointer` superclass.
+function <<test.Test>> meta::pure::functions::tests::pointerAccess::testUnresolvedPrimitiveTypePointerNameAccessCrashes(): Boolean[1]
+{
+    let ptr = ^PrimitiveTypePointer(path = 'meta::pure::metamodel::type::primitives::Integer');
+    let result = tryEval(| $ptr.name);
+    assert(
+        $result.failure->isNotEmpty(),
+        'Expected reading .name on an unresolved PrimitiveTypePointer to throw'
+    );
+}
+
+// 3. The escape hatch — `.path` is the one slot that's safe to read on an
+//    unresolved pointer (it's why pointers exist). Reading it must not
+//    crash; that's how dereferencers find the target.
+function <<test.Test>> meta::pure::functions::tests::pointerAccess::testUnresolvedPointerPathAccessIsSafe(): Boolean[1]
+{
+    let ptr = ^ClassPointer<Any>(path = 'meta::pure::metamodel::type::Any');
+    assertEquals('meta::pure::metamodel::type::Any', $ptr.path);
+}

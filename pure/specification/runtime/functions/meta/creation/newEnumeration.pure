@@ -93,40 +93,34 @@ function <<PCT.function>> meta::pure::functions::meta::creation::newEnumeration(
     );
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewEnumeration():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewEnumeration<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let en = meta::pure::functions::meta::creation::newEnumeration('TestEnum', ^Package(name='test', package=^Package(name='Root')), ['A', 'B', 'C']);
-    assert($en->instanceOf(Enumeration));
-    assertEquals('TestEnum', $en.name);
-
-    // Should have 3 properties (one per value)
-    assertEquals(3, $en.properties->size());
-    assertEquals('A', $en.properties->at(0).name);
-    assertEquals('B', $en.properties->at(1).name);
-    assertEquals('C', $en.properties->at(2).name);
-
-    // CGT should be Enumeration<self>
-    let cgt = $en.classifierGenericType->toOne()->cast(@GenericTypeValue);
-    assertIs(Enumeration, $cgt.type->toOne());
-    let selfGT = $cgt.typeArguments->at(0)->cast(@GenericTypeValue);
-    assertIs($en, $selfGT.type->toOne());
+    assert($f->eval(|
+        let en = meta::pure::functions::meta::creation::newEnumeration('TestEnum', ^Package(name='test', package=^Package(name='Root')), ['A', 'B', 'C']);
+        assert($en->instanceOf(Enumeration));
+        assertEquals('TestEnum', $en.name);
+        // Should have 3 properties (one per value)
+        assertEquals(3, $en.properties->size());
+        assertEquals('A', $en.properties->at(0).name);
+        assertEquals('B', $en.properties->at(1).name);
+        assertEquals('C', $en.properties->at(2).name);
+        // CGT should be Enumeration<self>
+        let cgt = $en.classifierGenericType->toOne()->cast(@GenericTypeValue);
+        assertIs(Enumeration, $cgt.type->toOne());
+        assertIs($en, $cgt.typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewEnumerationValueCGT():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewEnumerationValueCGT<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let en = meta::pure::functions::meta::creation::newEnumeration('TestEnum2', ^Package(name='test', package=^Package(name='Root')), ['X', 'Y']);
-    let prop = $en.properties->at(0);
-
-    // The default value should be an Enum instance
-    assert($prop.defaultValue->isNotEmpty());
-    let lambda = $prop.defaultValue->toOne();
-    let exprSeq = $lambda.expressionSequence;
-    assert($exprSeq->size() == 1);
-    let av = $exprSeq->at(0)->cast(@AtomicValue);
-    let enumVal = $av.value->toOne();
-    assert($enumVal->instanceOf(Enum), 'value should be an Enum');
-
-    // The Enum's CGT should point to the Enumeration
-    let enumCGT = $enumVal->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
-    assertIs($en, $enumCGT.type->toOne());
+    assert($f->eval(|
+        let en = meta::pure::functions::meta::creation::newEnumeration('TestEnum2', ^Package(name='test', package=^Package(name='Root')), ['X', 'Y']);
+        let lambda = $en.properties->at(0).defaultValue->toOne();
+        // The default value should be an Enum instance
+        assertEquals(1, $lambda.expressionSequence->size());
+        let enumVal = $lambda.expressionSequence->at(0)->cast(@AtomicValue).value->toOne();
+        assert($enumVal->instanceOf(Enum), 'value should be an Enum');
+        // The Enum's CGT should point to the Enumeration
+        assertIs($en, $enumVal->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue).type->toOne());
+    ));
 }

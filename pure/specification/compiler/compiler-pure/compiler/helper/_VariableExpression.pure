@@ -34,6 +34,6 @@ function meta::pure::compiler::helper::variableExpression::newVariableExpression
 function <<test.Test>> meta::pure::compiler::helper::variableExpression::tests::testNewVariableExpression():Boolean[1]
 {
     let varExpr = newVariableExpression();
-    assert(genericTypeRawType($varExpr.classifierGenericType->toOne())->toOne() == VariableExpression);
+    assert(rawType($varExpr.classifierGenericType->toOne())->toOne() == VariableExpression);
     true;
 }

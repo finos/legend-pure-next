@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::functions::asserts::*;
+import meta::pure::test::pct::*;
 
 function meta::pure::functions::asserts::assertInstanceOf(instance:Any[1], type:Type[1]):Boolean[1]
 {
@@ -36,16 +37,16 @@ function meta::pure::functions::asserts::assertInstanceOf(instance:Any[1], type:
 
 
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessAssertInstanceOf():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertInstanceOf<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertInstanceOf(1, Integer);
-    assertInstanceOf('the quick' + ' ' + 'brown fox', String);
+    assert($f->eval(|assertInstanceOf(1, Integer)));
+    assert($f->eval(|assertInstanceOf('the quick' + ' ' + 'brown fox', String)));
 }
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessAssertInstanceOfDates():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertInstanceOfDates<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertInstanceOf(%2015-03-14, Date);
-    assertInstanceOf(%2015-03-14, StrictDate);
-    assertInstanceOf(%2015-03-14, Any);
-    assertInstanceOf(%2015-03-14T23:59:00, DateTime);
+    assert($f->eval(|assertInstanceOf(%2015-03-14, Date)));
+    assert($f->eval(|assertInstanceOf(%2015-03-14, StrictDate)));
+    assert($f->eval(|assertInstanceOf(%2015-03-14, Any)));
+    assert($f->eval(|assertInstanceOf(%2015-03-14T23:59:00, DateTime)));
 }

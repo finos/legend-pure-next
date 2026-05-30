@@ -10,19 +10,22 @@ set shell := ["bash", "-c"]
 
 ts_root := source_directory()
 
-banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+header := "h(){ s=\"[typescript::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
 
 # Default: build + run tests.
 default: test
 
 # pnpm install + pnpm run build (tsc).
 build:
-    @{{banner}} '[typescript]' 'pnpm install + build'
+    @{{header}} 'build'
+    @{{substep}} 'pnpm install + build'
     cd {{ts_root}} && pnpm install && pnpm run build
 
 # Build + run pnpm tests (placeholder until the TypeScript runtime grows real tests).
 test: build
-    @{{banner}} '[typescript]' 'pnpm run test'
+    @{{header}} 'test'
+    @{{substep}} 'pnpm run test'
     cd {{ts_root}} && pnpm run test
 
 # No self-host or runtime-PCT suites on the TypeScript side yet.
@@ -31,5 +34,6 @@ test-all: test
 
 # Remove dist/ and node_modules/.
 clean:
-    @{{banner}} '[typescript clean]' 'remove dist/ and node_modules/'
+    @{{header}} 'clean'
+    @{{substep}} 'remove dist/ and node_modules/'
     rm -rf {{ts_root}}/dist {{ts_root}}/node_modules

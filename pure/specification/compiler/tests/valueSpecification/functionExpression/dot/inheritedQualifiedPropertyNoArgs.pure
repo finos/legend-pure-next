@@ -1,39 +1,38 @@
 ###Pure
+import test::*;
+
 Class test::Base
 {
-    label() {
-        'base'
-    }: String[1];
+  label() {'base'}: String[1];
 }
 
-Class test::Child extends test::Base
+Class test::Child extends Base
 {
-    name : String[1];
+  name: String[1];
 }
 
-function test::use():Any[*]
+function test::use(): Any[*]
 {
-    ^test::Child(name='x').label();
+  ^Child(name = 'x').label()
 }
-
 
 ###CompiledGraph
-class test::Base extends Any  ~Class<test::Base>  @2:1-7:1
+class test::Base extends Any  ~Class<test::Base>  @4:1-7:1
   qualifiedProperty label() :@String@[1]
-    AtomicValue  'base' :@String@[1]  ~@AtomicValue@  @5:9-5:14
+    AtomicValue  'base' :@String@[1]  ~@AtomicValue@  @6:12-6:17
 
 class test::Child extends test::Base  ~Class<test::Child>  @9:1-12:1
   property name :@String@[1]  ~Property<test::Child, @String@|1>
 
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  DotApplication test::Base.label() :#String##[1]#  ~@DotApplication@  @16:27-16:34
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Child##[1]#  ~@FunctionInvocation@  @16:5-16:26
+  DotApplication test::Base.label() :#String##[1]#  ~@DotApplication@  @16:21-16:28
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Child##[1]#  ~@FunctionInvocation@  @16:3-16:20
       typeParam T -> test::Child
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>  @16:5-16:26
-      Collection :#KeyExpression#[1]  ~@Collection@  @16:5-16:26
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:18-16:25
-          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @16:18-16:25
-          AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @16:23-16:25
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>  @16:3-16:20
+      Collection :#KeyExpression#[1]  ~@Collection@  @16:3-16:20
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:10-16:19
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @16:10-16:19
+          AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @16:17-16:19
 
 ###ReverseIndex
 meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:

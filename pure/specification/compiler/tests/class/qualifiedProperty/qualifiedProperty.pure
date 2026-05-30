@@ -1,18 +1,20 @@
 ###Pure
+import test::*;
+
 Class test::ClassWithQualifiedProperty
 {
   name: String[1];
-  qualifiedProp(s: String[1]){$s + $this.name}: String[1];
+  qualifiedProp(s: String[1]) {$s + $this.name}: String[1];
 }
 
 ###CompiledGraph
-class test::ClassWithQualifiedProperty extends Any  ~Class<test::ClassWithQualifiedProperty>  @2:1-6:1
+class test::ClassWithQualifiedProperty extends Any  ~Class<test::ClassWithQualifiedProperty>  @4:1-8:1
   property name :@String@[1]  ~Property<test::ClassWithQualifiedProperty, @String@|1>
   qualifiedProperty qualifiedProp(s:@String@[1]) :@String@[1]
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @5:31-5:45
-      Variable s :#String##[1]#  ~@VariableExpression@  @5:31-5:32
-      DotApplication test::ClassWithQualifiedProperty.name :#String##[1]#  ~@DotApplication@  @5:41-5:45
-        Variable this :#test::ClassWithQualifiedProperty##[1]#  ~@VariableExpression@  @5:36-5:40
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @7:32-7:46
+      Variable s :#String##[1]#  ~@VariableExpression@  @7:32-7:33
+      DotApplication test::ClassWithQualifiedProperty.name :#String##[1]#  ~@DotApplication@  @7:42-7:46
+        Variable this :#test::ClassWithQualifiedProperty##[1]#  ~@VariableExpression@  @7:37-7:41
 
 ###ReverseIndex
 meta::pure::functions::string::plus_String_1__String_1__String_1_:

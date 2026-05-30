@@ -1,0 +1,212 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::imports::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::serialization::tests::*;
+
+// =============================================================================
+// relativeModuleSpecifier — path arithmetic
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::pathSameDir(): Boolean[1]
+{
+   assertEquals('./b.js', relativeModuleSpecifier('a.ts', 'b.ts'));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::pathSameDirNested(): Boolean[1]
+{
+   assertEquals('./c.js', relativeModuleSpecifier('a/b.ts', 'a/c.ts'));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::pathDownToSubdir(): Boolean[1]
+{
+   assertEquals('./lib/user.js', relativeModuleSpecifier('src/app.ts', 'src/lib/user.ts'));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::pathUpFromSubdir(): Boolean[1]
+{
+   assertEquals('../user.js', relativeModuleSpecifier('src/lib/app.ts', 'src/user.ts'));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::pathSiblingDir(): Boolean[1]
+{
+   assertEquals('../util/c.js', relativeModuleSpecifier('a/lib/b.ts', 'a/util/c.ts'));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::pathDeepSibling(): Boolean[1]
+{
+   assertEquals('../../lib/db.js', relativeModuleSpecifier('src/api/handlers/user.ts', 'src/lib/db.ts'));
+}
+
+// =============================================================================
+// resolveImports — end-to-end
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveSingleLocalImport(): Boolean[1]
+{
+   // userFile defines User; appFile uses it as a property type.
+   let userFile = tsSourceFile('src/user.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsClass('UserService', [
+         tsProperty('current', tsRefFrom('User', tsLocalSource($userFile)))
+      ])
+   ]);
+   testFile('''
+            import type { User } from './user.js';
+
+            class UserService {
+              current: User;
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveDedupesNames(): Boolean[1]
+{
+   // Same User referenced from multiple sites → one import.
+   let userFile = tsSourceFile('src/user.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsClass('UserService', [
+         tsProperty('current', tsRefFrom('User', tsLocalSource($userFile))),
+         tsMethod('all',
+            [],
+            tsArrayOf(tsRefFrom('User', tsLocalSource($userFile))),
+            tsBlock([tsReturn(tsArrayLit([]))]))
+      ])
+   ]);
+   testFile('''
+            import type { User } from './user.js';
+
+            class UserService {
+              current: User;
+
+              all(): User[] {
+                return [];
+              }
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveExternalImport(): Boolean[1]
+{
+   let appFile = tsSourceFile('src/app.ts', [
+      tsClass('Schema', [
+         tsProperty('parser', tsRefFrom('ZodSchema', tsExternalSource('zod')))
+      ])
+   ]);
+   testFile('''
+            import type { ZodSchema } from 'zod';
+
+            class Schema {
+              parser: ZodSchema;
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveMixedImports(): Boolean[1]
+{
+   // External imports first (sorted), then locals — names alphabetic inside.
+   let userFile  = tsSourceFile('src/user.ts', []);
+   let orderFile = tsSourceFile('src/order.ts', []);
+   let appFile   = tsSourceFile('src/app.ts', [
+      tsClass('App', [
+         tsProperty('z',    tsRefFrom('z',     tsExternalSource('zod'))),
+         tsProperty('user', tsRefFrom('User',  tsLocalSource($userFile))),
+         tsProperty('order', tsRefFrom('Order', tsLocalSource($orderFile))),
+         tsProperty('lib',  tsRefFrom('flow',  tsExternalSource('lodash')))
+      ])
+   ]);
+   testFile('''
+            import type { flow } from 'lodash';
+            import type { z } from 'zod';
+            import type { Order } from './order.js';
+            import type { User } from './user.js';
+
+            class App {
+              z: z;
+
+              user: User;
+
+              order: Order;
+
+              lib: flow;
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveMergesSameSource(): Boolean[1]
+{
+   // Two names imported from one external source merge into one declaration.
+   let appFile = tsSourceFile('src/app.ts', [
+      tsClass('App', [
+         tsProperty('s', tsRefFrom('Schema', tsExternalSource('zod'))),
+         tsProperty('z', tsRefFrom('z', tsExternalSource('zod')))
+      ])
+   ]);
+   testFile('''
+            import type { Schema, z } from 'zod';
+
+            class App {
+              s: Schema;
+
+              z: z;
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveSkipsSelfImport(): Boolean[1]
+{
+   // A LocalSource pointing at thisFile must NOT produce an import line.
+   let selfFile = tsSourceFile('src/self.ts', []);
+   let withRef  = ^$selfFile(statements=[
+      tsClass('Inner', [
+         tsProperty('p', tsRefFrom('Inner', tsLocalSource($selfFile)))
+      ])
+   ]);
+   testFile('''
+            class Inner {
+              p: Inner;
+            }
+            ''',
+            $withRef->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::resolveNestedGenerics(): Boolean[1]
+{
+   // Both Promise and User get imported — walker recurses into typeArguments.
+   let userFile = tsSourceFile('src/user.ts', []);
+   let appFile  = tsSourceFile('src/app.ts', [
+      tsFunction(
+         'fetchUser',
+         [],
+         tsRefGenericFrom('Promise', [tsRefFrom('User', tsLocalSource($userFile))], tsExternalSource('promise-lib')),
+         tsBlock([tsReturn(tsId('p'))]))
+   ]);
+   testFile('''
+            import type { Promise } from 'promise-lib';
+            import type { User } from './user.js';
+
+            function fetchUser(): Promise<User> {
+              return p;
+            }
+            ''',
+            $appFile->resolveImports());
+}

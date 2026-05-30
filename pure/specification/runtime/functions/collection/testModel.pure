@@ -22,8 +22,8 @@ Class meta::pure::functions::collection::tests::model::CO_Firm
 
 Class meta::pure::functions::collection::tests::model::CO_Person
 {
-    firstName : String[1];
-    lastName: String[1];
+    <<equality.Key>> firstName : String[1];
+    <<equality.Key>> lastName: String[1];
 }
 
 Class meta::pure::functions::collection::tests::model::CO_NPerson extends CO_Person

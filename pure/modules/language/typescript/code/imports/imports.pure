@@ -1,0 +1,458 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Smart-imports resolver.
+//
+// resolveImports(file) walks every statement (and recursively, every
+// expression and nested statement reachable from it) looking for AST nodes
+// that carry an ImportSource:
+//   - TypeReferenceNode.source  (type position)
+//   - Identifier.source         (expression position)
+//
+// Both feed into the same ImportNeed-based pipeline. ImportDeclarations are
+// produced, deduped, grouped by module specifier, sorted (externals first,
+// then locals), and prepended to the file's statement list.
+
+import meta::external::language::typescript::imports::*;
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+
+// =============================================================================
+// ImportNeed — internal record carried through the walker.
+//   localName    — the name as it appears in this file's source code
+//   originalName — the name as exported from `source`; equals localName
+//                  when there is no aliasing
+//   typeOnly     — true if every encountered ref was in a type position
+//                  (the resolver collapses all-typeOnly groups into
+//                  TS's `import type { … }` form)
+// =============================================================================
+
+Class meta::external::language::typescript::imports::ImportNeed
+{
+   <<equality.Key>> localName    : String[1];
+   <<equality.Key>> originalName : String[1];
+   <<equality.Key>> source       : ImportSource[1];
+   <<equality.Key>> typeOnly     : Boolean[1];
+}
+
+function meta::external::language::typescript::imports::needType(localName: String[1], originalName: String[1], source: ImportSource[1]): ImportNeed[1]
+{
+   ^ImportNeed(localName=$localName, originalName=$originalName, source=$source, typeOnly=true);
+}
+
+function meta::external::language::typescript::imports::needValue(localName: String[1], originalName: String[1], source: ImportSource[1]): ImportNeed[1]
+{
+   ^ImportNeed(localName=$localName, originalName=$originalName, source=$source, typeOnly=false);
+}
+
+// =============================================================================
+// PathAlias — mirrors tsconfig.json's `paths` mapping. When a LocalSource's
+// target file lives under `targetPrefix`, the resolver rewrites the module
+// specifier as `prefix + remainder`, e.g.:
+//   PathAlias('@/', 'src/')
+//   src/app.ts → src/lib/user.ts becomes '@/lib/user.js'
+// Multiple aliases are tried in order; first match wins.
+// =============================================================================
+
+Class meta::external::language::typescript::imports::PathAlias
+{
+   <<equality.Key>> prefix       : String[1];
+   <<equality.Key>> targetPrefix : String[1];
+}
+
+function meta::external::language::typescript::imports::pathAlias(prefix: String[1], targetPrefix: String[1]): PathAlias[1]
+{
+   ^PathAlias(prefix=$prefix, targetPrefix=$targetPrefix);
+}
+
+// =============================================================================
+// Path helper.
+//   relativeModuleSpecifier('src/app.ts',         'src/lib/user.ts')   -> './lib/user.js'
+//   relativeModuleSpecifier('src/api/h.ts',       'src/lib/db.ts')     -> '../lib/db.js'
+//   relativeModuleSpecifier('a.ts',               'b.ts')              -> './b.js'
+// =============================================================================
+
+function meta::external::language::typescript::imports::relativeModuleSpecifier(fromPath: String[1], toPath: String[1]): String[1]
+{
+   let fromSegs = $fromPath->split('/');
+   let toSegs   = $toPath->split('/');
+
+   let fromDirs = $fromSegs->slice(0, $fromSegs->size() - 1);
+   let toDirs   = $toSegs->slice(0, $toSegs->size() - 1);
+   let toFile   = $toSegs->last()->toOne();
+   let toFileJs = if($toFile->endsWith('.ts'),
+                     | $toFile->substring(0, $toFile->length() - 3) + '.js',
+                     | $toFile);
+
+   let minLen = if($fromDirs->size() < $toDirs->size(), | $fromDirs->size(), | $toDirs->size());
+
+   let commonLen = range(0, $minLen)->fold(
+      {i, acc |
+         if($acc == $i && $fromDirs->at($i) == $toDirs->at($i),
+            | $acc + 1,
+            | $acc)
+      },
+      0);
+
+   let upCount = $fromDirs->size() - $commonLen;
+   let ups     = range(0, $upCount)->map(i | '..');
+   let downs   = $toDirs->slice($commonLen, $toDirs->size());
+
+   let parts = $ups->concatenate($downs)->concatenate([$toFileJs]);
+   let joined = $parts->joinStrings('/');
+
+   if($ups->isEmpty(), | './' + $joined, | $joined);
+}
+
+// =============================================================================
+// ImportSource → module specifier (as it appears in `from '...'`).
+// =============================================================================
+
+function meta::external::language::typescript::imports::moduleSpecifierFor(thisFile: SourceFile[1], source: ImportSource[1]): String[1]
+{
+   moduleSpecifierForWithAliases($thisFile, $source, []);
+}
+
+// `pathAliases` are tried in order; first match wins. Empty list falls back
+// to relative paths (the original behavior).
+function meta::external::language::typescript::imports::moduleSpecifierForWithAliases(thisFile: SourceFile[1], source: ImportSource[1], pathAliases: PathAlias[*]): String[1]
+{
+   $source->match([
+      {l: LocalSource[1] |
+         let alias = $pathAliases->filter(pa | $l.target.filePath->startsWith($pa.targetPrefix))->head();
+         if($alias->isEmpty(),
+            | relativeModuleSpecifier($thisFile.filePath, $l.target.filePath),
+            | aliasedModuleSpecifier($alias->toOne(), $l.target.filePath));
+      },
+      e: ExternalSource[1] | $e.moduleSpecifier
+   ]);
+}
+
+function meta::external::language::typescript::imports::aliasedModuleSpecifier(alias: PathAlias[1], targetPath: String[1]): String[1]
+{
+   let remainder = $targetPath->substring($alias.targetPrefix->length(), $targetPath->length());
+   // Same .ts → .js rewrite as relativeModuleSpecifier — ESM resolution
+   // expects the runtime-emitted extension.
+   let withJs = if($remainder->endsWith('.ts'),
+                   | $remainder->substring(0, $remainder->length() - 3) + '.js',
+                   | $remainder);
+   $alias.prefix + $withJs;
+}
+
+// =============================================================================
+// importsFor — group ImportNeeds into ImportDeclarations.
+//   - Drop self-refs (LocalSource pointing at thisFile).
+//   - Group by resolved module-specifier string.
+//   - Dedupe names within a group.
+//   - Externals first (no leading '.'), then locals (alphabetic within each).
+// =============================================================================
+
+function meta::external::language::typescript::imports::importsFor(thisFile: SourceFile[1], needs: ImportNeed[*]): ImportDeclaration[*]
+{
+   importsForWithAliases($thisFile, $needs, []);
+}
+
+function meta::external::language::typescript::imports::importsForWithAliases(thisFile: SourceFile[1], needs: ImportNeed[*], pathAliases: PathAlias[*]): ImportDeclaration[*]
+{
+   let nonSelf = $needs->filter(n |
+      $n.source->match([
+         l: LocalSource[1]    | $l.target.filePath != $thisFile.filePath,
+         e: ExternalSource[1] | true
+      ])
+   );
+
+   // (specifier, need) pairs so we can group by specifier while keeping
+   // localName/originalName/typeOnly handy for per-group decisions.
+   let pairs = $nonSelf->map(n | pair(moduleSpecifierForWithAliases($thisFile, $n.source, $pathAliases), $n));
+
+   let uniqueSpecs = $pairs->map(p | $p.first)->removeDuplicates()->sort(
+      {a: String[1], b: String[1] |
+         let aKey = if($a->startsWith('.'), | '1' + $a, | '0' + $a);
+         let bKey = if($b->startsWith('.'), | '1' + $b, | '0' + $b);
+         $aKey->compare($bKey);
+      });
+
+   $uniqueSpecs->map({spec |
+      let matching = $pairs->filter(p | $p.first == $spec)->map(p | $p.second);
+      // Dedupe by (originalName, localName) so the same alias only generates
+      // one specifier even if referenced many times.
+      let originals = $matching->map(n | $n.originalName)->removeDuplicates()->sort();
+      let specs = $originals->map({origName |
+         // Pick the first localName for this originalName. If a generator
+         // uses inconsistent aliases for the same export, we honor the
+         // first one and emit a single ImportSpecifier; subsequent refs
+         // would type-check against the chosen alias.
+         let localForOrig = $matching->filter(n | $n.originalName == $origName)->at(0).localName;
+         if($localForOrig == $origName,
+            | tsNamedImport($origName),
+            | tsNamedImportAliased($origName, $localForOrig));
+      });
+      // `import type` when every ref through this specifier is type-position.
+      let allTypeOnly = $matching->forAll(n | $n.typeOnly);
+      ^ImportDeclaration(
+         moduleSpecifier=$spec,
+         namedImports=$specs,
+         isTypeOnly=$allTypeOnly
+      );
+   });
+}
+
+// =============================================================================
+// resolveImports — end-to-end.
+// =============================================================================
+
+function meta::external::language::typescript::imports::resolveImports(sf: SourceFile[1]): SourceFile[1]
+{
+   resolveImportsWithAliases($sf, []);
+}
+
+function meta::external::language::typescript::imports::resolveImportsWithAliases(sf: SourceFile[1], pathAliases: PathAlias[*]): SourceFile[1]
+{
+   let needs = $sf.statements->map(s | $s->collectNeedsFromStmt());
+   let imports = importsForWithAliases($sf, $needs, $pathAliases);
+   ^$sf(statements=$imports->concatenate($sf.statements));
+}
+
+function meta::external::language::typescript::imports::collectNeedsFromStmt(s: Statement[1]): ImportNeed[*]
+{
+   $s->match([
+      {c: ClassDeclaration[1] |
+         let tps   = $c.typeParameters->map(tp | $tp->collectNeedsFromTypeParam());
+         let exts  = if($c.extendsClause->isEmpty(),
+                        | []->cast(@ImportNeed),
+                        | $c.extendsClause->toOne()->collectNeedsFromType());
+         let impls = $c.implementsClause->map(t | $t->collectNeedsFromType());
+         let mems  = $c.members->map(m | $m->collectNeedsFromClassMember());
+         $tps->concatenate($exts)->concatenate($impls)->concatenate($mems);
+      },
+      {i: InterfaceDeclaration[1] |
+         let tps  = $i.typeParameters->map(tp | $tp->collectNeedsFromTypeParam());
+         let exts = $i.extendsClause->map(t | $t->collectNeedsFromType());
+         let mems = $i.members->map(m | $m->collectNeedsFromTypeElement());
+         $tps->concatenate($exts)->concatenate($mems);
+      },
+      {ta: TypeAliasDeclaration[1] |
+         $ta.typeParameters->map(tp | $tp->collectNeedsFromTypeParam())
+            ->concatenate($ta.type->collectNeedsFromType());
+      },
+      {ed: EnumDeclaration[1] |
+         $ed.members->map(m | if($m.initializer->isEmpty(),
+                                 | []->cast(@ImportNeed),
+                                 | $m.initializer->toOne()->collectNeedsFromExpr()));
+      },
+      {f: FunctionDeclaration[1] |
+         let tps    = $f.typeParameters->map(tp | $tp->collectNeedsFromTypeParam());
+         let params = $f.parameters->map(p | $p->collectNeedsFromParameter());
+         let ret    = if($f.returnType->isEmpty(),
+                         | []->cast(@ImportNeed),
+                         | $f.returnType->toOne()->collectNeedsFromType());
+         let body   = if($f.body->isEmpty(),
+                         | []->cast(@ImportNeed),
+                         | $f.body->toOne()->collectNeedsFromStmt());
+         $tps->concatenate($params)->concatenate($ret)->concatenate($body);
+      },
+      {vs: VariableStatement[1] |
+         $vs.declarations->map({d |
+            let t    = if($d.type->isEmpty(),        | []->cast(@ImportNeed), | $d.type->toOne()->collectNeedsFromType());
+            let init = if($d.initializer->isEmpty(), | []->cast(@ImportNeed), | $d.initializer->toOne()->collectNeedsFromExpr());
+            $t->concatenate($init);
+         });
+      },
+      b:  Block[1]              | $b.statements->map(bs | $bs->collectNeedsFromStmt()),
+      r:  ReturnStatement[1]    | if($r.expression->isEmpty(),
+                                     | []->cast(@ImportNeed),
+                                     | $r.expression->toOne()->collectNeedsFromExpr()),
+      {ifs: IfStatement[1] |
+         let cond = $ifs.expression->collectNeedsFromExpr();
+         let thn  = $ifs.thenStatement->collectNeedsFromStmt();
+         let els  = if($ifs.elseStatement->isEmpty(),
+                       | []->cast(@ImportNeed),
+                       | $ifs.elseStatement->toOne()->collectNeedsFromStmt());
+         $cond->concatenate($thn)->concatenate($els);
+      },
+      es: ExpressionStatement[1] | $es.expression->collectNeedsFromExpr(),
+      other: Statement[1]        | []->cast(@ImportNeed)
+   ]);
+}
+
+function meta::external::language::typescript::imports::collectNeedsFromType(t: TypeNode[1]): ImportNeed[*]
+{
+   $t->match([
+      {r: TypeReferenceNode[1] |
+         let self = if($r.source->isEmpty(),
+                       | []->cast(@ImportNeed),
+                       | [needType($r.typeName,
+                                   if($r.originalName->isEmpty(), | $r.typeName, | $r.originalName->toOne()),
+                                   $r.source->toOne())]);
+         let args = $r.typeArguments->map(arg | $arg->collectNeedsFromType());
+         $self->concatenate($args);
+      },
+      a:   ArrayTypeNode[1]          | $a.elementType->collectNeedsFromType(),
+      u:   UnionTypeNode[1]          | $u.types->map(x | $x->collectNeedsFromType()),
+      ix:  IntersectionTypeNode[1]   | $ix.types->map(x | $x->collectNeedsFromType()),
+      tup: TupleTypeNode[1]          | $tup.elements->map(x | $x->collectNeedsFromType()),
+      {f: FunctionTypeNode[1] |
+         let tps    = $f.typeParameters->map(tp | $tp->collectNeedsFromTypeParam());
+         let params = $f.parameters->map(p | $p->collectNeedsFromParameter());
+         let ret    = $f.returnType->collectNeedsFromType();
+         $tps->concatenate($params)->concatenate($ret);
+      },
+      other: TypeNode[1]             | []->cast(@ImportNeed)
+   ]);
+}
+
+function meta::external::language::typescript::imports::collectNeedsFromClassMember(m: ClassMember[1]): ImportNeed[*]
+{
+   $m->match([
+      {method: MethodDeclaration[1] |
+         let tps    = $method.typeParameters->map(tp | $tp->collectNeedsFromTypeParam());
+         let params = $method.parameters->map(p | $p->collectNeedsFromParameter());
+         let ret    = if($method.returnType->isEmpty(),
+                         | []->cast(@ImportNeed),
+                         | $method.returnType->toOne()->collectNeedsFromType());
+         let body   = if($method.body->isEmpty(),
+                         | []->cast(@ImportNeed),
+                         | $method.body->toOne()->collectNeedsFromStmt());
+         $tps->concatenate($params)->concatenate($ret)->concatenate($body);
+      },
+      {prop: PropertyDeclaration[1] |
+         let t    = if($prop.type->isEmpty(),        | []->cast(@ImportNeed), | $prop.type->toOne()->collectNeedsFromType());
+         let init = if($prop.initializer->isEmpty(), | []->cast(@ImportNeed), | $prop.initializer->toOne()->collectNeedsFromExpr());
+         $t->concatenate($init);
+      },
+      {ctor: ConstructorDeclaration[1] |
+         let params = $ctor.parameters->map(p | $p->collectNeedsFromParameter());
+         let body   = if($ctor.body->isEmpty(),
+                         | []->cast(@ImportNeed),
+                         | $ctor.body->toOne()->collectNeedsFromStmt());
+         $params->concatenate($body);
+      },
+      {get: GetAccessor[1] |
+         let ret  = if($get.returnType->isEmpty(),
+                       | []->cast(@ImportNeed),
+                       | $get.returnType->toOne()->collectNeedsFromType());
+         let body = if($get.body->isEmpty(),
+                       | []->cast(@ImportNeed),
+                       | $get.body->toOne()->collectNeedsFromStmt());
+         $ret->concatenate($body);
+      },
+      {set: SetAccessor[1] |
+         let param = $set.parameter->collectNeedsFromParameter();
+         let body  = if($set.body->isEmpty(),
+                        | []->cast(@ImportNeed),
+                        | $set.body->toOne()->collectNeedsFromStmt());
+         $param->concatenate($body);
+      }
+   ]);
+}
+
+function meta::external::language::typescript::imports::collectNeedsFromTypeParam(tp: TypeParameterDeclaration[1]): ImportNeed[*]
+{
+   let c = if($tp.constraint->isEmpty(),  | []->cast(@ImportNeed), | $tp.constraint->toOne()->collectNeedsFromType());
+   let d = if($tp.defaultType->isEmpty(), | []->cast(@ImportNeed), | $tp.defaultType->toOne()->collectNeedsFromType());
+   $c->concatenate($d);
+}
+
+function meta::external::language::typescript::imports::collectNeedsFromParameter(p: ParameterDeclaration[1]): ImportNeed[*]
+{
+   let t    = if($p.type->isEmpty(),        | []->cast(@ImportNeed), | $p.type->toOne()->collectNeedsFromType());
+   let init = if($p.initializer->isEmpty(), | []->cast(@ImportNeed), | $p.initializer->toOne()->collectNeedsFromExpr());
+   $t->concatenate($init);
+}
+
+function meta::external::language::typescript::imports::collectNeedsFromTypeElement(e: TypeElement[1]): ImportNeed[*]
+{
+   $e->match([
+      ps: PropertySignature[1] | if($ps.type->isEmpty(),
+                                    | []->cast(@ImportNeed),
+                                    | $ps.type->toOne()->collectNeedsFromType()),
+      {ms: MethodSignature[1] |
+         let tps    = $ms.typeParameters->map(tp | $tp->collectNeedsFromTypeParam());
+         let params = $ms.parameters->map(p | $p->collectNeedsFromParameter());
+         let ret    = if($ms.returnType->isEmpty(),
+                         | []->cast(@ImportNeed),
+                         | $ms.returnType->toOne()->collectNeedsFromType());
+         $tps->concatenate($params)->concatenate($ret);
+      }
+   ]);
+}
+
+function meta::external::language::typescript::imports::collectNeedsFromExpr(e: Expression[1]): ImportNeed[*]
+{
+   $e->match([
+      {i: Identifier[1] |
+         if($i.source->isEmpty(),
+            | []->cast(@ImportNeed),
+            | [needValue($i.text,
+                         if($i.originalName->isEmpty(), | $i.text, | $i.originalName->toOne()),
+                         $i.source->toOne())]);
+      },
+      pa:  PropertyAccessExpression[1] | $pa.expression->collectNeedsFromExpr(),
+      {c: CallExpression[1] |
+         let callee = $c.expression->collectNeedsFromExpr();
+         let args   = $c.arguments->map(a | $a->collectNeedsFromExpr());
+         let tArgs  = $c.typeArguments->map(t | $t->collectNeedsFromType());
+         $callee->concatenate($args)->concatenate($tArgs);
+      },
+      {n: NewExpression[1] |
+         let callee = $n.expression->collectNeedsFromExpr();
+         let args   = $n.arguments->map(a | $a->collectNeedsFromExpr());
+         let tArgs  = $n.typeArguments->map(t | $t->collectNeedsFromType());
+         $callee->concatenate($args)->concatenate($tArgs);
+      },
+      {b: BinaryExpression[1] |
+         $b.left->collectNeedsFromExpr()->concatenate($b.right->collectNeedsFromExpr());
+      },
+      {ce: ConditionalExpression[1] |
+         $ce.condition->collectNeedsFromExpr()
+            ->concatenate($ce.whenTrue->collectNeedsFromExpr())
+            ->concatenate($ce.whenFalse->collectNeedsFromExpr());
+      },
+      pre:  PrefixUnaryExpression[1]  | $pre.operand->collectNeedsFromExpr(),
+      post: PostfixUnaryExpression[1] | $post.operand->collectNeedsFromExpr(),
+      {af: ArrowFunction[1] |
+         let tps    = $af.typeParameters->map(tp | $tp->collectNeedsFromTypeParam());
+         let params = $af.parameters->map(p | $p->collectNeedsFromParameter());
+         let ret    = if($af.returnType->isEmpty(),
+                         | []->cast(@ImportNeed),
+                         | $af.returnType->toOne()->collectNeedsFromType());
+         let body   = if($af.body->isNotEmpty(),
+                         | $af.body->toOne()->collectNeedsFromStmt(),
+                         | $af.expressionBody->toOne()->collectNeedsFromExpr());
+         $tps->concatenate($params)->concatenate($ret)->concatenate($body);
+      },
+      ol:  ObjectLiteralExpression[1] | $ol.properties->map(p | $p->collectNeedsFromObjectLitElement()),
+      al:  ArrayLiteralExpression[1]  | $al.elements->map(x | $x->collectNeedsFromExpr()),
+      sp:  SpreadElement[1]           | $sp.expression->collectNeedsFromExpr(),
+      {asx: AsExpression[1] |
+         $asx.expression->collectNeedsFromExpr()->concatenate($asx.type->collectNeedsFromType());
+      },
+      {sat: SatisfiesExpression[1] |
+         $sat.expression->collectNeedsFromExpr()->concatenate($sat.type->collectNeedsFromType());
+      },
+      nn:  NonNullExpression[1]      | $nn.expression->collectNeedsFromExpr(),
+      aw:  AwaitExpression[1]        | $aw.expression->collectNeedsFromExpr(),
+      te:  TemplateExpression[1]     | $te.spans->map(span | $span.expression->collectNeedsFromExpr()),
+      other: Expression[1]           | []->cast(@ImportNeed)
+   ]);
+}
+
+function meta::external::language::typescript::imports::collectNeedsFromObjectLitElement(e: ObjectLiteralElement[1]): ImportNeed[*]
+{
+   $e->match([
+      pa: PropertyAssignment[1]          | $pa.initializer->collectNeedsFromExpr(),
+      sa: SpreadAssignment[1]            | $sa.expression->collectNeedsFromExpr(),
+      sp: ShorthandPropertyAssignment[1] | []->cast(@ImportNeed)
+   ]);
+}

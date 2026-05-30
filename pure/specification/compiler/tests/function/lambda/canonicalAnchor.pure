@@ -1,40 +1,32 @@
 ###Pure
-// Replicates the findCommonType nested if(pair, pair, ...) pattern where
-// Nil_GT inside the | Nil lambda's returnType loses its canonical UDPGT-PE
-// reference. Java direct's _GenericType.reconcileInferred rebuilds the inner
-// Nil_GT as a fresh inline UDGT during type reconciliation — so the printed
-// classifier hierarchy shows `Class<Nil>` (no canonical anchor) instead of
-// `Class<@Nil@>` (canonical anchor). This test PINS DOWN the canonical
-// preservation expectation; it currently FAILS on Java direct, exposing the
-// drift that the @X@ printer annotation now makes visible.
 function test::nilInNestedIf(b: Boolean[1]): Type[0..1]
 {
-    if([pair(|$b, |Nil), pair(|true, |Nil)], | Nil);
+  if([pair(|$b, |Nil), pair(|true, |Nil)], |Nil)
 }
 
 ###CompiledGraph
 function test::nilInNestedIf_Boolean_1__Type_$0_1$_(b:@Boolean@[1]):@Type@[0..1]  ~UserDefinedFunction<{@Boolean@[1]->@Type@[0..1]}>
-  FunctionInvocation if_Pair_MANY__Function_1__T_m_ :#Class<#Nil#>##[1]#  ~@FunctionInvocation@  @12:5-12:51
+  FunctionInvocation if_Pair_MANY__Function_1__T_m_ :#Class<#Nil#>##[1]#  ~@FunctionInvocation@  @4:3-4:48
     typeParam T -> #Class<#Nil#>#
     mulParam m -> #[1]#
-    Collection :#Pair<#LambdaFunction<#{->#Boolean##[1]#}#>#, #LambdaFunction<#{->#Class<#Nil#>##[1]#}#>#>#[2]  ~@Collection@  @12:8-12:43
-      FunctionInvocation pair_U_1__V_1__Pair_1_ :#Pair<#LambdaFunction<#{->#Boolean##[1]#}#>#, #LambdaFunction<#{->#Class<@Nil@>#[1]}#>#>##[1]#  ~@FunctionInvocation@  @12:9-12:23
+    Collection :#Pair<#LambdaFunction<#{->#Boolean##[1]#}#>#, #LambdaFunction<#{->#Class<#Nil#>##[1]#}#>#>#[2]  ~@Collection@  @4:6-4:41
+      FunctionInvocation pair_U_1__V_1__Pair_1_ :#Pair<#LambdaFunction<#{->#Boolean##[1]#}#>#, #LambdaFunction<#{->#Class<@Nil@>#[1]}#>#>##[1]#  ~@FunctionInvocation@  @4:7-4:21
         typeParam U -> #LambdaFunction<#{->#Boolean##[1]#}#>#
         typeParam V -> #LambdaFunction<#{->#Class<@Nil@>#[1]}#>#
-        Lambda :#LambdaFunction<#{->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @12:14-12:16
+        Lambda :#LambdaFunction<#{->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @4:12-4:14
           openVar b :#Boolean##[1]#
-          Variable b :#Boolean##[1]#  ~@VariableExpression@  @12:15-12:16
-        Lambda :#LambdaFunction<#{->#Class<@Nil@>#[1]}#>#[1]  ~@AtomicValue@  @12:19-12:22
-          AtomicValue  meta::pure::metamodel::type::Nil :#Class<@Nil@>#[1]  ~@AtomicValue@  @12:20-12:22
-      FunctionInvocation pair_U_1__V_1__Pair_1_ :#Pair<#LambdaFunction<#{->@Boolean@[1]}#>#, #LambdaFunction<#{->#Class<@Nil@>#[1]}#>#>##[1]#  ~@FunctionInvocation@  @12:26-12:42
+          Variable b :#Boolean##[1]#  ~@VariableExpression@  @4:13-4:14
+        Lambda :#LambdaFunction<#{->#Class<@Nil@>#[1]}#>#[1]  ~@AtomicValue@  @4:17-4:20
+          AtomicValue  meta::pure::metamodel::type::Nil :#Class<@Nil@>#[1]  ~@AtomicValue@  @4:18-4:20
+      FunctionInvocation pair_U_1__V_1__Pair_1_ :#Pair<#LambdaFunction<#{->@Boolean@[1]}#>#, #LambdaFunction<#{->#Class<@Nil@>#[1]}#>#>##[1]#  ~@FunctionInvocation@  @4:24-4:40
         typeParam U -> #LambdaFunction<#{->@Boolean@[1]}#>#
         typeParam V -> #LambdaFunction<#{->#Class<@Nil@>#[1]}#>#
-        Lambda :#LambdaFunction<#{->@Boolean@[1]}#>#[1]  ~@AtomicValue@  @12:31-12:35
-          AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @12:32-12:35
-        Lambda :#LambdaFunction<#{->#Class<@Nil@>#[1]}#>#[1]  ~@AtomicValue@  @12:38-12:41
-          AtomicValue  meta::pure::metamodel::type::Nil :#Class<@Nil@>#[1]  ~@AtomicValue@  @12:39-12:41
-    Lambda :#LambdaFunction<#{->#Class<@Nil@>#[1]}#>#[1]  ~@AtomicValue@  @12:46-12:50
-      AtomicValue  meta::pure::metamodel::type::Nil :#Class<@Nil@>#[1]  ~@AtomicValue@  @12:48-12:50
+        Lambda :#LambdaFunction<#{->@Boolean@[1]}#>#[1]  ~@AtomicValue@  @4:29-4:33
+          AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @4:30-4:33
+        Lambda :#LambdaFunction<#{->#Class<@Nil@>#[1]}#>#[1]  ~@AtomicValue@  @4:36-4:39
+          AtomicValue  meta::pure::metamodel::type::Nil :#Class<@Nil@>#[1]  ~@AtomicValue@  @4:37-4:39
+    Lambda :#LambdaFunction<#{->#Class<@Nil@>#[1]}#>#[1]  ~@AtomicValue@  @4:44-4:47
+      AtomicValue  meta::pure::metamodel::type::Nil :#Class<@Nil@>#[1]  ~@AtomicValue@  @4:45-4:47
 
 ###ReverseIndex
 meta::pure::functions::collection::pair_U_1__V_1__Pair_1_:

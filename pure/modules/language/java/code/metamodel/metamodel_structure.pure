@@ -1,0 +1,154 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::metamodel::*;
+
+/*
+   The modeling strategy is to follow Java reflection
+   Except for types (introduced PrimitiveType and FunctionType)
+   That's why primitive and interface are flags on Class
+*/
+
+Class meta::external::language::java::metamodel::Importable
+{
+}
+
+Class meta::external::language::java::metamodel::Package extends meta::external::language::java::metamodel::AnnotatedElement, meta::external::language::java::metamodel::Importable
+{
+   <<equality.Key>> name : String[1];
+   fullPath: String[0..1];
+}
+
+Association meta::external::language::java::metamodel::PackageChildren
+{
+   <<equality.Key>> parent : meta::external::language::java::metamodel::Package[0..1];
+   children : meta::external::language::java::metamodel::Package[*];
+}
+
+Enum meta::external::language::java::metamodel::Modifier
+{
+   Abstract,
+   Final,
+   Interface,
+   Native,
+   Private,
+   Protected,
+   Public,
+   Static,
+   Strict,
+   Synchronized,
+   Transient,
+   Volatile,
+   Default
+}
+
+Class meta::external::language::java::metamodel::AnnotatedElement
+{
+   annotations : meta::external::language::java::metamodel::Annotation[*];
+   javaDoc: String[0..1];
+}
+
+Class meta::external::language::java::metamodel::Annotation
+{
+
+}
+
+Class meta::external::language::java::metamodel::GenericDeclaration
+{
+   typeParameters : TypeVariable[*];
+}
+
+Class meta::external::language::java::metamodel::Member
+{
+   modifiers : Modifier[*];
+}
+
+Class meta::external::language::java::metamodel::Class extends meta::external::language::java::metamodel::Type, meta::external::language::java::metamodel::GenericDeclaration, meta::external::language::java::metamodel::AnnotatedElement, meta::external::language::java::metamodel::Importable
+{
+   <<equality.Key>> simpleName : String[1];
+   <<equality.Key>> package : meta::external::language::java::metamodel::Package[1];
+
+   modifiers : Modifier[*];
+   interfaces : meta::external::language::java::metamodel::Type[*];
+   superType : meta::external::language::java::metamodel::Type[0..1];
+
+   constructors : Constructor[*];
+   fields : Field[*];
+   methods : meta::external::language::java::metamodel::Method[*];
+
+   additionalImports : String[*];
+   projectionParentName : String[0..1]; // Java doesn't really have an equivalent AFAIK but we need this
+}
+
+Class meta::external::language::java::metamodel::Enumeration extends meta::external::language::java::metamodel::Class
+{
+   enumeration : EnumerationEntry[*];
+}
+
+Class meta::external::language::java::metamodel::EnumerationEntry extends meta::external::language::java::metamodel::AnnotatedElement
+[
+   $this.value->isEmpty() || $this.arguments->isEmpty()
+]
+{
+   name      : String[1];
+   value     : String[0..1];
+   arguments : Code[*];
+}
+
+Class meta::external::language::java::metamodel::Field extends meta::external::language::java::metamodel::AnnotatedElement, Member
+[
+   $this.value->isEmpty() || $this.valueCode->isEmpty()
+]
+{
+   name : String[1];
+   type : meta::external::language::java::metamodel::Type[1];
+   value: String[0..1];
+   valueCode: Code[0..1];
+}
+
+Class meta::external::language::java::metamodel::Method extends meta::external::language::java::metamodel::AnnotatedElement, Member, GenericDeclaration
+[
+   $this.body->isEmpty() || $this.bodyCode->isEmpty()
+]
+{
+   name : String[1];
+   parameters : meta::external::language::java::metamodel::Parameter[*];
+   returnType : meta::external::language::java::metamodel::Type[1];
+   body : String[0..1]; // String for now ... will model expressions later
+   bodyCode: Code[0..1];
+
+   nullResultPossible : Boolean[0..1];
+   functionType : meta::external::language::java::metamodel::FunctionType[0..1];
+}
+
+Class meta::external::language::java::metamodel::Parameter extends meta::external::language::java::metamodel::AnnotatedElement
+{
+   name : String[1];
+   type : meta::external::language::java::metamodel::Type[1];
+}
+
+Class meta::external::language::java::metamodel::Constructor extends meta::external::language::java::metamodel::AnnotatedElement, Member, GenericDeclaration
+[
+   $this.body->isEmpty() || $this.bodyCode->isEmpty()
+]
+{
+   parameters : meta::external::language::java::metamodel::Parameter[*];
+   body : String[0..1]; // String for now ... will model expressions later
+   bodyCode: Code[0..1];
+}
+
+Profile meta::external::language::java::metamodel::annotations::AnnotationJavaInfo
+{
+  tags : [javaClass];
+}

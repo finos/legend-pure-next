@@ -1,0 +1,450 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::*;
+import meta::external::language::java::factory::project::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::metamodel::annotations::java::validation::constraints::*;
+import meta::external::language::java::metamodel::annotations::json::*;
+import meta::external::language::java::metamodel::project::*;
+import meta::external::language::java::serialization::*;
+import meta::external::language::java::serialization::tests::*;
+
+function <<test.Test>> meta::external::language::java::serialization::tests::classToStringWithInferredImports():Boolean[1]
+{
+   let c = testClass()->inferImports();
+
+   let expected = '''
+                  package org.finos;
+                  
+                  import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+                  import com.fasterxml.jackson.annotation.JsonProperty;
+                  import com.fasterxml.jackson.annotation.JsonSubTypes;
+                  import java.util.HashMap;
+                  import java.util.List;
+                  import java.util.Map;
+                  import javax.validation.constraints.NotNull;
+                  
+                  /**
+                   * This is the class level documentation for a test class that checks how classes are converted into string representations.
+                   * This text is long enough that it should wrap onto multiple lines.
+                   */
+                  @JsonIgnoreProperties(ignoreUnknown=true)
+                  @JsonSubTypes({@JsonSubTypes.Type(value=Alpha.class, name="a"), @JsonSubTypes.Type(value=Beta.class)})
+                  protected abstract class MyClass<T extends Object & String> extends OtherType<String> implements SomethingElse, AndMore
+                  {
+                      /**
+                       * This is MY field!
+                       */
+                      @NotNull
+                      private static String myField = "Mine!";
+                  
+                      @JsonProperty(value="other", required=false)
+                      public List<String> other;
+                  
+                      public Map<String, Object> myMap = new HashMap<String, Object>();
+                      protected int myPrimitive;
+                  
+                      MyClass()
+                      {
+                      }
+                  
+                      MyClass(/** Give some value */ @NotNull String value)
+                      {
+                          this.myField = value;
+                      }
+                  
+                      protected <T extends String> void doSomething(@NotNull String p)
+                      {
+                          myCode();
+                      }
+                  
+                      abstract String doSomethingElse();
+                  
+                      protected void doWildCardThing(List<? extends Object> p)
+                      {
+                          if (p.size() == 0)
+                          {
+                              this.myField = "List is empty";
+                          }
+                          else if (p.size() == 1)
+                          {
+                              this.myField = "List is singleton";
+                          }
+                          else
+                          {
+                              this.myField = "List has many";
+                          }
+                      }
+                  }''';
+
+
+   test($expected, $c);
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::classToStringWithRandomImports():Boolean[1]
+{
+   let proto = testClass();
+   let c = ^$proto(additionalImports = ['org.finos.legend.otherapi.*', 'org.eclipse.collections.*']);
+
+   let expected = '''
+                  package org.finos;
+                  
+                  import org.finos.legend.otherapi.*;
+                  import org.eclipse.collections.*;
+                  
+                  /**
+                   * This is the class level documentation for a test class that checks how classes are converted into string representations.
+                   * This text is long enough that it should wrap onto multiple lines.
+                   */
+                  @JsonIgnoreProperties(ignoreUnknown=true)
+                  @JsonSubTypes({@JsonSubTypes.Type(value=Alpha.class, name="a"), @JsonSubTypes.Type(value=Beta.class)})
+                  protected abstract class MyClass<T extends Object & String> extends OtherType<String> implements SomethingElse, AndMore
+                  {
+                      /**
+                       * This is MY field!
+                       */
+                      @NotNull
+                      private static String myField = "Mine!";
+                  
+                      @JsonProperty(value="other", required=false)
+                      public java.util.List<String> other;
+                  
+                      public java.util.Map<String, Object> myMap = new java.util.HashMap<String, Object>();
+                      protected int myPrimitive;
+                  
+                      MyClass()
+                      {
+                      }
+                  
+                      MyClass(/** Give some value */ @NotNull String value)
+                      {
+                          this.myField = value;
+                      }
+                  
+                      protected <T extends String> void doSomething(@NotNull String p)
+                      {
+                          myCode();
+                      }
+                  
+                      abstract String doSomethingElse();
+                  
+                      protected void doWildCardThing(java.util.List<? extends Object> p)
+                      {
+                          if (p.size() == 0)
+                          {
+                              this.myField = "List is empty";
+                          }
+                          else if (p.size() == 1)
+                          {
+                              this.myField = "List is singleton";
+                          }
+                          else
+                          {
+                              this.myField = "List has many";
+                          }
+                      }
+                  }''';
+
+
+   test($expected, $c);
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::classToStringWithNoImports():Boolean[1]
+{
+   let c = testClass();
+
+   let expected = '''
+                  package org.finos;
+                  
+                  /**
+                   * This is the class level documentation for a test class that checks how classes are converted into string representations.
+                   * This text is long enough that it should wrap onto multiple lines.
+                   */
+                  @JsonIgnoreProperties(ignoreUnknown=true)
+                  @JsonSubTypes({@JsonSubTypes.Type(value=Alpha.class, name="a"), @JsonSubTypes.Type(value=Beta.class)})
+                  protected abstract class MyClass<T extends Object & String> extends OtherType<String> implements SomethingElse, AndMore
+                  {
+                      /**
+                       * This is MY field!
+                       */
+                      @NotNull
+                      private static String myField = "Mine!";
+                  
+                      @JsonProperty(value="other", required=false)
+                      public java.util.List<String> other;
+                  
+                      public java.util.Map<String, Object> myMap = new java.util.HashMap<String, Object>();
+                      protected int myPrimitive;
+                  
+                      MyClass()
+                      {
+                      }
+                  
+                      MyClass(/** Give some value */ @NotNull String value)
+                      {
+                          this.myField = value;
+                      }
+                  
+                      protected <T extends String> void doSomething(@NotNull String p)
+                      {
+                          myCode();
+                      }
+                  
+                      abstract String doSomethingElse();
+                  
+                      protected void doWildCardThing(java.util.List<? extends Object> p)
+                      {
+                          if (p.size() == 0)
+                          {
+                              this.myField = "List is empty";
+                          }
+                          else if (p.size() == 1)
+                          {
+                              this.myField = "List is singleton";
+                          }
+                          else
+                          {
+                              this.myField = "List has many";
+                          }
+                      }
+                  }''';
+
+   test($expected, $c);
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::interfaceToString():Boolean[1]
+{
+   let i = javaClass(['public', 'interface'], 'org.finos.IFace')
+      ->jextends(javaParameterizedType(javaClass('org.finos.OtherIface'), javaString()))
+      ->javaDoc('Interface documenmtation.')
+      ->addMethod(javaMethod([], javaVoid(), 'doSomething', j_parameter(javaString(), 'p')->annotate(^NotNull())))
+      ->addMethod(javaMethod([], javaString(), 'someString', []));
+
+   let expected = '''
+                  package org.finos;
+                  
+                  /**
+                   * Interface documenmtation.
+                   */
+                  public interface IFace extends OtherIface<String>
+                  {
+                      void doSomething(@NotNull String p);
+                      String someString();
+                  }''';
+   test($expected, $i);
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::simpleEnumToString():Boolean[1]
+{
+   let e = javaEnum('public', 'org.finos.Things')
+      ->addEntries([
+           javaEnumEntry('Alpha')->annotate(^meta::external::language::java::metamodel::annotations::generated::Generated(value='a', comments='In the beginning'))->javaDoc('The first one'),
+           javaEnumEntry('Beta'),
+           javaEnumEntry('Gamma'),
+           javaEnumEntry('Delta'),
+           javaEnumEntry('Omega')->javaDoc('The last one')
+        ]);
+
+   let expected = '''
+                  package org.finos;
+                  
+                  public enum Things
+                  {
+                      /**
+                       * The first one
+                       */
+                      @Generated(value="a", comments="In the beginning")
+                      Alpha,
+                  
+                      Beta,
+                      Gamma,
+                      Delta,
+                  
+                      /**
+                       * The last one
+                       */
+                      Omega
+                  }''';
+   test($expected, $e);
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::complexEnumToString():Boolean[1]
+{
+   let e = javaEnum('public', 'org.finos.Things')
+      ->addEntries([
+           javaEnumEntry('Alpha', j_string('The first')),
+           javaEnumEntry('Beta', 'The second'),
+           javaEnumEntry('Gamma', j_string('The third')),
+           javaEnumEntry('Delta', j_string('The fourth'))
+        ])
+      ->addField(javaField(['private', 'final'], javaString(), 'desc'))
+      ->addConstructor({cls|
+           let param = j_parameter(javaString(), 'desc');
+           javaConstructor([], $param, j_this($cls)->j_field('desc')->j_assign($param));
+        })
+      ->addMethod({cls|
+           javaMethod('public', javaString(), 'getDescription', [], j_return(j_this($cls)->j_field('desc')));
+        });
+
+   let expected = '''
+                  package org.finos;
+                  
+                  public enum Things
+                  {
+                      Alpha("The first"),
+                      Beta("The second"),
+                      Gamma("The third"),
+                      Delta("The fourth");
+                  
+                      private final String desc;
+                  
+                      Things(String desc)
+                      {
+                          this.desc = desc;
+                      }
+                  
+                      public String getDescription()
+                      {
+                          return this.desc;
+                      }
+                  }''';
+   test($expected, $e);
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::testImportsForClass():Boolean[1]
+{
+   // Class in same package is considered imported
+   test('''
+        package org.finos.test;
+        
+        class Test
+        {
+            public A a;
+        }''',
+        javaClass('org.finos.test.Test')
+           ->addField(javaField('public', javaClass('org.finos.test.A'), 'a'))
+   );
+
+   // Class in imported package is considered imported
+   test('''
+        package org.finos.test;
+        
+        import java.util.*;
+        
+        class Test
+        {
+            public List<String> a;
+        }''',
+        javaClass('org.finos.test.Test')
+           ->imports(javaPackage('java.util'))
+           ->addField(javaField('public', javaList(javaString()), 'a'))
+   );
+
+   // Explicitly imported class is imported
+   test('''
+        package org.finos.test;
+        
+        import org.finos.testx.A;
+        
+        class Test
+        {
+            public A a;
+        }''',
+        javaClass('org.finos.test.Test')
+           ->imports(javaClass('org.finos.testx.A'))
+           ->addField(javaField('public', javaClass('org.finos.testx.A'), 'a'))
+   );
+
+   // Class in same package is not considered imported if masked by another import
+   test('''
+        package org.finos.test;
+        
+        import org.finos.testx.A;
+        
+        class Test
+        {
+            public org.finos.test.A a;
+        }''',
+        javaClass('org.finos.test.Test')
+           ->imports(javaClass('org.finos.testx.A'))
+           ->addField(javaField('public', javaClass('org.finos.test.A'), 'a'))
+   );
+}
+
+function <<test.Test>> meta::external::language::java::serialization::tests::interface():Boolean[1]
+{
+
+   let proto = javaClass(['public', 'interface'], 'meta.java.generation.tests.model.A');
+   let cls   = ^$proto(additionalImports = ['javax.annotation.Generated', 'java.time.*', 'java.util.*', 'javax.validation.*', 'javax.validation.constraints.*']);
+   
+   test('''
+        package meta.java.generation.tests.model;
+        
+        import javax.annotation.Generated;
+        import java.time.*;
+        import java.util.*;
+        import javax.validation.*;
+        import javax.validation.constraints.*;
+        
+        @Generated("meta::java::generation::tests::model::1_0_0::A")
+        public interface A
+        {
+            static final String _version_ = "AHH#AKu:AHO:0-ALD:AHj:2$AHO#ALf:AEfOIi:3$%AHj#A6M:A6M-A6T:A6T";
+            static final String _type_ = "A";
+        
+            Optional<B> getB();
+        
+            @NotNull
+            @Valid
+            List<E> getE();
+        }''',
+        $cls->annotate(^meta::external::language::java::metamodel::annotations::generated::Generated(value='meta::java::generation::tests::model::1_0_0::A'))
+            ->addField(javaField(['static','final'], javaString(), '_version_', j_string('AHH#AKu:AHO:0-ALD:AHj:2$AHO#ALf:AEfOIi:3$%AHj#A6M:A6M-A6T:A6T')))
+            ->addField(javaField(['static','final'], javaString(), '_type_', j_string('A')))
+            ->addMethod(javaMethod([], javaOptional(javaClass('meta.java.generation.tests.model.B')), 'getB', []))
+            ->addMethod(javaMethod([], javaList(javaClass('meta.java.generation.tests.model.E')), 'getE', [])
+                           ->annotate(^	meta::external::language::java::metamodel::annotations::java::validation::constraints::NotNull())
+                           ->annotate(^	meta::external::language::java::metamodel::annotations::java::validation::constraints::Valid())
+                       )
+   );
+}
+
+function <<access.private>> meta::external::language::java::serialization::tests::testClass(): meta::external::language::java::metamodel::Class[1]
+{
+   let wildcardParam = j_parameter(javaList(javaWildcardExtends(javaObject())), 'p');
+
+   javaClass(['protected', 'abstract'], javaTypeVar('T', [javaObject(), javaString()]), 'org.finos.MyClass')
+      ->jextends(javaParameterizedType(javaClass('org.finos.OtherType'), javaString()))
+      ->implements(javaClass('org.finos.SomethingElse'))
+      ->implements(javaClass('org.finos.AndMore'))
+      ->javaDoc('This is the class level documentation for a test class that checks how classes are converted into string representations.  This text is long enough that it should wrap onto multiple lines.')
+      ->annotate(^meta::external::language::java::metamodel::annotations::json::JsonIgnoreProperties(ignoreUnknown=true))
+      ->annotate(^meta::external::language::java::metamodel::annotations::json::JsonSubTypes(subTypes=[^meta::external::language::java::metamodel::annotations::json::JsonSubType(value='Alpha', name='a'), ^meta::external::language::java::metamodel::annotations::json::JsonSubType(value='Beta')]))
+      ->addConstructor(^Constructor())
+      ->addConstructor(javaConstructor([], j_parameter(javaString(), 'value')->annotate(^NotNull())->javaDoc('Give some value'), 'this.myField = value;'))
+      ->addField(javaField(['private', 'static'], javaString(), 'myField', '"Mine!"')->annotate(^NotNull())->javaDoc('This is MY field!'))
+      ->addField(javaField(['public'], javaList(javaString()), 'other')->annotate(^JsonProperty(value='other', required=false)))
+      ->addField(javaField(['public'], javaMap(javaString(),javaObject()), 'myMap', j_new(javaHashMap(javaString(), javaObject()), [])))
+      ->addField(javaField(['protected'], javaInt(), 'myPrimitive'))
+      ->addMethod(javaMethod('protected', ^TypeVariable(name = 'T', bounds = [javaString()]), javaVoid(), 'doSomething', j_parameter(javaString(), 'p')->annotate(^NotNull()),'myCode();'))
+      ->addMethod(javaMethod('abstract', javaString(), 'doSomethingElse', []))
+      ->addMethod(cls| javaMethod('protected', javaVoid(), 'doWildCardThing', j_parameter(javaList(javaWildcardExtends(javaObject())), 'p'),
+                          j_if(list([
+                                  pair($wildcardParam->j_invoke('size', [])->j_eq(j_int(0)), j_this($cls)->j_field('myField')->j_assign(j_string('List is empty'))),
+                                  pair($wildcardParam->j_invoke('size', [])->j_eq(j_int(1)), j_this($cls)->j_field('myField')->j_assign(j_string('List is singleton')))
+                               ]),
+                               j_this($cls)->j_field('myField')->j_assign(j_string('List has many')))
+                       ));
+}

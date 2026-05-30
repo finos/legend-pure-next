@@ -1,44 +1,43 @@
 ###Pure
 import x::*;
 
-function x::myFunc<T,K>(p:T[1], z:K[1]):String[1]
+function x::myFunc<T,K>(p: T[1], z: K[1]): String[1]
 {
-    'x';
+  'x'
 }
 
-function x::myFunc<T>(p:T[1], z:T[1]):String[1]
+function x::myFunc<T>(p: T[1], z: T[1]): String[1]
 {
-    'x';
+  'x'
 }
 
-
-function x::testF():String[1]
+function x::testF(): String[1]
 {
-    myFunc('a', 'b');
-    myFunc(1, 2);
-    myFunc(1, 'a');
+  myFunc('a', 'b');
+  myFunc(1, 2);
+  myFunc(1, 'a');
 }
 
 ###CompiledGraph
 function x::myFunc_T_1__K_1__String_1_(p:T~x::myFunc_T_1__K_1__String_1_[1], z:K~x::myFunc_T_1__K_1__String_1_[1]):@String@[1]  ~UserDefinedFunction<{T~x::myFunc_T_1__K_1__String_1_[1], K~x::myFunc_T_1__K_1__String_1_[1]->@String@[1]}>
-  AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @6:5-6:7
+  AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @6:3-6:5
 
 function x::myFunc_T_1__T_1__String_1_(p:T~x::myFunc_T_1__T_1__String_1_[1], z:T~x::myFunc_T_1__T_1__String_1_[1]):@String@[1]  ~UserDefinedFunction<{T~x::myFunc_T_1__T_1__String_1_[1], T~x::myFunc_T_1__T_1__String_1_[1]->@String@[1]}>
-  AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @11:5-11:7
+  AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @11:3-11:5
 
 function x::testF__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>
-  FunctionInvocation x::myFunc_T_1__T_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @17:5-17:20
+  FunctionInvocation x::myFunc_T_1__T_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @16:3-16:18
     typeParam T -> #String#
-    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @17:12-17:14
-    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @17:17-17:19
-  FunctionInvocation x::myFunc_T_1__T_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @18:5-18:16
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @16:10-16:12
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @16:15-16:17
+  FunctionInvocation x::myFunc_T_1__T_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @17:3-17:14
     typeParam T -> #Integer#
-    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @18:12-18:12
-    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @18:15-18:15
-  FunctionInvocation x::myFunc_T_1__T_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @19:5-19:18
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @17:10-17:10
+    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @17:13-17:13
+  FunctionInvocation x::myFunc_T_1__T_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @18:3-18:16
     typeParam T -> #Any#
-    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @19:12-19:12
-    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @19:15-19:17
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @18:10-18:10
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @18:13-18:15
 
 ###ReverseIndex
 x::myFunc_T_1__T_1__String_1_:

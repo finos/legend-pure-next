@@ -1,0 +1,23 @@
+{
+  "name": "pure",
+  "version": "1.0.0",
+  "description": "Syntax highlighting for the Pure language (FINOS Legend)",
+  "license": "Apache-2.0",
+  "contributes": {
+    "languages": [
+      {
+        "id": "pure",
+        "extensions": [".pure"],
+        "aliases": ["Pure", "pure"],
+        "configuration": "./pure.language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "pure",
+        "scopeName": "source.pure",
+        "path": "./syntaxes/pure.tmLanguage.json"
+      }
+    ]
+  }
+}

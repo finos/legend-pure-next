@@ -36,3 +36,7 @@ function meta::pure::compiler::test::leanRefsTest::anotherNonTest(a:Any[1]):Stri
    let x = ^TestCallerClass(name='foo');
    $x.name;
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 5

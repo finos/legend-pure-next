@@ -1,0 +1,552 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// v1 serializer — emits TypeScript source from the metamodel.
+//
+// Style: plain pure-functional. Indent is passed as a String argument; each
+// node returns its String fragment without I/O or accumulator state. This is
+// simpler than the Java Stringifier (no line buffering, no fold-level, no
+// import resolution) and adequate while the v1 metamodel surface is small.
+//
+// Output conventions:
+//   - 2-space indent
+//   - single-quoted strings ('foo' not "foo")
+//   - trailing newline on SourceFile output
+//   - one blank line between top-level statements
+//   - methods/properties separated by one blank line inside classes
+//
+// Known v1 limitations:
+//   - StringLiteral.text is emitted verbatim between quotes (no escape pass).
+//     Callers are responsible for pre-escaping if needed.
+//   - No line wrapping; long signatures are emitted on one line.
+
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+function meta::external::language::typescript::serialization::indentStep(): String[1]
+{
+   '  ';
+}
+
+// =============================================================================
+// Entry point
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serialize(sf: SourceFile[1]): String[1]
+{
+   let leading = if($sf.leadingComment->isEmpty(),
+                    | '',
+                    | $sf.leadingComment->toOne() + '\n\n');
+   // Pack contiguous imports tighter than other statements: imports run one
+   // per line; non-imports get a blank line between them.
+   let imports = $sf.statements->filter(s | $s->instanceOf(ImportDeclaration));
+   let rest    = $sf.statements->filter(s | !$s->instanceOf(ImportDeclaration));
+   let importBlock = if($imports->isEmpty(),
+                        | '',
+                        | $imports->map(s | $s->serializeStatement(''))->joinStrings('\n')
+                          + if($rest->isEmpty(), | '', | '\n\n'));
+   let restBlock   = $rest->map(s | $s->serializeStatement(''))->joinStrings('\n\n');
+   $leading + $importBlock + $restBlock + '\n';
+}
+
+// =============================================================================
+// Modifiers
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeModifier(mf: ModifierFlag[1]): String[1]
+{
+   $mf->toString()->toLower();
+}
+
+function meta::external::language::typescript::serialization::serializeModifiers(modifiers: ModifierFlag[*]): String[1]
+{
+   if($modifiers->isEmpty(),
+      | '',
+      | $modifiers->map(m | $m->serializeModifier())->joinStrings(' ') + ' ');
+}
+
+// =============================================================================
+// Type nodes
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeType(t: TypeNode[1]): String[1]
+{
+   $t->match([
+      k: KeywordTypeNode[1]        | $k.keyword,
+      a: ArrayTypeNode[1]          | $a.elementType->serializeType() + '[]',
+      r: TypeReferenceNode[1]      | $r.typeName + $r.typeArguments->serializeTypeArgs(),
+      f: FunctionTypeNode[1]       | '(' + $f.parameters->map(p | $p->serializeParameter())->joinStrings(', ') + ') => ' + $f.returnType->serializeType(),
+      l: LiteralTypeNode[1]        | $l.literal->serializeExpression(),
+      u: UnionTypeNode[1]          | $u.types->map(x | $x->serializeType())->joinStrings(' | '),
+      i: IntersectionTypeNode[1]   | $i.types->map(x | $x->serializeType())->joinStrings(' & '),
+      tup: TupleTypeNode[1]        | '[' + $tup.elements->map(x | $x->serializeType())->joinStrings(', ') + ']'
+   ]);
+}
+
+function meta::external::language::typescript::serialization::serializeTypeArgs(args: TypeNode[*]): String[1]
+{
+   if($args->isEmpty(),
+      | '',
+      | '<' + $args->map(a | $a->serializeType())->joinStrings(', ') + '>');
+}
+
+function meta::external::language::typescript::serialization::serializeTypeParam(tp: TypeParameterDeclaration[1]): String[1]
+{
+   $tp.name +
+   if($tp.constraint->isEmpty(), | '', | ' extends ' + $tp.constraint->toOne()->serializeType()) +
+   if($tp.defaultType->isEmpty(), | '', | ' = ' + $tp.defaultType->toOne()->serializeType());
+}
+
+function meta::external::language::typescript::serialization::serializeTypeParams(tps: TypeParameterDeclaration[*]): String[1]
+{
+   if($tps->isEmpty(),
+      | '',
+      | '<' + $tps->map(t | $t->serializeTypeParam())->joinStrings(', ') + '>');
+}
+
+// =============================================================================
+// Parameters
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeParameter(p: ParameterDeclaration[1]): String[1]
+{
+   let optMark = if($p.optional == true, | '?', | '');
+   let typeStr = if($p.type->isEmpty(), | '', | ': ' + $p.type->toOne()->serializeType());
+   let initStr = if($p.initializer->isEmpty(), | '', | ' = ' + $p.initializer->toOne()->serializeExpression());
+   $p.name->serializeBindingName() + $optMark + $typeStr + $initStr;
+}
+
+// =============================================================================
+// Binding names and destructuring patterns.
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeBindingName(bn: BindingName[1]): String[1]
+{
+   $bn->match([
+      i: Identifier[1]              | $i.text,
+      o: ObjectBindingPattern[1]    | $o->serializeObjectBindingPattern(),
+      a: ArrayBindingPattern[1]     | $a->serializeArrayBindingPattern()
+   ]);
+}
+
+function meta::external::language::typescript::serialization::serializeObjectBindingPattern(o: ObjectBindingPattern[1]): String[1]
+{
+   if($o.elements->isEmpty(),
+      | '{}',
+      | '{ ' + $o.elements->map(e | $e->serializeBindingElement())->joinStrings(', ') + ' }');
+}
+
+function meta::external::language::typescript::serialization::serializeArrayBindingPattern(a: ArrayBindingPattern[1]): String[1]
+{
+   '[' + $a.elements->map(e | $e->serializeBindingElement())->joinStrings(', ') + ']';
+}
+
+function meta::external::language::typescript::serialization::serializeBindingElement(e: BindingElement[1]): String[1]
+{
+   let restMark = if($e.isRest == true, | '...', | '');
+   let propPart = if($e.propertyName->isEmpty(), | '', | $e.propertyName->toOne() + ': ');
+   let nameStr  = $e.name->serializeBindingName();
+   let initPart = if($e.initializer->isEmpty(), | '', | ' = ' + $e.initializer->toOne()->serializeExpression());
+   $restMark + $propPart + $nameStr + $initPart;
+}
+
+// =============================================================================
+// Statements (entry — top-level dispatch).
+// Declarations and other statements all flow through this.
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeStatement(stmt: Statement[1], indent: String[1]): String[1]
+{
+   $stmt->match([
+      i: ImportDeclaration[1]    | $i->serializeImport($indent),
+      c: ClassDeclaration[1]     | $c->serializeClass($indent),
+      iface: InterfaceDeclaration[1] | $iface->serializeInterface($indent),
+      a: TypeAliasDeclaration[1] | $a->serializeTypeAlias($indent),
+      ed: EnumDeclaration[1]     | $ed->serializeEnum($indent),
+      f: FunctionDeclaration[1]  | $f->serializeFunction($indent),
+      b: Block[1]                | $indent + $b->serializeBlock($indent),
+      r: ReturnStatement[1]      | $indent + 'return' + if($r.expression->isEmpty(), | '', | ' ' + $r.expression->toOne()->serializeExpression()) + ';',
+      ifs: IfStatement[1]        | $ifs->serializeIf($indent),
+      vs: VariableStatement[1]   | $vs->serializeVarStmt($indent),
+      es: ExpressionStatement[1] | $indent + $es.expression->serializeExpression() + ';'
+   ]);
+}
+
+// =============================================================================
+// Imports
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeImportSpec(s: ImportSpecifier[1]): String[1]
+{
+   let base = if($s.alias->isEmpty(), | $s.name, | $s.name + ' as ' + $s.alias->toOne());
+   if($s.isTypeOnly == true, | 'type ' + $base, | $base);
+}
+
+function meta::external::language::typescript::serialization::serializeImport(i: ImportDeclaration[1], indent: String[1]): String[1]
+{
+   let hasBindings = $i.defaultImport->isNotEmpty()
+                     || $i.namedImports->isNotEmpty()
+                     || $i.namespaceImport->isNotEmpty();
+   let prefix = if($i.isTypeOnly == true, | 'import type ', | 'import ');
+   let defaultPart = if($i.defaultImport->isEmpty(), | '', | $i.defaultImport->toOne());
+   let namedPart   = if($i.namedImports->isEmpty(),
+                        | '',
+                        | '{ ' + $i.namedImports->map(s | $s->serializeImportSpec())->joinStrings(', ') + ' }');
+   let nsPart      = if($i.namespaceImport->isEmpty(), | '', | '* as ' + $i.namespaceImport->toOne());
+   let parts = [$defaultPart, $namedPart, $nsPart]->filter(p | $p != '');
+   if($hasBindings,
+      | $indent + $prefix + $parts->joinStrings(', ') + ' from \'' + $i.moduleSpecifier + '\';',
+      | $indent + 'import \'' + $i.moduleSpecifier + '\';');
+}
+
+// =============================================================================
+// Class
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeClass(c: ClassDeclaration[1], indent: String[1]): String[1]
+{
+   let modsStr = $c.modifiers->serializeModifiers();
+   let tpStr   = $c.typeParameters->serializeTypeParams();
+   let extStr  = if($c.extendsClause->isEmpty(), | '', | ' extends ' + $c.extendsClause->toOne()->serializeType());
+   let implStr = if($c.implementsClause->isEmpty(),
+                    | '',
+                    | ' implements ' + $c.implementsClause->map(t | $t->serializeType())->joinStrings(', '));
+   let bodyStr = if($c.members->isEmpty(),
+                    | '{}',
+                    | '{\n' +
+                      $c.members->map(m | $m->serializeClassMember($indent + indentStep()))->joinStrings('\n\n') +
+                      '\n' + $indent + '}');
+   $indent + $modsStr + 'class ' + $c.name + $tpStr + $extStr + $implStr + ' ' + $bodyStr;
+}
+
+function meta::external::language::typescript::serialization::serializeClassMember(m: ClassMember[1], indent: String[1]): String[1]
+{
+   $m->match([
+      method: MethodDeclaration[1]      | $method->serializeMethod($indent),
+      prop:   PropertyDeclaration[1]    | $prop->serializeProperty($indent),
+      ctor:   ConstructorDeclaration[1] | $ctor->serializeConstructor($indent),
+      get:    GetAccessor[1]            | $get->serializeGetAccessor($indent),
+      set:    SetAccessor[1]            | $set->serializeSetAccessor($indent)
+   ]);
+}
+
+function meta::external::language::typescript::serialization::serializeGetAccessor(g: GetAccessor[1], indent: String[1]): String[1]
+{
+   let modsStr = $g.modifiers->serializeModifiers();
+   let retStr  = if($g.returnType->isEmpty(), | '', | ': ' + $g.returnType->toOne()->serializeType());
+   let bodyStr = if($g.body->isEmpty(), | ';', | ' ' + $g.body->toOne()->serializeBlock($indent));
+   $indent + $modsStr + 'get ' + $g.name + '()' + $retStr + $bodyStr;
+}
+
+function meta::external::language::typescript::serialization::serializeSetAccessor(s: SetAccessor[1], indent: String[1]): String[1]
+{
+   let modsStr = $s.modifiers->serializeModifiers();
+   let paramStr = $s.parameter->serializeParameter();
+   let bodyStr = if($s.body->isEmpty(), | ';', | ' ' + $s.body->toOne()->serializeBlock($indent));
+   $indent + $modsStr + 'set ' + $s.name + '(' + $paramStr + ')' + $bodyStr;
+}
+
+function meta::external::language::typescript::serialization::serializeEnum(ed: EnumDeclaration[1], indent: String[1]): String[1]
+{
+   let modsStr = $ed.modifiers->serializeModifiers();
+   let constStr = if($ed.isConst == true, | 'const ', | '');
+   let bodyStr = if($ed.members->isEmpty(),
+                    | '{}',
+                    | '{\n' +
+                      $ed.members->map(m | $m->serializeEnumMember($indent + indentStep()))->joinStrings(',\n') +
+                      '\n' + $indent + '}');
+   $indent + $modsStr + $constStr + 'enum ' + $ed.name + ' ' + $bodyStr;
+}
+
+function meta::external::language::typescript::serialization::serializeEnumMember(m: EnumMember[1], indent: String[1]): String[1]
+{
+   let initStr = if($m.initializer->isEmpty(), | '', | ' = ' + $m.initializer->toOne()->serializeExpression());
+   $indent + $m.name + $initStr;
+}
+
+function meta::external::language::typescript::serialization::serializeMethod(m: MethodDeclaration[1], indent: String[1]): String[1]
+{
+   let modsStr   = $m.modifiers->serializeModifiers();
+   let tpStr     = $m.typeParameters->serializeTypeParams();
+   let paramsStr = $m.parameters->map(p | $p->serializeParameter())->joinStrings(', ');
+   let retStr    = if($m.returnType->isEmpty(), | '', | ': ' + $m.returnType->toOne()->serializeType());
+   let bodyStr   = if($m.body->isEmpty(), | ';', | ' ' + $m.body->toOne()->serializeBlock($indent));
+   $indent + $modsStr + $m.name + $tpStr + '(' + $paramsStr + ')' + $retStr + $bodyStr;
+}
+
+function meta::external::language::typescript::serialization::serializeProperty(p: PropertyDeclaration[1], indent: String[1]): String[1]
+{
+   let modsStr = $p.modifiers->serializeModifiers();
+   let optMark = if($p.optional == true, | '?', | '');
+   let typeStr = if($p.type->isEmpty(), | '', | ': ' + $p.type->toOne()->serializeType());
+   let initStr = if($p.initializer->isEmpty(), | '', | ' = ' + $p.initializer->toOne()->serializeExpression());
+   $indent + $modsStr + $p.name + $optMark + $typeStr + $initStr + ';';
+}
+
+function meta::external::language::typescript::serialization::serializeConstructor(c: ConstructorDeclaration[1], indent: String[1]): String[1]
+{
+   let modsStr   = $c.modifiers->serializeModifiers();
+   let paramsStr = $c.parameters->map(p | $p->serializeParameter())->joinStrings(', ');
+   let bodyStr   = if($c.body->isEmpty(), | ';', | ' ' + $c.body->toOne()->serializeBlock($indent));
+   $indent + $modsStr + 'constructor(' + $paramsStr + ')' + $bodyStr;
+}
+
+// =============================================================================
+// Interface
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeInterface(iface: InterfaceDeclaration[1], indent: String[1]): String[1]
+{
+   let modsStr = $iface.modifiers->serializeModifiers();
+   let tpStr   = $iface.typeParameters->serializeTypeParams();
+   let extStr  = if($iface.extendsClause->isEmpty(),
+                    | '',
+                    | ' extends ' + $iface.extendsClause->map(t | $t->serializeType())->joinStrings(', '));
+   let bodyStr = if($iface.members->isEmpty(),
+                    | '{}',
+                    | '{\n' +
+                      $iface.members->map(m | $m->serializeTypeElement($indent + indentStep()))->joinStrings('\n') +
+                      '\n' + $indent + '}');
+   $indent + $modsStr + 'interface ' + $iface.name + $tpStr + $extStr + ' ' + $bodyStr;
+}
+
+function meta::external::language::typescript::serialization::serializeTypeElement(te: TypeElement[1], indent: String[1]): String[1]
+{
+   $te->match([
+      {ps: PropertySignature[1] |
+         let ro  = if($ps.readonly == true, | 'readonly ', | '');
+         let opt = if($ps.optional == true, | '?', | '');
+         let tp  = if($ps.type->isEmpty(), | '', | ': ' + $ps.type->toOne()->serializeType());
+         $indent + $ro + $ps.name + $opt + $tp + ';';
+      },
+      {ms: MethodSignature[1] |
+         let tps = $ms.typeParameters->serializeTypeParams();
+         let opt = if($ms.optional == true, | '?', | '');
+         let ps  = $ms.parameters->map(p | $p->serializeParameter())->joinStrings(', ');
+         let rt  = if($ms.returnType->isEmpty(), | '', | ': ' + $ms.returnType->toOne()->serializeType());
+         $indent + $ms.name + $opt + $tps + '(' + $ps + ')' + $rt + ';';
+      }
+   ]);
+}
+
+// =============================================================================
+// Type alias
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeTypeAlias(a: TypeAliasDeclaration[1], indent: String[1]): String[1]
+{
+   $indent + $a.modifiers->serializeModifiers() + 'type ' + $a.name + $a.typeParameters->serializeTypeParams() + ' = ' + $a.type->serializeType() + ';';
+}
+
+// =============================================================================
+// Function declaration
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeFunction(f: FunctionDeclaration[1], indent: String[1]): String[1]
+{
+   let modsStr   = $f.modifiers->serializeModifiers();
+   let tpStr     = $f.typeParameters->serializeTypeParams();
+   let paramsStr = $f.parameters->map(p | $p->serializeParameter())->joinStrings(', ');
+   let retStr    = if($f.returnType->isEmpty(), | '', | ': ' + $f.returnType->toOne()->serializeType());
+   let bodyStr   = if($f.body->isEmpty(), | ';', | ' ' + $f.body->toOne()->serializeBlock($indent));
+   $indent + $modsStr + 'function ' + $f.name + $tpStr + '(' + $paramsStr + ')' + $retStr + $bodyStr;
+}
+
+// =============================================================================
+// Block / If / Variable
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeBlock(b: Block[1], indent: String[1]): String[1]
+{
+   if($b.statements->isEmpty(),
+      | '{}',
+      | '{\n' +
+        $b.statements->map(s | $s->serializeStatement($indent + indentStep()))->joinStrings('\n') +
+        '\n' + $indent + '}');
+}
+
+function meta::external::language::typescript::serialization::serializeIf(ifs: IfStatement[1], indent: String[1]): String[1]
+{
+   $indent + $ifs->serializeIfInline($indent);
+}
+
+// serializeIfInline renders an IfStatement WITHOUT the leading indent on its
+// `if (` head. Called recursively from the else clause so `} else if (…) {`
+// renders inline rather than on a new indented line.
+function meta::external::language::typescript::serialization::serializeIfInline(ifs: IfStatement[1], indent: String[1]): String[1]
+{
+   let head = 'if (' + $ifs.expression->serializeExpression() + ') ';
+   let thenStr = $ifs.thenStatement->match([
+      b: Block[1]     | $b->serializeBlock($indent),
+      s: Statement[1] | '\n' + $s->serializeStatement($indent + indentStep())
+   ]);
+   let elseStr = if($ifs.elseStatement->isEmpty(),
+                    | '',
+                    | $ifs.elseStatement->toOne()->match([
+                         b: Block[1]       | ' else ' + $b->serializeBlock($indent),
+                         n: IfStatement[1] | ' else ' + $n->serializeIfInline($indent),
+                         s: Statement[1]   | ' else\n' + $s->serializeStatement($indent + indentStep())
+                      ]));
+   $head + $thenStr + $elseStr;
+}
+
+function meta::external::language::typescript::serialization::serializeVarStmt(vs: VariableStatement[1], indent: String[1]): String[1]
+{
+   let kindStr = $vs.declarationKind->toString()->toLower();
+   let declsStr = $vs.declarations->map(d | $d->serializeVarDecl())->joinStrings(', ');
+   $indent + $vs.modifiers->serializeModifiers() + $kindStr + ' ' + $declsStr + ';';
+}
+
+function meta::external::language::typescript::serialization::serializeVarDecl(d: VariableDeclaration[1]): String[1]
+{
+   let typeStr = if($d.type->isEmpty(), | '', | ': ' + $d.type->toOne()->serializeType());
+   let initStr = if($d.initializer->isEmpty(), | '', | ' = ' + $d.initializer->toOne()->serializeExpression());
+   $d.name->serializeBindingName() + $typeStr + $initStr;
+}
+
+// =============================================================================
+// Expressions
+// =============================================================================
+
+function meta::external::language::typescript::serialization::serializeExpression(e: Expression[1]): String[1]
+{
+   $e->match([
+      i:    Identifier[1]                | $i.text,
+      t:    ThisExpression[1]            | 'this',
+      su:   SuperExpression[1]           | 'super',
+      p:    PropertyAccessExpression[1]  | $p.expression->serializeExpression() + if($p.isOptional == true, | '?.', | '.') + $p.name,
+      c:    CallExpression[1]            | $c.expression->serializeCallee() + if($c.isOptional == true, | '?.', | '') + $c.typeArguments->serializeTypeArgs() + '(' + $c.arguments->map(a | $a->serializeExpression())->joinStrings(', ') + ')',
+      n:    NewExpression[1]             | 'new ' + $n.expression->serializeExpression() + $n.typeArguments->serializeTypeArgs() + '(' + $n.arguments->map(a | $a->serializeExpression())->joinStrings(', ') + ')',
+      b:    BinaryExpression[1]          | $b.left->serializeBinaryOperand() + ' ' + $b.operatorToken + ' ' + $b.right->serializeBinaryOperand(),
+      ce:   ConditionalExpression[1]     | $ce.condition->serializeExpression() + ' ? ' + $ce.whenTrue->serializeExpression() + ' : ' + $ce.whenFalse->serializeExpression(),
+      sp:   SpreadElement[1]             | '...' + $sp.expression->serializeExpression(),
+      pre:  PrefixUnaryExpression[1]     | $pre.operator + $pre.operand->serializePrefixOperand(),
+      post: PostfixUnaryExpression[1]    | $post.operand->serializeExpression() + $post.operator,
+      af:   ArrowFunction[1]             | $af->serializeArrow(),
+      ol:   ObjectLiteralExpression[1]   | if($ol.properties->isEmpty(), | '{}', | '{ ' + $ol.properties->map(prop | $prop->serializeObjectLiteralElement())->joinStrings(', ') + ' }'),
+      al:   ArrayLiteralExpression[1]    | '[' + $al.elements->map(x | $x->serializeExpression())->joinStrings(', ') + ']',
+      str:  StringLiteral[1]             | '\'' + $str.text->escapeJsString() + '\'',
+      num:  NumericLiteral[1]            | $num.text,
+      bl:   BooleanLiteral[1]            | if($bl.value, | 'true', | 'false'),
+      nl:   NullLiteral[1]               | 'null',
+      nst:  NoSubstitutionTemplateLiteral[1] | '`' + $nst.text + '`',
+      te:   TemplateExpression[1]        | '`' + $te.head + $te.spans->map(s | '${' + $s.expression->serializeExpression() + '}' + $s.literal)->joinStrings('') + '`',
+      asx:  AsExpression[1]              | $asx.expression->serializeExpression() + ' as ' + $asx.type->serializeType(),
+      sat:  SatisfiesExpression[1]       | $sat.expression->serializeExpression() + ' satisfies ' + $sat.type->serializeType(),
+      nn:   NonNullExpression[1]         | $nn.expression->serializeExpression() + '!',
+      aw:   AwaitExpression[1]           | 'await ' + $aw.expression->serializeExpression()
+   ]);
+}
+
+function meta::external::language::typescript::serialization::serializeArrow(af: ArrowFunction[1]): String[1]
+{
+   let asyncStr = if($af.isAsync == true, | 'async ', | '');
+   let tpStr    = $af.typeParameters->serializeTypeParams();
+   let psStr    = $af.parameters->map(p | $p->serializeParameter())->joinStrings(', ');
+   let retStr   = if($af.returnType->isEmpty(), | '', | ': ' + $af.returnType->toOne()->serializeType());
+   // Concise object-returning bodies must be parenthesized: `(u) => ({k: v})`.
+   // Without parens, TS parses `{...}` as a block body and `k: v` as a
+   // labeled statement, which is a syntax error in this context.
+   let bodyStr  = if($af.body->isNotEmpty(),
+                     | $af.body->toOne()->serializeBlock(''),
+                     | $af.expressionBody->toOne()->match([
+                          ol: ObjectLiteralExpression[1] | '(' + $ol->serializeExpression() + ')',
+                          other: Expression[1]           | $other->serializeExpression()
+                       ]));
+   $asyncStr + $tpStr + '(' + $psStr + ')' + $retStr + ' => ' + $bodyStr;
+}
+
+function meta::external::language::typescript::serialization::serializePropAssign(pa: PropertyAssignment[1]): String[1]
+{
+   let key = if($pa.computed == true, | '[' + $pa.name + ']', | $pa.name);
+   $key + ': ' + $pa.initializer->serializeExpression();
+}
+
+// Operand serialization for prefix-unary operators (`!`, `-`, `+`, `~`, ...).
+// Compound operands (binary, ternary, as/satisfies) bind less tightly than
+// the unary prefix in JS, so we MUST parenthesize them to preserve intent.
+// `!x === y` parses as `(!x) === y` (wrong); we want `!(x === y)` for an
+// expression like `!isEmpty(x)`.
+function meta::external::language::typescript::serialization::serializePrefixOperand(e: Expression[1]): String[1]
+{
+   $e->match([
+      b:    BinaryExpression[1]      | '(' + $b->serializeExpression() + ')',
+      ce:   ConditionalExpression[1] | '(' + $ce->serializeExpression() + ')',
+      asx:  AsExpression[1]          | '(' + $asx->serializeExpression() + ')',
+      sat:  SatisfiesExpression[1]   | '(' + $sat->serializeExpression() + ')',
+      other: Expression[1]           | $other->serializeExpression()
+   ]);
+}
+
+// Binary-operand position: wrap forms that bind looser than the surrounding
+// binary, otherwise the rendered text reparses with different grouping.
+// Concrete trap: a `<` between `compare(...)` (which we emit as a ternary)
+// and `0` rendered as `a < b ? -1 : ... < 0` rebinds the rightmost `<`
+// into the ternary's else-branch, turning a Boolean result into a Number.
+// Arrow functions in operand position are equally hazardous and always
+// require parens.
+function meta::external::language::typescript::serialization::serializeBinaryOperand(e: Expression[1]): String[1]
+{
+   $e->match([
+      ce:  ConditionalExpression[1]  | '(' + $ce->serializeExpression() + ')',
+      af:  ArrowFunction[1]          | '(' + $af->serializeExpression() + ')',
+      asx: AsExpression[1]           | '(' + $asx->serializeExpression() + ')',
+      sat: SatisfiesExpression[1]    | '(' + $sat->serializeExpression() + ')',
+      other: Expression[1]           | $other->serializeExpression()
+   ]);
+}
+
+// Escape a Pure string for inclusion in a TS single-quoted string literal.
+// Order matters: backslash first (otherwise later replacements re-introduce
+// unescaped backslashes via their own escape sequences).
+function meta::external::language::typescript::serialization::escapeJsString(s: String[1]): String[1]
+{
+   $s->replace('\\', '\\\\')
+     ->replace('\'', '\\\'')
+     ->replace('\n', '\\n')
+     ->replace('\r', '\\r')
+     ->replace('\t', '\\t');
+}
+
+// Callee position needs parens around forms whose unparenthesized rendering
+// would either reparse as part of the previous token or change precedence:
+//   - `() => 'x'()`  : without parens, parsed as the arrow returning the
+//                       result of calling `'x'`, not the result of calling
+//                       the arrow.
+//   - `(a ? f : g)()`: ternary needs grouping or `f()` is invoked unconditionally.
+// Identifiers, property accesses, and other call expressions don't need wrapping.
+function meta::external::language::typescript::serialization::serializeCallee(e: Expression[1]): String[1]
+{
+   $e->match([
+      af:  ArrowFunction[1]          | '(' + $af->serializeExpression() + ')',
+      ce:  ConditionalExpression[1]  | '(' + $ce->serializeExpression() + ')',
+      b:   BinaryExpression[1]       | '(' + $b->serializeExpression() + ')',
+      asx: AsExpression[1]           | '(' + $asx->serializeExpression() + ')',
+      sat: SatisfiesExpression[1]    | '(' + $sat->serializeExpression() + ')',
+      other: Expression[1]           | $other->serializeExpression()
+   ]);
+}
+
+function meta::external::language::typescript::serialization::serializeObjectLiteralElement(e: ObjectLiteralElement[1]): String[1]
+{
+   $e->match([
+      pa: PropertyAssignment[1]         | $pa->serializePropAssign(),
+      sa: SpreadAssignment[1]           | '...' + $sa.expression->serializeExpression(),
+      sp: ShorthandPropertyAssignment[1] | $sp.name
+   ]);
+}

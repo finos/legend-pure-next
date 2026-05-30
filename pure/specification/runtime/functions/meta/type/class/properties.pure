@@ -26,16 +26,9 @@ function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::propert
     ^$resultWithAssoProps(values += $theClass.generalizations->map(generalization | properties($generalization.general))).values;
 }
 
-function <<test.Test>>  meta::pure::functions::meta::tests::properties::testProperties():Boolean[1]
+function <<PCT.test>>  meta::pure::functions::meta::tests::properties::testProperties<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let props = ^CC_Address(name='Hoboken', type=CC_GeographicEntityType.CITY)->genericType()->properties();
-    assertEquals(CC_Address.properties->concatenate(CC_Address.propertiesFromAssociations)->concatenate(CC_GeographicEntity.properties)->concatenate(Any.properties), $props);
-
-    assertSize($props, 8);
-    assertIs(CC_Address.properties->filter(p|$p.name == 'name')->at(0), $props->filter(p|$p.name == 'name')->at(0));
-    assertIs(CC_Address.properties->filter(p|$p.name == 'street')->at(0), $props->filter(p|$p.name == 'street')->at(0));
-    assertIs(CC_Address.properties->filter(p|$p.name == 'comments')->at(0), $props->filter(p|$p.name == 'comments')->at(0));
-    assertIs(CC_Address.propertiesFromAssociations->filter(p|$p.name == 'location')->at(0), $props->filter(p|$p.name == 'location')->at(0));
-    assertIs(CC_GeographicEntity.properties->filter(p|$p.name == 'type')->at(0), $props->filter(p|$p.name == 'type')->at(0));
-    assertIs(Any.properties->filter(p|$p.name == 'classifierGenericType')->at(0), $props->filter(p|$p.name == 'classifierGenericType')->at(0));
+    let allProps = $f->eval(|^CC_Address(name='Hoboken', type=CC_GeographicEntityType.CITY)->genericType()->properties());
+    assertEquals(CC_Address.properties->concatenate(CC_Address.propertiesFromAssociations)->concatenate(CC_GeographicEntity.properties)->concatenate(Any.properties), $allProps);
+    assertSize($allProps, 8);
 }

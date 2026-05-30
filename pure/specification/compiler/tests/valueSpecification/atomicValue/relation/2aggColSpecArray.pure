@@ -1,12 +1,13 @@
 ###Pure
-native function test<Z,V,K>(z:Relation<Z>[1], x:AggColSpecArray<{Relation<Z>[1], Window<Z>[1], Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]):Any[1];
+native function test<Z,V,K>(z: Relation<Z>[1], x: AggColSpecArray<{Relation<Z>[1],Window<Z>[1],Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]): Any[1];
 
-native function _sum(x:Integer[*]):Integer[1];
-native function _concat(x:String[*]):String[1];
+native function _sum(x: Integer[*]): Integer[1];
 
-function test():Any[1]
+native function _concat(x: String[*]): String[1];
+
+function test(): Any[1]
 {
-   test(''->cast(@Relation<(ok:String[1])>), ~[name:{p,f,r|1}:y|$y->_sum(), other:{p,f,r|'p'}:y|$y->_concat()]);
+  test(''->cast(@Relation<(ok:String)>), ~[name : {p, f, r|1} : y|$y->_sum(), other : {p, f, r|'p'} : y|$y->_concat()])
 }
 
 ###CompiledGraph
@@ -17,45 +18,45 @@ native function _sum_Integer_MANY__Integer_1_(x:@Integer@[*]):@Integer@[1]  ~Nat
 native function _concat_String_MANY__String_1_(x:@String@[*]):@String@[1]  ~NativeFunction<{@String@[*]->@String@[1]}>
 
 function test__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
-  FunctionInvocation test_Relation_1__AggColSpecArray_1__Any_1_ :#Any##[1]#  ~@FunctionInvocation@  @9:4-9:111
+  FunctionInvocation test_Relation_1__AggColSpecArray_1__Any_1_ :#Any##[1]#  ~@FunctionInvocation@  @10:3-10:119
     typeParam K -> @Any@
     typeParam V -> #Any#
     typeParam Z -> #(ok:#String##[1]#)#
-    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Relation<(ok:@String@[1])>##[1]#  ~@ArrowInvocation@  @9:11-9:43
+    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Relation<(ok:@String@[1])>##[1]#  ~@ArrowInvocation@  @10:10-10:39
       typeParam T -> Relation<(ok:@String@[1])>
       mulParam m -> [1]
-      AtomicValue  '' :@String@[1]  ~@AtomicValue@  @9:9-9:10
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>  @9:18-9:42
-    FunctionInvocation aggColSpecArray2_AggColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpecArray_1_ :#AggColSpecArray<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->@Any@[0..1]}#, {@Nil@[*]->@Any@[0..1]}, #(name:#Integer##[1]#, other:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @9:46-9:110
+      AtomicValue  '' :@String@[1]  ~@AtomicValue@  @10:8-10:9
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>  @10:17-10:38
+    FunctionInvocation aggColSpecArray2_AggColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpecArray_1_ :#AggColSpecArray<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->@Any@[0..1]}#, {@Nil@[*]->@Any@[0..1]}, #(name:#Integer##[1]#, other:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @10:42-10:118
       typeParam K -> #Any#
       typeParam P -> #(name:#Integer##[1]#, other:#String##[1]#)#
       typeParam T -> #Any#
       typeParam U -> #(ok:#String##[1]#)#
       typeParam V -> #Any#
       Collection :#AggColSpec<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->#Any##[0..1]#}#, #{#Nil##[*]#->#Any##[0..1]#}#, #Any#>#[2]  ~@Collection@
-        FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  ~@FunctionInvocation@  @9:48-9:74
+        FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  ~@FunctionInvocation@  @10:44-10:76
           typeParam K -> #Integer#
           typeParam T -> #(name:#Integer##[1]#)#
           typeParam U -> #(ok:#String##[1]#)#
           typeParam V -> #Integer#
-          Lambda(p:#Relation<#(ok:#String##[1]#)#>##[1]#, f:#Window<#(ok:#String##[1]#)#>##[1]#, r:#(ok:#String##[1]#)##[1]#) :#LambdaFunction<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->@Integer@[1]}#>#[1]  ~@AtomicValue@  @9:53-9:61
-            AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @9:60-9:60
-          Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @9:63-9:74
-            ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @9:67-9:74
-              Variable y :#Integer##[*]#  ~@VariableExpression@  @9:65-9:66
-          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @9:48-9:51
+          Lambda(p:#Relation<#(ok:#String##[1]#)#>##[1]#, f:#Window<#(ok:#String##[1]#)#>##[1]#, r:#(ok:#String##[1]#)##[1]#) :#LambdaFunction<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->@Integer@[1]}#>#[1]  ~@AtomicValue@  @10:51-10:61
+            AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @10:60-10:60
+          Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @10:65-10:76
+            ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @10:69-10:76
+              Variable y :#Integer##[*]#  ~@VariableExpression@  @10:67-10:68
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @10:44-10:47
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
-        FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @9:77-9:109
+        FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @10:79-10:117
           typeParam K -> #String#
           typeParam T -> #(other:#String##[1]#)#
           typeParam U -> #(ok:#String##[1]#)#
           typeParam V -> #String#
-          Lambda(p:#Relation<#(ok:#String##[1]#)#>##[1]#, f:#Window<#(ok:#String##[1]#)#>##[1]#, r:#(ok:#String##[1]#)##[1]#) :#LambdaFunction<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->@String@[1]}#>#[1]  ~@AtomicValue@  @9:83-9:93
-            AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @9:90-9:92
-          Lambda(y:#String##[*]#) :#LambdaFunction<#{#String##[*]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @9:95-9:109
-            ArrowInvocation _concat_String_MANY__String_1_ :#String##[1]#  ~@ArrowInvocation@  @9:99-9:109
-              Variable y :#String##[*]#  ~@VariableExpression@  @9:97-9:98
-          AtomicValue  'other' :@String@[1]  ~@AtomicValue@  @9:77-9:81
+          Lambda(p:#Relation<#(ok:#String##[1]#)#>##[1]#, f:#Window<#(ok:#String##[1]#)#>##[1]#, r:#(ok:#String##[1]#)##[1]#) :#LambdaFunction<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->@String@[1]}#>#[1]  ~@AtomicValue@  @10:87-10:99
+            AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @10:96-10:98
+          Lambda(y:#String##[*]#) :#LambdaFunction<#{#String##[*]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @10:103-10:117
+            ArrowInvocation _concat_String_MANY__String_1_ :#String##[1]#  ~@ArrowInvocation@  @10:107-10:117
+              Variable y :#String##[*]#  ~@VariableExpression@  @10:105-10:106
+          AtomicValue  'other' :@String@[1]  ~@AtomicValue@  @10:79-10:83
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(other:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#, other:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
 

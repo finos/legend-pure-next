@@ -1,0 +1,190 @@
+# pure/modules/translation/typescript/Justfile — builds the Pure-to-TypeScript translator
+# into a single PDB.
+#
+# Direct invocation: just <recipe>   (from pure/modules/translation/typescript/)
+#
+# Inputs:  shared/core.pdb, shared/core-tests.pdb, shared/typescript.pdb.
+# Output:  shared/typescript-translation.pdb
+#
+# The translator consumes the language/typescript metamodel + factories +
+# serializer (shared/typescript.pdb) and the Pure metamodel (shared/core.pdb),
+# and emits a TypeScript AST that serializes back to source. Round-trip
+# execution uses meta::external::language::typescript::compileAndExecute,
+# a Truffle-only native — so test recipes run via pure-truffle, not the
+# bootstrap backend.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+trn_root       := source_directory()
+repo_root      := trn_root / ".." / ".." / ".." / ".."
+shared_out     := repo_root / "shared"
+pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+
+verbose := ""
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+header := "h(){ s=\"[typescript-translation::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
+
+# Default: build typescript-translation.pdb.
+default: build
+
+# Requires shared/core.pdb, core-tests.pdb, typescript.pdb.
+
+# Compile pure/modules/translation/typescript -> shared/typescript-translation.pdb.
+build:
+    @{{header}} 'build'
+    @{{substep}} 'compile pure/modules/translation/typescript -> shared/typescript-translation.pdb'
+    test -f {{shared_out}}/core.pdb       || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/typescript.pdb || (echo "ERROR: missing {{shared_out}}/typescript.pdb (run \`just language::typescript::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
+        --base-pdb {{shared_out}}/typescript.pdb \
+        --base-pdb {{shared_out}}/translation-shared.pdb \
+        --source {{trn_root}} \
+        --output-dir {{shared_out}} {{err_filter}}
+
+# Compile with tests split into shared/typescript-translation-tests.pdb.
+build-tests:
+    @{{header}} 'build-tests'
+    @{{substep}} 'compile pure/modules/translation/typescript -> shared/typescript-translation.pdb + typescript-translation-tests.pdb'
+    test -f {{shared_out}}/core.pdb       || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/typescript.pdb || (echo "ERROR: missing {{shared_out}}/typescript.pdb (run \`just language::typescript::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
+        --base-pdb {{shared_out}}/typescript.pdb \
+        --base-pdb {{shared_out}}/translation-shared.pdb \
+        --source {{trn_root}} \
+        --output-dir {{shared_out}} \
+        --tests split {{err_filter}}
+
+# Runs via Truffle so the typescript compileAndExecute native is registered.
+
+# Default umbrella: translator's <<test.Test>> suite (including PCT wrappers).
+test-all: test-translation
+
+# Run the translator's <<test.Test>> suite (meta::external::language::typescript::translation).
+test-translation: build-tests _check-runtime-pdbs
+    @{{header}} 'test-translation'
+    @{{substep}} 'runTests meta::external::language::typescript::translation (Truffle)'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
+        --pdb {{shared_out}}/typescript-translation.pdb \
+        --pdb {{shared_out}}/typescript-translation-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::external::language::typescript::translation" {{err_filter}}
+
+# Surfaces what's left to translate — tests for natives without a coder fail
+# loudly with "no translator branch for function: <name>".
+
+# Run every PCT test under meta::pure::functions through the translator.
+test-pure-runtime-PCTs: build-tests _check-runtime-pdbs
+    @{{header}} 'test-pure-runtime-PCTs'
+    @{{substep}} 'runPCTTests meta::pure::functions (Truffle, translator adapter)'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
+        --pdb {{shared_out}}/typescript-translation.pdb \
+        --pdb {{shared_out}}/typescript-translation-tests.pdb \
+        --function "meta::external::language::typescript::translation::runPCTTestsViaTranslator_String_1__String_1_" \
+        --args "meta::pure::functions" {{err_filter}}
+
+# Emits one bundled TypeScript source file: TS interfaces for Pure Classes,
+# const-maps for Pure Enumerations, and `export function` decls for Pure UDFs.
+# Default root: `meta::pure::functions`.
+
+# Translate every PackageableElement under `root` (UDF, Class, Enumeration) to bundled TS.
+translate-pdb root="meta::pure::functions": build-tests _check-runtime-pdbs
+    @{{header}} 'translate-pdb'
+    @{{substep}} 'translate Pure PDB -> shared/typescript-translation-{{ replace(root, "::", "_") }}.ts'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
+        --pdb {{shared_out}}/typescript-translation.pdb \
+        --pdb {{shared_out}}/typescript-translation-tests.pdb \
+        --function "meta::external::language::typescript::translation::pdb::translatePdbToTs_String_1__String_1_" \
+        --args "{{root}}" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
+        | grep -v '^\[graal-tripwire\]' \
+        > {{shared_out}}/typescript-translation-{{ replace(root, "::", "_") }}.ts
+    @echo "wrote {{shared_out}}/typescript-translation-{{ replace(root, "::", "_") }}.ts ($(wc -c < {{shared_out}}/typescript-translation-{{ replace(root, "::", "_") }}.ts) bytes)"
+
+# Emits typed object literals (PClass, PEnumeration, PFunction) for every PE,
+# plus an `elements` array and `byPath` lookup map. Companion to
+# `translate-pdb` — that one emits RUNNABLE TS code; this one emits READABLE
+# TS data describing the Pure graph.
+
+# Reflect the Pure metamodel graph under `root` as TypeScript data.
+reflect-graph root="meta::pure::functions": build-tests _check-runtime-pdbs
+    @{{header}} 'reflect-graph'
+    @{{substep}} 'reflect Pure graph -> shared/typescript-translation-graph-{{ replace(root, "::", "_") }}.ts'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
+        --pdb {{shared_out}}/typescript-translation.pdb \
+        --pdb {{shared_out}}/typescript-translation-tests.pdb \
+        --function "meta::external::language::typescript::translation::reflect::reflectGraphToTs_String_1__String_1_" \
+        --args "{{root}}" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
+        | grep -v '^\[graal-tripwire\]' \
+        > {{shared_out}}/typescript-translation-graph-{{ replace(root, "::", "_") }}.ts
+    @echo "wrote {{shared_out}}/typescript-translation-graph-{{ replace(root, "::", "_") }}.ts ($(wc -c < {{shared_out}}/typescript-translation-graph-{{ replace(root, "::", "_") }}.ts) bytes)"
+
+# Every PCT test in `meta::pure::functions` printed side-by-side (Pure source
+# on the left, TS translation on the right). pure-truffle prints the returned
+# String to stdout verbatim, so a plain redirect is enough.
+
+# Render the Pure -> TypeScript translation gallery -> shared/typescript-translation-gallery.html.
+gallery: build-tests _check-runtime-pdbs
+    @{{header}} 'gallery'
+    @{{substep}} 'render Pure -> TypeScript gallery -> shared/typescript-translation-gallery.html'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/typescript.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
+        --pdb {{shared_out}}/typescript-translation.pdb \
+        --pdb {{shared_out}}/typescript-translation-tests.pdb \
+        --function "meta::external::language::typescript::translation::gallery::renderGallery_String_1__String_1_" \
+        --args "meta::pure::functions" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
+        | grep -v '^\[graal-tripwire\]' \
+        | awk '/<!DOCTYPE/{p=1} p' \
+        > {{shared_out}}/typescript-translation-gallery.html
+    @echo "wrote {{shared_out}}/typescript-translation-gallery.html ($(wc -c < {{shared_out}}/typescript-translation-gallery.html) bytes)"
+
+# Internal: fail loudly if PDBs / pure-truffle aren't staged.
+_check-runtime-pdbs:
+    #!/usr/bin/env bash
+    if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
+        echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2
+        exit 1
+    fi
+    if [[ ! -x "{{pure_truffle}}" ]]; then
+        echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" >&2
+        exit 1
+    fi
+
+# Remove shared/typescript-translation.pdb (and the tests PDB).
+clean:
+    @{{header}} 'clean'
+    @{{substep}} 'remove shared/typescript-translation.pdb + typescript-translation-tests.pdb'
+    rm -f {{shared_out}}/typescript-translation.pdb {{shared_out}}/typescript-translation-tests.pdb

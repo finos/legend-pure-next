@@ -67,16 +67,33 @@ public final class DotApplicationResolver
     {
         String functionName = expr._functionName();
 
+        int errorCheckpoint = context.currentErrorCount();
         // Resolve the receiver to get its genericType before property lookup
         MutableList<ValueSpecification> processParameters = expr._parametersValues().collect(p -> ValueSpecificationResolver.resolve(p, model, context));
         ValueSpecification receiver = processParameters.getFirst();
 
+        // Parent-reference chain step: `~.~`, `~.~.~`, … parse as
+        //   DotApplication(functionName="~", parametersValues=[<receiver chain>])
+        // where the chain bottoms out at a VariableExpression(name="~"). "~"
+        // isn't a valid identifier for a real property, so functionName="~"
+        // is an unambiguous marker. Walk the chain to compute total parent
+        // depth, look up the construction stack, stamp the typed copy.
+        if ("~".equals(functionName))
+        {
+            return resolveParentReferenceStep(expr, processParameters, model, context);
+        }
+
         if (receiver._genericType() == null || receiver._genericType() instanceof CompilerNotSetGenericType)
         {
-            context.addError(new CompilationError(
-                    "Can't resolve property '" + functionName + "' on unresolved receiver",
-                    expr._sourceInformation()));
-            // Return unresolved
+            // Only report when the receiver wasn't already flagged by its own
+            // resolution — otherwise we emit a noisy cascade on top of the
+            // real cause (e.g. mid-chain `~`, unknown symbol).
+            if (context.currentErrorCount() == errorCheckpoint)
+            {
+                context.addError(new CompilationError(
+                        "Can't resolve property '" + functionName + "' on unresolved receiver",
+                        expr._sourceInformation()));
+            }
             return expr._parametersValues(processParameters);
         }
 
@@ -158,6 +175,79 @@ public final class DotApplicationResolver
             context.debug("  AUTOMAP: receiverMul=%s", lazy(() -> _Multiplicity.print(receiverMul)));
             return buildAutomap(expr, receiver, functionName, processParameters, model, context);
         }
+    }
+
+    /**
+     * Resolve a parent-reference step. Counts the total parent depth by
+     * walking the {@code DotApplication(functionName="~", ...)} chain down
+     * to the base {@code VariableExpression(name="~")}, looks up the
+     * enclosing construction's GenericType at that depth on the compiler's
+     * construction-type stack, and stamps the typed copy. Multiplicity is
+     * always {@code [1]} — a parent reference yields a single value.
+     */
+    private static ValueSpecification resolveParentReferenceStep(
+            DotApplication expr,
+            MutableList<ValueSpecification> processParameters,
+            MetadataAccess model,
+            CompilationContext context)
+    {
+        int depth = countParentReferenceDepth(expr);
+        // Mid-chain `~`: chain doesn't bottom out at VariableExpression(name="~").
+        // E.g., `~.foo.~` — the inner `~` has a property receiver. Disallow:
+        // `~` can only appear at the START of a chain (followed by more `.~`
+        // or property/QP steps), never after a property step.
+        if (depth < 0)
+        {
+            context.addError(new CompilationError(
+                    "Parent reference '~' must appear at the start of a chain; "
+                            + "mid-chain `~` (e.g. `~.foo.~`) is not supported.",
+                    expr._sourceInformation()));
+            return expr._parametersValues(processParameters);
+        }
+        org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext plctx =
+                context.compilerContextExtensions(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext.class);
+        GenericType ctorGT = plctx.lookupParentReference(depth - 1);
+        if (ctorGT == null)
+        {
+            // Reconstruct the surface form for the error message so the user
+            // sees `~.~` / `~.~.~` instead of the chain structure.
+            StringBuilder sb = new StringBuilder("~");
+            for (int i = 1; i < depth; i++) sb.append(".~");
+            context.addError(new CompilationError(
+                    "Parent reference '" + sb + "' is out of bounds: only "
+                            + plctx.constructionDepth()
+                            + " enclosing `^X(...)` construction(s) are visible here.",
+                    expr._sourceInformation()));
+            return expr._parametersValues(processParameters);
+        }
+        return ((DotApplicationImpl) expr._copy())
+                ._parametersValues(processParameters)
+                ._genericType(_GenericType.asInferred(ctorGT, model))
+                ._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredPureOne"));
+    }
+
+    /**
+     * Total parent depth of a parent-reference {@code DotApplication("~", …)}
+     * chain. Walks the chain through every {@code DotApplication("~", …)}
+     * level and adds one for the base {@code VariableExpression(name="~")}.
+     * Returns {@code -1} when the chain does not bottom out at
+     * {@code VariableExpression(name="~")} — i.e. when a `~` step appears
+     * mid-chain after a property/QP step (`~.foo.~`).
+     */
+    private static int countParentReferenceDepth(DotApplication root)
+    {
+        int depth = 1; // this DotApplication is one parent step
+        ValueSpecification next = root._parametersValues().getFirst();
+        while (next instanceof DotApplication d && "~".equals(d._functionName()))
+        {
+            depth++;
+            next = d._parametersValues().getFirst();
+        }
+        if (next instanceof VariableExpression v && "~".equals(v._name()))
+        {
+            return depth + 1;
+        }
+        return -1;
     }
 
     /**

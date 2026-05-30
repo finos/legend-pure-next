@@ -40,6 +40,84 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let functionName = $dot.functionName->toOne();
     let siCtx = formatMetamodelSourceInfo($dot.sourceInformation, $context);
 
+    // Parent-reference chain step: `~.~`, `~.~.~`, … parse as
+    //   DotApplication(functionName="~", parametersValues=[<chain receiver>])
+    // where the chain bottoms out at VariableExpression(name="~"). "~" isn't a
+    // valid identifier for any real property — unambiguous marker. Walk the
+    // chain to compute total parent depth, look up the construction-type
+    // stack, stamp the typed copy. Multiplicity is always [1] (single value).
+    if($functionName == '~',
+        | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStep($dot, $scope, $context),
+        | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplicationInternal($dot, $scope, $context, $functionName, $siCtx)
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStep(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+{
+    let depth = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::countParentReferenceDepth($dot);
+    let stack = $context.constructionTypeStack;
+    let stackSize = $stack->size();
+    if($depth < 0,
+        | // Mid-chain `~`: chain doesn't bottom out at VariableExpression(~).
+          // E.g. `~.foo.~` — the inner `~` has a property receiver. Disallow:
+          // `~` may only appear at the start of a chain.
+          let siCtxMid = formatMetamodelSourceInfo($dot.sourceInformation, $context);
+          ^CompilerResult<ValueSpecification>(
+              value = $dot,
+              context = ^$context(errors += 'Parent reference \'~\' must appear at the start of a chain; mid-chain `~` (e.g. `~.foo.~`) is not supported.' + $siCtxMid)
+          );,
+        | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStepAtDepth($dot, $scope, $context, $depth, $stack, $stackSize)
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStepAtDepth(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1], depth:Integer[1], stack:meta::pure::metamodel::type::generics::GenericType[*], stackSize:Integer[1]):CompilerResult<ValueSpecification>[1]
+{
+    if($depth <= $stackSize,
+        | // Top of stack = innermost construction = depth 0; index from end.
+          let ctorGT = $stack->at($stackSize - $depth);
+          // Resolve receivers so the chain itself carries its own typed nodes
+          // (downstream walks read the receiver's genericType).
+          let resolvedParamResults = $dot.parametersValues->map(p | resolveValueSpecification($p, $scope, $context));
+          let ctx1 = $resolvedParamResults->fold({r, c | $r.context}, $context);
+          let resolvedParams = $resolvedParamResults->map(r | if($r.value->isEmpty(), | [], | $r.value->toOne()));
+          ^CompilerResult<ValueSpecification>(
+              value = ^$dot(
+                  genericType = asInferredGenericType($ctorGT),
+                  multiplicity = asInferredMultiplicity(PureOne),
+                  parametersValues = $resolvedParams->cast(@ValueSpecification)
+              ),
+              context = $ctx1
+          );,
+        | // Reconstruct surface form for the error message.
+          let tildes = range(0, $depth)->map(i | '~')->joinStrings('.');
+          let siCtxOob = formatMetamodelSourceInfo($dot.sourceInformation, $context);
+          ^CompilerResult<ValueSpecification>(
+              value = $dot,
+              context = ^$context(errors += 'Parent reference \'' + $tildes + '\' is out of bounds: only ' + $stackSize->toString() + ' enclosing `^X(...)` construction(s) are visible here.' + $siCtxOob)
+          );
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::countParentReferenceDepth(dot:DotApplication[1]):Integer[1]
+{
+    // Returns total parent depth, or -1 for an invalid chain (a `~` step
+    // whose receiver is not another `~` step nor the base `Variable("~")` —
+    // i.e. mid-chain `~` after a property step like `~.foo.~`).
+    let inner = $dot.parametersValues->at(0);
+    let innerDepth = $inner->match([
+        d: DotApplication[1] |
+            if($d.functionName->toOne() == '~',
+                | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::countParentReferenceDepth($d),
+                | -1
+            ),
+        v: VariableExpression[1] | if($v.name->toOne() == '~', | 1, | -1),
+        a: Any[1] | -1
+    ]);
+    if($innerDepth < 0, | -1, | 1 + $innerDepth);
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplicationInternal(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1], functionName:String[1], siCtx:String[1]):CompilerResult<ValueSpecification>[1]
+{
     // Resolve receiver parameters — use resolved types for property lookup
     let resolvedParamResults = $dot.parametersValues->map(p | resolveValueSpecification($p, $scope, $context));
     let ctx1 = $resolvedParamResults->fold({r, c | $r.context}, $context);
@@ -56,10 +134,18 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               + ' receiverMul=' + if($receiver.multiplicity->isEmpty(), | '?', | printMultiplicity($receiver.multiplicity->toOne()))
               + ' additionalParams=' + $resolvedParams->size()->toString());
           if($receiver.genericType->isEmpty() || $receiver.genericType->toOne()->instanceOf(CompilerNotSetGenericType),
-              | ^CompilerResult<ValueSpecification>(
+              | // Only emit a fresh cascade error when the receiver
+                // resolution itself didn't already report one — otherwise
+                // we noisily duplicate on top of the real cause (e.g.
+                // mid-chain `~`, unknown symbol).
+                let cascadingCtx = if($ctx1.errors->size() > $context.errors->size(),
+                    | $ctx1,
+                    | ^$ctx1(errors += 'Can\'t resolve property \'' + $functionName + '\' on unresolved receiver' + $siCtx)
+                );
+                ^CompilerResult<ValueSpecification>(
                     value = ^$dot(parametersValues = $resolvedParams->cast(@ValueSpecification)),
-                    context = ^$ctx1(errors += 'Can\'t resolve property \'' + $functionName + '\' on unresolved receiver' + $siCtx)
-                ),
+                    context = $cascadingCtx
+                );,
               | // Deref pointer first so Class/Enumeration/RelationType match arms catch it.
                 // When chained dot like `$w.inner.value` runs, the receiver's genericType.type
                 // may carry a ClassPointer (because Wrapper's typeArguments got pointer-wrapped

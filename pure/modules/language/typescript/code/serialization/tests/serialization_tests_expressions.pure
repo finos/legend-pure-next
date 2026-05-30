@@ -1,0 +1,93 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::serialization::tests::*;
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::identifierExpr(): Boolean[1]
+{
+   testExpr('foo', tsId('foo'));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::thisExpr(): Boolean[1]
+{
+   testExpr('this', tsThis());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::stringLitExpr(): Boolean[1]
+{
+   testExpr('\'hello\'', tsStrLit('hello'));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::numericLitExpr(): Boolean[1]
+{
+   testExpr('42', tsNumLit('42'));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::booleanLitTrue(): Boolean[1]
+{
+   testExpr('true', tsBoolLit(true));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::booleanLitFalse(): Boolean[1]
+{
+   testExpr('false', tsBoolLit(false));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::nullLitExpr(): Boolean[1]
+{
+   testExpr('null', tsNull());
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::propertyAccess(): Boolean[1]
+{
+   testExpr('this.name', tsAccess(tsThis(), 'name'));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::nestedPropertyAccess(): Boolean[1]
+{
+   testExpr('this.user.name', tsAccess(tsAccess(tsThis(), 'user'), 'name'));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::callNoArgs(): Boolean[1]
+{
+   testExpr('foo()', tsCall(tsId('foo'), []));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::callOneArg(): Boolean[1]
+{
+   testExpr('greet(\'world\')', tsCall(tsId('greet'), [tsStrLit('world')]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::callMultipleArgs(): Boolean[1]
+{
+   testExpr('add(1, 2, 3)', tsCall(tsId('add'), [tsNumLit('1'), tsNumLit('2'), tsNumLit('3')]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::binaryPlus(): Boolean[1]
+{
+   testExpr('a + b', tsBinary(tsId('a'), '+', tsId('b')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::binaryEquality(): Boolean[1]
+{
+   testExpr('x === 42', tsBinary(tsId('x'), '===', tsNumLit('42')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::binaryLogicalAnd(): Boolean[1]
+{
+   testExpr('a && b', tsBinary(tsId('a'), '&&', tsId('b')));
+}

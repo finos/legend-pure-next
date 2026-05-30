@@ -1,0 +1,148 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::translation::*;
+import meta::external::language::typescript::translation::gallery::*;
+import meta::pure::functions::printer::compiled::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::test::*;
+import meta::pure::translation::shared::*;
+import meta::pure::translation::shared::gallery::*;
+
+// ============================================================================
+// Pure -> TypeScript translation gallery. Walks every <<PCT.test>> function
+// under `rootPackagePath` (via `collectPCTTests`) and renders a tree-based
+// HTML document:
+//   - left:  collapsible tree of PCT functions (folders are filesystem dirs
+//            of the spec file that owns each test, leaves are the .pure
+//            files). Each node carries an aggregated pass/fail icon.
+//   - right: per-test side-by-side cards (Pure source / translated TS).
+//            Clicking a tree node filters the right pane to its subtree.
+//
+// Per test we capture two independent signals:
+//   * runtime status (pass/fail) — invoke the test via the TS translator
+//     adapter (compile + execute the translated source via GraalJS),
+//     record whether the test's assertions threw. Drives the tree icon.
+//   * translation status (ok/partial/failed) — does each `$f->eval(|lambda)`
+//     inside the test produce TS source without throwing. Drives the
+//     in-card badge on the translated column.
+//
+// All HTML chrome (tree, JS, CSS) lives in the shared
+// `meta::pure::translation::shared::gallery` module; this file only emits
+// per-test cards with the data attributes the chrome consumes.
+//
+// Entry point: `renderGallery(rootPackagePath)`. The `gallery` Justfile
+// recipe pipes stdout to `shared/typescript-translation-gallery.html`.
+// ============================================================================
+
+function <<test.TestDependency>> meta::external::language::typescript::translation::gallery::renderGallery(rootPackagePath: String[1]): String[1]
+{
+    let root  = pathToElement($rootPackagePath)->cast(@meta::pure::metamodel::Package);
+    let tests = meta::pure::test::collectPCTTests($root);
+    let ctx   = buildPrintContext($tests->cast(@meta::pure::metamodel::PackageableElement), PrintMode.ManageImports);
+    let total = $tests->size();
+    // No progress reporting: stdout is captured to the gallery file by the
+    // calling Justfile, so println would corrupt the HTML output.
+    let sections = $tests->map(t | $t->renderTestCard($ctx));
+    renderGalleryShell(
+        'Pure &rarr; TypeScript translation gallery',
+        'TypeScript',
+        'ts',
+        '#3178c6',
+        $rootPackagePath,
+        'pure/modules/translation/typescript/code/gallery.pure',
+        $total,
+        $sections->joinStrings('\n')
+    );
+}
+
+// Per-test card. Statically walks the test body collecting every
+// `$f->eval(|lambda)` call, translates each one to TS (for display), and
+// runs the whole test through the TS adapter (for runtime pass/fail).
+function meta::external::language::typescript::translation::gallery::renderTestCard(
+    test: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
+    ctx: meta::pure::functions::printer::compiled::PrintContext[1]
+): String[1]
+{
+    let path    = $test->elementToPath();
+    let pureSrc = printCompiledElement($test, $ctx);
+    // Display the EXACT TypeScript that the PCT adapter compiled + executed.
+    // `runTestViaAdapter` runs the test through `testAdapterForTranslatedTypeScript`;
+    // each `$f->eval(...)` inside it serializes a TS module and hands it to the
+    // `compile` native, which records it in a capture buffer. We then drain that
+    // buffer to obtain the real source(s), in compile order. This keeps the
+    // displayed TS 100% in sync with what the PCT run actually ran — including
+    // runtime-inlined open-variable captures — instead of re-deriving source
+    // through a separate static-translation path that can diverge.
+    //
+    // The buffer is empty at card entry: each card drains it here, and nothing
+    // between cards compiles TS (the Pure printer + HTML chrome do not).
+    let runResult = $test->runTestViaAdapter();
+    let sources   = drainCompiledSources();
+    let runtimeStatus = if ($runResult.first, | 'pass', | 'fail');
+    let runtimeMsg = $runResult.second;
+    let translationStatus = if ($sources->isEmpty(), | 'failed', | 'ok');
+    let tsSrc = if ($sources->isEmpty(),
+                    | if ($runtimeMsg->length() > 0,
+                          | '// adapter produced no TS (translation threw before compile):\n// ' + $runtimeMsg,
+                          | '// no $f->eval(...) call reached the translator'),
+                    | $sources->joinStrings('\n\n// -----\n\n'));
+    let sourceId = $test->sourceIdOf();
+    let suffix = if ($sources->size() > 1, | ' (' + $sources->size()->toString() + ' evals)', | '');
+    let badge = if ($runtimeStatus == 'pass', | '&#10003;', | '&#10007;');
+    let runMsgHtml = if ($runtimeStatus == 'fail' && $runtimeMsg->length() > 0,
+                         | '<div class="run-msg">' + escapeHtml($runtimeMsg) + '</div>',
+                         | '');
+    '<section class="pair ' + $translationStatus + ' runtime-' + $runtimeStatus + '"' +
+        ' data-path="' + escapeAttr($path) + '"' +
+        ' data-source="' + escapeAttr($sourceId) + '"' +
+        ' data-runtime="' + $runtimeStatus + '"' +
+        ' data-translation="' + $translationStatus + '">' +
+    '<h2><span class="runtime-badge">' + $badge + '</span>' + escapeHtml($path) + escapeHtml($suffix) + '</h2>' +
+    $runMsgHtml +
+    '<div class="cols">' +
+    '<div class="col pure"><div class="lang-tag">Pure</div><pre><code>' + escapeHtml($pureSrc) + '</code></pre></div>' +
+    '<div class="col ts"><div class="lang-tag">TypeScript</div><pre><code>' + escapeHtml($tsSrc) + '</code></pre></div>' +
+    '</div></section>';
+}
+
+// Run the test through the TS translator adapter and capture pass/fail.
+// `tryEval` swallows any exception thrown during translate + transpile +
+// GraalJS eval + assertion-check, so we treat "no failure" as a pass. We
+// deliberately do NOT inspect the returned Boolean — PCT tests use
+// assertEquals/assertSize which throw on mismatch, so a clean return is
+// always a pass.
+function meta::external::language::typescript::translation::gallery::runTestViaAdapter(
+    test: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]
+): meta::pure::functions::collection::Pair<Boolean, String>[1]
+{
+    let attempt = tryEval(| meta::pure::functions::io::withSilencedPrint(|
+        meta::pure::functions::lang::evaluate(
+            $test,
+            meta::pure::functions::collection::list(testAdapterForTranslatedTypeScript_Function_1__X_o_))));
+    if ($attempt.failure->isNotEmpty(),
+        | pair(false, $attempt.failure->toOne().message),
+        | pair(true, ''));
+}
+
+function meta::external::language::typescript::translation::gallery::sourceIdOf(
+    el: meta::pure::metamodel::PackageableElement[1]
+): String[1]
+{
+    let sids = $el.sourceInformation->map(si | $si.sourceId);
+    if ($sids->isEmpty(), | '', | $sids->toOne());
+}

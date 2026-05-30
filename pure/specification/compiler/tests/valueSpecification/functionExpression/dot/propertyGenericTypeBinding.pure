@@ -1,45 +1,46 @@
 ###Pure
+import test::*;
+
 Class test::Box<T>
 {
-    value : T[1];
+  value: T[1];
 }
 
-Class test::StringBox extends test::Box<String>
+Class test::StringBox extends Box<String>
 {
-    label : String[1];
+  label: String[1];
 }
 
-function test::use():Any[*]
+function test::use(): Any[*]
 {
-    let b = ^test::StringBox(value='hello', label='x');
-    $b.value;
+  let b = ^StringBox(value = 'hello', label = 'x');
+  $b.value;
 }
-
 
 ###CompiledGraph
-class test::Box extends Any  ~Class<test::Box<T~test::Box>>  @2:1-5:1
+class test::Box extends Any  ~Class<test::Box<T~test::Box>>  @4:1-7:1
   property value :T~test::Box[1]  ~Property<test::Box<T~test::Box>, T~test::Box|1>
 
-class test::StringBox extends test::Box<@String@>  ~Class<test::StringBox>  @7:1-10:1
+class test::StringBox extends test::Box<@String@>  ~Class<test::StringBox>  @9:1-12:1
   property label :@String@[1]  ~Property<test::StringBox, @String@|1>
 
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::StringBox##[1]#  ~@FunctionInvocation@  @14:5-14:54
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::StringBox##[1]#  ~@FunctionInvocation@  @16:3-16:50
     typeParam T -> #test::StringBox#
     mulParam m -> #[1]#
-    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @14:9-14:9
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::StringBox##[1]#  ~@FunctionInvocation@  @14:13-14:54
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @16:7-16:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::StringBox##[1]#  ~@FunctionInvocation@  @16:11-16:50
       typeParam T -> test::StringBox
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::StringBox|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::StringBox|1>  @14:13-14:54
-      Collection :#KeyExpression#[2]  ~@Collection@  @14:13-14:54
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @14:30-14:42
-          AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @14:30-14:42
-          AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @14:36-14:42
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @14:45-14:53
-          AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @14:45-14:53
-          AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @14:51-14:53
-  DotApplication test::Box.value :#T~test::Box##[1]#  ~@DotApplication@  @15:7-15:12
-    Variable b :#test::StringBox##[1]#  ~@VariableExpression@  @15:5-15:6
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::StringBox|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::StringBox|1>  @16:11-16:50
+      Collection :#KeyExpression#[2]  ~@Collection@  @16:11-16:50
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:22-16:36
+          AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @16:22-16:36
+          AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @16:30-16:36
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:39-16:49
+          AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @16:39-16:49
+          AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @16:47-16:49
+  DotApplication test::Box.value :#T~test::Box##[1]#  ~@DotApplication@  @17:5-17:10
+    Variable b :#test::StringBox##[1]#  ~@VariableExpression@  @17:3-17:4
 
 ###ReverseIndex
 meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:

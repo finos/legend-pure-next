@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::functions::asserts::*;
+import meta::pure::test::pct::*;
 
 
 function meta::pure::functions::asserts::assertSize(collection:Any[*], size:Integer[1]):Boolean[1]
@@ -36,8 +37,8 @@ function meta::pure::functions::asserts::assertSize(collection:Any[*], size:Inte
 }
 
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessAssertSize():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertSize<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertSize([1, 2, 3], 3);
-    assertSize(['a', 'b'], 2);
+    assert($f->eval(|assertSize([1, 2, 3], 3)));
+    assert($f->eval(|assertSize(['a', 'b'], 2)));
 }

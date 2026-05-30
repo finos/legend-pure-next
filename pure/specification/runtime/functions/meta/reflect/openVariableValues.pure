@@ -1,0 +1,64 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::test::pct::*;
+
+// Returns the captured-variable bindings of a Lambda — one entry per open
+// variable, keyed by name. Each entry's value is a List<Any> because Pure
+// variables are multiplicity-bearing (the captured value might be a single
+// scalar, a sequence, or empty).
+//
+// Restricted to LambdaFunction because non-lambda Functions (UserDefinedFunctions,
+// NativeFunctions) cannot carry captures — they have no enclosing lexical
+// scope at construction time. Callers wanting "openVariableValues on any
+// Function" must guard with an instanceOf or accept that the result is
+// always the empty map for non-lambdas.
+//
+// PCT.platformOnly because the implementation must reach into the runtime
+// closure representation (which varies per execution backend) — there is no
+// platform-portable implementation in Pure itself.
+native function <<PCT.function, PCT.platformOnly>>
+   meta::pure::functions::meta::openVariableValues(f:LambdaFunction<Any>[1]):Map<String, List<Any>>[1];
+
+// ----------------------------------------------------------------------------
+// PCT tests — parametrized by an adapter so each backend (interpreter, every
+// translator with a coder for `openVariableValues`) is exercised against the
+// same expected shape.
+// ----------------------------------------------------------------------------
+
+function <<PCT.test>> meta::pure::functions::meta::tests::openVariableValues::testOpenVariableValuesForLambdaSingleString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+   assertEquals(
+      'ok',
+      $f->eval(|let a = 'ok'; let lambda = {|'a' + $a}; $lambda->openVariableValues()->get('a')->toOne().values->toOne();)
+   );
+}
+
+function <<PCT.test>> meta::pure::functions::meta::tests::openVariableValues::testOpenVariableValuesForLambdaSequence<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+   assertEquals(
+      [1, 2, 5],
+      $f->eval(|let a = [1, 2, 5]; let lambda = {|$a->size()}; $lambda->openVariableValues()->get('a')->toOne().values;)
+   );
+}
+
+function <<PCT.test>> meta::pure::functions::meta::tests::openVariableValues::testOpenVariableValuesForLambdaNoOpenVariables<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+   assertEquals(
+      [],
+      $f->eval(|let lambda = {|1}; $lambda->openVariableValues()->keys();)
+   );
+}

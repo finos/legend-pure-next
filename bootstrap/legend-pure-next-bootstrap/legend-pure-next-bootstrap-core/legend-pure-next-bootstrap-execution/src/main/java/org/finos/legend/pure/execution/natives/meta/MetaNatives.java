@@ -485,7 +485,15 @@ public class MetaNatives
                 classPath = resolveClassPathFromCGT(cgt);
             }
 
-            Object copy = createInstanceByPath(classPath);
+            // When source is a DynamicInstance, build a DI target — even when
+            // a typed Impl class is on the classpath. DI sources have DI-valued
+            // nested slots (produced uniformly by `parse()`'s
+            // ProtocolToDynamicInstance conversion), and the typed Impl's
+            // setters reject those. Keeping the target as DI preserves the
+            // runtime's "everything-is-DI" invariant for things that started
+            // life as DI. Freshly `^Type(...)`-constructed values that hit
+            // the typed path naturally stay typed.
+            Object copy = newCopyTargetMatchingSource(original, classPath);
             // Shallow copy all properties (including classifierGenericType from original).
             // We do NOT rewrite self-references (classifierGenericType, TypeParameter.owner,
             // Property.owner, etc.) to point to the copy — that would silently mutate
@@ -566,8 +574,10 @@ public class MetaNatives
             }
 
             // Step 2: Create the copy. No self-reference rewriting — see the
-            // copy(T[1]) variant above for the rationale.
-            Object copy = createInstanceByPath(classPath);
+            // copy(T[1]) variant above for the rationale. Target type tracks
+            // source type (DI source → DI target) — see the matching
+            // newCopyTargetMatchingSource call in copy_T_1__T_1_.
+            Object copy = newCopyTargetMatchingSource(original, classPath);
             shallowCopyProperties(original, copy, cgt, resolver);
             GenericTypeValue copyCgt = cgt;
             if (copyCgt != null)
@@ -923,6 +933,41 @@ public class MetaNatives
         });
 
         // newEnumeration is implemented in Pure (see newEnumeration.pure).
+
+        // openVariableValues(LambdaFunction<Any>[1]) : Map<String, List<Any>>[1]
+        //
+        // Returns the lambda's captured open-variable bindings as a Map keyed by
+        // variable name. Lambdas with no captures (no enclosing scope at
+        // definition) are not converted to Closure — they return an empty map.
+        natives.put("openVariableValues_LambdaFunction_1__Map_1_", (args, eval, genericType, multiplicity) ->
+        {
+            java.util.LinkedHashMap<ValueSpecification, ValueSpecification> resultMap = new java.util.LinkedHashMap<>();
+            Object lambdaObj = _E_ValueSpecification.unwrap(args.get(0));
+            if (lambdaObj instanceof org.finos.legend.pure.execution.Closure closure)
+            {
+                org.finos.legend.pure.execution.Scope scope = closure.capturedScope();
+                meta.pure.metamodel.type.generics.GenericType stringGT =
+                        (meta.pure.metamodel.type.generics.GenericType) resolver.getElement(
+                                "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_primitives_String");
+                for (int i = 0; i < scope.localSize(); i++)
+                {
+                    String name = scope.localNameAt(i);
+                    ValueSpecification valueVS = scope.localValueAt(i);
+                    ValueSpecification valuesSlot = valueVS instanceof meta.pure.metamodel.valuespecification.Collection
+                            ? valueVS
+                            : org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(
+                                    java.util.List.of(valueVS), resolver);
+                    DynamicInstance listInstance = new DynamicInstance("meta::pure::functions::collection::List");
+                    listInstance.put("values", valuesSlot);
+                    ValueSpecification keyVS = _E_ValueSpecification.wrap(name, stringGT, null, resolver);
+                    ValueSpecification listVS = _E_ValueSpecification.wrap(listInstance, null, null, resolver);
+                    resultMap.put(keyVS, listVS);
+                }
+            }
+            return _E_ValueSpecification.wrap(
+                    new org.finos.legend.pure.execution.PureMap(resultMap),
+                    genericType, multiplicity, resolver);
+        });
     }
 
     // =========================================================================
@@ -1098,6 +1143,18 @@ public class MetaNatives
         {
             return;
         }
+        // Pointer-typed receiver carries no user constraints — `constraints`
+        // is declared on {@code ElementWithConstraints}, which only {@code
+        // Class<T>} and {@code PrimitiveType} extend. Enum / Enumeration /
+        // their pointers can't have constraints by the metamodel. More
+        // generally, a pointer is a stand-in: the live target will be
+        // validated when something actually casts to it via the canonical
+        // element. Skip — the alternative is reading `._generalizations()`
+        // on the pointer, which trips {@link PointerAccessGuard}.
+        if (type instanceof meta.pure.metamodel.pointer.TempCompilerPointer)
+        {
+            return;
+        }
         validateConstraintsOnType(type, targetGT, value, eval, resolver);
         if (type._generalizations() != null)
         {
@@ -1246,6 +1303,23 @@ public class MetaNatives
         {
             return new DynamicInstance(classPath);
         }
+    }
+
+    /**
+     * Create a copy target whose backing form matches the source. When the
+     * source is a {@link DynamicInstance}, the target must also be a DI even
+     * if a typed Impl class is on the classpath — DI sources have DI-valued
+     * nested slots (the parser converts its typed POJO output uniformly to
+     * DI via {@link ProtocolToDynamicInstance}), and the typed Impl's
+     * setters reject DI values. Typed sources stay typed.
+     */
+    public static Object newCopyTargetMatchingSource(Object source, String classPath)
+    {
+        if (source instanceof DynamicInstance)
+        {
+            return new DynamicInstance(classPath);
+        }
+        return createInstanceByPath(classPath);
     }
 
     /**
@@ -1582,6 +1656,19 @@ public class MetaNatives
         {
             return;
         }
+        // Compile-pure pass-1 pattern: proposedType is a {@link TempCompilerPointer}
+        // whose target is being built right now and isn't yet in the elementMap
+        // (e.g. {@code buildEnumerationSkeleton} wires an enum value's classifier
+        // as a pointer to the enum it's about to register). The pointer carries
+        // the path the producer intends; the post-processor canonicalises it at
+        // module construction. Accept — a pointer is compile-pure-internal, not
+        // a user-supplied raw type swap. Must run before the generalization
+        // walk: pointers carry only `path`, so reading `._generalizations()`
+        // on one trips {@link PointerAccessGuard}.
+        if (proposedType instanceof meta.pure.metamodel.pointer.TempCompilerPointer)
+        {
+            return;
+        }
         // Allow proposed to be a *subtype* of expected — covers the enum-value
         // pattern where {@code ^Enum(...)} is intentionally re-classified as a
         // specific user enumeration. Walks generalizations directly; safer than
@@ -1589,17 +1676,6 @@ public class MetaNatives
         // the cache yet. Mirrors {@code NewWithKeysNode.isSubtypeViaGeneralizations}
         // on the Truffle side.
         if (expected != null && proposedType != null && isSubtypeViaGeneralizations(proposedType, expected))
-        {
-            return;
-        }
-        // Compile-pure pass-1 pattern: proposedType is a {@link TempCompilerPointer}
-        // whose target is being built right now and isn't yet in the elementMap
-        // (e.g. {@code buildEnumerationSkeleton} wires an enum value's classifier
-        // as a pointer to the enum it's about to register). The pointer carries
-        // the path the producer intends; the post-processor canonicalises it at
-        // module construction. Accept — a pointer is compile-pure-internal, not
-        // a user-supplied raw type swap.
-        if (proposedType instanceof meta.pure.metamodel.pointer.TempCompilerPointer)
         {
             return;
         }

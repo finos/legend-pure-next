@@ -1,27 +1,27 @@
 ###Pure
-native function f<T>(s:Function<{->T[1]}>[1]):T[1];
+native function f<T>(s: Function<{->T[1]}>[1]): T[1];
 
-function test():Any[*]
+function test(): Any[*]
 {
-    f(|1)+1;
-    f(|'1')+'1';
+  f(|1) + 1;
+  f(|'1') + '1';
 }
 
 ###CompiledGraph
 native function f_Function_1__T_1_(s:Function<{->T~f_Function_1__T_1_[1]}>[1]):T~f_Function_1__T_1_[1]  ~NativeFunction<{Function<{->T~f_Function_1__T_1_[1]}>[1]->T~f_Function_1__T_1_[1]}>
 
 function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @6:5-6:11
-    FunctionInvocation f_Function_1__T_1_ :#Integer##[1]#  ~@FunctionInvocation@  @6:5-6:9
+  FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @6:3-6:11
+    FunctionInvocation f_Function_1__T_1_ :#Integer##[1]#  ~@FunctionInvocation@  @6:3-6:7
       typeParam T -> @Integer@
-      Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @6:7-6:8
-        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:8-6:8
+      Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @6:5-6:6
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:6-6:6
     AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:11-6:11
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @7:5-7:15
-    FunctionInvocation f_Function_1__T_1_ :#String##[1]#  ~@FunctionInvocation@  @7:5-7:11
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @7:3-7:15
+    FunctionInvocation f_Function_1__T_1_ :#String##[1]#  ~@FunctionInvocation@  @7:3-7:9
       typeParam T -> @String@
-      Lambda :#LambdaFunction<#{->@String@[1]}#>#[1]  ~@AtomicValue@  @7:7-7:10
-        AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @7:8-7:10
+      Lambda :#LambdaFunction<#{->@String@[1]}#>#[1]  ~@AtomicValue@  @7:5-7:8
+        AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @7:6-7:8
     AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @7:13-7:15
 
 ###ReverseIndex

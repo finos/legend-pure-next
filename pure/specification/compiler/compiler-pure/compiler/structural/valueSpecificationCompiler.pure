@@ -219,7 +219,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                   );
             );,
         any:Any[1] |
-            let parserGT = $a.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+            let parserGT = $a.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
             let compiledGT = $parserGT->compileGenericType($ctx, '', []);
             let ctxAfterGT = $compiledGT.context;
             let inferredGT = if($compiledGT.value->isEmpty() || $compiledGT.value->toOne()->instanceOf(UndefinedGenericType),
@@ -531,8 +531,19 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileCo
     let ctxAfterElems = $elemAcc.context->toOne();
     if($ctxAfterElems.errors->size() > $ctx.errors->size(),
         | ^ValueCompileResult(values = [], openVariables = [], context = $ctxAfterElems),
-        | let collMult = $c.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
-          let collGenTypeR = if($c.genericType->isNotEmpty(),
+        | // Collection.multiplicity is `[0..1]` (ProtocolInfo_optionalInProtocol)
+          // — the parser leaves it empty for un-annotated `[a, b, c]` literals.
+          // Default to CompilerNotSetMultiplicity when absent; downstream
+          // resolution infers from the values.
+          let collMult = if($c.multiplicity->isEmpty(),
+                            | ^CompilerNotSetMultiplicity(),
+                            | $c.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity());
+          // Only descend into compileGenericType when the slot is BOTH non-empty
+          // AND a GenericTypeValue subtype. CompilerNotSetGenericType (carried
+          // through by callers that don't yet know the type) is non-empty but
+          // NOT a GenericTypeValue — pass it through to downstream resolution.
+          let collGenTypeR = if($c.genericType->isNotEmpty()
+                                && $c.genericType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
               | $c.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctxAfterElems, '', []),
               | ^CompilerResult<GenericType>(value = ^CompilerNotSetGenericType(), context = $ctxAfterElems)
           );

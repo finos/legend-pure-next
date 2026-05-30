@@ -13,8 +13,9 @@
 // limitations under the License.
 
 import meta::pure::functions::asserts::*;
+import meta::pure::test::pct::*;
 
-native function meta::pure::functions::asserts::assert(condition:Boolean[1], messageFunction:Function<{->String[1]}>[1]):Boolean[1];
+native function <<functionType.SideEffectFunction>> meta::pure::functions::asserts::assert(condition:Boolean[1], messageFunction:Function<{->String[1]}>[1]):Boolean[1];
 
 
 function meta::pure::functions::asserts::assert(condition:Boolean[1]):Boolean[1]
@@ -33,16 +34,16 @@ function meta::pure::functions::asserts::assert(condition:Boolean[1], formatStri
 }
 
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessWithoutMessage():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessWithoutMessage<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   assert(true);
-   assert(2 == 2);
-   assert((1 + 2) == 3);
+   assert($f->eval(|assert(true)));
+   assert($f->eval(|assert(2 == 2)));
+   assert($f->eval(|assert((1 + 2) == 3)));
 }
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessWithFormattedMessage():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessWithFormattedMessage<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   assert(true, 'Test message: %s', [true]);
-   assert(2 == 2, 'Test message: %s', [true]);
-   assert((1 + 2) == 3, 'Test message: %s', [true]);
+   assert($f->eval(|assert(true, 'Test message: %s', [true])));
+   assert($f->eval(|assert(2 == 2, 'Test message: %s', [true])));
+   assert($f->eval(|assert((1 + 2) == 3, 'Test message: %s', [true])));
 }

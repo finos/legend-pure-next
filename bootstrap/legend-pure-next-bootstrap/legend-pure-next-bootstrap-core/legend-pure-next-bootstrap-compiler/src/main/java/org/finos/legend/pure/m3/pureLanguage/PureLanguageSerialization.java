@@ -259,7 +259,14 @@ public class PureLanguageSerialization
     {
         if (vs instanceof FunctionExpression fe)
         {
-            if (fe._func() == null)
+            // Parent-reference chain steps (`~.~`, `~.~.~`, …) parse as
+            // DotApplication(functionName="~", parametersValues=[...]) — "~"
+            // isn't a real function, so {@code _func} is intentionally null.
+            // The type is stamped from the construction stack at compile time
+            // and the receiver is the chain itself; no function ref to validate.
+            boolean isParentRefStep = vs instanceof meta.pure.metamodel.valuespecification.DotApplication
+                    && "~".equals(fe._functionName());
+            if (fe._func() == null && !isParentRefStep)
             {
                 throw new IllegalStateException(
                         "FunctionExpression '" + fe._functionName() + "' has null _func() in " + funcPath

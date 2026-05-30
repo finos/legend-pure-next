@@ -1,0 +1,38 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::test::pct::*;
+
+// Returns the underlying Type carried by a GenericType, or empty if none.
+// Currently only GenericTypeValue carries a concrete `.type`; other GenericType
+// shapes (Inferred, TypeParameter binding, etc.) yield empty.
+function meta::pure::metamodel::type::rawType(gt:GenericType[1]):Type[0..1]
+{
+    $gt->match([
+        gtv : GenericTypeValue[1] | $gtv.type,
+        a   : Any[1]              | []
+    ]);
+}
+
+function <<PCT.test>> meta::pure::metamodel::type::tests::rawType::testRawTypeOnGenericTypeValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(String, $f->eval(|let gt = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type=String); $gt->rawType()->toOne();));
+}
+
+function <<PCT.test>> meta::pure::metamodel::type::tests::rawType::testRawTypeOnUndefinedGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|let gt = ^meta::pure::metamodel::type::generics::UndefinedGenericType(); $gt->rawType()->isEmpty();));
+}

@@ -21,9 +21,9 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::variableCompiler::compileParameter(p:meta::pure::protocol::grammar::valuespecification::VariableExpression[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<VariableExpression>[1]
 {
-    let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+    let pType = $p.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
     let gtResult = $pType->compileGenericType($context, $packagePath, $typeParameters, 'parameter \'' + $p.name + '\'', $ownerContext);
-    let mMult = $p.multiplicity->compileMultiplicity();
+    let mMult = $p.multiplicity->toOne()->compileMultiplicity();
     ^CompilerResult<VariableExpression>(
         value = ^VariableExpression(
             // Mirror Java VariableCompiler.compileParameter: anonymous params

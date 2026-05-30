@@ -33,7 +33,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::size::testSizeEm
     assertEquals(0, $f->eval(|[]->size()));
 }
 
-Class meta::pure::functions::collection::tests::size::S_Person
+Class <<test.TestDependency>> meta::pure::functions::collection::tests::size::S_Person
 {
     firstName : String[1];
     lastName : String[1];

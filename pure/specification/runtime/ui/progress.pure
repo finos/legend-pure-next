@@ -36,13 +36,34 @@ import meta::pure::functions::string::*;
 //   println('OK: 247 / 247 passed in 1234 ms');
 // ---------------------------------------------------------------------------
 
+// Maximum visible width of a status line (the third line in the 3-line bar,
+// the second in the 2-line bar). Keeps long element paths / test names from
+// wrapping past the terminal edge — once a line wraps, the bar's cursor-up
+// sequence walks back one VISUAL line (into the wrap continuation) instead
+// of the bar line, and every subsequent redraw leaves the previous bar
+// stranded on screen. 78 = 80-column default minus the 2-char leading indent.
+function meta::pure::ui::progress::statusWidth():Integer[1] { 78 }
+
+// Truncate {@code s} so the resulting string is at most {@code maxLen}
+// characters. Keeps the suffix (test/function names live at the end) and
+// marks the cut with a leading ellipsis so it's obvious the value was
+// shortened. Pass-through when already short enough.
+function meta::pure::ui::progress::truncateForStatus(s:String[1], maxLen:Integer[1]):String[1]
+{
+    let len = $s->length();
+    if($len <= $maxLen,
+        | $s,
+        | '…' + $s->substring($len - ($maxLen - 1), $len)
+    );
+}
+
 // Render a 30-char progress bar plus percentage and counter. Pure function;
 // kept public so callers that want the bar text without the cursor dance
 // (logging, custom redraw) can reuse it.
 function meta::pure::ui::progress::renderBar(done:Integer[1], total:Integer[1]):String[1]
 {
-    let fullBar = '\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588';
-    let emptyBar = '\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591';
+    let fullBar = '██████████████████████████████';
+    let emptyBar = '░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░';
     let width = 30;
     // `/` returns Float in Pure — convert back to Integer via floor.
     let filled = if($total == 0, |0, |floor($done * $width / $total));
@@ -63,18 +84,19 @@ function meta::pure::ui::progress::startProgress(label:String[1]):Boolean[1]
     println($label);
     println('');
     println('');
-    print('\u001B[2A');
+    print('[2A');
     true;
 }
 
 // Redraw the bar with `done`/`total` and update the status line below it
 // with `current`. Restores the bar-line cursor invariant on exit. See
 // {@link tickProgress3} for the throttling rationale — same idea here.
-//   \r\u001B[K<bar>     — column 0, clear to EOL, write bar
-//   \u001B[B\r\u001B[K  — cursor down (no scroll) to status line, col 0, clear
-//   '  ' + $current     — write current item
-//   \u001B[K            — clear tail (in case previous item name was longer)
-//   \u001B[A\r          — cursor up back to bar line, col 0
+//   \r[K<bar>     — column 0, clear to EOL, write bar
+//   [B\r[K  — cursor down (no scroll) to status line, col 0, clear
+//   '  ' + $current     — write current item (truncated to statusWidth so a
+//                         long name can't wrap and break the cursor invariant)
+//   [K            — clear tail (in case previous item name was longer)
+//   [A\r          — cursor up back to bar line, col 0
 function meta::pure::ui::progress::tickProgress(done:Integer[1], total:Integer[1], current:String[1]):Boolean[1]
 {
     if($total == 0, | true,
@@ -82,8 +104,8 @@ function meta::pure::ui::progress::tickProgress(done:Integer[1], total:Integer[1
           let prevPct = if($done <= 1, | -1, | floor(($done - 1) * 100 / $total));
           let shouldEmit = $done == 1 || $done == $total || $curPct != $prevPct;
           if($shouldEmit,
-              | print('\r\u001B[K' + meta::pure::ui::progress::renderBar($done, $total)
-                      + '\u001B[B\r\u001B[K  ' + $current + '\u001B[K\u001B[A\r');
+              | print('\r[K' + meta::pure::ui::progress::renderBar($done, $total)
+                      + '[B\r[K  ' + meta::pure::ui::progress::truncateForStatus($current, meta::pure::ui::progress::statusWidth()) + '[K[A\r');
                 true;,
               | true
           );
@@ -94,7 +116,7 @@ function meta::pure::ui::progress::tickProgress(done:Integer[1], total:Integer[1
 // After this call the caller can println a summary normally.
 function meta::pure::ui::progress::finishProgress():Boolean[1]
 {
-    print('\r\u001B[K\u001B[B\r\u001B[K\u001B[B\r');
+    print('\r[K[B\r[K[B\r');
     true;
 }
 
@@ -123,12 +145,12 @@ function meta::pure::ui::progress::startProgress3():Boolean[1]
     println('');
     println('');
     println('');
-    print('\u001B[3A');
+    print('[3A');
     true;
 }
 
 // Redraw all 3 lines: header / bar / current item. Writes content first then
-// clears tail (\u001B[K) on each line - minimises flicker when content shrinks.
+// clears tail ([K) on each line - minimises flicker when content shrinks.
 //
 // Stateless throttle: emits only on the first tick, the last tick, and
 // whenever the integer percentage changes from the previous tick. Caps
@@ -137,6 +159,12 @@ function meta::pure::ui::progress::startProgress3():Boolean[1]
 // produce roughly the same visible cadence. The decision is derived from
 // {@code done}/{@code total} alone (no mutable state) so callers can safely
 // invoke this on every iteration.
+//
+// `current` is truncated to {@link statusWidth} before being written, so a
+// long element path (e.g. compile-pure's full FQN) can't wrap past the
+// terminal edge and break the cursor-up invariant — once a line wraps,
+// `[A` walks back into the wrap continuation, not the bar line, and
+// every subsequent redraw leaves the previous frame stranded on screen.
 function meta::pure::ui::progress::tickProgress3(header:String[1], done:Integer[1], total:Integer[1], current:String[1]):Boolean[1]
 {
     if($total == 0, | true,
@@ -144,9 +172,9 @@ function meta::pure::ui::progress::tickProgress3(header:String[1], done:Integer[
           let prevPct = if($done <= 1, | -1, | floor(($done - 1) * 100 / $total));
           let shouldEmit = $done == 1 || $done == $total || $curPct != $prevPct;
           if($shouldEmit,
-              | print('\r' + $header + '\u001B[K\u001B[B\r  '
-                      + meta::pure::ui::progress::renderBar($done, $total) + '\u001B[K\u001B[B\r  '
-                      + $current + '\u001B[K\u001B[A\u001B[A\r');
+              | print('\r' + $header + '[K[B\r  '
+                      + meta::pure::ui::progress::renderBar($done, $total) + '[K[B\r  '
+                      + meta::pure::ui::progress::truncateForStatus($current, meta::pure::ui::progress::statusWidth()) + '[K[A[A\r');
                 true;,
               | true
           );
@@ -156,11 +184,11 @@ function meta::pure::ui::progress::tickProgress3(header:String[1], done:Integer[
 // Leave the 3 reserved lines in place (header / bar / current item visible
 // to the user as a record of the final state), and drop the cursor onto
 // a fresh line below them so subsequent output appears underneath.
-//   \u001B[3B  cursor down 3 lines (no scroll, no overwrite)
+//   [3B  cursor down 3 lines (no scroll, no overwrite)
 //   \r         column 0
 //   \n         newline so subsequent output starts below a blank gap
 function meta::pure::ui::progress::finishProgress3():Boolean[1]
 {
-    print('\u001B[3B\r\n');
+    print('[3B\r\n');
     true;
 }

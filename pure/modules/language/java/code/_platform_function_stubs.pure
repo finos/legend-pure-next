@@ -1,0 +1,53 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// ----------------------------------------------------------------------------
+// Function stubs — legend-pure platform helpers not present in legend-pure-next.
+//
+// Implementations are deliberately minimal: enough to typecheck the
+// java-generation source, with semantics that match the original where they
+// can be expressed in terms of legend-pure-next primitives. Native-only
+// behaviours (evaluateAndDeactivate, generateJava) are stubbed pass-through.
+//
+// When the corresponding functions land in legend-pure-next's standard
+// library (or are inlined into call sites), delete this file.
+// ----------------------------------------------------------------------------
+
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::collection::*;
+import meta::pure::functions::lang::*;
+import meta::pure::functions::string::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::valuespecification::*;
+
+Profile meta::pure::profiles::access
+{
+   stereotypes: [public, protected, private, externalizable];
+}
+
+// sum — Integer sum.
+function meta::pure::functions::math::sum(values:Integer[*]): Integer[1]
+{
+    $values->fold({v:Integer[1], acc:Integer[1] | $acc + $v}, 0);
+}
+
+// ----------------------------------------------------------------------------
+// Additional missing collection / string helpers used by metamodel_factories.pure
+// and metamodel_serialization.pure.
+// ----------------------------------------------------------------------------
+
+// min — pairwise integer minimum.
+function meta::pure::functions::math::min(a:Integer[1], b:Integer[1]): Integer[1]
+{
+    if($a < $b, | $a, | $b);
+}
+

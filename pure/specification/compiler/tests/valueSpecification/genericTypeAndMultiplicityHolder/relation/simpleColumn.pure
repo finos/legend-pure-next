@@ -1,16 +1,16 @@
 ###Pure
-function test():Relation<(name:Number[0..1])>[1]
+function test(): Relation<(name:Number[0..1])>[1]
 {
-   ''->cast(@Relation<(name:Integer[1])>);
+  ''->cast(@Relation<(name:Integer)>)
 }
 
 ###CompiledGraph
 function test__Relation_1_():Relation<(name:@Number@[0..1])>[1]  ~UserDefinedFunction<{->Relation<(name:@Number@[0..1])>[1]}>
-  ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Relation<(name:@Integer@[1])>##[1]#  ~@ArrowInvocation@  @4:6-4:41
+  ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Relation<(name:@Integer@[1])>##[1]#  ~@ArrowInvocation@  @4:5-4:37
     typeParam T -> Relation<(name:@Integer@[1])>
     mulParam m -> [1]
-    AtomicValue  '' :@String@[1]  ~@AtomicValue@  @4:4-4:5
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(name:@Integer@[1])>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Relation<(name:@Integer@[1])>|?>  @4:13-4:40
+    AtomicValue  '' :@String@[1]  ~@AtomicValue@  @4:3-4:4
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(name:@Integer@[1])>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Relation<(name:@Integer@[1])>|?>  @4:12-4:36
 
 ###ReverseIndex
 meta::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:

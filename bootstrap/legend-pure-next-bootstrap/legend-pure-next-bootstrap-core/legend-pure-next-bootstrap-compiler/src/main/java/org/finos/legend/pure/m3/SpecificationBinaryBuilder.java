@@ -216,11 +216,20 @@ public class SpecificationBinaryBuilder
                 }
                 Set<String> leanPaths = pathSet(lean);
                 Set<String> testPaths = pathSet(tests);
-                writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
-                        lean, extensions, localModule, manifest, outputFile,
+                // Rewrite Package PDOs so each Package's children only point
+                // at paths in the same PDB; add shadow Packages to the tests
+                // half for parent paths whose canonical owner lives in lean.
+                // Runtime {@link org.finos.legend.pure.m3.module.MergedPackage}
+                // unions both halves when both PDBs are loaded.
+                List<PackageableElement> leanFiltered =
+                        org.finos.legend.pure.m3.module.PackageSplitFilter.filterPackageChildren(lean, leanPaths);
+                List<PackageableElement> testsWithShadows =
+                        org.finos.legend.pure.m3.module.PackageSplitFilter.withShadowPackages(tests, lean, testPaths);
+                writePdb("lean (" + leanFiltered.size() + "/" + elements.size() + ")",
+                        leanFiltered, extensions, localModule, manifest, outputFile,
                         org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains));
-                writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
-                        tests, extensions, localModule, TestElementFilter.testsManifest(manifest),
+                writePdb("tests-only (" + testsWithShadows.size() + "/" + elements.size() + ")",
+                        testsWithShadows, extensions, localModule, TestElementFilter.testsManifest(manifest),
                         TestElementFilter.testsOnlyPath(outputFile),
                         org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains));
             }

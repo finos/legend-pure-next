@@ -190,6 +190,7 @@
                                 <argument>${spec.dir}/runtime/featureTests</argument>
                                 <argument>${spec.dir}/runtime/ui</argument>
                                 <argument>${spec.dir}/runtime/test</argument>
+                                <argument>${spec.dir}/runtime/printer</argument>
                                 <argument>${gen.spec.dir}/protocol</argument>
                             </arguments>
                         </configuration>

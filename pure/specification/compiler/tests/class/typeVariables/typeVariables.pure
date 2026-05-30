@@ -1,53 +1,59 @@
 ###Pure
-Class meta::pure::test::MyClassWithTypeVariables(x:Integer[1])
+import meta::pure::test::*;
+
+Class meta::pure::test::MyClassWithTypeVariables(x: Integer[1])
 [
-   wx(~function:$this.text->size() < $x ~message:'Error '+$this.text->size()->toString()+' >= '+$x->toString())
+  wx
+  (
+    ~function: $this.text->size() < $x
+    ~message: 'Error ' + $this.text->size()->toString() + ' >= ' + $x->toString()
+  )
 ]
 {
-   x(){$x}:Integer[1];
-   res(){'1'+$x->toString()}:String[1];
-   res(z:String[1]){'1'+$x->toString()+$z}:String[1];
-   text : String[*];
+  text: String[*];
+  x() {$x}: Integer[1];
+  res() {'1' + $x->toString()}: String[1];
+  res(z: String[1]) {'1' + $x->toString() + $z}: String[1];
 }
 
 ###CompiledGraph
-class meta::pure::test::MyClassWithTypeVariables extends Any  ~Class<meta::pure::test::MyClassWithTypeVariables>  @2:1-11:1
+class meta::pure::test::MyClassWithTypeVariables extends Any  ~Class<meta::pure::test::MyClassWithTypeVariables>  @4:1-17:1
   typeVariable x :@Integer@[1]
   property text :@String@[*]  ~Property<meta::pure::test::MyClassWithTypeVariables, @String@|*>
   qualifiedProperty x() :@Integer@[1]
-    Variable x :#Integer##[1]#  ~@VariableExpression@  @7:8-7:9
+    Variable x :#Integer##[1]#  ~@VariableExpression@  @14:8-14:9
   qualifiedProperty res() :@String@[1]
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @8:10-8:27
-      AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @8:10-8:12
-      ArrowInvocation toString_Any_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @8:16-8:27
-        Variable x :#Integer##[1]#  ~@VariableExpression@  @8:14-8:15
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @15:10-15:29
+      AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @15:10-15:12
+      ArrowInvocation toString_Any_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @15:18-15:29
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @15:16-15:17
   qualifiedProperty res(z:@String@[1]) :@String@[1]
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @9:21-9:41
-      FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @9:21-9:38
-        AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @9:21-9:23
-        ArrowInvocation toString_Any_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @9:27-9:38
-          Variable x :#Integer##[1]#  ~@VariableExpression@  @9:25-9:26
-      Variable z :#String##[1]#  ~@VariableExpression@  @9:40-9:41
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @16:22-16:46
+      FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @16:22-16:41
+        AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @16:22-16:24
+        ArrowInvocation toString_Any_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @16:30-16:41
+          Variable x :#Integer##[1]#  ~@VariableExpression@  @16:28-16:29
+      Variable z :#String##[1]#  ~@VariableExpression@  @16:45-16:46
   constraint wx
     Lambda(this:meta::pure::test::MyClassWithTypeVariables[1], x:@Integer@[1])  ~#LambdaFunction<#{meta::pure::test::MyClassWithTypeVariables[1], @Integer@[1]->#Boolean##[1]#}#>#
-      FunctionInvocation lessThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @4:27-4:39
-        ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @4:27-4:34
-          DotApplication meta::pure::test::MyClassWithTypeVariables.text :#String##[*]#  ~@DotApplication@  @4:22-4:26
-            Variable this :#meta::pure::test::MyClassWithTypeVariables##[1]#  ~@VariableExpression@  @4:17-4:21
-        Variable x :#Integer##[1]#  ~@VariableExpression@  @4:38-4:39
+      FunctionInvocation lessThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @8:26-8:38
+        ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @8:26-8:33
+          DotApplication meta::pure::test::MyClassWithTypeVariables.text :#String##[*]#  ~@DotApplication@  @8:21-8:25
+            Variable this :#meta::pure::test::MyClassWithTypeVariables##[1]#  ~@VariableExpression@  @8:16-8:20
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @8:37-8:38
     messageFunction
       Lambda(this:meta::pure::test::MyClassWithTypeVariables[1], x:@Integer@[1])  ~#LambdaFunction<#{meta::pure::test::MyClassWithTypeVariables[1], @Integer@[1]->#String##[1]#}#>#
-        FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @4:50-4:110
-          FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @4:50-4:95
-            FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @4:50-4:88
-              AtomicValue  'Error ' :@String@[1]  ~@AtomicValue@  @4:50-4:57
-              ArrowInvocation toString_Any_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @4:69-4:88
-                ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @4:69-4:88
-                  DotApplication meta::pure::test::MyClassWithTypeVariables.text :#String##[*]#  ~@DotApplication@  @4:64-4:68
-                    Variable this :#meta::pure::test::MyClassWithTypeVariables##[1]#  ~@VariableExpression@  @4:59-4:63
-            AtomicValue  ' >= ' :@String@[1]  ~@AtomicValue@  @4:90-4:95
-          ArrowInvocation toString_Any_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @4:99-4:110
-            Variable x :#Integer##[1]#  ~@VariableExpression@  @4:97-4:98
+        FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @9:15-9:81
+          FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @9:15-9:64
+            FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @9:15-9:55
+              AtomicValue  'Error ' :@String@[1]  ~@AtomicValue@  @9:15-9:22
+              ArrowInvocation toString_Any_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @9:36-9:55
+                ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @9:36-9:55
+                  DotApplication meta::pure::test::MyClassWithTypeVariables.text :#String##[*]#  ~@DotApplication@  @9:31-9:35
+                    Variable this :#meta::pure::test::MyClassWithTypeVariables##[1]#  ~@VariableExpression@  @9:26-9:30
+            AtomicValue  ' >= ' :@String@[1]  ~@AtomicValue@  @9:59-9:64
+          ArrowInvocation toString_Any_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @9:70-9:81
+            Variable x :#Integer##[1]#  ~@VariableExpression@  @9:68-9:69
 
 ###ReverseIndex
 meta::pure::functions::boolean::lessThan_Number_1__Number_1__Boolean_1_:

@@ -6418,6 +6418,627 @@
           "value" : 0
         }
       }
+    }, {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "divide",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 14,
+          "endLine" : 112,
+          "startColumn" : 3,
+          "startLine" : 112
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Integer"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 3,
+            "endLine" : 112,
+            "startColumn" : 3,
+            "startLine" : 112
+          },
+          "value" : 9
+        }, {
+          "_type" : "FunctionInvocation",
+          "functionName" : "divide",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 13,
+            "endLine" : 112,
+            "startColumn" : 8,
+            "startLine" : 112
+          },
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 9,
+              "endLine" : 112,
+              "startColumn" : 8,
+              "startLine" : 112
+            },
+            "value" : 18
+          }, {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 13,
+              "endLine" : 112,
+              "startColumn" : 13,
+              "startLine" : 112
+            },
+            "value" : 6
+          } ]
+        } ]
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "minus",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 14,
+          "endLine" : 113,
+          "startColumn" : 3,
+          "startLine" : 113
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Integer"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 3,
+            "endLine" : 113,
+            "startColumn" : 3,
+            "startLine" : 113
+          },
+          "value" : 9
+        }, {
+          "_type" : "FunctionInvocation",
+          "functionName" : "minus",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 13,
+            "endLine" : 113,
+            "startColumn" : 8,
+            "startLine" : 113
+          },
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 9,
+              "endLine" : 113,
+              "startColumn" : 8,
+              "startLine" : 113
+            },
+            "value" : 18
+          }, {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 13,
+              "endLine" : 113,
+              "startColumn" : 13,
+              "startLine" : 113
+            },
+            "value" : 6
+          } ]
+        } ]
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "divide",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 14,
+          "endLine" : 114,
+          "startColumn" : 3,
+          "startLine" : 114
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Integer"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 3,
+            "endLine" : 114,
+            "startColumn" : 3,
+            "startLine" : 114
+          },
+          "value" : 9
+        }, {
+          "_type" : "FunctionInvocation",
+          "functionName" : "times",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 13,
+            "endLine" : 114,
+            "startColumn" : 8,
+            "startLine" : 114
+          },
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 9,
+              "endLine" : 114,
+              "startColumn" : 8,
+              "startLine" : 114
+            },
+            "value" : 18
+          }, {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 13,
+              "endLine" : 114,
+              "startColumn" : 13,
+              "startLine" : 114
+            },
+            "value" : 6
+          } ]
+        } ]
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "minus",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 14,
+          "endLine" : 115,
+          "startColumn" : 3,
+          "startLine" : 115
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Integer"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 3,
+            "endLine" : 115,
+            "startColumn" : 3,
+            "startLine" : 115
+          },
+          "value" : 9
+        }, {
+          "_type" : "FunctionInvocation",
+          "functionName" : "plus",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 13,
+            "endLine" : 115,
+            "startColumn" : 8,
+            "startLine" : 115
+          },
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 9,
+              "endLine" : 115,
+              "startColumn" : 8,
+              "startLine" : 115
+            },
+            "value" : 18
+          }, {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 13,
+              "endLine" : 115,
+              "startColumn" : 13,
+              "startLine" : 115
+            },
+            "value" : 6
+          } ]
+        } ]
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "plus",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 14,
+          "endLine" : 116,
+          "startColumn" : 3,
+          "startLine" : 116
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Integer"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 3,
+            "endLine" : 116,
+            "startColumn" : 3,
+            "startLine" : 116
+          },
+          "value" : 9
+        }, {
+          "_type" : "FunctionInvocation",
+          "functionName" : "minus",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 13,
+            "endLine" : 116,
+            "startColumn" : 8,
+            "startLine" : 116
+          },
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 9,
+              "endLine" : 116,
+              "startColumn" : 8,
+              "startLine" : 116
+            },
+            "value" : 18
+          }, {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 13,
+              "endLine" : 116,
+              "startColumn" : 13,
+              "startLine" : 116
+            },
+            "value" : 6
+          } ]
+        } ]
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "times",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 14,
+          "endLine" : 117,
+          "startColumn" : 3,
+          "startLine" : 117
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Integer"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 3,
+            "endLine" : 117,
+            "startColumn" : 3,
+            "startLine" : 117
+          },
+          "value" : 9
+        }, {
+          "_type" : "FunctionInvocation",
+          "functionName" : "divide",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 13,
+            "endLine" : 117,
+            "startColumn" : 8,
+            "startLine" : 117
+          },
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 9,
+              "endLine" : 117,
+              "startColumn" : 8,
+              "startLine" : 117
+            },
+            "value" : 18
+          }, {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 13,
+              "endLine" : 117,
+              "startColumn" : 13,
+              "startLine" : 117
+            },
+            "value" : 6
+          } ]
+        } ]
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "or",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 25,
+          "endLine" : 118,
+          "startColumn" : 3,
+          "startLine" : 118
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Boolean"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 6,
+            "endLine" : 118,
+            "startColumn" : 3,
+            "startLine" : 118
+          },
+          "value" : true
+        }, {
+          "_type" : "FunctionInvocation",
+          "functionName" : "or",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 24,
+            "endLine" : 118,
+            "startColumn" : 12,
+            "startLine" : 118
+          },
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Boolean"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 16,
+              "endLine" : 118,
+              "startColumn" : 12,
+              "startLine" : 118
+            },
+            "value" : false
+          }, {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Boolean"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 24,
+              "endLine" : 118,
+              "startColumn" : 21,
+              "startLine" : 118
+            },
+            "value" : true
+          } ]
+        } ]
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "and",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 25,
+          "endLine" : 119,
+          "startColumn" : 3,
+          "startLine" : 119
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Boolean"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 6,
+            "endLine" : 119,
+            "startColumn" : 3,
+            "startLine" : 119
+          },
+          "value" : true
+        }, {
+          "_type" : "FunctionInvocation",
+          "functionName" : "and",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 24,
+            "endLine" : 119,
+            "startColumn" : 12,
+            "startLine" : 119
+          },
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Boolean"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 16,
+              "endLine" : 119,
+              "startColumn" : 12,
+              "startLine" : 119
+            },
+            "value" : false
+          }, {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Boolean"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 24,
+              "endLine" : 119,
+              "startColumn" : 21,
+              "startLine" : 119
+            },
+            "value" : true
+          } ]
+        } ]
+      } ],
+      "functionName" : "precedenceRightAssoc",
+      "name" : "precedenceRightAssoc__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 120,
+        "startColumn" : 1,
+        "startLine" : 110
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 46,
+            "endLine" : 110,
+            "startColumn" : 44,
+            "startLine" : 110
+          },
+          "value" : "Any"
+        }
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 0
+        }
+      }
     } ],
     "parserName" : "Pure"
   } ],

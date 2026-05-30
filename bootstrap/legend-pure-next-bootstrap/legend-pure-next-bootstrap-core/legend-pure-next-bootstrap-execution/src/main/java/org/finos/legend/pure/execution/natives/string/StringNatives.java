@@ -393,6 +393,33 @@ public class StringNatives
             return _E_ValueSpecification.wrap((long) s.indexOf(search, from), genericType, multiplicity, resolver);
         });
 
+        // lastIndexOf(String[1], String[1]) : Integer[1]
+        natives.put("lastIndexOf_String_1__String_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        {
+            String s = (String) _E_ValueSpecification.unwrap(args.get(0));
+            String search = (String) _E_ValueSpecification.unwrap(args.get(1));
+            return _E_ValueSpecification.wrap((long) s.lastIndexOf(search), genericType, multiplicity, resolver);
+        });
+
+        // chunk(String[1], Integer[1]) : String[*]
+        natives.put("chunk_String_1__Integer_1__String_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            String s = (String) _E_ValueSpecification.unwrap(args.get(0));
+            int size = ((Long) _E_ValueSpecification.unwrap(args.get(1))).intValue();
+            int len = s.length();
+            List<ValueSpecification> result = new ArrayList<>();
+            for (int i = 0; i < len; i += size)
+            {
+                result.add(_E_ValueSpecification.wrap(s.substring(i, Math.min(i + size, len)), genericType, null, resolver));
+            }
+            int count = result.size();
+            meta.pure.metamodel.type.generics.GenericType gt = result.isEmpty() ? null : result.get(0)._genericType();
+            return new meta.pure.metamodel.valuespecification.CollectionImpl(resolver)
+                    ._values(org.eclipse.collections.api.factory.Lists.mutable.withAll(result))
+                    ._genericType(gt)
+                    ._multiplicity(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(count, count, resolver));
+        });
+
         // matches(String[1], String[1]) : Boolean[1] — full-string regex match
         natives.put("matches_String_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {

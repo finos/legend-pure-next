@@ -13,32 +13,27 @@
 // limitations under the License.
 
 import meta::pure::protocol::*;
+import meta::pure::test::pct::*;
 
 native function meta::pure::functions::meta::parse(sourceId:String[1], content:String[1]):PureFile[1];
 
-function <<test.Test>> meta::pure::functions::meta::testParseNativeIntegration() : Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::testParseNativeIntegration<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let content = 'Class pkg::MyClass { name:String[1]; }';
-    let file = meta::pure::functions::meta::parse('testSource', $content);
+    let file = $f->eval(|meta::pure::functions::meta::parse('testSource', 'Class pkg::MyClass { name:String[1]; }'));
+    let cls = $file.sections->at(0).elements->at(0)->cast(@meta::pure::protocol::grammar::type::Class);
     assertEquals('testSource', $file.sourceId);
     assertEquals(1, $file.sections->size());
-
-    let section = $file.sections->at(0);
-    assertEquals(1, $section.elements->size());
-
-    let cls = $section.elements->at(0)->cast(@meta::pure::protocol::grammar::type::Class);
+    assertEquals(1, $file.sections->at(0).elements->size());
     assertEquals('MyClass', $cls.name);
     assertEquals('pkg', $cls.package->cast(@meta::pure::protocol::grammar::Package_Pointer).value);
     assertEquals(1, $cls.properties->size());
-
-    let prop = $cls.properties->at(0);
-    assertEquals('name', $prop.name);
+    assertEquals('name', $cls.properties->at(0).name);
 }
 
-function <<test.Test>> meta::pure::functions::meta::testParseUnknownSectionThrows() : Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::testParseUnknownSectionThrows<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertError(
-        |meta::pure::functions::meta::parse(
+        | $f->eval(|meta::pure::functions::meta::parse(
             'test',
             '''
             ###Pure
@@ -47,21 +42,34 @@ function <<test.Test>> meta::pure::functions::meta::testParseUnknownSectionThrow
             ###Unknown
             stuff
             '''
-        ),
+        )),
         'No parser registered for section: ###Unknown'
     );
 }
 
-function <<test.Test>> meta::pure::functions::meta::testParseEnumPropertyValues() : Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::testParseEnumPropertyValues<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    // Parse a class with a composite aggregation property
-    let content = 'Class pkg::MyClass { (composite) child:String[*]; name:String[1]; }';
-    let file = meta::pure::functions::meta::parse('testSource', $content);
-    let cls = $file.sections->at(0).elements->at(0)->cast(@meta::pure::protocol::grammar::type::Class);
-
     // The composite property's aggregation should be an Enum_Pointer referencing the metamodel enum
-    let compositeProp = $cls.properties->filter(p | $p.name == 'child')->at(0);
-    let enumPtr = $compositeProp.aggregation->cast(@meta::pure::protocol::grammar::Enum_Pointer);
+    let enumPtr = $f->eval(|meta::pure::functions::meta::parse('testSource', 'Class pkg::MyClass { (composite) child:String[*]; name:String[1]; }').sections->at(0).elements->at(0)->cast(@meta::pure::protocol::grammar::type::Class).properties->filter(p | $p.name == 'child')->at(0).aggregation->cast(@meta::pure::protocol::grammar::Enum_Pointer));
     assertEquals('meta::pure::metamodel::function::property::AggregationKind', $enumPtr.value);
     assertEquals('Composite', $enumPtr.extraPointerValues->at(0).value);
+}
+
+// Regression: `^$pdo(field = newValue)` copy-with-update on a parser-produced
+// PDO. The parse native uniformly converts its typed POJO output to
+// DynamicInstance via ProtocolToDynamicInstance, so the source PDO and all
+// its nested slots are DI-shaped. The copy code must match target backing
+// form to source — DI source → DI target — instead of promoting to a typed
+// Impl (which would then reject the DI-valued nested slots and throw
+// "Failed to set property X value type: DynamicInstance").
+function <<PCT.test>> meta::pure::functions::meta::testCopyParsedFunctionInvocation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|
+        let file = meta::pure::functions::meta::parse('testSource', '###Pure\nfunction test::f(): Integer[1]\n{\n  1 + 2\n}\n');
+        let udf = $file.sections->at(0).elements->at(0)->cast(@meta::pure::protocol::grammar::function::UserDefinedFunction);
+        let fi = $udf.expressionSequence->at(0)->cast(@meta::pure::protocol::grammar::valuespecification::FunctionInvocation);
+        let copy = ^$fi(functionName = 'renamed');
+        assertEquals('renamed', $copy.functionName);
+        assertEquals('plus', $fi.functionName);
+    ));
 }

@@ -131,12 +131,18 @@ function meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefa
                     );
                     let thisVar = ^VariableExpression(name = 'this', genericType = $ownerGenericType, multiplicity = PureOne);
                     let scope = $lambda.parameters->cast(@VariableExpression)->concatenate($thisVar);
+                    // Push the property sub-element so references inside the
+                    // default value (e.g. a `^Other()` literal's type) attribute
+                    // to {@code Class.propName}, not the enclosing class.
+                    let savedDvPath = $ctx1.currentElementPath;
+                    let dvPushed = if($savedDvPath->isEmpty() || $prop.name->isEmpty(), | $ctx1, | ^$ctx1(currentElementPath = $savedDvPath->toOne() + '.' + $prop.name->toOne()));
                     let resolveResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
                         $lambda.expressionSequence,
                         $scope,
-                        $ctx1
+                        $dvPushed
                     );
-                    let ctx2 = $resolveResult.context;
+                    let dvResolvedCtx = $resolveResult.context;
+                    let ctx2 = ^$dvResolvedCtx(currentElementPath = $savedDvPath);
                     let resolvedLambda = meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$lambda(expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification)));
                     let resolvedProp = ^$prop(defaultValue = $resolvedLambda);
                     // Validate type and multiplicity of the resolved default value
@@ -226,7 +232,7 @@ function meta::pure::compiler::structural::propertyCompiler::validatePropertyOve
 {
     $cls.properties->fold({prop, pCtx |
         let superProp = $cls.generalizations
-            ->map(g | $g.general->genericTypeRawType())
+            ->map(g | $g.general->rawType())
             ->map(superType | $superType->meta::pure::compiler::helper::type::derefTypeIfPointer($context))
             ->filter(t | $t->isNotEmpty())
             ->map(t | $t->toOne())

@@ -1,0 +1,168 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::serialization::tests::*;
+
+// =============================================================================
+// Object destructuring
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constObjectDestructureSimple(): Boolean[1]
+{
+   testStmt(
+      'const { a, b } = obj;',
+      tsConst(tsObjectBinding([tsBindName('a'), tsBindName('b')]), [], tsId('obj')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constObjectDestructureRename(): Boolean[1]
+{
+   testStmt(
+      'const { source: alias } = obj;',
+      tsConst(tsObjectBinding([tsBindRename('source', 'alias')]), [], tsId('obj')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constObjectDestructureDefault(): Boolean[1]
+{
+   testStmt(
+      'const { x = 0, y = 1 } = obj;',
+      tsConst(
+         tsObjectBinding([
+            tsBindDefault('x', tsNumLit('0')),
+            tsBindDefault('y', tsNumLit('1'))
+         ]),
+         [],
+         tsId('obj')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constObjectDestructureRest(): Boolean[1]
+{
+   testStmt(
+      'const { head, ...rest } = obj;',
+      tsConst(tsObjectBinding([tsBindName('head'), tsBindRest('rest')]), [], tsId('obj')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constObjectDestructureNested(): Boolean[1]
+{
+   testStmt(
+      'const { user: { name } } = obj;',
+      tsConst(
+         tsObjectBinding([
+            tsBindNested('user', tsObjectBinding([tsBindName('name')]))
+         ]),
+         [],
+         tsId('obj')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constObjectDestructureTyped(): Boolean[1]
+{
+   testStmt(
+      'const { a, b }: Pair = obj;',
+      tsConst(
+         tsObjectBinding([tsBindName('a'), tsBindName('b')]),
+         tsRef('Pair'),
+         tsId('obj')));
+}
+
+// =============================================================================
+// Array destructuring
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constArrayDestructureSimple(): Boolean[1]
+{
+   testStmt(
+      'const [a, b] = arr;',
+      tsConst(tsArrayBinding([tsBindName('a'), tsBindName('b')]), [], tsId('arr')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constArrayDestructureRest(): Boolean[1]
+{
+   testStmt(
+      'const [head, ...tail] = arr;',
+      tsConst(tsArrayBinding([tsBindName('head'), tsBindRest('tail')]), [], tsId('arr')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::letArrayDestructureDefault(): Boolean[1]
+{
+   testStmt(
+      'let [first = 0, second = 0] = arr;',
+      tsLet(
+         tsArrayBinding([
+            tsBindDefault('first', tsNumLit('0')),
+            tsBindDefault('second', tsNumLit('0'))
+         ]),
+         [],
+         tsId('arr')));
+}
+
+// =============================================================================
+// Parameter destructuring
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::paramObjectDestructure(): Boolean[1]
+{
+   // Standalone test: just the parameter renders as `{ x, y }: T`
+   testStmt(
+      '''
+      class C {
+        f({ x, y }: Point): void {}
+      }''',
+      tsClass('C', [
+         tsMethod(
+            'f',
+            [tsParam(tsObjectBinding([tsBindName('x'), tsBindName('y')]), tsRef('Point'))],
+            tsVoid(),
+            tsBlock([]))
+      ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::paramArrayDestructure(): Boolean[1]
+{
+   // TupleTypeNode is deferred to v2; use number[] as the parameter type.
+   testStmt(
+      '''
+      class C {
+        f([a, b]: number[]): number {
+          return a + b;
+        }
+      }''',
+      tsClass('C', [
+         tsMethod(
+            'f',
+            [tsParam(tsArrayBinding([tsBindName('a'), tsBindName('b')]),
+                     tsArrayOf(tsNumber()))],
+            tsNumber(),
+            tsBlock([tsReturn(tsBinary(tsId('a'), '+', tsId('b')))]))
+      ]));
+}
+
+// =============================================================================
+// Mixed
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constMixedDestructure(): Boolean[1]
+{
+   testStmt(
+      'const { name: userName, age = 0, ...rest } = user;',
+      tsConst(
+         tsObjectBinding([
+            tsBindRename('name', 'userName'),
+            tsBindDefault('age', tsNumLit('0')),
+            tsBindRest('rest')
+         ]),
+         [],
+         tsId('user')));
+}

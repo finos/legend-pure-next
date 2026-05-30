@@ -1,0 +1,32 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::printer::protocol::*;
+import meta::pure::protocol::*;
+
+// Protocol printer for `Association` elements. Same shape as Class minus
+// `Class`/`Association` keyword. Reuses printProperty from class.pure for
+// each of the two assoc-prop sides. Association collides with M3, so FQN
+// inline.
+function meta::pure::functions::printer::protocol::printProtocolAssociation(a: meta::pure::protocol::grammar::relationship::Association[1]): String[1]
+{
+    'Association ' + printAnnotations($a.stereotypes, $a.taggedValues) + printPackagePointer($a.package) + $a.name +
+    '\n{\n' +
+        [
+            $a.properties->map(p | '  ' + printProperty($p))->joinStrings('\n'),
+            $a.qualifiedProperties->map(qp | '  ' + printQualifiedProperty($qp))->joinStrings('\n')
+        ]->joinStrings('\n') + '\n' +
+    '}\n';
+}

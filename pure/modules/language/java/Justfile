@@ -1,0 +1,118 @@
+# pure/language/java/Justfile — builds the Pure java-generation modules into a single PDB.
+#
+# Direct invocation: just <recipe>     (from pure/language/java/)
+#
+# Layout:
+#   pure/                  — core_external_language_java metamodel + factories +
+#                            serialization + generation/conventions
+#   conventions-essential/ — core_external_language_java_conventions_essential
+#   conventions-standard/  — core_external_language_java_conventions_standard
+#
+# Inputs:  shared/core.pdb (produced by `bootstrap::build`).
+# Output:  shared/java.pdb
+#
+# Uses the bootstrap **native** Java compiler (`pure-bootstrap compile`), not
+# the Pure-on-Java compile-via-pure path. Native compile takes a single
+# --base-pdb and only needs core.pdb here since the java-generation source
+# references meta::pure::* platform types (in core.pdb) only — no
+# compiler-pure types.
+#
+# All three modules are compiled together as a single source tree so the
+# inter-module references (e.g. conventions-essential -> pure's transform
+# package) resolve in one pass. The directory split preserves the original
+# legend-engine module boundaries for future re-extraction.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+java_root      := source_directory()
+repo_root      := java_root / ".." / ".." / ".." / ".."
+shared_out     := repo_root / "shared"
+pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+
+verbose := ""
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+header := "h(){ s=\"[language-java::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
+
+# Default: build java.pdb.
+default: build
+
+# Requires shared/core.pdb (run `just bootstrap::build` from repo root first).
+
+# Compile pure/ + conventions-essential/ + conventions-standard/ into shared/java.pdb.
+build:
+    @{{header}} 'build'
+    @{{substep}} 'compile pure/language/java -> shared/java.pdb'
+    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --source {{java_root}} \
+        --output-dir {{shared_out}} {{err_filter}}
+
+# Uses compiler.pdb and exercises the same compiler-pure code that
+# compile-via-pure runs, but JIT-compiled by Truffle. Useful when iterating on
+# pure/specification/compiler/compiler-pure since it picks changes up
+# automatically (compile-via-pure also does, but native compile does NOT).
+
+# Compile pure/language/java -> shared/java.pdb via the Pure compiler on Truffle.
+build-truffle:
+    @{{header}} 'build-truffle'
+    @{{substep}} 'compile pure/language/java -> shared/java.pdb (Truffle)'
+    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/compiler.pdb || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
+    {{pure_truffle}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source {{java_root}} \
+        --output-dir {{shared_out}} {{err_filter}}
+
+# Compile with tests split into shared/java-tests.pdb (needed by `test-all`).
+build-tests:
+    @{{header}} 'build-tests'
+    @{{substep}} 'compile pure/language/java -> shared/java.pdb + java-tests.pdb'
+    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --source {{java_root}} \
+        --output-dir {{shared_out}} \
+        --tests split {{err_filter}}
+
+# The `compileAndExecute` native is implemented in the Truffle Java extension
+# (legend-pure-next-truffle-extension-java's JavaCompileNatives) — the
+# bootstrap CLI does NOT register it, so testCompileAndExecute* tests fail
+# there with "No native implementation for: compileAndExecute".
+# Needs core-tests.pdb because runTests is <<test.TestDependency>>.
+
+# Run all Pure tests under meta::external::language::java via pure-truffle.
+test-all: build-tests _check-runtime-pdbs
+    @{{header}} 'test-all'
+    @{{substep}} 'runTests meta::external::language::java (Truffle)'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/java.pdb \
+        --pdb {{shared_out}}/java-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::external::language::java" {{err_filter}}
+
+# Internal: fail loudly if PDBs / pure-truffle aren't staged.
+_check-runtime-pdbs:
+    #!/usr/bin/env bash
+    if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
+        echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2
+        exit 1
+    fi
+    if [[ ! -x "{{pure_truffle}}" ]]; then
+        echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" >&2
+        exit 1
+    fi
+
+# Remove shared/java.pdb (and the tests PDB).
+clean:
+    @{{header}} 'clean'
+    @{{substep}} 'remove shared/java.pdb + shared/java-tests.pdb'
+    rm -f {{shared_out}}/java.pdb {{shared_out}}/java-tests.pdb

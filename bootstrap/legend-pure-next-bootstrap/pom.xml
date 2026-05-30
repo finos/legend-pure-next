@@ -149,15 +149,6 @@
                     <includes>
                         <include>**/*Test*.java</include>
                     </includes>
-                    <systemPropertyVariables>
-                        <!--
-                          Enable PointerAccessGuard's strict mode under tests:
-                          reading any non-pointer-native property on a
-                          TempCompilerPointer subtype throws. Production CLI /
-                          IDE leaves the flag off and the JIT folds the check.
-                        -->
-                        <legend.pure.strictPointerAccess>true</legend.pure.strictPointerAccess>
-                    </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>

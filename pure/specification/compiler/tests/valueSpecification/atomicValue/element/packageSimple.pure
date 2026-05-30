@@ -1,14 +1,14 @@
 ###Pure
-import test::new::support::*;
+import meta::*;
 
 function test::new::testNew(): Any[*]
 {
-  meta::pure
+  pure
 }
 
 ###CompiledGraph
 function test::new::testNew__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  AtomicValue  meta::pure :#Package#[1]  ~@AtomicValue@  @6:3-6:12
+  AtomicValue  meta::pure :#Package#[1]  ~@AtomicValue@  @6:3-6:6
 
 ###ReverseIndex
 meta::pure:

@@ -1,0 +1,94 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Project-level structure: an npm package containing a directory tree of
+// SourceFile nodes plus a tsconfig hint. Mirrors the layout a TypeScript
+// emitter actually produces on disk.
+
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::metamodel::project::*;
+
+// =============================================================================
+// NpmPackage — root of a generated TypeScript project.
+//   - `name` and `version` populate package.json.
+//   - `dependencies` / `devDependencies` are npm specifier strings,
+//     keyed by package name. We keep them as flat lists rather than
+//     a map for v1 (no Map type in scope).
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::project::NpmPackage
+{
+   <<equality.Key>> name : String[1];
+   version         : String[0..1];
+   description     : String[0..1];
+   moduleType      : ModuleType[0..1];               // defaults to ESM at emit
+   root            : ProjectDirectory[1];
+   dependencies    : NpmDependency[*];
+   devDependencies : NpmDependency[*];
+   tsconfig        : TsConfig[0..1];
+}
+
+Enum meta::external::language::typescript::metamodel::project::ModuleType
+{
+   ESM,                                              // package.json "type": "module"
+   CommonJS
+}
+
+Class meta::external::language::typescript::metamodel::project::NpmDependency
+{
+   <<equality.Key>> packageName : String[1];
+   <<equality.Key>> versionRange : String[1];        // e.g. '^5.6.3'
+}
+
+// =============================================================================
+// TsConfig — minimal tsconfig.json projection. v1 captures the fields a
+// generator usually wants to set; the rest can be added when needed.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::project::TsConfig
+{
+   target           : String[0..1];                  // e.g. 'ES2022'
+   moduleSetting    : String[0..1];                  // e.g. 'ESNext', 'NodeNext'
+   moduleResolution : String[0..1];                  // e.g. 'Bundler', 'NodeNext'
+   strict           : Boolean[0..1];
+   declaration      : Boolean[0..1];
+   outDir           : String[0..1];
+   rootDir          : String[0..1];
+}
+
+// =============================================================================
+// ProjectDirectory — directory tree.
+// Holds child SourceFiles directly; subdirectories nest recursively.
+// Not modelled as an Association so a directory can be moved / cloned
+// without rewriting parent pointers.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::project::ProjectDirectory
+{
+   <<equality.Key>> name : String[1];
+   sourceFiles    : meta::external::language::typescript::metamodel::SourceFile[*];
+   parent         : ProjectDirectory[0..1];
+   subdirectories : ProjectDirectory[*];
+
+   fullPath()
+   {
+      if($this.parent->isEmpty(),
+         | fail('Should not reach root'); '';,
+         |
+      if($this.parent.parent->isEmpty(),
+         | $this.name,
+         | $this.parent->toOne().fullPath() + '/' + $this.name
+      ));
+   }: String[1];
+}

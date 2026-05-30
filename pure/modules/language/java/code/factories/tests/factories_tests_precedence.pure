@@ -1,0 +1,123 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::*;
+import meta::external::language::java::factory::tests::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::serialization::*;
+
+// ----------------------------------------------------------------------------
+// Associativity / parenthesization tests for the serializer.
+//
+// These exercise `maybeParentheses` / `maybeParenthesesTighter` in
+// serialization_code.pure. Pre-fix, the serializer used `<` on both operands
+// of an infix expression, which under-parenthesized the RIGHT operand of a
+// left-associative parent at the same precedence level — so `a - (b - c)`
+// would emit as `a - b - c` and silently reparse as `(a - b) - c`. The fix
+// is to use `<=` on the side where same-precedence requires parens.
+// ----------------------------------------------------------------------------
+
+// Left-associative same-precedence nested on the RIGHT: parens required.
+// Without the fix, all three of these would emit without parens and reparse
+// incorrectly.
+function <<test.Test>> meta::external::language::java::factory::tests::infixRightNestedSameLevelKeepsParens():Boolean[1]
+{
+   // Subtraction: `a - (b - c)` != `(a - b) - c`
+   assertCode('a - (b - c)', javaInt(),
+              j_variable(javaInt(), 'a')->j_minus(
+                 j_variable(javaInt(), 'b')->j_minus(j_variable(javaInt(), 'c'))));
+
+   // Mixed multiplicative (same precedence level 12): `a / (b * c)` != `a / b * c`
+   assertCode('a / (b * c)', javaInt(),
+              j_variable(javaInt(), 'a')->j_divide(
+                 j_variable(javaInt(), 'b')->j_multiply(j_variable(javaInt(), 'c'))));
+
+   // Division nested in division: `a / (b / c)` != `a / b / c`
+   assertCode('a / (b / c)', javaInt(),
+              j_variable(javaInt(), 'a')->j_divide(
+                 j_variable(javaInt(), 'b')->j_divide(j_variable(javaInt(), 'c'))));
+}
+
+// Left-associative same-precedence nested on the LEFT: parens NOT required.
+// The natural left-to-right parse already matches the AST structure.
+function <<test.Test>> meta::external::language::java::factory::tests::infixLeftNestedSameLevelDropsParens():Boolean[1]
+{
+   // `(a - b) - c` is the natural left-associative parse, emit unparenthesized
+   assertCode('a - b - c', javaInt(),
+              j_variable(javaInt(), 'a')->j_minus(j_variable(javaInt(), 'b'))
+                 ->j_minus(j_variable(javaInt(), 'c')));
+
+   // Same for division left-nested
+   assertCode('a / b / c', javaInt(),
+              j_variable(javaInt(), 'a')->j_divide(j_variable(javaInt(), 'b'))
+                 ->j_divide(j_variable(javaInt(), 'c')));
+}
+
+// Cross-level: lower-precedence (parent) wrapping higher-precedence (child)
+// never needs parens, regardless of side.
+function <<test.Test>> meta::external::language::java::factory::tests::infixHigherPrecedenceChildDropsParens():Boolean[1]
+{
+   // `a + b * c` (parent +, child *) — no parens
+   assertCode('a + b * c', javaInt(),
+              j_variable(javaInt(), 'a')->j_plus(
+                 j_variable(javaInt(), 'b')->j_multiply(j_variable(javaInt(), 'c'))));
+   // Same on left
+   assertCode('b * c + a', javaInt(),
+              j_variable(javaInt(), 'b')->j_multiply(j_variable(javaInt(), 'c'))
+                 ->j_plus(j_variable(javaInt(), 'a')));
+}
+
+// Cross-level: lower-precedence (child) inside higher-precedence (parent)
+// always needs parens on either side.
+function <<test.Test>> meta::external::language::java::factory::tests::infixLowerPrecedenceChildKeepsParens():Boolean[1]
+{
+   // `(a + b) * c` — without parens, `*` would bind tighter
+   assertCode('(a + b) * c', javaInt(),
+              j_variable(javaInt(), 'a')->j_plus(j_variable(javaInt(), 'b'))
+                 ->j_multiply(j_variable(javaInt(), 'c')));
+   // `a * (b + c)` — same on the right
+   assertCode('a * (b + c)', javaInt(),
+              j_variable(javaInt(), 'a')->j_multiply(
+                 j_variable(javaInt(), 'b')->j_plus(j_variable(javaInt(), 'c'))));
+}
+
+// Ternary in the TEST position needs parens (right-associative parent →
+// equal-precedence on the left is the side that breaks associativity).
+// Without the fix, `(a == b) ? c : d) ? e : f` would have lost the outer
+// parens and reparsed as `a == b ? c : d ? e : f` = `a == b ? c : (d ? e : f)`.
+function <<test.Test>> meta::external::language::java::factory::tests::ternaryInTestPositionKeepsParens():Boolean[1]
+{
+   let inner = j_variable(javaBoolean(), 'a')->j_conditional(j_variable(javaInt(), 'b'),
+                                                              j_variable(javaInt(), 'c'));
+   // Use the inner ternary AS the test of an outer ternary
+   let outer = $inner->j_eq(j_int(1))->j_conditional(j_variable(javaInt(), 'd'),
+                                                      j_variable(javaInt(), 'e'));
+   // The inner conditional (precedence 2) inside the `==` (precedence 8)
+   // needs parens because 2 < 8.
+   assertCode('(a ? b : c) == 1 ? d : e', javaInt(), $outer);
+}
+
+// Ternary in the THEN / ELSE positions does NOT need parens — those slots
+// accept any expression including nested ternary (right-associative).
+function <<test.Test>> meta::external::language::java::factory::tests::ternaryInThenOrElseDropsParens():Boolean[1]
+{
+   // Nested ternary in ELSE: `a ? b : c ? d : e` parses right-associatively
+   // as `a ? b : (c ? d : e)`, which is what the AST says — no parens needed.
+   assertCode('a ? b : c ? d : e', javaInt(),
+              j_variable(javaBoolean(), 'a')->j_conditional(
+                 j_variable(javaInt(), 'b'),
+                 j_variable(javaBoolean(), 'c')->j_conditional(
+                    j_variable(javaInt(), 'd'),
+                    j_variable(javaInt(), 'e'))));
+}

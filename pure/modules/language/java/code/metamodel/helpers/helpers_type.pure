@@ -1,0 +1,242 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::metamodel::*;
+
+function meta::external::language::java::metamodel::isPrimitiveOrBoxedType(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->toOne()->match([
+      pt: meta::external::language::java::metamodel::PrimitiveType[1] | true,
+      c : meta::external::language::java::metamodel::Class[1]         | isBoxedType($c),
+      a : Any[1]                                  | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::isPrimitive(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->toOne()->match([
+      pt: meta::external::language::java::metamodel::PrimitiveType[1] | true,
+      a : Any[1]                                  | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::isPrimitiveNumber(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->isPrimitive() && ['int', 'long', 'short', 'byte', 'float', 'double']->contains($type->cast(@meta::external::language::java::metamodel::PrimitiveType).simpleName);
+}
+
+function meta::external::language::java::metamodel::isPrimitiveInt(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->isPrimitive() && $type->cast(@meta::external::language::java::metamodel::PrimitiveType).simpleName == 'int';
+}
+
+function meta::external::language::java::metamodel::isPrimitiveLong(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->isPrimitive() && $type->cast(@meta::external::language::java::metamodel::PrimitiveType).simpleName == 'long';
+}
+
+function meta::external::language::java::metamodel::isBoxedType(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->instanceOf(meta::external::language::java::metamodel::Class) && $type->cast(@meta::external::language::java::metamodel::Class)->isBoxedType();
+}
+
+function meta::external::language::java::metamodel::isBoxedType(class: meta::external::language::java::metamodel::Class[1]):Boolean[1]
+{
+   ['Boolean', 'Byte', 'Character', 'Float', 'Integer', 'Long', 'Short', 'Double']->contains($class.simpleName)
+      && $class.package.name == 'lang'
+      && $class.package.parent->isNotEmpty()
+      && $class.package.parent.name == 'java'
+      && $class.package.parent.parent->isEmpty();
+}
+
+function meta::external::language::java::metamodel::isBoxedNumberType(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->instanceOf(meta::external::language::java::metamodel::Class) && $type->cast(@meta::external::language::java::metamodel::Class)->isBoxedNumberType();
+}
+
+function meta::external::language::java::metamodel::isBoxedNumberType(class: meta::external::language::java::metamodel::Class[1]):Boolean[1]
+{
+   ['Byte', 'Float', 'Integer', 'Long', 'Short', 'Double', 'Number']->contains($class.simpleName) && $class.package ->isJavaLang();
+}
+
+function meta::external::language::java::metamodel::isClass(type:meta::external::language::java::metamodel::Type[1], qualifiedName:String[1]):Boolean[1]
+{
+   $type->match([
+      c:meta::external::language::java::metamodel::Class[1] | $c->isClass($qualifiedName),
+      a:Any[1]                                              | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::isClass(type:meta::external::language::java::metamodel::Type[1], pkg:String[1], names:String[*]):Boolean[1]
+{
+   $type->match([
+      c:meta::external::language::java::metamodel::Class[1] | $c->isClass($pkg, $names),
+      a:Any[1]                                              | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::isClass(c:meta::external::language::java::metamodel::Class[1], qualifiedName:String[1]):Boolean[1]
+{
+   let pos  = $qualifiedName->lastIndexOf('.');
+   let pkg  = $qualifiedName->substring(0, $pos);
+   let name = $qualifiedName->substring($pos+1);
+   $c->isClass($pkg, $name);
+}
+
+function meta::external::language::java::metamodel::isClass(c:meta::external::language::java::metamodel::Class[1], pkg:String[1], names:String[*]):Boolean[1]
+{
+   $c->isInPackage($pkg) && $names->contains($c.simpleName);
+}
+
+function meta::external::language::java::metamodel::isSubclassOf(c1:meta::external::language::java::metamodel::Class[1], c2:meta::external::language::java::metamodel::Class[1]):Boolean[1]
+{
+   if($c1 == $c2 || $c2->isClass('java.lang.Object'),
+      | true,
+      |
+   if($c1.superType->isNotEmpty(),
+      | $c1.superType->cast(@meta::external::language::java::metamodel::Class)->toOne()->isSubclassOf($c2),
+      |
+   if($c1->isClass('java.lang', 'Byte'),
+      | $c2->isClass('java.lang', ['Short', 'Character', 'Integer', 'Long', 'Float', 'Double', 'Number']),
+      |
+   if($c1->isClass('java.lang', 'Short'),
+      | $c2->isClass('java.lang', ['Character', 'Integer', 'Long', 'Float', 'Double', 'Number']),
+      |
+   if($c1->isClass('java.lang', 'Character'),
+      | $c2->isClass('java.lang', ['Integer', 'Long', 'Float', 'Double', 'Number']),
+      |
+   if($c1->isClass('java.lang', 'Integer'),
+      | $c2->isClass('java.lang', ['Long', 'Float', 'Double', 'Number']),
+      |
+   if($c1->isClass('java.lang', 'Long'),
+      | $c2->isClass('java.lang', ['Float', 'Double', 'Number']),
+      |
+   if($c1->isClass('java.lang', 'Float'),
+      | $c2->isClass('java.lang', ['Double', 'Number']),
+      |
+   if($c1->isClass('java.lang', 'Double'),
+      | $c2->isClass('java.lang', 'Number'),
+      | false
+   )))))))));
+}
+
+function meta::external::language::java::metamodel::isStatic(method: meta::external::language::java::metamodel::Method[1]):Boolean[1]
+{
+   $method.modifiers->contains(meta::external::language::java::metamodel::Modifier.Static);
+}
+
+function meta::external::language::java::metamodel::isJavaArray(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->instanceOf(meta::external::language::java::metamodel::Array);
+}
+
+function meta::external::language::java::metamodel::isJavaPrimitive(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->instanceOf(meta::external::language::java::metamodel::PrimitiveType);
+}
+
+function meta::external::language::java::metamodel::isJavaParameterizedTyype(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->instanceOf(meta::external::language::java::metamodel::ParameterizedType);
+}
+
+function meta::external::language::java::metamodel::isJavaList(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->match([
+      pt: meta::external::language::java::metamodel::ParameterizedType[1] | $pt.rawType->isClass('java.util.List'),
+      a :Any[1]                                                           | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::isJavaCollection(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->match([
+      pt: meta::external::language::java::metamodel::ParameterizedType[1] | $pt.rawType->isClass('java.util', ['List', 'Set', 'EnumSet', 'ArrayList', 'LinkedList', 'HashSet', 'TreeSet']),
+      a :Any[1]                                                           | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::elementType(type: meta::external::language::java::metamodel::Type[1]):meta::external::language::java::metamodel::Type[1]
+{
+   assert($type->isJavaParameterizedTyype(), |'Cannot obtain element type as not a Parameterized Type');
+   $type->cast(@meta::external::language::java::metamodel::ParameterizedType).typeArguments->at(0);
+}
+
+function meta::external::language::java::metamodel::elementTypeOfJavaList(type: meta::external::language::java::metamodel::Type[1]):meta::external::language::java::metamodel::Type[1]
+{
+   assert($type->isJavaList(), |'Cannot obtain element type as not a List');
+   $type->elementType();
+}
+
+function meta::external::language::java::metamodel::isJavaSupplier(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->match([
+      pt: meta::external::language::java::metamodel::ParameterizedType[1] | $pt.rawType->isClass('java.util.function.Supplier'),
+      a :Any[1]                                                           | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::isJavaFunction(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->match([
+      pt: meta::external::language::java::metamodel::ParameterizedType[1] | $pt.rawType->isClass('java.util.function.Function'),
+      a :Any[1]                                                           | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::suppliedTypeOfJavaSupplier(type: meta::external::language::java::metamodel::Type[1]):meta::external::language::java::metamodel::Type[1]
+{
+   assert($type->isJavaSupplier(), |'Cannot obtain supplied type as not a Supplier');
+   $type->cast(@meta::external::language::java::metamodel::ParameterizedType).typeArguments->at(0);
+}
+
+function meta::external::language::java::metamodel::returnTypeOfJavaFunction(type: meta::external::language::java::metamodel::Type[1]):meta::external::language::java::metamodel::Type[1]
+{
+   assert($type->isJavaFunction(), |'Cannot obtain supplied type as not a Function');
+   $type->cast(@meta::external::language::java::metamodel::ParameterizedType).typeArguments->at(1);
+}
+
+function meta::external::language::java::metamodel::inputTypeOfJavaFunction(type: meta::external::language::java::metamodel::Type[1]):meta::external::language::java::metamodel::Type[1]
+{
+   assert($type->isJavaFunction(), |'Cannot obtain supplied type as not a Function');
+   $type->cast(@meta::external::language::java::metamodel::ParameterizedType).typeArguments->at(0);
+}
+
+function meta::external::language::java::metamodel::isJavaStream(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->match([
+      pt: meta::external::language::java::metamodel::ParameterizedType[1] | $pt.rawType->isClass('java.util.stream.Stream'),
+      a :Any[1]                                                           | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::elementTypeOfJavaStream(type: meta::external::language::java::metamodel::Type[1]):meta::external::language::java::metamodel::Type[1]
+{
+   assert($type->isJavaStream(), |'Cannot obtain element type as not a Stream');
+   $type->elementType();
+}
+
+function meta::external::language::java::metamodel::isJavaOptional(type: meta::external::language::java::metamodel::Type[1]):Boolean[1]
+{
+   $type->match([
+      pt: meta::external::language::java::metamodel::ParameterizedType[1] | $pt.rawType->isClass('java.util.Optional'),
+      a :Any[1]                                                           | false
+   ]);
+}
+
+function meta::external::language::java::factory::elementTypeOfJavaOptional(type: meta::external::language::java::metamodel::Type[1]):meta::external::language::java::metamodel::Type[1]
+{
+   assert($type->isJavaOptional(), |'Cannot obtain element type as not an Optional');
+   $type->elementType();
+}

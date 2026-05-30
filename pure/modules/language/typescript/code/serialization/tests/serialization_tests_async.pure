@@ -1,0 +1,122 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::imports::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::serialization::tests::*;
+
+// =============================================================================
+// await expression
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::awaitSimple(): Boolean[1]
+{
+   testExpr('await fetch()', tsAwait(tsCall(tsId('fetch'), [])));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::awaitMemberAccess(): Boolean[1]
+{
+   testExpr('await user.save()',
+            tsAwait(tsCall(tsAccess(tsId('user'), 'save'), [])));
+}
+
+// =============================================================================
+// Promise<T> sugar
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::promiseTypeRef(): Boolean[1]
+{
+   testType('Promise<string>', tsPromise(tsString()));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::promiseNested(): Boolean[1]
+{
+   testType('Promise<User[]>', tsPromise(tsArrayOf(tsRef('User'))));
+}
+
+// =============================================================================
+// async function / method / arrow
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::asyncFunctionDeclaration(): Boolean[1]
+{
+   testStmt('''
+            async function load(): Promise<User> {
+              return await fetchUser();
+            }''',
+            tsAsyncFunction('load', [], tsPromise(tsRef('User')),
+               tsBlock([tsReturn(tsAwait(tsCall(tsId('fetchUser'), [])))])));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::asyncMethod(): Boolean[1]
+{
+   testStmt('''
+            class Repo {
+              async findOne(id: number): Promise<User> {
+                return await this.db.get(id);
+              }
+            }''',
+            tsClass('Repo', [
+               tsAsyncMethod('findOne',
+                  [tsParam('id', tsNumber())],
+                  tsPromise(tsRef('User')),
+                  tsBlock([
+                     tsReturn(tsAwait(tsCall(tsAccess(tsAccess(tsThis(), 'db'), 'get'), [tsId('id')])))
+                  ]))
+            ]));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::asyncArrowExpression(): Boolean[1]
+{
+   testExpr('async (id) => await fetchUser(id)',
+            tsAsyncArrowExpr(
+               [tsParamNoType('id')],
+               tsAwait(tsCall(tsId('fetchUser'), [tsId('id')]))));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::asyncArrowBlock(): Boolean[1]
+{
+   testExpr('''
+            async (id) => {
+              return await fetchUser(id);
+            }''',
+            tsAsyncArrowBlock(
+               [tsParamNoType('id')],
+               tsBlock([tsReturn(tsAwait(tsCall(tsId('fetchUser'), [tsId('id')])))])));
+}
+
+// =============================================================================
+// Walker descends through await — imports inside `await ...` get picked up
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::awaitInsideResolvesImports(): Boolean[1]
+{
+   let apiFile = tsSourceFile('src/api.ts', []);
+   let appFile = tsSourceFile('src/app.ts', [
+      tsAsyncFunction('main', [], [],
+         tsBlock([
+            tsExprStmt(tsAwait(tsCall(tsIdFrom('fetchAll', tsLocalSource($apiFile)), [])))
+         ]))
+   ]);
+   testFile('''
+            import { fetchAll } from './api.js';
+
+            async function main() {
+              await fetchAll();
+            }
+            ''',
+            $appFile->resolveImports());
+}

@@ -61,6 +61,24 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
         | let mMult1 = meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($p1Protocol.multiplicity);
           let mMult2 = meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($p2Protocol.multiplicity);
 
+          // Compile each property's stereotypes/tagged values with the caller
+          // sub-element pushed (so annotation references attribute to
+          // {@code Assoc.propName}) AND the recording context threaded forward.
+          // Mirrors Java AssociationHandler.secondPass withCallerSubElement: the
+          // Pure context is immutable, so discarding the returned context would
+          // drop the recorded profile/stereotype/tag references entirely.
+          let savedPath = $ctx1.currentElementPath;
+          let p1Pushed = if($savedPath->isEmpty(), | $ctx1, | ^$ctx1(currentElementPath = $savedPath->toOne() + '.' + $p1Protocol.name->toOne()));
+          let p1Stereo = compilePropertyStereotypes($p1Protocol, $p1Pushed, $ownerCtx);
+          let p1Tag    = compilePropertyTaggedValues($p1Protocol, $p1Stereo.context, $ownerCtx);
+          let p1TagCtx = $p1Tag.context;
+          let ctxAfterP1Ann = ^$p1TagCtx(currentElementPath = $savedPath);
+          let p2Pushed = if($savedPath->isEmpty(), | $ctxAfterP1Ann, | ^$ctxAfterP1Ann(currentElementPath = $savedPath->toOne() + '.' + $p2Protocol.name->toOne()));
+          let p2Stereo = compilePropertyStereotypes($p2Protocol, $p2Pushed, $ownerCtx);
+          let p2Tag    = compilePropertyTaggedValues($p2Protocol, $p2Stereo.context, $ownerCtx);
+          let p2TagCtx = $p2Tag.context;
+          let ctxAfterP2Ann = ^$p2TagCtx(currentElementPath = $savedPath);
+
           let propClassifierGT1 = ^UserDefinedGenericType(
               type = Property,
               typeArguments = [$mGenType2, $mGenType1],
@@ -72,8 +90,8 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
               aggregation = compileAggregationKind($p1Protocol),
               genericType = $mGenType1,
               multiplicity = $mMult1,
-              stereotypes = compilePropertyStereotypes($p1Protocol, $ctx1, $ownerCtx).values,
-              taggedValues = compilePropertyTaggedValues($p1Protocol, $ctx1, $ownerCtx).values,
+              stereotypes = $p1Stereo.values,
+              taggedValues = $p1Tag.values,
               sourceInformation = compileSourceInformation($p1Protocol.p_sourceInformation, $context)
           );
 
@@ -88,15 +106,17 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
               aggregation = compileAggregationKind($p2Protocol),
               genericType = $mGenType2,
               multiplicity = $mMult2,
-              stereotypes = compilePropertyStereotypes($p2Protocol, $ctx1, $ownerCtx).values,
-              taggedValues = compilePropertyTaggedValues($p2Protocol, $ctx1, $ownerCtx).values,
+              stereotypes = $p2Stereo.values,
+              taggedValues = $p2Tag.values,
               sourceInformation = compileSourceInformation($p2Protocol.p_sourceInformation, $context)
           );
 
-          // Compile stereotypes and tagged values on the association itself
+          // Compile stereotypes and tagged values on the association itself —
+          // thread from the property-annotation context so their recorded
+          // references survive.
           let stereoAccum = $protocolAssoc.stereotypes->fold({s, acc |
                                       compileStereotype($s, $acc, $ownerCtx);
-                                  }, ^CompilerListResult<Stereotype>(context = $ctx1));
+                                  }, ^CompilerListResult<Stereotype>(context = $ctxAfterP2Ann));
           let tvAccum = $protocolAssoc.taggedValues->fold({t, acc |
                                       compileTaggedValue($t, $acc, $ownerCtx);
                                   }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));
@@ -106,9 +126,12 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
           // (the class that "owns" the first property, i.e. where QPs are accessible).
           // Deref pointer first so downstream `.name` / `.typeParameters` reads work
           // (Class_Pointer carries only path+element).
-          let qpOwnerClass = $mGenType2->genericTypeRawType()->meta::pure::compiler::helper::type::derefTypeIfPointer($ctx2)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
+          let qpOwnerClass = $mGenType2->rawType()->meta::pure::compiler::helper::type::derefTypeIfPointer($ctx2)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
           let qpAccum = $protocolAssoc.qualifiedProperties->fold({qp, acc |
-              let result = $qp->compileQualifiedProperty($acc.context, $packagePath, $qpOwnerClass);
+              // Push the QP sub-element so its references attribute to
+              // {@code Assoc.qpName} (mirrors Java AssociationHandler /
+              // ClassHandler withCallerSubElement(qp._name())).
+              let result = $acc.context->withCallerSubElement($qp.name, {ctx | $qp->compileQualifiedProperty($ctx, $packagePath, $qpOwnerClass)});
               ^$acc(values += $result.value, context = $result.context);
           }, ^CompilerListResult<QualifiedProperty<Any>>(context = $ctx2));
           let ctx3 = $qpAccum.context;
@@ -129,8 +152,8 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
           // Use the properties from the compiled association (they have owner set to the association)
           let registeredProp1 = $compiledAssoc.properties->at(0);
           let registeredProp2 = $compiledAssoc.properties->at(1);
-          let class2Path = $mGenType2->genericTypeRawType()->toOne()->cast(@PackageableElement)->elementToPath();
-          let class1Path = $mGenType1->genericTypeRawType()->toOne()->cast(@PackageableElement)->elementToPath();
+          let class2Path = $mGenType2->rawType()->toOne()->cast(@PackageableElement)->elementToPath();
+          let class1Path = $mGenType1->rawType()->toOne()->cast(@PackageableElement)->elementToPath();
           // Self-association (both ends point at the same class, e.g. `Package.parent`
           // / `Package.children`): apply BOTH property additions to the same instance
           // before writing back. The Java side mutates `class._propertiesFromAssociations()`

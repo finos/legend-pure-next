@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
-# Shell wrapper for the Truffle-backed Pure compile fat JAR.
+# Shell wrapper for the Truffle-backed Pure compile fat JAR + extensions.
 #
-# Requires the project to be built with `just build-truffle` first.
+# Requires the project to be built with `just truffle::build` first.
 # Phase F will replace this with a native-image binary of the same name.
+#
+# Classpath: the runtime fat jar plus every extension jar in build/. Extensions
+# (e.g. legend-pure-next-truffle-extension-java) contribute specialized native
+# nodes via the TruffleNativesExtension SPI; ServiceLoader picks them up at
+# startup as long as their jars are on the classpath.
 #
 # JVMCI flags: the polyglot engine falls back to a fallback runtime (and prints
 # a warning) unless JVMCI is explicitly enabled. With GraalVM JDK on PATH that
@@ -13,16 +18,30 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TRUFFLE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-JAR="${TRUFFLE_DIR}/build/pure-truffle.jar"
+BUILD_DIR="${TRUFFLE_DIR}/build"
+JAR="${BUILD_DIR}/pure-truffle.jar"
 
 if [[ ! -f "${JAR}" ]]; then
     echo "Error: pure-truffle jar not found at ${JAR}" >&2
-    echo "Run 'just build-truffle' first." >&2
+    echo "Run 'just truffle::build' first." >&2
     exit 1
 fi
+
+# Build classpath: fat jar + every other jar in build/ (extensions). The fat
+# jar's manifest Main-Class is irrelevant when launching with -cp; main class
+# is passed explicitly.
+CLASSPATH="${JAR}"
+shopt -s nullglob
+for ext in "${BUILD_DIR}"/*.jar; do
+    if [[ "${ext}" != "${JAR}" ]]; then
+        CLASSPATH="${CLASSPATH}:${ext}"
+    fi
+done
+shopt -u nullglob
 
 exec java \
     -XX:+UnlockExperimentalVMOptions \
     -XX:+EnableJVMCI \
     -XX:+UseJVMCICompiler \
-    -jar "${JAR}" "$@"
+    -cp "${CLASSPATH}" \
+    org.finos.legend.pure.truffle.PureCompileMain "$@"

@@ -1,0 +1,128 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::serialization::tests::*;
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::mapIdentity(): Boolean[1]
+{
+   testExpr('items.map((x) => x)', tsMap(tsId('items'), 'x', tsId('x')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::mapProjectProperty(): Boolean[1]
+{
+   testExpr('users.map((u) => u.name)', tsMap(tsId('users'), 'u', tsAccess(tsId('u'), 'name')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::filterByEquality(): Boolean[1]
+{
+   testExpr(
+      'items.filter((x) => x.active === true)',
+      tsFilter(tsId('items'), 'x', tsBinary(tsAccess(tsId('x'), 'active'), '===', tsBoolLit(true))));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::someExists(): Boolean[1]
+{
+   testExpr('items.some((x) => x > 0)', tsSome(tsId('items'), 'x', tsBinary(tsId('x'), '>', tsNumLit('0'))));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::everyForAll(): Boolean[1]
+{
+   testExpr('items.every((x) => x !== null)', tsEvery(tsId('items'), 'x', tsBinary(tsId('x'), '!==', tsNull())));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::findFirst(): Boolean[1]
+{
+   testExpr(
+      'users.find((u) => u.id === target)',
+      tsFind(tsId('users'), 'u', tsBinary(tsAccess(tsId('u'), 'id'), '===', tsId('target'))));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::flatMapFlatten(): Boolean[1]
+{
+   testExpr(
+      'groups.flatMap((g) => g.items)',
+      tsFlatMap(tsId('groups'), 'g', tsAccess(tsId('g'), 'items')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::forEachSideEffect(): Boolean[1]
+{
+   testExpr(
+      'items.forEach((x) => console.log(x))',
+      tsForEach(tsId('items'), 'x', tsCall(tsAccess(tsId('console'), 'log'), [tsId('x')])));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::reduceSum(): Boolean[1]
+{
+   testExpr(
+      'items.reduce((acc, v) => acc + v, 0)',
+      tsReduce(tsId('items'), 'acc', 'v',
+               tsBinary(tsId('acc'), '+', tsId('v')),
+               tsNumLit('0')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::includesValue(): Boolean[1]
+{
+   testExpr('items.includes(42)', tsIncludes(tsId('items'), tsNumLit('42')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::joinWithSeparator(): Boolean[1]
+{
+   testExpr('items.join(\', \')', tsJoin(tsId('items'), tsStrLit(', ')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::sliceRange(): Boolean[1]
+{
+   testExpr('items.slice(0, 5)', tsSlice(tsId('items'), tsNumLit('0'), tsNumLit('5')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::lengthProperty(): Boolean[1]
+{
+   testExpr('items.length', tsLength(tsId('items')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::reverseNoArgs(): Boolean[1]
+{
+   testExpr('items.reverse()', tsReverse(tsId('items')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::sortByComparator(): Boolean[1]
+{
+   testExpr(
+      'items.sort((a, b) => a - b)',
+      tsSortBy(tsId('items'), 'a', 'b', tsBinary(tsId('a'), '-', tsId('b'))));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::arrayLitFromExpressions(): Boolean[1]
+{
+   testExpr('[1, 2, 3]', tsArrayLit([tsNumLit('1'), tsNumLit('2'), tsNumLit('3')]));
+}
+
+// Chained pipeline: items.filter(x => x.active).map(x => x.name).join(', ')
+function <<test.Test>> meta::external::language::typescript::serialization::tests::chainedPipeline(): Boolean[1]
+{
+   testExpr(
+      'items.filter((x) => x.active).map((x) => x.name).join(\', \')',
+      tsJoin(
+         tsMap(
+            tsFilter(tsId('items'), 'x', tsAccess(tsId('x'), 'active')),
+            'x',
+            tsAccess(tsId('x'), 'name')
+         ),
+         tsStrLit(', ')
+      )
+   );
+}

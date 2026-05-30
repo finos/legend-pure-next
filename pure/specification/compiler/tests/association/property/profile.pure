@@ -1,16 +1,16 @@
 ###Pure
 import protocol::support::*;
 
-Association protocol::MyAssociation
-{
-  <<AProfile.flag>> {AProfile.tag1 = 'yeah'} a: ClassA[1];
-  b: ClassB[*];
-}
-
 Profile protocol::support::AProfile
 {
   stereotypes: [flag];
   tags: [tag1];
+}
+
+Association protocol::MyAssociation
+{
+  <<AProfile.flag>> {AProfile.tag1 = 'yeah'} a: ClassA[1];
+  b: ClassB[*];
 }
 
 Class protocol::support::ClassA
@@ -22,15 +22,15 @@ Class protocol::support::ClassB
 }
 
 ###CompiledGraph
-association protocol::MyAssociation  ~@Association@  @4:1-8:1
+profile protocol::support::AProfile  ~@Profile@  @4:1-8:1
+  stereotype flag  ~@Stereotype@
+  tag tag1  ~@Tag@
+
+association protocol::MyAssociation  ~@Association@  @10:1-14:1
   property a :protocol::support::ClassA[1]  ~Property<protocol::support::ClassB, protocol::support::ClassA|1>
     <<protocol::support::AProfile.flag>>
     {protocol::support::AProfile.tag1 = 'yeah'}
   property b :protocol::support::ClassB[*]  ~Property<protocol::support::ClassA, protocol::support::ClassB|*>
-
-profile protocol::support::AProfile  ~@Profile@  @10:1-14:1
-  stereotype flag  ~@Stereotype@
-  tag tag1  ~@Tag@
 
 class protocol::support::ClassA extends Any  ~Class<protocol::support::ClassA>  @16:1-18:1
 

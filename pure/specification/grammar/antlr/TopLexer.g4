@@ -28,11 +28,20 @@ SEMICOLON
     : ';'
     ;
 
-// String-literal token — declared BEFORE the comment rules so longest-match
+// String literals — declared BEFORE the comment rules so longest-match
 // preserves `'/**...*/'` as a single STRING_CONTENT token rather than letting
 // `BLOCK_COMMENT` skip the `/**...*/` substring inside it (which would lose
 // that text from `contentToken.getText()` reassembly and feed an empty
 // string to the per-section M3Lexer).
+//
+// Triple-quoted multi-line literals (`'''...'''`) need the same protection:
+// without an explicit rule, a `/**...*/` block on a line inside the literal
+// would be eaten by BLOCK_COMMENT. Declared before STRING_CONTENT so ANTLR's
+// longest-match prefers it when the input starts with three quotes.
+STRING_TRIPLE_CONTENT
+    : '\'\'\'' .*? '\'\'\''
+    ;
+
 STRING_CONTENT
     : '\'' ( '\\' . | ~['\r\n\\] )* '\''
     ;

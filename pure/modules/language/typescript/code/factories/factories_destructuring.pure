@@ -1,0 +1,111 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Destructuring factories.
+//
+//   const { a, b } = obj;
+//   const { source: alias } = obj;
+//   const { x = 0 } = obj;
+//   const { head, ...rest } = obj;
+//   const [a, b] = arr;
+//   const [head, ...tail] = arr;
+//   const { user: { name } } = obj;        // nested
+//   function f({ a, b }: T) { ... }
+//
+// The element factories (tsBindName / tsBindRename / tsBindDefault /
+// tsBindRest / tsBindNested) build one BindingElement at a time. Compose
+// them inside tsObjectBinding(...) or tsArrayBinding(...) and pass the
+// pattern to tsLet / tsConst / tsParam (BindingName-typed overloads).
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+
+// =============================================================================
+// Binding elements — one position inside a pattern.
+// =============================================================================
+
+// `{ a }` or `[a]` — leaf binding to an identifier name.
+function meta::external::language::typescript::factories::tsBindName(name: String[1]): BindingElement[1]
+{
+   ^BindingElement(name=tsId($name));
+}
+
+// `{ source: alias }` — destructure `source` from the object, bind to `alias`.
+function meta::external::language::typescript::factories::tsBindRename(propertyName: String[1], localName: String[1]): BindingElement[1]
+{
+   ^BindingElement(propertyName=$propertyName, name=tsId($localName));
+}
+
+// `{ x = default }` — bind `x` with a fallback value when undefined.
+function meta::external::language::typescript::factories::tsBindDefault(name: String[1], default: Expression[1]): BindingElement[1]
+{
+   ^BindingElement(name=tsId($name), initializer=$default);
+}
+
+// `{ ...rest }` or `[...tail]` — rest binding (must be last in pattern).
+function meta::external::language::typescript::factories::tsBindRest(name: String[1]): BindingElement[1]
+{
+   ^BindingElement(name=tsId($name), isRest=true);
+}
+
+// `{ user: { name } }` — nest a pattern inside another. `propertyName` is the
+// source-side property (here 'user'); `pattern` is the nested BindingPattern.
+function meta::external::language::typescript::factories::tsBindNested(propertyName: String[1], pattern: BindingName[1]): BindingElement[1]
+{
+   ^BindingElement(propertyName=$propertyName, name=$pattern);
+}
+
+// =============================================================================
+// Binding patterns.
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsObjectBinding(elements: BindingElement[*]): ObjectBindingPattern[1]
+{
+   ^ObjectBindingPattern(elements=$elements);
+}
+
+function meta::external::language::typescript::factories::tsArrayBinding(elements: BindingElement[*]): ArrayBindingPattern[1]
+{
+   ^ArrayBindingPattern(elements=$elements);
+}
+
+// =============================================================================
+// Overloads of tsLet / tsConst / tsParam that take a BindingName directly.
+//
+// The existing String-name forms remain (they wrap with tsId internally).
+// These overloads are what destructuring callers reach for.
+// =============================================================================
+
+function meta::external::language::typescript::factories::tsLet(name: BindingName[1], type: TypeNode[0..1], init: Expression[0..1]): VariableStatement[1]
+{
+   ^VariableStatement(
+      modifiers=[],
+      declarationKind=VariableDeclarationKind.Let,
+      declarations=[^VariableDeclaration(name=$name, type=$type, initializer=$init)]
+   );
+}
+
+function meta::external::language::typescript::factories::tsConst(name: BindingName[1], type: TypeNode[0..1], init: Expression[0..1]): VariableStatement[1]
+{
+   ^VariableStatement(
+      modifiers=[],
+      declarationKind=VariableDeclarationKind.Const,
+      declarations=[^VariableDeclaration(name=$name, type=$type, initializer=$init)]
+   );
+}
+
+function meta::external::language::typescript::factories::tsParam(name: BindingName[1], type: TypeNode[0..1]): ParameterDeclaration[1]
+{
+   ^ParameterDeclaration(name=$name, type=$type);
+}

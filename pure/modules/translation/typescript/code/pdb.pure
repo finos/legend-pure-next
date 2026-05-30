@@ -1,0 +1,206 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::*;
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::translation::*;
+import meta::external::language::typescript::translation::pdb::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::translation::shared::*;
+
+// ============================================================================
+// Bulk PDB → TypeScript translation. Walks every PackageableElement under
+// `rootPackagePath` and emits a single TS source file containing:
+//
+//   - One `interface <Name>` per Pure `Class` (declared properties only;
+//     associations and constraints are dropped — JS has no runtime
+//     constraint checking).
+//   - One `const <Name>` per Pure `Enumeration`, mapping each enum value
+//     name to `{name: '<value>'}`. Matches the in-memory translator's
+//     enum-value shape (see classInstanceToObjectLiteral).
+//   - One `function <name>(...)` per Pure `UserDefinedFunction`, translated
+//     through the same `translateFunction` pipeline used by the
+//     per-test adapter. Bodies are emitted unchanged from the regular
+//     translation path.
+//
+// Entry point: `translatePdbToTs(rootPackagePath)` returns the bundled TS
+// source as a single String. The `translate-pdb` Justfile recipe pipes
+// stdout to `shared/typescript-translation-<root>.ts`.
+//
+// Limitations:
+//   - Constraints, associations, and qualified properties are not emitted.
+//   - Generic type parameters are erased; everything is plainly typed.
+//   - Name collisions across packages use the short name only — the bundle
+//     assumes unique short names within `rootPackagePath`. If a PDB has
+//     duplicates, only the last definition under the same short name wins.
+// ============================================================================
+
+function <<test.TestDependency>> meta::external::language::typescript::translation::pdb::translatePdbToTs(rootPackagePath: String[1]): String[1]
+{
+   let root = pathToElement($rootPackagePath)->cast(@meta::pure::metamodel::Package);
+   let elements = $root->collectAllElements();
+   let header = '// Auto-generated from Pure PDB rooted at ' + $rootPackagePath + '\n' +
+                '// Source: pure/modules/translation/typescript/code/pdb.pure\n\n';
+   let parts = $elements->map(e | $e->translateElement());
+   let nonEmpty = $parts->filter(p | $p != '');
+   $header + $nonEmpty->joinStrings('\n\n');
+}
+
+// Walk a Package recursively, returning every PE we know how to translate:
+// Classes, Enumerations, UserDefinedFunctions. Skips functions whose body
+// is wholly built from natives the translator already covers (everything is
+// included by default; the runtime preamble carries the natives).
+function <<test.TestDependency>> meta::external::language::typescript::translation::pdb::collectAllElements(
+   pkg: meta::pure::metamodel::Package[1]
+): meta::pure::metamodel::PackageableElement[*]
+{
+   let direct = $pkg.children
+                   ->map(c | meta::pure::test::resolveChild($c))
+                   ->filter(e | $e->isTranslatableElement());
+   let subPackages = $pkg.children
+                        ->map(c | meta::pure::test::resolveChild($c))
+                        ->filter(e | $e->instanceOf(meta::pure::metamodel::Package))
+                        ->cast(@meta::pure::metamodel::Package);
+   concatenate($direct, $subPackages->map(p | $p->collectAllElements()));
+}
+
+function meta::external::language::typescript::translation::pdb::isTranslatableElement(
+   e: meta::pure::metamodel::PackageableElement[1]
+): Boolean[1]
+{
+   $e->instanceOf(meta::pure::metamodel::function::UserDefinedFunction)
+      || $e->instanceOf(meta::pure::metamodel::type::Class)
+      || $e->instanceOf(meta::pure::metamodel::type::Enumeration);
+}
+
+// Dispatch on element kind. Returns '' for elements we skip silently (e.g.
+// abstract / typemodifiers-marked classes that wouldn't translate cleanly).
+function meta::external::language::typescript::translation::pdb::translateElement(
+   e: meta::pure::metamodel::PackageableElement[1]
+): String[1]
+{
+   if ($e->instanceOf(meta::pure::metamodel::function::UserDefinedFunction),
+      | let udf = $e->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>);
+        $udf->translateUdfElement();,
+   |if ($e->instanceOf(meta::pure::metamodel::type::Enumeration),
+      | let en = $e->cast(@meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>);
+        $en->translateEnumeration();,
+   |if ($e->instanceOf(meta::pure::metamodel::type::Class),
+      | let cls = $e->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>);
+        $cls->translateClass();,
+      | ''
+   )));
+}
+
+// `Class Pkg::Name { prop1: T1[m1]; ... }` → `interface Name { prop1: T1; ... }`.
+// Generics + multiplicities are not preserved in the type annotations; the
+// bundle is for shape documentation, not strict typing.
+function meta::external::language::typescript::translation::pdb::translateClass(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   let shortName = $cls->elementToPath()->split('::')->last()->toOne();
+   let fields = $cls.properties->map(p | $p->translateClassProperty());
+   let fieldsBlock = if ($fields->isEmpty(),
+                         | '',
+                         | '\n  ' + $fields->joinStrings('\n  ') + '\n');
+   '// Class ' + $cls->elementToPath() + '\n' +
+   'export interface ' + $shortName + ' {' + $fieldsBlock + '}';
+}
+
+function meta::external::language::typescript::translation::pdb::translateClassProperty(
+   p: meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Any, meta::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   let n = $p.name->toOne();
+   let raw = $p.genericType->rawType();
+   let tyStr = if ($raw->isEmpty(),
+                   | 'any',
+                   | $raw->toOne()->pureTypeToTsTypeName());
+   $n + ': ' + $tyStr + ';';
+}
+
+function meta::external::language::typescript::translation::pdb::pureTypeToTsTypeName(
+   t: meta::pure::metamodel::type::Type[1]
+): String[1]
+{
+   let path = $t->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
+   if ($path == 'meta::pure::metamodel::type::primitives::String',  | 'string',
+   |if ($path == 'meta::pure::metamodel::type::primitives::Integer', | 'number',
+   |if ($path == 'meta::pure::metamodel::type::primitives::Float',   | 'number',
+   |if ($path == 'meta::pure::metamodel::type::primitives::Number',  | 'number',
+   |if ($path == 'meta::pure::metamodel::type::primitives::Decimal', | 'number',
+   |if ($path == 'meta::pure::metamodel::type::primitives::Boolean', | 'boolean',
+   |if ($path == 'meta::pure::metamodel::type::primitives::Date',    | 'string',
+   |if ($path == 'meta::pure::metamodel::type::primitives::StrictDate', | 'string',
+   |if ($path == 'meta::pure::metamodel::type::primitives::DateTime', | 'string',
+   |if ($path == 'meta::pure::metamodel::type::primitives::StrictTime', | 'string',
+   | // User-defined Class/Enumeration → reference by short name. Caller
+     // is responsible for emitting the corresponding interface/const
+     // earlier in the bundle.
+     $path->split('::')->last()->toOne()
+   ))))))))));
+}
+
+// `Enum Pkg::Color { RED, GREEN }` → `export const Color = { RED: {name:'RED'}, GREEN: {name:'GREEN'} };`.
+// Matches what classInstanceToObjectLiteral emits for an Enumeration class.
+function meta::external::language::typescript::translation::pdb::translateEnumeration(
+   en: meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   let shortName = $en->elementToPath()->split('::')->last()->toOne();
+   let entries = $en.properties->map(p | $p.name->toOne() + ': {name: \'' + $p.name->toOne() + '\'}');
+   '// Enumeration ' + $en->elementToPath() + '\n' +
+   'export const ' + $shortName + ' = { ' + $entries->joinStrings(', ') + ' };';
+}
+
+// Translate a UDF through the existing `translateFunction` pipeline, then
+// serialize the resulting SourceFile. Strip the `export function execute(...)`
+// wrapper and rename to the UDF's short name so the bundle reads like a
+// hand-written TS module.
+function meta::external::language::typescript::translation::pdb::translateUdfElement(
+   udf: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   let path = $udf->elementToPath();
+   let shortName = safeJsName($udf.functionName->toOne()->split('::')->last()->toOne());
+   let attempt = tryEval(| $udf->renderUdfTs($shortName));
+   if ($attempt.failure->isNotEmpty(),
+      | '// translation failed for ' + $path + ': ' + $attempt.failure->toOne().message,
+      | '// ' + $path + '\n' + $attempt.value);
+}
+
+function meta::external::language::typescript::translation::pdb::renderUdfTs(
+   udf: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
+   shortName: String[1]
+): String[1]
+{
+   let tsParams = $udf.parameters->map(p |
+      tsParam($p.name, pureTypeToTypeScriptType($p.genericType, $p.multiplicity))
+   );
+   let returnType = pureTypeToTypeScriptType($udf.returnGenericType, $udf.returnMultiplicity);
+   let body = $udf.expressionSequence->buildTsFunctionBody(defaultConvention()->withTypeVarWitness($udf.parameters));
+   let fn = ^FunctionDeclaration(
+      name           = $shortName,
+      modifiers      = [ModifierFlag.Export],
+      typeParameters = [],
+      parameters     = $tsParams,
+      returnType     = $returnType,
+      body           = $body
+   );
+   tsSourceFile('translated.ts', [$fn])->serialize();
+}

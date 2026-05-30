@@ -125,5 +125,33 @@ public class CompilerNatives implements NativeExtension
             String result = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(dateStr);
             return _E_ValueSpecification.wrap(result != null ? result : dateStr, genericType, multiplicity, resolver);
         });
+
+        // meta::pure::functions::meta::resolveAndReturnGraph(elements:Map<String, PackageableElement>[1]):PackageableElement[*]
+        //
+        // Permissive no-op on java-direct. compile() invokes this native at
+        // its return so Truffle consumers get a fully-resolved graph at the
+        // boundary; on java-direct the standard test/CLI flows (test-pure-
+        // compiler, compile-via-pure) feed compile output straight into
+        // graph printers / PDB writers that have always handled pointers
+        // natively, so a no-op leaves observed behavior unchanged.
+        //
+        // If a new java-direct consumer arrives that strictly needs a
+        // pointer-free graph, swap this for a reflection-based deep-copy +
+        // pointer walker over the XImpl `_X()` accessors (model on
+        // ProtocolToDynamicInstance).
+        natives.put("resolveAndReturnGraph_Map_1__PackageableElement_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            org.finos.legend.pure.execution.PureMap pureMap =
+                    (org.finos.legend.pure.execution.PureMap) _E_ValueSpecification.unwrap(args.get(0));
+            org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.valuespecification.ValueSpecification> wrapped =
+                    org.eclipse.collections.api.factory.Lists.mutable.empty();
+            for (java.util.Map.Entry<meta.pure.metamodel.valuespecification.ValueSpecification,
+                                     meta.pure.metamodel.valuespecification.ValueSpecification> e :
+                    pureMap.getMap().entrySet())
+            {
+                wrapped.add(e.getValue());
+            }
+            return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrapped, resolver);
+        });
     }
 }

@@ -1,0 +1,413 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::translation::shared::*;
+
+// Decompiler: compiled FunctionDefinition (`meta::pure::metamodel::*`) →
+// protocol grammar form (`meta::pure::protocol::grammar::*`) that the
+// compiler accepts as input. Used by `inlineOpenVariables` to walk a
+// captured lambda and emit an equivalent protocol UserDefinedFunction
+// whose VariableExpressions for open variables have been substituted with
+// the protocol expressions producing their captured values.
+//
+// Two protocol namespaces share short class names with the compiled
+// metamodel (VariableExpression, FunctionExpression, ...). Every reference
+// in this file uses the fully-qualified protocol path to keep both sides
+// unambiguous within the same file.
+
+// ----------------------------------------------------------------------------
+// Top-level: wrap a compiled FunctionDefinition body in a protocol
+// UserDefinedFunction. `captureMap` maps open-variable names to the values
+// captured at runtime — each VariableExpression in the body whose name is
+// in the map gets substituted with the protocol expression representing
+// the captured value (toProtocolFromRuntime).
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::toProtocolUserDefinedFunction(
+   compiledBody: meta::pure::metamodel::valuespecification::ValueSpecification[*],
+   compiledParams: meta::pure::metamodel::valuespecification::VariableExpression[*],
+   compiledReturnGT: meta::pure::metamodel::type::generics::GenericType[1],
+   compiledReturnMul: meta::pure::metamodel::multiplicity::Multiplicity[1],
+   captureMap: Map<String, List<Any>>[1],
+   packagePath: String[1],
+   fnName: String[1]
+): meta::pure::protocol::grammar::function::UserDefinedFunction[1]
+{
+   ^meta::pure::protocol::grammar::function::UserDefinedFunction(
+      name              = $fnName,
+      functionName      = $fnName,
+      package           = ^meta::pure::protocol::grammar::Package_Pointer(value = $packagePath),
+      returnGenericType = $compiledReturnGT->toProtocolGenericType(),
+      returnMultiplicity = $compiledReturnMul->toProtocolMultiplicity(),
+      typeParameters    = [],
+      multiplicityParameters = [],
+      parameters        = $compiledParams->map(p | $p->toProtocolParameter()),
+      expressionSequence = $compiledBody->map(vs | $vs->toProtocolValueSpec($captureMap)),
+      preConstraints    = [],
+      postConstraints   = [],
+      stereotypes       = [],
+      taggedValues      = []
+   );
+}
+
+// Compiled GenericType -> protocol GenericType_Protocol. Handles the cases we
+// actually see in canonicalization (resolved UserDefinedGenericType with a
+// concrete rawType + optional type-args). Generics like List<String> emit
+// recursively. Falls back to InferredGenericType with Any when the rawType
+// can't be resolved (a TypeParameter binding pre-resolution, etc.).
+function meta::pure::translation::shared::toProtocolGenericType(
+   gt: meta::pure::metamodel::type::generics::GenericType[1]
+): meta::pure::protocol::grammar::type::generics::GenericTypeValue[1]
+{
+   let raw = $gt->rawType();
+   let isPackageable = $raw->isNotEmpty() && $raw->toOne()->instanceOf(meta::pure::metamodel::PackageableElement);
+   let rawPath = if ($isPackageable, | $raw->toOne()->elementToPath(), | 'meta::pure::metamodel::type::Any');
+   // Recurse into the GenericType's own type arguments so generics like
+   // `List<String>` survive the round-trip (only GenericTypeValue carries
+   // typeArguments; other shapes have none). Without this the `<String>` is
+   // dropped and reflection on `genericType().typeArguments` sees nothing.
+   // Only packageable-rawType args round-trip as `Type_Pointer`; non-packageable
+   // args (e.g. a lambda classifier's FunctionType) are dropped, as before —
+   // they have no path-pointer form.
+   let typeArgs = $gt->match([
+      gtv: meta::pure::metamodel::type::generics::GenericTypeValue[1] | $gtv.typeArguments,
+      e:   meta::pure::metamodel::type::generics::GenericType[*]      | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+   ]);
+   let pTypeArgs = $typeArgs
+      ->filter(ta | $ta->rawType()->isNotEmpty() && $ta->rawType()->toOne()->instanceOf(meta::pure::metamodel::PackageableElement))
+      ->map(ta | $ta->toProtocolGenericType()->cast(@meta::pure::protocol::grammar::type::generics::GenericType_Protocol));
+   ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+      type = ^meta::pure::protocol::grammar::type::Type_Pointer(value = $rawPath),
+      typeArguments = $pTypeArgs,
+      multiplicityArguments = [],
+      typeVariableValues = []
+   );
+}
+
+// Compiled Multiplicity -> protocol Multiplicity_Protocol. Three shapes:
+//   - PackageableElement (PureOne, ZeroMany, OneMany, ZeroOne, PureZero) ->
+//     reference by path via Multiplicity_Pointer.
+//   - MultiplicityParameter (UserDefinedMultiplicityParameter, InferredMultiplicityParameter)
+//     -> protocol MultiplicityParameter carrying the parameter name. Surfaces
+//     when a captured lambda's classifier exposes a parameter slot like `m`
+//     or `y` that the canonical recompile must re-bind.
+//   - ConcreteMultiplicity ad-hoc (e.g. `[2..5]`) -> UserDefinedAdHocMultiplicity
+//     with the literal lowerBound/upperBound.
+function meta::pure::translation::shared::toProtocolMultiplicity(
+   m: meta::pure::metamodel::multiplicity::Multiplicity[1]
+): meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]
+{
+   if ($m->instanceOf(meta::pure::metamodel::multiplicity::MultiplicityParameter),
+      | // Parameter multiplicities — `T[m]`, lambda `{-> X[y]}` return slot, etc.
+        let mp = $m->cast(@meta::pure::metamodel::multiplicity::MultiplicityParameter);
+        ^meta::pure::protocol::grammar::multiplicity::UserDefinedMultiplicityParameter(name = $mp.name->toOne())
+           ->cast(@meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol);,
+   |if ($m->instanceOf(meta::pure::metamodel::multiplicity::ConcreteMultiplicity),
+      | // Every concrete multiplicity — named (PureOne/ZeroMany/OneMany/ZeroOne/
+        // PureZero, all PackageableMultiplicity which IS-A ConcreteMultiplicity)
+        // or ad-hoc `[2..5]` — is emitted as bounds. This matches what the
+        // grammar parser produces for `[..]`; compileMultiplicity has NO arm for
+        // Multiplicity_Pointer and would silently collapse a pointer to [1].
+        let cm = $m->cast(@meta::pure::metamodel::multiplicity::ConcreteMultiplicity);
+        ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+           lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(
+              value = $cm.lowerBound.value
+           ),
+           upperBound = if ($cm.upperBound->isEmpty(),
+              | [],
+              | [^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(
+                    value = $cm.upperBound->toOne().value
+                 )]
+           )
+        )->cast(@meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol);,
+      | // Undefined / not-yet-resolved — leave undefined for the recompile to infer.
+        ^meta::pure::protocol::grammar::multiplicity::UndefinedMultiplicity()
+           ->cast(@meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol);
+   ));
+}
+
+// ----------------------------------------------------------------------------
+// Parameter — compiled VariableExpression to protocol VariableExpression.
+// Both sides share the same shape; we just drop the resolved type/multiplicity
+// (the recompile will infer them).
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::toProtocolParameter(
+   p: meta::pure::metamodel::valuespecification::VariableExpression[1]
+): meta::pure::protocol::grammar::valuespecification::VariableExpression[1]
+{
+   // Protocol VariableExpression slots `genericType` / `multiplicity` are
+   // `[0..1]` — leave them empty rather than emitting CompilerNotSetGenericType.
+   // compileLambda casts the genericType to GenericTypeValue inside an
+   // `isNotEmpty()` guard, which trips on CompilerNotSetGenericType (it's
+   // non-empty but not castable). Empty avoids the guard entirely.
+   ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+      name = $p.name,
+      genericType = []->cast(@meta::pure::protocol::grammar::type::generics::GenericType_Protocol),
+      multiplicity = []->cast(@meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol)
+   );
+}
+
+// ----------------------------------------------------------------------------
+// ValueSpec dispatch — match-based walk over the compiled AST emitting
+// equivalent protocol nodes. Substitution happens at VariableExpression:
+// if the variable's name is in captureMap, emit the protocol expression
+// for the captured value instead of a fresh VariableExpression reference.
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::toProtocolValueSpec(
+   vs: meta::pure::metamodel::valuespecification::ValueSpecification[1],
+   captureMap: Map<String, List<Any>>[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   $vs->match([
+      {ve: meta::pure::metamodel::valuespecification::VariableExpression[1] |
+         // captureMap is pre-filtered upstream (canonical.pure) so it only
+         // contains true open-variable captures from outer scope — let-bound
+         // locals are stripped. When the name is in the map, substitute even
+         // if the captured value list is empty (an outer `let x = []` captures
+         // an empty value; the inner reference must still inline as `[]` so
+         // the recompile sees a consistent expression).
+         let capValue = $captureMap->get($ve.name);
+         if ($capValue->isEmpty(),
+            | ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+                 name = $ve.name,
+                 genericType = ^meta::pure::protocol::grammar::type::generics::CompilerNotSetGenericType(),
+                 multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+              ),
+            | $capValue->toOne()->captureToProtocol()
+         );
+      },
+      {av: meta::pure::metamodel::valuespecification::AtomicValue[1] |
+         // A nested thunk (`| expr`) is an AtomicValue wrapping a compiled
+         // LambdaFunction. Only when the thunk actually closes over a captured
+         // open variable (e.g. `$empty` inside `firstNonEmpty([| $empty, ...])`)
+         // do we recurse into its body through the SAME substitution path
+         // (toProtocolValueSpec + captureMap) to inline it, emitting a protocol
+         // LambdaFunction so the substituted body recompiles. Capture-free
+         // thunks are passed through unchanged (no recompile) — recompiling
+         // them needlessly perturbs their inferred classifier and regresses
+         // reflection-sensitive tests (lang::new / lang::copy).
+         let isCapturingThunk = $av.value->isNotEmpty()
+            && $av.value->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction)
+            && $av.value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+                  .openVariables->exists(ov | $captureMap->get($ov.name->toOne())->isNotEmpty());
+         if ($isCapturingThunk,
+            | let thunk = $av.value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
+              let protoLambda = ^meta::pure::protocol::grammar::function::LambdaFunction(
+                 parameters         = $thunk.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression)->map(p | $p->toProtocolParameter()),
+                 expressionSequence = $thunk.expressionSequence->map(e | $e->toProtocolValueSpec($captureMap))
+              );
+              // Wrap the protocol lambda in an AtomicValue (its `value` slot is
+              // `Any`); compileAtomicValue's lambda arm re-runs compileLambda,
+              // which re-infers the (now-substituted) thunk's FunctionType.
+              ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+                 value = $protoLambda,
+                 genericType = $av.genericType->toProtocolGenericType(),
+                 multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+              );,
+            | // Non-lambda literal: AtomicValue.genericType is cast to
+              // GenericTypeValue inside the valueSpecificationCompiler's `any`
+              // branch, so emit a GenericTypeValue (e.g. UserDefinedGenericType
+              // with a Type_Pointer), not CompilerNotSetGenericType.
+              ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+                 value = $av.value,
+                 genericType = $av.genericType->toProtocolGenericType(),
+                 multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+              ));
+      },
+      {fe: meta::pure::metamodel::valuespecification::FunctionExpression[1] |
+         // FunctionExpression covers FunctionInvocation / DotApplication /
+         // ArrowInvocation in the compiled metamodel. Preserve DotApplication
+         // (property access) as its protocol equivalent so downstream
+         // translators can emit `obj.prop` without re-deriving from func slot
+         // (which is reset by the recompile). Other subtypes fold to
+         // FunctionInvocation.
+         if ($fe->instanceOf(meta::pure::metamodel::valuespecification::DotApplication),
+            | ^meta::pure::protocol::grammar::valuespecification::DotApplication(
+                 functionName = $fe.functionName,
+                 parametersValues = $fe.parametersValues->map(p | $p->toProtocolValueSpec($captureMap))
+              ),
+            | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+                 functionName = $fe.functionName,
+                 parametersValues = $fe.parametersValues->map(p | $p->toProtocolValueSpec($captureMap))
+              )
+         );
+      },
+      {col: meta::pure::metamodel::valuespecification::Collection[1] |
+         // Compiled-form Collection (`[a, b, c]` literal) -> protocol Collection
+         // of recursed elements. The grammar parser sets an explicit
+         // `multiplicity = [count..count]` on every `[..]` literal; omitting it
+         // leaves the Collection arg unresolved, which (e.g. as the
+         // KeyExpression[*] arg of `new`) prevents the call from fully resolving
+         // and collapses `new`'s inferred return to its raw type parameter.
+         let n = $col.values->size();
+         ^meta::pure::protocol::grammar::valuespecification::Collection(
+            values = $col.values->map(v | $v->toProtocolValueSpec($captureMap)),
+            multiplicity = ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+               lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n),
+               upperBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n)
+            )
+         );
+      },
+      {gmh: meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder[1] |
+         // GenericTypeAndMultiplicityHolder shows up as a value-spec
+         // argument to runtime constructors (`new(holder, name, keys)` and
+         // friends) where the holder carries the target type + multiplicity
+         // info. Decompile by translating its genericType + multiplicity to
+         // protocol form.
+         // The holder's `genericType` is its OWN classifier shape —
+         // `UserDefinedGenericTypeAndMultiplicityHolder<UserType>` — so its
+         // rawType is the holder class and the actual constructed type lives
+         // at `typeArguments[0]`. The protocol form a `new` constructor
+         // expects is that UserType directly; emitting the wrapped holder type
+         // makes recompile double-wrap it, leaving the recompiled holder's
+         // user type pointing back at the holder class (and downstream
+         // classifier reads resolve to UDGTMH instead of the real class).
+         // Unwrap to typeArguments[0] for the self-descriptive shape; pass any
+         // other genericType through unchanged.
+         let userGt = $gmh.genericType->map(g |
+            if ($g->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue)
+                  && $g->rawType()->toOne() == meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder
+                  && $g->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).typeArguments->isNotEmpty(),
+               | $g->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).typeArguments->at(0),
+               | $g));
+         let pGT  = if ($userGt->isEmpty(),
+                        | []->cast(@meta::pure::protocol::grammar::type::generics::GenericType_Protocol),
+                        | [$userGt->toOne()->toProtocolGenericType()->cast(@meta::pure::protocol::grammar::type::generics::GenericType_Protocol)]);
+         let pMul = if ($gmh.multiplicity->isEmpty(),
+                        | []->cast(@meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol),
+                        | [$gmh.multiplicity->toOne()->toProtocolMultiplicity()]);
+         ^meta::pure::protocol::grammar::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder(
+            genericType  = $pGT,
+            multiplicity = $pMul
+         );
+      },
+      // Diagnostic catch-all: surface the value's runtime classifier so we
+      // know which arm to add (or which Truffle PDO construction site is
+      // missing classifierGenericType, à la the lambda fix).
+      {other: Any[1] |
+         let rt = $other->genericType().type;
+         let classifierPath = if ($rt->isEmpty(),
+                                  | '<no classifier>',
+                                  | $rt->toOne()->elementToPath());
+         fail('toProtocolValueSpec: unhandled subtype; classifier=' + $classifierPath);
+         ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+            value = '__unhandled__',
+            genericType = ^meta::pure::protocol::grammar::type::generics::CompilerNotSetGenericType(),
+            multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+         );
+      }
+   ]);
+}
+
+// ----------------------------------------------------------------------------
+// Capture → protocol expression. Maps a List<Any> (one open-variable
+// binding) to a protocol ValueSpec the compiler can re-resolve.
+//
+// Scalar single-value captures (Integer, Float, String, Boolean) become
+// AtomicValue literals. Class-instance captures (PureDynamicObjects)
+// become protocol `new`-FunctionExpressions that reconstruct the instance
+// from its property values. Multi-value sequence captures land as
+// protocol Collections.
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::captureToProtocol(
+   values: List<Any>[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let vs = $values.values;
+   if ($vs->size() == 1,
+      | $vs->toOne()->singleValueToProtocol(),
+      | // Multi-value capture — wrap in a Collection of single-value protocol
+        // expressions. The compiler re-resolves each.
+        ^meta::pure::protocol::grammar::valuespecification::Collection(
+           values = $vs->map(v | $v->singleValueToProtocol()),
+           genericType = ^meta::pure::protocol::grammar::type::generics::CompilerNotSetGenericType(),
+           multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+        )
+   );
+}
+
+// Single captured value → protocol expression. Scalars wrap in AtomicValue;
+// class instances build a `new`-FunctionExpression with key=value pairs.
+function meta::pure::translation::shared::singleValueToProtocol(
+   v: Any[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   // Scalar primitives flow as AtomicValue.value (the protocol AtomicValue
+   // slot is typed `Any[1]` which accepts Pure primitives natively). Anything
+   // not primitive is assumed to be a class-instance PDO and gets the
+   // constructor-literal treatment. AtomicValue.genericType must be a
+   // GenericTypeValue (the valueSpecificationCompiler's `any` arm casts to
+   // it), so derive the right Type_Pointer for each primitive.
+   if ($v->isPrimitiveValue(),
+      | ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+           value = $v,
+           genericType = ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+              type = ^meta::pure::protocol::grammar::type::Type_Pointer(value = $v->primitiveTypePath()),
+              typeArguments = [],
+              multiplicityArguments = [],
+              typeVariableValues = []
+           ),
+           multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+        ),
+      | $v->classInstanceToProtocol()
+   );
+}
+
+function meta::pure::translation::shared::isPrimitiveValue(v: Any[1]): Boolean[1]
+{
+   $v->instanceOf(Integer)
+      || $v->instanceOf(Float)
+      || $v->instanceOf(Boolean)
+      || $v->instanceOf(String);
+}
+
+// Resolve a Pure primitive runtime value to its canonical Type path. Used to
+// emit Type_Pointer for protocol AtomicValue.genericType.
+function meta::pure::translation::shared::primitiveTypePath(v: Any[1]): String[1]
+{
+   if ($v->instanceOf(Integer), | 'meta::pure::metamodel::type::primitives::Integer',
+   |if ($v->instanceOf(Float),   | 'meta::pure::metamodel::type::primitives::Float',
+   |if ($v->instanceOf(Boolean), | 'meta::pure::metamodel::type::primitives::Boolean',
+   |if ($v->instanceOf(String),  | 'meta::pure::metamodel::type::primitives::String',
+   | fail('primitiveTypePath: not a primitive value'); 'meta::pure::metamodel::type::Any';
+   ))));
+}
+
+// Class-instance PDO → protocol AtomicValue holding the PDO directly. The
+// compiled AtomicValue.value slot accepts Any[1], including class instances;
+// the compiler's resolver treats the embedded PDO as a literal of its
+// classifier's type. We tag the protocol AtomicValue's genericType with a
+// Type_Pointer at the instance's class path so the compiler doesn't have to
+// re-derive it during pass-2 resolution.
+function meta::pure::translation::shared::classInstanceToProtocol(
+   v: Any[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let classPath = $v->genericType()->rawType()
+                     ->toOne('classInstanceToProtocol: captured value has no rawType')
+                     ->elementToPath();
+   ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+      value = $v,
+      genericType = ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+         type = ^meta::pure::protocol::grammar::type::Type_Pointer(value = $classPath),
+         typeArguments = [],
+         multiplicityArguments = [],
+         typeVariableValues = []
+      ),
+      multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+   );
+}

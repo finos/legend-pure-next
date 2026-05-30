@@ -1,0 +1,118 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::metamodel::*;
+
+function meta::external::language::java::metamodel::assignmentOperators():String[*]
+{
+   ['=','+=','-=','*=','/=','%=','&=','^=','|=','<<=','>>=','>>>='];
+}
+
+function meta::external::language::java::metamodel::isStatement(code: Code[1]):Boolean[1]
+{
+   $code->match([
+      c:SimpleCode[1] | true,   // Since unkmown we rely on caller to ensure it's in the right form
+      c:Statement[1]  | true,
+      c:Code[1]       | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::isNull(expression:Code[1]):Boolean[1]
+{
+   $expression->instanceOf(Null);
+}
+
+
+function meta::external::language::java::metamodel::isSameLiteral(left:Code[1], right:Code[1]):Boolean[1]
+{
+   $left->instanceOf(Literal) && $right->instanceOf(Literal)
+      && $left->cast(@Literal).type == $right->cast(@Literal).type
+      && $left->cast(@Literal).literal == $right->cast(@Literal).literal;
+}
+
+
+function meta::external::language::java::metamodel::isValidExpressionAsStatement(expression:Code[1]):Boolean[1]
+{
+   $expression->match([
+      pre : PrefixExpression[1]  | ['++', '--']->contains($pre.op),
+      post: PostfixExpression[1] | ['++', '--']->contains($post.op),
+      inf : InfixExpression[1]   | assignmentOperators()->contains($inf.op),
+      mc  : MethodCall[1]        | true,
+      smc : StaticMethodCall[1]  | true,
+      new : New[1]               | true,
+      c   : Code[1]              | false
+   ])
+}
+
+function meta::external::language::java::metamodel::isAssignment(c:Code[1]):Boolean[1]
+{
+   $c->match([
+      inf : InfixExpression[1] | assignmentOperators()->contains($inf.op),
+      _c  : Code[1]            | false
+   ])
+}
+
+function meta::external::language::java::metamodel::isDeclaration(c:Code[1]):Boolean[1]
+{
+   $c->match([
+      lvd : LocalVariableDeclaration[1] | true,
+      _c  : Code[1]                     | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::isDeclarationWithAssignment(c:Code[1]):Boolean[1]
+{
+   $c->match([
+      lvd : LocalVariableDeclaration[1] | !$lvd.initializer->isEmpty(),
+      _c  : Code[1]                     | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::isCollectionsEmptyList(c:Code[1]):Boolean[1]
+{
+   $c->match([
+      smc:StaticMethodCall[1] | $smc.class->isClass('java.util.Collections') && $smc.methodName == 'emptyList',
+      _c :Code[1]             | false
+   ]);
+}
+
+function meta::external::language::java::metamodel::isDeprecated(c:Code[1]):Boolean[1]
+{
+   $c->instanceOf(SimpleCode);
+}
+
+function meta::external::language::java::metamodel::isParameter(c:Code[1]):Boolean[1]
+{
+   $c->instanceOf(Parameter);
+}
+
+function meta::external::language::java::metamodel::parameterName(c:Code[1]):String[1]
+{
+   $c->cast(@Parameter).name;
+}
+
+function meta::external::language::java::metamodel::isVariable(c:Code[1]):Boolean[1]
+{
+   $c->instanceOf(Variable);
+}
+
+function meta::external::language::java::metamodel::variableName(c:Code[1]):String[1]
+{
+   $c->cast(@Variable).name;
+}
+
+function meta::external::language::java::metamodel::isNil(i:ValueSpecification[1]) : Boolean[1]
+{
+  $i->cast(@ValueSpecification).genericType->rawType() == Nil;
+}

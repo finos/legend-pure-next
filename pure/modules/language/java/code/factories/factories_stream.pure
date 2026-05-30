@@ -1,0 +1,205 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::packages::*;
+import meta::external::language::java::factory::*;
+import meta::external::language::java::factory::project::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::metamodel::project::*;
+import meta::external::language::java::serialization::*;
+
+function <<access.private>> meta::external::language::java::factory::streamCastBody(expression:Code[1], castTo:meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   let fromStreamOf = $expression.type->elementTypeOfJavaStream();
+   if ($castTo->elementTypeOfJavaStream()->instanceOf(meta::external::language::java::metamodel::Class),
+      {|
+         let toStreamOf = $castTo->elementTypeOfJavaStream()->cast(@meta::external::language::java::metamodel::Class);
+         $expression->j_invoke('map', j_methodReference(j_field($toStreamOf, 'class', javaClassType($toStreamOf)), 'cast', javaFunctionType($fromStreamOf, $toStreamOf)), $castTo);
+      },
+      {|
+         if ($castTo->elementTypeOfJavaStream()->instanceOf(meta::external::language::java::metamodel::TypeVariable),
+            {|
+               let toStreamTV = $castTo->elementTypeOfJavaStream()->cast(@meta::external::language::java::metamodel::TypeVariable);
+               let x          = j_parameter(if($fromStreamOf->isJavaList(),|$fromStreamOf->elementType();,|$fromStreamOf;), 'x');
+               $expression->j_invoke('map', j_lambda($x, $x->j_cast($toStreamTV)), $castTo);
+            },
+            | $expression
+         );
+      }
+   );
+}
+
+function meta::external::language::java::factory::js_map(stream: Code[1], func: Code[1]):Code[1]
+{
+   let funcType   = $func.type->cast(@meta::external::language::java::metamodel::FunctionType);
+   let funcReturn = $funcType.returnType;
+   let map        = $stream->prepareStreamForCallWithLambda($func)->j_invoke('map', $func, javaStream($funcReturn));
+
+   if($funcReturn->isJavaList(),
+      | $map->js_flatMap(j_methodReference(javaClass('java.util.Collection'), 'stream', javaFunctionType($funcReturn, javaStream($funcReturn->elementTypeOfJavaList())))),
+      {|
+         let cannotBeNull = $funcType.nullResultPossible->isFalse() || $funcReturn->isJavaPrimitive();
+         let x = j_parameter($funcReturn, '$x');
+         if($cannotBeNull, | $map, |$map->js_filter(j_lambda($x, $x->j_ne(j_null()))));
+      }
+   );
+}
+
+function meta::external::language::java::factory::js_mapAllowingNullValues(stream: Code[1], func: Code[1]):Code[1]
+{
+   let funcType    = $func.type->cast(@meta::external::language::java::metamodel::FunctionType);
+   let funcReturn  = $funcType.returnType;
+   let updatedFunc = if($func->instanceOf(Lambda) && $func->cast(@Lambda).parameters->size() == 1
+                        ,| let orgFunc       = $func->cast(@Lambda);
+                           let newExpression = j_if($orgFunc.parameters->toOne()->j_eq(j_null()), j_null()->j_return(), $orgFunc.expression)->j_block();
+                           ^$orgFunc(expression = $newExpression);
+                        ,| $func);
+   let map         = $stream->prepareStreamForCallWithLambda($updatedFunc)->j_invoke('map', $updatedFunc, javaStream($funcReturn));
+
+   if($funcReturn->isJavaList(),
+      | $map->js_flatMap(j_methodReference(javaClass('java.util.Collection'), 'stream', javaFunctionType($funcReturn, javaStream($funcReturn->elementTypeOfJavaList())))),
+      | $map
+   );
+}
+
+function meta::external::language::java::factory::js_flatMap(stream: Code[1], func: Code[1]):Code[1]
+{
+   let funcType   = $func.type->cast(@meta::external::language::java::metamodel::FunctionType);
+   let funcReturn = $funcType.returnType;
+   assert($funcReturn->isJavaStream(), 'Function should return streams');
+
+   $stream->prepareStreamForCallWithLambda($func)->j_invoke('flatMap', $func, javaStream($funcReturn->elementType()));
+}
+
+function meta::external::language::java::factory::js_filter(stream:Code[1], func:Code[1]):Code[1]
+{
+   let s = $stream->prepareStreamForCallWithLambda($func);
+   $s->j_invoke('filter', $func, $s.type);
+}
+
+function meta::external::language::java::factory::js_distinct(stream:Code[1]):Code[1]
+{
+   assert($stream.type->isJavaStream(), 'Should apply to a stream');
+   $stream->j_invoke('distinct', [], $stream.type);
+}
+
+function meta::external::language::java::factory::js_skip(stream:Code[1], limit:Code[1]):Code[1]
+{
+   assert($stream.type->isJavaStream(), 'Should apply to a stream');
+   $stream->j_invoke('skip', $limit, $stream.type);
+}
+
+function meta::external::language::java::factory::js_limit(stream:Code[1], limit:Code[1]):Code[1]
+{
+   assert($stream.type->isJavaStream(), 'Should apply to a stream');
+   $stream->j_invoke('limit', $limit, $stream.type);
+}
+
+function meta::external::language::java::factory::js_max(stream:Code[1], func:Code[1]):Code[1]
+{
+   $stream->prepareStreamForCallWithLambda($func)->j_invoke('max', $func, javaOptional($stream.type->elementTypeOfJavaStream()));
+}
+
+function meta::external::language::java::factory::js_min(stream:Code[1], func:Code[1]):Code[1]
+{
+   $stream->prepareStreamForCallWithLambda($func)->j_invoke('min', $func, javaOptional($stream.type->elementTypeOfJavaStream()));
+}
+
+function meta::external::language::java::factory::js_reduce(stream:Code[1], func:Code[1]):Code[1]
+{
+   $stream->prepareStreamForCallWithLambda($func)->j_invoke('reduce', $func, javaOptional($stream.type->elementTypeOfJavaStream()));
+}
+
+function meta::external::language::java::factory::js_reduce(stream:Code[1], identity:Code[1], func:Code[1]):Code[1]
+{
+   $stream->prepareStreamForCallWithLambda($func)->j_invoke('reduce', [$identity, $func], $identity.type->toBoxed());
+}
+
+function meta::external::language::java::factory::js_findFirst(stream:Code[1]):Code[1]
+{
+   assert($stream.type->isJavaStream(), 'Should apply to a stream');
+   $stream->j_invoke('findFirst', [], javaOptional($stream.type->elementTypeOfJavaStream()));
+}
+
+function meta::external::language::java::factory::js_count(stream:Code[1]):Code[1]
+{
+   assert($stream.type->isJavaStream(), 'Should apply to a stream');
+   $stream->j_invoke('count', [], javaLong());
+}
+
+function meta::external::language::java::factory::js_forEach(stream:Code[1], func:Code[1]):Code[1]
+{
+   $stream->prepareStreamForCallWithLambda($func)->j_invoke('forEach', $func, javaVoid());
+}
+
+function meta::external::language::java::factory::js_anyMatch(stream:Code[1], func:Code[1]):Code[1]
+{
+   $stream->prepareStreamForCallWithLambda($func)->j_invoke('anyMatch', $func, javaBoolean());
+}
+
+function meta::external::language::java::factory::js_noneMatch(stream:Code[1], func:Code[1]):Code[1]
+{
+   $stream->prepareStreamForCallWithLambda($func)->j_invoke('noneMatch', $func, javaBoolean());
+}
+
+function meta::external::language::java::factory::js_allMatch(stream:Code[1], func:Code[1]):Code[1]
+{
+   $stream->prepareStreamForCallWithLambda($func)->j_invoke('allMatch', $func, javaBoolean());
+}
+
+function <<access.private>> meta::external::language::java::factory::prepareStreamForCallWithLambda(stream: Code[1], func: Code[1]):Code[1]
+{
+
+   assert($stream.type->isJavaStream(), 'Should apply to a stream');
+   assert($func->instanceOf(StaticMethodCall) || $func->instanceOf(StaticMethodReference) || $func.type->instanceOf(meta::external::language::java::metamodel::FunctionType), 'Should apply a function');
+
+   if ($func->instanceOf(StaticMethodCall),| $stream->j_cast(javaStream($func.type->cast(@meta::external::language::java::metamodel::ParameterizedType).typeArguments->at(0)));,
+       | $stream->j_cast(javaStream($func.type->cast(@meta::external::language::java::metamodel::FunctionType).parameterTypes->at(0))););
+}
+
+function meta::external::language::java::factory::js_joining(stream: Code[1]):Code[1]
+{
+   $stream->js_joining(j_string(''));
+}
+
+function meta::external::language::java::factory::js_joining(stream: Code[1], delimiter: Code[1]):Code[1]
+{
+   assert($stream.type->isJavaStream(), 'Should apply to a stream');
+   $stream->j_invoke('collect', j_invoke(javaCollectors(), 'joining', $delimiter, javaCollector()), javaString());
+}
+
+function meta::external::language::java::factory::js_resolve(stream: Code[1], type: meta::external::language::java::metamodel::Type[1]):Code[1]
+{
+   assert($stream.type->isJavaStream(), 'Should apply to a stream');
+   assert($type->instanceOf(meta::external::language::java::metamodel::ParameterizedType) || $type->instanceOf(meta::external::language::java::metamodel::Class), |'Not yet handled: ' + $type->typeToString());
+   ^DeferredStreamResolve(stream=$stream, type=$type);
+}
+
+function meta::external::language::java::factory::jo_get(optional: Code[1]):Code[1]
+{
+   assert($optional.type->isJavaOptional(), 'Should apply to an Optional');
+   $optional->j_invoke('get', [], $optional.type->elementTypeOfJavaOptional());
+}
+
+function meta::external::language::java::factory::jo_orElse(optional: Code[1], else:Code[1]):Code[1]
+{
+   assert($optional.type->isJavaOptional(), 'Should apply to an Optional');
+   $optional->j_invoke('orElse', $else, $optional.type->elementTypeOfJavaOptional());
+}
+
+function meta::external::language::java::factory::jo_orElseNull(optional: Code[1]):Code[1]
+{
+   assert($optional.type->isJavaOptional(), 'Should apply to an Optional');
+   $optional->jo_orElse(j_null($optional.type->elementTypeOfJavaOptional()));
+}

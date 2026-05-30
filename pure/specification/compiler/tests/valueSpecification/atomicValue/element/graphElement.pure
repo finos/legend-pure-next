@@ -1,36 +1,41 @@
 ###Pure
-Class a::A {}
-native function x::b::f():Any[1];
+import a::*;
+import x::b::*;
+import z::*;
+
 Profile z::AProfile
 {
   stereotypes: [flag, newFlag];
   tags: [tag1, tag2];
 }
 
-function test():Any[*]
+native function x::b::f(): Any[1];
+
+Class a::A
 {
-    [
-        a::A,
-        x::b::f__Any_1_,
-        z::AProfile
-    ]
 }
+
+function test(): Any[*]
+{
+  [A, f__Any_1_, AProfile]
+}
+
 ###CompiledGraph
-class a::A extends Any  ~Class<a::A>  @2:1-2:13
-
-native function x::b::f__Any_1_():@Any@[1]  ~NativeFunction<{->@Any@[1]}>
-
-profile z::AProfile  ~@Profile@  @4:1-8:1
+profile z::AProfile  ~@Profile@  @6:1-10:1
   stereotype flag  ~@Stereotype@
   stereotype newFlag  ~@Stereotype@
   tag tag1  ~@Tag@
   tag tag2  ~@Tag@
 
+native function x::b::f__Any_1_():@Any@[1]  ~NativeFunction<{->@Any@[1]}>
+
+class a::A extends Any  ~Class<a::A>  @14:1-16:1
+
 function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  Collection :#PackageableElement#[3]  ~@Collection@  @12:5-16:5
-    AtomicValue  a::A :#Class<a::A>#[1]  ~@AtomicValue@  @13:9-13:12
-    AtomicValue  x::b::f__Any_1_ :#NativeFunction<{->@Any@[1]}>#[1]  ~@AtomicValue@  @14:9-14:23
-    AtomicValue  z::AProfile :#Profile#[1]  ~@AtomicValue@  @15:9-15:19
+  Collection :#PackageableElement#[3]  ~@Collection@  @20:3-20:26
+    AtomicValue  a::A :#Class<a::A>#[1]  ~@AtomicValue@  @20:4-20:4
+    AtomicValue  x::b::f__Any_1_ :#NativeFunction<{->@Any@[1]}>#[1]  ~@AtomicValue@  @20:7-20:15
+    AtomicValue  z::AProfile :#Profile#[1]  ~@AtomicValue@  @20:18-20:25
 
 ###ReverseIndex
 a::A:

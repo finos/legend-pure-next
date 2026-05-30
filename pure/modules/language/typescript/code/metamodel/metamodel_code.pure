@@ -1,0 +1,326 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Statements (non-declarations) and Expressions. See metamodel_type.pure for the strategy.
+
+import meta::external::language::typescript::metamodel::*;
+
+// =============================================================================
+// Statements (other than Declaration; declarations live in metamodel_structure.pure).
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::Block extends Statement
+{
+   statements : Statement[*];
+}
+
+Class meta::external::language::typescript::metamodel::ReturnStatement extends Statement
+{
+   expression : Expression[0..1];
+}
+
+Class meta::external::language::typescript::metamodel::IfStatement extends Statement
+{
+   <<equality.Key>> expression : Expression[1];
+   thenStatement : Statement[1];
+   elseStatement : Statement[0..1];                  // may itself be an IfStatement (else-if chain)
+}
+
+Enum meta::external::language::typescript::metamodel::VariableDeclarationKind
+{
+   Var,
+   Let,
+   Const
+}
+
+// VariableStatement wraps a `let`/`const`/`var` declaration list at the
+// statement level. Mirrors ts.VariableStatement which holds a
+// VariableDeclarationList.
+Class meta::external::language::typescript::metamodel::VariableStatement extends Statement
+{
+   modifiers       : ModifierFlag[*];                // `export const x = ...`
+   declarationKind : VariableDeclarationKind[1];
+   declarations    : VariableDeclaration[1..*];
+}
+
+// `name` is a BindingName so destructuring is first-class on the LHS:
+//   - Identifier:               `let x = …`
+//   - ObjectBindingPattern:     `let { a, b } = …`
+//   - ArrayBindingPattern:      `let [a, b] = …`
+Class meta::external::language::typescript::metamodel::VariableDeclaration extends Node
+{
+   <<equality.Key>> name : BindingName[1];
+   type        : TypeNode[0..1];
+   initializer : Expression[0..1];
+}
+
+Class meta::external::language::typescript::metamodel::ExpressionStatement extends Statement
+{
+   <<equality.Key>> expression : Expression[1];
+}
+
+// =============================================================================
+// Expressions.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::Expression extends Node
+{
+}
+
+// Identifier is a node, not a bare string. The TS compiler treats it the same
+// way — leaves room for attaching position / inferred type later.
+//
+// Identifier multi-inherits from Expression AND BindingName, matching the TS
+// compiler where `ts.Identifier` plays both roles (used as an expression
+// reference, but also as the leaf form of a BindingName in declarations).
+//
+// `source` (optional) lets a generator mark an identifier as coming from
+// another file — same mechanism as TypeReferenceNode.source. Used by
+// resolveImports() to auto-add import declarations for expression-position
+// references (function names, constructor refs, etc.). Local bindings
+// (variables, parameters) leave it empty.
+Class meta::external::language::typescript::metamodel::Identifier extends Expression, BindingName
+{
+   <<equality.Key>> text : String[1];
+   source : meta::external::language::typescript::metamodel::ImportSource[0..1];
+   // EXPORTED name from `source` when it differs from `text` (alias case).
+   // See TypeReferenceNode.originalName for the equivalent on the type side.
+   originalName : String[0..1];
+}
+
+Class meta::external::language::typescript::metamodel::ThisExpression extends Expression
+{
+}
+
+Class meta::external::language::typescript::metamodel::SuperExpression extends Expression
+{
+}
+
+// PropertyAccessExpression — `expression.name` (or `expression?.name`
+// when `isOptional` is true).
+Class meta::external::language::typescript::metamodel::PropertyAccessExpression extends Expression
+{
+   <<equality.Key>> expression : Expression[1];
+   <<equality.Key>> name       : String[1];
+   isOptional : Boolean[0..1];
+}
+
+// CallExpression — `expression(args)` (or `expression?.(args)` when
+// `isOptional` is true).
+Class meta::external::language::typescript::metamodel::CallExpression extends Expression
+{
+   <<equality.Key>> expression    : Expression[1];   // callee
+   typeArguments : TypeNode[*];
+   arguments     : Expression[*];
+   isOptional : Boolean[0..1];
+}
+
+Class meta::external::language::typescript::metamodel::NewExpression extends Expression
+{
+   <<equality.Key>> expression    : Expression[1];   // constructor reference
+   typeArguments : TypeNode[*];
+   arguments     : Expression[*];
+}
+
+// BinaryExpression — covers arithmetic, comparison, logical, assignment, and
+// nullish-coalescing operators. `operatorToken` carries the operator text as
+// it appears in source (e.g. '+', '===', '&&', '??', '=', '+='). This
+// matches the TS compiler's design of using SyntaxKind rather than a typed
+// enum at the metamodel level.
+Class meta::external::language::typescript::metamodel::BinaryExpression extends Expression
+{
+   <<equality.Key>> left          : Expression[1];
+   <<equality.Key>> operatorToken : String[1];
+   <<equality.Key>> right         : Expression[1];
+}
+
+// ConditionalExpression — TS ternary: `cond ? whenTrue : whenFalse`.
+// Mirrors ts.ConditionalExpression { condition, whenTrue, whenFalse }.
+Class meta::external::language::typescript::metamodel::ConditionalExpression extends Expression
+{
+   <<equality.Key>> condition : Expression[1];
+   <<equality.Key>> whenTrue  : Expression[1];
+   <<equality.Key>> whenFalse : Expression[1];
+}
+
+Class meta::external::language::typescript::metamodel::PrefixUnaryExpression extends Expression
+{
+   <<equality.Key>> operator : String[1];            // '!', '-', '+', '~', '++', '--', 'typeof', 'void', 'delete'
+   <<equality.Key>> operand  : Expression[1];
+}
+
+Class meta::external::language::typescript::metamodel::PostfixUnaryExpression extends Expression
+{
+   <<equality.Key>> operand  : Expression[1];
+   <<equality.Key>> operator : String[1];            // '++', '--'
+}
+
+// ArrowFunction
+//   (p: T) => Expr
+//   (p: T): R => { body; }
+//
+// TS distinguishes concise-body (Expression) from block-body (Block). We
+// keep them on separate slots so the serializer can emit the correct form
+// without inspecting body shape. Exactly one must be set.
+Class meta::external::language::typescript::metamodel::ArrowFunction extends Expression
+[
+   ($this.body->isEmpty() && $this.expressionBody->isNotEmpty()) ||
+   ($this.body->isNotEmpty() && $this.expressionBody->isEmpty())
+]
+{
+   typeParameters : TypeParameterDeclaration[*];
+   parameters     : ParameterDeclaration[*];
+   returnType     : TypeNode[0..1];
+   body           : Block[0..1];
+   expressionBody : Expression[0..1];
+   isAsync        : Boolean[0..1];
+}
+
+// ObjectLiteralExpression — `{ a: 1, b: 2, ...rest }`.
+// `properties` holds ObjectLiteralElements (PropertyAssignment or
+// SpreadAssignment). MethodDeclaration / getters / setters in object
+// literals remain deferred.
+Class meta::external::language::typescript::metamodel::ObjectLiteralExpression extends Expression
+{
+   properties : ObjectLiteralElement[*];
+}
+
+Class meta::external::language::typescript::metamodel::ObjectLiteralElement extends Node
+{
+}
+
+Class meta::external::language::typescript::metamodel::PropertyAssignment extends ObjectLiteralElement
+{
+   <<equality.Key>> name : String[1];                // raw key text; quoted by serializer when needed
+   computed : Boolean[0..1];                         // `[expr]: ...` keys deferred to v2
+   <<equality.Key>> initializer : Expression[1];
+}
+
+// SpreadAssignment — `{ ...source }` inside an object literal.
+Class meta::external::language::typescript::metamodel::SpreadAssignment extends ObjectLiteralElement
+{
+   <<equality.Key>> expression : Expression[1];
+}
+
+// ShorthandPropertyAssignment — `{ x }` shorthand for `{ x: x }`. The
+// `name` slot is both the property key AND the local identifier in scope.
+Class meta::external::language::typescript::metamodel::ShorthandPropertyAssignment extends ObjectLiteralElement
+{
+   <<equality.Key>> name : String[1];
+}
+
+Class meta::external::language::typescript::metamodel::ArrayLiteralExpression extends Expression
+{
+   elements : Expression[*];
+}
+
+// SpreadElement — `...expr` in an array literal or call argument list.
+// In TS, SpreadElement extends Expression, allowing it in any
+// argument-list position without a special wrapper.
+Class meta::external::language::typescript::metamodel::SpreadElement extends Expression
+{
+   <<equality.Key>> expression : Expression[1];
+}
+
+// =============================================================================
+// Literals.
+// =============================================================================
+
+// `text` stores the literal as it appears in source so the serializer can
+// emit it byte-for-byte. Mirrors ts.StringLiteral.text + ts.StringLiteral.rawText.
+Class meta::external::language::typescript::metamodel::StringLiteral extends Expression
+{
+   <<equality.Key>> text : String[1];
+}
+
+// `text` because TS allows `1_000_000`, `0x1F`, `0b10`, `1n`, `1.5e3`, etc.
+// A typed Number would lose those forms.
+Class meta::external::language::typescript::metamodel::NumericLiteral extends Expression
+{
+   <<equality.Key>> text : String[1];
+}
+
+Class meta::external::language::typescript::metamodel::BooleanLiteral extends Expression
+{
+   <<equality.Key>> value : Boolean[1];
+}
+
+Class meta::external::language::typescript::metamodel::NullLiteral extends Expression
+{
+}
+
+// AwaitExpression — `await expr`. Valid only inside async functions; TS
+// enforces this — the metamodel does not.
+Class meta::external::language::typescript::metamodel::AwaitExpression extends Expression
+{
+   <<equality.Key>> expression : Expression[1];
+}
+
+// =============================================================================
+// Template literals.
+//
+//   NoSubstitutionTemplateLiteral:  `plain text`
+//   TemplateExpression:             `Hello, ${name}!`
+//                                    └─head─┘└span┘
+//
+// TemplateExpression decomposes into a head string + one TemplateSpan per
+// `${…}…` slot. Each span carries the substituted expression and the
+// literal text that follows it. Mirrors ts.TemplateExpression / ts.TemplateSpan.
+// =============================================================================
+
+Class meta::external::language::typescript::metamodel::TemplateLiteral extends Expression
+{
+}
+
+Class meta::external::language::typescript::metamodel::NoSubstitutionTemplateLiteral extends TemplateLiteral
+{
+   <<equality.Key>> text : String[1];
+}
+
+Class meta::external::language::typescript::metamodel::TemplateExpression extends TemplateLiteral
+{
+   <<equality.Key>> head  : String[1];
+   <<equality.Key>> spans : TemplateSpan[1..*];
+}
+
+Class meta::external::language::typescript::metamodel::TemplateSpan extends Node
+{
+   <<equality.Key>> expression : Expression[1];
+   <<equality.Key>> literal    : String[1];
+}
+
+// =============================================================================
+// Type cast / assertion expressions.
+// =============================================================================
+
+// `expr as T`. Modern TS-only form of type assertion.
+Class meta::external::language::typescript::metamodel::AsExpression extends Expression
+{
+   <<equality.Key>> expression : Expression[1];
+   <<equality.Key>> type       : TypeNode[1];
+}
+
+// `expr satisfies T`. Like `as` but does not widen the inferred type.
+Class meta::external::language::typescript::metamodel::SatisfiesExpression extends Expression
+{
+   <<equality.Key>> expression : Expression[1];
+   <<equality.Key>> type       : TypeNode[1];
+}
+
+// `expr!` — non-null assertion. Tells the type-checker the value is not
+// null/undefined without changing runtime behavior.
+Class meta::external::language::typescript::metamodel::NonNullExpression extends Expression
+{
+   <<equality.Key>> expression : Expression[1];
+}

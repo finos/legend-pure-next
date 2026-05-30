@@ -17,108 +17,142 @@ import meta::pure::test::pct::*;
 
 native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::genericType(any:Any[*]):GenericTypeValue[1];
 
-function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericType():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(Class, CC_Person->genericType().type->toOne());
-    assertIs(CC_Person, CC_Person->genericType().typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+    let expected = [Class, CC_Person];
+    assertEquals($expected, $f->eval(|
+        let gt = CC_Person->genericType();
+        [$gt.type->toOne(), $gt.typeArguments->at(0)->cast(@GenericTypeValue).type->toOne()];
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericTypeInstance():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(CC_Person, ^CC_Person(firstName='Pierre', lastName='Doe')->genericType().type->toOne());
+    assertIs(CC_Person, $f->eval(|^CC_Person(firstName='Pierre', lastName='Doe')->genericType().type->toOne()));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericTypeFromEnum():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeFromEnum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(Enumeration, CC_GeographicEntityType->genericType().type->toOne());
-    assertIs(CC_GeographicEntityType, CC_GeographicEntityType->genericType().typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+    let expected = [Enumeration, CC_GeographicEntityType];
+    assertEquals($expected, $f->eval(|
+        let gt = CC_GeographicEntityType->genericType();
+        [$gt.type->toOne(), $gt.typeArguments->at(0)->cast(@GenericTypeValue).type->toOne()];
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericTypeFromEnumVal():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeFromEnumVal<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(CC_GeographicEntityType, CC_GeographicEntityType.CITY->genericType().type->toOne());
+    assertIs(CC_GeographicEntityType, $f->eval(|CC_GeographicEntityType.CITY->genericType().type->toOne()));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericTypeWithGenerics():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeWithGenerics<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let l = ^CC_List<String>(values=['a', 'b', 'c']);
-    assertIs(CC_List, $l->genericType().type->toOne());
-    assertIs(String, $l->genericType().typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+    let expected = [CC_List, String];
+    assertEquals($expected, $f->eval(|
+        let gt = ^CC_List<String>(values=['a', 'b', 'c'])->genericType();
+        [$gt.type->toOne(), $gt.typeArguments->at(0)->cast(@GenericTypeValue).type->toOne()];
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::genericType::testClassTypeParameters():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testClassTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // CC_List<T> has one type parameter T
-    let cls = CC_List;
-    let tp = $cls->cast(@Class<Any>).typeParameters;
-    assert($tp->size() == 1, 'CC_List should have 1 type parameter, got: ' + $tp->size()->toString());
-    assert($tp->at(0)->instanceOf(TypeParameter), 'type parameter should be a TypeParameter');
-    assertEquals('T', $tp->at(0)->cast(@TypeParameter).name);
+    assert($f->eval(|
+        let tps = CC_List->cast(@Class<Any>).typeParameters;
+        assertEquals(1, $tps->size(), 'CC_List should have 1 type parameter');
+        assert($tps->at(0)->instanceOf(TypeParameter), 'type parameter should be a TypeParameter');
+        assertEquals('T', $tps->at(0)->cast(@TypeParameter).name);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::genericType::testNewTypeParameterMatch():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testNewTypeParameterMatch<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // TypeParameter created via new should match in a match expression
-    let tp = ^TypeParameter(name='T', contravariant=false);
-    assert($tp->instanceOf(TypeParameter), 'new TypeParameter should instanceOf TypeParameter');
-    let result = $tp->match([
-        t:TypeParameter[1] | 'tp:' + $t.name,
-        a:Any[1] | 'any'
-    ]);
-    assertEquals('tp:T', $result);
+    assert($f->eval(|
+        let tp = ^TypeParameter(name='T', contravariant=false);
+        assert($tp->instanceOf(TypeParameter), 'new TypeParameter should instanceOf TypeParameter');
+        assertEquals('tp:T', $tp->match([
+            t:TypeParameter[1] | 'tp:' + $t.name,
+            a:Any[1] | 'any'
+        ]));
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::genericType::testTypeParameterInGenericType():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testTypeParameterInGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // TypeParameter stored in a GenericType should still match as TypeParameter
-    let tp = ^TypeParameter(name='T', contravariant=false);
-    let gt = ^UserDefinedGenericType(type=$tp);
-    let extracted = $gt->cast(@GenericTypeValue).type->toOne();
-    assert($extracted->instanceOf(TypeParameter), 'extracted type should be TypeParameter, got: ' + $extracted->type()->toOne()->elementToPath());
-    let matchResult = $extracted->match([
-        t:TypeParameter[1] | 'tp:' + $t.name,
-        pe:PackageableElement[1] | 'pe',
-        a:Any[1] | 'any'
-    ]);
-    assertEquals('tp:T', $matchResult);
+    assert($f->eval(|
+        let tp = ^TypeParameter(name='T', contravariant=false);
+        let extracted = ^UserDefinedGenericType(type=$tp)->cast(@GenericTypeValue).type->toOne();
+        assert($extracted->instanceOf(TypeParameter), 'extracted type should be TypeParameter');
+        assertEquals('tp:T', $extracted->match([
+            t:TypeParameter[1] | 'tp:' + $t.name,
+            pe:PackageableElement[1] | 'pe',
+            a:Any[1] | 'any'
+        ]));
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::genericType::testTypeParameterFromClassTypeParams():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testTypeParameterFromClassTypeParams<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // TypeParameter accessed from a PDB-loaded generic class should match
-    let tp = CC_List->cast(@Class<Any>).typeParameters->at(0);
-    let gt = ^UserDefinedGenericType(type=$tp);
-    let extracted = $gt->cast(@GenericTypeValue).type->toOne();
-    assert($extracted->instanceOf(TypeParameter), 'extracted PDB TypeParameter should be TypeParameter');
-    let matchResult = $extracted->match([
-        t:TypeParameter[1] | 'tp:' + $t.name,
-        pe:PackageableElement[1] | 'pe',
-        a:Any[1] | 'any'
-    ]);
-    assertEquals('tp:T', $matchResult);
+    assert($f->eval(|
+        let extracted = ^UserDefinedGenericType(type=CC_List->cast(@Class<Any>).typeParameters->at(0))->cast(@GenericTypeValue).type->toOne();
+        assert($extracted->instanceOf(TypeParameter), 'extracted PDB TypeParameter should be TypeParameter');
+        assertEquals('tp:T', $extracted->match([
+            t:TypeParameter[1] | 'tp:' + $t.name,
+            pe:PackageableElement[1] | 'pe',
+            a:Any[1] | 'any'
+        ]));
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::genericType::testCopyPreservesTypeParameters():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testCopyPreservesTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // Create a class with typeParameters, then copy-with to add a property.
     // The copy should preserve typeParameters.
-    let tp = ^TypeParameter(name='T', contravariant=false);
-    let cls = new(^UserDefinedGenericType(type=Class, typeArguments=[^UserDefinedGenericType(type=Any)]))->cast(@Class<Any>);
-    let withTp = ^$cls(name='TestGeneric', typeParameters=[$tp]);
-    assertEquals(1, $withTp.typeParameters->size());
-    assertEquals('T', $withTp.typeParameters->at(0).name);
+    assert($f->eval(|
+        let tp = ^TypeParameter(name='T', contravariant=false);
+        let cls = new(^UserDefinedGenericType(type=Class, typeArguments=[^UserDefinedGenericType(type=Any)]))->cast(@Class<Any>);
+        let withTp = ^$cls(name='TestGeneric', typeParameters=[$tp]);
+        assertEquals(1, $withTp.typeParameters->size());
+        assertEquals('T', $withTp.typeParameters->at(0).name);
 
-    // Now copy-with to add another property — typeParameters should survive
-    let copied = ^$withTp(properties=[]);
-    assertEquals(1, $copied.typeParameters->size(), 'typeParameters should be preserved after copy-with');
-    assertEquals('T', $copied.typeParameters->at(0).name);
+        // Now copy-with to add another property — typeParameters should survive
+        let copied = ^$withTp(properties=[]);
+        assertEquals(1, $copied.typeParameters->size(), 'typeParameters should be preserved after copy-with');
+        assertEquals('T', $copied.typeParameters->at(0).name);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericTypeArgumentsOnProperty():Boolean[1]
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeArgumentsOnProperty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // CC_Person.locations has type CC_Location[*] — no type args
-    let cls = CC_Person;
-    let locProp = $cls->cast(@Class<Any>).properties->filter(p | $p.name == 'locations')->toOne();
-    let propGT = $locProp.genericType->toOne()->cast(@GenericTypeValue);
-    assertIs(CC_Location, $propGT.type->toOne());
+    assertIs(CC_Location, $f->eval(|CC_Person->cast(@Class<Any>).properties->filter(p | $p.name == 'locations')->toOne().genericType->toOne()->cast(@GenericTypeValue).type->toOne()));
+}
+
+// A lambda literal `{ ... }` is a metamodel LambdaFunction; its
+// classifierGenericType MUST point at the LambdaFunction class so downstream
+// code (match dispatch, instanceOf checks, generic introspection) works the
+// same way it does for class instances. Without this, match expressions on
+// a lambda fall through to the catch-all and error with "No match branch
+// accepts value of Pure type org.finos.legend.pure.truffle.runtime.dynobj.
+// PureDynamicObject@..." — the bare JVM identity instead of a Pure type.
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeOnLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertIs(meta::pure::metamodel::function::LambdaFunction,
+             $f->eval(|let lambda = {| 1 + 2}; $lambda->genericType().type->toOne();));
+}
+
+// REGRESSION: a lambda that captures an outer variable should have the same
+// classifierGenericType invariant as a non-capturing lambda. Currently fails
+// — the runtime lambda-construction path that captures open variables
+// produces a PDO without `classifierGenericType` set, so genericType().type
+// is empty. Non-capturing lambdas (see `testGenericTypeOnLambda`) do get the
+// classifier; only the capturing path is buggy. Match-side companions live
+// in lang/flow/match.pure.
+function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeOnCapturingLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertIs(meta::pure::metamodel::function::LambdaFunction,
+             $f->eval(|let a = 5; let lambda = {| $a + 1}; $lambda->genericType().type->toOne();));
 }

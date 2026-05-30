@@ -1,27 +1,25 @@
 ###Pure
-import meta::pure::metamodel::relation::*;
+native function select<T,Z>(r: Relation<T>[1], cols: ColSpecArray<Z⊆T>[1]): Relation<Z>[1];
 
-function f(x:Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>[1], y:Relation<(bla:String[1])>[1]):Any[*]
+function f(x: Relation<(legal:String, other:Integer[0..1], yeah:Float)>[1], y: Relation<(bla:String)>[1]): Any[*]
 {
-   $x->select(~[legal, other])
+  $x->select(~[legal, other])
 }
 
-native function select<T,Z>(r:Relation<T>[1], cols:ColSpecArray<Z⊆T>[1]):Relation<Z>[1];
-
 ###CompiledGraph
+native function select_Relation_1__ColSpecArray_1__Relation_1_(r:Relation<T~select_Relation_1__ColSpecArray_1__Relation_1_>[1], cols:ColSpecArray<Z~select_Relation_1__ColSpecArray_1__Relation_1_⊆T~select_Relation_1__ColSpecArray_1__Relation_1_>[1]):Relation<Z~select_Relation_1__ColSpecArray_1__Relation_1_>[1]  ~NativeFunction<{Relation<T~select_Relation_1__ColSpecArray_1__Relation_1_>[1], ColSpecArray<Z~select_Relation_1__ColSpecArray_1__Relation_1_⊆T~select_Relation_1__ColSpecArray_1__Relation_1_>[1]->Relation<Z~select_Relation_1__ColSpecArray_1__Relation_1_>[1]}>
+
 function f_Relation_1__Relation_1__Any_MANY_(x:Relation<(legal:@String@[1], other:@Integer@[0..1], yeah:Float[1])>[1], y:Relation<(bla:@String@[1])>[1]):@Any@[*]  ~UserDefinedFunction<{Relation<(legal:@String@[1], other:@Integer@[0..1], yeah:Float[1])>[1], Relation<(bla:@String@[1])>[1]->@Any@[*]}>
-  ArrowInvocation select_Relation_1__ColSpecArray_1__Relation_1_ :#Relation<#(legal:@String@[1], other:@Integer@[0..1])#>##[1]#  ~@ArrowInvocation@  @6:6-6:30
+  ArrowInvocation select_Relation_1__ColSpecArray_1__Relation_1_ :#Relation<#(legal:@String@[1], other:@Integer@[0..1])#>##[1]#  ~@ArrowInvocation@  @6:5-6:29
     typeParam T -> (legal:@String@[1], other:@Integer@[0..1], yeah:Float[1])
     typeParam Z -> #(legal:@String@[1], other:@Integer@[0..1])#
-    Variable x :#Relation<(legal:@String@[1], other:@Integer@[0..1], yeah:Float[1])>##[1]#  ~@VariableExpression@  @6:4-6:5
-    FunctionInvocation colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_ :#ColSpecArray<#(legal:@String@[1], other:@Integer@[0..1])#>##[1]#  ~@FunctionInvocation@  @6:15-6:29
+    Variable x :#Relation<(legal:@String@[1], other:@Integer@[0..1], yeah:Float[1])>##[1]#  ~@VariableExpression@  @6:3-6:4
+    FunctionInvocation colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_ :#ColSpecArray<#(legal:@String@[1], other:@Integer@[0..1])#>##[1]#  ~@FunctionInvocation@  @6:14-6:28
       typeParam T -> #(legal:@String@[1], other:@Integer@[0..1])#
       Collection :#String#[2]  ~@Collection@
-        AtomicValue  'legal' :@String@[1]  ~@AtomicValue@  @6:17-6:21
-        AtomicValue  'other' :@String@[1]  ~@AtomicValue@  @6:24-6:28
+        AtomicValue  'legal' :@String@[1]  ~@AtomicValue@  @6:16-6:20
+        AtomicValue  'other' :@String@[1]  ~@AtomicValue@  @6:23-6:27
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:@String@[1], other:@Integer@[0..1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
-
-native function select_Relation_1__ColSpecArray_1__Relation_1_(r:Relation<T~select_Relation_1__ColSpecArray_1__Relation_1_>[1], cols:ColSpecArray<Z~select_Relation_1__ColSpecArray_1__Relation_1_⊆T~select_Relation_1__ColSpecArray_1__Relation_1_>[1]):Relation<Z~select_Relation_1__ColSpecArray_1__Relation_1_>[1]  ~NativeFunction<{Relation<T~select_Relation_1__ColSpecArray_1__Relation_1_>[1], ColSpecArray<Z~select_Relation_1__ColSpecArray_1__Relation_1_⊆T~select_Relation_1__ColSpecArray_1__Relation_1_>[1]->Relation<Z~select_Relation_1__ColSpecArray_1__Relation_1_>[1]}>
 
 ###ReverseIndex
 meta::pure::functions::relation::colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_:

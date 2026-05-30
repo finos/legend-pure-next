@@ -238,8 +238,14 @@ function meta::pure::compiler::clearCurrentElement(context:CompilerContext[1]):C
 // self-loops, callers with no path set, and noise (anything under
 // {@code meta::pure::metamodel::}). Mirrors Java
 // {@link CompilationContext#recordReference}.
-function meta::pure::compiler::recordReference(context:CompilerContext[1], targetPath:String[1]):CompilerContext[1]
+function meta::pure::compiler::recordReference(context:CompilerContext[1], rawTargetPath:String[1]):CompilerContext[1]
 {
+    // The root package's elementToPath is '' (a deliberate contract — see
+    // testRootElementToPath); its canonical written/printed reference is '::'.
+    // Normalise here, the single recording choke point, so the reverse index
+    // keys the root as '::' (matching the compiled graph and the Java reference)
+    // without disturbing elementToPath itself.
+    let targetPath = if($rawTargetPath == '', | '::', | $rawTargetPath);
     if($context.currentElementPath->isEmpty()
             || $targetPath == $context.currentElementPath->toOne()
             || $targetPath->startsWith('meta::pure::metamodel::'),

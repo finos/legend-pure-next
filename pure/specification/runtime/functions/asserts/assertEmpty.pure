@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::functions::asserts::*;
+import meta::pure::test::pct::*;
 
 function meta::pure::functions::asserts::assertEmpty(collection:Any[*]):Boolean[1]
 {
@@ -36,8 +37,11 @@ function meta::pure::functions::asserts::assertEmpty(collection:Any[*], message:
 
 
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessAssertEmpty():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   assertEmpty([]);
-   assertEmpty([1, 2, 3]->filter(x | $x == 5));
+   // One assertion per eval: failure attributes to a specific call, and
+   // the eval's own return value (assertEmpty returns Boolean[1]=true on
+   // success) IS what we assert on — no throwaway `true;` placeholder.
+   assert($f->eval(|assertEmpty([])));
+   assert($f->eval(|assertEmpty([1, 2, 3]->filter(x | $x == 5))));
 }

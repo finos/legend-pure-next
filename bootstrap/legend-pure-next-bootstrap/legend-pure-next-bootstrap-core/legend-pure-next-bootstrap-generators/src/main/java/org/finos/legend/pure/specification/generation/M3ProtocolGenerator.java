@@ -82,6 +82,7 @@ public class M3ProtocolGenerator
     private final Resource protocolInfoNonPointer;
     private final Resource protocolInfoTransientCompilerOnly;
     private final Resource protocolInfoPointerSource;
+    private final Resource protocolInfoOptionalInProtocol;
     private final Resource compilerPointer;
     private final Resource protocolInfoAbstract;
     private final Property taggedValuesProp;
@@ -89,6 +90,7 @@ public class M3ProtocolGenerator
     private final Property valueProp;
     private final Property rdfType;
     private final Resource m3PureOne;
+    private final Resource m3ZeroOne;
     private final Resource m3ZeroMany;
     private final Resource m3String;
     private final Resource m3Any;
@@ -137,6 +139,8 @@ public class M3ProtocolGenerator
             model.createResource(M3_NS + "ProtocolInfo_transientCompilerOnly");
         this.protocolInfoPointerSource =
             model.createResource(M3_NS + "ProtocolInfo_pointerSource");
+        this.protocolInfoOptionalInProtocol =
+            model.createResource(M3_NS + "ProtocolInfo_optionalInProtocol");
         this.compilerPointer =
             model.createResource(M3_NS + "meta_pure_profiles_compiler_pointer");
 
@@ -147,6 +151,7 @@ public class M3ProtocolGenerator
         this.valueProp = model.createProperty(M3_NS, "taggedValue_value");
         this.rdfType = model.createProperty(RDF_TYPE_NS, "type");
         this.m3PureOne = model.createResource(M3_NS + "PureOne");
+        this.m3ZeroOne = model.createResource(M3_NS + "ZeroOne");
         this.m3ZeroMany = model.createResource(M3_NS + "ZeroMany");
         this.m3String = model.createResource(M3_NS + "String");
         this.m3Any = model.createResource(M3_NS + "Any");
@@ -496,12 +501,37 @@ public class M3ProtocolGenerator
         Statement multStmt = model.getProperty(r, multiplicityProp);
         if (multStmt != null && multStmt.getObject().isResource())
         {
-            w.write("    :multiplicity :" + getLocalName(multStmt.getResource()) + " .\n");
+            // Properties stereotyped `ProtocolInfo_optionalInProtocol` are
+            // REQUIRED in the compiled metamodel (PureOne) but OPTIONAL in
+            // protocol form — the parser may leave them empty. Remap PureOne
+            // -> ZeroOne so `^X(...)` construction can omit them without
+            // violating Pure's multiplicity check. Other multiplicities pass
+            // through unchanged.
+            Resource mult = multStmt.getResource();
+            if (mult.equals(m3PureOne) && hasStereotype(r, protocolInfoOptionalInProtocol))
+            {
+                mult = m3ZeroOne;
+            }
+            w.write("    :multiplicity :" + getLocalName(mult) + " .\n");
         }
         else
         {
             w.write("    .\n");
         }
+    }
+
+    private boolean hasStereotype(Resource r, Resource stereotype)
+    {
+        StmtIterator it = model.listStatements(r, stereotypesProp, (RDFNode) null);
+        while (it.hasNext())
+        {
+            Statement s = it.next();
+            if (s.getObject().isResource() && s.getObject().asResource().equals(stereotype))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void writeEnumerations(BufferedWriter w) throws IOException

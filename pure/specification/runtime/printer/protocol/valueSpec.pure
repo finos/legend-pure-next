@@ -1,0 +1,716 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::printer::protocol::*;
+import meta::pure::protocol::*;
+// Most protocol-grammar type names (FunctionInvocation, AtomicValue, Class,
+// LambdaFunction, ...) collide with auto-imported M3 metamodel namesakes, so
+// the wildcard import would create ambiguity at every use site. Wildcard
+// imports below cover only the protocol-only Pointer types and union-aliases
+// that have no M3 counterpart; M3-conflicting types stay FQN inline.
+import meta::pure::protocol::grammar::*;
+
+// Protocol-side ValueSpecification printer. Walks the VS tree and emits
+// surface-Pure text — first pass aims for sentinel-free coverage of every
+// shape the grammar test corpus produces, not byte-exact round-trip
+// (the grammar_corpus test only fails on /* UNSUPPORTED */ markers or a
+// thrown exception). Per-shape textual fidelity is a follow-up.
+
+function meta::pure::functions::printer::protocol::printValueSpec(vs: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): String[1]
+{
+    $vs->match([
+        v:   meta::pure::protocol::grammar::valuespecification::VariableExpression[1] | printVariableExpression($v),
+        a:   meta::pure::protocol::grammar::valuespecification::AtomicValue[1] | printAtomicValue($a),
+        c:   meta::pure::protocol::grammar::valuespecification::Collection[1] | printCollection($c),
+        fi:  meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] | printFunctionInvocation($fi),
+        arrow: meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1] | printArrowInvocation($arrow),
+        dot: meta::pure::protocol::grammar::valuespecification::DotApplication[1] | printDotApplication($dot),
+        gmh: meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1] | printGenericTypeAndMultiplicityHolder($gmh),
+        l:   meta::pure::protocol::grammar::function::LambdaFunction[1] | printLambdaFunction($l),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | '/* todo: ' + $any->genericType().type->toOne()->elementToPath() + ' */'
+    ]);
+}
+
+// `$name` for named variables; `~`-prefixed names (the parser keeps the whole
+// `~`, `~.~`, `~.foo` chain as a single VariableExpression name) are emitted
+// without the `$` sigil.
+function meta::pure::functions::printer::protocol::printVariableExpression(v: meta::pure::protocol::grammar::valuespecification::VariableExpression[1]): String[1]
+{
+    let n = $v.name->orElse('');
+    if ($n->startsWith('~'), | $n, | '$' + $n);
+}
+
+// AtomicValue.value carries the literal payload (String, Integer, Float, ...)
+// or a Package_Pointer for unresolved references. Dispatch on its runtime
+// type so each kind renders in its source-text form.
+function meta::pure::functions::printer::protocol::printAtomicValue(a: meta::pure::protocol::grammar::valuespecification::AtomicValue[1]): String[1]
+{
+    if ($a.value->isEmpty(),
+        | '/* todo: empty AtomicValue */',
+        | let v = $a.value->toOne();
+          let typeName = atomicValueTypeName($a);
+          $v->match([
+              s: String[1]  | if (isDateTypeName($typeName), | '%' + $s, | printStringLiteral($s)),
+              i: Integer[1] | $i->toString(),
+              f: Float[1]   | $f->toString(),
+              d: Decimal[1] | $d->toString() + 'd',
+              b: Boolean[1] | $b->toString(),
+              pp: Package_Pointer[1] | $pp.value,
+              lf: meta::pure::protocol::grammar::function::LambdaFunction[1] | printLambdaFunction($lf),
+              x: Any[1] | $x->toString()
+          ]);
+    );
+}
+
+// Date / StrictDate / DateTime / StrictTime literals share the `%...` prefix.
+// Parser stores their text value as String, but the AtomicValue's genericType
+// tells us to render with the `%` prefix rather than as a quoted string.
+function meta::pure::functions::printer::protocol::isDateTypeName(name: String[0..1]): Boolean[1]
+{
+    if ($name->isEmpty(),
+        | false,
+        | let n = $name->toOne();
+          $n == 'Date' || $n == 'StrictDate' || $n == 'DateTime' || $n == 'StrictTime';
+    );
+}
+
+// Pull the short type name out of an AtomicValue's genericType. Returns
+// `[]` if the genericType is missing or doesn't expose a named Type_Pointer.
+function meta::pure::functions::printer::protocol::atomicValueTypeName(a: meta::pure::protocol::grammar::valuespecification::AtomicValue[1]): String[0..1]
+{
+    if ($a.genericType->isEmpty(),
+        | [],
+        | $a.genericType->toOne()->match([
+            gtv: meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] |
+                $gtv.type->toOne()->match([
+                    p: meta::pure::protocol::grammar::type::Type_Pointer[1] | $p.value->split('::')->last(),
+                    any: meta::pure::metamodel::type::Any[1] | []
+                ]),
+            any: meta::pure::metamodel::type::Any[1] | []
+          ]);
+    );
+}
+
+// Render a string literal: pick `'...'` for single-line, `'''...'''` for
+// multi-line (heredoc). DSL bodies are stored as strings shaped `#{...}#`
+// and emitted verbatim (no quotes) — that matches the parser's surface.
+function meta::pure::functions::printer::protocol::printStringLiteral(s: String[1]): String[1]
+{
+    if ($s->startsWith('#{') && $s->endsWith('}#'),
+        | $s,
+    | if ($s->contains('\n'),
+        // Heredoc form. Parser strips the leading newline (text-block style)
+        // but preserves the trailing one — so a trailing `\n` is the signal
+        // that the source had `'''` on its own opening line. Re-add the
+        // leading `\n` in that case so the printed form matches.
+        | '\'\'\'' + if ($s->endsWith('\n'), | '\n', | '') + $s + '\'\'\'',
+        | '\'' + escapeStringLiteral($s) + '\''
+    ));
+}
+
+// Pure source uses backslash escapes for `'` and `\` inside `'...'` literals.
+function meta::pure::functions::printer::protocol::escapeStringLiteral(s: String[1]): String[1]
+{
+    $s->replace('\\', '\\\\')->replace('\'', '\\\'');
+}
+
+function meta::pure::functions::printer::protocol::printCollection(c: meta::pure::protocol::grammar::valuespecification::Collection[1]): String[1]
+{
+    $c.values->map(v | printValueSpec($v))->joinStrings('[', ', ', ']');
+}
+
+// Sugar dispatcher: a few builtin function calls have dedicated parser surface
+// (let bindings, infix operators, `^X(...)` constructors). When the call shape
+// matches, render the source-form; otherwise fall back to `foo(args)`.
+function meta::pure::functions::printer::protocol::printFunctionInvocation(fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): String[1]
+{
+    let name = $fi.functionName;
+    let arity = $fi.parametersValues->size();
+    if([pair(| $name == '__paren__' && $arity == 1,           | '(' + printValueSpec($fi.parametersValues->at(0)) + ')'),
+        pair(| $name == 'letFunction' && $arity == 2,         | printLetSugar($fi)),
+        pair(| isInfixOperator($name) && $arity == 2,         | printInfix($name, $fi.parametersValues->at(0), $fi.parametersValues->at(1))),
+        pair(| isNotEqualPattern($name, $fi.parametersValues),| printNotEqualSugar($fi.parametersValues->at(0))),
+        pair(| isUnaryNotOperator($name) && $arity == 1,      | '!' + printNotOperand($fi.parametersValues->at(0))),
+        pair(| $name == 'minus' && $arity == 1,               | '-' + printNotOperand($fi.parametersValues->at(0))),
+        pair(| $name == 'new' && $arity >= 1,                 | printNewSugar($fi)),
+        pair(| $name == 'copy' && $arity == 2,                | printCopySugar($fi)),
+        pair(| isAllSugar($name) && $arity >= 1,              | printAllSugar($name, $fi)),
+        pair(| $name == 'slice',                              | printSliceSugar($fi)),
+        pair(| isColSpecSugar($name),                         | printColSpecSugar($name, $fi))],
+       | $fi.parametersValues->map(p | printValueSpec($p))->joinStrings($name + '(', ', ', ')'));
+}
+
+// `letFunction('name', value)` → `let name = value`. Parser canonicalises every
+// `let x = expr` into this two-argument call.
+function meta::pure::functions::printer::protocol::printLetSugar(fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): String[1]
+{
+    let nameArg = $fi.parametersValues->at(0);
+    let valArg = $fi.parametersValues->at(1);
+    let varName = $nameArg->cast(@meta::pure::protocol::grammar::valuespecification::AtomicValue).value->toOne()->cast(@String);
+    'let ' + $varName + ' = ' + printValueSpec($valArg);
+}
+
+// Infix operator allow-list — names that parser emits as FunctionInvocation
+// but the source spells inline (`a + b`, `a == b`, etc.). Written as chained
+// `||` rather than `[...]->contains($name)` because the list-of-string form
+// occasionally resolves to the wrong `contains` native (String vs Collection).
+function meta::pure::functions::printer::protocol::isInfixOperator(name: String[1]): Boolean[1]
+{
+    $name == 'plus' || $name == 'minus' || $name == 'times' || $name == 'divide'
+      || $name == 'equal' || $name == 'notEqual'
+      || $name == 'lessThan' || $name == 'lessThanEqual'
+      || $name == 'greaterThan' || $name == 'greaterThanEqual'
+      || $name == 'and' || $name == 'or';
+}
+
+function meta::pure::functions::printer::protocol::isUnaryNotOperator(name: String[1]): Boolean[1]
+{
+    $name == 'not';
+}
+
+// `a != b` is parsed as `not(equal(a, b))`. Detect the pattern so we can
+// render the source-form `a != b` rather than `!a == b`.
+function meta::pure::functions::printer::protocol::isNotEqualPattern(name: String[1], params: meta::pure::protocol::grammar::valuespecification::ValueSpecification[*]): Boolean[1]
+{
+    if ($name != 'not' || $params->size() != 1,
+        | false,
+        | $params->at(0)->match([
+            inner: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+                $inner.functionName == 'equal' && $inner.parametersValues->size() == 2,
+            any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | false
+          ]);
+    );
+}
+
+function meta::pure::functions::printer::protocol::printNotEqualSugar(equalCall: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): String[1]
+{
+    let inner = $equalCall->cast(@meta::pure::protocol::grammar::valuespecification::FunctionInvocation);
+    printInfix('notEqual', $inner.parametersValues->at(0), $inner.parametersValues->at(1));
+}
+
+// Wrap the operand of `!` in parens when it's a binary operator call —
+// `!(a == b)` instead of `!a == b`, matching the source's explicit grouping.
+function meta::pure::functions::printer::protocol::printNotOperand(v: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): String[1]
+{
+    let needsParens = $v->match([
+        fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+            isInfixOperator($fi.functionName) || isNotEqualPattern($fi.functionName, $fi.parametersValues),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | false
+    ]);
+    if ($needsParens, | '(' + printValueSpec($v) + ')', | printValueSpec($v));
+}
+
+function meta::pure::functions::printer::protocol::printInfix(name: String[1], lhs: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], rhs: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): String[1]
+{
+    let op = if([pair(| $name == 'plus',             | '+'),
+                 pair(| $name == 'minus',            | '-'),
+                 pair(| $name == 'times',            | '*'),
+                 pair(| $name == 'divide',           | '/'),
+                 pair(| $name == 'equal',            | '=='),
+                 pair(| $name == 'notEqual',         | '!='),
+                 pair(| $name == 'lessThan',         | '<'),
+                 pair(| $name == 'lessThanEqual',    | '<='),
+                 pair(| $name == 'greaterThan',      | '>'),
+                 pair(| $name == 'greaterThanEqual', | '>='),
+                 pair(| $name == 'and',              | '&&'),
+                 pair(| $name == 'or',               | '||')],
+                | $name);
+    printInfixOperand($lhs, $name, true) + ' ' + $op + ' ' + printInfixOperand($rhs, $name, false);
+}
+
+// MINIMAL-mode operator precedence. Higher value = binds tighter. Mirrors
+// PureLanguageSerializer.precedenceOf — keep the two in sync. Returns -1
+// for non-operator names so callers can short-circuit.
+function meta::pure::functions::printer::protocol::infixPrecedence(name: String[1]): Integer[1]
+{
+    if([pair(| $name == 'or',                                                                      | 1),
+        pair(| $name == 'and',                                                                     | 2),
+        pair(| $name == 'equal' || $name == 'notEqual',                                            | 3),
+        pair(| $name == 'lessThan' || $name == 'lessThanEqual'
+                || $name == 'greaterThan' || $name == 'greaterThanEqual',                          | 4),
+        pair(| $name == 'plus' || $name == 'minus',                                                | 5),
+        pair(| $name == 'times' || $name == 'divide',                                              | 6)],
+       | -1);
+}
+
+// MINIMAL-mode parenthesization for a binary operand. Left side: same or
+// higher precedence keeps no parens (left-associative). Right side: only
+// strictly-higher precedence keeps no parens — equal precedence on the
+// right would re-associate on re-parse (e.g. `9 / (18 / 6)` ≠ `9 / 18 / 6`).
+// Mirrors PureLanguageSerializer.possiblyAddParenthesisLeft/Right.
+function meta::pure::functions::printer::protocol::printInfixOperand(operand: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], outerName: String[1], isLeft: Boolean[1]): String[1]
+{
+    let rendered = printValueSpec($operand);
+    $operand->match([
+        fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+            if (isInfixOperator($fi.functionName) && $fi.parametersValues->size() == 2,
+                | let outerPrec = infixPrecedence($outerName);
+                  let innerPrec = infixPrecedence($fi.functionName);
+                  let keepBare = if ($isLeft, | $innerPrec >= $outerPrec, | $innerPrec > $outerPrec);
+                  if ($keepBare, | $rendered, | '(' + $rendered + ')');,
+                | $rendered
+            ),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | $rendered
+    ]);
+}
+
+// `copy(receiver, [keyExpression(...), ...])` → `^receiver(k=v, ...)`. Used
+// by parser for `^$x(k=v)` and `^expr(...)(k=v)` copy-with-overrides shapes —
+// receiver may be `$x`, `expr.next`, `expr()` and similar.
+function meta::pure::functions::printer::protocol::printCopySugar(fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): String[1]
+{
+    let receiver = $fi.parametersValues->at(0);
+    let kvArg = $fi.parametersValues->at(1);
+    let kvs = $kvArg->match([
+        c: meta::pure::protocol::grammar::valuespecification::Collection[1] | $c.values,
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | $any
+    ]);
+    '^' + printValueSpec($receiver) + $kvs->map(kv | printKeyExpression($kv))->joinStrings('(', ', ', ')');
+}
+
+// `new(@Class[1], [KeyExpression('k', v), ...])` → `^pkg::Class(k=v, ...)`.
+// Parser canonicalises `^X(...)` into a `new` call whose first arg holds the
+// target type and second arg the keyExpression list.
+function meta::pure::functions::printer::protocol::printNewSugar(fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): String[1]
+{
+    let typeArg = $fi.parametersValues->at(0);
+    let keyExprs = if ($fi.parametersValues->size() < 2,
+                  | [],
+                  | let keyExprArg = $fi.parametersValues->at(1);
+                    $keyExprArg->match([
+                        c: meta::pure::protocol::grammar::valuespecification::Collection[1] | $c.values,
+                        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | $any
+                    ]);
+                 );
+    '^' + printNewTarget($typeArg) + $keyExprs->map(keyExpr | printKeyExpression($keyExpr))->joinStrings('(', ', ', ')');
+}
+
+// The first arg of a `new` call carries the constructor target. It may be:
+//   * a GenericTypeAndMultiplicityHolder (`@Class[1]`) — emit `pkg::Class`
+//   * any other VS — emit `$expr` / `expr()` for copy targets like `^$x(...)`.
+function meta::pure::functions::printer::protocol::printNewTarget(target: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): String[1]
+{
+    $target->match([
+        gmh: meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1] |
+            if ($gmh.genericType->isEmpty(), | '', | printGenericType($gmh.genericType->toOne())),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | printValueSpec($any)
+    ]);
+}
+
+// `getAll`, `getAllVersions`, `getAllVersionsInRange` are emitted by parser
+// for the `Class.all()` / `Class.allVersions()` / `Class.allVersionsInRange(...)`
+// surface forms. First arg is the class; rest are extra args (for InRange).
+function meta::pure::functions::printer::protocol::isAllSugar(name: String[1]): Boolean[1]
+{
+    $name == 'getAll' || $name == 'getAllVersions' || $name == 'getAllVersionsInRange';
+}
+
+function meta::pure::functions::printer::protocol::printAllSugar(name: String[1], fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): String[1]
+{
+    let target = printValueSpec($fi.parametersValues->at(0));
+    let methodName = if([pair(| $name == 'getAll',         | 'all'),
+                         pair(| $name == 'getAllVersions', | 'allVersions')],
+                        | 'allVersionsInRange');
+    $target + '.' + $methodName + $fi.parametersValues->drop(1)->map(p | printValueSpec($p))->joinStrings('(', ', ', ')');
+}
+
+// `slice(stop)`, `slice(start, stop)`, `slice(start, stop, step)` →
+// `[:stop]`, `[start:stop]`, `[start:stop:step]`.
+function meta::pure::functions::printer::protocol::printSliceSugar(fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): String[1]
+{
+    let parts = $fi.parametersValues->map(p | printValueSpec($p));
+    if([pair(| $parts->size() == 1, | '[:' + $parts->at(0) + ']'),
+        pair(| $parts->size() == 2, | '[' + $parts->at(0) + ':' + $parts->at(1) + ']')],
+       | '[' + $parts->at(0) + ':' + $parts->at(1) + ':' + $parts->at(2) + ']');
+}
+
+// Relation column-spec sugar — the `~colName` / `~[col1, col2]` etc. forms
+// the parser canonicalises into `colSpec`, `funcColSpec`, `aggColSpec`,
+// `colSpecArray`, `funcColSpecArray`, `aggColSpecArray` (and the `…2`
+// arity-bumped variants). Mirrors PureLanguageSerializer.serializeColSpec.
+function meta::pure::functions::printer::protocol::isColSpecSugar(name: String[1]): Boolean[1]
+{
+    $name == 'colSpec' || $name == 'funcColSpec' || $name == 'funcColSpec2'
+      || $name == 'aggColSpec' || $name == 'aggColSpec2'
+      || $name == 'colSpecArray' || $name == 'funcColSpecArray' || $name == 'funcColSpecArray2'
+      || $name == 'aggColSpecArray' || $name == 'aggColSpecArray2';
+}
+
+function meta::pure::functions::printer::protocol::printColSpecSugar(name: String[1], fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): String[1]
+{
+    let params = $fi.parametersValues;
+    if([pair(| $name == 'colSpec',                                                | '~' + printColSpecBody($params)),
+        pair(| $name == 'funcColSpec' || $name == 'funcColSpec2',                 | '~' + extractAtomicString($params->at(1)) + ' : ' + printValueSpec($params->at(0))),
+        pair(| $name == 'aggColSpec' || $name == 'aggColSpec2',                   | '~' + extractAtomicString($params->at(2)) + ' : ' + printValueSpec($params->at(0)) + ' : ' + printValueSpec($params->at(1))),
+        pair(| $name == 'colSpecArray',                                           | printColSpecArraySugar($params)),
+        pair(| $name == 'funcColSpecArray' || $name == 'funcColSpecArray2',       | printFuncColSpecArraySugar($params)),
+        pair(| $name == 'aggColSpecArray' || $name == 'aggColSpecArray2',         | printAggColSpecArraySugar($params))],
+       | $params->map(p | printValueSpec($p))->joinStrings($name + '(', ', ', ')'));
+}
+
+// `colSpec('name', @TypeHolder)` → `name [: Type[mult]]` (no leading `~`,
+// caller adds it). The type/multiplicity come from the holder's wrapped
+// single-column RelationType.
+function meta::pure::functions::printer::protocol::printColSpecBody(params: meta::pure::protocol::grammar::valuespecification::ValueSpecification[*]): String[1]
+{
+    let nameStr = extractAtomicString($params->at(0));
+    if ($params->size() < 2,
+        | $nameStr,
+        | $nameStr + extractColSpecTypeSuffix($params->at(1))
+    );
+}
+
+// Pull `: T[m]` text out of a colSpec's TypeHolder second argument. Returns
+// empty string when the holder doesn't carry a column type (the no-type
+// `~name` form).
+function meta::pure::functions::printer::protocol::extractColSpecTypeSuffix(holder: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): String[1]
+{
+    $holder->match([
+        gmh: meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1] |
+            extractColSpecTypeSuffixFromGmh($gmh),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | ''
+    ]);
+}
+
+function meta::pure::functions::printer::protocol::extractColSpecTypeSuffixFromGmh(gmh: meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1]): String[1]
+{
+    if ($gmh.genericType->isEmpty(),
+        | '',
+        | $gmh.genericType->toOne()->match([
+            gtv: meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] |
+                extractColSpecTypeSuffixFromGtv($gtv),
+            any: meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1] | ''
+          ]);
+    );
+}
+
+function meta::pure::functions::printer::protocol::extractColSpecTypeSuffixFromGtv(gtv: meta::pure::protocol::grammar::type::generics::GenericTypeValue[1]): String[1]
+{
+    if ($gtv.type->isEmpty(),
+        | '',
+        | $gtv.type->toOne()->match([
+            rt: meta::pure::protocol::grammar::relation::RelationType[1] |
+                if ($rt.columns->isEmpty(),
+                    | '',
+                    | let col = $rt.columns->at(0);
+                      let gt = if ($col.genericType->isEmpty(), | '', | ' : ' + printGenericType($col.genericType->toOne()));
+                      let mul = if ($col.multiplicity->isEmpty(), | '', | printMultiplicity($col.multiplicity->toOne()));
+                      $gt + $mul;
+                ),
+            any: meta::pure::metamodel::type::Any[1] | ''
+          ]);
+    );
+}
+
+// `colSpecArray([names...], @TypeHolder)` → `~[name1 [: T1[m1]], name2 [: T2[m2]], ...]`.
+function meta::pure::functions::printer::protocol::printColSpecArraySugar(params: meta::pure::protocol::grammar::valuespecification::ValueSpecification[*]): String[1]
+{
+    let names = $params->at(0)->cast(@meta::pure::protocol::grammar::valuespecification::Collection).values;
+    let cols = extractRelationTypeColumns(if ($params->size() < 2, | [], | $params->at(1)));
+    let entries = $names->map(n | colSpecArrayEntry($n, $cols));
+    $entries->joinStrings('~[', ', ', ']');
+}
+
+function meta::pure::functions::printer::protocol::colSpecArrayEntry(nameVal: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], cols: meta::pure::protocol::grammar::relation::Column[*]): String[1]
+{
+    let nameStr = extractAtomicString($nameVal);
+    let matching = $cols->filter(c | !$c.name->isEmpty() && $c.name->toOne() == $nameStr);
+    if ($matching->isEmpty(),
+        | $nameStr,
+        | let col = $matching->at(0);
+          let gt = if ($col.genericType->isEmpty(), | '', | ' : ' + printGenericType($col.genericType->toOne()));
+          let mul = if ($col.multiplicity->isEmpty(), | '', | printMultiplicity($col.multiplicity->toOne()));
+          $nameStr + $gt + $mul;
+    );
+}
+
+function meta::pure::functions::printer::protocol::extractRelationTypeColumns(holder: meta::pure::protocol::grammar::valuespecification::ValueSpecification[0..1]): meta::pure::protocol::grammar::relation::Column[*]
+{
+    if ($holder->isEmpty(),
+        | [],
+        | $holder->toOne()->match([
+            gmh: meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1] |
+                if ($gmh.genericType->isEmpty(),
+                    | [],
+                    | $gmh.genericType->toOne()->match([
+                        gtv: meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] |
+                            if ($gtv.type->isEmpty(),
+                                | [],
+                                | $gtv.type->toOne()->match([
+                                    rt: meta::pure::protocol::grammar::relation::RelationType[1] | $rt.columns,
+                                    any: meta::pure::metamodel::type::Any[1] | []
+                                  ])
+                            ),
+                        any: meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1] | []
+                      ])
+                ),
+            any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | []
+          ]);
+    );
+}
+
+function meta::pure::functions::printer::protocol::printFuncColSpecArraySugar(params: meta::pure::protocol::grammar::valuespecification::ValueSpecification[*]): String[1]
+{
+    let col = $params->at(0)->cast(@meta::pure::protocol::grammar::valuespecification::Collection);
+    let entries = $col.values->map(e | innerFuncColSpecEntry($e));
+    $entries->joinStrings('~[', ', ', ']');
+}
+
+function meta::pure::functions::printer::protocol::innerFuncColSpecEntry(e: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): String[1]
+{
+    $e->match([
+        fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+            if ($fi.parametersValues->size() >= 2,
+                | extractAtomicString($fi.parametersValues->at(1)) + ' : ' + printValueSpec($fi.parametersValues->at(0)),
+                | printValueSpec($e);
+            ),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | printValueSpec($any)
+    ]);
+}
+
+function meta::pure::functions::printer::protocol::printAggColSpecArraySugar(params: meta::pure::protocol::grammar::valuespecification::ValueSpecification[*]): String[1]
+{
+    let col = $params->at(0)->cast(@meta::pure::protocol::grammar::valuespecification::Collection);
+    let entries = $col.values->map(e | innerAggColSpecEntry($e));
+    $entries->joinStrings('~[', ', ', ']');
+}
+
+function meta::pure::functions::printer::protocol::innerAggColSpecEntry(e: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): String[1]
+{
+    $e->match([
+        fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+            if ($fi.parametersValues->size() >= 3,
+                | extractAtomicString($fi.parametersValues->at(2)) + ' : ' + printValueSpec($fi.parametersValues->at(0)) + ' : ' + printValueSpec($fi.parametersValues->at(1)),
+                | printValueSpec($e);
+            ),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | printValueSpec($any)
+    ]);
+}
+
+// Common helper: pull a string out of an AtomicValue (the name slot in all
+// colSpec variants is always a string-typed AtomicValue).
+function meta::pure::functions::printer::protocol::extractAtomicString(v: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): String[1]
+{
+    $v->match([
+        a: meta::pure::protocol::grammar::valuespecification::AtomicValue[1] |
+            if ($a.value->isEmpty(), | '', | $a.value->toOne()->toString()),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | ''
+    ]);
+}
+
+// `keyExpression('name', value)` calls are the `k=v` slots in a `new()`.
+// Render the canonical `k=v` form; when shape is unexpected fall back to the
+// raw function-call print so output stays sentinel-free.
+function meta::pure::functions::printer::protocol::printKeyExpression(keyExpr: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): String[1]
+{
+    $keyExpr->match([
+        fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] | printKeyExpressionInvocation($fi),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | printValueSpec($any)
+    ]);
+}
+
+function meta::pure::functions::printer::protocol::printKeyExpressionInvocation(fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): String[1]
+{
+    if ($fi.functionName == 'keyExpression' && $fi.parametersValues->size() == 2,
+        | let kAtom = $fi.parametersValues->at(0)->cast(@meta::pure::protocol::grammar::valuespecification::AtomicValue);
+          let k = $kAtom.value->toOne()->cast(@String);
+          $k + '=' + printValueSpec($fi.parametersValues->at(1));,
+        | $fi.parametersValues->map(p | printValueSpec($p))->joinStrings($fi.functionName + '(', ', ', ')')
+    );
+}
+
+// `receiver->name(rest...)`. Parser puts the receiver as parametersValues[0].
+// `->` binds tighter than unary `!`/`-` and infix operators, so a receiver
+// expression like `!X` or `X + Y` must be wrapped in parens or the printed
+// form would re-parse with a different shape (`!X->f()` is `!(X->f())`).
+function meta::pure::functions::printer::protocol::printArrowInvocation(arrow: meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1]): String[1]
+{
+    if ($arrow.parametersValues->isEmpty(),
+        | $arrow.functionName + '()',
+        | printArrowReceiver($arrow.parametersValues->at(0)) + '->' + $arrow.functionName +
+          $arrow.parametersValues->drop(1)->map(p | printValueSpec($p))->joinStrings('(', ', ', ')');
+    );
+}
+
+function meta::pure::functions::printer::protocol::printArrowReceiver(v: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): String[1]
+{
+    let needsParens = $v->match([
+        fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+            isInfixOperator($fi.functionName)
+              || ($fi.functionName == 'not' && $fi.parametersValues->size() == 1)
+              || ($fi.functionName == 'minus' && $fi.parametersValues->size() == 1),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | false
+    ]);
+    if ($needsParens, | '(' + printValueSpec($v) + ')', | printValueSpec($v));
+}
+
+// `receiver.name` for simple property access; `receiver.name(args)` when
+// extra params are present (qualified-property style). Receiver is param[0].
+function meta::pure::functions::printer::protocol::printDotApplication(dot: meta::pure::protocol::grammar::valuespecification::DotApplication[1]): String[1]
+{
+    if ($dot.parametersValues->isEmpty(),
+        | '.' + $dot.functionName,
+        | let receiver = printValueSpec($dot.parametersValues->at(0));
+          let rest = $dot.parametersValues->drop(1);
+          if ($rest->isEmpty(),
+              | $receiver + '.' + $dot.functionName,
+              | $receiver + '.' + $dot.functionName + $rest->map(p | printValueSpec($p))->joinStrings('(', ', ', ')');
+          );
+    );
+}
+
+// `@TypeName[mul]` form used inside `cast(@T)` and similar holders.
+// Special cases for parameterized helpers:
+//   * type-only: `@T`
+//   * mul-only:  `@|m` (no type, parser surface is `@|mulName`)
+//   * both:      `@T[m]`
+function meta::pure::functions::printer::protocol::printGenericTypeAndMultiplicityHolder(gmh: meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1]): String[1]
+{
+    let gt = if ($gmh.genericType->isEmpty(), | '', | printGenericType($gmh.genericType->toOne()));
+    let hasMul = !$gmh.multiplicity->isEmpty();
+    // When the type is absent / undefined (renders empty), use `@|m` — the
+    // parser surface for "multiplicity-only" holders like `toMultiplicity(@|m)`.
+    if ($gt == '' && $hasMul,
+        | '@|' + printMultiplicityArg($gmh.multiplicity->toOne()),
+        | let mul = if (!$hasMul, | '', | printMultiplicity($gmh.multiplicity->toOne()));
+          '@' + $gt + $mul;
+    );
+}
+
+// Lambdas: multi-param wrapped in `{}`; single-param emitted bare (parser
+// accepts both forms but the corpus uses the bare form whenever possible).
+function meta::pure::functions::printer::protocol::printLambdaFunction(l: meta::pure::protocol::grammar::function::LambdaFunction[1]): String[1]
+{
+    let params = $l.parameters->map(p | printLambdaParameter($p))->joinStrings(', ');
+    let body = $l.expressionSequence->map(b | printValueSpec($b))->joinStrings('; ');
+    if ($l.parameters->size() == 1,
+        | $params + '|' + $body,
+        | '{' + $params + '|' + $body + '}'
+    );
+}
+
+// Lambda parameter — emit just the name when type/mul are unset (typical for
+// inline lambdas like `{x|...}`), full `name: T[m]` otherwise.
+function meta::pure::functions::printer::protocol::printLambdaParameter(p: meta::pure::protocol::grammar::valuespecification::VariableExpression[1]): String[1]
+{
+    let n = $p.name->orElse('');
+    if ($p.genericType->isEmpty(),
+        | $n,
+        | $n + ': ' + printGenericType($p.genericType->toOne()) + if ($p.multiplicity->isEmpty(), | '', | printMultiplicity($p.multiplicity->toOne()))
+    );
+}
+
+// ---------------------------------------------------------------------------
+// EXPLICIT-mode paren wrapping. AST transformation that wraps every operator
+// expression's operand (when the operand is itself an operator) in a synthetic
+// `__paren__` FunctionInvocation. The regular printer recognises `__paren__`
+// and emits `(...)`. Mirrors PureLanguageSerializer.ParenthesisMode.EXPLICIT.
+// ---------------------------------------------------------------------------
+
+function meta::pure::functions::printer::protocol::wrapExplicit(vs: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+    $vs->match([
+        fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] | wrapExplicitFI($fi),
+        arrow: meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1] | wrapExplicitArrow($arrow),
+        dot: meta::pure::protocol::grammar::valuespecification::DotApplication[1] | wrapExplicitDot($dot),
+        c: meta::pure::protocol::grammar::valuespecification::Collection[1] | ^$c(values = $c.values->map(v | wrapExplicit($v))->cast(@meta::pure::protocol::grammar::valuespecification::ValueSpecification)),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | $vs
+    ]);
+}
+
+function meta::pure::functions::printer::protocol::wrapExplicitFI(fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+    let recursed = $fi.parametersValues->map(p | wrapExplicit($p))->cast(@meta::pure::protocol::grammar::valuespecification::ValueSpecification);
+    let name = $fi.functionName;
+    let arity = $recursed->size();
+    let finalParams = if([pair(| isInfixOperator($name) && $arity == 2,         | [wrapExplicitInfixLeft($recursed->at(0), $name), wrapExplicitInfixRight($recursed->at(1), $name)]->cast(@meta::pure::protocol::grammar::valuespecification::ValueSpecification)),
+                          pair(| isNotEqualPattern($name, $fi.parametersValues),| $recursed),
+                          pair(| $name == 'not' && $arity == 1,                 | [wrapExplicitUnary($recursed->at(0))]->cast(@meta::pure::protocol::grammar::valuespecification::ValueSpecification)),
+                          pair(| $name == 'minus' && $arity == 1,               | [wrapExplicitUnary($recursed->at(0))]->cast(@meta::pure::protocol::grammar::valuespecification::ValueSpecification))],
+                         | $recursed);
+    ^$fi(parametersValues = $finalParams);
+}
+
+function meta::pure::functions::printer::protocol::wrapExplicitArrow(arrow: meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+    ^$arrow(parametersValues = $arrow.parametersValues->map(p | wrapExplicit($p))->cast(@meta::pure::protocol::grammar::valuespecification::ValueSpecification));
+}
+
+function meta::pure::functions::printer::protocol::wrapExplicitDot(dot: meta::pure::protocol::grammar::valuespecification::DotApplication[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+    ^$dot(parametersValues = $dot.parametersValues->map(p | wrapExplicit($p))->cast(@meta::pure::protocol::grammar::valuespecification::ValueSpecification));
+}
+
+// Left operand of a binary op: same-arithmetic-op on the left keeps no parens
+// (so `2 + 3 + 4` stays flat). Otherwise wrap when the operand is itself an
+// operator expression.
+function meta::pure::functions::printer::protocol::wrapExplicitInfixLeft(operand: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], outerName: String[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+    $operand->match([
+        fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+            if (isArithmeticOp($outerName) && $fi.functionName == $outerName,
+                | $operand,
+                | if (isWrappableForExplicit($fi), | parenWrap($operand), | $operand)
+            ),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | $operand
+    ]);
+}
+
+// Right operand of a binary op: always wrap when the operand is an operator
+// expression (no left-associativity exception).
+function meta::pure::functions::printer::protocol::wrapExplicitInfixRight(operand: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], outerName: String[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+    $operand->match([
+        fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+            if (isWrappableForExplicit($fi), | parenWrap($operand), | $operand),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | $operand
+    ]);
+}
+
+// Operand of unary `!`/`-`: wrap when operand is a binary infix (so
+// `!(a == b)` not `!a == b`). Unary stacking like `!!x` stays flat.
+function meta::pure::functions::printer::protocol::wrapExplicitUnary(operand: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+    $operand->match([
+        fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+            if (isInfixOperator($fi.functionName) || isNotEqualPattern($fi.functionName, $fi.parametersValues),
+                | parenWrap($operand),
+                | $operand
+            ),
+        any: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | $operand
+    ]);
+}
+
+function meta::pure::functions::printer::protocol::isWrappableForExplicit(fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1]): Boolean[1]
+{
+    isInfixOperator($fi.functionName) || isNotEqualPattern($fi.functionName, $fi.parametersValues);
+}
+
+function meta::pure::functions::printer::protocol::isArithmeticOp(name: String[1]): Boolean[1]
+{
+    $name == 'plus' || $name == 'minus' || $name == 'times' || $name == 'divide';
+}
+
+// Wrap a value in a synthetic `__paren__` FunctionInvocation. Printer
+// recognises this marker and emits `(...)` around the inner.
+function meta::pure::functions::printer::protocol::parenWrap(v: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+    ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+        functionName = '__paren__',
+        parametersValues = [$v]->cast(@meta::pure::protocol::grammar::valuespecification::ValueSpecification),
+        genericType = ^meta::pure::protocol::grammar::type::generics::UndefinedGenericType(),
+        multiplicity = ^meta::pure::protocol::grammar::multiplicity::UndefinedMultiplicity()
+    );
+}

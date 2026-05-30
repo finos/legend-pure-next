@@ -1,0 +1,57 @@
+###Pure
+function test::rightAssocDivide(): Float[1]
+{
+  9 / (18 / 6)
+}
+
+function test::leftAssocDivide(): Float[1]
+{
+  9 / 18 / 6
+}
+
+function test::rightAssocMinus(): Integer[1]
+{
+  9 - (18 - 6)
+}
+
+function test::leftAssocMinus(): Integer[1]
+{
+  9 - 18 - 6
+}
+
+###CompiledGraph
+function test::rightAssocDivide__Float_1_():Float[1]  ~UserDefinedFunction<{->Float[1]}>
+  FunctionInvocation divide_Number_1__Number_1__Float_1_ :#Float##[1]#  ~@FunctionInvocation@  @4:3-4:14
+    AtomicValue  9 :@Integer@[1]  ~@AtomicValue@  @4:3-4:3
+    FunctionInvocation divide_Number_1__Number_1__Float_1_ :#Float##[1]#  ~@FunctionInvocation@  @4:8-4:13
+      AtomicValue  18 :@Integer@[1]  ~@AtomicValue@  @4:8-4:9
+      AtomicValue  6 :@Integer@[1]  ~@AtomicValue@  @4:13-4:13
+
+function test::leftAssocDivide__Float_1_():Float[1]  ~UserDefinedFunction<{->Float[1]}>
+  FunctionInvocation divide_Number_1__Number_1__Float_1_ :#Float##[1]#  ~@FunctionInvocation@  @9:3-9:12
+    FunctionInvocation divide_Number_1__Number_1__Float_1_ :#Float##[1]#  ~@FunctionInvocation@  @9:3-9:8
+      AtomicValue  9 :@Integer@[1]  ~@AtomicValue@  @9:3-9:3
+      AtomicValue  18 :@Integer@[1]  ~@AtomicValue@  @9:7-9:8
+    AtomicValue  6 :@Integer@[1]  ~@AtomicValue@  @9:12-9:12
+
+function test::rightAssocMinus__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
+  FunctionInvocation minus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @14:3-14:14
+    AtomicValue  9 :@Integer@[1]  ~@AtomicValue@  @14:3-14:3
+    FunctionInvocation minus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @14:8-14:13
+      AtomicValue  18 :@Integer@[1]  ~@AtomicValue@  @14:8-14:9
+      AtomicValue  6 :@Integer@[1]  ~@AtomicValue@  @14:13-14:13
+
+function test::leftAssocMinus__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
+  FunctionInvocation minus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @19:3-19:12
+    FunctionInvocation minus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @19:3-19:8
+      AtomicValue  9 :@Integer@[1]  ~@AtomicValue@  @19:3-19:3
+      AtomicValue  18 :@Integer@[1]  ~@AtomicValue@  @19:7-19:8
+    AtomicValue  6 :@Integer@[1]  ~@AtomicValue@  @19:12-19:12
+
+###ReverseIndex
+meta::pure::functions::math::divide_Number_1__Number_1__Float_1_:
+  test::leftAssocDivide__Float_1_
+  test::rightAssocDivide__Float_1_
+meta::pure::functions::math::minus_Integer_1__Integer_1__Integer_1_:
+  test::leftAssocMinus__Integer_1_
+  test::rightAssocMinus__Integer_1_

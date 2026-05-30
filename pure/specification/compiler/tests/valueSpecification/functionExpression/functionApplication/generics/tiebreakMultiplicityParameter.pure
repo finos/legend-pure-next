@@ -1,48 +1,48 @@
 ###Pure
 import x::*;
 
-function x::myFunc<|m,p>(p:String[m], z:String[p]):String[1]
+function x::myFunc<|m,p>(p: String[m], z: String[p]): String[1]
 {
-    'x';
+  'x'
 }
 
-function x::myFunc<|m>(p:String[m], z:String[m]):String[1]
+function x::myFunc<|m>(p: String[m], z: String[m]): String[1]
 {
-    'x';
+  'x'
 }
 
-function x::testF():String[1]
+function x::testF(): String[1]
 {
-    myFunc(['a','b'], 'b');
-    myFunc('a', 'b');
-    myFunc(['a','b'], ['a','b']);
+  myFunc(['a', 'b'], 'b');
+  myFunc('a', 'b');
+  myFunc(['a', 'b'], ['a', 'b']);
 }
 
 ###CompiledGraph
 function x::myFunc_String_m__String_p__String_1_(p:@String@[m], z:@String@[p]):@String@[1]  ~UserDefinedFunction<{@String@[m], @String@[p]->@String@[1]}>
-  AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @6:5-6:7
+  AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @6:3-6:5
 
 function x::myFunc_String_m__String_m__String_1_(p:@String@[m], z:@String@[m]):@String@[1]  ~UserDefinedFunction<{@String@[m], @String@[m]->@String@[1]}>
-  AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @11:5-11:7
+  AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @11:3-11:5
 
 function x::testF__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>
-  FunctionInvocation x::myFunc_String_m__String_m__String_1_ :#String##[1]#  ~@FunctionInvocation@  @16:5-16:26
+  FunctionInvocation x::myFunc_String_m__String_m__String_1_ :#String##[1]#  ~@FunctionInvocation@  @16:3-16:25
     mulParam m -> #[1..2]#
-    Collection :#String#[2]  ~@Collection@  @16:12-16:20
-      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @16:13-16:15
-      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @16:17-16:19
-    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @16:23-16:25
-  FunctionInvocation x::myFunc_String_m__String_m__String_1_ :#String##[1]#  ~@FunctionInvocation@  @17:5-17:20
+    Collection :#String#[2]  ~@Collection@  @16:10-16:19
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @16:11-16:13
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @16:16-16:18
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @16:22-16:24
+  FunctionInvocation x::myFunc_String_m__String_m__String_1_ :#String##[1]#  ~@FunctionInvocation@  @17:3-17:18
     mulParam m -> #[1]#
-    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @17:12-17:14
-    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @17:17-17:19
-  FunctionInvocation x::myFunc_String_m__String_m__String_1_ :#String##[1]#  ~@FunctionInvocation@  @18:5-18:32
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @17:10-17:12
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @17:15-17:17
+  FunctionInvocation x::myFunc_String_m__String_m__String_1_ :#String##[1]#  ~@FunctionInvocation@  @18:3-18:32
     mulParam m -> #[2]#
-    Collection :#String#[2]  ~@Collection@  @18:12-18:20
-      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @18:13-18:15
-      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @18:17-18:19
-    Collection :#String#[2]  ~@Collection@  @18:23-18:31
-      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @18:24-18:26
+    Collection :#String#[2]  ~@Collection@  @18:10-18:19
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @18:11-18:13
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @18:16-18:18
+    Collection :#String#[2]  ~@Collection@  @18:22-18:31
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @18:23-18:25
       AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @18:28-18:30
 
 ###ReverseIndex

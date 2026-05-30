@@ -682,11 +682,27 @@ function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], 
     );
     if($silent, | true, | println(printCompilationStatisticsSummary($stats)); true;);
 
+    // Pointer-resolution boundary. Every TempCompilerPointer the three passes
+    // wove into the graph (Class.package as PackagePointer, generalizations'
+    // type as ClassPointer, FunctionExpression.func as PackageableFunctionPointer,
+    // etc.) is swapped here for a live element via the {@code resolveAndReturnGraph}
+    // native — backed by PointerGraphImmutableResolver, which mirrors the
+    // walk shape of PointerGraphResolver but produces a fresh deep copy.
+    //
+    // Resolving inside {@code compile} means no caller (Java post-compile, Pure
+    // recompile-then-canonicalize, PDB writer, IDE) ever sees pointers. The
+    // inner {@code pass3Ctx.elementMap} stays pointer-bearing as a defensive
+    // snapshot — anything that needs the resolved graph reads from
+    // {@code CompilerContext.elementMap} on the returned context.
+    let resolvedElementList = resolveAndReturnGraph($pass3Ctx.elementMap);
+    let finalElementMap = newMap($pass3Ctx.elementMap->keys()->zip($resolvedElementList));
+    let finalCtx = ^$pass3Ctx(elementMap = $finalElementMap);
+
     ^CompilationResult(
-        elements = $resolvedElements,
-        errors   = $pass3Ctx.errors,
+        elements = $resolvedElementList,
+        errors   = $finalCtx.errors,
         statistics = $stats,
-        context  = $pass3Ctx
+        context  = $finalCtx
     );
 }
 

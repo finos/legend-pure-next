@@ -34,7 +34,7 @@ function <<PCT.function>> meta::pure::functions::collection::removeDuplicates<T>
 
 
 
-function meta::pure::functions::collection::tests::removeDuplicates::cmp(a:Any[1],b:Any[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::functions::collection::tests::removeDuplicates::cmp(a:Any[1],b:Any[1]):Boolean[1]
 {
     $a->toString() == $b->toString()
 }

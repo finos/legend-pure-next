@@ -1,0 +1,121 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::*;
+import meta::external::language::typescript::translation::*;
+import meta::external::language::typescript::serialization::*;
+import meta::pure::translation::shared::*;
+
+// PCT tests for the Pure->TypeScript translator. Each `<<test.Test>>` here
+// invokes an upstream `<<PCT.test>>` from the math/operation specs, passing
+// our `testAdapterForTranslatedTypeScript`. The adapter translates the PCT
+// lambda to TS, transpiles + evaluates it via GraalJS through the Truffle
+// `compileAndExecute` native, and returns the result. If the answer matches
+// the PCT's expected constant, the translator + emitted TS + the JS engine's
+// arithmetic all agree with Pure semantics.
+
+function <<test.Test>> meta::external::language::typescript::translation::tests::pct::testSimplePlus(): Boolean[1]
+{
+   meta::pure::functions::math::tests::plus::testSimplePlus(testAdapterForTranslatedTypeScript_Function_1__X_o_);
+}
+
+function <<test.Test>> meta::external::language::typescript::translation::tests::pct::testFilterInstance(): Boolean[1]
+{
+   meta::pure::functions::collection::tests::filter::testFilterInstance(testAdapterForTranslatedTypeScript_Function_1__X_o_);
+}
+
+// Meta PCT — exercises metamodel reflection through the translator:
+//   instance.genericType() → class metadata → .properties /
+//   .propertiesFromAssociations / .generalizations.general traversal.
+// First test to actually hit the address-walker + __metadataRead path
+// end-to-end with real metamodel reads.
+function <<test.Test>> meta::external::language::typescript::translation::tests::pct::testMetaProperties(): Boolean[1]
+{
+   meta::pure::functions::meta::tests::properties::testProperties(testAdapterForTranslatedTypeScript_Function_1__X_o_);
+}
+
+// Phase-2 orientation: a tiny lambda example. Pair it with `renderTinyLambdaTs`
+// to inspect what the current translator emits for a typical lambda-bound
+// expression. See the matching commentary in `runtime.pure` for the target
+// __pureResolve / __pdo / __lambda emit shape we're moving to.
+function meta::external::language::typescript::translation::tests::pct::tinyLambdaExample(): Boolean[1]
+{
+   let inc = {x:Integer[1] | $x + 1};
+   assertEquals(2, $inc->eval(1));
+   // Reflection on the lambda — triggers metadata machinery
+   assert($inc->genericType().type->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction));
+}
+
+// Run the tiny example through the PCT adapter end-to-end (translate +
+// execute via Truffle). Lets us catch regressions in the new metadata
+// strategy (compile/execute split, __pureResolve / __pdo / __lambda) on
+// a single small function before running the full PCT suite.
+function <<test.Test>> meta::external::language::typescript::translation::tests::pct::runTinyLambdaViaTranslator(): Boolean[1]
+{
+   testAdapterForTranslatedTypeScript(| {x:Integer[1] | $x + 1}->eval(1) == 2);
+}
+
+// Helper: translate `tinyLambdaExample` to TypeScript source and return the
+// serialized string. Invoke via:
+//   pure-truffle execute --pdb …  --function meta::external::language::typescript::translation::tests::renderTinyLambdaTs_String_1_  --args ''
+function <<test.TestDependency>>
+meta::external::language::typescript::translation::tests::renderTinyLambdaTs(): String[1]
+{
+   let f  = meta::external::language::typescript::translation::tests::pct::tinyLambdaExample__Boolean_1_;
+   // Use conventionForRoot (same as the PCT adapter) so the lambdaIndex
+   // is seeded and wrapLambdaWithAst actually emits __lambdaPtr wrappers.
+   let sf = $f->translateFunctionDef(conventionForRoot($f));
+   $sf->serialize();
+}
+
+function <<test.TestDependency>>
+meta::external::language::typescript::translation::tests::renderFilterTestTs(): String[1]
+{
+   let lambda = {| [^meta::pure::functions::collection::tests::model::CO_Person(firstName='Fabrice', lastName='Smith')]
+                  ->filter(p | !$p.lastName->isEmpty() && ($p.lastName->toOne()->length() < 6))};
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
+                       [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
+   let sf = $canonical->translateFunctionDef(conventionForRoot($canonical));
+   $sf->serialize();
+}
+
+function <<test.TestDependency>>
+meta::external::language::typescript::translation::tests::renderMetaPropertiesTs(): String[1]
+{
+   let lambda = {| ^meta::pure::functions::meta::tests::model::CC_Address(name='Hoboken',
+                       type=meta::pure::functions::meta::tests::model::CC_GeographicEntityType.CITY)
+                     ->genericType()->meta::pure::functions::meta::properties()};
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
+                       [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
+   let sf = $canonical->translateFunctionDef(conventionForRoot($canonical));
+   $sf->serialize();
+}
+
+// Diagnostic: verify the round-tripped PDO has the right field values, even
+// if the assertEquals comparator rejects them. Pin firstName / lastName /
+// classifierGenericType type-path on the actual result.
+function <<test.Test>> meta::external::language::typescript::translation::tests::pct::debugFilterInstanceRoundTripFields(): Boolean[1]
+{
+   let smith   = ^meta::pure::functions::collection::tests::model::CO_Person(firstName='Fabrice', lastName='Smith');
+   let doe     = ^meta::pure::functions::collection::tests::model::CO_Person(firstName='Pierre', lastName='Doe');
+   let branche = ^meta::pure::functions::collection::tests::model::CO_Person(firstName='Justin', lastName='Branche');
+   let result  = testAdapterForTranslatedTypeScript(
+      | [$smith, $branche, $doe]->filter(p | !$p.lastName->isEmpty() && ($p.lastName->toOne()->length() < 6))
+   )->cast(@meta::pure::functions::collection::tests::model::CO_Person);
+   assertEquals(2, $result->size());
+   assertEquals('Fabrice', $result->at(0).firstName);
+   assertEquals('Smith',   $result->at(0).lastName);
+   assertEquals('Pierre',  $result->at(1).firstName);
+   assertEquals('Doe',     $result->at(1).lastName);
+}

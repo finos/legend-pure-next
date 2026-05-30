@@ -1,0 +1,5 @@
+{
+  "name": "java",
+  "packagePattern": "(meta::(external::language|pure))(::.*)?",
+  "dependencies": ["core"]
+}

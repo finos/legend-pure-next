@@ -1931,21 +1931,32 @@ public class PureLanguageSerializer
 
     /**
      * Add parentheses for the RIGHT operand of a binary operator.
-     * In MINIMAL mode: strictly higher precedence on right = no parens.
+     * In MINIMAL mode: strictly higher precedence on right = no parens; equal
+     * precedence on the right must keep its parens because operators are
+     * left-associative — dropping them would re-parse `a / (b / c)` as `(a / b) / c`.
      * In EXPLICIT mode: always check (delegates to possiblyAddParenthesis).
      */
     private void possiblyAddParenthesisRight(final StringBuilder sb,
             final String outerFunc, final ValueSpecification param)
     {
-        if (parenMode == ParenthesisMode.MINIMAL && param instanceof FunctionExpression sfe)
+        if (parenMode == ParenthesisMode.MINIMAL && param instanceof FunctionExpression sfe
+                && isInfix(sfe) && !isUnary(sfe))
         {
             String innerFunc = String.valueOf(sfe._functionName());
             int outerPrec = precedenceOf(outerFunc);
             int innerPrec = innerPrecedenceOf(sfe, innerFunc);
-            // Right side: strictly higher prec = no parens
-            if (outerPrec >= 0 && innerPrec > outerPrec)
+            if (outerPrec >= 0 && innerPrec >= 0)
             {
-                serializeExpression(sb, param);
+                if (innerPrec > outerPrec)
+                {
+                    serializeExpression(sb, param);
+                }
+                else
+                {
+                    sb.append("(");
+                    serializeExpression(sb, param);
+                    sb.append(")");
+                }
                 return;
             }
         }

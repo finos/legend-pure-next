@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::functions::asserts::*;
+import meta::pure::test::pct::*;
 
 function meta::pure::functions::asserts::assertNotEmpty(collection:Any[*]):Boolean[1]
 {
@@ -35,7 +36,7 @@ function meta::pure::functions::asserts::assertNotEmpty(collection:Any[*], messa
 }
 
 
-function <<test.Test>> meta::pure::functions::asserts::tests::testSuccessAssertNotEmpty():Boolean[1]
+function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertNotEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   assertNotEmpty([1, 2, 3]);
+   assert($f->eval(|assertNotEmpty([1, 2, 3])));
 }

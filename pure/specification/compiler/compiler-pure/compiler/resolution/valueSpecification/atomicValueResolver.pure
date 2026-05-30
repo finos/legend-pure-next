@@ -283,7 +283,12 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
     let result = $specs->fold({vs, acc |
         $vs->match([
             ve:VariableExpression[1] |
-                if($paramNames->contains($ve.name->toOne()) || $acc->exists(a | $a.name == $ve.name),
+                // `~` (and `~.~`, ...) is a construction parent-reference, resolved
+                // at runtime against the enclosing `^X(...)` via the construction
+                // stack — never a captured free variable. It must not be collected
+                // as an open variable (otherwise a lambda body that reads `~.foo`
+                // reports a spurious `openVar ~`).
+                if($paramNames->contains($ve.name->toOne()) || $acc->exists(a | $a.name == $ve.name) || $ve.name->toOne()->startsWith('~'),
                     | $acc,
                     | $acc->concatenate($ve)
                 ),

@@ -15,7 +15,7 @@
 import meta::pure::test::pct::*;
 
 // Returns all regular file paths (recursively) under the given directory, sorted.
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::directoryTree(path:String[1]):String[*];
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::io::directoryTree(path:String[1]):String[*];
 
 // Reads a file's contents as a string.
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::readFile(path:String[1]):String[1];
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::io::readFile(path:String[1]):String[1];

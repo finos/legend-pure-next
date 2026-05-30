@@ -1,55 +1,54 @@
 ###Pure
-function test::tst():Any[*]
+native function _cast<T|m>(source: Any[m], object: GenericTypeAndMultiplicityHolder<T|?>[1]): T[m];
+
+native function _cast<T|m>(source: T[*], object: GenericTypeAndMultiplicityHolder<?|m>[1]): T[m];
+
+native function _cast<T|m>(source: Any[*], object: GenericTypeAndMultiplicityHolder<T|m>[1]): T[m];
+
+function test::tst(): Any[*]
 {
-   ''->_cast(@String);
-   ['a','b']->_cast(@String);
-   ['a','b']->_cast(@|1..*);
-   1->cast(@Number)->_cast(@Integer);
+  ''->_cast(@String);
+  ['a', 'b']->_cast(@String);
+  ['a', 'b']->_cast(@|1..*);
+  1->cast(@Number)->_cast(@Integer);
 }
 
-native function _cast<T|m>(source:Any[m], object:GenericTypeAndMultiplicityHolder<T|?>[1]):T[m];
-
-native function _cast<T|m>(source:T[*], object:GenericTypeAndMultiplicityHolder<?|m>[1]):T[m];
-
-native function _cast<T|m>(source:Any[*], object:GenericTypeAndMultiplicityHolder<T|m>[1]):T[m];
-
-
 ###CompiledGraph
-function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  ArrowInvocation _cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#String##[1]#  ~@ArrowInvocation@  @4:6-4:21
-    typeParam T -> @String@
-    mulParam m -> [1]
-    AtomicValue  '' :@String@[1]  ~@AtomicValue@  @4:4-4:5
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@String@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@String@|?>  @4:14-4:20
-  ArrowInvocation _cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#String##[2]#  ~@ArrowInvocation@  @5:13-5:28
-    typeParam T -> @String@
-    mulParam m -> [2]
-    Collection :#String#[2]  ~@Collection@  @5:4-5:12
-      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @5:5-5:7
-      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @5:9-5:11
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@String@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@String@|?>  @5:21-5:27
-  ArrowInvocation _cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_ :#String##[1..*]#  ~@ArrowInvocation@  @6:13-6:27
-    typeParam T -> #String#
-    mulParam m -> [1..*]
-    Collection :#String#[2]  ~@Collection@  @6:4-6:12
-      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @6:5-6:7
-      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @6:9-6:11
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<?|1..*>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<?|1..*>  @6:21-6:26
-  ArrowInvocation _cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Integer##[1]#  ~@ArrowInvocation@  @7:5-7:36
-    typeParam T -> @Integer@
-    mulParam m -> #[1]#
-    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Number##[1]#  ~@ArrowInvocation@  @7:5-7:36
-      typeParam T -> @Number@
-      mulParam m -> [1]
-      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @7:4-7:4
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@Number@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@Number@|?>  @7:12-7:18
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>  @7:28-7:35
-
 native function _cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_(source:@Any@[m], object:GenericTypeAndMultiplicityHolder<T~_cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_|?>[1]):T~_cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_[m]  ~NativeFunction<{@Any@[m], GenericTypeAndMultiplicityHolder<T~_cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_|?>[1]->T~_cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_[m]}>
 
 native function _cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_(source:T~_cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_[*], object:GenericTypeAndMultiplicityHolder<?|m~_cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_>[1]):T~_cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_[m]  ~NativeFunction<{T~_cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_[*], GenericTypeAndMultiplicityHolder<?|m~_cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_>[1]->T~_cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_[m]}>
 
 native function _cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_(source:@Any@[*], object:GenericTypeAndMultiplicityHolder<T~_cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_|m~_cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_>[1]):T~_cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_[m]  ~NativeFunction<{@Any@[*], GenericTypeAndMultiplicityHolder<T~_cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_|m~_cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_>[1]->T~_cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_[m]}>
+
+function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  ArrowInvocation _cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#String##[1]#  ~@ArrowInvocation@  @10:5-10:20
+    typeParam T -> @String@
+    mulParam m -> [1]
+    AtomicValue  '' :@String@[1]  ~@AtomicValue@  @10:3-10:4
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@String@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@String@|?>  @10:13-10:19
+  ArrowInvocation _cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#String##[2]#  ~@ArrowInvocation@  @11:13-11:28
+    typeParam T -> @String@
+    mulParam m -> [2]
+    Collection :#String#[2]  ~@Collection@  @11:3-11:12
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @11:4-11:6
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @11:9-11:11
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@String@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@String@|?>  @11:21-11:27
+  ArrowInvocation _cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_ :#String##[1..*]#  ~@ArrowInvocation@  @12:13-12:27
+    typeParam T -> #String#
+    mulParam m -> [1..*]
+    Collection :#String#[2]  ~@Collection@  @12:3-12:12
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @12:4-12:6
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @12:9-12:11
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<?|1..*>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<?|1..*>  @12:21-12:26
+  ArrowInvocation _cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Integer##[1]#  ~@ArrowInvocation@  @13:4-13:35
+    typeParam T -> @Integer@
+    mulParam m -> #[1]#
+    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Number##[1]#  ~@ArrowInvocation@  @13:4-13:35
+      typeParam T -> @Number@
+      mulParam m -> [1]
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @13:3-13:3
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@Number@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@Number@|?>  @13:11-13:17
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>  @13:27-13:34
 
 ###ReverseIndex
 _cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:

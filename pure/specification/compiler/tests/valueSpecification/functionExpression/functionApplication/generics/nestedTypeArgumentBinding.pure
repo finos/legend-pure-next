@@ -1,38 +1,30 @@
 ###Pure
-// Regression test for nested-typeArgument binding: when a generic function (here `put<U,V>`)
-// is called with a typed argument `List<V_outer>`, the resolved binding for V should preserve
-// the inner typeArgument [V_outer] — i.e. `typeParam V -> #List<V_outer>#`, not `typeParam V -> #List#`.
-//
-// As of writing, Pure fails this test (V binding loses inner typeArgument); Java passes.
-// Reproduces the self-host parity diff at:
-//   ...putMapList.expressionSequence[2].resolvedTypeParameters[name=V].value.typeArguments.size
-
-function test::wrapAndPut<K,V>(map:Map<K,List<V>>[1], key:K[1], value:V[1]):Map<K,List<V>>[1]
+function test::wrapAndPut<K,V>(map: Map<K, List<V>>[1], key: K[1], value: V[1]): Map<K, List<V>>[1]
 {
-    let nl = ^List<V>(values=[$value]);
-    $map->put($key, $nl);
+  let nl = ^List<V>(values = [$value]);
+  $map->put($key, $nl);
 }
 
 ###CompiledGraph
 function test::wrapAndPut_Map_1__K_1__V_1__Map_1_(map:Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1], key:K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1], value:V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1]):Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1]  ~UserDefinedFunction<{Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1], K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1], V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1]->Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@FunctionInvocation@  @12:5-12:38
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@FunctionInvocation@  @4:3-4:38
     typeParam T -> #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#
     mulParam m -> #[1]#
-    AtomicValue  'nl' :@String@[1]  ~@AtomicValue@  @12:9-12:10
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@FunctionInvocation@  @12:14-12:38
+    AtomicValue  'nl' :@String@[1]  ~@AtomicValue@  @4:7-4:8
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@FunctionInvocation@  @4:12-4:38
       typeParam T -> List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>|1>  @12:14-12:38
-      Collection :#KeyExpression#[1]  ~@Collection@  @12:14-12:38
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:23-12:37
-          AtomicValue  'values' :@String@[1]  ~@AtomicValue@  @12:23-12:37
-          Collection :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_#[1]  ~@Collection@  @12:30-12:37
-            Variable value :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @12:31-12:36
-  ArrowInvocation put_Map_1__U_1__V_1__Map_1_ :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#>##[1]#  ~@ArrowInvocation@  @13:9-13:24
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>|1>  @4:12-4:38
+      Collection :#KeyExpression#[1]  ~@Collection@  @4:12-4:38
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @4:21-4:37
+          AtomicValue  'values' :@String@[1]  ~@AtomicValue@  @4:21-4:37
+          Collection :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_#[1]  ~@Collection@  @4:30-4:37
+            Variable value :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @4:31-4:36
+  ArrowInvocation put_Map_1__U_1__V_1__Map_1_ :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#>##[1]#  ~@ArrowInvocation@  @5:7-5:22
     typeParam U -> K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_
     typeParam V -> #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#
-    Variable map :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>##[1]#  ~@VariableExpression@  @13:5-13:8
-    Variable key :#K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @13:15-13:18
-    Variable nl :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@VariableExpression@  @13:21-13:23
+    Variable map :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>##[1]#  ~@VariableExpression@  @5:3-5:6
+    Variable key :#K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @5:13-5:16
+    Variable nl :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@VariableExpression@  @5:19-5:21
 
 ###ReverseIndex
 meta::pure::functions::collection::List:

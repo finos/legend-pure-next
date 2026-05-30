@@ -1,32 +1,41 @@
 ###Pure
-native function check(s:String[*]):Boolean[1];
-function g<|m>(f:Function<{String[m]->Boolean[1]}>[1]):String[m]{[]}
-function f<|m>(s:String[m], a:String[m]):String[1]{'a'}
-function test():Any[*]
+native function check(s: String[*]): Boolean[1];
+
+function g<|m>(f: Function<{String[m]->Boolean[1]}>[1]): String[m]
 {
-    f(['a','b'], g(t|$t->check()))
+  []
+}
+
+function f<|m>(s: String[m], a: String[m]): String[1]
+{
+  'a'
+}
+
+function test(): Any[*]
+{
+  f(['a', 'b'], g(t|$t->check()))
 }
 
 ###CompiledGraph
 native function check_String_MANY__Boolean_1_(s:@String@[*]):@Boolean@[1]  ~NativeFunction<{@String@[*]->@Boolean@[1]}>
 
 function g_Function_1__String_m_(f:Function<{@String@[m]->@Boolean@[1]}>[1]):@String@[m]  ~UserDefinedFunction<{Function<{@String@[m]->@Boolean@[1]}>[1]->@String@[m]}>
-  Collection :#Nil#[0]  ~@Collection@  @3:66-3:67
+  Collection :#Nil#[0]  ~@Collection@  @6:3-6:4
 
 function f_String_m__String_m__String_1_(s:@String@[m], a:@String@[m]):@String@[1]  ~UserDefinedFunction<{@String@[m], @String@[m]->@String@[1]}>
-  AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @4:52-4:54
+  AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @11:3-11:5
 
 function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation f_String_m__String_m__String_1_ :#String##[1]#  ~@FunctionInvocation@  @7:5-7:34
+  FunctionInvocation f_String_m__String_m__String_1_ :#String##[1]#  ~@FunctionInvocation@  @16:3-16:33
     mulParam m -> #[2]#
-    Collection :#String#[2]  ~@Collection@  @7:7-7:15
-      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @7:8-7:10
-      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @7:12-7:14
-    FunctionInvocation g_Function_1__String_m_ :#String##[2]#  ~@FunctionInvocation@  @7:18-7:33
+    Collection :#String#[2]  ~@Collection@  @16:5-16:14
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @16:6-16:8
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @16:11-16:13
+    FunctionInvocation g_Function_1__String_m_ :#String##[2]#  ~@FunctionInvocation@  @16:17-16:32
       mulParam m -> #[2]#
-      Lambda(t:#String##[2]#) :#LambdaFunction<#{#String##[2]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @7:20-7:32
-        ArrowInvocation check_String_MANY__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @7:24-7:32
-          Variable t :#String##[2]#  ~@VariableExpression@  @7:22-7:23
+      Lambda(t:#String##[2]#) :#LambdaFunction<#{#String##[2]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @16:19-16:31
+        ArrowInvocation check_String_MANY__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @16:23-16:31
+          Variable t :#String##[2]#  ~@VariableExpression@  @16:21-16:22
 
 ###ReverseIndex
 check_String_MANY__Boolean_1_:

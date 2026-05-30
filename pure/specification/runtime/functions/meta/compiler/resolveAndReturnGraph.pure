@@ -1,0 +1,47 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+
+// Deep-copies every PackageableElement in {@code elements} and resolves every
+// TempCompilerPointer it encounters to a live element — by-path lookup in
+// {@code elements} first, then cross-module resolver. The input Map and its
+// element PDOs are left untouched; the returned list contains fresh copies
+// with pointer slots rewritten to live targets.
+//
+// Parallel to PointerGraphResolver.resolveAll (the Java-side, in-place
+// equivalent invoked at TruffleInMemoryModule construction). This function
+// gives compile-pure a way to materialize a resolved graph without mutating
+// the compilation result.
+native function meta::pure::functions::meta::resolveAndReturnGraph(elements:Map<String, meta::pure::metamodel::PackageableElement>[1]):meta::pure::metamodel::PackageableElement[*];
+
+function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let result = $f->eval(|meta::pure::functions::meta::resolveAndReturnGraph(newMap([]->cast(@Pair<String, meta::pure::metamodel::PackageableElement>))));
+    assertEquals(0, $result->size());
+}
+
+function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphPassthrough<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    // No pointers in the graph — resolveAndReturnGraph still produces a
+    // fresh deep copy with the same shape. Use a live element (Class)
+    // looked up via pathToElement so the input has no TempCompilerPointers.
+    let result = $f->eval(|
+        let cls = pathToElement('meta::pure::metamodel::type::Class', '::')->cast(@meta::pure::metamodel::PackageableElement);
+        let map = newMap([pair('meta::pure::metamodel::type::Class', $cls)]);
+        meta::pure::functions::meta::resolveAndReturnGraph($map);
+    );
+    assertEquals(1, $result->size());
+    assertEquals('Class', $result->at(0).name);
+}

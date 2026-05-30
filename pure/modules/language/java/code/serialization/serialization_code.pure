@@ -1,0 +1,202 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::factory::*;
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::metamodel::annotations::json::*;
+import meta::external::language::java::metamodel::project::*;
+import meta::external::language::java::serialization::*;
+
+function <<access.private>> meta::external::language::java::serialization::doCode(sfer:Stringifier[1], code: Code[0..1]) :Stringifier[1]
+{
+   $sfer->ifNotEmpty($code, {s, c| $s->doCode($c->toOne())});
+}
+
+function <<access.private>> meta::external::language::java::serialization::doCode(sfer:Stringifier[1], code: Code[1]) :Stringifier[1]
+{
+   $code->map(c| $c->resolveDeferred())->match([
+      c:SimpleCode[1]               | $sfer->forEach($c.code->replace('\n\n','\nBLANKLINE\n')->split('\n')->map(l| if($l->trim() == '', |'BLANKLINE', |$l)), {s, l| if($l == 'BLANKLINE', |$s->blankLine(), |$s->addText($l)->newLine())}),
+      c:Null[1]                     | $sfer->addText('null'),
+      c:This[1]                     | if($sfer.stack->isEmpty() || $sfer.stack->last() == $c.type, |$sfer, |$sfer->doType($c.type)->addText('.'))->addText('this'),
+      c:Super[1]                    | $sfer->addText('super'),
+      c:Variable[1]                 | if($sfer.inParameters, |$sfer->doType($c.type)->space(), |$sfer)->addText($c.name),
+      c:ArrayAccess[1]              | $sfer->doCode($c.array)->addText('[')->doCode($c.index)->addText(']'),
+      c:Literal[1]                  | $sfer->addText($c.literal),
+      c:InfixExpression[1]          | $sfer->maybeParentheses($c.left, $c)->space()->addText($c.op)->space()->maybeParenthesesTighter($c.right, $c),
+      c:PrefixExpression[1]         | if($c.op == '!' && $c.expression->findProxyUnderlier()->instanceOf(InstanceOf),
+                                        |$sfer->addText('!')->addText('(')->doCode($c.expression)->addText(')'),
+                                        |$sfer->addText($c.op)->maybeParentheses($c.expression, $c);
+                                        );,
+      c:PostfixExpression[1]        | $sfer->maybeParentheses($c.expression, $c)->addText($c.op),
+      c:Conditional[1]              | $sfer->maybeParenthesesTighter($c.test, $c)->addText(' ')->foldable()->addText('? ')->subFoldingStart()->maybeParentheses($c.then, $c)->addText(' ')->subFoldingEnd()->foldable()->addText(': ')->subFoldingStart()->maybeParentheses($c.else, $c)->subFoldingEnd(),
+      c:InstanceOf[1]               | $sfer->maybeParentheses($c.expression, $c)->addText(' instanceof ')->doType($c.class),
+      c:Block[1]                    | $sfer->openBrace()->forEach($c.statements, {s,st| $s->doCode($st)->newLine()})->closeBrace(),
+      c:ExpressionStatement[1]      | $sfer->doCode($c.expression)->semicolon()->newLine(),
+      c:LocalVariableDeclaration[1] | $sfer->doModifiers($c.modifiers)->doType($c.type)->space()->addWord($c.variableName)->ifNotEmpty($c.initializer, {s, i| $s->addText('=')->space()->doCode($i)})->when(!$sfer.inForHead, {s|$s->semicolon()}),
+      c:If[1]                       | $sfer->addWord('if')->addText('(')->doCode($c.test)->addText(')')->doCode($c.then)->ifNotEmpty($c.else, {s, else| $s->addWord('else')->doCode($else->toOne())}),
+      c:For[1]                      | $sfer->addWord('for')->addText('(')->startForHead()->doCode($c.init)->semicolon()->space()->doCode($c.test)->semicolon()->space()->doCode($c.update)->endForHead()->addText(')')->newLine()->doCode($c.body),
+      c:ForEach[1]                  | $sfer->addWord('for')->addText('(')->startParameters()->doParameter($c.parameter)->endParameters()->addText(': ')->doCode($c.collection)->addText(')')->newLine()->doCode($c.body),
+      c:While[1]                    | $sfer->addWord('while')->addText('(')->doCode($c.test)->addText(')')->newLine()->doCode($c.then),
+      c:DoWhile[1]                  | $sfer->addWord('do')->doCode($c.do)->addWord('while')->addText('(')->doCode($c.while)->addText(')')->semicolon(),
+      c:Try[1]                      | $sfer->addWord('try')->doCode($c.try)->forEach($c.catches, {s, ctch| $s->doCode($ctch)})->ifNotEmpty($c.finally, {s, fin| $s->doCode($fin->toOne())}),
+      c:Catch[1]                    | $sfer->addWord('catch')->doParameters($c.parameter)->doCode($c.clause),
+      c:Finally[1]                  | $sfer->addWord('finally')->doCode($c.clause),
+      c:Return[1]                   | $sfer->addWord('return')->ifNotEmpty($c.expression, {s, e| $s->doCode($e->toOne())})->semicolon()->newLine(),
+      c:Throw[1]                    | $sfer->addWord('throw')->doCode($c.expression)->semicolon(),
+      c:New[1]                      | $sfer->doCodeNew($c),
+      c:NewArray[1]                 | $sfer->doCodeNewArray($c),
+      c:CodeMethod[1]               | $sfer->doModifiers($c.modifiers)->doType($c.type)->space()->addText($c.name)->doParameters($c.parameters)->newLine()->doCode($c.body),
+      c:CastProxy[1]                | $sfer->doCode($c.proxy),
+      c:Cast[1]                     | $sfer->addText('(')->doType($c.type)->addText(')')->space()->maybeParentheses($c.expression, $c),
+      c:ThisConstructorCall[1]      | $sfer->addText('this')->doArguments($c.arguments)->semicolon(),
+      c:SuperConstructorCall[1]     | $sfer->addText('super')->doArguments($c.arguments)->semicolon(),
+      c:MethodCall[1]               | $sfer->maybeInstanceParentheses($c.instance)->foldable()->addText('.')->doTypeArguments($c.typeArguments)->addText($c.methodName)->doArguments($c.arguments),
+      c:FieldAccess[1]              | $sfer->maybeInstanceParentheses($c.instance)->foldable()->addText('.')->addText($c.fieldName),
+      c:MethodReference[1]          | $sfer->maybeInstanceParentheses($c.instance)->addText('::')->addText($c.methodName),
+      c:StaticMethodCall[1]         | $sfer->doType($c.class)->foldable()->addText('.')->doTypeArguments($c.typeArguments)->addText($c.methodName)->doArguments($c.arguments),
+      c:StaticFieldAccess[1]        | $sfer->doType($c.class)->foldable()->addText('.')->addText($c.fieldName),
+      c:StaticMethodReference[1]    | $sfer->doType($c.class)->addText('::')->addText($c.methodName),
+      c:Lambda[1]                   | $sfer->doParametersWithoutFolds($c.parameters)->addText(' -> ')->doLambdaExpression($c.expression)
+   ]);
+}
+
+function <<access.private>> meta::external::language::java::serialization::doCodeNew(sfer:Stringifier[1], c:New[1]): Stringifier[1]
+{
+   let newAndArgs = $sfer
+      ->addWord('new')
+      ->doType($c.type)
+      ->doTypeArguments($c.typeArguments)
+      ->doArguments($c.arguments);
+
+   $c->match([
+      a: NewAnonymous[1] | $newAndArgs->startAnonymousInnerClass()->forEach($a.methods, {s, m| $s->doCode($m)})->endAnonymousInnerClass(),
+      n: New[1]          | $newAndArgs
+   ]);
+}
+
+function <<access.private>> meta::external::language::java::serialization::doCodeNewArray(sfer:Stringifier[1], c:NewArray[1]): Stringifier[1]
+{
+   let newAndArgs = $sfer
+      ->addWord('new')
+      ->doType($c.type)
+      ->addText('{')
+      ->joiningFoldable($c.arguments, {s,a| $s->doCode($a)}, '', ', ', '')
+      ->addText('}');
+}
+
+function <<access.private>> meta::external::language::java::serialization::doLambdaExpression(sfer:Stringifier[1], code: Code[1]): Stringifier[1]
+{
+   $code->match([
+      c:Block[1]  | if($c.statements->size() == 1 && ($c.statements->at(0)->instanceOf(Return) || !$c.statements->at(0)->isStatement()),
+                       | $sfer->doLambdaExpression($c.statements->at(0)),
+                       | $sfer->doCode($c)
+                    ),
+      c:Return[1] | $sfer->doCode($c.expression->toOne()),
+      c:Code[1]   | $sfer->doCode(if($c->isStatement(), |$c->j_block(), |$c))
+   ]);
+}
+
+function <<access.private>> meta::external::language::java::serialization::doTypeArguments(sfer:Stringifier[1], args:meta::external::language::java::metamodel::Type[*]): Stringifier[1]
+{
+   $sfer->ifNotEmpty($args, {s, as| $s->joining($as, {s2,t| $s2->doType($t)}, '<', ', ', '>')});
+}
+
+function <<access.private>> meta::external::language::java::serialization::doArguments(sfer:Stringifier[1], args:Code[*]): Stringifier[1]
+{
+   $sfer->joiningFoldable($args, {s,a| $s->doCode($a)}, '(', ', ', ')');
+}
+
+function <<access.private>> meta::external::language::java::serialization::precedence(code: Code[1]):Integer[1]
+{
+   $code->resolveDeferred()->match([
+      post:PostfixExpression[1]                                 | 14,     // 14 postfix                expr++ expr--
+      pre :PrefixExpression[1]                                  | 13,     // 13 unary                  ++expr --expr +expr -expr ~ !
+      pre :Cast[1]                                              | 13,     // 13 unary                  (type)
+      {in:InfixExpression[1]|
+         if(['*', '/', '%']->contains($in.op),                        | 12, |   // 12 multiplicative         * / %
+         if(['+', '-']->contains($in.op),                             | 11, |   // 11 additive               + -
+         if(['<<', '>>', '>>>']->contains($in.op),                    | 10, |   // 10 shift                  << >> >>>
+         if(['<', '>', '<=', '>=']->contains($in.op),                 |  9, |   //  9 relational             < > <= >= instanceof (see below)
+         if(['==', '!=']->contains($in.op),                           |  8, |   //  8 equality               == !=
+         if($in.op == '&',                                            |  7, |   //  7 bitwise AND            &
+         if($in.op == '^',                                            |  6, |   //  6 bitwise exclusive OR   ^
+         if($in.op == '|',                                            |  5, |   //  5 bitwise inclusive OR   |
+         if($in.op == '&&',                                           |  4, |   //  4 logical AND            &&
+         if($in.op == '||',                                           |  3, |   //  3 logical OR             ||
+                                                                          //  2 ternary (SEE BELOW)
+         if(assignmentOperators()->contains($in.op),                  |  1, |   //  1 assignment             = += -= *= /= %= &= ^= |= <<= >>= >>>=
+            fail('Unknown operator: '+$in.op);-1;
+         )))))))))))
+      },
+      i:InstanceOf[1]                                           |  9,     //  9 relational             instanceof (see above)
+      c:Conditional[1]                                          |  2,     //  2 ternary                ? :
+      c:SimpleCode[1]                                           |  0,     //  unknown so no precedence
+      c:Code[1]                                                 | 99      //  anything else considered atomic
+   ])
+}
+
+
+function meta::external::language::java::serialization::findProxyUnderlier(code:Code[1]):Code[1]
+{
+  $code->match(
+    [
+      c:CastProxy[1]| $c.proxy->findProxyUnderlier(),
+      x:Code[1]|$x
+    ]
+  );
+}
+
+function <<access.private>> meta::external::language::java::serialization::maybeParentheses(sfer:Stringifier[1], code:Code[1], wrt:Code[1]): Stringifier[1]
+{
+   if($code->precedence() < $wrt->precedence(),
+      | $sfer->addText('(')->doCode($code)->addText(')'),
+      | $sfer->doCode($code)
+   );
+}
+
+// Stricter variant of `maybeParentheses` that also adds parens when child
+// precedence EQUALS parent's. Use for the operand that sits on the
+// associativity-breaking side: the RIGHT operand of a left-associative parent
+// (e.g. `a - (b - c)` would otherwise reparse as `(a - b) - c`), or the LEFT
+// operand of a right-associative parent (e.g. ternary condition).
+function <<access.private>> meta::external::language::java::serialization::maybeParenthesesTighter(sfer:Stringifier[1], code:Code[1], wrt:Code[1]): Stringifier[1]
+{
+   if($code->precedence() <= $wrt->precedence() && $code->precedence() != 99,
+      | $sfer->addText('(')->doCode($code)->addText(')'),
+      | $sfer->doCode($code)
+   );
+}
+
+function <<access.private>> meta::external::language::java::serialization::maybeInstanceParentheses(sfer:Stringifier[1], code:Code[1]): Stringifier[1]
+{
+   let required = $code->resolveDeferred()->match([
+      c:SimpleCode[1]               | false,  // We don't know but safe at present and deprecated.  Any issues should be moved to new style
+      c:This[1]                     | false,
+      c:Super[1]                    | false,
+      c:Variable[1]                 | false,
+      c:ArrayAccess[1]              | false,
+      c:Literal[1]                  | false,
+      c:New[1]                      | false,
+      c:MethodCall[1]               | false,
+      c:FieldAccess[1]              | false,
+      c:StaticMethodCall[1]         | false,
+      c:StaticFieldAccess[1]        | false,
+      c:Code[1]                     | true
+   ]);
+
+   if($required,
+      | $sfer->addText('(')->doCode($code)->addText(')'),
+      | $sfer->doCode($code)
+   );
+}

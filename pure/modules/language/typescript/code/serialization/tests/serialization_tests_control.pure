@@ -1,0 +1,156 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::factories::*;
+import meta::external::language::typescript::metamodel::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::serialization::tests::*;
+
+// =============================================================================
+// Ternary
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::ternarySimple(): Boolean[1]
+{
+   testExpr('x > 0 ? \'pos\' : \'neg\'',
+            tsTernary(
+               tsBinary(tsId('x'), '>', tsNumLit('0')),
+               tsStrLit('pos'),
+               tsStrLit('neg')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::ternaryNested(): Boolean[1]
+{
+   testExpr('x > 0 ? \'pos\' : x < 0 ? \'neg\' : \'zero\'',
+            tsTernary(
+               tsBinary(tsId('x'), '>', tsNumLit('0')),
+               tsStrLit('pos'),
+               tsTernary(
+                  tsBinary(tsId('x'), '<', tsNumLit('0')),
+                  tsStrLit('neg'),
+                  tsStrLit('zero'))));
+}
+
+// =============================================================================
+// If statement
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::ifStmtSingleBranch(): Boolean[1]
+{
+   testStmt('''
+            if (ready) {
+              return 1;
+            }''',
+            tsIfStmt(
+               tsId('ready'),
+               tsBlock([tsReturn(tsNumLit('1'))]),
+               []));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::ifStmtWithElse(): Boolean[1]
+{
+   testStmt('''
+            if (ready) {
+              return 1;
+            } else {
+              return 0;
+            }''',
+            tsIfStmt(
+               tsId('ready'),
+               tsBlock([tsReturn(tsNumLit('1'))]),
+               tsBlock([tsReturn(tsNumLit('0'))])));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::ifElseIfChain(): Boolean[1]
+{
+   testStmt('''
+            if (a) {
+              return 1;
+            } else if (b) {
+              return 2;
+            } else {
+              return 3;
+            }''',
+            tsIfStmt(
+               tsId('a'),
+               tsBlock([tsReturn(tsNumLit('1'))]),
+               tsIfStmt(
+                  tsId('b'),
+                  tsBlock([tsReturn(tsNumLit('2'))]),
+                  tsBlock([tsReturn(tsNumLit('3'))]))));
+}
+
+// =============================================================================
+// let / const
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::letTypedInit(): Boolean[1]
+{
+   testStmt('let count: number = 0;', tsLet('count', tsNumber(), tsNumLit('0')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::letNoType(): Boolean[1]
+{
+   testStmt('let name = \'world\';', tsLet('name', [], tsStrLit('world')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::letNoInit(): Boolean[1]
+{
+   testStmt('let value: string;', tsLet('value', tsString(), []));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constTypedInit(): Boolean[1]
+{
+   testStmt('const PI: number = 3.14;', tsConst('PI', tsNumber(), tsNumLit('3.14')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::constInferred(): Boolean[1]
+{
+   testStmt('const greeting = \'hi\';', tsConst('greeting', [], tsStrLit('hi')));
+}
+
+// =============================================================================
+// Unary operators in conditional position
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::notExpr(): Boolean[1]
+{
+   testExpr('!ready', tsNot(tsId('ready')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::negExpr(): Boolean[1]
+{
+   testExpr('-x', tsNeg(tsId('x')));
+}
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::typeofExpr(): Boolean[1]
+{
+   testExpr('typeof x', tsTypeof(tsId('x')));
+}
+
+// =============================================================================
+// Combined: guard-clause pattern
+// =============================================================================
+
+function <<test.Test>> meta::external::language::typescript::serialization::tests::guardClause(): Boolean[1]
+{
+   testStmt('''
+            if (!items.length) {
+              return [];
+            }''',
+            tsIfStmt(
+               tsNot(tsLength(tsId('items'))),
+               tsBlock([tsReturn(tsArrayLit([]))]),
+               []));
+}

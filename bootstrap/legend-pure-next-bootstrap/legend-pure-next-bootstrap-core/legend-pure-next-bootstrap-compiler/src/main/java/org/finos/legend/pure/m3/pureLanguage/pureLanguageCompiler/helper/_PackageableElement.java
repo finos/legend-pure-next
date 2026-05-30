@@ -139,6 +139,28 @@ public class _PackageableElement
     }
 
     /**
+     * Return the simple (unqualified) name of a packageable element.
+     *
+     * <p>Pointer-aware: for a {@link TempCompilerPointer} the inherited
+     * {@code _name} field is unset (reading it throws via
+     * {@code PointerAccessGuard}); derive the simple name from the tail of
+     * {@code _path()} instead. Used by {@code _Type#isTopType} /
+     * {@code isBottomType} / {@code isFunctionType} so {@code match} arms over
+     * a pointer-anchored Type (the bottom-type / top-type / function-type
+     * short-circuits in {@code subtypeOf}) don't hit the strict guard.</p>
+     */
+    public static String simpleName(PackageableElement element)
+    {
+        if (element instanceof TempCompilerPointer p)
+        {
+            String path = p._path();
+            int lastSep = path.lastIndexOf("::");
+            return lastSep < 0 ? path : path.substring(lastSep + 2);
+        }
+        return element._name();
+    }
+
+    /**
      * Cached overload — uses {@link MetadataAccess#elementPathCache()} so
      * repeat calls on the same element (very common in self-host: every
      * type reference in error messages, debug, equality) return the

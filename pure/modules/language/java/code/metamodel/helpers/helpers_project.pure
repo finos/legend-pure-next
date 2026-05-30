@@ -1,0 +1,76 @@
+// Copyright 2020 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::metamodel::*;
+import meta::external::language::java::metamodel::project::*;
+
+function meta::external::language::java::metamodel::project::containsClass(project:Project[1], class:meta::external::language::java::metamodel::Class[1]): Boolean[1]
+{
+   $project->getClass($class)->isNotEmpty();
+}
+
+function meta::external::language::java::metamodel::project::containsClass(project:Project[1], fullClassName:String[1]): Boolean[1]
+{
+   $project->containsClass('src/main/java', $fullClassName);
+}
+
+function meta::external::language::java::metamodel::project::containsClass(project:Project[1], path:String[1], fullClassName:String[1]): Boolean[1]
+{
+   $project->getClass($path, $fullClassName)->isNotEmpty();
+}
+
+function meta::external::language::java::metamodel::project::resolve(project: Project[1], class:meta::external::language::java::metamodel::Class[1]): meta::external::language::java::metamodel::Class[1]
+{
+   let resolved = $project->getClass($class);
+   if($resolved->isEmpty(), |$class, |$resolved->toOne());
+}
+
+function meta::external::language::java::metamodel::project::getClass(project: Project[1], class:meta::external::language::java::metamodel::Class[1]): meta::external::language::java::metamodel::Class[0..1]
+{
+   $project->getClass('src/main/java', $class.package->packageNames(), $class.simpleName);
+}
+
+function meta::external::language::java::metamodel::project::getClass(project: Project[1], path:String[1], className: String[1]): meta::external::language::java::metamodel::Class[0..1]
+{
+   let dotPos    = $className->lastIndexOf('.');
+   let clsName   = $className->substring($dotPos+1);
+   let pkgNames  = $className->substring(0, $dotPos)->split('.');
+   $project->getClass($path, $pkgNames, $clsName);
+}
+
+function meta::external::language::java::metamodel::project::getClass(project: Project[1], path:String[1], pkgNames: String[*], clsName: String[1]): meta::external::language::java::metamodel::Class[0..1]
+{
+   let pathNames = $path->split('/');
+   let baseDir   = $pathNames->fold({name:String[1],d:ProjectDirectory[*]| if($d->isEmpty(), |[], |$d.subdirectories->filter(sd|$sd.name == $name))}, $project.root);
+   let dir       = $pkgNames->fold({name:String[1],d:ProjectDirectory[*]| if($d->isEmpty(), |[], |$d.subdirectories->filter(sd|$sd.name == $name))}, $baseDir);
+   let classes   = $dir->map(d|$d.classes->filter(c|$c.simpleName == $clsName));
+
+   assert($classes->size() < 2, |'Unexpectedly found duplicate class ' + $clsName);
+   $classes->head();
+}
+
+function meta::external::language::java::metamodel::project::allClasses(project: Project[1]): meta::external::language::java::metamodel::Class[*]
+{
+   $project->allDirectories().classes;
+}
+
+function meta::external::language::java::metamodel::project::allDirectories(project: Project[1]): ProjectDirectory[*]
+{
+   $project.root->allSubDirectories();
+}
+
+function meta::external::language::java::metamodel::project::allSubDirectories(dir: ProjectDirectory[1]): ProjectDirectory[*]
+{
+   $dir.subdirectories->fold({d, acc|$acc->concatenate($d)->concatenate($d->allSubDirectories())}, []);
+}

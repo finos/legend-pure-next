@@ -71,9 +71,9 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
           // type references to the enclosing function's reverse index.
           let paramAccum = $l.parameters->fold({p, acc |
               let accCtx = $acc.context->toOne();
-              let hasType = $p.genericType->isNotEmpty() && $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->isNotEmpty();
+              let hasType = $p.genericType->isNotEmpty() && $p.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->isNotEmpty();
               let gtR = if($hasType,
-                  | $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($accCtx, '', []),
+                  | $p.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($accCtx, '', []),
                   | ^CompilerResult<GenericType>(value = ^CompilerNotSetGenericType(), context = $accCtx)
               );
               let pmGenType = $gtR.value->toOne();
@@ -82,7 +82,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
               // setMissingLambdaParameterInformation will fill the actual multiplicity from bindings.
               let pmMult = if($p.multiplicity->isEmpty(),
                   | ^CompilerNotSetMultiplicity(),
-                  | $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity()
+                  | $p.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity()
               );
               let v = ^VariableExpression(
                   name = $p.name,

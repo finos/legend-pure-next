@@ -1,0 +1,121 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::printer::compiled::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::constraint::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::valuespecification::*;
+
+// Compiled-side printer for `Class`. Mirrors the protocol-side shape:
+// annotations + name + type/mul params + extends + constraints + body.
+
+function meta::pure::functions::printer::compiled::printCompiledClass(c: Class<Any>[1], ctx: PrintContext[1]): String[1]
+{
+    let body = compiledClassBody($c.properties, $c.qualifiedProperties, $ctx);
+    'Class ' + printCompiledAnnotations($c.stereotypes, $c.taggedValues, $ctx) + printPackagePrefix($c.package) + $c.name->toOne() +
+        printCompiledTypeAndMulParams($c.typeParameters, $c.multiplicityParameters) +
+        printCompiledTypeVariables($c.typeVariables, $ctx) +
+        printCompiledGeneralizations($c.generalizations, $ctx) +
+        printCompiledElementConstraints($c.constraints, $ctx) +
+    '\n{\n' + $body + '}\n';
+}
+
+// Collapses an empty body to `{\n}` (no blank line between). Non-empty body
+// renders one line per property / qualified property.
+function meta::pure::functions::printer::compiled::compiledClassBody(properties: Property<Nil, Any|*>[*], qualifiedProperties: QualifiedProperty<Any>[*], ctx: PrintContext[1]): String[1]
+{
+    let parts = [
+        $properties->map(p | '  ' + printCompiledProperty($p, $ctx))->joinStrings('\n'),
+        $qualifiedProperties->map(qp | '  ' + printCompiledQualifiedProperty($qp, $ctx))->joinStrings('\n')
+    ]->filter(s | $s != '');
+    if ($parts->isEmpty(), | '', | $parts->joinStrings('\n') + '\n');
+}
+
+// Emit a single property line:
+//   `<<stereos>> {tags} (aggKind) name: Type[mult] = defaultValue;`
+function meta::pure::functions::printer::compiled::printCompiledProperty(p: Property<Nil, Any|*>[1], ctx: PrintContext[1]): String[1]
+{
+    let defaultPart = if ($p.defaultValue->isEmpty(),
+                          | '',
+                          | let lambda = $p.defaultValue->toOne();
+                            if ($lambda.expressionSequence->isEmpty(), | '', | ' = ' + printCompiledValueSpec($lambda.expressionSequence->at(0), $ctx));
+                         );
+    printCompiledAnnotations($p.stereotypes, $p.taggedValues, $ctx) +
+        printAggregationKindEnum($p.aggregation) +
+        $p.name->toOne() + ': ' + printGenericType($p.genericType->toOne(), $ctx) + printMultiplicity($p.multiplicity) + $defaultPart + ';';
+}
+
+// `<<stereos>> {tags} name(p1: T1[m1], ...) { body }: ReturnType[mult];`
+function meta::pure::functions::printer::compiled::printCompiledQualifiedProperty(qp: QualifiedProperty<Any>[1], ctx: PrintContext[1]): String[1]
+{
+    let annotations = printCompiledAnnotations($qp.stereotypes, $qp.taggedValues, $ctx);
+    // M3 QualifiedProperty.parameters includes the implicit `$this` first;
+    // the surface syntax omits it.
+    let userParams = $qp.parameters->filter(p | $p.name->orElse('') != 'this');
+    let body = if ($qp.expressionSequence->isEmpty(),
+                    | '',
+                    | if ($qp.expressionSequence->size() == 1,
+                          | printCompiledValueSpec($qp.expressionSequence->at(0), $ctx),
+                          | $qp.expressionSequence->map(e | '    ' + printCompiledValueSpec($e, $ctx) + ';')->joinStrings('\n', '\n', '\n  ')
+                      );
+                   );
+    $annotations + $qp.name->toOne() + $userParams->map(p | printCompiledFunctionParameter($p, $ctx))->joinStrings('(', ', ', ')') + ' {' + $body + '}: ' + printGenericType($qp.genericType->toOne(), $ctx) + printMultiplicity($qp.multiplicity) + ';';
+}
+
+// `extends Super1, Super2`. The implicit `Any` parent is filtered out so
+// `Class X` without an explicit `extends` clause prints without `extends Any`.
+function meta::pure::functions::printer::compiled::printCompiledGeneralizations(gens: Generalization[*], ctx: PrintContext[1]): String[1]
+{
+    let parents = $gens->map(g | printGenericType($g.general->toOne(), $ctx))->filter(s | $s != 'Any');
+    if ($parents->isEmpty(),
+        | '',
+        | $parents->joinStrings(' extends ', ', ', '')
+    );
+}
+
+// `[ c1, c2: $x > 0, ... ]` element-level constraint block.
+function meta::pure::functions::printer::compiled::printCompiledElementConstraints(constraints: Constraint[*], ctx: PrintContext[1]): String[1]
+{
+    if ($constraints->isEmpty(),
+        | '',
+        | $constraints->map(c | printCompiledConstraint($c, $ctx))->joinStrings('\n[\n  ', ',\n  ', '\n]')
+    );
+}
+
+// `(x:Type[m], y:Type[m])` — parameterised-class type-variables block. The
+// VariableExpressions live on Class.typeVariables; each carries name/type/mul.
+// Emitted only when non-empty so unparameterised classes stay clean.
+function meta::pure::functions::printer::compiled::printCompiledTypeVariables(tvs: VariableExpression[*], ctx: PrintContext[1]): String[1]
+{
+    if ($tvs->isEmpty(),
+        | '',
+        | $tvs->map(tv | printCompiledFunctionParameter($tv, $ctx))->joinStrings('(', ', ', ')')
+    );
+}
+
+// AggregationKind enum value → `(composite) ` / `(shared) ` / no prefix for
+// None. The M3 enum is distinct from the protocol's Enum_Pointer form.
+function meta::pure::functions::printer::compiled::printAggregationKindEnum(a: AggregationKind[0..1]): String[1]
+{
+    if ($a->isEmpty() || $a->toOne() == AggregationKind.None,
+        | '',
+        | let name = if ($a->toOne() == AggregationKind.Composite, | 'composite', | 'shared');
+          '(' + $name + ') ';
+    );
+}

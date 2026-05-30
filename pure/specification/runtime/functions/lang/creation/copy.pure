@@ -28,21 +28,23 @@ native function
 native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::copy<T>(object:T[1]):T[1];
 
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testFlatCopyToOne():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testFlatCopyToOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let pierre = ^LA_Person(firstName='Pierre', lastName='Doe');
-    assertEquals('Pierre', $pierre.firstName);
-    assertEquals('Doe', $pierre.lastName);
+    assert($f->eval(|
+        let pierre = ^LA_Person(firstName='Pierre', lastName='Doe');
+        assertEquals('Pierre', $pierre.firstName);
+        assertEquals('Doe', $pierre.lastName);
 
-    let david = ^$pierre(firstName='David');
-    assertEquals('David', $david.firstName);
-    assertEquals('Doe', $david.lastName);
+        let david = ^$pierre(firstName='David');
+        assertEquals('David', $david.firstName);
+        assertEquals('Doe', $david.lastName);
 
-    // Verify that the original object did not change
-    assertEquals('Pierre', $pierre.firstName);
+        // Verify that the original object did not change
+        assertEquals('Pierre', $pierre.firstName);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testDeepCopyToOne():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testDeepCopyToOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // The old deep-path syntax (`firm.legalName='X'`) is removed from the
     // grammar. Equivalent intent is expressed with `^~.field(...)` — a
@@ -52,206 +54,217 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testDeepCopyToO
     // new() also enforces the immutability rule: assoc-prop values must be
     // instantiated inline. Compose pierre with all values inline, then read
     // the nested address/firm back via property access for the assertions.
-    let pierre = ^LA_Person(
-        firstName='Pierre',
-        lastName='Doe',
-        address=^LA_Address(name='Hoboken, NJ', type=LA_GeographicEntityType.CITY),
-        firm=^LA_Firm(legalName='FirmX', address=^LA_Address(name='New York, NY', type=LA_GeographicEntityType.CITY))
-    );
-    let hoboken = $pierre.address->toOne();
-    let firmX = $pierre.firm->toOne();
-    let nyc = $firmX.address->toOne();
+    assert($f->eval(|
+        let pierre = ^LA_Person(
+            firstName='Pierre',
+            lastName='Doe',
+            address=^LA_Address(name='Hoboken, NJ', type=LA_GeographicEntityType.CITY),
+            firm=^LA_Firm(legalName='FirmX', address=^LA_Address(name='New York, NY', type=LA_GeographicEntityType.CITY))
+        );
+        let hoboken = $pierre.address->toOne();
+        let firmX = $pierre.firm->toOne();
+        let nyc = $firmX.address->toOne();
 
-    let pierre2 = ^$pierre(
-        firstName='David',
-        address=^~.address(name='Somewhere'),
-        firm=^~.firm(legalName='FirmX', employees=[])
-    );
-    assertEquals('David', $pierre2.firstName);
-    assertEquals('Doe', $pierre2.lastName);
-    assertIsNot($hoboken, $pierre2.address->toOne());
-    assertEquals('Somewhere', $pierre2.address.name);
-    assertIsNot($firmX, $pierre2.firm->toOne());
-    assertEquals('FirmX', $pierre2.firm.legalName);
-    assertEquals($nyc, $pierre2.firm.address);
+        let pierre2 = ^$pierre(
+            firstName='David',
+            address=^~.address(name='Somewhere'),
+            firm=^~.firm(legalName='FirmX', employees=[])
+        );
+        assertEquals('David', $pierre2.firstName);
+        assertEquals('Doe', $pierre2.lastName);
+        assertIsNot($hoboken, $pierre2.address->toOne());
+        assertEquals('Somewhere', $pierre2.address.name);
+        assertIsNot($firmX, $pierre2.firm->toOne());
+        assertEquals('FirmX', $pierre2.firm.legalName);
+        assertEquals($nyc, $pierre2.firm.address);
 
-    // Originals untouched.
-    assertEquals('Hoboken, NJ', $hoboken.name);
-    assertEquals('Hoboken, NJ', $pierre.address.name);
-    assertEquals('FirmX', $firmX.legalName);
-    assertEquals('FirmX', $pierre.firm.legalName);
-    assertEquals($nyc, $firmX.address);
-    assertEquals($nyc, $pierre.firm.address);
+        // Originals untouched.
+        assertEquals('Hoboken, NJ', $hoboken.name);
+        assertEquals('Hoboken, NJ', $pierre.address.name);
+        assertEquals('FirmX', $firmX.legalName);
+        assertEquals('FirmX', $pierre.firm.legalName);
+        assertEquals($nyc, $firmX.address);
+        assertEquals($nyc, $pierre.firm.address);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testFlatCopyObjectToManyAdd():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testFlatCopyObjectToManyAdd<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let nj = ^LA_Location(place='New Jersey', type=LA_GeographicEntityType.REGION);
-    let ny = ^LA_Location(place='New York', type=LA_GeographicEntityType.REGION);
+    assert($f->eval(|
+        let nj = ^LA_Location(place='New Jersey', type=LA_GeographicEntityType.REGION);
+        let ny = ^LA_Location(place='New York', type=LA_GeographicEntityType.REGION);
 
-    let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', locations=$nj);
-    assertEquals('Pierre', $pierre.firstName);
-    assertEquals('Doe', $pierre.lastName);
-    assertSize($pierre.locations, 1);
-    assertIs($nj, $pierre.locations->at(0));
+        let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', locations=$nj);
+        assertEquals('Pierre', $pierre.firstName);
+        assertEquals('Doe', $pierre.lastName);
+        assertSize($pierre.locations, 1);
+        assertIs($nj, $pierre.locations->at(0));
 
-    let pierre2 = ^$pierre(locations += $ny);
-    assertEquals('Pierre', $pierre2.firstName);
-    assertEquals('Doe', $pierre2.lastName);
-    assertSize($pierre2.locations, 2);
-    assertIs($nj, $pierre2.locations->at(0));
-    assertIs($ny, $pierre2.locations->at(1));
+        let pierre2 = ^$pierre(locations += $ny);
+        assertEquals('Pierre', $pierre2.firstName);
+        assertEquals('Doe', $pierre2.lastName);
+        assertSize($pierre2.locations, 2);
+        assertIs($nj, $pierre2.locations->at(0));
+        assertIs($ny, $pierre2.locations->at(1));
 
-    // Verify that the original object did not change
-    assertEquals('Pierre', $pierre.firstName);
-    assertEquals('Doe', $pierre.lastName);
-    assertSize($pierre.locations, 1);
-    assertIs($nj, $pierre.locations->at(0));
+        // Verify that the original object did not change
+        assertEquals('Pierre', $pierre.firstName);
+        assertEquals('Doe', $pierre.lastName);
+        assertSize($pierre.locations, 1);
+        assertIs($nj, $pierre.locations->at(0));
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testFlatCopyPrimitiveToManyAdd():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testFlatCopyPrimitiveToManyAdd<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let person = ^LA_Person(firstName='Daniel', lastName='Benedict', otherNames=['DN', 'Danie_Ben']);
-    assertEquals('Daniel', $person.firstName);
-    assertEquals('Benedict', $person.lastName);
-    assertSize($person.otherNames, 2);
-    assertEquals('DN', $person.otherNames->at(0));
-    assertEquals('Danie_Ben', $person.otherNames->at(1));
+    assert($f->eval(|
+        let person = ^LA_Person(firstName='Daniel', lastName='Benedict', otherNames=['DN', 'Danie_Ben']);
+        assertEquals('Daniel', $person.firstName);
+        assertEquals('Benedict', $person.lastName);
+        assertSize($person.otherNames, 2);
+        assertEquals('DN', $person.otherNames->at(0));
+        assertEquals('Danie_Ben', $person.otherNames->at(1));
 
-    let person2 = ^$person(otherNames += 'Dani_Benedict');
-    assertEquals('Daniel', $person2.firstName);
-    assertEquals('Benedict', $person2.lastName);
-    assertSize($person2.otherNames, 3);
-    assertEquals('DN', $person2.otherNames->at(0));
-    assertEquals('Danie_Ben', $person2.otherNames->at(1));
-    assertEquals('Dani_Benedict', $person2.otherNames->at(2));
+        let person2 = ^$person(otherNames += 'Dani_Benedict');
+        assertEquals('Daniel', $person2.firstName);
+        assertEquals('Benedict', $person2.lastName);
+        assertSize($person2.otherNames, 3);
+        assertEquals('DN', $person2.otherNames->at(0));
+        assertEquals('Danie_Ben', $person2.otherNames->at(1));
+        assertEquals('Dani_Benedict', $person2.otherNames->at(2));
 
-    // Verify that the original object did not change
-    assertEquals('Daniel', $person.firstName);
-    assertEquals('Benedict', $person.lastName);
-    assertSize($person.otherNames, 2);
-    assertEquals('DN', $person.otherNames->at(0));
-    assertEquals('Danie_Ben', $person.otherNames->at(1));
+        // Verify that the original object did not change
+        assertEquals('Daniel', $person.firstName);
+        assertEquals('Benedict', $person.lastName);
+        assertSize($person.otherNames, 2);
+        assertEquals('DN', $person.otherNames->at(0));
+        assertEquals('Danie_Ben', $person.otherNames->at(1));
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testFlatCopyPrimitiveToManyReplace():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testFlatCopyPrimitiveToManyReplace<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let person = ^LA_Person(firstName='Daniel', lastName='Benedict', otherNames=['DN', 'Danie_Ben']);
-    assertEquals('Daniel', $person.firstName);
-    assertEquals('Benedict', $person.lastName);
-    assertSize($person.otherNames, 2);
-    assertEquals('DN', $person.otherNames->at(0));
-    assertEquals('Danie_Ben', $person.otherNames->at(1));
+    assert($f->eval(|
+        let person = ^LA_Person(firstName='Daniel', lastName='Benedict', otherNames=['DN', 'Danie_Ben']);
+        assertEquals('Daniel', $person.firstName);
+        assertEquals('Benedict', $person.lastName);
+        assertSize($person.otherNames, 2);
+        assertEquals('DN', $person.otherNames->at(0));
+        assertEquals('Danie_Ben', $person.otherNames->at(1));
 
-    let person2 = ^$person(otherNames = ['Danie_Ben', 'Dani_Benedict', 'Sloth', 'Entropy']);
-    assertEquals('Daniel', $person2.firstName);
-    assertEquals('Benedict', $person2.lastName);
-    assertSize($person2.otherNames, 4);
-    assertEquals('Danie_Ben', $person2.otherNames->at(0));
-    assertEquals('Dani_Benedict', $person2.otherNames->at(1));
-    assertEquals('Sloth', $person2.otherNames->at(2));
-    assertEquals('Entropy', $person2.otherNames->at(3));
+        let person2 = ^$person(otherNames = ['Danie_Ben', 'Dani_Benedict', 'Sloth', 'Entropy']);
+        assertEquals('Daniel', $person2.firstName);
+        assertEquals('Benedict', $person2.lastName);
+        assertSize($person2.otherNames, 4);
+        assertEquals('Danie_Ben', $person2.otherNames->at(0));
+        assertEquals('Dani_Benedict', $person2.otherNames->at(1));
+        assertEquals('Sloth', $person2.otherNames->at(2));
+        assertEquals('Entropy', $person2.otherNames->at(3));
 
-    let person3 = ^$person(otherNames = $person.otherNames->init());
-    assertEquals('Daniel', $person3.firstName);
-    assertEquals('Benedict', $person3.lastName);
-    assertSize($person3.otherNames, 1);
-    assertEquals('DN', $person3.otherNames->at(0));
+        let person3 = ^$person(otherNames = $person.otherNames->init());
+        assertEquals('Daniel', $person3.firstName);
+        assertEquals('Benedict', $person3.lastName);
+        assertSize($person3.otherNames, 1);
+        assertEquals('DN', $person3.otherNames->at(0));
 
-    let person4 = ^$person(otherNames = $person.otherNames->init()->init());
-    assertEquals('Daniel', $person4.firstName);
-    assertEquals('Benedict', $person4.lastName);
-    assertSize($person4.otherNames, 0);
+        let person4 = ^$person(otherNames = $person.otherNames->init()->init());
+        assertEquals('Daniel', $person4.firstName);
+        assertEquals('Benedict', $person4.lastName);
+        assertSize($person4.otherNames, 0);
 
-    // Verify that the original object did not change
-    assertEquals('Daniel', $person.firstName);
-    assertEquals('Benedict', $person.lastName);
-    assertSize($person.otherNames, 2);
-    assertEquals('DN', $person.otherNames->at(0));
-    assertEquals('Danie_Ben', $person.otherNames->at(1));
+        // Verify that the original object did not change
+        assertEquals('Daniel', $person.firstName);
+        assertEquals('Benedict', $person.lastName);
+        assertSize($person.otherNames, 2);
+        assertEquals('DN', $person.otherNames->at(0));
+        assertEquals('Danie_Ben', $person.otherNames->at(1));
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyWithIdVariable():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testCopyWithIdVariable<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let firm = ^LA_Firm(legalName='Firm');
-    assertEquals('Firm', $firm.legalName);
+    assert($f->eval(|
+        let firm = ^LA_Firm(legalName='Firm');
+        assertEquals('Firm', $firm.legalName);
 
-    let id = '1234';
-    let firm1234 = ^$firm(legalName=$id);
-    assertEquals($id, $firm1234.legalName);
+        let id = '1234';
+        let firm1234 = ^$firm(legalName=$id);
+        assertEquals($id, $firm1234.legalName);
+    ));
 }
 
-function <<test.Test>>   meta::pure::functions::lang::tests::copy::testCopyWithAssociation():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testCopyWithAssociation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // Copy must never mutate an existing instance. `^$pierre(firstName='Bob')`
     // (without explicitly handling firm) would silently inherit `$pierre.firm`
     // and mutate `$firmX.employees` via bidirectional binding. The runtime
     // rejects this — the user must instantiate firm within the copy
     // expression to maintain immutability.
-    let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', firm=^LA_Firm(legalName='FirmX'));
-    assertEquals('Pierre', $pierre.firstName);
-    assertEquals('Doe', $pierre.lastName);
+    assert($f->eval(|
+        let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', firm=^LA_Firm(legalName='FirmX'));
+        assertEquals('Pierre', $pierre.firstName);
+        assertEquals('Doe', $pierre.lastName);
 
-    let firmX = $pierre.firm->toOne();
-    assertEquals('FirmX', $firmX.legalName);
-    assertIs($firmX, $pierre.firm->toOne());
-    assertSameElements($pierre, $firmX.employees);
+        let firmX = $pierre.firm->toOne();
+        assertEquals('FirmX', $firmX.legalName);
+        assertIs($firmX, $pierre.firm->toOne());
+        assertSameElements($pierre, $firmX.employees);
 
-    // Case 1: omitting firm (inherited from $pierre) → immutability violation.
-    assertError(
-        |^$pierre(firstName='Bob', lastName='Roe'),
-        'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
-    );
+        // Case 1: omitting firm (inherited from $pierre) → immutability violation.
+        assertError(
+            |^$pierre(firstName='Bob', lastName='Roe'),
+            'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
+        );
 
-    // Case 2: explicitly passing the existing $firmX → same violation (would
-    // still mutate $firmX.employees via bidir binding).
-    assertError(
-        |^$pierre(firstName='Bob', lastName='Roe', firm=$firmX),
-        'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
-    );
+        // Case 2: explicitly passing the existing $firmX → same violation (would
+        // still mutate $firmX.employees via bidir binding).
+        assertError(
+            |^$pierre(firstName='Bob', lastName='Roe', firm=$firmX),
+            'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
+        );
 
-    // Case 3: variable holding a fresh instance — still rejected, because the
-    // instance was created outside this copy expression. The runtime can't
-    // tell variable from inline at the value site; only instances created
-    // within this copy's evaluation count as fresh.
-    let preBuiltFirm = ^LA_Firm(legalName='Pre');
-    assertError(
-        |^$pierre(firstName='Bob', lastName='Roe', firm=$preBuiltFirm),
-        'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
-    );
+        // Case 3: variable holding a fresh instance — still rejected, because the
+        // instance was created outside this copy expression. The runtime can't
+        // tell variable from inline at the value site; only instances created
+        // within this copy's evaluation count as fresh.
+        let preBuiltFirm = ^LA_Firm(legalName='Pre');
+        assertError(
+            |^$pierre(firstName='Bob', lastName='Roe', firm=$preBuiltFirm),
+            'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
+        );
 
-    // Case 4: explicit fresh firm via inline `^LA_Firm(...)` → OK. bob.firm is
-    // the new firm, $firmX is untouched (still has only $pierre).
-    let bob = ^$pierre(firstName='Bob', lastName='Roe', firm=^LA_Firm(legalName='FirmY'));
-    assertEquals('Bob', $bob.firstName);
-    assertEquals('Roe', $bob.lastName);
-    assertEquals('FirmY', $bob.firm->toOne().legalName);
-    assertIsNot($firmX, $bob.firm->toOne());
-    // Original firm untouched — immutability preserved.
-    assertSameElements($pierre, $firmX.employees);
-    // Bob's fresh firm has bob in employees (bidir on the fresh firm).
-    assertSameElements($bob, $bob.firm->toOne().employees);
+        // Case 4: explicit fresh firm via inline `^LA_Firm(...)` → OK. bob.firm is
+        // the new firm, $firmX is untouched (still has only $pierre).
+        let bob = ^$pierre(firstName='Bob', lastName='Roe', firm=^LA_Firm(legalName='FirmY'));
+        assertEquals('Bob', $bob.firstName);
+        assertEquals('Roe', $bob.lastName);
+        assertEquals('FirmY', $bob.firm->toOne().legalName);
+        assertIsNot($firmX, $bob.firm->toOne());
+        // Original firm untouched — immutability preserved.
+        assertSameElements($pierre, $firmX.employees);
+        // Bob's fresh firm has bob in employees (bidir on the fresh firm).
+        assertSameElements($bob, $bob.firm->toOne().employees);
 
-    // Case 5: explicit clear `firm=[]` → OK. bob has no firm. $firmX
-    // unchanged.
-    let carol = ^$pierre(firstName='Carol', lastName='X', firm=[]);
-    assert($carol.firm->isEmpty());
-    assertSameElements($pierre, $firmX.employees);
+        // Case 5: explicit clear `firm=[]` → OK. bob has no firm. $firmX
+        // unchanged.
+        let carol = ^$pierre(firstName='Carol', lastName='X', firm=[]);
+        assert($carol.firm->isEmpty());
+        assertSameElements($pierre, $firmX.employees);
 
-    // Case 6: inline copy via `^$firmX()` — the inner copy itself produces a
-    // freshly-created instance within the outer copy's expression, so it
-    // satisfies the fresh-scope check. bob3.firm is a copy of firmX (legal
-    // name still 'FirmX'), but it's a DIFFERENT PDO from firmX — $firmX is
-    // untouched.
-    let bob3 = ^$pierre(firstName='Bob3', lastName='X', firm=^$firmX());
-    assertEquals('Bob3', $bob3.firstName);
-    assertEquals('FirmX', $bob3.firm->toOne().legalName);
-    assertIsNot($firmX, $bob3.firm->toOne());
-    assertSameElements($pierre, $firmX.employees);
-
+        // Case 6: inline copy via `^$firmX()` — the inner copy itself produces a
+        // freshly-created instance within the outer copy's expression, so it
+        // satisfies the fresh-scope check. bob3.firm is a copy of firmX (legal
+        // name still 'FirmX'), but it's a DIFFERENT PDO from firmX — $firmX is
+        // untouched.
+        let bob3 = ^$pierre(firstName='Bob3', lastName='X', firm=^$firmX());
+        assertEquals('Bob3', $bob3.firstName);
+        assertEquals('FirmX', $bob3.firm->toOne().legalName);
+        assertIsNot($firmX, $bob3.firm->toOne());
+        assertSameElements($pierre, $firmX.employees);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testFoldInsideCopyBuildsAssociationChain():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testFoldInsideCopyBuildsAssociationChain<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // Mirror of testFoldInsideNewBuildsAssociationChain but driving an outer
     // copy expression: the fold's per-iteration ^...() registers into the
@@ -259,283 +272,309 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testFoldInsideC
     // any inner copy wrappers. The receiver of the outer copy is itself a
     // freshly-built leaf; the copy retains its name/parent and verifies the
     // chain in both directions.
-    let leaf = ^LA_Organization(
-        name = 'd',
-        parent = ['b','c']->fold(
-            {cur, pack | ^LA_Organization(name=$cur, parent=$pack) },
-            ^LA_Organization(name='a')
-        )
-    );
+    assert($f->eval(|
+        let leaf = ^LA_Organization(
+            name = 'd',
+            parent = ['b','c']->fold(
+                {cur, pack | ^LA_Organization(name=$cur, parent=$pack) },
+                ^LA_Organization(name='a')
+            )
+        );
 
-    // Copy with a new fold-built parent chain. The override drops the old
-    // parent and threads a fresh chain — all built inside the copy's scope.
-    let renamedLeaf = ^$leaf(
-        name = 'D',
-        parent = ['B','C']->fold(
-            {cur, pack | ^LA_Organization(name=$cur, parent=$pack) },
-            ^LA_Organization(name='A')
-        )
-    );
+        // Copy with a new fold-built parent chain. The override drops the old
+        // parent and threads a fresh chain — all built inside the copy's scope.
+        let renamedLeaf = ^$leaf(
+            name = 'D',
+            parent = ['B','C']->fold(
+                {cur, pack | ^LA_Organization(name=$cur, parent=$pack) },
+                ^LA_Organization(name='A')
+            )
+        );
 
-    // Forward (parent chain): renamedLeaf → C → B → A → root.
-    assertEquals('D', $renamedLeaf.name);
-    assertEquals('C', $renamedLeaf.parent->toOne().name);
-    assertEquals('B', $renamedLeaf.parent->toOne().parent->toOne().name);
-    assertEquals('A', $renamedLeaf.parent->toOne().parent->toOne().parent->toOne().name);
-    assertEquals([], $renamedLeaf.parent->toOne().parent->toOne().parent->toOne().parent);
+        // Forward (parent chain): renamedLeaf → C → B → A → root.
+        assertEquals('D', $renamedLeaf.name);
+        assertEquals('C', $renamedLeaf.parent->toOne().name);
+        assertEquals('B', $renamedLeaf.parent->toOne().parent->toOne().name);
+        assertEquals('A', $renamedLeaf.parent->toOne().parent->toOne().parent->toOne().name);
+        assertEquals([], $renamedLeaf.parent->toOne().parent->toOne().parent->toOne().parent);
 
-    // Reverse (children chain): walking down from root must reach renamedLeaf
-    // by identity at every link.
-    let root = $renamedLeaf.parent->toOne().parent->toOne().parent->toOne();
-    let down1 = $root.children->toOne();
-    let down2 = $down1.children->toOne();
-    let down3 = $down2.children->toOne();
-    assertIs($renamedLeaf, $down3);
-    assertIs($renamedLeaf.parent->toOne(), $down2);
-    assertIs($renamedLeaf.parent->toOne().parent->toOne(), $down1);
+        // Reverse (children chain): walking down from root must reach renamedLeaf
+        // by identity at every link.
+        let root = $renamedLeaf.parent->toOne().parent->toOne().parent->toOne();
+        let down1 = $root.children->toOne();
+        let down2 = $down1.children->toOne();
+        let down3 = $down2.children->toOne();
+        assertIs($renamedLeaf, $down3);
+        assertIs($renamedLeaf.parent->toOne(), $down2);
+        assertIs($renamedLeaf.parent->toOne().parent->toOne(), $down1);
 
-    // Original leaf untouched — its parent chain still has lowercase names
-    // and its tree is still well-formed in both directions.
-    assertEquals('d', $leaf.name);
-    assertEquals('c', $leaf.parent->toOne().name);
-    let origRoot = $leaf.parent->toOne().parent->toOne().parent->toOne();
-    assertEquals('a', $origRoot.name);
-    assertIs($leaf, $origRoot.children->toOne().children->toOne().children->toOne());
+        // Original leaf untouched — its parent chain still has lowercase names
+        // and its tree is still well-formed in both directions.
+        assertEquals('d', $leaf.name);
+        assertEquals('c', $leaf.parent->toOne().name);
+        let origRoot = $leaf.parent->toOne().parent->toOne().parent->toOne();
+        assertEquals('a', $origRoot.name);
+        assertIs($leaf, $origRoot.children->toOne().children->toOne().children->toOne());
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testDeepCopyWithAssociation1():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testDeepCopyWithAssociation1<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // Replaces the old `firm.employees=[], firm.address=^...` syntax with
     // `firm = ^~.firm(employees=[], address=^...)` — a copy of the
     // receiver's firm (via parent reference `~`) with overrides.
-    let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', firm=^LA_Firm(legalName='FirmX', address=^LA_Address(name='Jersey City, NJ', type=LA_GeographicEntityType.CITY)));
-    assertEquals('Pierre', $pierre.firstName);
-    assertEquals('Doe', $pierre.lastName);
+    assert($f->eval(|
+        let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', firm=^LA_Firm(legalName='FirmX', address=^LA_Address(name='Jersey City, NJ', type=LA_GeographicEntityType.CITY)));
+        assertEquals('Pierre', $pierre.firstName);
+        assertEquals('Doe', $pierre.lastName);
 
-    let gsJC = $pierre.firm->toOne();
-    assertEquals('FirmX', $gsJC.legalName);
-    assertEquals('Jersey City, NJ', $gsJC.address->toOne().name);
+        let gsJC = $pierre.firm->toOne();
+        assertEquals('FirmX', $gsJC.legalName);
+        assertEquals('Jersey City, NJ', $gsJC.address->toOne().name);
 
-    assertIs($gsJC, $pierre.firm->toOne());
-    assertEquals($pierre, $gsJC.employees);
+        assertIs($gsJC, $pierre.firm->toOne());
+        assertEquals($pierre, $gsJC.employees);
 
-    let bob = ^$pierre(firstName='Bob', lastName='Roe',
-        firm=^~.firm(employees=[], address=^LA_Address(name='New York, NY', type=LA_GeographicEntityType.CITY))
-    );
-    assertEquals('Bob', $bob.firstName);
-    assertEquals('Roe', $bob.lastName);
+        let bob = ^$pierre(firstName='Bob', lastName='Roe',
+            firm=^~.firm(employees=[], address=^LA_Address(name='New York, NY', type=LA_GeographicEntityType.CITY))
+        );
+        assertEquals('Bob', $bob.firstName);
+        assertEquals('Roe', $bob.lastName);
 
-    let gsNYC = $bob.firm->toOne();
-    assertEquals('FirmX', $gsNYC.legalName);
-    assertEquals('New York, NY', $gsNYC.address->toOne().name);
+        let gsNYC = $bob.firm->toOne();
+        assertEquals('FirmX', $gsNYC.legalName);
+        assertEquals('New York, NY', $gsNYC.address->toOne().name);
 
-    assertIs($gsNYC, $bob.firm->toOne());
-    assertIsNot($gsJC, $bob.firm->toOne());
-    assertSameElements($pierre, $gsJC.employees);
-    assertSameElements($bob, $gsNYC.employees);
+        assertIs($gsNYC, $bob.firm->toOne());
+        assertIsNot($gsJC, $bob.firm->toOne());
+        assertSameElements($pierre, $gsJC.employees);
+        assertSameElements($bob, $gsNYC.employees);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testDeepCopyWithAssociation2():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testDeepCopyWithAssociation2<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // Construct tech1 with inline parent + firm (immutability rule). The
     // copy then uses `^~.parent(...)` to deep-copy tech1's parent with key
     // overrides, demonstrating the parent-reference pattern for nested copies.
-    let tech1 = ^LA_Department(
-        name='Tech1',
-        parent=^LA_Division(name='Tech1OldParent', firm=^LA_Firm(legalName='FirmA')),
-        firm=^LA_Firm(legalName='FirmB')
-    );
-    assertInstanceOf($tech1, LA_Department);
-    assertEquals('Tech1', $tech1.name);
-    assertEquals('Tech1OldParent', $tech1.parent->toOne().name);
-    assertEquals('FirmB', $tech1.firm.legalName);
+    assert($f->eval(|
+        let tech1 = ^LA_Department(
+            name='Tech1',
+            parent=^LA_Division(name='Tech1OldParent', firm=^LA_Firm(legalName='FirmA')),
+            firm=^LA_Firm(legalName='FirmB')
+        );
+        assertInstanceOf($tech1, LA_Department);
+        assertEquals('Tech1', $tech1.name);
+        assertEquals('Tech1OldParent', $tech1.parent->toOne().name);
+        assertEquals('FirmB', $tech1.firm.legalName);
 
-    let tech2 = ^$tech1(
-        name='Tech2',
-        parent=^~.parent(children=[], name='TechParent1', firm=^LA_Firm(legalName='FirmC')),
-        firm=^LA_Firm(legalName='FirmY')
-    );
-    assertInstanceOf($tech2, LA_Department);
-    assertEquals('Tech2', $tech2.name);
-    assertEquals('FirmY', $tech2.firm.legalName);
-    assertIsNot($tech1.parent->toOne(), $tech2.parent->toOne());
+        let tech2 = ^$tech1(
+            name='Tech2',
+            parent=^~.parent(children=[], name='TechParent1', firm=^LA_Firm(legalName='FirmC')),
+            firm=^LA_Firm(legalName='FirmY')
+        );
+        assertInstanceOf($tech2, LA_Department);
+        assertEquals('Tech2', $tech2.name);
+        assertEquals('FirmY', $tech2.firm.legalName);
+        assertIsNot($tech1.parent->toOne(), $tech2.parent->toOne());
 
-    let p = $tech2.parent->toOne();
-    assertEquals('TechParent1', $p.name);
+        let p = $tech2.parent->toOne();
+        assertEquals('TechParent1', $p.name);
 
-    // Original tech1 untouched.
-    assertEquals('Tech1', $tech1.name);
-    assertEquals('FirmB', $tech1.firm.legalName);
-    assertEquals('Tech1OldParent', $tech1.parent->toOne().name);
+        // Original tech1 untouched.
+        assertEquals('Tech1', $tech1.name);
+        assertEquals('FirmB', $tech1.firm.legalName);
+        assertEquals('Tech1OldParent', $tech1.parent->toOne().name);
+    ));
 }
 
 // Test function definition copy
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testFunctionDefinitionCopy():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testFunctionDefinitionCopy<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let f1 = 'meta::pure::functions::lang::tests::copy::testFunctionDefinitionCopy__Boolean_1_'->pathToElement();
-    let type = $f1->genericType();
-    assertIs(UserDefinedFunction, $type->cast(@GenericTypeValue).type->toOne());
+    assert($f->eval(|
+        let f1 = 'meta::pure::functions::lang::tests::copy::testFunctionDefinitionCopy_Function_1__Boolean_1_'->pathToElement();
+        let type = $f1->genericType();
+        assertIs(UserDefinedFunction, $type->cast(@GenericTypeValue).type->toOne());
 
-    let f2 = ^$f1();
-    assertIsNot($f1, $f2);
-    assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType().type);
-    assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType().typeArguments->size());
+        let f2 = ^$f1();
+        assertIsNot($f1, $f2);
+        assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType().type);
+        assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType().typeArguments->size());
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testFunctionDefinitionWithInstanceCopy():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testFunctionDefinitionWithInstanceCopy<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let f1 = 'meta::pure::functions::lang::tests::copy::testFlatCopyToOne__Boolean_1_'->pathToElement();
-    let type = $f1->genericType();
-    assertIs(UserDefinedFunction, $type->cast(@GenericTypeValue).type->toOne());
+    assert($f->eval(|
+        let f1 = 'meta::pure::functions::lang::tests::copy::testFlatCopyToOne_Function_1__Boolean_1_'->pathToElement();
+        let type = $f1->genericType();
+        assertIs(UserDefinedFunction, $type->cast(@GenericTypeValue).type->toOne());
 
-    let f2 = ^$f1();
-    assertIsNot($f1, $f2);
-    assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType().type);
-    assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType().typeArguments->size());
+        let f2 = ^$f1();
+        assertIsNot($f1, $f2);
+        assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType().type);
+        assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType().typeArguments->size());
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopySubClass():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testCopySubClass<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let address = ^LA_Address(name='Somewhere', type=LA_GeographicEntityType.CITY);
-    let upCastAddress = $address->cast(@LA_GeographicEntity);
-    assertIs($address, $upCastAddress);
+    assert($f->eval(|
+        let address = ^LA_Address(name='Somewhere', type=LA_GeographicEntityType.CITY);
+        let upCastAddress = $address->cast(@LA_GeographicEntity);
+        assertIs($address, $upCastAddress);
 
-    let upCastCopy = ^$upCastAddress(type=LA_GeographicEntityType.REGION);
-    assertInstanceOf($upCastCopy, LA_Address);
-    assertEquals('Somewhere', $upCastCopy->cast(@LA_Address).name);
-    assertIs(LA_GeographicEntityType.REGION, $upCastCopy.type);
+        let upCastCopy = ^$upCastAddress(type=LA_GeographicEntityType.REGION);
+        assertInstanceOf($upCastCopy, LA_Address);
+        assertEquals('Somewhere', $upCastCopy->cast(@LA_Address).name);
+        assertIs(LA_GeographicEntityType.REGION, $upCastCopy.type);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testSelfPointerStability():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testSelfPointerStability<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let x = meta::pure::functions::meta::creation::newClass(^TypeParameter(contravariant=false, name='T'), []);
-    let z = ^$x();
+    assert($f->eval(|
+        let x = meta::pure::functions::meta::creation::newClass(^TypeParameter(contravariant=false, name='T'), []);
+        let z = ^$x();
 
-    // copy() is a literal shallow copy: self-references in the source's slots
-    // (classifierGenericType, TypeParameter.owner, Property.owner, …) keep
-    // pointing to the SOURCE, not the copy. The runtime no longer rewires
-    // them implicitly — to wire the copy as the referent, the caller must
-    // do it explicitly with `~.~` (parent reference).
-    assertIs ($x, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).type->toOne());
-    assertIs ($x, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).typeArguments->toOne()->cast(@GenericTypeValue).type->cast(@TypeParameter).owner->toOne());
+        // copy() is a literal shallow copy: self-references in the source's slots
+        // (classifierGenericType, TypeParameter.owner, Property.owner, …) keep
+        // pointing to the SOURCE, not the copy. The runtime no longer rewires
+        // them implicitly — to wire the copy as the referent, the caller must
+        // do it explicitly with `~.~` (parent reference).
+        assertIs ($x, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).type->toOne());
+        assertIs ($x, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).typeArguments->toOne()->cast(@GenericTypeValue).type->cast(@TypeParameter).owner->toOne());
 
-    // Properties — use `~.~` to wire the property's owner back to the copy.
-    // (`~` would be the property value itself; `~.~` is the enclosing copy.)
-    let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-        type = meta::pure::metamodel::function::property::Property,
-        typeArguments = [
-            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $z),
-            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = String)
-        ],
-        multiplicityArguments = [PureOne]
-    );
-    let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
-    let builtProp = ^$prop(
-        name = 'test',
-        aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
-        genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = String),
-        multiplicity = PureOne
-    );
+        // Properties — use `~.~` to wire the property's owner back to the copy.
+        // (`~` would be the property value itself; `~.~` is the enclosing copy.)
+        let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+            type = meta::pure::metamodel::function::property::Property,
+            typeArguments = [
+                ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $z),
+                ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = String)
+            ],
+            multiplicityArguments = [PureOne]
+        );
+        let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+        let builtProp = ^$prop(
+            name = 'test',
+            aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+            genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = String),
+            multiplicity = PureOne
+        );
 
-    let n = ^$z(properties = ^$builtProp(owner = ~.~));
-    assertIs($n, $n.properties->at(0).owner);
+        let n = ^$z(properties = ^$builtProp(owner = ~.~));
+        assertIs($n, $n.properties->at(0).owner);
 
-    // Inheritance — use ~.~ to wire specific back to the copy
-    let m = ^$n(generalizations = ^meta::pure::metamodel::relationship::Generalization(specific = ~.~, general = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type=Any)));
-    assertIs($m, $m.generalizations->at(0).specific);
+        // Inheritance — use ~.~ to wire specific back to the copy
+        let m = ^$n(generalizations = ^meta::pure::metamodel::relationship::Generalization(specific = ~.~, general = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type=Any)));
+        assertIs($m, $m.generalizations->at(0).specific);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopySelfReferenceLoop():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testCopySelfReferenceLoop<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let n = ^LA_Node(value=1);
-    let c = ^$n(next=~);
-    assertEquals(1, $c.value);
-    assertIs($c, $c.next->toOne());
+    assert($f->eval(|
+        let n = ^LA_Node(value=1);
+        let c = ^$n(next=~);
+        assertEquals(1, $c.value);
+        assertIs($c, $c.next->toOne());
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyClearToManyProperty():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testCopyClearToManyProperty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // [*] property: setting to [] should clear the list
-    let person = ^LA_Person(firstName='Pierre', lastName='Doe', otherNames=['A', 'B', 'C']);
-    assertSize($person.otherNames, 3);
+    assert($f->eval(|
+        let person = ^LA_Person(firstName='Pierre', lastName='Doe', otherNames=['A', 'B', 'C']);
+        assertSize($person.otherNames, 3);
 
-    let cleared = ^$person(otherNames = []);
-    assertEquals('Pierre', $cleared.firstName);
-    assertEquals('Doe', $cleared.lastName);
-    assertSize($cleared.otherNames, 0);
+        let cleared = ^$person(otherNames = []);
+        assertEquals('Pierre', $cleared.firstName);
+        assertEquals('Doe', $cleared.lastName);
+        assertSize($cleared.otherNames, 0);
 
-    // Verify original unchanged
-    assertSize($person.otherNames, 3);
+        // Verify original unchanged
+        assertSize($person.otherNames, 3);
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreservesCGTTypeArgs():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testCopyPreservesCGTTypeArgs<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let tp = ^TypeParameter(name='T', contravariant=false);
-    let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
-    let named = ^$cls(name='MyClass');
+    assert($f->eval(|
+        let tp = ^TypeParameter(name='T', contravariant=false);
+        let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
+        let named = ^$cls(name='MyClass');
 
-    // copy() is a shallow copy — the self-referential CGT (`Class<cls<T~cls>>`)
-    // is preserved as-is and still points back at the ORIGINAL `$cls`. The
-    // copy's structure is intact (CGT.type = Class, typeArgs contain the
-    // TypeParameter), but the inner self-reference is to the source.
-    let cgt = $named.classifierGenericType->toOne()->cast(@GenericTypeValue);
-    assertIs(Class, $cgt.type->toOne());
-    let selfGT = $cgt.typeArguments->at(0)->cast(@GenericTypeValue);
-    assertIs($cls, $selfGT.type->toOne());
+        // copy() is a shallow copy — the self-referential CGT (`Class<cls<T~cls>>`)
+        // is preserved as-is and still points back at the ORIGINAL `$cls`. The
+        // copy's structure is intact (CGT.type = Class, typeArgs contain the
+        // TypeParameter), but the inner self-reference is to the source.
+        let cgt = $named.classifierGenericType->toOne()->cast(@GenericTypeValue);
+        assertIs(Class, $cgt.type->toOne());
+        let selfGT = $cgt.typeArguments->at(0)->cast(@GenericTypeValue);
+        assertIs($cls, $selfGT.type->toOne());
 
-    // The self-GT should carry the TypeParameter as a type argument
-    assertEquals(1, $selfGT.typeArguments->size(), 'self-GT should have 1 type arg (the TypeParameter)');
-    let tpGT = $selfGT.typeArguments->at(0)->cast(@GenericTypeValue);
-    let tpType = $tpGT.type->toOne();
-    assert($tpType->instanceOf(TypeParameter), 'type arg should be TypeParameter');
+        // The self-GT should carry the TypeParameter as a type argument
+        assertEquals(1, $selfGT.typeArguments->size(), 'self-GT should have 1 type arg (the TypeParameter)');
+        let tpGT = $selfGT.typeArguments->at(0)->cast(@GenericTypeValue);
+        let tpType = $tpGT.type->toOne();
+        assert($tpType->instanceOf(TypeParameter), 'type arg should be TypeParameter');
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreservesTypeParameterOwner():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testCopyPreservesTypeParameterOwner<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let tp = ^TypeParameter(name='T', contravariant=false);
-    let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
-    let named = ^$cls(name='MyClass');
+    assert($f->eval(|
+        let tp = ^TypeParameter(name='T', contravariant=false);
+        let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
+        let named = ^$cls(name='MyClass');
 
-    // The TypeParameter is shared with the original (shallow copy semantics)
-    // and its owner therefore stays pointing at `$cls`. Callers that need the
-    // owner to follow the copy must rebuild the TypeParameter explicitly via
-    // `~.~` in their copy expression.
-    let copiedTp = $named.typeParameters->at(0);
-    assert($copiedTp.owner->isNotEmpty(), 'TypeParameter owner should survive copy');
-    assertIs($cls, $copiedTp.owner->toOne());
+        // The TypeParameter is shared with the original (shallow copy semantics)
+        // and its owner therefore stays pointing at `$cls`. Callers that need the
+        // owner to follow the copy must rebuild the TypeParameter explicitly via
+        // `~.~` in their copy expression.
+        let copiedTp = $named.typeParameters->at(0);
+        assert($copiedTp.owner->isNotEmpty(), 'TypeParameter owner should survive copy');
+        assertIs($cls, $copiedTp.owner->toOne());
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreservesEnumPropertyOwnerAndCGT():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testCopyPreservesEnumPropertyOwnerAndCGT<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let en = meta::pure::functions::meta::creation::newEnumeration('TestEnum', ^Package(name='test', package=^Package(name='Root')), ['A', 'B']);
-    let copied = ^$en(name='CopiedEnum');
+    assert($f->eval(|
+        let en = meta::pure::functions::meta::creation::newEnumeration('TestEnum', ^Package(name='test', package=^Package(name='Root')), ['A', 'B']);
+        let copied = ^$en(name='CopiedEnum');
 
-    // Shallow-copy semantics: the Properties (and the enum-value CGTs inside
-    // their default-value lambdas) keep pointing at the original `$en`. The
-    // copy isn't a deep clone — only the top-level Enumeration changes.
-    let prop = $copied.properties->at(0);
-    assertIs($en, $prop.owner->toOne());
+        // Shallow-copy semantics: the Properties (and the enum-value CGTs inside
+        // their default-value lambdas) keep pointing at the original `$en`. The
+        // copy isn't a deep clone — only the top-level Enumeration changes.
+        let prop = $copied.properties->at(0);
+        assertIs($en, $prop.owner->toOne());
 
-    let lambda = $prop.defaultValue->toOne();
-    let av = $lambda.expressionSequence->at(0)->cast(@AtomicValue);
-    let enumVal = $av.value->toOne();
-    let enumCGT = $enumVal->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
-    assertIs($en, $enumCGT.type->toOne());
+        let lambda = $prop.defaultValue->toOne();
+        let av = $lambda.expressionSequence->at(0)->cast(@AtomicValue);
+        let enumVal = $av.value->toOne();
+        let enumCGT = $enumVal->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
+        assertIs($en, $enumCGT.type->toOne());
+    ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyClearOptionalProperty():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testCopyClearOptionalProperty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // [0..1] property: setting to [] should set to empty (no value)
-    let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', firm=^LA_Firm(legalName='FirmX'));
-    assert($pierre.firm->isNotEmpty());
+    assert($f->eval(|
+        let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', firm=^LA_Firm(legalName='FirmX'));
+        assert($pierre.firm->isNotEmpty());
 
-    let noFirm = ^$pierre(firm = []);
-    assertEquals('Pierre', $noFirm.firstName);
-    assert($noFirm.firm->isEmpty());
+        let noFirm = ^$pierre(firm = []);
+        assertEquals('Pierre', $noFirm.firstName);
+        assert($noFirm.firm->isEmpty());
 
-    // Verify original unchanged
-    assert($pierre.firm->isNotEmpty());
+        // Verify original unchanged
+        assert($pierre.firm->isNotEmpty());
+    ));
 }
 
 // Platform-level invariant: ^$expr(field=value) (copy-with-keys) must preserve
@@ -545,66 +584,72 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyClearOp
 // (i.e. must be a PackageableElement, not a freshly-built inline UDGT).
 // This frames the copy native's behavior across Java direct, Truffle, and
 // compile-via-pure platforms.
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreservesCanonicalClassifierAnchor():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testCopyPreservesCanonicalClassifierAnchor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let ft = ^meta::pure::metamodel::type::FunctionType(
-        returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = meta::pure::metamodel::type::Any),
-        returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne
-    );
-    // Sanity: original is canonical UDPGT-PE
-    assert($ft.classifierGenericType->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
-        'Precondition: ^FunctionType should produce canonical UDPGT-PE classifier'
-    );
+    assert($f->eval(|
+        let ft = ^meta::pure::metamodel::type::FunctionType(
+            returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = meta::pure::metamodel::type::Any),
+            returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne
+        );
+        // Sanity: original is canonical UDPGT-PE
+        assert($ft.classifierGenericType->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
+            'Precondition: ^FunctionType should produce canonical UDPGT-PE classifier'
+        );
 
-    // Copy with a key that doesn't affect classifier
-    let ft2 = ^$ft(returnMultiplicity = meta::pure::metamodel::multiplicity::ZeroOne);
+        // Copy with a key that doesn't affect classifier
+        let ft2 = ^$ft(returnMultiplicity = meta::pure::metamodel::multiplicity::ZeroOne);
 
-    // Copy's classifier must still be a canonical UDPGT-PE
-    let copyCgt = $ft2.classifierGenericType->toOne();
-    assert($copyCgt->instanceOf(meta::pure::metamodel::PackageableElement),
-        'Expected copy classifierGenericType to remain canonical UDPGT-PE after ^$expr(...)'
-    );
-    assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
-        $copyCgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
-    );
+        // Copy's classifier must still be a canonical UDPGT-PE
+        let copyCgt = $ft2.classifierGenericType->toOne();
+        assert($copyCgt->instanceOf(meta::pure::metamodel::PackageableElement),
+            'Expected copy classifierGenericType to remain canonical UDPGT-PE after ^$expr(...)'
+        );
+        assertEquals(
+            'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
+            $copyCgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
+        );
+    ));
 }
 
 // copy(T[1]) without keys — must also preserve canonical UDPGT-PE classifier.
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyNoKeysPreservesCanonicalAnchor():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testCopyNoKeysPreservesCanonicalAnchor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let ft = ^meta::pure::metamodel::type::FunctionType(
-        returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = meta::pure::metamodel::type::Any),
-        returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne
-    );
-    let ft2 = $ft->copy();
-    let copyCgt = $ft2.classifierGenericType->toOne();
-    assert($copyCgt->instanceOf(meta::pure::metamodel::PackageableElement),
-        'Expected copy() (no keys) classifierGenericType to remain canonical UDPGT-PE'
-    );
-    assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
-        $copyCgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
-    );
+    assert($f->eval(|
+        let ft = ^meta::pure::metamodel::type::FunctionType(
+            returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = meta::pure::metamodel::type::Any),
+            returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne
+        );
+        let ft2 = $ft->copy();
+        let copyCgt = $ft2.classifierGenericType->toOne();
+        assert($copyCgt->instanceOf(meta::pure::metamodel::PackageableElement),
+            'Expected copy() (no keys) classifierGenericType to remain canonical UDPGT-PE'
+        );
+        assertEquals(
+            'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
+            $copyCgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
+        );
+    ));
 }
 
 // Chained copies: each copy operation should preserve canonical anchor.
-function <<test.Test>> meta::pure::functions::lang::tests::copy::testChainedCopiesPreserveCanonicalAnchor():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::copy::testChainedCopiesPreserveCanonicalAnchor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let ft = ^meta::pure::metamodel::type::FunctionType(
-        returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = meta::pure::metamodel::type::Any),
-        returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne
-    );
-    let ft2 = ^$ft(returnMultiplicity = meta::pure::metamodel::multiplicity::ZeroOne);
-    let ft3 = ^$ft2(returnMultiplicity = meta::pure::metamodel::multiplicity::ZeroMany);
-    let ft4 = $ft3->copy();
+    assert($f->eval(|
+        let ft = ^meta::pure::metamodel::type::FunctionType(
+            returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = meta::pure::metamodel::type::Any),
+            returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne
+        );
+        let ft2 = ^$ft(returnMultiplicity = meta::pure::metamodel::multiplicity::ZeroOne);
+        let ft3 = ^$ft2(returnMultiplicity = meta::pure::metamodel::multiplicity::ZeroMany);
+        let ft4 = $ft3->copy();
 
-    let cgt = $ft4.classifierGenericType->toOne();
-    assert($cgt->instanceOf(meta::pure::metamodel::PackageableElement),
-        'Expected chained-copy classifierGenericType to remain canonical UDPGT-PE'
-    );
-    assertEquals(
-        'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
-        $cgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
-    );
+        let cgt = $ft4.classifierGenericType->toOne();
+        assert($cgt->instanceOf(meta::pure::metamodel::PackageableElement),
+            'Expected chained-copy classifierGenericType to remain canonical UDPGT-PE'
+        );
+        assertEquals(
+            'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
+            $cgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
+        );
+    ));
 }

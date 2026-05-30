@@ -526,13 +526,33 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     debug($context, | 'validateParam[' + $i->toString() + ']: reconciled=' + printGenericType($reconciledArgGT) + ' sameAsActual=' + ($reconciledArgGT == $argGT)->toString());
                     // Mirrors Java rebuildWithReconciledType: for lambdas, rebuild with reconciled FunctionType params
                     let reconciledVS = $argVS->match([
-                        av:AtomicValue[1] |
-                            if($av.value->toOne()->instanceOf(LambdaFunction),
+                        {av:AtomicValue[1] |
+                            // Guard size==1 before toOne(): AtomicValues for `[]`
+                            // literals carry an empty `.value` and would blow up
+                            // toOne(). Multi-valued AtomicValues (collection
+                            // literals) similarly aren't lambdas — both fall
+                            // through to the plain genericType-rebuild path.
+                            // Pattern matched as nested ifs: Pure's `&&` does
+                            // not short-circuit, so `size()==1 && toOne()->...`
+                            // would still evaluate toOne() on an empty value.
+                            let isLambda = if($av.value->size() == 1,
+                                | $av.value->toOne()->instanceOf(LambdaFunction),
+                                | false
+                            );
+                            if($isLambda,
                                 | let lambda = $av.value->toOne()->cast(@LambdaFunction<Any>);
-                                  let reconciledFT = $reconciledArgGT->genericTypeTypeArguments()->at(0)->match([
-                                      ftGT:GenericTypeValue[1] | if($ftGT.type->isNotEmpty() && $ftGT.type->toOne()->instanceOf(FunctionType), | $ftGT.type->toOne()->cast(@FunctionType), | []),
-                                      a:Any[1] | []
-                                  ]);
+                                  // genericTypeTypeArguments() may return empty
+                                  // when the reconciled GT is e.g. a bare TypeParameter
+                                  // (`T` with no type-args). Guard ->at(0) so we
+                                  // don't size-0 inside the match.
+                                  let typeArgs = $reconciledArgGT->genericTypeTypeArguments();
+                                  let reconciledFT = if($typeArgs->isEmpty(),
+                                      | []->cast(@FunctionType),
+                                      | $typeArgs->at(0)->match([
+                                          ftGT:GenericTypeValue[1] | if($ftGT.type->isNotEmpty() && $ftGT.type->toOne()->instanceOf(FunctionType), | $ftGT.type->toOne()->cast(@FunctionType), | []),
+                                          a:Any[1] | []
+                                        ])
+                                  );
                                   if($reconciledFT->isNotEmpty() && $reconciledFT->toOne().parameters->isNotEmpty(),
                                       | // Mirror Java rebuildWithReconciledType: also overwrite the lambda's
                                       // classifierGenericType with the reconciled GT so the inner FT.parameters
@@ -545,7 +565,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                       | ^$argVS(genericType = $reconciledArgGT)
                                   );,
                                 | ^$argVS(genericType = $reconciledArgGT)
-                            ),
+                            );
+                        },
                         other:Any[1] | ^$argVS(genericType = $reconciledArgGT)
                     ]);
                     let updatedBindings = $acc.bindings;

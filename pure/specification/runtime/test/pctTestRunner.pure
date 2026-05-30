@@ -53,45 +53,71 @@ function <<test.TestDependency>> meta::pure::test::collectPCTTests(pkg:Package[1
     concatenate($directTests, $subTests);
 }
 
+// Single-arg overload: runs every PCT test under the given package through
+// the stdlib in-memory adapter (`$f->eval()` — interpret directly on the
+// current runtime). Back-compat shim around the 2-arg form below.
 function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1]):String[1]
+{
+    meta::pure::test::runPCTTests(
+        $rootPackagePath,
+        meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_
+    );
+}
+
+// Two-arg overload: callers supply the adapter — e.g. a translator-backed
+// adapter that compiles each PCT lambda to another language, runs it, and
+// returns the result. Each backend (Truffle in-memory, java translator,
+// future sql/typescript translators) provides its own adapter; the runner
+// itself only knows how to hand the adapter to each PCT closure.
+function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1], adapter:Function<Any>[1]):String[1]
 {
     let root = pathToElement($rootPackagePath)->cast(@Package);
     let tests = meta::pure::test::collectPCTTests($root);
     let total = $tests->size();
+    // Fail loudly on 0: same rationale as runTests above — 0 PCT tests under
+    // a real path almost always means the test PDB isn't loaded or the
+    // package's children list is missing the test sub-packages.
+    assert($total > 0, |'runPCTTests: found 0 <<PCT.test>> tests under ' + $rootPackagePath + ' — check that the relevant test PDB is loaded and that the path is correct.');
     startProgress('Running ' + $total->toString() + ' <<PCT.test>> tests from ' + $rootPackagePath + '...');
 
     let start = currentTimeMillis();
 
-    // Every PCT test takes an adapter function. We pass the stdlib in-memory
-    // adapter (testAdapterForInMemoryExecution) by reference — it just calls
-    // $f->eval() on the closure the test hands it.
-    //
     // tryEval wraps each test invocation so a single failure doesn't abort
     // the whole run. Collect (testPath, errorOrEmpty) pairs for a final
     // summary that shows every failure (not just the first).
+    //
+    // We use the dynamic `evaluate(Function<Any>, List<Any>)` instead of
+    // typed `eval(...)` because `$adapter` is `Function<Any>` (the runner
+    // doesn't know its specific signature) — `evaluate` accepts any
+    // function + a heterogeneous parameter list and dispatches at runtime.
     let results = range(0, $total)->map(i:Integer[1] |
         let fn = $tests->at($i);
         let name = $fn->elementToPath();
         tickProgress($i + 1, $total, $name);
-        let result = tryEval(| $fn->eval(meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_));
+        let result = tryEval(| withSilencedPrint(| meta::pure::functions::lang::evaluate($fn, meta::pure::functions::collection::list($adapter))));
         ^meta::pure::test::TestResult(name = $name, error = $result.failure);
     );
 
     let elapsedMs = currentTimeMillis() - $start;
     finishProgress();
 
-    let failures = $results->filter(r | $r.error->isNotEmpty());
+    let failures = $results->filter(r:meta::pure::test::TestResult[1] | $r.error->isNotEmpty());
     let failed = $failures->size();
     let passed = $total - $failed;
 
-    if($failed > 0,
-        | $failures->map(r |
-              let err = $r.error->toOne();
-              println('  FAIL: ' + $r.name);
-              println('    ' + $err.message);
-              $err.stack->map(frame | println('      at ' + $frame));
-          );
-          'FAIL: ' + $passed->toString() + ' / ' + $total->toString() + ' <<PCT.test>> tests passed (' + $failed->toString() + ' failed) in ' + $elapsedMs->toString() + ' ms';,
+    $failures->map(r:meta::pure::test::TestResult[1] |
+        let err = $r.error->toOne();
+        println('  FAIL: ' + $r.name);
+        println('    ' + $err.message);
+        $err.stack->map(frame:String[1] | println('      at ' + $frame));
+    );
+    let summary = if($failed > 0,
+        | 'FAIL: ' + $passed->toString() + ' / ' + $total->toString() + ' <<PCT.test>> tests passed (' + $failed->toString() + ' failed) in ' + $elapsedMs->toString() + ' ms',
         | 'OK: ' + $total->toString() + ' / ' + $total->toString() + ' <<PCT.test>> tests passed in ' + $elapsedMs->toString() + ' ms'
     );
+    // Throw on any failure so the CLI's exit code reflects test status —
+    // returning the summary string lets the bootstrap CLI swallow failures
+    // (it just prints the result), so callers never see a non-zero exit.
+    assert($failed == 0, $summary);
+    $summary;
 }

@@ -102,6 +102,11 @@ function <<test.TestDependency>> meta::pure::test::runTests(rootPackagePath:Stri
     let root = pathToElement($rootPackagePath)->cast(@Package);
     let tests = meta::pure::test::collectFunctionTests($root);
     let total = $tests->size();
+    // Fail loudly on 0: a caller of runTests expects the path to contain at
+    // least one <<test.Test>> function. 0 almost always means the test PDB
+    // isn't loaded or Package.children traversal can't see them (e.g. an
+    // inmem module's children didn't get merged into the canonical Package).
+    assert($total > 0, |'runTests: found 0 <<test.Test>> tests under ' + $rootPackagePath + ' — check that the relevant test PDB is loaded and that the path is correct.');
     startProgress('Running ' + $total->toString() + ' <<test.Test>> tests from ' + $rootPackagePath + '...');
 
     let start = currentTimeMillis();
@@ -126,14 +131,20 @@ function <<test.TestDependency>> meta::pure::test::runTests(rootPackagePath:Stri
     let failed = $failures->size();
     let passed = $total - $failed;
 
-    if($failed > 0,
-        | $failures->map(r |
-              let err = $r.error->toOne();
-              println('  FAIL: ' + $r.name);
-              println('    ' + $err.message);
-              $err.stack->map(frame | println('      at ' + $frame));
-          );
-          'FAIL: ' + $passed->toString() + ' / ' + $total->toString() + ' <<test.Test>> tests passed (' + $failed->toString() + ' failed) in ' + $elapsedMs->toString() + ' ms';,
+    $failures->map(r |
+        let err = $r.error->toOne();
+        println('  FAIL: ' + $r.name);
+        println('    ' + $err.message);
+        $err.stack->map(frame | println('      at ' + $frame));
+    );
+    let summary = if($failed > 0,
+        | 'FAIL: ' + $passed->toString() + ' / ' + $total->toString() + ' <<test.Test>> tests passed (' + $failed->toString() + ' failed) in ' + $elapsedMs->toString() + ' ms',
         | 'OK: ' + $total->toString() + ' / ' + $total->toString() + ' <<test.Test>> tests passed in ' + $elapsedMs->toString() + ' ms'
     );
+    // Throw on any failure so the CLI's exit code reflects test status —
+    // returning the summary string lets the bootstrap CLI swallow failures
+    // (it just prints the result), so callers like `just test-pure-runtime-*`
+    // never see a non-zero exit.
+    assert($failed == 0, $summary);
+    $summary;
 }

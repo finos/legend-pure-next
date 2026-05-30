@@ -1,26 +1,26 @@
 ###Pure
 import test::*;
 
-function test::tst():Any[*]
+function test::tst(): Any[*]
 {
-    ^MyClass(name='ok').name + 'e';
+  ^MyClass(name = 'ok').name + 'e'
 }
 
 Class test::MyClass
 {
-    name : String[1];
+  name: String[1];
 }
 
 ###CompiledGraph
 function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
   FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:24-6:34
     DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @6:24-6:28
-      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MyClass##[1]#  ~@FunctionInvocation@  @6:5-6:23
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MyClass##[1]#  ~@FunctionInvocation@  @6:3-6:23
         typeParam T -> test::MyClass
-        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>  @6:5-6:23
-        Collection :#KeyExpression#[1]  ~@Collection@  @6:5-6:23
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:14-6:22
-            AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:14-6:22
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>  @6:3-6:23
+        Collection :#KeyExpression#[1]  ~@Collection@  @6:3-6:23
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:12-6:22
+            AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:12-6:22
             AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @6:19-6:22
     AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @6:32-6:34
 

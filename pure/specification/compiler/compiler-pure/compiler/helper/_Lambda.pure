@@ -39,7 +39,7 @@ function <<test.Test>> meta::pure::compiler::helper::lambda::tests::testBuildFun
     
     assert($ft.parameters->isNotEmpty());
     assertEquals('a', $ft.parameters->at(0).name);
-    assertEquals(String, $ft.parameters->at(0).genericType->toOne()->genericTypeRawType()->toOne());
+    assertEquals(String, $ft.parameters->at(0).genericType->toOne()->rawType()->toOne());
     assertEquals($lambda.expressionSequence->last()->toOne().genericType, $ft.returnType);
     assertEquals(1, $ft.returnMultiplicity->toOne()->multiplicityLowerBound());
     assertEquals(1, $ft.returnMultiplicity->toOne()->multiplicityUpperBound());
@@ -50,8 +50,8 @@ function <<test.Test>> meta::pure::compiler::helper::lambda::tests::testGetLambd
     let lambda = {a:String[1]| $a + 'ok'};
     let gto = $lambda->getLambdaClassifierGenericType();
     
-    assertEquals(LambdaFunction, $gto->genericTypeRawType()->toOne());
+    assertEquals(LambdaFunction, $gto->rawType()->toOne());
     let ta = $gto->genericTypeTypeArguments();
     assertEquals(1, $ta->size());
-    assert($ta->at(0)->genericTypeRawType()->toOne()->instanceOf(FunctionType));
+    assert($ta->at(0)->rawType()->toOne()->instanceOf(FunctionType));
 }

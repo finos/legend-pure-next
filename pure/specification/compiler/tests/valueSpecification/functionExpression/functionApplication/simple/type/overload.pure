@@ -1,14 +1,18 @@
 ###Pure
 import pack::*;
+
 native function pack::lookup(str: String[1], toFind: String[1]): Integer[1];
+
 native function pack::lookup<T>(set: T[*], value: T[1]): Integer[1];
+
 function pack::testStringLookup(s: String[1]): Integer[1]
 {
-  $s->lookup('quick');
+  $s->lookup('quick')
 }
+
 function pack::testCollectionLookup(c: Integer[*]): Integer[1]
 {
-  $c->lookup(5);
+  $c->lookup(5)
 }
 
 ###CompiledGraph
@@ -17,15 +21,15 @@ native function pack::lookup_String_1__String_1__Integer_1_(str:@String@[1], toF
 native function pack::lookup_T_MANY__T_1__Integer_1_(set:T~pack::lookup_T_MANY__T_1__Integer_1_[*], value:T~pack::lookup_T_MANY__T_1__Integer_1_[1]):@Integer@[1]  ~NativeFunction<{T~pack::lookup_T_MANY__T_1__Integer_1_[*], T~pack::lookup_T_MANY__T_1__Integer_1_[1]->@Integer@[1]}>
 
 function pack::testStringLookup_String_1__Integer_1_(s:@String@[1]):@Integer@[1]  ~UserDefinedFunction<{@String@[1]->@Integer@[1]}>
-  ArrowInvocation pack::lookup_String_1__String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @7:5-7:21
-    Variable s :#String##[1]#  ~@VariableExpression@  @7:3-7:4
-    AtomicValue  'quick' :@String@[1]  ~@AtomicValue@  @7:14-7:20
+  ArrowInvocation pack::lookup_String_1__String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @10:5-10:21
+    Variable s :#String##[1]#  ~@VariableExpression@  @10:3-10:4
+    AtomicValue  'quick' :@String@[1]  ~@AtomicValue@  @10:14-10:20
 
 function pack::testCollectionLookup_Integer_MANY__Integer_1_(c:@Integer@[*]):@Integer@[1]  ~UserDefinedFunction<{@Integer@[*]->@Integer@[1]}>
-  ArrowInvocation pack::lookup_T_MANY__T_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @11:5-11:15
+  ArrowInvocation pack::lookup_T_MANY__T_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @15:5-15:15
     typeParam T -> #Integer#
-    Variable c :#Integer##[*]#  ~@VariableExpression@  @11:3-11:4
-    AtomicValue  5 :@Integer@[1]  ~@AtomicValue@  @11:14-11:14
+    Variable c :#Integer##[*]#  ~@VariableExpression@  @15:3-15:4
+    AtomicValue  5 :@Integer@[1]  ~@AtomicValue@  @15:14-15:14
 
 ###ReverseIndex
 pack::lookup_String_1__String_1__Integer_1_:

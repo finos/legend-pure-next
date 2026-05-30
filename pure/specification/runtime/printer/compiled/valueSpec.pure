@@ -1,0 +1,741 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::printer::compiled::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::valuespecification::*;
+
+// Compiled-side ValueSpecification printer. Walks the M3 VS tree and emits
+// surface-Pure text. First cut: sentinel-free coverage of common shapes
+// (AtomicValue literals, VariableExpression, Collection, FunctionInvocation /
+// ArrowInvocation / DotApplication dispatchers, LambdaFunction). Per-shape
+// sugar (let bindings, infix operators, `^X(...)` constructors) mirrors the
+// protocol-side printer.
+
+function meta::pure::functions::printer::compiled::printCompiledValueSpec(vs: ValueSpecification[1], ctx: PrintContext[1]): String[1]
+{
+    $vs->match([
+        v:   VariableExpression[1] | printCompiledVariableExpression($v),
+        a:   AtomicValue[1] | printCompiledAtomicValue($a, $ctx),
+        c:   Collection[1] | $c.values->map(v | printCompiledValueSpec($v, $ctx))->joinStrings('[', ', ', ']'),
+        fi:  FunctionInvocation[1] | printCompiledFunctionInvocation($fi, $ctx),
+        arrow: ArrowInvocation[1] | printCompiledArrowInvocation($arrow, $ctx),
+        dot: DotApplication[1] | printCompiledDotApplication($dot, $ctx),
+        l:   LambdaFunction<Any>[1] | printCompiledLambdaFunction($l, $ctx),
+        h:   GenericTypeAndMultiplicityHolder<Any>[1] | printCompiledTypeHolder($h, $ctx),
+        any: ValueSpecification[1] | '/* todo: ' + $any->genericType().type->toOne()->elementToPath() + ' */'
+    ]);
+}
+
+// `@T` (type only), `@T|m` (type + mul, separated by `|`), `@|m` (mul only,
+// with leading `|`). Grammar: `AT (type? (PIPE multiplicityArgument)? | multiplicity)`
+// — so `@T[m]` is NOT valid, both type+mul must use `|`. UndefinedGenericType
+// collapses the type half; UndefinedMultiplicity collapses the mul half too
+// (the holder's mul slot is optional, so `@T|?` is equivalent to `@T` here).
+function meta::pure::functions::printer::compiled::printCompiledTypeHolder(h: GenericTypeAndMultiplicityHolder<Any>[1], ctx: PrintContext[1]): String[1]
+{
+    let cgt = $h->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
+    let typeArg = if ($cgt.typeArguments->isEmpty(), | [], | $cgt.typeArguments->at(0)->toOne());
+    let mulArg = if ($cgt.multiplicityArguments->isEmpty(), | [], | $cgt.multiplicityArguments->at(0)->toOne());
+    let typeStr = if ($typeArg->isEmpty(), | '', | printGenericType($typeArg->toOne(), $ctx));
+    // Within the `@` holder the mul slot is optional — treat
+    // UndefinedMultiplicity the same as a missing mul-arg and drop the `|?`.
+    let mulStr = if ($mulArg->isEmpty() || $mulArg->toOne()->instanceOf(UndefinedMultiplicity),
+                     | '',
+                     | printCompiledMultiplicityArg($mulArg->toOne())
+                    );
+    if ($typeStr == '' && $mulStr != '',
+        | '@|' + $mulStr,
+        | '@' + $typeStr + if ($mulStr == '', | '', | '|' + $mulStr)
+    );
+}
+
+function meta::pure::functions::printer::compiled::printCompiledVariableExpression(v: VariableExpression[1]): String[1]
+{
+    let n = $v.name->orElse('');
+    if ($n->startsWith('~'), | $n, | '$' + $n);
+}
+
+// AtomicValue.value carries the literal payload. Render based on type. M3's
+// AtomicValue.value is typed Any[1] so the compiler may wrap non-literal
+// values too — most commonly a LambdaFunction (e.g. `let k = x|x+1`'s RHS) —
+// in which case we recurse via the VS dispatcher instead of toString'ing.
+// Date/StrictDate/DateTime values are stored as Strings but must render with
+// the `%` prefix so re-parse picks the right primitive type.
+function meta::pure::functions::printer::compiled::printCompiledAtomicValue(a: AtomicValue[1], ctx: PrintContext[1]): String[1]
+{
+    if ($a.value->isEmpty(),
+        | '/* todo: empty AtomicValue */',
+        | let v = $a.value->toOne();
+          let typeName = atomicValueTypeName($a);
+          $v->match([
+              s: String[1]  | if (isDateLikeType($typeName), | '%' + $s, | '\'' + escapeStringLiteral($s) + '\''),
+              i: Integer[1] | $i->toString(),
+              f: Float[1]   | $f->toString(),
+              d: Decimal[1] | $d->toString() + 'd',
+              b: Boolean[1] | $b->toString(),
+              vs: ValueSpecification[1] | printCompiledValueSpec($vs, $ctx),
+              lf: LambdaFunction<Any>[1] | printCompiledLambdaFunction($lf, $ctx),
+              // Package / Class / etc. literals (graph-element references) emit
+              // as their (possibly-shortened) path so the parser re-resolves
+              // them on re-parse. The root package's path is empty / 'Root' —
+              // surface syntax is `::`.
+              pe: PackageableElement[1] | let path = $pe->elementToPath();
+                                          if ($path == '' || $path == 'Root', | '::', | ctxShortenIfPossible($path, $ctx));,
+              x: Any[1] | $x->toString()
+          ]);
+    );
+}
+
+function meta::pure::functions::printer::compiled::atomicValueTypeName(a: AtomicValue[1]): String[1]
+{
+    // Use `genericType` (the VS-level type slot) not `classifierGenericType`
+    // (which is always `AtomicValue`). The genericType is what carries the
+    // payload's type — StrictDate vs String etc.
+    let gt = $a.genericType;
+    if ($gt->isEmpty(),
+        | '',
+        | $gt->toOne()->match([
+              gtv: GenericTypeValue[1] | if ($gtv.type->isEmpty(), | '', | $gtv.type->toOne()->match([
+                  pe: PackageableElement[1] | $pe->elementToPath(),
+                  any: meta::pure::metamodel::type::Type[1] | ''
+              ])),
+              any: GenericType[1] | ''
+          ])
+    );
+}
+
+function meta::pure::functions::printer::compiled::isDateLikeType(typeName: String[1]): Boolean[1]
+{
+    $typeName == 'meta::pure::metamodel::type::primitives::StrictDate'
+        || $typeName == 'meta::pure::metamodel::type::primitives::DateTime'
+        || $typeName == 'meta::pure::metamodel::type::primitives::Date'
+        || $typeName == 'meta::pure::metamodel::type::primitives::LatestDate';
+}
+
+function meta::pure::functions::printer::compiled::printCompiledFunctionInvocation(fi: FunctionInvocation[1], ctx: PrintContext[1]): String[1]
+{
+    let name = $fi.functionName;
+    let arity = $fi.parametersValues->size();
+    // For non-sugar emission we use the resolved-function FQN (then ctx-shortened
+    // in ManageImports mode) so re-parse can find the function without relying
+    // on the original imports. Sugar dispatch is keyed off the bare name
+    // (parser's canonical name).
+    let emitName = printCompiledFunctionInvocationName($fi, $ctx);
+    if([pair(| $name == 'letFunction' && $arity == 2,         | printCompiledLetSugar($fi, $ctx)),
+        pair(| isCompiledInfixOperator($name) && $arity == 2, | printCompiledInfixOperand($fi.parametersValues->at(0), $name, true, $ctx) + ' ' + compiledOperatorSymbol($name) + ' ' + printCompiledInfixOperand($fi.parametersValues->at(1), $name, false, $ctx)),
+        pair(| $name == 'not' && $arity == 1,                 | '!' + printCompiledValueSpec($fi.parametersValues->at(0), $ctx)),
+        pair(| $name == 'minus' && $arity == 1,               | '-' + printCompiledValueSpec($fi.parametersValues->at(0), $ctx)),
+        pair(| $name == 'new' && $arity >= 1,                 | printCompiledNewSugar($fi, $ctx)),
+        pair(| $name == 'copy' && $arity == 2,                | printCompiledCopySugar($fi, $ctx)),
+        pair(| $name == 'keyExpression' && ($arity == 2 || $arity == 3), | printCompiledKeyExpressionInline($fi, $ctx)),
+        pair(| $name == 'map' && $arity == 2 && isCompiledAutomapShape($fi),         | printCompiledAutomapAsDotChain($fi, $ctx)),
+        pair(| $name == 'map' && $arity == 2 && isCompiledCopyAutomapShape($fi),     | printCompiledCopyAutomapAsExpr($fi, $ctx)),
+        pair(| isCompiledAllSugar($name) && $arity >= 1,      | printCompiledAllSugar($name, $fi, $ctx)),
+        pair(| isCompiledColSpecSugar($name),                 | printCompiledColSpecSugar($name, $fi, $ctx))],
+       | $fi.parametersValues->map(p | printCompiledValueSpec($p, $ctx))->joinStrings($emitName + '(', ', ', ')'));
+}
+
+// The dotApplicationResolver rewrites `$receiver.prop` (when the receiver is
+// non-singular) into `map(receiver, v_automap | $v_automap.prop)`. Detect
+// that exact shape so the printer can undo back to `$receiver.prop` — the
+// surface form the source uses.
+function meta::pure::functions::printer::compiled::isCompiledAutomapShape(fi: FunctionInvocation[1]): Boolean[1]
+{
+    if ($fi.parametersValues->size() != 2,
+        | false,
+        | let lambda = unwrapCompiledLambda($fi.parametersValues->at(1));
+          if ($lambda->isEmpty(), | false, | isCompiledAutomapLambda($lambda->toOne()));
+    );
+}
+
+// The lambda may be wrapped in an AtomicValue (the compiler often boxes
+// Functions/Lambdas as AtomicValue.value). Unwrap one level so detection
+// works in both shapes.
+function meta::pure::functions::printer::compiled::unwrapCompiledLambda(v: ValueSpecification[1]): LambdaFunction<Any>[0..1]
+{
+    $v->match([
+        l: LambdaFunction<Any>[1] | $l,
+        a: AtomicValue[1] | if ($a.value->isEmpty(), | [], | $a.value->toOne()->match([
+                                                                  l: LambdaFunction<Any>[1] | $l,
+                                                                  any: Any[1] | []
+                                                              ])),
+        any: ValueSpecification[1] | []
+    ]);
+}
+
+function meta::pure::functions::printer::compiled::isCompiledAutomapLambda(l: LambdaFunction<Any>[1]): Boolean[1]
+{
+    // Automap's synthetic lambda has exactly one param named `v_automap`
+    // and a body that's a DotApplication on `$v_automap` (and nothing else).
+    if ($l.parameters->size() != 1 || $l.parameters->at(0).name->orElse('') != 'v_automap'
+        || $l.expressionSequence->size() != 1,
+        | false,
+        | $l.expressionSequence->at(0)->match([
+              dot: DotApplication[1] | !$dot.parametersValues->isEmpty()
+                                        && $dot.parametersValues->at(0)->match([
+                                              v: VariableExpression[1] | $v.name->orElse('') == 'v_automap',
+                                              any: ValueSpecification[1] | false
+                                          ]),
+              any: ValueSpecification[1] | false
+          ])
+    );
+}
+
+// `map(receiver, v_automap | $v_automap.prop)` → `<receiver>.prop`. The
+// DotApplication body may itself contain additional arguments (chained calls)
+// — emit those after the property name. Receiver renders recursively, so
+// nested automaps unwrap naturally.
+function meta::pure::functions::printer::compiled::printCompiledAutomapAsDotChain(fi: FunctionInvocation[1], ctx: PrintContext[1]): String[1]
+{
+    let receiver = printCompiledValueSpec($fi.parametersValues->at(0), $ctx);
+    let lambda = unwrapCompiledLambda($fi.parametersValues->at(1))->toOne();
+    let dot = $lambda.expressionSequence->at(0)->cast(@DotApplication);
+    let rest = $dot.parametersValues->drop(1);
+    // QualifiedProperty calls need `()` even with no extra args — same rule
+    // as the standalone DotApplication printer.
+    let isQp = isCompiledQualifiedPropertyCall($dot);
+    if ($rest->isEmpty() && !$isQp,
+        | $receiver + '.' + $dot.functionName,
+        | $receiver + '.' + $dot.functionName + $rest->map(p | printCompiledValueSpec($p, $ctx))->joinStrings('(', ', ', ')')
+    );
+}
+
+// `^expr(keys)` where `expr` is non-singular ([*] or [0..1]) is rewritten by
+// `functionExpressionResolver::buildCopyAutomap` to
+// `expr->map(_automap | copy($_automap, [keyExpressions]))`. Detect and
+// undo back to the source `^<expr>(k=v, ...)` shape.
+function meta::pure::functions::printer::compiled::isCompiledCopyAutomapShape(fi: FunctionInvocation[1]): Boolean[1]
+{
+    if ($fi.parametersValues->size() != 2,
+        | false,
+        | let lambda = unwrapCompiledLambda($fi.parametersValues->at(1));
+          if ($lambda->isEmpty(), | false, | isCompiledCopyAutomapLambda($lambda->toOne()));
+    );
+}
+
+function meta::pure::functions::printer::compiled::isCompiledCopyAutomapLambda(l: LambdaFunction<Any>[1]): Boolean[1]
+{
+    if ($l.parameters->size() != 1 || $l.parameters->at(0).name->orElse('') != '_automap'
+        || $l.expressionSequence->size() != 1,
+        | false,
+        | $l.expressionSequence->at(0)->match([
+              copyFi: FunctionInvocation[1] | $copyFi.functionName == 'copy'
+                                              && $copyFi.parametersValues->size() == 2
+                                              && $copyFi.parametersValues->at(0)->match([
+                                                    v: VariableExpression[1] | $v.name->orElse('') == '_automap',
+                                                    any: ValueSpecification[1] | false
+                                                ]),
+              any: ValueSpecification[1] | false
+          ])
+    );
+}
+
+function meta::pure::functions::printer::compiled::printCompiledCopyAutomapAsExpr(fi: FunctionInvocation[1], ctx: PrintContext[1]): String[1]
+{
+    let receiver = printCompiledValueSpec($fi.parametersValues->at(0), $ctx);
+    let lambda = unwrapCompiledLambda($fi.parametersValues->at(1))->toOne();
+    let innerCopy = $lambda.expressionSequence->at(0)->cast(@FunctionInvocation);
+    let keyExprs = $innerCopy.parametersValues->at(1)->match([
+        c: Collection[1] | $c.values,
+        any: ValueSpecification[1] | $any
+    ]);
+    '^' + $receiver + $keyExprs->map(k | printCompiledKeyExpression($k, $ctx))->joinStrings('(', ', ', ')');
+}
+
+// FQN for a FunctionExpression (FunctionInvocation / ArrowInvocation / etc.):
+// when the resolver wired up `func`, use the owning-package prefix + the bare
+// function name (NOT the mangled full path, since the parser does overload
+// resolution from the bare name). In ManageImports mode the result is then
+// shortened via the context. Falls back to bare name when func is unset
+// (built-in operators that resolve via auto-imports).
+function meta::pure::functions::printer::compiled::printCompiledFunctionInvocationName(fe: FunctionExpression[1], ctx: PrintContext[1]): String[1]
+{
+    let name = $fe.functionName;
+    if ($fe.func->isEmpty(),
+        | $name,
+        | // Some compile paths populate `functionName` with the
+          // already-qualified path (e.g. `test::isValid` or
+          // `meta::pure::functions::string::length` when the source used the
+          // FQN form). Pass that through ctxShortenIfPossible directly so
+          // ManageImports can still collapse it to the bare name. For bare
+          // names, prepend the resolved function's package first.
+          if ($name->contains('::'),
+              | ctxShortenIfPossible($name, $ctx),
+              | let pkgPath = compiledFunctionPackagePath($fe.func->toOne());
+                if ($pkgPath == '' || $pkgPath == 'Root',
+                    | $name,
+                    | ctxShortenIfPossible($pkgPath + '::' + $name, $ctx)
+                );
+          );
+    );
+}
+
+function meta::pure::functions::printer::compiled::compiledFunctionPackagePath(f: Function<Any>[1]): String[1]
+{
+    $f->match([
+        ptr: meta::pure::metamodel::pointer::TempCompilerPointer[1] | packagePartOfPath($ptr.path),
+        // QualifiedProperty / Property: emit owner's path; the bare name is
+        // already the unqualified property name.
+        ap: meta::pure::metamodel::function::property::AbstractProperty<Any>[1] |
+            if ($ap.owner->isEmpty(), | '', | $ap.owner->toOne()->cast(@PackageableElement)->elementToPath()),
+        pe: PackageableElement[1] | if ($pe.package->isEmpty(), | '', | $pe.package->toOne()->elementToPath()),
+        any: Function<Any>[1] | ''
+    ]);
+}
+
+// Strip the trailing `::<lastSegment>` from a path to get the package portion.
+// `x::myFunc_String_1_` → `x`. `Root::foo` → `Root`. Single-segment paths
+// (no `::`) return empty.
+function meta::pure::functions::printer::compiled::packagePartOfPath(path: String[1]): String[1]
+{
+    let idx = $path->lastIndexOf('::');
+    if ($idx < 0, | '', | $path->substring(0, $idx));
+}
+
+// `getAll(Class)` → `Class.all()`; `getAllVersions(Class)` → `Class.allVersions()`;
+// `getAllVersionsInRange(Class, ...)` → `Class.allVersionsInRange(...)`.
+function meta::pure::functions::printer::compiled::isCompiledAllSugar(name: String[1]): Boolean[1]
+{
+    $name == 'getAll' || $name == 'getAllVersions' || $name == 'getAllVersionsInRange';
+}
+
+function meta::pure::functions::printer::compiled::printCompiledAllSugar(name: String[1], fi: FunctionInvocation[1], ctx: PrintContext[1]): String[1]
+{
+    let target = printCompiledValueSpec($fi.parametersValues->at(0), $ctx);
+    let methodName = if([pair(| $name == 'getAll',         | 'all'),
+                         pair(| $name == 'getAllVersions', | 'allVersions')],
+                        | 'allVersionsInRange');
+    $target + '.' + $methodName + $fi.parametersValues->drop(1)->map(p | printCompiledValueSpec($p, $ctx))->joinStrings('(', ', ', ')');
+}
+
+// The parser canonicalises `~name`, `~name:T`, `~[col, col2]`, etc. into
+// colSpec / funcColSpec / aggColSpec (and the `*Array` and `*2` variants).
+// Mirrors the protocol-side dispatch.
+function meta::pure::functions::printer::compiled::isCompiledColSpecSugar(name: String[1]): Boolean[1]
+{
+    $name == 'colSpec' || $name == 'funcColSpec' || $name == 'funcColSpec2'
+        || $name == 'aggColSpec' || $name == 'aggColSpec2'
+        || $name == 'colSpecArray' || $name == 'funcColSpecArray' || $name == 'funcColSpecArray2'
+        || $name == 'aggColSpecArray' || $name == 'aggColSpecArray2';
+}
+
+function meta::pure::functions::printer::compiled::printCompiledColSpecSugar(name: String[1], fi: FunctionInvocation[1], ctx: PrintContext[1]): String[1]
+{
+    let params = $fi.parametersValues;
+    if([pair(| $name == 'colSpec',                                          | '~' + printCompiledColSpecBody($params, $ctx)),
+        pair(| $name == 'funcColSpec' || $name == 'funcColSpec2',           | '~' + extractCompiledAtomicString($params->at(1)) + ' : ' + printCompiledValueSpec($params->at(0), $ctx)),
+        pair(| $name == 'aggColSpec' || $name == 'aggColSpec2',             | '~' + extractCompiledAtomicString($params->at(2)) + ' : ' + printCompiledValueSpec($params->at(0), $ctx) + ' : ' + printCompiledValueSpec($params->at(1), $ctx)),
+        pair(| $name == 'colSpecArray',                                     | printCompiledColSpecArraySugar($params, $ctx)),
+        pair(| $name == 'funcColSpecArray' || $name == 'funcColSpecArray2', | printCompiledFuncColSpecArraySugar($params, $ctx)),
+        pair(| $name == 'aggColSpecArray' || $name == 'aggColSpecArray2',   | printCompiledAggColSpecArraySugar($params, $ctx))],
+       | $params->map(p | printCompiledValueSpec($p, $ctx))->joinStrings($name + '(', ', ', ')'));
+}
+
+// `colSpec('name', @TypeHolder)` → `name[: Type[mult]]`. The type/multiplicity
+// come from the holder's wrapped single-column RelationType.
+function meta::pure::functions::printer::compiled::printCompiledColSpecBody(params: ValueSpecification[*], ctx: PrintContext[1]): String[1]
+{
+    let nameStr = extractCompiledAtomicString($params->at(0));
+    if ($params->size() < 2,
+        | $nameStr,
+        | $nameStr + extractCompiledColSpecTypeSuffix($params->at(1), $ctx)
+    );
+}
+
+function meta::pure::functions::printer::compiled::extractCompiledColSpecTypeSuffix(holder: ValueSpecification[1], ctx: PrintContext[1]): String[1]
+{
+    $holder->match([
+        h: GenericTypeAndMultiplicityHolder<Any>[1] | extractCompiledColSpecTypeSuffixFromHolder($h, $ctx),
+        any: ValueSpecification[1] | ''
+    ]);
+}
+
+function meta::pure::functions::printer::compiled::extractCompiledColSpecTypeSuffixFromHolder(h: GenericTypeAndMultiplicityHolder<Any>[1], ctx: PrintContext[1]): String[1]
+{
+    // Holder's CGT carries typeArguments[0]=GenericType-of-RelationType.
+    let cgt = $h->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
+    if ($cgt.typeArguments->isEmpty(),
+        | '',
+        | $cgt.typeArguments->at(0)->match([
+              gtv: GenericTypeValue[1] | if ($gtv.type->isEmpty(),
+                                              | '',
+                                              | $gtv.type->toOne()->match([
+                                                  rt: RelationType<Any>[1] | extractCompiledColSpecColumnSuffix($rt, $ctx),
+                                                  any: meta::pure::metamodel::type::Type[1] | ''
+                                                ])
+                                          ),
+              any: GenericType[1] | ''
+          ])
+    );
+}
+
+function meta::pure::functions::printer::compiled::extractCompiledColSpecColumnSuffix(rt: RelationType<Any>[1], ctx: PrintContext[1]): String[1]
+{
+    if ($rt.columns->isEmpty(),
+        | '',
+        | // Single-column RelationType: pull its data type + multiplicity.
+          let col = $rt.columns->at(0);
+          let colCgt = $col->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
+          if ($colCgt.typeArguments->size() < 2,
+              | '',
+              | ':' + printGenericType($colCgt.typeArguments->at(1), $ctx) + compiledColSpecMulSuffix($colCgt.multiplicityArguments)
+          );
+    );
+}
+
+// In `~name:T[m]` syntax the multiplicity is OPTIONAL — `[1]` is the implicit
+// default, so we omit it. Other concrete multiplicities (`[0..1]`, `[*]`, ...)
+// stay.
+function meta::pure::functions::printer::compiled::compiledColSpecMulSuffix(mulArgs: Multiplicity[*]): String[1]
+{
+    if ($mulArgs->isEmpty(),
+        | '',
+        | let m = printMultiplicity($mulArgs->at(0));
+          if ($m == '[1]', | '', | $m);
+    );
+}
+
+// `colSpecArray([names...], @TypeHolder)` → `~[name1[:T1[m1]], ...]`.
+function meta::pure::functions::printer::compiled::printCompiledColSpecArraySugar(params: ValueSpecification[*], ctx: PrintContext[1]): String[1]
+{
+    let names = $params->at(0)->cast(@Collection).values;
+    let cols = extractCompiledRelationTypeColumns(if ($params->size() < 2, | [], | $params->at(1)));
+    let entries = $names->map(n | compiledColSpecArrayEntry($n, $cols, $ctx));
+    $entries->joinStrings('~[', ', ', ']');
+}
+
+function meta::pure::functions::printer::compiled::compiledColSpecArrayEntry(nameVal: ValueSpecification[1], cols: Column<Nil, Any|*>[*], ctx: PrintContext[1]): String[1]
+{
+    let nameStr = extractCompiledAtomicString($nameVal);
+    let matching = $cols->filter(c | !$c.name->isEmpty() && $c.name->toOne() == $nameStr);
+    if ($matching->isEmpty(),
+        | $nameStr,
+        | let col = $matching->at(0);
+          let colCgt = $col->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
+          if ($colCgt.typeArguments->size() < 2,
+              | $nameStr,
+              | $nameStr + ':' + printGenericType($colCgt.typeArguments->at(1), $ctx) + compiledColSpecMulSuffix($colCgt.multiplicityArguments)
+          );
+    );
+}
+
+function meta::pure::functions::printer::compiled::extractCompiledRelationTypeColumns(holder: ValueSpecification[0..1]): Column<Nil, Any|*>[*]
+{
+    if ($holder->isEmpty(),
+        | [],
+        | $holder->toOne()->match([
+              h: GenericTypeAndMultiplicityHolder<Any>[1] | extractCompiledHolderColumns($h),
+              any: ValueSpecification[1] | []
+          ])
+    );
+}
+
+function meta::pure::functions::printer::compiled::extractCompiledHolderColumns(h: GenericTypeAndMultiplicityHolder<Any>[1]): Column<Nil, Any|*>[*]
+{
+    let cgt = $h->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
+    if ($cgt.typeArguments->isEmpty(),
+        | [],
+        | $cgt.typeArguments->at(0)->match([
+              gtv: GenericTypeValue[1] | if ($gtv.type->isEmpty(),
+                                              | [],
+                                              | $gtv.type->toOne()->match([
+                                                  rt: RelationType<Any>[1] | $rt.columns,
+                                                  any: meta::pure::metamodel::type::Type[1] | []
+                                                ])
+                                          ),
+              any: GenericType[1] | []
+          ])
+    );
+}
+
+function meta::pure::functions::printer::compiled::printCompiledFuncColSpecArraySugar(params: ValueSpecification[*], ctx: PrintContext[1]): String[1]
+{
+    let col = $params->at(0)->cast(@Collection);
+    let entries = $col.values->map(e | innerCompiledFuncColSpecEntry($e, $ctx));
+    $entries->joinStrings('~[', ', ', ']');
+}
+
+function meta::pure::functions::printer::compiled::innerCompiledFuncColSpecEntry(e: ValueSpecification[1], ctx: PrintContext[1]): String[1]
+{
+    $e->match([
+        fi: FunctionInvocation[1] |
+            if ($fi.parametersValues->size() >= 2,
+                | extractCompiledAtomicString($fi.parametersValues->at(1)) + ' : ' + printCompiledValueSpec($fi.parametersValues->at(0), $ctx),
+                | printCompiledValueSpec($e, $ctx);
+            ),
+        any: ValueSpecification[1] | printCompiledValueSpec($any, $ctx)
+    ]);
+}
+
+function meta::pure::functions::printer::compiled::printCompiledAggColSpecArraySugar(params: ValueSpecification[*], ctx: PrintContext[1]): String[1]
+{
+    let col = $params->at(0)->cast(@Collection);
+    let entries = $col.values->map(e | innerCompiledAggColSpecEntry($e, $ctx));
+    $entries->joinStrings('~[', ', ', ']');
+}
+
+function meta::pure::functions::printer::compiled::innerCompiledAggColSpecEntry(e: ValueSpecification[1], ctx: PrintContext[1]): String[1]
+{
+    $e->match([
+        fi: FunctionInvocation[1] |
+            if ($fi.parametersValues->size() >= 3,
+                | extractCompiledAtomicString($fi.parametersValues->at(2)) + ' : ' + printCompiledValueSpec($fi.parametersValues->at(0), $ctx) + ' : ' + printCompiledValueSpec($fi.parametersValues->at(1), $ctx),
+                | printCompiledValueSpec($e, $ctx);
+            ),
+        any: ValueSpecification[1] | printCompiledValueSpec($any, $ctx)
+    ]);
+}
+
+// Pull the string payload out of a string-typed AtomicValue. (The colSpec
+// name argument is always a string-typed AtomicValue.)
+function meta::pure::functions::printer::compiled::extractCompiledAtomicString(v: ValueSpecification[1]): String[1]
+{
+    $v->match([
+        a: AtomicValue[1] | if ($a.value->isEmpty(), | '', | $a.value->toOne()->toString()),
+        any: ValueSpecification[1] | ''
+    ]);
+}
+
+// `new(@Class[1], [keyExpression('k', v), ...])` → `^pkg::Class(k=v, ...)`.
+// Parser canonicalises `^X(...)` into a `new` call whose first arg holds the
+// constructor target and second arg the keyExpression list (a Collection or
+// a single keyExpression call).
+function meta::pure::functions::printer::compiled::printCompiledNewSugar(fi: FunctionInvocation[1], ctx: PrintContext[1]): String[1]
+{
+    let typeArg = $fi.parametersValues->at(0);
+    let keyExprs = if ($fi.parametersValues->size() < 2,
+                       | [],
+                       | $fi.parametersValues->at(1)->match([
+                             c: Collection[1] | $c.values,
+                             any: ValueSpecification[1] | $any
+                         ])
+                      );
+    '^' + printCompiledNewTarget($typeArg, $ctx) + $keyExprs->map(k | printCompiledKeyExpression($k, $ctx))->joinStrings('(', ', ', ')');
+}
+
+// `copy(receiver, [keyExpression('k', v), ...])` → `^$receiver(k=v, ...)` or
+// `^expr()(k=v, ...)`. Same canonical shape as new.
+function meta::pure::functions::printer::compiled::printCompiledCopySugar(fi: FunctionInvocation[1], ctx: PrintContext[1]): String[1]
+{
+    let receiver = $fi.parametersValues->at(0);
+    let keyExprs = $fi.parametersValues->at(1)->match([
+        c: Collection[1] | $c.values,
+        any: ValueSpecification[1] | $any
+    ]);
+    '^' + printCompiledValueSpec($receiver, $ctx) + $keyExprs->map(k | printCompiledKeyExpression($k, $ctx))->joinStrings('(', ', ', ')');
+}
+
+// new-target is either a `@Type` literal (GenericTypeAndMultiplicityHolder)
+// which we strip to the bare path, or any other VS we print as-is.
+function meta::pure::functions::printer::compiled::printCompiledNewTarget(target: ValueSpecification[1], ctx: PrintContext[1]): String[1]
+{
+    $target->match([
+        h: GenericTypeAndMultiplicityHolder<Any>[1] | extractCompiledHolderTypePath($h, $ctx),
+        any: ValueSpecification[1] | printCompiledValueSpec($any, $ctx)
+    ]);
+}
+
+function meta::pure::functions::printer::compiled::extractCompiledHolderTypePath(h: GenericTypeAndMultiplicityHolder<Any>[1], ctx: PrintContext[1]): String[1]
+{
+    let cgt = $h->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
+    if ($cgt.typeArguments->isEmpty(), | '', | printGenericType($cgt.typeArguments->at(0), $ctx));
+}
+
+function meta::pure::functions::printer::compiled::printCompiledKeyExpression(keyExpr: ValueSpecification[1], ctx: PrintContext[1]): String[1]
+{
+    $keyExpr->match([
+        fi: FunctionInvocation[1] | printCompiledKeyExpressionInline($fi, $ctx),
+        any: ValueSpecification[1] | printCompiledValueSpec($any, $ctx)
+    ]);
+}
+
+// Inline `k=v` / `k+=v` form when used inside `^X(k=v, ...)`. The 2-arg form
+// canonicalises `k = v`; the 3-arg form `keyExpression('k', v, true)`
+// canonicalises the `k += v` add-to-collection operator.
+function meta::pure::functions::printer::compiled::printCompiledKeyExpressionInline(fi: FunctionInvocation[1], ctx: PrintContext[1]): String[1]
+{
+    if ($fi.functionName == 'keyExpression' && ($fi.parametersValues->size() == 2 || $fi.parametersValues->size() == 3),
+        | let kAtom = $fi.parametersValues->at(0)->cast(@AtomicValue);
+          let k = $kAtom.value->toOne()->cast(@String);
+          let op = if ($fi.parametersValues->size() == 3, | ' += ', | ' = ');
+          $k + $op + printCompiledValueSpec($fi.parametersValues->at(1), $ctx);,
+        | $fi.parametersValues->map(p | printCompiledValueSpec($p, $ctx))->joinStrings($fi.functionName + '(', ', ', ')')
+    );
+}
+
+function meta::pure::functions::printer::compiled::printCompiledLetSugar(fi: FunctionInvocation[1], ctx: PrintContext[1]): String[1]
+{
+    let nameArg = $fi.parametersValues->at(0)->cast(@AtomicValue);
+    let varName = $nameArg.value->toOne()->cast(@String);
+    'let ' + $varName + ' = ' + printCompiledValueSpec($fi.parametersValues->at(1), $ctx);
+}
+
+function meta::pure::functions::printer::compiled::isCompiledInfixOperator(name: String[1]): Boolean[1]
+{
+    $name == 'plus' || $name == 'minus' || $name == 'times' || $name == 'divide'
+      || $name == 'equal' || $name == 'notEqual'
+      || $name == 'lessThan' || $name == 'lessThanEqual'
+      || $name == 'greaterThan' || $name == 'greaterThanEqual'
+      || $name == 'and' || $name == 'or';
+}
+
+// MINIMAL-mode operator precedence. Higher value = binds tighter. Mirrors
+// PureLanguageSerializer.precedenceOf — keep the two in sync. Returns -1
+// for non-operator names so callers can short-circuit.
+function meta::pure::functions::printer::compiled::compiledOperatorPrecedence(name: String[1]): Integer[1]
+{
+    if([pair(| $name == 'or',                                                                      | 1),
+        pair(| $name == 'and',                                                                     | 2),
+        pair(| $name == 'equal' || $name == 'notEqual',                                            | 3),
+        pair(| $name == 'lessThan' || $name == 'lessThanEqual'
+                || $name == 'greaterThan' || $name == 'greaterThanEqual',                          | 4),
+        pair(| $name == 'plus' || $name == 'minus',                                                | 5),
+        pair(| $name == 'times' || $name == 'divide',                                              | 6)],
+       | -1);
+}
+
+// MINIMAL-mode parenthesization for a binary operand. Left side: same or
+// higher precedence keeps no parens (left-associative). Right side: only
+// strictly-higher precedence keeps no parens — equal precedence on the
+// right would re-associate on re-parse (e.g. `9 / (18 / 6)` ≠ `9 / 18 / 6`).
+// Mirrors PureLanguageSerializer.possiblyAddParenthesisLeft/Right.
+function meta::pure::functions::printer::compiled::printCompiledInfixOperand(operand: ValueSpecification[1], outerName: String[1], isLeft: Boolean[1], ctx: PrintContext[1]): String[1]
+{
+    let rendered = printCompiledValueSpec($operand, $ctx);
+    $operand->match([
+        fi: FunctionInvocation[1] |
+            if (isCompiledInfixOperator($fi.functionName) && $fi.parametersValues->size() == 2,
+                | let outerPrec = compiledOperatorPrecedence($outerName);
+                  let innerPrec = compiledOperatorPrecedence($fi.functionName);
+                  let keepBare = if ($isLeft, | $innerPrec >= $outerPrec, | $innerPrec > $outerPrec);
+                  if ($keepBare, | $rendered, | '(' + $rendered + ')');,
+                | $rendered
+            ),
+        any: ValueSpecification[1] | $rendered
+    ]);
+}
+
+function meta::pure::functions::printer::compiled::compiledOperatorSymbol(name: String[1]): String[1]
+{
+    if([pair(| $name == 'plus',             | '+'),
+        pair(| $name == 'minus',            | '-'),
+        pair(| $name == 'times',            | '*'),
+        pair(| $name == 'divide',           | '/'),
+        pair(| $name == 'equal',            | '=='),
+        pair(| $name == 'notEqual',         | '!='),
+        pair(| $name == 'lessThan',         | '<'),
+        pair(| $name == 'lessThanEqual',    | '<='),
+        pair(| $name == 'greaterThan',      | '>'),
+        pair(| $name == 'greaterThanEqual', | '>='),
+        pair(| $name == 'and',              | '&&'),
+        pair(| $name == 'or',               | '||')],
+       | $name);
+}
+
+// `receiver->name(rest...)` — parser puts receiver as parametersValues[0].
+// Uses FQN for the function name when `.func` is set so re-parse can resolve
+// without relying on the original source's imports.
+function meta::pure::functions::printer::compiled::printCompiledArrowInvocation(arrow: ArrowInvocation[1], ctx: PrintContext[1]): String[1]
+{
+    let emitName = printCompiledFunctionInvocationName($arrow, $ctx);
+    if ($arrow.parametersValues->isEmpty(),
+        | $emitName + '()',
+        | printCompiledValueSpec($arrow.parametersValues->at(0), $ctx) + '->' + $emitName +
+          $arrow.parametersValues->drop(1)->map(p | printCompiledValueSpec($p, $ctx))->joinStrings('(', ', ', ')')
+    );
+}
+
+// `receiver.name` / `receiver.name(args)`. Dot access targets a Property or
+// QualifiedProperty — bare name is the unqualified property name (FQN doesn't
+// make sense here; the receiver disambiguates).
+function meta::pure::functions::printer::compiled::printCompiledDotApplication(dot: DotApplication[1], ctx: PrintContext[1]): String[1]
+{
+    if ($dot.parametersValues->isEmpty(),
+        | '.' + $dot.functionName,
+        | let receiver = printCompiledValueSpec($dot.parametersValues->at(0), $ctx);
+          let rest = $dot.parametersValues->drop(1);
+          // QualifiedProperty calls need `()` even with no extra args — the
+          // parser distinguishes `$c.prop` (Property access) from `$c.qp()`
+          // (zero-arg QualifiedProperty invocation) by the parens.
+          let isQp = isCompiledQualifiedPropertyCall($dot);
+          if ($rest->isEmpty() && !$isQp,
+              | $receiver + '.' + $dot.functionName,
+              | $receiver + '.' + $dot.functionName + $rest->map(p | printCompiledValueSpec($p, $ctx))->joinStrings('(', ', ', ')')
+          );
+    );
+}
+
+function meta::pure::functions::printer::compiled::isCompiledQualifiedPropertyCall(dot: DotApplication[1]): Boolean[1]
+{
+    if ($dot.func->isEmpty(),
+        | false,
+        | $dot.func->toOne()->instanceOf(meta::pure::metamodel::function::property::QualifiedProperty)
+            || $dot.func->toOne()->instanceOf(meta::pure::metamodel::pointer::QualifiedPropertyPointer)
+    );
+}
+
+// Escape special chars in a string literal so the printed form re-parses as
+// the original value. `\` first (so subsequent escapes don't re-escape their
+// added backslash), then `'`, then real newlines.
+function meta::pure::functions::printer::compiled::escapeStringLiteral(s: String[1]): String[1]
+{
+    $s->replace('\\', '\\\\')->replace('\'', '\\\'')->replace('\n', '\\n');
+}
+
+// Lambda forms (`anyLambda : lambdaPipe | lambdaFunction | lambdaParam lambdaPipe`):
+//   0 params → `|body`            (bare lambdaPipe)
+//   1 param  → `p|body`           (lambdaParam lambdaPipe)
+//   2+       → `{p1, p2|body}`    (lambdaFunction, braces required)
+// Parameters carry type+multiplicity when known — emit `name: T[m]` so the
+// printed form re-parses with the same parameter signature. Bare-name form
+// is reserved for truly type-less lambdas (parser will infer on re-parse).
+function meta::pure::functions::printer::compiled::printCompiledLambdaFunction(l: LambdaFunction<Any>[1], ctx: PrintContext[1]): String[1]
+{
+    let params = $l.parameters->map(p | printCompiledLambdaParam($p, $ctx))->joinStrings(', ');
+    let body = $l.expressionSequence->map(b | printCompiledValueSpec($b, $ctx))->joinStrings('; ');
+    if ($l.parameters->size() < 2,
+        | $params + '|' + $body,
+        | '{' + $params + '|' + $body + '}'
+    );
+}
+
+function meta::pure::functions::printer::compiled::printCompiledLambdaParam(p: VariableExpression[1], ctx: PrintContext[1]): String[1]
+{
+    let n = $p.name->orElse('');
+    // A bare `e` in the source compiles with an Inferred-flavoured genericType
+    // (InferredGenericType / InferredPackageableGenericType) — the resolver
+    // filled the type in from context. Emitting `e:Integer[1]` explicitly
+    // would re-parse to a non-Inferred type, changing the compile-time
+    // metadata. Emit bare for Inferred types so the re-compile re-infers.
+    if ($p.genericType->isEmpty() || compiledIsInferredType($p.genericType->toOne()),
+        | $n,
+        | $n + ':' + printGenericType($p.genericType->toOne(), $ctx) + if ($p.multiplicity->isEmpty(), | '', | printMultiplicity($p.multiplicity->toOne()))
+    );
+}
+
+// A GenericType is "Inferred" when the resolver filled it in from context
+// rather than the source providing it. The graph printer marks these with
+// `#X#` brackets so canonical-anchor drift stays visible.
+function meta::pure::functions::printer::compiled::compiledIsInferredType(g: GenericType[1]): Boolean[1]
+{
+    $g->instanceOf(meta::pure::metamodel::type::generics::InferredGenericType)
+        || $g->instanceOf(meta::pure::metamodel::type::generics::InferredPackageableGenericType);
+}

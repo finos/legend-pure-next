@@ -122,27 +122,40 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
         ^$c(errors += 'Duplicate enum value \'' + $d + '\' in ' + $ownerCtx + $siCtx);
     }, $context);
 
-    // Add stereotypes/taggedValues to existing enum value properties (created by newEnumeration in pass 1)
-    let updatedProps = $skeleton.properties->map(prop |
+    // Add stereotypes/taggedValues to existing enum value properties (created
+    // by newEnumeration in pass 1). Folded (not mapped) so the annotation
+    // recording context is threaded; each value pushes its sub-element path
+    // ({@code Enum.Value}) so profile/stereotype/tag references attribute to the
+    // value, mirroring Java EnumerationHandler withCallerSubElement.
+    let propsAccum = $skeleton.properties->fold({prop, acc |
         let protocolProp = $protocolEnum.properties->filter(p | $p.name == $prop.name);
         if($protocolProp->isEmpty(),
-            | $prop,
+            | ^$acc(values += $prop),
             | let pp = $protocolProp->head()->toOne();
-              let stereoResult = compilePropertyStereotypes($pp, $ctx0, $ownerCtx);
-              let tvResult = compilePropertyTaggedValues($pp, $ctx0, $ownerCtx);
+              let saved = $acc.context.currentElementPath;
+              let pushed = if($saved->isEmpty(), | $acc.context, | ^$acc.context(currentElementPath = $saved->toOne() + '.' + $pp.name->toOne()));
+              let stereoResult = compilePropertyStereotypes($pp, $pushed, $ownerCtx);
+              let tvResult = compilePropertyTaggedValues($pp, $stereoResult.context, $ownerCtx);
+              let tvCtx = $tvResult.context;
+              let restored = ^$tvCtx(currentElementPath = $saved);
               let si = compileSourceInformation($pp.p_sourceInformation, $context);
-              ^$prop(
-                  stereotypes = $stereoResult.values,
-                  taggedValues = $tvResult.values,
-                  sourceInformation = $si
+              ^$acc(
+                  values += ^$prop(
+                      stereotypes = $stereoResult.values,
+                      taggedValues = $tvResult.values,
+                      sourceInformation = $si
+                  ),
+                  context = $restored
               );
         );
-    );
+    }, ^CompilerListResult<meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Nil, meta::pure::metamodel::type::Any>>(context = $ctx0));
+    let updatedProps = $propsAccum.values;
 
-    // Compile stereotypes and tagged values on the enumeration itself
+    // Compile stereotypes and tagged values on the enumeration itself — thread
+    // from the enum-value annotation context so their recordings survive.
     let stereoAccum = $protocolEnum.stereotypes->fold({s, acc |
                                 compileStereotype($s, $acc, $ownerCtx);
-                            }, ^CompilerListResult<Stereotype>(context = $ctx0));
+                            }, ^CompilerListResult<Stereotype>(context = $propsAccum.context));
     let tvAccum = $protocolEnum.taggedValues->fold({t, acc |
                                 compileTaggedValue($t, $acc, $ownerCtx);
                             }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));

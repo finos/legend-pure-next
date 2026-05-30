@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2026 Goldman Sachs
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-truffle-extension</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-truffle-extension-typescript</artifactId>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Truffle - Extension - TypeScript</name>
+    <description>
+        Truffle native bridge for `meta::external::language::typescript::compileAndExecute`.
+        Loads the official `typescript.js` compiler into a long-lived GraalJS
+        polyglot Context, transpiles the user's TypeScript source via
+        `ts.transpileModule`, evaluates the resulting JavaScript, and invokes a
+        named top-level function on it. Registered via the TruffleNativesExtension SPI.
+
+        Build pre-req: `pnpm install` in platforms/typescript so
+        `node_modules/typescript/lib/typescript.js` exists. The pom copies that
+        file into `target/classes/typescript.js` at `process-resources`.
+    </description>
+
+    <dependencies>
+        <!-- Truffle runtime: provides PureNode, NativeNodeRegistry, the
+             TruffleNativesExtension SPI, plus PureSequence and the
+             CollectionHelper / StringHelper utility classes. -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-truffle-runtime</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Truffle-pdb-generation: provides PureSequence + PDB value/runtime
+             types. Declared explicitly so the extension's compile classpath
+             does not depend on transitive resolution through a `provided` edge. -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-truffle-pdb-generation</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.graalvm.truffle</groupId>
+            <artifactId>truffle-api</artifactId>
+            <version>${truffle.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Polyglot API: `Context`, `Source`, `Value`. Already on the
+             runtime classpath via legend-pure-next-truffle-runtime. -->
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>polyglot</artifactId>
+            <version>${truffle.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- GraalJS engine. Brought in by this extension so the runtime fat
+             jar stays JS-free unless this extension is on the classpath. -->
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>js-community</artifactId>
+            <version>${truffle.version}</version>
+            <type>pom</type>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit-jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.15.0</version>
+                <configuration>
+                    <release>25</release>
+                </configuration>
+            </plugin>
+            <!-- Copies `typescript.js` from platforms/typescript/node_modules
+                 and `runtime-lib.ts` from pure/modules/translation/typescript/code
+                 into target/classes so they ship inside the extension jar as
+                 classpath resources. Requires that `pnpm install` has run in
+                 platforms/typescript first; fail loudly if not. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-typescript-compiler</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../../../../typescript/node_modules/typescript/lib</directory>
+                                    <includes>
+                                        <include>typescript.js</include>
+                                    </includes>
+                                </resource>
+                                <resource>
+                                    <directory>${project.basedir}/../../../../../pure/modules/translation/typescript/code</directory>
+                                    <includes>
+                                        <include>runtime-lib.ts</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Stages GraalJS transitive runtime jars (js-language, regex,
+                 icu4j, ...) into target/dependency/ so the Truffle launcher
+                 wrapper can copy them next to the extension jar. The
+                 `js-community` POM dep itself is excluded — only the real jars
+                 it pulls in are needed at runtime. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-graaljs-runtime-deps</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/dependency</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                            <excludeGroupIds>org.finos.legend.pure</excludeGroupIds>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

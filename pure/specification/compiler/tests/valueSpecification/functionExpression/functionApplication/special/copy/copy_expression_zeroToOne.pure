@@ -1,12 +1,9 @@
 ###Pure
 import test::copy::zeroToOne::*;
 
-// Tests `^expr(keys)` where the receiver has multiplicity [0..1].
-// The compiler rewrites to `expr->map(_automap | ^$_automap(keys))`
-// so the return type stays [0..1].
-function test::copy::zeroToOne::testCopyOfOptional(node:Node[1]): Any[*]
+function test::copy::zeroToOne::testCopyOfOptional(node: Node[1]): Any[*]
 {
-  let opt = ^$node.parent(name='copied');
+  let opt = ^$node.parent(name = 'copied')
 }
 
 Class test::copy::zeroToOne::Node
@@ -17,25 +14,25 @@ Class test::copy::zeroToOne::Node
 
 ###CompiledGraph
 function test::copy::zeroToOne::testCopyOfOptional_Node_1__Any_MANY_(node:test::copy::zeroToOne::Node[1]):@Any@[*]  ~UserDefinedFunction<{test::copy::zeroToOne::Node[1]->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::zeroToOne::Node##[0..1]#  ~@FunctionInvocation@  @9:3-9:40
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::zeroToOne::Node##[0..1]#  ~@FunctionInvocation@  @6:3-6:42
     typeParam T -> #test::copy::zeroToOne::Node#
     mulParam m -> #[0..1]#
-    AtomicValue  'opt' :@String@[1]  ~@AtomicValue@  @9:7-9:9
-    FunctionInvocation map_T_$0_1$__Function_1__V_$0_1$_ :#test::copy::zeroToOne::Node##[0..1]#  ~@FunctionInvocation@  @9:13-9:40
+    AtomicValue  'opt' :@String@[1]  ~@AtomicValue@  @6:7-6:9
+    FunctionInvocation map_T_$0_1$__Function_1__V_$0_1$_ :#test::copy::zeroToOne::Node##[0..1]#  ~@FunctionInvocation@  @6:13-6:42
       typeParam T -> #test::copy::zeroToOne::Node#
       typeParam V -> #test::copy::zeroToOne::Node#
-      DotApplication test::copy::zeroToOne::Node.parent :#test::copy::zeroToOne::Node##[0..1]#  ~@DotApplication@  @9:19-9:25
-        Variable node :#test::copy::zeroToOne::Node##[1]#  ~@VariableExpression@  @9:14-9:18
+      DotApplication test::copy::zeroToOne::Node.parent :#test::copy::zeroToOne::Node##[0..1]#  ~@DotApplication@  @6:19-6:25
+        Variable node :#test::copy::zeroToOne::Node##[1]#  ~@VariableExpression@  @6:14-6:18
       Lambda(_automap:#test::copy::zeroToOne::Node#[1]) :#LambdaFunction<#{#test::copy::zeroToOne::Node#[1]->#test::copy::zeroToOne::Node##[1]#}#>#[1]  ~@AtomicValue@
-        FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::zeroToOne::Node##[1]#  ~@FunctionInvocation@  @9:13-9:40
+        FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::zeroToOne::Node##[1]#  ~@FunctionInvocation@  @6:13-6:42
           typeParam T -> #test::copy::zeroToOne::Node#
           Variable _automap :#test::copy::zeroToOne::Node##[1]#  ~@VariableExpression@
-          Collection :#KeyExpression#[1]  ~@Collection@  @9:13-9:40
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @9:27-9:39
-              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @9:27-9:39
-              AtomicValue  'copied' :@String@[1]  ~@AtomicValue@  @9:32-9:39
+          Collection :#KeyExpression#[1]  ~@Collection@  @6:13-6:42
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:27-6:41
+              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:27-6:41
+              AtomicValue  'copied' :@String@[1]  ~@AtomicValue@  @6:34-6:41
 
-class test::copy::zeroToOne::Node extends Any  ~Class<test::copy::zeroToOne::Node>  @12:1-16:1
+class test::copy::zeroToOne::Node extends Any  ~Class<test::copy::zeroToOne::Node>  @9:1-13:1
   property name :@String@[1]  ~Property<test::copy::zeroToOne::Node, @String@|1>
   property parent :test::copy::zeroToOne::Node[0..1]  ~Property<test::copy::zeroToOne::Node, test::copy::zeroToOne::Node|0..1>
 

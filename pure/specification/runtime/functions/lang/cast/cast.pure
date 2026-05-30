@@ -21,19 +21,19 @@ native function <<PCT.function>> meta::pure::functions::lang::cast<T|m>(source:T
 
 native function <<PCT.function>> meta::pure::functions::lang::cast<T|m>(source:Any[*], object:GenericTypeAndMultiplicityHolder<T|m>[1]):T[m];
 
-Primitive meta::pure::functions::lang::tests::cast::P8 extends Integer
+Primitive <<test.TestDependency>> meta::pure::functions::lang::tests::cast::P8 extends Integer
 
 Class <<test.TestDependency>> meta::pure::functions::lang::tests::cast::Container
 {
   val : P8[1];
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testPrimitiveExtensionCast():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testPrimitiveExtensionCast<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-  assertEquals(1, ^Container(val=1->cast(@P8)).val);
+  assertEquals(1, $f->eval(|^Container(val=1->cast(@P8)).val));
 }
 
-Primitive meta::pure::functions::lang::tests::cast::P(x:Integer[1]) extends Integer
+Primitive <<test.TestDependency>> meta::pure::functions::lang::tests::cast::P(x:Integer[1]) extends Integer
 [
     $this < $x
 ]
@@ -43,22 +43,22 @@ Class <<test.TestDependency>> meta::pure::functions::lang::tests::cast::Containe
     val : P(8)[1];
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testPrimitiveExtensionCastWithConstraint():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testPrimitiveExtensionCastWithConstraint<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(1, ^Container2(val=1->cast(@P(8))).val);
+    assertEquals(1, $f->eval(|^Container2(val=1->cast(@P(8))).val));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testPrimitiveExtensionCastWithConstraintError():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testPrimitiveExtensionCastWithConstraintError<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertError(|^Container2(val=10->cast(@P(8))), 'Constraint :[0] violated in the Class P');
+    assertError(|$f->eval(|^Container2(val=10->cast(@P(8)))), 'Constraint :[0] violated in the Class P');
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testPrimitiveExtensionCastWithAdd():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testPrimitiveExtensionCastWithAdd<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(4, 3->cast(@P(8)) + 1);
+    assertEquals(4, $f->eval(|3->cast(@P(8)) + 1));
 }
 
-Primitive meta::pure::functions::lang::tests::cast::NP(x:Integer[1]) extends Integer
+Primitive <<test.TestDependency>> meta::pure::functions::lang::tests::cast::NP(x:Integer[1]) extends Integer
 [
    id(~function:$this < $x ~message:'the value is greater than '+$x->toString())
 ]
@@ -68,44 +68,44 @@ Class <<test.TestDependency>> meta::pure::functions::lang::tests::cast::Containe
     val : NP(8)[1];
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testPrimitiveExtensionCastWithConstraintErrorMessage():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testPrimitiveExtensionCastWithConstraintErrorMessage<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   assertError(|^Container3(val=10->cast(@NP(8))), 'Constraint :[id] violated in the Class NP, Message: the value is greater than 8');
+   assertError(|$f->eval(|^Container3(val=10->cast(@NP(8)))), 'Constraint :[id] violated in the Class NP, Message: the value is greater than 8');
 }
 
-Primitive meta::pure::functions::lang::tests::cast::OP(x:Integer[1]) extends Integer
+Primitive <<test.TestDependency>> meta::pure::functions::lang::tests::cast::OP(x:Integer[1]) extends Integer
 [
    id(~function:$this < $x ~message:'the value is greater than '+$x->toString())
 ]
 
-Primitive meta::pure::functions::lang::tests::cast::OP8 extends OP(8)
+Primitive <<test.TestDependency>> meta::pure::functions::lang::tests::cast::OP8 extends OP(8)
 
 Class <<test.TestDependency>> meta::pure::functions::lang::tests::cast::Container4 {val : OP8[1];}
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testSimpleConstraintCastErrorWithMessageSimpleInheritance():Any[*]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testSimpleConstraintCastErrorWithMessageSimpleInheritance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Any[*]
 {
-   assertError(|^Container4(val=10->cast(@OP8)), 'Constraint :[id] violated in the Class OP, Message: the value is greater than 8')
+   assertError(|$f->eval(|^Container4(val=10->cast(@OP8))), 'Constraint :[id] violated in the Class OP, Message: the value is greater than 8')
 }
 
-Primitive meta::pure::functions::lang::tests::cast::StringP extends String
+Primitive <<test.TestDependency>> meta::pure::functions::lang::tests::cast::StringP extends String
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testExtendedPrimitiveTypeError():Any[*]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testExtendedPrimitiveTypeError<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Any[*]
 {
-   assertError(|10->cast(@StringP), 'Cast exception: Integer cannot be cast to StringP')
+   assertError(|$f->eval(|10->cast(@StringP)), 'Cast exception: Integer cannot be cast to StringP')
 }
 
 // TypeParameters and collections should pass through cast without type-check errors
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testCastTypeParameter():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testCastTypeParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   let tp = Class.typeParameters->at(0);
-   let result = $tp->cast(@Any);
-   assert($result->instanceOf(TypeParameter));
+   assert($f->eval(|
+       let tp = Class.typeParameters->at(0);
+       $tp->cast(@Any)->instanceOf(TypeParameter);
+   ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testCastCollection():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testCastCollection<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   let result = [Integer, String]->cast(@Type);
-   assertEquals(2, $result->size());
+   assertEquals(2, $f->eval(|[Integer, String]->cast(@Type)->size()));
 }
 
 // --- Generic copy-through-upcast pattern (repro for annotate/javaDoc bug) ---
@@ -141,16 +141,18 @@ function <<test.TestDependency>> meta::pure::functions::lang::tests::cast::tagAs
    $tagged->cast(@T);
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testGenericCopyThroughUpcastPreservesType():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testGenericCopyThroughUpcastPreservesType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   let sub = ^CR_Sub(extra='e1');
-   let result = $sub->tagAs('hello');
    // The dynamic instance is still CR_Sub — the upcast→copy→downcast
    // round-trip must preserve its concrete type so subclass properties
    // remain accessible at type T.
-   assertEquals('e1', $result.extra);
-   assertEquals(['hello'], $result.tag);
-   assert($result->instanceOf(CR_Sub));
+   assert($f->eval(|
+       let sub = ^CR_Sub(extra='e1');
+       let tagged = $sub->tagAs('hello');
+       assertEquals('e1', $tagged.extra);
+       assertEquals(['hello'], $tagged.tag);
+       assert($tagged->instanceOf(CR_Sub));
+   ));
 }
 
 // Strict-resolution probe: cast(@T) inside a generic function where T is
@@ -171,13 +173,38 @@ function <<test.TestDependency>> meta::pure::functions::lang::tests::cast::castA
    $value->cast(@T)
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testGenericCastResolvesTypeParameter():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testGenericCastResolvesTypeParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-   let hint = ^CR_Sub(extra='h');
    // T is bound to CR_Sub via $hint; 'wrong-type' is a String. With T
    // resolved at runtime this must throw.
    assertError(
-      | castAsHint('wrong-type', $hint),
+      | $f->eval(|
+          let hint = ^CR_Sub(extra='h');
+          castAsHint('wrong-type', $hint);
+      ),
+      'Cast exception: String cannot be cast to CR_Sub'
+   );
+}
+
+// Cross-boundary probe: `<T>` is bound in `castThroughHint` from `$hint`, then
+// the to-be-cast `$value` and the witness `$hint` are forwarded to `castAsHint`,
+// where the actual `cast(@T)` fires. T therefore has to survive TWO function
+// boundaries (test -> castThroughHint -> castAsHint) via the runtime type-var
+// witness, not just the single call covered by testGenericCastResolvesTypeParameter.
+function <<test.TestDependency>> meta::pure::functions::lang::tests::cast::castThroughHint<T>(value:Any[1], hint:T[1]):T[1]
+{
+   castAsHint($value, $hint)
+}
+
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testCrossBoundaryCastTypeParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+   // T binds to CR_Sub via $hint two calls up; casting a String must throw at
+   // the deepest boundary.
+   assertError(
+      | $f->eval(|
+          let hint = ^CR_Sub(extra='h');
+          castThroughHint('wrong-type', $hint);
+      ),
       'Cast exception: String cannot be cast to CR_Sub'
    );
 }
@@ -196,35 +223,40 @@ function <<test.TestDependency>> meta::pure::functions::lang::tests::cast::castV
    $probe->cast(@T)
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testSequenceTypeParameterHomogeneous():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testSequenceTypeParameterHomogeneous<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    // Both elements are CR_Sub → T binds to CR_Sub. Casting a String must throw.
-   let subs = [^CR_Sub(extra='a'), ^CR_Sub(extra='b')];
    assertError(
-      | castViaSeq($subs, 'wrong-type'),
+      | $f->eval(|
+          let subs = [^CR_Sub(extra='a'), ^CR_Sub(extra='b')];
+          castViaSeq($subs, 'wrong-type');
+      ),
       'Cast exception: String cannot be cast to CR_Sub'
    );
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testSequenceTypeParameterHeterogeneousCommonSupertype():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testSequenceTypeParameterHeterogeneousCommonSupertype<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    // CR_Sub and CR_OtherSub both extend CR_Base; their meet is CR_Base.
    // T binds to CR_Base — casting a String still throws.
-   let mixed = [^CR_Sub(extra='a'), ^CR_OtherSub(more='o')];
    assertError(
-      | castViaSeq($mixed, 'wrong-type'),
+      | $f->eval(|
+          let mixed = [^CR_Sub(extra='a'), ^CR_OtherSub(more='o')];
+          castViaSeq($mixed, 'wrong-type');
+      ),
       'Cast exception: String cannot be cast to CR_Base'
    );
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testSequenceTypeParameterAcceptsCommonSupertype():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testSequenceTypeParameterAcceptsCommonSupertype<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    // Same heterogeneous sequence; T = CR_Base. A bare CR_Base value satisfies
    // T and the cast should succeed (return the value unchanged).
-   let mixed = [^CR_Sub(extra='a'), ^CR_OtherSub(more='o')];
-   let baseValue = ^CR_Base(tag=['x']);
-   let result = castViaSeq($mixed, $baseValue);
-   assertIs($baseValue, $result);
+   assert($f->eval(|
+       let mixed = [^CR_Sub(extra='a'), ^CR_OtherSub(more='o')];
+       let baseValue = ^CR_Base(tag=['x']);
+       $baseValue->is(castViaSeq($mixed, $baseValue));
+   ));
 }
 
 // Multiplicity-resolution probes: cast(@T|m) inside a generic function
@@ -241,36 +273,40 @@ function <<test.TestDependency>> meta::pure::functions::lang::tests::cast::castA
    $probe->cast(@T|m)
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testMultiplicityParameterRejectsCountMismatchScalarWitness():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testMultiplicityParameterRejectsCountMismatchScalarWitness<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    // Witness is a single CR_Sub → T=CR_Sub, m=PureOne. Probe is a 2-element
    // sequence: count violates m=[1..1]. The cast-side multiplicity check
    // (now firing on sig 3 dispatch after the subsumes fix) throws.
-   let one = ^CR_Sub(extra='a');
    assertError(
-      | castAsTM($one, [^CR_Sub(extra='1'), ^CR_Sub(extra='2')]),
+      | $f->eval(|
+          let one = ^CR_Sub(extra='a');
+          castAsTM($one, [^CR_Sub(extra='1'), ^CR_Sub(extra='2')]);
+      ),
       'multiplicity'
    );
 }
 
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testMultiplicityParameterAcceptsMatchingScalarWitness():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testMultiplicityParameterAcceptsMatchingScalarWitness<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    // Witness is single → m=PureOne. Probe is a single element of matching T.
    // Cast must accept and return the singleton unchanged.
-   let one = ^CR_Sub(extra='a');
-   let probe = ^CR_Sub(extra='b');
-   let result = castAsTM($one, $probe);
-   assertIs($probe, $result);
+   assert($f->eval(|
+       let one = ^CR_Sub(extra='a');
+       let probe = ^CR_Sub(extra='b');
+       $probe->is(castAsTM($one, $probe));
+   ));
 }
 
-function <<test.Test>> meta::pure::functions::lang::tests::cast::testMultiplicityParameterAcceptsMatchingSequenceWitness():Boolean[1]
+function <<PCT.test>> meta::pure::functions::lang::tests::cast::testMultiplicityParameterAcceptsMatchingSequenceWitness<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    // Two-element witness → m=[2..2] (or any range that allows 2). A
    // 2-element probe of matching T fits. Use a homogeneous CR_Sub sequence
    // so T resolves cleanly.
-   let twoWitness = [^CR_Sub(extra='a'), ^CR_Sub(extra='b')];
-   let twoProbe   = [^CR_Sub(extra='x'), ^CR_Sub(extra='y')];
-   let result = castAsTM($twoWitness, $twoProbe);
-   assertEquals(2, $result->size());
+   assertEquals(2, $f->eval(|
+       let twoWitness = [^CR_Sub(extra='a'), ^CR_Sub(extra='b')];
+       let twoProbe   = [^CR_Sub(extra='x'), ^CR_Sub(extra='y')];
+       castAsTM($twoWitness, $twoProbe)->size();
+   ));
 }

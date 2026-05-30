@@ -1,0 +1,106 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::java::*;
+import meta::external::language::java::serialization::*;
+import meta::external::language::java::translation::*;
+import meta::pure::translation::shared::*;
+
+// JVM-runtime bridge for the Pure->Java translator: `translation.pure`
+// produces a Java metamodel Class; this file serialises that to source,
+// hands it to `compileAndExecute` (the in-process javac + reflective-invoke
+// native declared in language/java/code/native.pure), and surfaces the
+// result so round-trip / PCT tests can assert that the translated Java
+// *computes* the same answer as the source Pure, not merely that it
+// serialises to a particular string.
+
+// Translate a Pure function, then compile+execute the resulting Java with
+// the supplied arguments.
+function meta::external::language::java::translation::runViaTranslation(
+   conv: Conventions[1],
+   f: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
+   args: Any[*]
+): Any[*]
+{
+   let sig       = $conv->translateFunction($f);
+   let source    = $sig->renderFullSource();
+   let className = $sig.class->qualifiedClassName();
+   compileAndExecute($source, $className, $sig.method.name, $args);
+}
+
+// PCT adapter — pluggable into any `<<PCT.test>>`. Takes the test's no-arg
+// lambda, canonicalizes it via the shared translation pipeline (inlines open
+// variables into the body), translates the canonical FunctionDefinition to a
+// Java class, compiles + executes it, and returns the result for the test's
+// `assertEquals(..., $f->eval(|expr))`.
+//
+// makeCanonical returns a UserDefinedFunction when the input lambda has
+// captures (recompiled with each capture substituted as a literal) and the
+// original LambdaFunction when it doesn't. translateFunctionDef dispatches on
+// that shape, so both paths land in the same buildSignature back-end.
+function meta::external::language::java::translation::testAdapterForTranslatedJava<X|o>(
+   f: meta::pure::metamodel::function::Function<{->X[o]}>[1]
+): X[o]
+{
+   let conv      = defaultConventions('org.finos.test');
+   let lambda    = $f->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
+   // Localize open variables — each capture becomes a single `let name = <value>;`
+   // binding at the top of the body (named once; `$name` references survive),
+   // rather than inlining the value at every use site.
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
+                       [meta::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]);
+   let sig       = $conv->translateFunctionDef($canonical, 'PCTRunner');
+   let source    = $sig->renderFullSource();
+   let className = $sig.class->qualifiedClassName();
+   compileAndExecute($source, $className, $sig.method.name, []);
+}
+
+// Render the main GalleryRunner class source plus every helper class
+// (Pure user-defined classes generated alongside it) into a single
+// compilation unit. classToString emits `package X;\npublic class Y { ... }`
+// for the main class; we append each helper using the same serializer but
+// strip its leading `package X;\n\n` so javac sees one package declaration.
+function meta::external::language::java::translation::renderFullSource(sig: FunctionSignature[1]): String[1]
+{
+   let mainSrc = $sig.class->classToString();
+   let helpers = $sig.extraClasses->map(h | $h->classToString()->stripPackageHeader());
+   $mainSrc + '\n\n' + $helpers->joinStrings('\n\n');
+}
+
+function meta::external::language::java::translation::stripPackageHeader(src: String[1]): String[1]
+{
+   // Drop the leading `package X;` line plus the blank line that follows.
+   let firstNewline = $src->indexOf('\n');
+   if ($firstNewline < 0,
+      | $src,
+      | let rest = $src->substring($firstNewline + 1, $src->length());
+        // strip leading blank lines
+        if ($rest->startsWith('\n'), | $rest->substring(1, $rest->length()), | $rest);
+   );
+}
+
+// Convenience: run every `<<PCT.test>>` under `rootPackagePath` through the
+// translator adapter — each PCT lambda gets compiled to Java, javac'd
+// in-process, reflectively invoked, and the result fed back to the PCT
+// test's assertion. Delegates to the core `runPCTTests(pkg, adapter)`
+// overload with our adapter baked in. Marked `<<test.TestDependency>>`
+// because the core runner has that stereotype (PCT runners go in -tests.pdb).
+function <<test.TestDependency>>
+   meta::external::language::java::translation::runPCTTestsViaTranslator(rootPackagePath:String[1]):String[1]
+{
+   meta::pure::test::runPCTTests(
+      $rootPackagePath,
+      testAdapterForTranslatedJava_Function_1__X_o_
+   );
+}

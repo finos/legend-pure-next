@@ -1,0 +1,89 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::typescript::*;
+import meta::external::language::typescript::serialization::*;
+import meta::external::language::typescript::translation::*;
+import meta::pure::translation::shared::*;
+
+// Truffle-runtime bridge: translation.pure produces a SourceFile; this file
+// serialises it, runs it through `compile` (GraalJS-backed transpile + eval
+// from the typescript Truffle extension), then `execute`s the `execute`
+// export and surfaces the result for round-trip / PCT tests.
+
+function meta::external::language::typescript::translation::runViaTranslation(
+   f: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
+   args: Any[*]
+): Any[*]
+{
+   // PE-backed root — addresses resolve via the resolver; no graph
+   // injection needed.
+   let sf     = $f->translateFunction(defaultConvention());
+   let source = $sf->serialize();
+   $source->compile()->execute('execute', $args, [$f.returnGenericType], [$f.returnMultiplicity], []);
+}
+
+// PCT adapter — pluggable into any `<<PCT.test>>`. Takes the test's no-arg
+// lambda, canonicalizes it via the shared translation pipeline (inlines open
+// variables), translates the canonical form to a TS source file, transpiles
+// + evaluates it via GraalJS, and returns the result for the test's
+// `assertEquals(..., $f->eval(|expr))`.
+//
+// The canonicalize step expands a capturing lambda into an open-variable-free
+// FunctionDefinition; downstream `translateFunction` consumes any
+// FunctionDefinition (UserDefinedFunction OR LambdaFunction), so both
+// shapes are handled by the same dispatch.
+function meta::external::language::typescript::translation::testAdapterForTranslatedTypeScript<X|o>(
+   f: meta::pure::metamodel::function::Function<{->X[o]}>[1]
+): X[o]
+{
+   let lambda    = $f->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
+   // Localize open variables: each capture becomes a single `let name = <value>;`
+   // binding at the top of the body, and `$name` references survive. This names
+   // each captured value once (so `is($x, $x)` is the same reference, and a
+   // capture used inside a thunk resolves to the local binding) instead of
+   // duplicating the value at every use site as InlineOpenVariables would.
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
+                       [meta::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]);
+   let conv      = conventionForRoot($canonical);
+   let sf        = $canonical->translateFunctionDef($conv);
+   // The TypeScript Truffle extension automatically prepends `runtime-lib.ts`
+   // (shipped as a classpath resource) to every source, so `__assert`,
+   // `__eq`, `__fold`, `__instanceOf`, ... are all in scope when the
+   // translator emits calls to them. No string-glue here.
+   //
+   // Metadata access — lambda PDOs, cross-PE type lookups — lives in the
+   // emitted source: the translator generates uniform
+   // `__pureResolve(address)` calls. For addresses targeting sub-nodes of
+   // the in-memory canonical (no PDB backing), we inject the canonical as
+   // the `graph` argument to execute; the Java host routes
+   // `__local::root$...` addresses to it during the call.
+   let source     = $sf->serialize();
+   let funcType   = $canonical.classifierGenericType.typeArguments
+                       ->at(0)->rawType()->toOne()
+                       ->cast(@meta::pure::metamodel::type::FunctionType);
+   $source->compile()->execute('execute', [], $funcType.returnType, $funcType.returnMultiplicity, [$canonical]);
+}
+
+// Convenience: run every `<<PCT.test>>` under `rootPackagePath` through the
+// translator adapter. Marked <<test.TestDependency>> so it lands in the
+// -tests PDB alongside the core PCT runner.
+function <<test.TestDependency>>
+   meta::external::language::typescript::translation::runPCTTestsViaTranslator(rootPackagePath:String[1]):String[1]
+{
+   meta::pure::test::runPCTTests(
+      $rootPackagePath,
+      testAdapterForTranslatedTypeScript_Function_1__X_o_
+   );
+}

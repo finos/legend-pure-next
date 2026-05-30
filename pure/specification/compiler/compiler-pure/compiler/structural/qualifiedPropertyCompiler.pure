@@ -35,17 +35,17 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
     let classCtx = 'class \'' + $className + '\'';
 
     // Compile return type
-    let protocolType = $qp.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+    let protocolType = $qp.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
     let gtResult = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@TypeParameter), 'qualified property \'' + $qp.name + '\'', $classCtx);
     let returnGenType = $gtResult.value->toOne();
     let ctx1 = $gtResult.context;
-    let returnMult = $qp.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+    let returnMult = $qp.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
 
     // Compile explicit parameters
     let paramAccum = $qp.parameters->fold({p, acc |
-        let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+        let pType = $p.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
         let pGtResult = $pType->compileGenericType($acc.context, $packagePath, [], 'parameter \'' + $p.name + '\'', $classCtx);
-        let pMult = $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+        let pMult = $p.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
         ^$acc(
             values += ^VariableExpression(
                 name = $p.name,
@@ -106,7 +106,10 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
     );
     ^CompilerResult<QualifiedProperty<Any>>(
         value = $compiledQP,
-        context = $ctx3
+        // Thread the stereotype/tag recording context (not $ctx3) so the QP's
+        // annotation references (profile/stereotype/tag) survive in the reverse
+        // index — discarding it drops them.
+        context = $tvAccum.context
     );
     );
 }

@@ -29,98 +29,90 @@ function <<PCT.function, PCT.platformOnly>> meta::pure::functions::string::toRep
                 ])
 }
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testIntegerToRepresentation():Boolean[1]
+function <<PCT.test>> meta::pure::functions::string::tests::toRepresentation::testIntegerToRepresentation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('1', 1->toRepresentation());
-    assertEquals('-1', toRepresentation(-1));
+    assertEquals(['1', '-1'], $f->eval(|[1, -1]->map(v | $v->toRepresentation())));
 }
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testFloatToRepresentation():Boolean[1]
+function <<PCT.test>> meta::pure::functions::string::tests::toRepresentation::testFloatToRepresentation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('3.14', 3.14->toRepresentation());
-    assertEquals('3.14159', 3.14159->toRepresentation());
+    assertEquals(['3.14', '3.14159'], $f->eval(|[3.14, 3.14159]->map(v | $v->toRepresentation())));
 }
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testFloatToRepresentationWithExcessTrailingZeros():Boolean[1]
+function <<PCT.test>> meta::pure::functions::string::tests::toRepresentation::testFloatToRepresentationWithExcessTrailingZeros<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('17.0', 17.0->toRepresentation());
-    assertEquals('17.0', 17.000->toRepresentation());
+    assertEquals(['17.0', '17.0'], $f->eval(|[17.0, 17.000]->map(v | $v->toRepresentation())));
 }
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testFloatToRepresentationWithNoLeadingZero():Boolean[1]
+function <<PCT.test>> meta::pure::functions::string::tests::toRepresentation::testFloatToRepresentationWithNoLeadingZero<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('0.01', 0.01->toRepresentation());
-    assertEquals('0.01', .01->toRepresentation());
+    assertEquals(['0.01', '0.01'], $f->eval(|[0.01, .01]->map(v | $v->toRepresentation())));
 }
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testFloatToRepresentationWithPositiveExponent():Boolean[1]
+function <<PCT.test>> meta::pure::functions::string::tests::toRepresentation::testFloatToRepresentationWithPositiveExponent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('134210000.0', 134.21e6->toRepresentation());
-    assertEquals('134210000.0', 1.3421e8->toRepresentation());
-    assertEquals('134210000.0', 0.13421e9->toRepresentation());
-    assertEquals('134210000.0', 134210000.0->toRepresentation());
+    assertEquals(['134210000.0', '134210000.0', '134210000.0', '134210000.0'],
+                 $f->eval(|[134.21e6, 1.3421e8, 0.13421e9, 134210000.0]->map(v | $v->toRepresentation())));
 }
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testFloatToRepresentationWithNegativeExponent():Boolean[1]
+function <<PCT.test>> meta::pure::functions::string::tests::toRepresentation::testFloatToRepresentationWithNegativeExponent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('0.000000013421', 134.21e-10->toRepresentation());
-    assertEquals('0.000000013421', 1.3421e-8->toRepresentation());
-    assertEquals('0.000000013421', 0.13421e-7->toRepresentation());
-    assertEquals('0.000000013421', 0.000000013421->toRepresentation());
+    assertEquals(['0.000000013421', '0.000000013421', '0.000000013421', '0.000000013421'],
+                 $f->eval(|[134.21e-10, 1.3421e-8, 0.13421e-7, 0.000000013421]->map(v | $v->toRepresentation())));
 }
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testBooleanToRepresentation():Boolean[1]
+function <<PCT.test>> meta::pure::functions::string::tests::toRepresentation::testBooleanToRepresentation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('true', true->toRepresentation());
-    assertEquals('false', false->toRepresentation());
+    assertEquals(['true', 'false'], $f->eval(|[true, false]->map(v | $v->toRepresentation())));
 }
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testStringToRepresentation():Boolean[1]
+function <<PCT.test>> meta::pure::functions::string::tests::toRepresentation::testStringToRepresentation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('\'the quick brown fox jumps over the lazy dog\'', 'the quick brown fox jumps over the lazy dog'->toRepresentation());
-    assertEquals('\'\'', ''->toRepresentation());
-    assertEquals('\'\\\\\'', '\\'->toRepresentation());
-    assertEquals('\'\\n\'', '\n'->toRepresentation());
-    assertEquals('\'the quick brown fox jumps over the lazy \\\\ \\\'dog\\\'\'', 'the quick brown fox jumps over the lazy \\ \'dog\''->toRepresentation());
+    assertEquals(
+        ['\'the quick brown fox jumps over the lazy dog\'',
+         '\'\'',
+         '\'\\\\\'',
+         '\'\\n\'',
+         '\'the quick brown fox jumps over the lazy \\\\ \\\'dog\\\'\''],
+        $f->eval(|['the quick brown fox jumps over the lazy dog', '', '\\', '\n', 'the quick brown fox jumps over the lazy \\ \'dog\'']->map(v | $v->toRepresentation()))
+    );
 }
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testSimpleDateToRepresentation():Boolean[1]
+function <<PCT.test>> meta::pure::functions::string::tests::toRepresentation::testSimpleDateToRepresentation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('%2014-01-02T01:54:27.352', %2014-01-01T20:54:27.352-0500->toRepresentation());
+    assertEquals('%2014-01-02T01:54:27.352', $f->eval(|%2014-01-01T20:54:27.352-0500->toRepresentation()));
 }
 
-function <<test.Test>>  meta::pure::functions::string::tests::toRepresentation::testDateTimeWithTimezoneToRepresentation():Boolean[1]
+function <<PCT.test>>  meta::pure::functions::string::tests::toRepresentation::testDateTimeWithTimezoneToRepresentation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('%2014-01-01T00:00:00.0000', %2014-01-01T00:00:00.0000+0000->toRepresentation());
-    assertEquals('%2014-01-01T00:00:00.0000', %2014-01-01T00:00:00.0000-0000->toRepresentation());
-
-    assertEquals('%2014-01-01T00:00:00.000', %2014-01-01T00:00:00.000+0000->toRepresentation());
-    assertEquals('%2014-01-01T00:00:00.000', %2014-01-01T00:00:00.000-0000->toRepresentation());
-
-    assertEquals('%2014-01-01T00:00:00.0', %2014-1-1T0:00:00.0+0000->toRepresentation());
-    assertEquals('%2014-01-01T00:00:00.0', %2014-1-1T0:00:00.0-0000->toRepresentation());
-
-    assertEquals('%2014-01-01T00:00', %2014-1-1T0:00+0000->toRepresentation());
-    assertEquals('%2014-01-01T00:00', %2014-1-1T0:00-0000->toRepresentation());
+    assertEquals(
+        ['%2014-01-01T00:00:00.0000', '%2014-01-01T00:00:00.0000',
+         '%2014-01-01T00:00:00.000', '%2014-01-01T00:00:00.000',
+         '%2014-01-01T00:00:00.0', '%2014-01-01T00:00:00.0',
+         '%2014-01-01T00:00', '%2014-01-01T00:00'],
+        $f->eval(|[
+            %2014-01-01T00:00:00.0000+0000, %2014-01-01T00:00:00.0000-0000,
+            %2014-01-01T00:00:00.000+0000, %2014-01-01T00:00:00.000-0000,
+            %2014-1-1T0:00:00.0+0000, %2014-1-1T0:00:00.0-0000,
+            %2014-1-1T0:00+0000, %2014-1-1T0:00-0000
+        ]->map(d | $d->toRepresentation()))
+    );
 }
 
-function <<test.Test>>  meta::pure::functions::string::tests::toRepresentation::testDateTimeToRepresentation():Boolean[1]
+function <<PCT.test>>  meta::pure::functions::string::tests::toRepresentation::testDateTimeToRepresentation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('%2014-01-01T00:00:00.000', %2014-01-01T00:00:00.000->toRepresentation());
-    assertEquals('%2014-01-01T00:00:00.00', %2014-01-01T00:00:00.00->toRepresentation());
-    assertEquals('%2014-01-01T00:00:00.0', %2014-1-1T0:00:00.0->toRepresentation());
-    assertEquals('%2014-01-01T00:00:00', %2014-1-1T0:00:00->toRepresentation());
+    assertEquals(
+        ['%2014-01-01T00:00:00.000', '%2014-01-01T00:00:00.00', '%2014-01-01T00:00:00.0', '%2014-01-01T00:00:00'],
+        $f->eval(|[%2014-01-01T00:00:00.000, %2014-01-01T00:00:00.00, %2014-1-1T0:00:00.0, %2014-1-1T0:00:00]->map(d | $d->toRepresentation()))
+    );
 }
 
-function <<test.Test>>  meta::pure::functions::string::tests::toRepresentation::testDateToRepresentation():Boolean[1]
+function <<PCT.test>>  meta::pure::functions::string::tests::toRepresentation::testDateToRepresentation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('%2014-01-01', %2014-01-01->toRepresentation());
-    assertEquals('%2014-01-01', %2014-1-1->toRepresentation());
-
-    assertEquals('%2014-01', %2014-01->toRepresentation());
-    assertEquals('%2014-01', %2014-1->toRepresentation());
-
-    assertEquals('%2014', %2014->toRepresentation());
+    assertEquals(
+        ['%2014-01-01', '%2014-01-01', '%2014-01', '%2014-01', '%2014'],
+        $f->eval(|[%2014-01-01, %2014-1-1, %2014-01, %2014-1, %2014]->map(d | $d->toRepresentation()))
+    );
 }
 
 //function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testClassInstanceToRepresentation():Boolean[1]
@@ -132,14 +124,14 @@ function <<test.Test>>  meta::pure::functions::string::tests::toRepresentation::
 //    assert($personRepr->startsWith('<Anonymous_') || $personRepr->startsWith('<@_'), 'Expected %r to start with \'<Anonymous_\'', $personRepr);
 //}
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testClassToRepresentation():Boolean[1]
+function <<PCT.test>> meta::pure::functions::string::tests::toRepresentation::testClassToRepresentation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('meta::pure::functions::string::tests::toRepresentation::ST_Person', ST_Person->toRepresentation());
+    assertEquals('meta::pure::functions::string::tests::toRepresentation::ST_Person', $f->eval(|ST_Person->toRepresentation()));
 }
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testFunctionToRepresentation():Boolean[1]
+function <<PCT.test>> meta::pure::functions::string::tests::toRepresentation::testFunctionToRepresentation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('meta::pure::functions::string::toRepresentation_Any_1__String_1_', meta::pure::functions::string::toRepresentation_Any_1__String_1_->toRepresentation());
+    assertEquals('meta::pure::functions::string::toRepresentation_Any_1__String_1_', $f->eval(|meta::pure::functions::string::toRepresentation_Any_1__String_1_->toRepresentation()));
 }
 
 Class <<test.TestDependency>> meta::pure::functions::string::tests::toRepresentation::ST_List<T>

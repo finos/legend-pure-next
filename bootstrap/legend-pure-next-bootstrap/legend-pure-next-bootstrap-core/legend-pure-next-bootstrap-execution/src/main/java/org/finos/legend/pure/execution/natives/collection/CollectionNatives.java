@@ -85,6 +85,18 @@ public class CollectionNatives
             return col._values().get(0);
         });
 
+        // toOne(T[*], message:String[1]) : T[1]
+        natives.put("toOne_T_MANY__String_1__T_1_", (args, eval, genericType, multiplicity) ->
+        {
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            if (col._values().size() != 1)
+            {
+                String msg = (String) _E_ValueSpecification.unwrap(args.get(1));
+                throw new RuntimeException(msg);
+            }
+            return col._values().get(0);
+        });
+
         // toOneMany(T[*]) : T[1..*]
         natives.put("toOneMany_T_MANY__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
