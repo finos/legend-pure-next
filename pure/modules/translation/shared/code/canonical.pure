@@ -13,10 +13,8 @@
 // limitations under the License.
 
 import meta::pure::compiler::*;
-import meta::pure::compiler::helper::pointer::*;
 import meta::pure::compiler::helper::type::*;
 import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::pointer::*;
 import meta::pure::metamodel::type::*;
 import meta::pure::metamodel::type::generics::*;
 import meta::pure::metamodel::valuespecification::*;
@@ -253,17 +251,14 @@ function meta::pure::translation::shared::inlineOpenVariablesViaRecompile(lambda
       true
    );
    // Pull the canonicalized function out of the result by functionName.
-   let canonical = $result.context->toOne().elementMap->values()
+   // compile() now invokes resolveAndReturnGraph internally before returning,
+   // so the elementMap values are already pointer-free — no per-FD walker
+   // needed here.
+   $result.context->toOne().elementMap->values()
       ->filter(e | $e->instanceOf(UserDefinedFunction))
       ->cast(@UserDefinedFunction<Any>)
       ->filter(udf | $udf.functionName == $canonicalName)
       ->toOne('inlineOpenVariables: canonicalized function not found after recompile; errors=' + $result.errors->joinStrings(' | '));
-   // Resolve every TempCompilerPointer the compile pipeline embedded in the
-   // canonical UDF's AST. Consumers (java translator, gallery, ...) read
-   // through GenericType.rawType and FunctionExpression.func and break on
-   // pointer's empty .name/.package slots. PointerGraphResolver runs at
-   // Truffle module load, not on recompile-derived ASTs, so resolve here.
-   $canonical->resolvePointersInFD($result.context->toOne())->cast(@UserDefinedFunction<Any>);
 }
 
 // ----------------------------------------------------------------------------
@@ -433,19 +428,18 @@ function meta::pure::translation::shared::localizeOpenVariablesViaRecompile(lamb
    // (e.g. an unresolved function pointer for a called UDF) leak silently into
    // translation as a malformed func slot.
    assert($result.errors->isEmpty(), | 'localizeOpenVariables: canonical recompile errors: ' + $result.errors->joinStrings(' | '));
+   // compile() resolves pointers internally; canonical is already pointer-free.
    let canonical = $result.context->toOne().elementMap->values()
       ->filter(e | $e->instanceOf(UserDefinedFunction))
       ->cast(@UserDefinedFunction<Any>)
       ->filter(udf | $udf.functionName == $canonicalName)
       ->toOne('localizeOpenVariables: canonicalized function not found after recompile; errors=' + $result.errors->joinStrings(' | '));
-   // Same pointer-resolution rationale as inlineOpenVariablesViaRecompile.
-   let resolved = $canonical->resolvePointersInFD($result.context->toOne())->cast(@UserDefinedFunction<Any>);
    // Restamp the return type/mult from the recompiled body's last expression.
    // We declared Any[*] before compiling (so the recompile couldn't fail on a
    // return mismatch); now that the body is a freshly-compiled metamodel element
    // its last expression carries the accurate inferred genericType/multiplicity,
    // which is the canonical function's real return contract.
-   $resolved->restampReturnFromBody();
+   $canonical->restampReturnFromBody();
 }
 
 // Replace a recompiled UDF's declared Any[*] return with its body's last
@@ -604,17 +598,7 @@ function meta::pure::translation::shared::evalFoldedFE(
    let foldedFE = ^$fe(parametersValues = $reducedParams);
    if ($fe.func->isEmpty(),
       | $foldedFE,
-      | // `fe.func` is a {@link PackageableFunctionPointer} after the
-        // PointerGraphResolver has run (~50ms once at module load). Resolve
-        // to the live Function via {@code pathToElement} before calling
-        // {@code evaluate}.
-        let funcRef = $fe.func->toOne();
-        let realFunc = if ($funcRef->instanceOf(meta::pure::metamodel::pointer::PackageableFunctionPointer),
-                           | meta::pure::functions::meta::pathToElement(
-                                $funcRef->cast(@meta::pure::metamodel::pointer::PackageableFunctionPointer<Any>).path
-                             )->cast(@Function<Any>),
-                           | $funcRef->cast(@Function<Any>)
-                       );
+      | let realFunc = $fe.func->toOne()->cast(@Function<Any>);
         if ($realFunc->hasSideEffect() || foldWouldTriggerEvalSideEffect($realFunc, $reducedParams),
            | $foldedFE,
            | // `evaluate(func, params)` takes a Function plus per-arg
@@ -676,12 +660,10 @@ function meta::pure::translation::shared::isEvalFamily(func: Function<Any>[1]): 
    );
 }
 
-// If `vs` is an AtomicValue whose `.value` is (or resolves to) a Function,
-// return it. Used by {@link foldWouldTriggerEvalSideEffect} to peek through
-// eval's first arg. Handles three shapes: a live Function PDO, a
-// PackageableFunctionPointer (resolved via {@code pathToElement}), and a
-// LambdaFunction (returned as a Function so the caller's stereotype check
-// reads empty — closures don't carry stereotypes).
+// If `vs` is an AtomicValue whose `.value` is a Function, return it. Used by
+// {@link foldWouldTriggerEvalSideEffect} to peek through eval's first arg.
+// compile() resolves every PackageableFunctionPointer at its boundary so the
+// value is a live Function (UDF or LambdaFunction) by the time it gets here.
 function meta::pure::translation::shared::extractFunctionValue(vs: ValueSpecification[1]): Function<Any>[0..1]
 {
    if (!$vs->instanceOf(AtomicValue),
@@ -690,14 +672,9 @@ function meta::pure::translation::shared::extractFunctionValue(vs: ValueSpecific
         if ($av.value->isEmpty(),
            | []->cast(@Function<Any>),
            | let v = $av.value->toOne();
-             if ($v->instanceOf(meta::pure::metamodel::pointer::PackageableFunctionPointer),
-                | meta::pure::functions::meta::pathToElement(
-                     $v->cast(@meta::pure::metamodel::pointer::PackageableFunctionPointer<Any>).path
-                  )->cast(@Function<Any>),
-                | if ($v->instanceOf(meta::pure::metamodel::function::Function),
-                     | $v->cast(@Function<Any>),
-                     | []->cast(@Function<Any>)
-                  )
+             if ($v->instanceOf(meta::pure::metamodel::function::Function),
+                | $v->cast(@Function<Any>),
+                | []->cast(@Function<Any>)
              );
         );
    );
@@ -889,13 +866,12 @@ function meta::pure::translation::shared::nestedIfToMultiIfViaRecompile(udf: Use
       false,
       true
    );
-   let canonical = $result.context->toOne().elementMap->values()
+   // compile() resolves pointers internally; canonical is already pointer-free.
+   $result.context->toOne().elementMap->values()
       ->filter(e | $e->instanceOf(UserDefinedFunction))
       ->cast(@UserDefinedFunction<Any>)
       ->filter(u | $u.functionName == $canonicalName)
       ->toOne('nestedIfToMultiIf: function not found after recompile; errors=' + $result.errors->joinStrings(' | '));
-   // Same rationale as inlineOpenVariablesViaRecompile — see resolvePointersInFD.
-   $canonical->resolvePointersInFD($result.context->toOne())->cast(@UserDefinedFunction<Any>);
 }
 
 // Protocol-AST walk — recurse first, then attempt to flatten this node.
@@ -1419,172 +1395,6 @@ function meta::pure::translation::shared::referencesVariable(vs: ValueSpecificat
 // when running in a context where the live registry isn't reachable (e.g.
 // detached compile in CI tooling), which isn't our case.
 // ============================================================================
-
-// ============================================================================
-// Post-recompile pointer resolution.
-//
-// compile-pure embeds TempCompilerPointer instances at every cross-element
-// reference to keep refs identity-stable across the compile's three passes.
-// In normal module-load flow Truffle's PointerGraphResolver swaps these for
-// the live target before any consumer reads through them. Canonical's
-// recompile invokes the compiler directly and returns the resulting UDF
-// straight to the caller — the resolver never runs, and consumers
-// (translators, printers, gallery) see GenericType.rawType ==
-// ClassPointer (path-only, .name empty) and FunctionExpression.func ==
-// PackageableFunctionPointer (.name empty). Reading those slots through
-// .name->toOne() or instanceOf(Class)+cast.name breaks.
-//
-// resolvePointersInFD walks the recompile output and swaps every pointer
-// found in a Type or Function slot for the live target via the registry
-// in result.context. The walk is shape-driven: it touches only the slots
-// that consumers actually look through (GenericType.rawType,
-// GenericType.typeArguments, FunctionType.parameters/returnType,
-// FunctionExpression.func, classifierGenericType, returnGenericType) and
-// recurses into lambda bodies and nested value specifications.
-// ============================================================================
-
-function meta::pure::translation::shared::resolvePointersInFD(
-   f: FunctionDefinition<Any>[1],
-   context: meta::pure::compiler::CompilerContext[1]
-): FunctionDefinition<Any>[1]
-{
-   $f->match([
-      udf: UserDefinedFunction<Any>[1] |
-         ^$udf(
-            expressionSequence    = $udf.expressionSequence->map(vs | $vs->resolvePointersInVS($context)),
-            classifierGenericType = $udf.classifierGenericType->resolvePointersInGTV($context)
-         ),
-      lam: LambdaFunction<Any>[1] |
-         ^$lam(
-            expressionSequence    = $lam.expressionSequence->map(vs | $vs->resolvePointersInVS($context)),
-            classifierGenericType = $lam.classifierGenericType->resolvePointersInGTV($context)
-         ),
-      other: FunctionDefinition<Any>[1] | $other
-   ]);
-}
-
-function meta::pure::translation::shared::resolvePointersInVS(
-   vs: ValueSpecification[1],
-   context: meta::pure::compiler::CompilerContext[1]
-): ValueSpecification[1]
-{
-   $vs->match([
-      fe: FunctionExpression[1] |
-         ^$fe(
-            parametersValues = $fe.parametersValues->map(p | $p->resolvePointersInVS($context)),
-            genericType      = $fe.genericType->resolvePointersInGenericType($context),
-            func             = $fe.func->map(fn | $fn->resolveFunctionPointerOrLeave($context))
-         ),
-      coll: meta::pure::metamodel::valuespecification::Collection[1] |
-         ^$coll(
-            values      = $coll.values->map(v | $v->resolvePointersInVS($context)),
-            genericType = $coll.genericType->resolvePointersInGenericType($context)
-         ),
-      av: AtomicValue[1] |
-         ^$av(
-            value       = $av.value->resolvePointersInAtomicValueValue($context),
-            genericType = $av.genericType->resolvePointersInGenericType($context)
-         ),
-      ve: meta::pure::metamodel::valuespecification::VariableExpression[1] |
-         ^$ve(genericType = $ve.genericType->resolvePointersInGenericType($context)),
-      other: ValueSpecification[1] | $other
-   ]);
-}
-
-// AtomicValue.value is Any[1] — most often a primitive but can hold a
-// compiled LambdaFunction (multi-if cond lambdas, match arms, pair branches).
-// Recurse into the lambda body; pass primitives through unchanged.
-function meta::pure::translation::shared::resolvePointersInAtomicValueValue(
-   v: Any[1],
-   context: meta::pure::compiler::CompilerContext[1]
-): Any[1]
-{
-   if($v->instanceOf(LambdaFunction),
-      | $v->cast(@LambdaFunction<Any>)->resolvePointersInFD($context),
-      | $v
-   );
-}
-
-// classifierGenericType / FunctionExpression.genericType / Collection.genericType
-// are typed `GenericTypeValue[1]`. Update the `.type` slot + recurse into
-// `.typeArguments` so the result type stays `GenericTypeValue`. Other GenericType
-// subclasses (Inferred, UserDefined, Undefined, ...) only appear inside a
-// GenericTypeValue's `.typeArguments` list or as `FunctionType.returnType`, and
-// go through {@link resolvePointersInGenericType}.
-function meta::pure::translation::shared::resolvePointersInGTV(
-   gtv: GenericTypeValue[1],
-   context: meta::pure::compiler::CompilerContext[1]
-): GenericTypeValue[1]
-{
-   ^$gtv(
-      type          = $gtv.type->resolveTypeMaybeRecurse($context),
-      typeArguments = $gtv.typeArguments->map(ta | $ta->resolvePointersInGenericType($context))
-   );
-}
-
-// Any GenericType — preserve subclass by matching. Only the three `.type`-
-// bearing variants need slot updates; pass others (UndefinedGenericType,
-// CompilerNotSetGenericType, GenericTypeOperation, TypeParameter binding)
-// through unchanged.
-function meta::pure::translation::shared::resolvePointersInGenericType(
-   gt: GenericType[1],
-   context: meta::pure::compiler::CompilerContext[1]
-): GenericType[1]
-{
-   $gt->match([
-      gtv: GenericTypeValue[1] | $gtv->resolvePointersInGTV($context),
-      igt: meta::pure::metamodel::type::generics::InferredGenericType[1] |
-         ^$igt(type = $igt.type->resolveTypeMaybeRecurse($context)),
-      udt: meta::pure::metamodel::type::generics::UserDefinedGenericType[1] |
-         ^$udt(type = $udt.type->resolveTypeMaybeRecurse($context)),
-      other: GenericType[1] | $other
-   ]);
-}
-
-// derefTypeIfPointer swaps a TempCompilerPointer for its live Type; for
-// FunctionType (a non-PE Type) we additionally recurse into parameters +
-// returnType because the FT itself is never a pointer but its nested
-// GenericTypes carry pointer rawTypes (e.g. a lambda's
-// classifierGenericType.typeArguments[0].type = FunctionType whose
-// returnType holds a ClassPointer-bearing GenericType).
-function meta::pure::translation::shared::resolveTypeMaybeRecurse(
-   t: Type[1],
-   context: meta::pure::compiler::CompilerContext[1]
-): Type[1]
-{
-   let derefed = $t->derefTypeIfPointer($context);
-   if($derefed->isEmpty(),
-      | $t,
-      | let d = $derefed->toOne();
-        if($d->instanceOf(FunctionType),
-           | let ft = $d->cast(@FunctionType);
-             ^$ft(
-                parameters = $ft.parameters
-                                ->map(p | $p->resolvePointersInVS($context)
-                                          ->cast(@meta::pure::metamodel::valuespecification::VariableExpression)),
-                returnType = $ft.returnType->resolvePointersInGenericType($context)
-             );,
-           | $d
-        );
-   );
-}
-
-// FunctionExpression.func is Function[0..1]; after compile it's typically a
-// PackageableFunctionPointer (or PropertyPointer / QualifiedPropertyPointer
-// for `.foo` accesses). Swap for the live Function; non-pointer values pass
-// through. dereferencePointer returns Any[1] so cast back to Function.
-function meta::pure::translation::shared::resolveFunctionPointerOrLeave(
-   fn: meta::pure::metamodel::function::Function<Any>[1],
-   context: meta::pure::compiler::CompilerContext[1]
-): meta::pure::metamodel::function::Function<Any>[1]
-{
-   if($fn->instanceOf(TempCompilerPointer),
-      | $fn->cast(@TempCompilerPointer)
-           ->dereferencePointer($context)
-           ->cast(@meta::pure::metamodel::function::Function<Any>),
-      | $fn
-   );
-}
 
 // ============================================================================
 // β-reduction support — substitute VariableExpression references in a

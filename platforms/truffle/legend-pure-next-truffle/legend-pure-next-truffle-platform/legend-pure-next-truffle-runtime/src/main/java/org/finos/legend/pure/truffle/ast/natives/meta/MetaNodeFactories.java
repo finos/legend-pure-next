@@ -147,6 +147,14 @@ public final class MetaNodeFactories
         registry.register("parse_String_1__String_1__PureFile_1_",
                 (args, gt, mul, fe) -> new ParseNode(args[0], args[1]));
 
+        // resolveAndReturnGraph — deep-copies the input element map and resolves
+        // every TempCompilerPointer it contains to a live target. Invoked at
+        // the end of meta::pure::compiler::compile so every caller (Truffle
+        // runtime, PDB writer, IDE, Pure recompile callers in canonical.pure)
+        // receives a pointer-free graph at the compile boundary.
+        registry.register("resolveAndReturnGraph_Map_1__PackageableElement_MANY_",
+                (args, gt, mul, fe) -> new ResolveAndReturnGraphNode(args[0]));
+
         // findFunctionsByNameAndArity — compiler native: search resolver for functions
         registry.register("findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_",
                 (args, gt, mul, fe) -> new FindFunctionsByNameAndArityNode(args[0], args[1]));

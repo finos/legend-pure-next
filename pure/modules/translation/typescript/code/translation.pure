@@ -424,9 +424,8 @@ function meta::external::language::typescript::translation::encodePeRef(v: Any[1
 {
    let isPe = $v->instanceOf(meta::pure::metamodel::PackageableElement);
    let pe   = $v->cast(@meta::pure::metamodel::PackageableElement);
-   // Use `elementToPath` rather than reading `.package` directly — the
-   // former routes through the resolver so cross-module ClassPointers (which
-   // have an unresolved `.package` slot) still produce their canonical path.
+   // Use `elementToPath` rather than reading `.package` directly so the
+   // path goes through the resolver (canonical paths for cross-module refs).
    let path = if ($isPe, | $pe->elementToPath(), | '');
    if (!$isPe || $path == '',
        | tsId('undefined'),
@@ -502,25 +501,17 @@ function meta::external::language::typescript::translation::containsParentRefOne
    ]);
 }
 
-// Resolve a FunctionExpression's target UserDefinedFunction. `fe.func` may be a
-// PackageableFunctionPointer after compile (the load-time PointerGraphResolver
-// doesn't cover every recompiled/nested call site), so deref via `pathToElement`
-// — the same resolution canonical.pure's partial-eval uses. Empty when func is
-// absent or doesn't resolve to a UDF (e.g. a native).
+// Resolve a FunctionExpression's target UserDefinedFunction. `fe.func` is a
+// live Function after compile() (resolveAndReturnGraph swaps every pointer
+// at the boundary). Empty when func is absent or isn't a UDF (e.g. a native).
 function meta::external::language::typescript::translation::resolveUdf(fe: FunctionExpression[1]): meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[0..1]
 {
    if ($fe.func->isEmpty(), | [], | $fe.func->toOne()->derefFuncToUdf());
 }
 function meta::external::language::typescript::translation::derefFuncToUdf(f: meta::pure::metamodel::function::Function<meta::pure::metamodel::type::Any>[1]): meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[0..1]
 {
-   // `f` may be any TempCompilerPointer subtype (PackageableFunctionPointer, or a
-   // generic compile pointer) — every pointer carries `.path`; resolve it to the
-   // live element. Non-pointers pass through.
-   let real = if ($f->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer),
-                  | meta::pure::functions::meta::pathToElement($f->cast(@meta::pure::metamodel::pointer::TempCompilerPointer).path),
-                  | $f);
-   if ($real->instanceOf(meta::pure::metamodel::function::UserDefinedFunction),
-      | $real->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>),
+   if ($f->instanceOf(meta::pure::metamodel::function::UserDefinedFunction),
+      | $f->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>),
       | []->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>));
 }
 
@@ -817,9 +808,32 @@ function meta::external::language::typescript::translation::newCoder(args: Value
         // read an earlier one.
         let assigns = $allEntries->map(e |
            tsExprStmt(tsBinary(tsAccess(tsId('self'), $e.name), '=', $e.initializer))->cast(@meta::external::language::typescript::metamodel::Statement));
-        if ($keyExprs->containsParentRef(),
+        let instExpr = if ($keyExprs->containsParentRef(),
            | tsCall(tsId('__newObj'), [tsObject([]), tsArrowBlock([tsParamNoType('self')], tsBlock($assigns))]),
            | tsObject($allEntries));
+        // Class-level constraints (incl. inherited via the generalization
+        // chain) fire at construction in Pure — `^Foo(...)` evaluates
+        // `Foo.constraints` against the new instance, with `$this` bound to
+        // it and any class-level typeVariables resolved from the holder's
+        // `typeVariableValues`. Same helper as castCoder uses for primitive
+        // constraints — single walker handles both kinds.
+        let target = $args->at(0)->holderTargetType();
+        let gt     = $args->at(0)->holderUserGenericType();
+        let siteTypeVarValues = $gt->match([
+           gtv: meta::pure::metamodel::type::generics::GenericTypeValue[1] | $gtv.typeVariableValues,
+           e:   meta::pure::metamodel::type::generics::GenericType[*]      | []->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)
+        ]);
+        // Bidirectional association binding: for each entry that is an
+        // association property (`firm`, `parent`, …), wire the partner side
+        // on the supplied other instance so e.g. `firm.employees` reaches back
+        // to the new Person. Runs BEFORE the constraint check so the
+        // constraint sees the fully-wired instance.
+        let withBinds = if ($target->isEmpty() || !$target->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+           | $instExpr,
+           | $instExpr->wrapWithAssociationBinds($target->toOne()->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>), $allEntries, $conv));
+        if ($target->isEmpty(),
+           | $withBinds,
+           | $withBinds->wrapWithConstraintChecks($target->toOne(), $siteTypeVarValues, $conv));
    );
 }
 
@@ -835,7 +849,24 @@ function meta::external::language::typescript::translation::classifierGenericTyp
    $holder->holderUserGenericType()
       ->filter(g | $g->rawType()->isNotEmpty()
                    && $g->rawType()->toOne()->instanceOf(meta::pure::metamodel::PackageableElement))
-      ->map(g | tsEntry('classifierGenericType', $g->genericTypeToCgtObject()));
+      ->map(g |
+         // For metamodel classes (anything under `meta::pure::metamodel::`),
+         // Pure has a CANONICAL UDPGT-PE (UserDefinedPackageableGenericType)
+         // singleton that instances share as their `classifierGenericType`.
+         // It lives at the conventional path
+         // `meta::pure::metamodel::type::generics::optimization::GenericType_<class-path-with-_>`,
+         // and tests like `testCopyPreservesCanonicalClassifierAnchor` assert
+         // both `classifierGenericType instanceOf PackageableElement` AND
+         // `elementToPath() == <that-path>`. Resolve directly to the UDPGT-PE
+         // so the canonical-anchor invariant holds across new + copy.
+         // User-class instances keep the self-describing `{type:..., __equalityKeys:[]}`
+         // object — they don't have UDPGT-PEs.
+         let path = $g->rawType()->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
+         if ($path->startsWith('meta::pure::metamodel::'),
+            | tsEntry('classifierGenericType', tsCall(tsId('__pureResolve'),
+                  [tsStrLit('meta::pure::metamodel::type::generics::optimization::GenericType_' + $path->replace('::', '_'))])),
+            | tsEntry('classifierGenericType', $g->genericTypeToCgtObject()));
+      );
 }
 
 // Render a GenericType as the self-describing `{ type: __pureResolve(path),
@@ -863,11 +894,10 @@ function meta::external::language::typescript::translation::genericTypeToCgtObje
    // `meta::pure::metamodel::*` classes are left unstamped so they keep their
    // existing (pointer/structural) equality — they're reference-compared.
    //
-   // The rawType is often a ClassPointer (compile-time reference) whose
-   // `.properties` are unresolved; resolve it to the live class via its
-   // pointer-aware path so `^X(...)` literals stamp the SAME keys as captured
-   // PDOs (otherwise their CGT shapes diverge and equality breaks). The `__`
-   // prefix keeps the key out of `__eq`'s structural compare and the Java lift.
+   // Look up the class via pathToElement to get the resolver's canonical
+   // instance — `^X(...)` literals must stamp the SAME keys as captured PDOs
+   // or their CGT shapes diverge and equality breaks. The `__` prefix keeps
+   // the key out of `__eq`'s structural compare and the Java lift.
    let eqEntry   = if ($rt->isEmpty() || !$rt->toOne()->instanceOf(meta::pure::metamodel::type::Class),
                        | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment),
                        | let path = $rt->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
@@ -913,7 +943,6 @@ function meta::external::language::typescript::translation::allUserProperties(
                     ->map(g | $g.general->rawType())
                     ->filter(t | $t->isNotEmpty()
                                  && $t->toOne()->instanceOf(meta::pure::metamodel::type::Class)
-                                 && !$t->toOne()->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer)
                                  && !$t->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->startsWith('meta::pure::metamodel::'))
                     ->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>);
    let inherited = $supers->map(s | $s->allUserProperties());
@@ -1556,9 +1585,207 @@ function meta::external::language::typescript::translation::castCoder(args: Valu
    //  - concrete USER target -> `__cast(src, 'path')` runtime type-check;
    //  - type-parameter target -> resolve T from its witness param at runtime;
    //  - metamodel target (`@Type`/`@Any`/…) or unresolved -> pass through.
+   // After the type check, the result is wrapped with the target's user
+   // constraints (own + inherited) — `cast(@P(8))` fires the constraint
+   // `$this < $x` with `$x` bound from `(8)` and `$this` bound to the value.
    let src = translateExpression($args->at(0), $conv);
-   let tgt = if ($args->size() >= 2, | $args->at(1)->holderTargetType(), | []->cast(@meta::pure::metamodel::type::Type));
-   if ($tgt->isEmpty(), | $src, | $tgt->toOne()->castResolvedExpr($src, $conv));
+   if ($args->size() < 2, | $src, |
+      let holder = $args->at(1);
+      let tgt    = $holder->holderTargetType();
+      if ($tgt->isEmpty(), | $src, |
+         let typed = $tgt->toOne()->castResolvedExpr($src, $conv);
+         let gt    = $holder->holderUserGenericType();
+         let siteTypeVarValues = $gt->match([
+            gtv: meta::pure::metamodel::type::generics::GenericTypeValue[1] | $gtv.typeVariableValues,
+            e:   meta::pure::metamodel::type::generics::GenericType[*]      | []->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)
+         ]);
+         $typed->wrapWithConstraintChecks($tgt->toOne(), $siteTypeVarValues, $conv);
+      );
+   );
+}
+
+// For property `propName` on `cls`, return (partnerName, partnerIsToMany)
+// when the property is one side of an Association — empty otherwise.
+// Walks `cls.propertiesFromAssociations`; for each match, reads `prop.owner`
+// (the Association) and picks the OTHER property by name. Mirrors Pure's
+// bidirectional wiring contract: every association property has exactly one
+// partner on the paired class.
+function meta::external::language::typescript::translation::findAssociationPartner(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1],
+   propName: String[1]
+): meta::pure::functions::collection::Pair<String, Boolean>[*]
+{
+   $cls.propertiesFromAssociations
+       ->filter(p | $p.name->toOne() == $propName)
+       ->filter(p | $p.owner->isNotEmpty() && $p.owner->toOne()->instanceOf(meta::pure::metamodel::relationship::Association))
+       ->map(p |
+          $p.owner->toOne()->cast(@meta::pure::metamodel::relationship::Association).properties
+              ->filter(x | $x.name->toOne() != $propName)
+              ->map(pt | pair($pt.name->toOne(), $pt.multiplicity->isToManyMult())));
+}
+
+// Wrap an instance expression so each association-property key set fires a
+// `__bindAssoc(self, self.<name>, <partnerName>, <toMany>)` after construction.
+// `entries` are the PropertyAssignment list emitted into the instance literal —
+// we walk them, look up `cls`'s association schema, and append one bind per
+// match. Non-association keys are no-ops. Returns `instExpr` unchanged when
+// nothing in `entries` is an association property.
+function meta::external::language::typescript::translation::wrapWithAssociationBinds(
+   instExpr: Expression[1],
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1],
+   entries: meta::external::language::typescript::metamodel::PropertyAssignment[*],
+   conv: Convention[1]
+): Expression[1]
+{
+   let binds = $entries->map(e |
+      $cls->findAssociationPartner($e.name)
+          ->map(p | tsExprStmt(tsCall(tsId('__bindAssoc'), [tsId('__this'), tsAccess(tsId('__this'), $e.name), tsStrLit($p.first), tsBoolLit($p.second)]))->cast(@meta::external::language::typescript::metamodel::Statement)));
+   if ($binds->isEmpty(),
+      | $instExpr,
+      | tsCall(tsArrowBlock([tsParamNoType('__this')], tsBlock($binds->concatenate([tsReturn(tsId('__this'))->cast(@meta::external::language::typescript::metamodel::Statement)]))), [$instExpr]));
+}
+
+// Wrap an instance expression in an IIFE that runs every user constraint
+// declared on `t` (and on its supertypes) against the instance before
+// returning it. `siteTypeVarValues` are the typeVariableValues supplied at
+// the use site (e.g. `[AtomicValue 8]` for `@P(8)`) — they're paired by
+// position with `t.typeVariables` to bind names like `$x` for the
+// constraint scope. Returns `instExpr` unchanged when there are no
+// constraints in the hierarchy.
+//
+// Error format mirrors the Java runtime (CastNode.validateConstraints):
+// `'Constraint :[<name-or-idx>] violated in the Class <Owner>'` plus an
+// optional `', Message: <msg>'` when the constraint carries a
+// `messageFunction`. Own constraints run BEFORE inherited (matches the
+// Truffle walk order).
+function meta::external::language::typescript::translation::wrapWithConstraintChecks(
+   instExpr: Expression[1],
+   t: meta::pure::metamodel::type::Type[1],
+   siteTypeVarValues: meta::pure::metamodel::valuespecification::ValueSpecification[*],
+   conv: Convention[1]
+): Expression[1]
+{
+   let stmts = emitConstraintsForType($t, $siteTypeVarValues, $conv);
+   if ($stmts->isEmpty(),
+      | $instExpr,
+      | // `((__this) => { <checks>; return __this; })(<instExpr>)`. `__this`
+        // is the JS identifier `$this` in the constraint body translates to
+        // (via safeJsName), so the predicate's `$this` resolves to the
+        // IIFE's param without any extra binding plumbing.
+        tsCall(
+           tsArrowBlock(
+              [tsParamNoType('__this')],
+              tsBlock($stmts->concatenate([tsReturn(tsId('__this'))->cast(@meta::external::language::typescript::metamodel::Statement)]))
+           ),
+           [$instExpr]
+        )
+   );
+}
+
+// Walk `t` + its generalization chain, emitting one Statement per
+// (Constraint, owner) pair. At each level the type's own typeVariables are
+// paired with `siteTypeVarValues` (from this level's use site or the
+// supertype's `Generalization.general.typeVariableValues`) to seed `let`
+// bindings for the constraint scope.
+function meta::external::language::typescript::translation::emitConstraintsForType(
+   t: meta::pure::metamodel::type::Type[1],
+   siteTypeVarValues: meta::pure::metamodel::valuespecification::ValueSpecification[*],
+   conv: Convention[1]
+): meta::external::language::typescript::metamodel::Statement[*]
+{
+   let isClass = $t->instanceOf(meta::pure::metamodel::type::Class);
+   let isPrim  = $t->instanceOf(meta::pure::metamodel::type::PrimitiveType);
+   if (!$isClass && !$isPrim,
+      | []->cast(@meta::external::language::typescript::metamodel::Statement),
+      | // Skip metamodel-internal types — their constraints (if any) belong
+        // to the host runtime, not the translated test surface.
+        let path = $t->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
+        if ($path == '' || $path->startsWith('meta::pure::metamodel::'),
+           | []->cast(@meta::external::language::typescript::metamodel::Statement),
+           | let typeVars       = if ($isClass,
+                                      | $t->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>).typeVariables,
+                                      | $t->cast(@meta::pure::metamodel::type::PrimitiveType).typeVariables);
+             let constraints    = if ($isClass,
+                                      | $t->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>).constraints,
+                                      | $t->cast(@meta::pure::metamodel::type::PrimitiveType).constraints);
+             let generalizations = if ($isClass,
+                                       | $t->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>).generalizations,
+                                       | $t->cast(@meta::pure::metamodel::type::PrimitiveType).generalizations);
+             let owner = $path->split('::')->last()->toOne();
+             let ownStmts = range(0, $constraints->size())->map(i |
+                emitOneConstraintCheck($constraints->at($i), $i, $owner, $typeVars, $siteTypeVarValues, $conv)
+             );
+             let inheritedStmts = $generalizations->map(g |
+                let general    = $g.general;
+                let superType  = $general->rawType();
+                let superTVV   = $general->match([
+                   gtv: meta::pure::metamodel::type::generics::GenericTypeValue[1] | $gtv.typeVariableValues,
+                   e:   meta::pure::metamodel::type::generics::GenericType[*]      | []->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)
+                ]);
+                if ($superType->isEmpty(),
+                   | []->cast(@meta::external::language::typescript::metamodel::Statement),
+                   | emitConstraintsForType($superType->toOne(), $superTVV, $conv));
+             );
+             $ownStmts->concatenate($inheritedStmts);
+        );
+   );
+}
+
+// Emit one `__checkConstraint(<predicate>, '<name>', '<owner>', <msgArrow>)`
+// call wrapped in a do-block IIFE so the typeVariable `let` bindings
+// (resolving `$x` etc. in the predicate) don't leak across sibling/inherited
+// constraints whose owners might declare different type-variable names.
+function meta::external::language::typescript::translation::emitOneConstraintCheck(
+   c: meta::pure::metamodel::constraint::Constraint[1],
+   idx: Integer[1],
+   owner: String[1],
+   typeVars: meta::pure::metamodel::valuespecification::VariableExpression[*],
+   siteTypeVarValues: meta::pure::metamodel::valuespecification::ValueSpecification[*],
+   conv: Convention[1]
+): meta::external::language::typescript::metamodel::Statement[1]
+{
+   // Anonymous constraints `[expr]` carry no name; match the Truffle runtime
+   // which renders them as their 0-based index.
+   let nameStr = if ($c.name->isEmpty() || $c.name->toOne() == '',
+                     | $idx->toString(),
+                     | $c.name->toOne());
+   // Each typeVar at this level gets a `let <safeName> = <translatedValue>;`
+   // before the check. Drop any extra/missing pairs silently (a malformed
+   // declaration shouldn't crash the translator; the predicate will surface
+   // its own ReferenceError if the binding is genuinely missing).
+   let n = if ($typeVars->size() < $siteTypeVarValues->size(),
+               | $typeVars->size(),
+               | $siteTypeVarValues->size());
+   let bindings = range(0, $n)->map(i |
+      tsLet(safeJsName($typeVars->at($i).name->toOne()), [], translateExpression($siteTypeVarValues->at($i), $conv))->cast(@meta::external::language::typescript::metamodel::Statement)
+   );
+   // Predicate body: the constraint's `functionDefinition` is a
+   // LambdaFunction<{->Boolean[1]}>. Single-expr body translates directly;
+   // multi-expr (shouldn't happen for a predicate, but be defensive) wraps
+   // in an IIFE.
+   let fd = $c.functionDefinition->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
+   let predExpr = if ($fd.expressionSequence->size() == 1,
+                      | translateExpression($fd.expressionSequence->toOne(), $conv),
+                      | tsCall(tsArrowBlock([], $fd.expressionSequence->buildTsFunctionBody($conv)), []));
+   // Optional message lambda — emit as `() => <msg>` so it's only evaluated
+   // on violation, matching Pure's semantics.
+   let msgFd = $c.messageFunction;
+   let msgArg = if ($msgFd->isEmpty(),
+                    | tsId('undefined'),
+                    | let mfd = $msgFd->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
+                      let mbody = if ($mfd.expressionSequence->size() == 1,
+                                      | translateExpression($mfd.expressionSequence->toOne(), $conv),
+                                      | tsCall(tsArrowBlock([], $mfd.expressionSequence->buildTsFunctionBody($conv)), []));
+                      tsArrowExpr([], $mbody);
+                 );
+   let callExpr = tsCall(tsId('__checkConstraint'), [$predExpr, tsStrLit($nameStr), tsStrLit($owner), $msgArg]);
+   // do-block IIFE: `(() => { let x = ...; __checkConstraint(...); })()` —
+   // statement-shaped so the outer arrow's body can hold a flat list of
+   // these without nested expression wiring.
+   tsExprStmt(tsCall(
+      tsArrowBlock([], tsBlock($bindings->concatenate([tsExprStmt($callExpr)->cast(@meta::external::language::typescript::metamodel::Statement)]))),
+      []
+   ));
 }
 
 // A concrete (non-type-parameter) cast target: emit a runtime type-check for a
@@ -1706,9 +1933,24 @@ function meta::external::language::typescript::translation::copyCoder(args: Valu
    // to the copy / enclosing instances.
    let assigns = $entries->map(e |
       tsExprStmt(tsBinary(tsAccess(tsId('self'), $e.name), '=', $e.initializer))->cast(@meta::external::language::typescript::metamodel::Statement));
-   if ($keyExprs->containsParentRef(),
+   // Non-parent-ref path: route through `__copy(base, {entries})` rather than
+   // a raw `{...base, ...entries}` spread. Raw spread enumerates only the
+   // proxy's `{__purePath, path}` own keys for a __pureResolve-backed base
+   // and silently drops `classifierGenericType` — the runtime helper pulls
+   // it in eagerly. Plain-object bases get a plain spread inside __copy.
+   let copyExpr = if ($keyExprs->containsParentRef(),
       | tsCall(tsId('__copyCtx'), [$base, tsArrowBlock([tsParamNoType('self')], tsBlock($assigns))]),
-      | tsObject([tsSpreadEntry($base)]->concatenate($entries)));
+      | tsCall(tsId('__copy'), [$base, tsObject($entries)]));
+   // Bidirectional association binding for any key set that names an
+   // association property. Same wrapper as newCoder uses — the class comes
+   // from the source value's inferred GenericType (e.g. for `^$pierre(...)`
+   // the genericType wraps LA_Person). Skip when the type isn't a concrete
+   // user Class (pointer, metamodel-internal, etc.) — those can't carry the
+   // user-association schema we need.
+   let srcType = $args->at(0).genericType->rawType();
+   if ($srcType->isEmpty() || !$srcType->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+      | $copyExpr,
+      | $copyExpr->wrapWithAssociationBinds($srcType->toOne()->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>), $entries, $conv));
 }
 
 function meta::external::language::typescript::translation::regexpLikeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1911,12 +2153,14 @@ function meta::external::language::typescript::translation::pathToElementCoder(a
    tsCall(tsId('__pathToElement'), $argExprs);
 }
 
-// elementToPath(e:PackageableElement[1]) -> the element's path. Without
-// metadata, we treat the input as the path (works for class-name AtomicValues
-// emitted by genericType()/type() chains).
+// elementToPath(e:PackageableElement[1]) -> the element's path. Dispatch
+// through a runtime helper: a string input is returned as-is (works for
+// class-name AtomicValues emitted by `genericType()/type()` chains); a
+// __pureResolve proxy (carrying `path`) returns its `path` slot; plain
+// objects with a `.path` field do the same.
 function meta::external::language::typescript::translation::elementToPathCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   translateExpression($args->at(0), $conv);
+   tsCall(tsId('__elementToPath'), [translateExpression($args->at(0), $conv)]);
 }
 
 // list(values...) -> `{ values: [...args] }` matches Pure's List wrapper. Some
@@ -2711,7 +2955,6 @@ function meta::external::language::typescript::translation::collectReferencedUdf
    $vs->match([
       {fe: FunctionExpression[1] |
          // Recurse into the args first, then check if this FE calls a UDF.
-         // `fe.func` may be a PackageableFunctionPointer — resolveUdf derefs it.
          let acc1 = $fe.parametersValues->collectReferencedUdfs($seen);
          let udfOpt = $fe->resolveUdf();
          if ($udfOpt->isEmpty(),

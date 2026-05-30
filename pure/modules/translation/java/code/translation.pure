@@ -240,20 +240,19 @@ function <<access.private>> meta::external::language::java::translation::binaryI
 // which auto-unboxes Object→Long/Double via {@code longValue()/doubleValue()}.
 function <<access.private>> meta::external::language::java::translation::binaryOperandCast(expr: Code[1], rawType: meta::pure::metamodel::type::Type[1]): Code[1]
 {
-   let deref = $rawType->derefTempPointer();
    // For primitive targets, cast through the boxed equivalent first so
    // {@code j_cast(javaLong())}'s boxed-to-primitive proxy fires (emitting
    // {@code ((Long) x).longValue()}). A direct {@code (long) someObject}
    // doesn't compile.
-   if ($deref == meta::pure::metamodel::type::primitives::Integer,
+   if ($rawType == meta::pure::metamodel::type::primitives::Integer,
       | $expr->j_castWithoutChecks(javaClass('java.lang.Long'))->j_cast(javaLong()),
-   |if ($deref == meta::pure::metamodel::type::primitives::Float
-      || $deref == meta::pure::metamodel::type::primitives::Decimal
-      || $deref == meta::pure::metamodel::type::primitives::Number,
+   |if ($rawType == meta::pure::metamodel::type::primitives::Float
+      || $rawType == meta::pure::metamodel::type::primitives::Decimal
+      || $rawType == meta::pure::metamodel::type::primitives::Number,
       | $expr->j_castWithoutChecks(javaClass('java.lang.Double'))->j_cast(javaDouble()),
-   |if ($deref == meta::pure::metamodel::type::primitives::String,
+   |if ($rawType == meta::pure::metamodel::type::primitives::String,
       | $expr->j_castWithoutChecks(javaString()),
-   |if ($deref == meta::pure::metamodel::type::primitives::Boolean,
+   |if ($rawType == meta::pure::metamodel::type::primitives::Boolean,
       | $expr->j_castWithoutChecks(javaClass('java.lang.Boolean'))->j_cast(javaBoolean()),
       | $expr
    ))));
@@ -1088,7 +1087,7 @@ function <<access.private>> meta::external::language::java::translation::absCode
    let arg = $fe.parametersValues->at(0);
    let n   = $conv->translateExpression($arg);
    let rawOpt = $arg.genericType->rawType();
-   let isInt  = $rawOpt->isNotEmpty() && $rawOpt->toOne()->derefTempPointer() == meta::pure::metamodel::type::primitives::Integer;
+   let isInt  = $rawOpt->isNotEmpty() && $rawOpt->toOne() == meta::pure::metamodel::type::primitives::Integer;
    if ($isInt,
       | j_invoke(javaClass('java.lang.Math'), 'abs', [$n->j_cast(javaLong())], javaLong()),
       | j_invoke(javaClass('java.lang.Math'), 'abs', [$n->j_cast(javaDouble())], javaDouble())
@@ -1134,7 +1133,7 @@ function <<access.private>> meta::external::language::java::translation::toFloat
    let arg = $fe.parametersValues->at(0);
    let n   = $conv->translateExpression($arg);
    let raw = $arg.genericType->rawType();
-   let isStr = $raw->isNotEmpty() && $raw->toOne()->derefTempPointer() == meta::pure::metamodel::type::primitives::String;
+   let isStr = $raw->isNotEmpty() && $raw->toOne() == meta::pure::metamodel::type::primitives::String;
    if ($isStr,
       | j_invoke(javaClass('java.lang.Double'), 'parseDouble', [$n->j_cast(javaString())], javaDouble()),
       | $n->j_cast(javaDouble())
@@ -2053,24 +2052,7 @@ function meta::external::language::java::translation::pureTypeToJavaType(conv: C
         // continues; the use site will work as long as it doesn't need
         // type-specific dispatch.
         javaObject(),
-      | $conv->pureTypeToJavaTypeResolved($rawOpt->toOne()->derefTempPointer(), $mult)
-   );
-}
-
-// Deref a leaked TempCompilerPointer to its live target via the global
-// {@code lenientPathToElement} registry. {@link resolvePointersInFD} in
-// canonical.pure handles the recompile path, but {@link inlineOpenVariables}'s
-// no-capture fast-path skips recompile entirely — so pointers from the
-// original compile (e.g. {@code Map<U,V>} in the lambda's classifierGenericType
-// returnType) still reach the translator. Falling through with a pointer
-// makes {@code $raw == meta::pure::functions::collection::Map} fail (identity
-// mismatch with the live class) and the type-mapper would emit
-// {@code org.finos.test.Map} instead of {@code java.util.Map}.
-function meta::external::language::java::translation::derefTempPointer(t: meta::pure::metamodel::type::Type[1]): meta::pure::metamodel::type::Type[1]
-{
-   if ($t->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer),
-      | meta::pure::functions::meta::lenientPathToElement($t->cast(@meta::pure::metamodel::pointer::TempCompilerPointer).path)->toOne()->cast(@meta::pure::metamodel::type::Type),
-      | $t
+      | $conv->pureTypeToJavaTypeResolved($rawOpt->toOne(), $mult)
    );
 }
 
@@ -2315,8 +2297,8 @@ function <<access.private>> meta::external::language::java::translation::copyCod
    // cast / setter chain matches the generated helper class. If the type
    // isn't a Pure Class (e.g. inferred to Any), skip the cast and fall
    // through to a raw _copy() call.
-   let clsOpt = if ($rawOpt->isNotEmpty() && $rawOpt->toOne()->derefTempPointer()->instanceOf(meta::pure::metamodel::type::Class),
-      | [javaClass($conv.basePackageName + '.' + $rawOpt->toOne()->derefTempPointer()->cast(@meta::pure::metamodel::PackageableElement).name->toOne())],
+   let clsOpt = if ($rawOpt->isNotEmpty() && $rawOpt->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+      | [javaClass($conv.basePackageName + '.' + $rawOpt->toOne()->cast(@meta::pure::metamodel::PackageableElement).name->toOne())],
       | []->cast(@meta::external::language::java::metamodel::Class)
    );
    let typedSrc = if ($clsOpt->isEmpty(), | $srcCode, | $srcCode->j_cast($clsOpt->toOne()));
@@ -2616,17 +2598,11 @@ function <<access.private>> meta::external::language::java::translation::extract
    // classifierGenericType.typeArguments[0].rawType(). The instance's
    // own `.genericType` slot inherits from VS and points to GMH itself
    // (not the wrapped class), so we'd extract "...Holder" if we used it.
-   //
-   // {@code derefTempPointer} resolves any leaked TempCompilerPointer to the
-   // live class — the no-capture fast-path in canonical's inlineOpenVariables
-   // skips pointer-resolution, so pointers still flow through to here in
-   // those cases. Reading `.name` directly on a pointer trips the runtime
-   // pointer-access guard.
    let typeArgs = $gmh.classifierGenericType.typeArguments;
    if ($typeArgs->isNotEmpty(),
       | let raw = $typeArgs->at(0)->rawType();
         if ($raw->isNotEmpty() && $raw->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
-           | $raw->toOne()->derefTempPointer()->cast(@meta::pure::metamodel::PackageableElement).name->toOneMany()->at(0),
+           | $raw->toOne()->cast(@meta::pure::metamodel::PackageableElement).name->toOneMany()->at(0),
            | 'PureInstance'
         );,
       | 'PureInstance'
@@ -3036,7 +3012,7 @@ function <<access.private>> meta::external::language::java::translation::extract
    let rawOpt   = $src.genericType->rawType();
    if ($rawOpt->isEmpty(),
       | []->cast(@meta::external::language::java::translation::ClassRef),
-      | let raw = $rawOpt->toOne()->derefTempPointer();
+      | let raw = $rawOpt->toOne();
         if (!$raw->instanceOf(meta::pure::metamodel::type::Class),
            | []->cast(@meta::external::language::java::translation::ClassRef),
            | let className = $raw->cast(@meta::pure::metamodel::PackageableElement).name->toOne();

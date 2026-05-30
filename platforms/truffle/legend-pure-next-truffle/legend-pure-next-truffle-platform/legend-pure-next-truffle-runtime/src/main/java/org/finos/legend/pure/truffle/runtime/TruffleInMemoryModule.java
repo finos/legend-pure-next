@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
-import org.finos.legend.pure.truffle.runtime.helper.PointerGraphResolver;
 import org.finos.legend.pure.truffle.runtime.helper.TypeCache;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -41,7 +40,9 @@ import java.util.Set;
  * canonicalisation pass is needed because {@code compile} already runs
  * with the resolver in scope — references to types in dependency modules
  * (e.g. {@code Integer}) are bound to the resolver's canonical objects
- * during pass 3.</p>
+ * during pass 3, and the {@code resolveAndReturnGraph} native fires at the
+ * end of compile to swap every remaining TempCompilerPointer for its live
+ * target before the elements ever leave compile-pure.</p>
  */
 public final class TruffleInMemoryModule implements TruffleModule
 {
@@ -52,8 +53,7 @@ public final class TruffleInMemoryModule implements TruffleModule
     private final TruffleTypeCache typeCache = new TypeCache();
 
     public TruffleInMemoryModule(String name, List<String> dependencies, PureSequence elements,
-                                 TruffleMetadataAccess resolver,
-                                 PointerGraphResolver.ResolveProgress resolveProgress)
+                                 TruffleMetadataAccess resolver)
     {
         this.name = name;
         this.dependencies = List.copyOf(dependencies);
@@ -71,30 +71,21 @@ public final class TruffleInMemoryModule implements TruffleModule
             byPath.put(path, el);
             pathByElement.put(el, path);
         }
-        // Compile-pure leaves TempCompilerPointer refs throughout the result
-        // graph (Class.package, generalizations[].general.type, etc.) so
-        // cross-element refs stay identity-stable across the three compile
-        // passes. Resolve them now — analogous to FbsResolverHelper.resolvePointerRef
-        // at PDB load — so downstream readers (Truffle AST builder, runtime
-        // property reads, type walks) never see pointers.
-        long t0 = System.nanoTime();
-        PointerGraphResolver.resolveAll(byPath, resolver, resolveProgress);
-
-        // Note: we DO NOT drop synthesised `Package` PDOs whose path the
-        // resolver already owns. The registry permits Package path collisions
-        // (see TruffleModuleRegistry.register) and folds children across
-        // contributors via resolveAndMerge / foldChildrenInto — exactly what
-        // we need so this module's namespace contributions (test sub-packages,
-        // new user classes, etc.) appear in the canonical Package.children
-        // tree. Dropping them here used to bypass that mechanism and made
+        // Pointer resolution happens inside meta::pure::compiler::compile
+        // (via the resolveAndReturnGraph native) BEFORE the elements reach
+        // this constructor. No post-compile Java resolution is needed.
+        //
+        // We DO NOT drop synthesised `Package` PDOs whose path the resolver
+        // already owns. The registry permits Package path collisions (see
+        // TruffleModuleRegistry.register) and folds children across contributors
+        // via resolveAndMerge / foldChildrenInto — exactly what we need so
+        // this module's namespace contributions (test sub-packages, new user
+        // classes, etc.) appear in the canonical Package.children tree.
+        // Dropping them here used to bypass that mechanism and made
         // Package.children-walking discovery (notably runTests/runPCTTests)
         // silently see zero results. Symmetric teardown lives in
         // TruffleModuleRegistry.unregister: when this module is dropped, its
         // contributed children are identity-removed from the surviving anchor.
-
-        long elapsedMs = (System.nanoTime() - t0) / 1_000_000;
-        System.err.println("[TruffleInMemoryModule] " + name + ": resolved pointer graph for "
-                + byPath.size() + " elements in " + elapsedMs + " ms");
     }
 
     @Override

@@ -224,15 +224,16 @@ public final class PureClassRegistry
             Object general = readField(g, "general");
             Object parent = general != null ? readField(general, "type") : null;
             // Class-info population can fire DURING compile-pure execution
-            // (lazy on first PDO construction), before TruffleInMemoryModule
-            // post-processing resolves pointers in the result graph. At that
-            // moment `parent` may still be a TempCompilerPointer (the
-            // compiler wraps cross-element type refs as pointers — see
-            // [_Pointer.pure]). Pointers have no `generalizations` slot, so
-            // walking through them truncates the hierarchy and the leaf class
-            // loses inherited slots like `classifierGenericType` from Any.
-            // Deref ONCE during the walk — purely a hierarchy query, not a
-            // runtime read deref.
+            // (lazy on first PDO construction). The new resolveAndReturnGraph
+            // boundary in compile() resolves pointers in the FINAL result,
+            // but mid-compile PDOs constructed before that boundary still
+            // carry pointer-shaped parent refs (the compiler wraps cross-
+            // element type refs as TempCompilerPointer — see [_Pointer.pure]).
+            // Pointers have no `generalizations` slot, so walking through
+            // them truncates the hierarchy and the leaf class loses inherited
+            // slots like `classifierGenericType` from Any. Deref here is the
+            // compile-time runtime infrastructure handling mid-compile state,
+            // not a post-compile workaround.
             parent = derefIfPointer(parent, resolver);
             if (parent != null) collectHierarchy(parent, sink, seen, resolver);
         }

@@ -288,11 +288,7 @@ public final class TruffleBackend implements PureBackend
                         {
                             deps.add(existing.name());
                         }
-                        progress.post(new ProgressEvent("Resolving pointers", 0, elements.size(),
-                                memModuleName));
-                        registry.register(new TruffleInMemoryModule(memModuleName, deps, elements, registry,
-                                (done, total, path) -> progress.post(new ProgressEvent(
-                                        "Resolving pointers", done, total, path))));
+                        registry.register(new TruffleInMemoryModule(memModuleName, deps, elements, registry));
                     }
                 }
             }

@@ -56,17 +56,17 @@ function <<PCT.test>> meta::pure::functions::asserts::testSimpleAssertErrorColum
 // only the header + frame syntax is pinned.
 // ----------------------------------------------------------------------------
 
-function meta::pure::functions::asserts::tests::stackTrace::inner():String[1]
+function <<test.TestDependency>> meta::pure::functions::asserts::tests::stackTrace::inner():String[1]
 {
     []->cast(@String)->toOne();
 }
 
-function meta::pure::functions::asserts::tests::stackTrace::middle():String[1]
+function <<test.TestDependency>> meta::pure::functions::asserts::tests::stackTrace::middle():String[1]
 {
     meta::pure::functions::asserts::tests::stackTrace::inner();
 }
 
-function meta::pure::functions::asserts::tests::stackTrace::outer():String[1]
+function <<test.TestDependency>> meta::pure::functions::asserts::tests::stackTrace::outer():String[1]
 {
     meta::pure::functions::asserts::tests::stackTrace::middle();
 }

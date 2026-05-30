@@ -370,7 +370,7 @@ function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_loc
    assertEquals(
       '''
       ###Pure
-      function __canonical__::__canonical__(): Integer[1]
+      function <<test.TestDependency>> __canonical__::__canonical__(): Integer[1]
       {
         let x = 5;
         $x + 1;
@@ -393,7 +393,7 @@ function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_loc
    assertEquals(
       '''
       ###Pure
-      function __canonical__::__canonical__(): Integer[1]
+      function <<test.TestDependency>> __canonical__::__canonical__(): Integer[1]
       {
         let s = 'hi';
         length($s);

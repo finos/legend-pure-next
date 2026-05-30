@@ -120,28 +120,28 @@ function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchWithFu
     assertEquals([4,5,6], $f->eval(|%2005->match([{a:Integer[1]|1}, {a:String[*]|$a}, {a:String[1]|[6,7,1,2]}, {a:Date[1]|[4,5,6]}])));
 }
 
-Class meta::pure::functions::lang::tests::match::Geo
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::match::Geo
 {
     type : MA_GeographicEntityType[1];
 }
 
-Class meta::pure::functions::lang::tests::match::MA_Address extends Geo
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::match::MA_Address extends Geo
 {
     name : String[1];
 }
 
-Class meta::pure::functions::lang::tests::match::MA_Person
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::match::MA_Person
 {
     firstName : String[1];
     lastName : String[1];
 }
 
-Class meta::pure::functions::lang::tests::match::MA_Location extends Geo
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::match::MA_Location extends Geo
 {
     place : String[1];
 }
 
-Enum meta::pure::functions::lang::tests::match::MA_GeographicEntityType
+Enum <<test.TestDependency>> meta::pure::functions::lang::tests::match::MA_GeographicEntityType
 {
     CITY
 }
@@ -217,7 +217,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchUserDe
 // scalar. Without caller-driven shape coercion at the function-call binding,
 // property access inside that function fails because the receiver is a
 // sequence wrapper, not a PDO.
-Class meta::pure::functions::lang::tests::match::M_Node
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::match::M_Node
 {
     name : String[1];
 }
@@ -252,7 +252,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchOneArm
 // on this function. Bootstrap compiles + executes it fine; only Truffle's
 // PureASTBuilder.lowerBody chokes ("Cannot invoke PureSequence.size() because
 // seq is null").
-Class meta::pure::functions::lang::tests::match::MA_Node
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::match::MA_Node
 {
     name : String[1];
 }

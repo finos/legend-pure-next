@@ -47,7 +47,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::letFn::testLetAsLastSt
     assertEquals('last statement string', $f->eval(|letAsLastStatement()));
 }
 
-function meta::pure::functions::lang::tests::letFn::letAsLastStatement():String[1]
+function <<test.TestDependency>> meta::pure::functions::lang::tests::letFn::letAsLastStatement():String[1]
 {
     let last = 'last statement string';
 }
@@ -67,7 +67,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::letFn::testLetWithPara
    assertEquals('echo', $f->eval(|letWithParam('echo')->toOne()));
 }
 
-function meta::pure::functions::lang::tests::letFn::letChainedWithAnotherFunction(elements : Any[*]):Any[*]
+function <<test.TestDependency>> meta::pure::functions::lang::tests::letFn::letChainedWithAnotherFunction(elements : Any[*]):Any[*]
 {
    let classes = $elements->removeDuplicates();
 }
@@ -77,7 +77,7 @@ Class <<test.TestDependency>> meta::pure::functions::lang::tests::letFn::TestCla
    value:String[1];
 }
 
-function meta::pure::functions::lang::tests::letFn::letWithParam(val:String[1]):Any[*]
+function <<test.TestDependency>> meta::pure::functions::lang::tests::letFn::letWithParam(val:String[1]):Any[*]
 {
    let a = $val;
 }

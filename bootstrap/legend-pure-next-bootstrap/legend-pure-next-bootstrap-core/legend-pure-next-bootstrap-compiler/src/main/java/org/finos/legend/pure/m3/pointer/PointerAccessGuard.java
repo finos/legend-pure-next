@@ -34,8 +34,9 @@ package org.finos.legend.pure.m3.pointer;
  * {@code test-pure-self-host} regression hid a class of compile-pure bugs
  * until 2026-05-27). Any access that lands here is a real bug — fix at the
  * producer (wrap the right pointer type at construction) or at the consumer
- * (dereference via {@code PointerGraphResolver} / {@code derefTypeIfPointer}
- * before reading).</p>
+ * (dereference via {@code derefTypeIfPointer} inside compile-pure, or rely
+ * on the {@code resolveAndReturnGraph} native that fires at compile()'s end
+ * so post-compile consumers never see pointers in the first place).</p>
  *
  * <p>Generated impl classes (see {@code RdfJavaGenerator}) emit a
  * {@link #checkAccess} call at the top of every getter for an inherited

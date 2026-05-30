@@ -55,12 +55,12 @@ function <<PCT.test>> meta::pure::functions::collection::tests::contains::testCo
     assertFalse($f->eval(|$col->contains(^CO_Firm(legalName='f3'))));
 }
 
-Class meta::pure::functions::collection::tests::contains::ClassWithoutEquality
+Class <<test.TestDependency>> meta::pure::functions::collection::tests::contains::ClassWithoutEquality
 {
    name : String[1];
 }
 
-function meta::pure::functions::collection::tests::contains::comparator(a:ClassWithoutEquality[1], b:ClassWithoutEquality[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::functions::collection::tests::contains::comparator(a:ClassWithoutEquality[1], b:ClassWithoutEquality[1]):Boolean[1]
 {
    $a.name == $b.name
 }

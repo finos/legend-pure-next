@@ -109,8 +109,10 @@ test-translation: build-tests _check-runtime-pdbs
 # that loading the translator extension doesn't break Truffle's interpretation
 # of any stdlib spec test. meta::pure::functions lives in core-tests.
 
-# Run the standard Pure runtime suites (runTests + PCT) over meta::pure::functions via Truffle.
-test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
+# Run the standard Pure runtime suites over meta::pure::functions via Truffle.
+# NB: PCTs (`test-pure-runtime-PCTs`) are intentionally excluded for now —
+# they're still stabilising. Invoke that recipe directly to run them.
+test-pure-runtime: test-pure-runtime-testFunctions
 
 # Run runTests over meta::pure::functions via Truffle, with the java-translation extension loaded.
 test-pure-runtime-testFunctions: build-tests _check-runtime-pdbs

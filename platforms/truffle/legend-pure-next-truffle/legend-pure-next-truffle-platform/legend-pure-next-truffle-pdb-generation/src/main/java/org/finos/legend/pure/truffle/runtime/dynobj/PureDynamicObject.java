@@ -117,7 +117,7 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
                 {
                     throw new IllegalStateException(
                             "Unresolved pointer access: " + classInfo.purePath + "." + slotName
-                                    + " — dereference upstream via PointerGraphResolver or derefTypeIfPointer");
+                                    + " — pointer reached a non-pointer-native slot read. compile() should resolve every pointer via resolveAndReturnGraph before returning; check whether a producer skipped the boundary");
                 }
             }
         }
@@ -181,7 +181,7 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
         {
             throw new IllegalStateException(
                     "Unresolved pointer access: " + classInfo.purePath + "." + name
-                            + " — dereference upstream via PointerGraphResolver or derefTypeIfPointer");
+                            + " — pointer reached a non-pointer-native slot read. compile() should resolve every pointer via resolveAndReturnGraph before returning; check whether a producer skipped the boundary");
         }
         int slot = classInfo.slotIndex(name);
         if (slot >= 0 && slot < slots.length)

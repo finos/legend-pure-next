@@ -2023,9 +2023,26 @@ function __subtypeViaGeneralizations(cls: any, tPath: string): boolean {
 // separator so resolver.getElement finds the canonical path. The `name` slot
 // is just the last `::`-segment; it's informational and gets dropped by the
 // lift.
+// Inverse of __pathToElement: unwrap a PE reference back to its canonical
+// string path. Strings pass through (so AtomicValue class-name literals
+// emitted by genericType()/type() chains keep working); a __pureResolve
+// proxy / any object carrying `.path` yields that slot; everything else
+// pass-through unchanged so the caller's downstream code sees the raw value.
+function __elementToPath(v: any): any {
+  if (typeof v === "string") return v;
+  if (v && typeof v === "object" && typeof v.path === "string") return v.path;
+  return v;
+}
+
 function __pathToElement(p: string, sep?: string): any {
   const norm = sep && sep !== "::" ? p.split(sep).join("::") : p;
-  return { name: norm.split("::").pop() || "", path: norm };
+  // Return a __pureResolve proxy so downstream slot reads
+  // (`classifierGenericType`, `properties`, `generalizations`, …) route
+  // through the host resolver instead of hitting `undefined` on a plain
+  // `{name, path}` literal. Both `name` and `path` are still readable —
+  // `path` directly on the proxy target, `name` via the get-trap. Same
+  // pattern as `pathToElement` produces in Pure: a live PE reference.
+  return __pureResolve(norm);
 }
 
 
@@ -2148,6 +2165,21 @@ function __commonType(coll: any): string {
   for (let i = 1; i < arr.length; i++) t = __commonAncestor(t, __pureTypeOf(arr[i]) ?? "meta::pure::metamodel::type::Any");
   return t;
 }
+// Pure's constraint-violation throw. `ok` is the boolean from the constraint's
+// predicate (already evaluated); `name` is the constraint's id (or the
+// stringified index for anonymous `[expr]` constraints); `owner` is the short
+// name of the class/primitive declaring the constraint. `msgFn` (optional) is
+// lazy so the message expression — itself a Pure lambda body — is only
+// evaluated on violation. Error format mirrors the Java runtime
+// (CastNode.validateConstraints): `Constraint :[<id>] violated in the Class
+// <Owner>[, Message: <msg>]`.
+function __checkConstraint(ok: boolean, name: string, owner: string, msgFn?: () => any): void {
+  if (ok) return;
+  const m = msgFn ? msgFn() : undefined;
+  throw new Error("Constraint :[" + name + "] violated in the Class " + owner
+                  + (m !== undefined ? ", Message: " + m : ""));
+}
+
 function __castLeaf(p: string | undefined): string { return p ? (String(p).split("::").pop() as string) : "?"; }
 function __cast(value: any, targetPath: string): any {
   if (value === undefined || value === null) return value;
@@ -2244,10 +2276,65 @@ function __newObj(base: any, fill: (self: any) => void): any {
   try { fill(base); } finally { __ctorStack.pop(); }
   return base;
 }
+// Spread `src` into a plain object, eagerly materialising the
+// __pureResolve-proxy slots that an object spread would otherwise drop.
+// A PDO proxy carries only `{__purePath, path}` as OWN enumerable keys;
+// `classifierGenericType` and friends are lazy via the get-trap, so `{...proxy}`
+// loses them — downstream `$copy->genericType()` then hits
+// `Cannot read property 'type' of undefined`. Pull `classifierGenericType` into
+// the snapshot so the copy keeps a self-describing type tag. Non-proxy bases
+// pass through with a plain spread.
+function __spreadEager(src: any): any {
+  if (src === null || typeof src !== "object" || Array.isArray(src)) return src;
+  if ("__purePath" in src) {
+    return { ...src, classifierGenericType: (src as any).classifierGenericType };
+  }
+  return { ...src };
+}
+
+// Bidirectional association binding. When `^Person(firm=F)` runs, Pure wires
+// the paired `employees` side on the firm — so `F.employees` reaches back to
+// the new Person. The translator detects association props at codegen time
+// and emits one `__bindAssoc` call per association key set; here we mutate
+// the partner side (the OTHER instance's reverse slot) to include `this`.
+//
+// `toMany`: true if the partner side is `[*]`/`[1..*]`/`[0..*]` (Pure's
+// `isToManyMult`) — accumulate into an array, deduping by identity. false
+// → scalar replace, matching the metamodel's `[0..1]`/`[1]` side. Skips
+// undefined/null/primitive partners silently — Pure already requires
+// association partners to be instantiated within the new/copy expression;
+// an uninstantiated key produces an empty value, so there's nothing to bind.
+function __bindAssoc(thisObj: any, otherValue: any, reverseName: string, toMany: boolean): void {
+  if (otherValue === undefined || otherValue === null) return;
+  if (Array.isArray(otherValue)) {
+    for (const o of otherValue) __bindAssoc(thisObj, o, reverseName, toMany);
+    return;
+  }
+  if (typeof otherValue !== "object") return;
+  if (toMany) {
+    const cur = (otherValue as any)[reverseName];
+    const arr = Array.isArray(cur) ? cur : (cur === undefined || cur === null ? [] : [cur]);
+    if (arr.indexOf(thisObj) < 0) arr.push(thisObj);
+    (otherValue as any)[reverseName] = arr;
+  } else {
+    (otherValue as any)[reverseName] = thisObj;
+  }
+}
+
+// `^$x(k = v, ...)` — copy of `src` with the supplied key overrides applied.
+// Goes through __spreadEager so a proxy base keeps its classifier tag, then
+// merges the overrides. Used by copyCoder for the no-parent-ref form; the
+// `~`-referencing form goes through __copyCtx below.
+function __copy(base: any, overrides: any): any {
+  const self = __spreadEager(base);
+  if (self === null || typeof self !== "object") return self;
+  return Object.assign(self, overrides);
+}
+
 // `^$x(k = ~...)` — copy `src`, then fill with the copy on the stack so its
 // key expressions can reference `~` (the copy itself / enclosing instances).
 function __copyCtx(src: any, fill: (self: any) => void): any {
-  const self = (src !== null && typeof src === "object" && !Array.isArray(src)) ? { ...src } : src;
+  const self = __spreadEager(src);
   __ctorStack.push(self);
   try { fill(self); } finally { __ctorStack.pop(); }
   return self;

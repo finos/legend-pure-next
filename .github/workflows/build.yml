@@ -88,6 +88,19 @@ env:
 
 on: [push, pull_request]
 
+# deploy-pages needs `pages: write` + `id-token: write` (OIDC). `contents: read`
+# stays minimal — no other job writes back to the repo.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Serialise Pages deploys so rapid main pushes don't race. `cancel-in-progress:
+# false` lets an in-flight deploy finish rather than dropping it half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   # Single gate for the whole pipeline. Every top-level job depends on this
   # (directly via `needs: guard`, or transitively via `needs: bootstrap`), so
@@ -559,14 +572,45 @@ jobs:
       - name: Truffle native self-host
         run: just truffle::native::test-pure-self-host
 
-  # Run the language-java module's full test suite. Depends on truffle-self-host
-  # for the truffle CLI + Java extension jar (where `compileAndExecute` is
-  # registered — bootstrap doesn't have it). The module's `test-all` runs
-  # `runTests meta::external::language::java` via pure-truffle.
-  language-java:
-    name: Language Java module tests (Truffle)
+  # Prereqs that the `translations` matrix consumes — built in parallel as one
+  # matrix box so the visualizer doesn't draw long arrows around standalone
+  # nodes. Three targets:
+  #   - language-java       : pure-bootstrap builds shared/java.pdb, then
+  #                            pure-truffle runs `runTests meta::external::language::java`
+  #                            (the Java extension's JavaCompileNatives registers
+  #                            `compileAndExecute`, which bootstrap doesn't have).
+  #   - language-typescript : symmetric; the TS extension's GraalJS-backed
+  #                            `compileAndExecute`.
+  #   - translation-shared  : Pure-AST -> Pure-AST canonicalisation shared by
+  #                            the two translators; `just test-all` both builds
+  #                            translation-shared{,-tests}.pdb and runs the
+  #                            canonical-tests suite via pure-truffle.
+  # Per-entry: `build_cmd` is the optional pre-test-all build step (only the
+  # language modules need a separate `just build`); `pdb_files` is the
+  # space-separated tar input (shared has two files, languages have one).
+  translation-deps:
+    name: Translation deps (${{ matrix.target }})
     needs: truffle-self-host
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false  # let entries report independently
+      matrix:
+        include:
+          - target: language-java
+            working_dir: pure/modules/language/java
+            build_cmd: just build
+            pdb_files: shared/java.pdb
+            artifact: language-java-pdb
+          - target: language-typescript
+            working_dir: pure/modules/language/typescript
+            build_cmd: just build
+            pdb_files: shared/typescript.pdb
+            artifact: language-typescript-pdb
+          - target: translation-shared
+            working_dir: pure/modules/translation/shared
+            build_cmd: ''
+            pdb_files: shared/translation-shared.pdb shared/translation-shared-tests.pdb
+            artifact: translation-shared-pdb
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -613,23 +657,46 @@ jobs:
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
           tar -xf truffle-artifacts.tar
 
-      # `build` uses pure-bootstrap to compile shared/java.pdb;
-      # `test-all` runs `runTests meta::external::language::java` via pure-truffle
-      # (the Java extension's JavaCompileNatives registers `compileAndExecute`).
-      # No `language::*` submodule in the root Justfile — cd into the module.
-      - name: Language Java test
-        working-directory: pure/modules/language/java
-        run: |
-          just build
-          just test-all
+      # Skip when build_cmd is empty (translation-shared's test-all already builds).
+      - name: Build
+        if: matrix.build_cmd != ''
+        working-directory: ${{ matrix.working_dir }}
+        run: ${{ matrix.build_cmd }}
 
-  # Run the language-typescript module's full test suite. Same shape as
-  # language-java but using the TypeScript extension's GraalJS-backed
-  # `compileAndExecute`.
-  language-typescript:
-    name: Language TypeScript module tests (Truffle)
-    needs: truffle-self-host
+      - name: Test-all
+        working-directory: ${{ matrix.working_dir }}
+        run: just test-all
+
+      # Unquoted pdb_files lets bash word-split for the multi-file shared entry.
+      - name: Tar pdb
+        run: tar -cf ${{ matrix.artifact }}.tar ${{ matrix.pdb_files }}
+
+      - name: Upload pdb
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.tar
+          retention-days: 1
+
+  # Pure -> <target> translator. The two targets (java, typescript) run in
+  # parallel as matrix entries — UI groups them under one `translations` parent.
+  # Each entry runs test-all (translator self-tests + runtime suites) then
+  # gallery (renders the Pure/<target> side-by-side HTML). Each downloads only
+  # its own language pdb (`language-<target>-pdb`), but waits for the full
+  # `languages` matrix to finish — that's the price of `needs: languages` being
+  # one coarse arrow instead of per-matrix-entry edges.
+  translations:
+    name: Translation ${{ matrix.target }} (test-all + gallery)
+    needs: translation-deps
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: java
+            gallery_file: shared/java-translation-gallery.html
+          - target: typescript
+            gallery_file: shared/typescript-translation-gallery.html
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -668,18 +735,92 @@ jobs:
         with:
           name: truffle-artifacts
 
+      - name: Download translation-shared pdb
+        uses: actions/download-artifact@v8
+        with:
+          name: translation-shared-pdb
+
+      - name: Download language pdb
+        uses: actions/download-artifact@v8
+        with:
+          name: language-${{ matrix.target }}-pdb
+
       - name: Restore artifacts
         run: |
           tar -xf bootstrap-artifacts.tar
           mkdir -p ~/.m2/repository
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
           tar -xf truffle-artifacts.tar
+          tar -xf translation-shared-pdb.tar
+          tar -xf language-${{ matrix.target }}-pdb.tar
 
-      - name: Language TypeScript test
-        working-directory: pure/modules/language/typescript
+      - name: Translation ${{ matrix.target }} test-all + gallery
+        working-directory: pure/modules/translation/${{ matrix.target }}
         run: |
           just build
           just test-all
+          just gallery
+
+      - name: Upload translation gallery
+        uses: actions/upload-artifact@v7
+        with:
+          name: gallery-${{ matrix.target }}
+          path: ${{ matrix.gallery_file }}
+          retention-days: 1
+
+  # Publishes the translation galleries to GitHub Pages. The HTMLs are produced
+  # upstream by translation-java::gallery and translation-typescript::gallery
+  # and shipped as the gallery-java / gallery-typescript artifacts. Both files
+  # are self-contained (inline CSS/JS/data) so the deploy is just "drop into
+  # _site/". Runs only on push to main on the canonical repo so PRs and forks
+  # don't try to publish.
+  # One-time setup: repo Settings → Pages → Source = "GitHub Actions".
+  publish-gallery:
+    name: Publish galleries to GitHub Pages
+    needs: translations
+    if: github.repository == 'finos/legend-pure-next' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download java gallery
+        uses: actions/download-artifact@v8
+        with:
+          name: gallery-java
+          path: gallery-java
+
+      - name: Download typescript gallery
+        uses: actions/download-artifact@v8
+        with:
+          name: gallery-typescript
+          path: gallery-typescript
+
+      - name: Stage site
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp gallery-java/java-translation-gallery.html             _site/java.html
+          cp gallery-typescript/typescript-translation-gallery.html _site/typescript.html
+          cat > _site/index.html <<'EOF'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>legend-pure-next translation galleries</title>
+          <h1>legend-pure-next translation galleries</h1>
+          <ul>
+            <li><a href="java.html">Java translation gallery</a></li>
+            <li><a href="typescript.html">TypeScript translation gallery</a></li>
+          </ul>
+          EOF
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   # Single aggregation job: branch protection only needs to require this one.
   # Adding a new parallel job means listing it in `needs:` here — no changes
@@ -689,13 +830,24 @@ jobs:
   # but for the wrong reason).
   all-green:
     name: All checks passed
-    needs: [bootstrap, bootstrap-self-host, printer-compiled, printer-protocol, truffle-self-host, truffle-native-self-host, language-java, language-typescript]
+    needs:
+      - bootstrap
+      - bootstrap-self-host
+      - printer-compiled
+      - printer-protocol
+      - truffle-self-host
+      - truffle-native-self-host
+      - translation-deps
+      - translations
+      - publish-gallery
     if: always()
     runs-on: ubuntu-24.04
     steps:
       - name: Verify all dependencies succeeded
+        env:
+          HAS_FAILURE: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
         run: |
-          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+          if [[ "$HAS_FAILURE" == "true" ]]; then
             echo "One or more required checks failed or were cancelled."
             exit 1
           fi

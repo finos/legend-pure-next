@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.runtime;
 
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
-import org.finos.legend.pure.truffle.runtime.helper.PointerGraphResolver;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -152,8 +151,7 @@ public final class TruffleFromMemoryRunner
             deps.add(existing.name());
         }
         registry.register(new TruffleInMemoryModule(
-                moduleName, deps, testElements, registry,
-                PointerGraphResolver.ResolveProgress.NOOP));
+                moduleName, deps, testElements, registry));
     }
 
     private static PureSequence filterTestStereotyped(PureSequence elements, TruffleModuleRegistry registry)

@@ -397,8 +397,8 @@ public final class NewWithKeysNode extends PureNode
         // and isn't yet in the resolver (e.g. {@code buildEnumerationSkeleton}
         // wires an enum value's classifier as a pointer to the enum it's
         // about to register). The pointer carries the path the producer
-        // intends, and {@code PointerGraphResolver} canonicalises it at
-        // module construction. Accept — a pointer is by construction
+        // intends, and {@code resolveAndReturnGraph} (invoked inside compile)
+        // canonicalises it at the end of compile. Accept — a pointer is by construction
         // compile-pure-internal, not a user-supplied raw type swap. Must
         // run before the generalization walk: pointers carry only `path`,
         // so reading `.generalizations` on one trips the strict guard.

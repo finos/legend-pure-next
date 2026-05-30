@@ -102,12 +102,12 @@ function <<PCT.test>> meta::pure::functions::meta::tests::instanceOf::testInstan
 // This is the bug exposed by `_CompiledGraphPrinter.formatLiteral` when it
 // switched from declared-type strings to value-based `instanceOf` checks —
 // Truffle handled it correctly, Pure-on-Java did not.
-Class meta::pure::functions::meta::tests::instanceOf::AnyHolder
+Class <<test.TestDependency>> meta::pure::functions::meta::tests::instanceOf::AnyHolder
 {
     value: Any[1];
 }
 
-Class meta::pure::functions::meta::tests::instanceOf::NumberHolder
+Class <<test.TestDependency>> meta::pure::functions::meta::tests::instanceOf::NumberHolder
 {
     value: Number[1];
 }

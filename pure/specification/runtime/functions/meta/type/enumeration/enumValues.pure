@@ -32,7 +32,7 @@ function meta::pure::functions::meta::enumValues<E>(enumeration:Enumeration<E>[1
     );
 }
 
-Enum meta::pure::functions::meta::tests::enumValues::TestColor
+Enum <<test.TestDependency>> meta::pure::functions::meta::tests::enumValues::TestColor
 {
     RED, GREEN, BLUE
 }

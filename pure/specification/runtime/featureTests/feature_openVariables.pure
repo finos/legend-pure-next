@@ -49,7 +49,7 @@ function <<test.Test>> meta::pure::functions::tests::openVariables::testClosedVa
     assertEquals('start-a-b-c', $result);
 }
 
-function meta::pure::functions::tests::openVariables::applyMapper(values:String[*], fn:Function<{String[1]->String[1]}>[1]):String[*]
+function <<test.TestDependency>> meta::pure::functions::tests::openVariables::applyMapper(values:String[*], fn:Function<{String[1]->String[1]}>[1]):String[*]
 {
     $values->map($fn);
 }
@@ -82,7 +82,7 @@ function <<test.Test>> meta::pure::functions::tests::openVariables::testFoldAccu
 // with the same name does NOT corrupt the lambda's captured binding.
 // ────────────────────────────────────────────────────────────────────────────
 
-function meta::pure::functions::tests::openVariables::applyWithShadow(values:String[*], fn:Function<{String[1]->String[1]}>[1]):String[*]
+function <<test.TestDependency>> meta::pure::functions::tests::openVariables::applyWithShadow(values:String[*], fn:Function<{String[1]->String[1]}>[1]):String[*]
 {
     let suffix = '_WRONG';  // same name as the outer 'suffix' — must NOT leak into fn
     $values->map($fn);
