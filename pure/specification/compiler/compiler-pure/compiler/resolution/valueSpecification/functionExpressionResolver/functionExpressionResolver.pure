@@ -179,7 +179,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::topoSortKeyExpressions(fi:FunctionExpression[1], col:Collection[1], items:ValueSpecification[*], context:CompilerContext[1]):Pair<FunctionExpression, CompilerContext>[1]
 {
     let names = $items->map(it | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractKeyExpressionName($it));
-    let depLists = $items->map(it | ^List<Integer>(values = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractSiblingDeps($it, $names)));
+    // Drop self-edges: a key whose value reads `~.<its-own-name>` (e.g.
+    // `items = ~.items->map(...)`, including the compiler-synthesised
+    // `map(~.opt, closure)` from `^~.opt(...)` on an optional property) is
+    // reading the receiver/parent's value of that property — available before
+    // construction — not the in-progress sibling. It is never a genuine
+    // ordering cycle, so it must not register as one. Cross-edges (a -> b ->
+    // a) are preserved, so real cycles still error.
+    let depLists = range(0, $items->size())->map(i |
+        ^List<Integer>(values = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::extractSiblingDeps($items->at($i), $names)->filter(d | $d != $i)));
     let anyDep = $depLists->exists(d | $d.values->isNotEmpty());
     if(!$anyDep,
         | pair($fi, $context),

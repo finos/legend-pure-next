@@ -106,7 +106,10 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
     );
     ^CompilerResult<QualifiedProperty<Any>>(
         value = $compiledQP,
-        context = $ctx3
+        // Thread the stereotype/tag recording context (not $ctx3) so the QP's
+        // annotation references (profile/stereotype/tag) survive in the reverse
+        // index — discarding it drops them.
+        context = $tvAccum.context
     );
     );
 }

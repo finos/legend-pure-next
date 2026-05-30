@@ -17,3 +17,7 @@ Class test::new::parentRefError::Cycle
   a: String[*];
   b: String[*];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 3

@@ -65,6 +65,7 @@ public final class PureCompileMain
         {
             case "compile" -> compile(rest);
             case "execute" -> execute(rest);
+            case "execute-from-memory" -> executeFromMemory(rest);
             default ->
             {
                 System.err.println("Unknown command: " + command);
@@ -81,6 +82,7 @@ public final class PureCompileMain
         System.err.println("Commands:");
         System.err.println("  compile --base-pdb <file>... --source <dir> --output-dir <dir> [--tests <mode>]   Compile Pure sources against base PDB(s)");
         System.err.println("  execute --pdb <file>... --function <path> [--args <arg>...]   Execute a Pure function");
+        System.err.println("  execute-from-memory --pdb <file>... --source-dir <dir>... --function <path> [--args <arg>...]   Compile sources to an in-memory module then execute a function");
         System.err.println();
         System.err.println("Profiling options (work for both commands):");
         System.err.println("  --source-root <dir>             Probe <dir>/<sourceId> to embed Pure source content (repeatable)");
@@ -329,6 +331,110 @@ public final class PureCompileMain
             // (cpusampler, etc.) so their reports actually print, and any
             // in-flight Graal compilations write their `opt failed` events
             // into the captured err buffer before we scan it below.
+            runtime.close();
+            failOnGraalCompilationFailures(runtime);
+        }
+    }
+
+    /**
+     * {@code execute-from-memory}: same shape as {@link #execute}, but
+     * additionally compiles every Pure source under each {@code --source-dir}
+     * via Pure-on-Truffle and registers the filtered result as an in-memory
+     * module before resolving {@code --function}. Used by the
+     * {@code test-pure-runtime-inMemory-*} just recipes to drive
+     * {@code runTests} / {@code runPCTTests} over freshly-compiled tests
+     * instead of {@code core-tests.pdb} — exercising the from-source code
+     * path end-to-end without staging a PDB on disk.
+     *
+     * <p>Filter rule mirrors {@code TestElementFilter.isTestElement} (the
+     * bootstrap's core.pdb / core-tests.pdb split): keep test-stereotyped
+     * functions and every {@code Package} PDO; everything else (library
+     * helpers, profiles) must come through the resolver from the base PDBs.
+     * See {@link org.finos.legend.pure.truffle.runtime.TruffleFromMemoryRunner}.</p>
+     */
+    private static void executeFromMemory(String[] args) throws Exception
+    {
+        ProfilingOptions profiling = new ProfilingOptions();
+        args = consumeProfilingFlags(args, profiling);
+
+        List<String> pdbPaths = new ArrayList<>();
+        List<String> sourceDirs = new ArrayList<>();
+        String function = null;
+        List<String> fnArgs = new ArrayList<>();
+
+        for (int i = 0; i < args.length; i++)
+        {
+            switch (args[i])
+            {
+                case "--pdb" -> pdbPaths.add(args[++i]);
+                case "--source-dir" -> sourceDirs.add(args[++i]);
+                case "--function" -> function = args[++i];
+                case "--args" ->
+                {
+                    while (i + 1 < args.length && !args[i + 1].startsWith("--"))
+                    {
+                        fnArgs.add(args[++i]);
+                    }
+                }
+                default -> throw new IllegalArgumentException("Unknown option: " + args[i]);
+            }
+        }
+
+        if (pdbPaths.isEmpty() || sourceDirs.isEmpty() || function == null)
+        {
+            System.err.println("Usage: pure-truffle execute-from-memory --pdb <file>... --source-dir <dir>... --function <path> [--args <arg>...]");
+            System.exit(1);
+        }
+
+        // Same PDB-load + registry plumbing as execute().
+        org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry resolver =
+                new org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry();
+        java.util.List<org.finos.legend.pure.truffle.runtime.TrufflePdbLoader> loaders = new java.util.ArrayList<>();
+        for (String p : pdbPaths)
+        {
+            org.finos.legend.pure.truffle.runtime.TrufflePdbLoader loader =
+                    new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(Path.of(p));
+            resolver.register(loader);
+            loaders.add(loader);
+        }
+        for (var loader : loaders) loader.setResolver(resolver);
+        for (var loader : loaders) loader.preloadAll();
+        resolver.validate();
+
+        PureTruffleRuntime.Builder runtimeBuilder = PureTruffleRuntime.builder()
+                .withResolver(resolver)
+                .withParserExtensions(List.of(
+                        new org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension(),
+                        new org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension(),
+                        new org.finos.legend.pure.truffle.runtime.TruffleTestFileLanguageExtension(),
+                        new org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension(),
+                        new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()));
+        profiling.apply(runtimeBuilder);
+        PureTruffleRuntime runtime = runtimeBuilder.build();
+
+        try
+        {
+            // Compile sources to an inmem module BEFORE resolving --function:
+            // the function itself may live in the inmem module (e.g. a test
+            // helper) and would otherwise be unresolvable.
+            org.finos.legend.pure.truffle.runtime.TruffleFromMemoryRunner.compileAndRegister(
+                    resolver, runtime, sourceDirs, "inmem-runtime-tests");
+
+            Object fd = resolver.getElement(function);
+            if (fd == null)
+            {
+                System.err.println("Function not found: " + function);
+                System.exit(1);
+            }
+
+            Object result = runtime.execute(fd, fnArgs.toArray());
+            if (result != null)
+            {
+                System.out.println(result);
+            }
+        }
+        finally
+        {
             runtime.close();
             failOnGraalCompilationFailures(runtime);
         }

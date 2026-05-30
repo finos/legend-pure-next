@@ -221,6 +221,57 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
                 dependents.add(m.name());
             }
         }
+        modules.remove(name);
+        // Symmetric teardown of any Package-children mutations the removed
+        // module made via {@link #foldChildrenInto}. For every Package path
+        // the removed module contributed, find the remaining anchor Package
+        // (first contributor among the still-registered modules) and
+        // identity-remove the removed module's own Package children from
+        // it. This is the lifecycle inverse of register/resolveAndMerge:
+        // when the module was a non-anchor contributor, its children got
+        // folded into the anchor, and now we undo that fold; when it was
+        // the anchor itself, the mutated anchor PDO disappears with the
+        // module and the new anchor's children are pristine, so the
+        // identity-remove loop is a harmless no-op. Uniform across PDB and
+        // in-memory modules.
+        for (String path : removed.elementPaths())
+        {
+            Object removedElement = removed.getElement(path);
+            if (!(removedElement instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject removedPkg)
+                    || !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(
+                            removedPkg, "meta::pure::metamodel::Package"))
+            {
+                continue;
+            }
+            org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject newAnchor = null;
+            for (TruffleModule m : modules.values())
+            {
+                Object e = m.getElement(path);
+                if (e instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo
+                        && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(
+                                pdo, "meta::pure::metamodel::Package"))
+                {
+                    newAnchor = pdo;
+                    break;
+                }
+            }
+            if (newAnchor == null)
+            {
+                continue;
+            }
+            Object kidsObj = removedPkg.readSlot(SLOT_CHILDREN);
+            if (!(kidsObj instanceof org.finos.legend.pure.truffle.types.PureSequence removedKids))
+            {
+                continue;
+            }
+            List<Object> toRemove = new ArrayList<>(removedKids.size());
+            for (int i = 0; i < removedKids.size(); i++)
+            {
+                Object k = removedKids.getBoxed(i);
+                if (k != null) toRemove.add(k);
+            }
+            removeChildrenByIdentity(newAnchor, toRemove);
+        }
         // Drop cached element lookups owned by this module — otherwise
         // re-registering with fresh content (e.g. an IDE recompile of
         // welcome.pure) would still serve the old objects from the cache.
@@ -231,7 +282,6 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
         {
             elementCache.remove(path);
         }
-        modules.remove(name);
         functionsByNameArity = null;
         reverseAssocIndex = null;
         for (String d : dependents)
@@ -485,6 +535,8 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
 
     private static final int SLOT_CHILDREN =
             org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("children");
+    private static final int SLOT_PACKAGE =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("package");
 
     private static void foldChildrenInto(
             org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject anchor,
@@ -501,18 +553,153 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
                 return;
             }
             Object anchorKidsObj = anchor.readSlot(SLOT_CHILDREN);
-            java.util.LinkedHashSet<Object> seen = new java.util.LinkedHashSet<>();
+            // Dedupe by child element name (not PDO identity). Two distinct
+            // PDOs at the same name are either a benign Package collision
+            // (two modules synthesise the same sub-namespace — kept once,
+            // their own resolveAndMerge folds their children later) or a
+            // real bug (two modules both define a Function / Class at the
+            // same path) — fail loudly per the registry's uniqueness rule
+            // for non-Package elements.
+            java.util.LinkedHashMap<String, Object> byName = new java.util.LinkedHashMap<>();
             if (anchorKidsObj instanceof org.finos.legend.pure.truffle.types.PureSequence anchorKids)
             {
-                for (int i = 0; i < anchorKids.size(); i++) seen.add(anchorKids.getBoxed(i));
+                for (int i = 0; i < anchorKids.size(); i++)
+                {
+                    Object k = anchorKids.getBoxed(i);
+                    if (k == null) continue;
+                    putOrFailOnDuplicate(byName, k);
+                }
             }
             for (int i = 0; i < otherKids.size(); i++)
             {
                 Object k = otherKids.getBoxed(i);
-                if (k != null) seen.add(k);
+                if (k == null) continue;
+                putOrFailOnDuplicate(byName, k);
             }
             anchor.writeSlot(SLOT_CHILDREN,
-                    new org.finos.legend.pure.truffle.types.ObjectSequence(seen.toArray()));
+                    new org.finos.legend.pure.truffle.types.ObjectSequence(byName.values().toArray()));
+            // Symmetric with attaching to anchor.children: every surviving
+            // child's `.package` back-reference must point at the anchor that
+            // now owns it. Compile-pure / PDB-load sets `.package` to whichever
+            // Package PDO the producing module synthesised — which for an
+            // inmem-built child means the inmem-side Package, not the
+            // canonical anchor. Without this rewrite, walking
+            // `pathToElement(parent).children[i].package` returns a different
+            // PDO than `pathToElement(parent)` itself (identity inconsistency
+            // that breaks `assertIs` on Package references). Idempotent for
+            // anchor's own original children (their `.package` already is
+            // anchor) and harmless for nulls/non-PDOs. No matching teardown
+            // is needed because unregistering a module drops its child PDOs
+            // entirely — the rewritten back-reference disappears with the
+            // child, leaving nothing dangling.
+            for (Object k : byName.values())
+            {
+                if (k instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject child)
+                {
+                    // Write unconditionally: reading the slot first would
+                    // trigger lazy PDB decode for FlatBuffer-loaded children,
+                    // which re-enters the resolver and recurses back through
+                    // resolveAndMerge -> foldChildrenInto -> readSlot ad
+                    // infinitum (StackOverflow). The write itself is a
+                    // direct slot set, no decoding involved.
+                    child.writeSlot(SLOT_PACKAGE, anchor);
+                }
+            }
+        }
+    }
+
+    /**
+     * Insert {@code k} into {@code byName} keyed on its child element name
+     * (read from the global {@code "name"} slot). If a different PDO is
+     * already present at that name, allow it only when both are
+     * {@code Package} PDOs (a benign cross-module namespace collision —
+     * the sub-Package's own {@link #resolveAndMerge} will fold their
+     * deeper children later); throw otherwise so non-Package duplicates
+     * surface immediately instead of being silently merged.
+     */
+    private static void putOrFailOnDuplicate(
+            java.util.LinkedHashMap<String, Object> byName, Object k)
+    {
+        Object nameObj = ((org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject) k)
+                .readSlot(SLOT_PROPERTY_NAME);
+        if (!(nameObj instanceof String name))
+        {
+            throw new IllegalStateException(
+                    "Package child has no String 'name' slot value; class="
+                            + (k == null ? "null" : k.getClass().getName()));
+        }
+        Object existing = byName.get(name);
+        if (existing == null || existing == k)
+        {
+            byName.put(name, k);
+            return;
+        }
+        boolean existingIsPkg = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(
+                existing, "meta::pure::metamodel::Package");
+        boolean newIsPkg = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(
+                k, "meta::pure::metamodel::Package");
+        if (existingIsPkg && newIsPkg)
+        {
+            // Benign Package collision — keep existing anchor; the sub-Package's
+            // own resolveAndMerge handles the deeper children merge.
+            return;
+        }
+        throw new IllegalStateException(
+                "Duplicate child '" + name + "' while merging Package children: "
+                        + "non-Package collision (existing=" + describePdo(existing)
+                        + ", new=" + describePdo(k) + "). "
+                        + "The registry's uniqueness rule should have rejected this at register-time; "
+                        + "if you see this, two modules are claiming the same Pure path for a non-Package element.");
+    }
+
+    private static String describePdo(Object pdo)
+    {
+        if (!(pdo instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject p))
+        {
+            return String.valueOf(pdo);
+        }
+        String cls = p.classInfo == null ? p.getClass().getSimpleName() : p.classInfo.purePath;
+        return cls + "@" + System.identityHashCode(p);
+    }
+
+    /**
+     * Identity-remove children from a Package PDO's children slot. Used by
+     * {@link #unregister} to undo the {@link #foldChildrenInto} contributions
+     * an unregistering module made to a remaining anchor Package: pass the
+     * unregistering module's own Package PDO's children as {@code toRemove}
+     * — those are the references that were folded into the anchor, and only
+     * those are removed (so contributions from other still-registered
+     * modules survive).
+     */
+    private static void removeChildrenByIdentity(
+            org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject anchor,
+            java.util.List<Object> toRemove)
+    {
+        if (toRemove.isEmpty())
+        {
+            return;
+        }
+        synchronized (anchor)
+        {
+            Object kidsObj = anchor.readSlot(SLOT_CHILDREN);
+            if (!(kidsObj instanceof org.finos.legend.pure.truffle.types.PureSequence kids))
+            {
+                return;
+            }
+            java.util.Set<Object> removeSet = java.util.Collections.newSetFromMap(
+                    new java.util.IdentityHashMap<>(toRemove.size() * 2));
+            removeSet.addAll(toRemove);
+            java.util.List<Object> kept = new java.util.ArrayList<>(kids.size());
+            for (int i = 0; i < kids.size(); i++)
+            {
+                Object k = kids.getBoxed(i);
+                if (!removeSet.contains(k))
+                {
+                    kept.add(k);
+                }
+            }
+            anchor.writeSlot(SLOT_CHILDREN,
+                    new org.finos.legend.pure.truffle.types.ObjectSequence(kept.toArray()));
         }
     }
 

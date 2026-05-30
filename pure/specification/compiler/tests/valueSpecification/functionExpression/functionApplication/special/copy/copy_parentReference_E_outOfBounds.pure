@@ -16,3 +16,9 @@ Class test::copy::parentRefError::Node
   value: Integer[1];
   next:  Node[0..1];
 }
+
+###CompilerStats
+inferenceRollbacks: 2
+candidateEvaluations: 5
+rollbackSites:
+  PARAM_UNRESOLVED = 2

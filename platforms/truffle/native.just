@@ -32,7 +32,8 @@ verbose := ""
 mvnq    := if verbose == "" { "-q" } else { "" }
 err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
 
-banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+header := "h(){ s=\"[truffle::native::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
 
 # Default: build + run all native tests.
 default: test
@@ -41,7 +42,8 @@ default: test
 build: _check-pdbs _check-graalvm
     #!/usr/bin/env bash
     set -euo pipefail
-    {{banner}} '[truffle]' 'native-image build (GraalVM)'
+    {{header}} 'build'
+    {{substep}} 'native-image build (GraalVM)'
     if ! command -v native-image >/dev/null 2>&1; then
         echo "Error: 'native-image' not on PATH." >&2
         echo "Install with: brew install --cask graalvm-jdk@25" >&2
@@ -63,7 +65,8 @@ test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
 
 # Run compiler-graph spec tests via the native binary.
 test-pure-compiler: build
-    @{{banner}} '[pure→native]' 'runCompiledGraphTests'
+    @{{header}} 'test-pure-compiler'
+    @{{substep}} 'runCompiledGraphTests'
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -74,7 +77,8 @@ test-pure-compiler: build
 
 # Run Pure runTests over meta::pure::functions via the native binary.
 test-pure-runtime-testFunctions: build
-    @{{banner}} '[pure→native]' 'runTests'
+    @{{header}} 'test-pure-runtime-testFunctions'
+    @{{substep}} 'runTests'
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -85,7 +89,8 @@ test-pure-runtime-testFunctions: build
 
 # Run Pure PCT tests over meta::pure::functions via the native binary.
 test-pure-runtime-PCTs: build
-    @{{banner}} '[pure→native]' 'runPCTTests'
+    @{{header}} 'test-pure-runtime-PCTs'
+    @{{substep}} 'runPCTTests'
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -98,7 +103,8 @@ test-pure-runtime-PCTs: build
 # output in {{truffle_out}}/ when both run (e.g. under `truffle::test-all`).
 # Self-host: compile compiler-pure on the native binary, run compiler tests, then PDB-diff vs Java direct.
 test-pure-self-host: build
-    @{{banner}} '[self-host-native]' 'compiler-pure → {{truffle_out}}/native/compiler.pdb (native), then run compiler tests'
+    @{{header}} 'test-pure-self-host'
+    @{{substep}} 'compiler-pure → {{truffle_out}}/native/compiler.pdb (native), then run compiler tests'
     {{truffle_native}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
@@ -113,7 +119,7 @@ test-pure-self-host: build
         --pdb {{truffle_out}}/native/compiler-tests.pdb \
         --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
-    @{{banner}} '[self-host-native]' 'diff shared/compiler.pdb (Java compiler) ↔ {{truffle_out}}/native/compiler.pdb (native compiler)'
+    @{{substep}} 'diff shared/compiler.pdb (Java compiler) ↔ {{truffle_out}}/native/compiler.pdb (native compiler)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
         {{shared_out}}/compiler.pdb \
         {{truffle_out}}/native/compiler.pdb {{err_filter}}

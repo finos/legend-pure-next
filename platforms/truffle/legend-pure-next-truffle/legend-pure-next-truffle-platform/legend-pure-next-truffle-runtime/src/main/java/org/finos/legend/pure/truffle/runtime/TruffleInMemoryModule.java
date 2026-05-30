@@ -14,13 +14,11 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
-import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
 import org.finos.legend.pure.truffle.runtime.helper.PointerGraphResolver;
 import org.finos.legend.pure.truffle.runtime.helper.TypeCache;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -82,32 +80,17 @@ public final class TruffleInMemoryModule implements TruffleModule
         long t0 = System.nanoTime();
         PointerGraphResolver.resolveAll(byPath, resolver, resolveProgress);
 
-        // Merge {@code Package} entries with the resolver's already-loaded
-        // modules. Packages are namespaces, not module-owned content —
-        // compile-pure synthesises a {@code Package} PDO for every namespace
-        // it touches, which inevitably duplicates the {@code Package}s any
-        // dep module (core, compiler, …) has already registered. Drop the
-        // local Package entries so {@link #getElement} falls through to the
-        // resolver's canonical instance, keeping the per-path-single-instance
-        // invariant. Any OTHER duplicate (Function / Class / …) is a real bug
-        // and the registry's uniqueness guard will reject it.
-        if (resolver != null)
-        {
-            List<String> sharedPackages = new ArrayList<>();
-            for (Map.Entry<String, Object> e : byPath.entrySet())
-            {
-                if (PureObj.pureTypeIs(e.getValue(), "meta::pure::metamodel::Package")
-                        && resolver.getElement(e.getKey()) != null)
-                {
-                    sharedPackages.add(e.getKey());
-                }
-            }
-            for (String path : sharedPackages)
-            {
-                Object dropped = byPath.remove(path);
-                if (dropped != null) pathByElement.remove(dropped);
-            }
-        }
+        // Note: we DO NOT drop synthesised `Package` PDOs whose path the
+        // resolver already owns. The registry permits Package path collisions
+        // (see TruffleModuleRegistry.register) and folds children across
+        // contributors via resolveAndMerge / foldChildrenInto — exactly what
+        // we need so this module's namespace contributions (test sub-packages,
+        // new user classes, etc.) appear in the canonical Package.children
+        // tree. Dropping them here used to bypass that mechanism and made
+        // Package.children-walking discovery (notably runTests/runPCTTests)
+        // silently see zero results. Symmetric teardown lives in
+        // TruffleModuleRegistry.unregister: when this module is dropped, its
+        // contributed children are identity-removed from the surviving anchor.
 
         long elapsedMs = (System.nanoTime() - t0) / 1_000_000;
         System.err.println("[TruffleInMemoryModule] " + name + ": resolved pointer graph for "

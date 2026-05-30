@@ -259,7 +259,10 @@ public class AtomicValueResolver
         if (vs instanceof VariableExpression varExpr)
         {
             String name = varExpr._name();
-            if (!paramNames.contains(name) && seenNames.add(name))
+            // `~` (and `~.~`, ...) is a construction parent-reference, resolved at
+            // runtime against the enclosing `^X(...)` via the construction stack —
+            // never a captured free variable, so it must not be an open variable.
+            if (!paramNames.contains(name) && !name.startsWith("~") && seenNames.add(name))
             {
                 result.add(varExpr);
             }

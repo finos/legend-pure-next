@@ -18,25 +18,28 @@ pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
 verbose := ""
 err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
 
-banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+header := "h(){ s=\"[language-typescript::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
 
 # Default: build typescript.pdb.
 default: build
 
-# Compile pure/modules/language/typescript into shared/typescript.pdb.
 # Requires shared/core.pdb (run `just bootstrap::build` from repo root first).
+
+# Compile pure/modules/language/typescript into shared/typescript.pdb.
 build:
-    @{{banner}} '[language-typescript]' 'compile pure/modules/language/typescript -> shared/typescript.pdb'
+    @{{header}} 'build'
+    @{{substep}} 'compile pure/modules/language/typescript -> shared/typescript.pdb'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --source {{ts_root}} \
         --output-dir {{shared_out}} {{err_filter}}
 
-# Compile via the Pure compiler running on Truffle. Picks up changes to
-# pure/specification/compiler/compiler-pure automatically.
+# Compile -> shared/typescript.pdb via the Pure compiler on Truffle (picks up compiler-pure changes automatically).
 build-truffle:
-    @{{banner}} '[language-typescript]' 'compile pure/modules/language/typescript -> shared/typescript.pdb (Truffle)'
+    @{{header}} 'build-truffle'
+    @{{substep}} 'compile pure/modules/language/typescript -> shared/typescript.pdb (Truffle)'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -f {{shared_out}}/compiler.pdb || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
@@ -48,7 +51,8 @@ build-truffle:
 
 # Compile with tests split into shared/typescript-tests.pdb (needed by `test-all`).
 build-tests:
-    @{{banner}} '[language-typescript]' 'compile pure/modules/language/typescript -> shared/typescript.pdb + typescript-tests.pdb'
+    @{{header}} 'build-tests'
+    @{{substep}} 'compile pure/modules/language/typescript -> shared/typescript.pdb + typescript-tests.pdb'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
@@ -56,14 +60,16 @@ build-tests:
         --output-dir {{shared_out}} \
         --tests split {{err_filter}}
 
-# Run all Pure tests under meta::external::language::typescript via pure-truffle.
 # The `compileAndExecute` native is implemented in the Truffle TypeScript
 # extension (legend-pure-next-truffle-extension-typescript's
 # TypeScriptCompileNatives) — the bootstrap CLI does NOT register it, so
 # testCompileAndExecute* tests fail there with "No native implementation
 # for: compileAndExecute".
+
+# Run all Pure tests under meta::external::language::typescript via pure-truffle.
 test-all: build-tests _check-runtime-pdbs
-    @{{banner}} '[language-typescript]' 'runTests meta::external::language::typescript (Truffle)'
+    @{{header}} 'test-all'
+    @{{substep}} 'runTests meta::external::language::typescript (Truffle)'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -86,5 +92,6 @@ _check-runtime-pdbs:
 
 # Remove shared/typescript.pdb (and the tests PDB).
 clean:
-    @{{banner}} '[language-typescript clean]' 'remove shared/typescript.pdb + shared/typescript-tests.pdb'
+    @{{header}} 'clean'
+    @{{substep}} 'remove shared/typescript.pdb + shared/typescript-tests.pdb'
     rm -f {{shared_out}}/typescript.pdb {{shared_out}}/typescript-tests.pdb

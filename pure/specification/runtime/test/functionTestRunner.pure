@@ -102,6 +102,11 @@ function <<test.TestDependency>> meta::pure::test::runTests(rootPackagePath:Stri
     let root = pathToElement($rootPackagePath)->cast(@Package);
     let tests = meta::pure::test::collectFunctionTests($root);
     let total = $tests->size();
+    // Fail loudly on 0: a caller of runTests expects the path to contain at
+    // least one <<test.Test>> function. 0 almost always means the test PDB
+    // isn't loaded or Package.children traversal can't see them (e.g. an
+    // inmem module's children didn't get merged into the canonical Package).
+    assert($total > 0, |'runTests: found 0 <<test.Test>> tests under ' + $rootPackagePath + ' — check that the relevant test PDB is loaded and that the path is correct.');
     startProgress('Running ' + $total->toString() + ' <<test.Test>> tests from ' + $rootPackagePath + '...');
 
     let start = currentTimeMillis();

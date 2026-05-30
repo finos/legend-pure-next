@@ -34,27 +34,33 @@ pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
 verbose := ""
 err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
 
-banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+header := "h(){ s=\"[language-java::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
 
 # Default: build java.pdb.
 default: build
 
-# Compile pure/ + conventions-essential/ + conventions-standard/ into shared/java.pdb.
 # Requires shared/core.pdb (run `just bootstrap::build` from repo root first).
+
+# Compile pure/ + conventions-essential/ + conventions-standard/ into shared/java.pdb.
 build:
-    @{{banner}} '[language-java]' 'compile pure/language/java -> shared/java.pdb'
+    @{{header}} 'build'
+    @{{substep}} 'compile pure/language/java -> shared/java.pdb'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --source {{java_root}} \
         --output-dir {{shared_out}} {{err_filter}}
 
-# Compile via the Pure compiler running on Truffle (uses compiler.pdb, exercises the
-# same Pure compiler-pure code that runs in compile-via-pure but JIT-compiled by
-# Truffle). Useful when iterating on changes to pure/specification/compiler/compiler-pure since it picks
-# them up automatically (compile-via-pure also does, but native compile does NOT).
+# Uses compiler.pdb and exercises the same compiler-pure code that
+# compile-via-pure runs, but JIT-compiled by Truffle. Useful when iterating on
+# pure/specification/compiler/compiler-pure since it picks changes up
+# automatically (compile-via-pure also does, but native compile does NOT).
+
+# Compile pure/language/java -> shared/java.pdb via the Pure compiler on Truffle.
 build-truffle:
-    @{{banner}} '[language-java]' 'compile pure/language/java -> shared/java.pdb (Truffle)'
+    @{{header}} 'build-truffle'
+    @{{substep}} 'compile pure/language/java -> shared/java.pdb (Truffle)'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -f {{shared_out}}/compiler.pdb || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
@@ -66,7 +72,8 @@ build-truffle:
 
 # Compile with tests split into shared/java-tests.pdb (needed by `test-all`).
 build-tests:
-    @{{banner}} '[language-java]' 'compile pure/language/java -> shared/java.pdb + java-tests.pdb'
+    @{{header}} 'build-tests'
+    @{{substep}} 'compile pure/language/java -> shared/java.pdb + java-tests.pdb'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
@@ -74,14 +81,16 @@ build-tests:
         --output-dir {{shared_out}} \
         --tests split {{err_filter}}
 
-# Run all Pure tests under meta::external::language::java via pure-truffle.
 # The `compileAndExecute` native is implemented in the Truffle Java extension
 # (legend-pure-next-truffle-extension-java's JavaCompileNatives) — the
 # bootstrap CLI does NOT register it, so testCompileAndExecute* tests fail
 # there with "No native implementation for: compileAndExecute".
 # Needs core-tests.pdb because runTests is <<test.TestDependency>>.
+
+# Run all Pure tests under meta::external::language::java via pure-truffle.
 test-all: build-tests _check-runtime-pdbs
-    @{{banner}} '[language-java]' 'runTests meta::external::language::java (Truffle)'
+    @{{header}} 'test-all'
+    @{{substep}} 'runTests meta::external::language::java (Truffle)'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -104,5 +113,6 @@ _check-runtime-pdbs:
 
 # Remove shared/java.pdb (and the tests PDB).
 clean:
-    @{{banner}} '[language-java clean]' 'remove shared/java.pdb + shared/java-tests.pdb'
+    @{{header}} 'clean'
+    @{{substep}} 'remove shared/java.pdb + shared/java-tests.pdb'
     rm -f {{shared_out}}/java.pdb {{shared_out}}/java-tests.pdb

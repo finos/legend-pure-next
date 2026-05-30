@@ -74,6 +74,10 @@ function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:S
     let root = pathToElement($rootPackagePath)->cast(@Package);
     let tests = meta::pure::test::collectPCTTests($root);
     let total = $tests->size();
+    // Fail loudly on 0: same rationale as runTests above — 0 PCT tests under
+    // a real path almost always means the test PDB isn't loaded or the
+    // package's children list is missing the test sub-packages.
+    assert($total > 0, |'runPCTTests: found 0 <<PCT.test>> tests under ' + $rootPackagePath + ' — check that the relevant test PDB is loaded and that the path is correct.');
     startProgress('Running ' + $total->toString() + ' <<PCT.test>> tests from ' + $rootPackagePath + '...');
 
     let start = currentTimeMillis();

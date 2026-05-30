@@ -22,3 +22,9 @@ Class test::new::parentRefMidChain::Inner
 {
   name: String[1];
 }
+
+###CompilerStats
+inferenceRollbacks: 2
+candidateEvaluations: 5
+rollbackSites:
+  PARAM_UNRESOLVED = 2

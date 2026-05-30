@@ -42,6 +42,8 @@ function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraph
           // silent semantic drift through.
           let hasError = contains($content, '###' + 'Error');
           let hasGraph = contains($content, '###' + 'CompiledGraph');
+          let hasReverse = contains($content, '###' + 'ReverseIndex');
+          let hasStats = contains($content, '###' + 'CompilerStats');
           if(!$hasError && !$hasGraph,
               | assert(false, 'Test file has neither ###Error nor ###CompiledGraph section (cannot verify outcome): ' + $sourceId);,
               | // Blank out lines preceding ###Pure (mirrors the original
@@ -64,16 +66,28 @@ function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraph
                 // 247-test run with noise.
                 let result = meta::pure::compiler::compile(manageFileSections($parsedFile), false, true);
 
+                // Mandatory-section rules (every test must pin BOTH its AST and
+                // its reference telemetry): a success test (###CompiledGraph) must
+                // carry a validated ###ReverseIndex; an error test (###Error) must
+                // carry a validated ###CompilerStats. Without these the snapshot
+                // only covers half the compiler's output and lets reference-index
+                // / resolver-stat drift through unnoticed.
+                let mandReverse = assert(!$hasGraph || $hasReverse, 'Success test (###CompiledGraph) is missing the mandatory ###ReverseIndex section: ' + $sourceId);
+                let mandStats   = assert(!$hasError || $hasStats, 'Error test (###Error) is missing the mandatory ###CompilerStats section: ' + $sourceId);
+
                 let errorCheck = if($hasError,
                                     | assertCompilationErrorOnResult($content, $result, $sourceId);,
                                     | true);
                 let graphCheck = if($hasGraph,
                                     | assertCompiledGraphOnResult($parsedFile, $result, $sourceId);,
                                     | true);
-                let statsCheck = if(contains($content, '###' + 'CompilerStats'),
+                let reverseCheck = if($hasReverse,
+                                    | assertReverseIndexOnResult($parsedFile, $result, $sourceId);,
+                                    | true);
+                let statsCheck = if($hasStats,
                                     | assertCompilerStatsOnResult($parsedFile, $result, $sourceId);,
                                     | true);
-                $errorCheck && $graphCheck && $statsCheck;
+                $errorCheck && $graphCheck && $reverseCheck && $statsCheck;
           );
     );
 }
@@ -127,6 +141,22 @@ function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraph
          assertEquals($cleanedExpected, $cleanedActual);
          true;
     );
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::assertReverseIndexOnResult(parsedFile:meta::pure::protocol::PureFile[1], result:meta::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]
+{
+    let allElements = $parsedFile.sections.elements;
+    let riElement = $allElements->filter(e | $e->instanceOf(meta::pure::compiler::test::ReverseIndex))->head();
+    // An empty `###ReverseIndex` section (reference-free test) parses to no
+    // element — treat that as an empty expected index, so it still validates
+    // that the compiler produced no reverse references.
+    let expectedRaw = if($riElement->isEmpty(), | '', | $riElement->toOne()->cast(@meta::pure::compiler::test::ReverseIndex).value);
+    let expected = $expectedRaw->split('\n')->map(s | $s->trim())->filter(s | $s != '')->joinStrings('\n');
+
+    let actualRaw = meta::pure::compiler::test::printer::printReverseIndex($result.context->toOne());
+    let actual = $actualRaw->split('\n')->map(s | $s->trim())->filter(s | $s != '')->joinStrings('\n');
+    if($expected != $actual, | println('FAIL ReverseIndex:' + $sourceId), | []);
+    assertEquals($expected, $actual);
 }
 
 function <<test.TestDependency>> meta::pure::compiler::test::assertCompilerStatsOnResult(parsedFile:meta::pure::protocol::PureFile[1], result:meta::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]

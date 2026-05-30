@@ -22,15 +22,18 @@ pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
 verbose := ""
 err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
 
-banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+header := "h(){ s=\"[java-translation::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
 
 # Default: build java-translation.pdb.
 default: build
 
-# Compile pure/modules/translation/java -> shared/java-translation.pdb.
 # Requires shared/core.pdb and shared/java.pdb.
+
+# Compile pure/modules/translation/java -> shared/java-translation.pdb.
 build:
-    @{{banner}} '[java-translation]' 'compile pure/modules/translation/java -> shared/java-translation.pdb'
+    @{{header}} 'build'
+    @{{substep}} 'compile pure/modules/translation/java -> shared/java-translation.pdb'
     test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -f {{shared_out}}/java.pdb               || (echo "ERROR: missing {{shared_out}}/java.pdb (run \`just language::java::build\` first)" && exit 1)
     test -f {{shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
@@ -44,7 +47,8 @@ build:
 
 # Compile via the Pure compiler running on Truffle.
 build-truffle:
-    @{{banner}} '[java-translation]' 'compile pure/modules/translation/java -> shared/java-translation.pdb (Truffle)'
+    @{{header}} 'build-truffle'
+    @{{substep}} 'compile pure/modules/translation/java -> shared/java-translation.pdb (Truffle)'
     test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -f {{shared_out}}/java.pdb               || (echo "ERROR: missing {{shared_out}}/java.pdb (run \`just language::java::build\` first)" && exit 1)
     test -f {{shared_out}}/compiler.pdb           || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
@@ -61,7 +65,8 @@ build-truffle:
 
 # Compile with tests split into shared/java-translation-tests.pdb.
 build-tests:
-    @{{banner}} '[java-translation]' 'compile pure/modules/translation/java -> shared/java-translation.pdb + java-translation-tests.pdb'
+    @{{header}} 'build-tests'
+    @{{substep}} 'compile pure/modules/translation/java -> shared/java-translation.pdb + java-translation-tests.pdb'
     test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -f {{shared_out}}/java.pdb               || (echo "ERROR: missing {{shared_out}}/java.pdb (run \`just language::java::build\` first)" && exit 1)
     test -f {{shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
@@ -74,17 +79,21 @@ build-tests:
         --output-dir {{shared_out}} \
         --tests split {{err_filter}}
 
-# Default umbrella: translator's own <<test.Test>> suite (the 14 cases under
+# Runs the translator's own <<test.Test>> suite (the 14 cases under
 # meta::external::language::java::translation::tests) plus the standard runtime
 # suites over meta::pure::functions exercised through Truffle with the
 # java-translation extension loaded.
+
+# Default umbrella: translator test suite + runtime suites (Truffle, extension loaded).
 test-all: test-translation test-pure-runtime
 
-# Run the translator's own <<test.Test>> suite. Each case exercises some
-# combination of translator AST shape, generated Java assertions, in-process
-# javac round-trips, and per-PCT-test wrappers (code/tests/*).
+# Each case exercises some combination of translator AST shape, generated Java
+# assertions, in-process javac round-trips, and per-PCT-test wrappers (code/tests/*).
+
+# Run the translator's own <<test.Test>> suite (meta::external::language::java::translation).
 test-translation: build-tests _check-runtime-pdbs
-    @{{banner}} '[java-translation]' 'runTests meta::external::language::java::translation (Truffle)'
+    @{{header}} 'test-translation'
+    @{{substep}} 'runTests meta::external::language::java::translation (Truffle)'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -96,15 +105,17 @@ test-translation: build-tests _check-runtime-pdbs
         --function "meta::pure::test::runTests_String_1__String_1_" \
         --args "meta::external::language::java::translation" {{err_filter}}
 
-# Run the standard Pure runtime test suites (runTests + PCT) over
-# meta::pure::functions (which lives in core-tests) via Truffle. Mirrors the
-# truffle Justfile recipe — same args, same backend — verifies that loading
-# the translator extension doesn't break Truffle's interpretation of any
-# stdlib spec test.
+# Mirrors the truffle Justfile recipe — same args, same backend — verifying
+# that loading the translator extension doesn't break Truffle's interpretation
+# of any stdlib spec test. meta::pure::functions lives in core-tests.
+
+# Run the standard Pure runtime suites (runTests + PCT) over meta::pure::functions via Truffle.
 test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
 
+# Run runTests over meta::pure::functions via Truffle, with the java-translation extension loaded.
 test-pure-runtime-testFunctions: build-tests _check-runtime-pdbs
-    @{{banner}} '[java-translation]' 'runTests meta::pure::functions (Truffle, extension loaded)'
+    @{{header}} 'test-pure-runtime-testFunctions'
+    @{{substep}} 'runTests meta::pure::functions (Truffle, extension loaded)'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -116,8 +127,10 @@ test-pure-runtime-testFunctions: build-tests _check-runtime-pdbs
         --function "meta::pure::test::runTests_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
 
+# Run PCT tests over meta::pure::functions via the translator adapter (lambdas -> Java -> javac -> invoke).
 test-pure-runtime-PCTs: build-tests _check-runtime-pdbs
-    @{{banner}} '[java-translation]' 'runPCTTests meta::pure::functions (Truffle, translator adapter)'
+    @{{header}} 'test-pure-runtime-PCTs'
+    @{{substep}} 'runPCTTests meta::pure::functions (Truffle, translator adapter)'
     # Uses runPCTTestsViaTranslator (in code/runtime.pure) which delegates to
     # the core 2-arg `runPCTTests(pkg, adapter)` with our translator adapter
     # baked in. Each PCT lambda gets translated to Java, compiled via the
@@ -136,15 +149,17 @@ test-pure-runtime-PCTs: build-tests _check-runtime-pdbs
         --function "meta::external::language::java::translation::runPCTTestsViaTranslator_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
 
-# Build the Pure -> Java translation gallery as a self-contained HTML page.
 # Each `sample_*` UDF in code/gallery.pure is rendered as a side-by-side card
 # (literal Pure snippet on the left, translateFunction + classToString Java
 # on the right). Writes shared/java-translation-gallery.html.
 #
 # pure-truffle prints the returned String to stdout verbatim (no `'...'`
 # quoting wrapper, no `\n` escaping), so a plain redirect is enough.
+
+# Build the Pure -> Java translation gallery as a self-contained HTML page.
 gallery: build-tests _check-runtime-pdbs
-    @{{banner}} '[java-translation]' 'render Pure -> Java gallery -> shared/java-translation-gallery.html'
+    @{{header}} 'gallery'
+    @{{substep}} 'render Pure -> Java gallery -> shared/java-translation-gallery.html'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -174,5 +189,6 @@ _check-runtime-pdbs:
 
 # Remove shared/java-translation.pdb (and the tests PDB).
 clean:
-    @{{banner}} '[java-translation clean]' 'remove shared/java-translation.pdb + java-translation-tests.pdb'
+    @{{header}} 'clean'
+    @{{substep}} 'remove shared/java-translation.pdb + java-translation-tests.pdb'
     rm -f {{shared_out}}/java-translation.pdb {{shared_out}}/java-translation-tests.pdb

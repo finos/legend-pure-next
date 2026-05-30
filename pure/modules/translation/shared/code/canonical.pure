@@ -309,8 +309,15 @@ function meta::pure::translation::shared::realOpenVariableCaptures(lambda: Lambd
                           ->map(fe | $fe.parametersValues->at(0)
                                        ->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value
                                        ->cast(@String));
+   // `~` (and `~.~`, ...) are construction parent-references, not outer-scope
+   // captures: openVariableValues reports `~` with an empty value list. Binding
+   // it as `let ~ = []` turns the parent-reference into a bogus empty local, so
+   // `^~.foo(...)` deep-copies misresolve and the key-expression cycle detector
+   // false-positives ('firm' -> 'firm'). Leave `~` for the recompile to resolve
+   // against the enclosing construction.
    $allCaptures->keys()
-      ->filter(k | !$letBoundNames->contains($k))
+      ->filter(k | !$letBoundNames->contains($k)
+                && !$k->startsWith('~'))
       ->fold({k, acc | $acc->put($k, $allCaptures->get($k)->toOne())},
              newMap([]->cast(@Pair<String, List<Any>>)));
 }

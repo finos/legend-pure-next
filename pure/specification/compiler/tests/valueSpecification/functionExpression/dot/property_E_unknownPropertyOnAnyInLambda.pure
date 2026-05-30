@@ -19,3 +19,11 @@ function test::tst():String[*]
 {
     test::anyValues()->filter(v | $v.name == 'RED')->cast(@String);
 }
+
+###CompilerStats
+inferenceRollbacks: 8
+candidateEvaluations: 8
+rollbackSites:
+  PARAM_UNRESOLVED = 2
+  LAMBDA_DISPATCH = 1
+  MULTI_CANDIDATE_PRE_RESOLVE = 1
