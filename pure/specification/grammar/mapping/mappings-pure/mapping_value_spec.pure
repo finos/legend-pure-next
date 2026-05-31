@@ -1,0 +1,708 @@
+// Value-specification parsing.
+//
+// Walks the precedence ladder (combinedExpression → orExpression → andExpression
+// → equalityExpression → relationalExpression → additiveExpression →
+// multiplicativeExpression → expression) plus their atomicExpression /
+// instanceLiteralToken / variable / expressionsArray leaves and the
+// chain-fold over property/function arrow steps.
+//
+// Initial scope:
+//  - literals (INTEGER, STRING, BOOLEAN, FLOAT, DECIMAL, DATE, STRICTTIME)
+//  - variable references ($x)
+//  - empty + non-empty array literals `[]`, `[1, 2, 3]`
+//  - let expressions: `let x = expr;`
+//  - binary ops via the precedence ladder
+//  - arrow steps (functionExpression `->fn(args)`) and property/method steps
+// Deferred: lambdas, instance references with all/allVersions, columnBuilders,
+// expressionInstance (^Type), cast, slice, parentReference, type-algebra ops.
+
+import meta::pure::parser::mappings::*;
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+import meta::pure::protocol::grammar::*;
+
+// -----------------------------------------------------------------------
+// Primitive-type helper used by all literal builders.
+// -----------------------------------------------------------------------
+
+function meta::pure::parser::mappings::primitiveType(name: String[1]): meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1]
+{
+   ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+      type = ^meta::pure::protocol::grammar::type::Type_Pointer(value = $name)
+   )
+}
+
+// -----------------------------------------------------------------------
+// Variable + literals.
+// -----------------------------------------------------------------------
+
+function meta::pure::parser::mappings::buildVariable(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::VariableExpression[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      name                = $ctx->getChild('identifier')->toOne()->getText()
+   )
+}
+
+function meta::pure::parser::mappings::buildInstanceLiteralToken(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::AtomicValue[1]
+{
+   if($ctx->hasToken('INTEGER'),
+      | atomic($ctx, parseInteger($ctx->getTokenText('INTEGER')->toOne()), 'Integer', $lineOffset),
+   | if($ctx->hasToken('STRING'),
+      | atomic($ctx, stripQuotes($ctx->getTokenText('STRING')->toOne()), 'String', $lineOffset),
+   | if($ctx->hasToken('STRING_TRIPLE'),
+      // `'''multi-line content'''` — strip `'''` + dedent per JEP-378 rules.
+      | atomic($ctx, stripTripleQuotesDedented($ctx->getTokenText('STRING_TRIPLE')->toOne()), 'String', $lineOffset),
+   | if($ctx->hasToken('BOOLEAN'),
+      | atomic($ctx, parseBoolean($ctx->getTokenText('BOOLEAN')->toOne()), 'Boolean', $lineOffset),
+   | if($ctx->hasToken('FLOAT'),
+      | atomic($ctx, parseFloat($ctx->getTokenText('FLOAT')->toOne()), 'Float', $lineOffset),
+   | if($ctx->hasToken('DECIMAL'),
+      | atomic($ctx, parseDecimal(stripTrailingChar($ctx->getTokenText('DECIMAL')->toOne())), 'Decimal', $lineOffset),
+   | if($ctx->hasToken('DATE'),
+      | atomic($ctx, stripLeadingChar($ctx->getTokenText('DATE')->toOne()),
+               dateTypeOf($ctx->getTokenText('DATE')->toOne()), $lineOffset),
+   | if($ctx->hasToken('STRICTTIME'),
+      | atomic($ctx, stripLeadingChar($ctx->getTokenText('STRICTTIME')->toOne()), 'StrictTime', $lineOffset),
+   | atomic($ctx, $ctx->getText(), 'String', $lineOffset)))))))));
+}
+
+function meta::pure::parser::mappings::stripTrailingChar(text: String[1]): String[1]
+{
+   $text->substring(0, $text->length() - 1)
+}
+
+function meta::pure::parser::mappings::stripLeadingChar(text: String[1]): String[1]
+{
+   $text->substring(1, $text->length())
+}
+
+function meta::pure::parser::mappings::dateTypeOf(rawDate: String[1]): String[1]
+{
+   if($rawDate->contains('T'), |'DateTime', |'StrictDate')
+}
+
+// `'''multi-line'''` → strip the 3-char opening + closing delimiters.
+function meta::pure::parser::mappings::stripTripleQuotes(text: String[1]): String[1]
+{
+   $text->substring(3, $text->length() - 3)
+}
+
+function meta::pure::parser::mappings::atomic(ctx: AntlrContext[1], value: Any[1], typeName: String[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::AtomicValue[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      value               = $value,
+      genericType         = primitiveType($typeName)
+   )
+}
+
+// instanceLiteral dispatches to instanceLiteralToken (unsigned) or handles
+// the signed numeric forms directly (`-1`, `-1.9`, `-1.2d`). For now we
+// pass through to instanceLiteralToken which covers the most common path.
+function meta::pure::parser::mappings::buildInstanceLiteral(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::AtomicValue[1]
+{
+   if($ctx->hasChild('instanceLiteralToken'),
+      | buildInstanceLiteralToken($ctx->getChild('instanceLiteralToken')->toOne(), $lineOffset),
+      | atomic($ctx, $ctx->getText(), 'String', $lineOffset))
+}
+
+// -----------------------------------------------------------------------
+// Code block + let.
+// -----------------------------------------------------------------------
+
+function meta::pure::parser::mappings::buildCodeBlock(blockCtx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[*]
+{
+   $blockCtx->getChildren('programLine')->map(line | buildProgramLine($line, $lineOffset))->concatenate([])
+}
+
+function meta::pure::parser::mappings::buildProgramLine(lineCtx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[*]
+{
+   if($lineCtx->hasChild('combinedExpression'),
+      | buildCombinedExpression($lineCtx->getChild('combinedExpression')->toOne(), $lineOffset),
+      | if($lineCtx->hasChild('letExpression'),
+           | buildLetExpression($lineCtx->getChild('letExpression')->toOne(), $lineOffset),
+           | []));
+}
+
+function meta::pure::parser::mappings::buildLetExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      functionName        = 'letFunction',
+      parametersValues    = [
+         ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+            p_sourceInformation = buildSourceInfo($ctx->getChild('identifier')->toOne(), $lineOffset),
+            genericType         = primitiveType('String'),
+            value               = $ctx->getChild('identifier')->toOne()->getText()),
+         buildCombinedExpression($ctx->getChild('combinedExpression')->toOne(), $lineOffset)
+      ]
+   )
+}
+
+// -----------------------------------------------------------------------
+// Precedence ladder. Each level left-folds binary operators over its child,
+// passing through unwrapped when there's only one operand.
+// -----------------------------------------------------------------------
+
+function meta::pure::parser::mappings::buildCombinedExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   buildOrExpression($ctx->getChild('orExpression')->toOne(), $lineOffset)
+}
+
+// Precedence-ladder rules each left-fold over their operand sub-rule,
+// emitting a binary FunctionInvocation per operator. When there's only one
+// operand, returns it unwrapped (.dsl's left_fold collapses likewise).
+
+function meta::pure::parser::mappings::buildOrExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let operands = $ctx->getChildren('andExpression');
+   $operands->tail()->fold(
+      {op, acc | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+         p_sourceInformation = buildBinaryOpSourceInfo($acc, $op, $lineOffset),
+         functionName        = 'or',
+         parametersValues    = [$acc, buildAndExpression($op, $lineOffset)])},
+      buildAndExpression($operands->at(0), $lineOffset));
+}
+
+function meta::pure::parser::mappings::buildAndExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let operands = $ctx->getChildren('equalityExpression');
+   $operands->tail()->fold(
+      {op, acc | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+         p_sourceInformation = buildBinaryOpSourceInfo($acc, $op, $lineOffset),
+         functionName        = 'and',
+         parametersValues    = [$acc, buildEqualityExpression($op, $lineOffset)])},
+      buildEqualityExpression($operands->at(0), $lineOffset));
+}
+
+// `==` → equal(...); `!=` → not(equal(...)). Operator-token-driven.
+function meta::pure::parser::mappings::buildEqualityExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let operands = $ctx->getChildren('relationalExpression');
+   range(1, $operands->size())->fold(
+      {i, acc | buildEqualityStep($ctx, $acc, $operands->at($i), $i, $lineOffset)},
+      buildRelationalExpression($operands->at(0), $lineOffset));
+}
+
+function meta::pure::parser::mappings::buildEqualityStep(ctx: AntlrContext[1], acc: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], rhsCtx: AntlrContext[1], i: Integer[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let opText = $ctx->getChildTextAt(2 * $i - 1)->toOne();
+   let eq = ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildBinaryOpSourceInfo($acc, $rhsCtx, $lineOffset),
+      functionName        = 'equal',
+      parametersValues    = [$acc, buildRelationalExpression($rhsCtx, $lineOffset)]
+   );
+   if($opText == '!=',
+      | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+           p_sourceInformation = buildBinaryOpSourceInfo($acc, $rhsCtx, $lineOffset),
+           functionName        = 'not',
+           parametersValues    = [$eq]),
+      | $eq);
+}
+
+function meta::pure::parser::mappings::buildRelationalExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let operands = $ctx->getChildren('additiveExpression');
+   // Operator at child(2*i-1) between operand[i-1] and operand[i]. We can't see
+   // the index from inside the fold lambda, so range and zip.
+   range(1, $operands->size())->fold(
+      {i, acc | buildRelationalStep($ctx, $acc, $operands->at($i), $i, $lineOffset)},
+      buildAdditiveExpression($operands->at(0), $lineOffset));
+}
+
+function meta::pure::parser::mappings::buildRelationalStep(ctx: AntlrContext[1], acc: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], rhsCtx: AntlrContext[1], i: Integer[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let opText = $ctx->getChildTextAt(2 * $i - 1)->toOne();
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildBinaryOpSourceInfo($acc, $rhsCtx, $lineOffset),
+      functionName        = relationalOpName($opText),
+      parametersValues    = [$acc, buildAdditiveExpression($rhsCtx, $lineOffset)]
+   );
+}
+
+// Source span for a binary FunctionInvocation: start from the LHS's source
+// info (or the RHS start when LHS has none), end at the RHS context end.
+// Mirrors production's `buildOpSourceInfo($tok, left, $rhsCtx)` minus the
+// $tok branch — close enough for most cases.
+function meta::pure::parser::mappings::buildBinaryOpSourceInfo(acc: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], rhsCtx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::SourceInformation[1]
+{
+   let leftSrc = $acc.p_sourceInformation;
+   ^meta::pure::protocol::grammar::SourceInformation(
+      startLine   = if($leftSrc->isNotEmpty(), | $leftSrc->toOne().startLine,   | $rhsCtx->getStartLine() + $lineOffset),
+      startColumn = if($leftSrc->isNotEmpty(), | $leftSrc->toOne().startColumn, | $rhsCtx->getStartColumn()),
+      endLine     = $rhsCtx->getStopLine() + $lineOffset,
+      endColumn   = $rhsCtx->getStopColumn()
+   );
+}
+
+function meta::pure::parser::mappings::relationalOpName(opText: String[1]): String[1]
+{
+   if($opText == '<',  | 'lessThan',
+   | if($opText == '<=', | 'lessThanEqual',
+   | if($opText == '>',  | 'greaterThan',
+   | if($opText == '>=', | 'greaterThanEqual',
+   | 'unknownRelOp'))))
+}
+
+function meta::pure::parser::mappings::buildAdditiveExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let operands = $ctx->getChildren('multiplicativeExpression');
+   range(1, $operands->size())->fold(
+      {i, acc | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+         p_sourceInformation = buildBinaryOpSourceInfo($acc, $operands->at($i), $lineOffset),
+         functionName        = if($ctx->getChildTextAt(2 * $i - 1)->toOne() == '-', |'minus', |'plus'),
+         parametersValues    = [$acc, buildMultiplicativeExpression($operands->at($i), $lineOffset)])},
+      buildMultiplicativeExpression($operands->at(0), $lineOffset));
+}
+
+function meta::pure::parser::mappings::buildMultiplicativeExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let operands = $ctx->getChildren('expression');
+   range(1, $operands->size())->fold(
+      {i, acc | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+         p_sourceInformation = buildBinaryOpSourceInfo($acc, $operands->at($i), $lineOffset),
+         functionName        = if($ctx->getChildTextAt(2 * $i - 1)->toOne() == '/', |'divide', |'times'),
+         parametersValues    = [$acc, buildExpression($operands->at($i), $lineOffset)])},
+      buildExpression($operands->at(0), $lineOffset));
+}
+
+// -----------------------------------------------------------------------
+// expression: chain_fold over propertyOrFunctionExpression. Initial scope:
+// only the non-arrow path (passes through buildNonArrowOrEqualExpression
+// without applying any arrow/property chain). The chain_fold itself is
+// deferred until lambda/arrow fixtures land.
+// -----------------------------------------------------------------------
+
+function meta::pure::parser::mappings::buildExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   chainPropertyOrFunctionExpression($ctx, $lineOffset)
+}
+
+function meta::pure::parser::mappings::buildNonArrowOrEqualExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   if($ctx->hasChild('atomicExpression'),
+      | buildAtomicExpression($ctx->getChild('atomicExpression')->toOne(), $lineOffset),
+   | if($ctx->hasChild('expressionsArray'),
+      | buildExpressionsArray($ctx->getChild('expressionsArray')->toOne(), $lineOffset),
+   | if($ctx->hasChild('signedExpression'),
+      | buildSignedExpression($ctx->getChild('signedExpression')->toOne(), $lineOffset),
+   | if($ctx->hasChild('notExpression'),
+      | buildNotExpression($ctx->getChild('notExpression')->toOne(), $lineOffset),
+   | if($ctx->hasChild('sliceExpression'),
+      | buildSliceExpression($ctx->getChild('sliceExpression')->toOne(), $lineOffset),
+   | if($ctx->hasChild('combinedExpression'),
+      | buildCombinedExpression($ctx->getChild('combinedExpression')->toOne(), $lineOffset),
+   | atomic($ctx, '<unsupported nonArrowOrEqualExpression>', 'String', $lineOffset)))))));
+}
+
+// `[a:b]` etc → `slice(a, b)` FunctionInvocation.
+function meta::pure::parser::mappings::buildSliceExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      functionName        = 'slice',
+      parametersValues    = $ctx->getChildren('expression')->map(e | buildExpression($e, $lineOffset))
+   )
+}
+
+// `-expr` → `minus(expr)`; `+expr` → passthrough.
+function meta::pure::parser::mappings::buildSignedExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let inner = buildSimpleExpression($ctx->getChild('simpleExpression')->toOne(), $lineOffset);
+   if($ctx->hasToken('MINUS'),
+      | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+           p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+           functionName        = 'minus',
+           parametersValues    = [$inner]),
+      | $inner);
+}
+
+// `!expr` → `not(expr)`.
+function meta::pure::parser::mappings::buildNotExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      functionName        = 'not',
+      parametersValues    = [buildSimpleExpression($ctx->getChild('simpleExpression')->toOne(), $lineOffset)]
+   )
+}
+
+// Minimal: passthrough nonArrowOrEqualExpression without the chain_fold over
+// property/function arrow steps. Property + arrow chains deferred until those
+// fixtures are added.
+function meta::pure::parser::mappings::buildSimpleExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   chainPropertyOrFunctionExpression($ctx, $lineOffset)
+}
+
+// Shared body for expression + simpleExpression — walks propertyOrFunctionExpression
+// chain steps off the leading nonArrowOrEqualExpression, wrapping each in
+// DotApplication (.prop) or ArrowInvocation (->fn).
+function meta::pure::parser::mappings::chainPropertyOrFunctionExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   $ctx->getChildren('propertyOrFunctionExpression')->fold(
+      {step, acc |
+         if($step->hasChild('propertyExpression'),
+            | buildPropertyExpression($acc, $step->getChild('propertyExpression')->toOne(), $lineOffset),
+         | if($step->hasChild('functionExpression'),
+            | buildFunctionExpression($acc, $step->getChild('functionExpression')->toOne(), $lineOffset),
+            | $acc))},
+      buildNonArrowOrEqualExpression($ctx->getChild('nonArrowOrEqualExpression')->toOne(), $lineOffset));
+}
+
+// `receiver.propName` or `receiver.propName(args)` → DotApplication.
+function meta::pure::parser::mappings::buildPropertyExpression(receiver: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let argsCtx = $ctx->getChild('functionExpressionParameters');
+   let params = if($argsCtx->isNotEmpty(),
+                   | $receiver->concatenate($argsCtx->toOne()->getChildren('combinedExpression')->map(e | buildCombinedExpression($e, $lineOffset))),
+                   | [$receiver]);
+   ^meta::pure::protocol::grammar::valuespecification::DotApplication(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      functionName        = $ctx->getChild('propertyName')->toOne()->getText(),
+      parametersValues    = $params
+   );
+}
+
+// `receiver->fn(args)` (one or more arrow steps) → ArrowInvocation chain.
+function meta::pure::parser::mappings::buildFunctionExpression(receiver: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   $ctx->getChildren('arrowStep')->fold(
+      {step, acc | ^meta::pure::protocol::grammar::valuespecification::ArrowInvocation(
+         p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+         functionName        = $step->getChild('qualifiedName')->toOne()->getText(),
+         parametersValues    = $acc->concatenate(
+            $step->getChild('functionExpressionParameters')
+                 ->map(p | $p->getChildren('combinedExpression')->map(e | buildCombinedExpression($e, $lineOffset)))
+                 ->concatenate([])
+         )
+      )},
+      $receiver);
+}
+
+function meta::pure::parser::mappings::buildAtomicExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   if($ctx->hasChild('variable'),
+      | buildVariable($ctx->getChild('variable')->toOne(), $lineOffset),
+   | if($ctx->hasChild('instanceLiteralToken'),
+      | buildInstanceLiteralToken($ctx->getChild('instanceLiteralToken')->toOne(), $lineOffset),
+   | if($ctx->hasChild('anyLambda'),
+      | buildAnyLambda($ctx->getChild('anyLambda')->toOne(), $lineOffset),
+   | if($ctx->hasChild('instanceReference'),
+      | buildInstanceReference($ctx->getChild('instanceReference')->toOne(), $lineOffset),
+   | if($ctx->hasChild('expressionInstance'),
+      | buildExpressionInstance($ctx->getChild('expressionInstance')->toOne(), $lineOffset),
+   | if($ctx->hasToken('AT'),
+      | buildAtomicTypeRef($ctx, $lineOffset),
+   | if($ctx->hasChild('dsl'),
+      | buildDslAtomic($ctx->getChild('dsl')->toOne(), $lineOffset),
+   | if($ctx->hasChild('parentReference'),
+      | buildParentReference($ctx->getChild('parentReference')->toOne(), $lineOffset),
+   | if($ctx->hasChild('columnBuilders'),
+      | buildColumnBuilders($ctx->getChild('columnBuilders')->toOne(), $lineOffset),
+   | atomic($ctx, '<unsupported atomicExpression>', 'String', $lineOffset))))))))));
+}
+
+// `#{...}#` DSL block — captured as a String AtomicValue whose value is the
+// raw DSL_TEXT (no parsing on the spec side; the host language handles it).
+function meta::pure::parser::mappings::buildDslAtomic(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   atomic($ctx, $ctx->getTokenText('DSL_TEXT')->toOne(), 'String', $lineOffset)
+}
+
+// `~`, `~.~`, `~.foo`, etc. Builds VariableExpression("~") then folds DotApplication
+// per step (functionName="~" for ~ steps, propertyName for property steps).
+function meta::pure::parser::mappings::buildParentReference(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let seed = ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      name                = '~'
+   )->cast(@meta::pure::protocol::grammar::valuespecification::ValueSpecification);
+   $ctx->getChildren('parentReferenceStep')->fold(
+      {step, acc | ^meta::pure::protocol::grammar::valuespecification::DotApplication(
+         p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+         functionName        = if($step->hasToken('TILDE'),
+                                  | '~',
+                                  | $step->getChild('propertyName')->toOne()->getText()),
+         parametersValues    = [$acc])->cast(@meta::pure::protocol::grammar::valuespecification::ValueSpecification)},
+      $seed);
+}
+
+// `@Type` / `@Type[mul]` / `@|mul` / `@Type[mul]` / etc. — a UserDefinedGenericTypeAndMultiplicityHolder
+// with optional type + multiplicity, defaulting to Undefined* when absent.
+function meta::pure::parser::mappings::buildAtomicTypeRef(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let typeCtx = $ctx->getChild('type');
+   let mulArg  = $ctx->getChild('multiplicityArgument');
+   let mul     = $ctx->getChild('multiplicity');
+   ^meta::pure::protocol::grammar::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      genericType         = if($typeCtx->isNotEmpty(),
+                               | buildGenericType($typeCtx->toOne(), $lineOffset),
+                               | ^meta::pure::protocol::grammar::type::generics::UndefinedGenericType()),
+      multiplicity        = if($mulArg->isNotEmpty(),
+                               | parseMultiplicityArgument($mulArg->toOne()),
+                            | if($mul->isNotEmpty(),
+                                 | buildMultiplicity($mul->toOne()),
+                                 | ^meta::pure::protocol::grammar::multiplicity::UndefinedMultiplicity()))
+   );
+}
+
+// -----------------------------------------------------------------------
+// expressionInstance: `^Type(slot=val, ...)` or `^$var(slot=val, ...)`
+// (copy form). Initial scope: the named-type `^Type(...)` form only.
+// -----------------------------------------------------------------------
+
+function meta::pure::parser::mappings::buildExpressionInstance(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   if($ctx->hasChild('variable'),
+      | buildExpressionInstanceCopy($ctx, $lineOffset),
+   | if($ctx->hasChild('qualifiedName'),
+      | buildExpressionInstanceNew($ctx, $lineOffset),
+   | buildExpressionInstanceCopyExpr($ctx, $lineOffset)))
+}
+
+// `^expr(...)` (third alt): receiver is an arbitrary combinedExpression result.
+function meta::pure::parser::mappings::buildExpressionInstanceCopyExpr(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let receiver = buildCombinedExpression($ctx->getChild('combinedExpression')->toOne(), $lineOffset);
+   let assigns  = $ctx->getChildren('expressionInstanceParserPropertyAssignment');
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      functionName        = 'copy',
+      parametersValues    = if($assigns->size() > 0,
+         | [$receiver, buildAssignmentsCollection($ctx, $assigns, $lineOffset)],
+         | [$receiver])
+   );
+}
+
+function meta::pure::parser::mappings::buildExpressionInstanceCopy(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let varCtx  = $ctx->getChild('variable')->toOne();
+   let assigns = $ctx->getChildren('expressionInstanceParserPropertyAssignment');
+   let receiver = ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+      p_sourceInformation = buildSourceInfo($varCtx, $lineOffset),
+      name                = $varCtx->getChild('identifier')->toOne()->getText()
+   );
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      functionName        = 'copy',
+      parametersValues    = if($assigns->size() > 0,
+         | [$receiver, buildAssignmentsCollection($ctx, $assigns, $lineOffset)],
+         | [$receiver])
+   );
+}
+
+function meta::pure::parser::mappings::buildExpressionInstanceNew(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let qn      = $ctx->getChild('qualifiedName');
+   let assigns = $ctx->getChildren('expressionInstanceParserPropertyAssignment');
+   let head = ^meta::pure::protocol::grammar::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      genericType         = ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+         type                  = ^meta::pure::protocol::grammar::type::Type_Pointer(
+            value = if($qn->isNotEmpty(), |$qn->toOne()->getText(), |'Unknown')),
+         // `^MyClass<TArg|MArg>(...)` — pull typeArguments / multiplicityArguments /
+         // typeVariableValues from the expressionInstance ctx; mirrors the production
+         // parser's buildExpressionInstanceGenericType.
+         typeArguments         = $ctx->getChild('typeArguments')
+                                       ->map(t | $t->getChildren('typeOrUndefined')->map(c | buildTypeOrUndefined($c, $lineOffset))),
+         multiplicityArguments = $ctx->getChild('multiplicityArguments')
+                                       ->map(m | $m->getChildren('multiplicityArgument')->map(a | parseMultiplicityArgument($a))),
+         typeVariableValues    = $ctx->getChild('typeVariableValues')
+                                       ->map(t | $t->getChildren('instanceLiteral')->map(l | buildInstanceLiteral($l, $lineOffset)))
+      ),
+      multiplicity        = ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+         lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = 1),
+         upperBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = 1)
+      )
+   );
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      functionName        = 'new',
+      parametersValues    = if($assigns->size() > 0,
+         | [$head, buildAssignmentsCollection($ctx, $assigns, $lineOffset)],
+         | [$head])
+   );
+}
+
+function meta::pure::parser::mappings::buildAssignmentsCollection(ctx: AntlrContext[1], assigns: AntlrContext[*], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::Collection(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      values              = $assigns->map(a | buildExpressionInstanceParserPropertyAssignment($a, $lineOffset)),
+      multiplicity        = ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+         lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $assigns->size()),
+         upperBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $assigns->size())
+      )
+   )
+}
+
+function meta::pure::parser::mappings::buildExpressionInstanceParserPropertyAssignment(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   // Grammar: propertyName PLUS? EQUAL expressionInstanceRightSide. The PLUS
+   // indicates `+=` (append) vs `=` (replace); production adds a third Boolean
+   // AtomicValue (true) when PLUS is present so the compiler knows to
+   // append. Without it, copy expressions like `^$c(names += 'x')` come out
+   // shaped like plain `=` assignments and downstream code silently drops
+   // the append semantics.
+   let base = [
+      atomic($ctx, $ctx->getChild('propertyName')->toOne()->getText(), 'String', $lineOffset),
+      buildExpressionInstanceRightSide($ctx->getChild('expressionInstanceRightSide')->toOne(), $lineOffset)
+   ];
+   let parameters = if($ctx->hasToken('PLUS'),
+                       | $base->concatenate([atomicBoolean($ctx, true, $lineOffset)]),
+                       | $base);
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      functionName        = 'keyExpression',
+      parametersValues    = $parameters
+   );
+}
+
+// Boolean-typed AtomicValue helper — mirrors the `atomic` helper for the
+// String case. Used only by the `keyExpression` builder above so far.
+function meta::pure::parser::mappings::atomicBoolean(ctx: AntlrContext[1], value: Boolean[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::AtomicValue[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      genericType         = ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+         type = ^meta::pure::protocol::grammar::type::Type_Pointer(value = 'Boolean')),
+      value               = $value
+   )
+}
+
+function meta::pure::parser::mappings::buildExpressionInstanceRightSide(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let inner = $ctx->getChild('expressionInstanceAtomicRightSide')->toOne();
+   if($inner->hasChild('combinedExpression'),
+      | buildCombinedExpression($inner->getChild('combinedExpression')->toOne(), $lineOffset),
+   | if($inner->hasChild('expressionInstance'),
+      | buildExpressionInstance($inner->getChild('expressionInstance')->toOne(), $lineOffset),
+   | // qualifiedName fallback — `^Foo(name=Some::Path)`
+     ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+        p_sourceInformation = buildSourceInfo($inner, $lineOffset),
+        name                = $inner->getText())));
+}
+
+// -----------------------------------------------------------------------
+// Lambdas. Three forms covered by `anyLambda`:
+//   { x: T[m] | body }
+//   { x      | body }
+//   {        | body }   // zero params
+// In all forms the LambdaFunction is wrapped in an AtomicValue.
+// -----------------------------------------------------------------------
+
+function meta::pure::parser::mappings::buildAnyLambda(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   if($ctx->hasChild('lambdaFunction'),
+      | ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+           p_sourceInformation = buildSourceInfo($ctx->getChild('lambdaFunction')->toOne(), $lineOffset),
+           value               = buildLambdaFunction($ctx->getChild('lambdaFunction')->toOne(), $lineOffset)),
+   | // Inline { x? | code } form: no explicit lambdaFunction child.
+     ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+        p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+        value               = ^meta::pure::protocol::grammar::function::LambdaFunction(
+           p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+           parameters          = $ctx->getChildren('lambdaParam')->map(p | buildLambdaParam($p, $lineOffset)),
+           expressionSequence  = buildCodeBlock($ctx->getChild('lambdaPipe')->toOne()->getChild('codeBlock')->toOne(), $lineOffset)
+        )));
+}
+
+function meta::pure::parser::mappings::buildLambdaFunction(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::function::LambdaFunction[1]
+{
+   ^meta::pure::protocol::grammar::function::LambdaFunction(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      parameters          = $ctx->getChildren('lambdaParam')->map(p | buildLambdaParam($p, $lineOffset)),
+      expressionSequence  = buildCodeBlock($ctx->getChild('lambdaPipe')->toOne()->getChild('codeBlock')->toOne(), $lineOffset)
+   )
+}
+
+// `x` or `x: T[m]` — VariableExpression. type+multiplicity slots only set when
+// `lambdaParamType` is present (mirrors .dsl's ifPresent gating).
+function meta::pure::parser::mappings::buildLambdaParam(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::VariableExpression[1]
+{
+   let typedCtx = $ctx->getChild('lambdaParamType');
+   if($typedCtx->isNotEmpty(),
+      | ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+           p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+           name                = $ctx->getChild('identifier')->toOne()->getText(),
+           genericType         = buildGenericType($typedCtx->toOne()->getChild('type')->toOne(), $lineOffset),
+           multiplicity        = buildMultiplicity($typedCtx->toOne()->getChild('multiplicity')->toOne())),
+      | ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+           name = $ctx->getChild('identifier')->toOne()->getText()));
+}
+
+// `MyClass`              → AtomicValue with Package_Pointer
+// `f(1, 2)`              → FunctionInvocation('f', [args])
+// `MyClass.all()`        → FunctionInvocation('getAll', [AtomicValue(Package_Pointer)])
+// `MyClass.allVersions()`→ getAllVersions
+// Initial scope: the three above. Milestoning variants + allVersionsInRange deferred.
+function meta::pure::parser::mappings::buildInstanceReference(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let aof = $ctx->getChild('allOrFunction');
+   let qn  = $ctx->getChild('qualifiedName');
+   let qnText = if($qn->isNotEmpty(), |$qn->toOne()->getText(), |$ctx->getText());
+
+   if($aof->isEmpty(),
+      // bare reference — `myEnum`, `MyClass`, etc.
+      | ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+           p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+           value               = ^meta::pure::protocol::grammar::Package_Pointer(value = $qnText)),
+   | if($aof->toOne()->hasChild('functionExpressionParameters'),
+      // direct call — `f(1, 2)`
+      | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+           p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+           functionName        = $qnText,
+           parametersValues    = $aof->toOne()->getChild('functionExpressionParameters')->toOne()
+                                      ->getChildren('combinedExpression')->map(e | buildCombinedExpression($e, $lineOffset))),
+   | if($aof->toOne()->hasChild('allFunction'),
+      | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+           p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+           functionName        = 'getAll',
+           parametersValues    = [^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+              p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+              value               = ^meta::pure::protocol::grammar::Package_Pointer(value = $qnText))]),
+   | if($aof->toOne()->hasChild('allVersionsFunction'),
+      | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+           p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+           functionName        = 'getAllVersions',
+           parametersValues    = [^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+              p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+              value               = ^meta::pure::protocol::grammar::Package_Pointer(value = $qnText))]),
+   | if($aof->toOne()->hasChild('allVersionsInRangeFunction'),
+      | buildAllVersionsInRange($ctx, $aof->toOne(), $qnText, $lineOffset),
+   | // Fallback for milestoning variants — bare reference.
+     ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+           p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+           value               = ^meta::pure::protocol::grammar::Package_Pointer(value = $qnText)))))));
+}
+
+function meta::pure::parser::mappings::buildAllVersionsInRange(ctx: AntlrContext[1], aof: AntlrContext[1], qnText: String[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let rangeFn = $aof->getChild('allVersionsInRangeFunction')->toOne();
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      functionName        = 'getAllVersionsInRange',
+      parametersValues    = [^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+         p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+         value               = ^meta::pure::protocol::grammar::Package_Pointer(value = $qnText))]
+         ->concatenate($rangeFn->getChildren('buildMilestoningVariableExpression')
+                                ->map(m | buildVariable($m->getChild('variable')->toOne(), $lineOffset)))
+   );
+}
+
+// `[a, b, c]` → Collection with values + multiplicity=count..count.
+function meta::pure::parser::mappings::buildExpressionsArray(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let exprs = $ctx->getChildren('combinedExpression');
+   ^meta::pure::protocol::grammar::valuespecification::Collection(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      values              = $exprs->map(e | buildCombinedExpression($e, $lineOffset)),
+      multiplicity        = ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+         lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $exprs->size()),
+         upperBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $exprs->size())
+      )
+   );
+}

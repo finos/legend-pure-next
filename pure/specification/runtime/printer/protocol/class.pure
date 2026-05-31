@@ -59,15 +59,17 @@ function meta::pure::functions::printer::protocol::printProperty(p: meta::pure::
     $annotations + $agg + $p.name + ': ' + printGenericType($p.genericType) + printMultiplicity($p.multiplicity) + $defaultPart + ';';
 }
 
-// Aggregation prefix matches the parser: `(composite) `, `(shared) `, `(none) `.
+// Aggregation prefix matches the parser: `(composite) `, `(shared) `.
 // Slot is an Enum_Pointer whose extraPointerValues[0] holds the enum name
-// (Composite / Shared / None). Empty/missing → no prefix.
+// (Composite / Shared / None). Empty/missing → no prefix; `None` is the
+// implicit default and omitted from printed source (both builders always
+// populate the slot for validator parity).
 function meta::pure::functions::printer::protocol::printAggregationKind(a: Enum_Pointer[0..1]): String[1]
 {
     if ($a->isEmpty(),
         | '',
         | let name = $a->toOne().extraPointerValues->at(0).value;
-          '(' + $name->toLower() + ') ';
+          if ($name == 'None', | '', | '(' + $name->toLower() + ') ');
     );
 }
 

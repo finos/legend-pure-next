@@ -36,6 +36,9 @@ build:
         --source {{ts_root}} \
         --output-dir {{shared_out}} {{err_filter}}
 
+# No sibling-module deps — alias of `build` for symmetry with translation/* modules.
+build-all: build
+
 # Compile -> shared/typescript.pdb via the Pure compiler on Truffle (picks up compiler-pure changes automatically).
 build-truffle:
     @{{header}} 'build-truffle'

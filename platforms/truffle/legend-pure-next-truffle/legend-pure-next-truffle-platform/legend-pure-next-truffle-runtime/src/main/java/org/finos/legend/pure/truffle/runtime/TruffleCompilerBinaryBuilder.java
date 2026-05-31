@@ -117,15 +117,12 @@ public final class TruffleCompilerBinaryBuilder
             loader.preloadAll();
         }
 
-        // 2. Boot the truffle runtime.
+        // 2. Boot the truffle runtime. Section parsers (CompiledGraph /
+        // CompilerStats / TestFile / ReverseIndex / Error) come from
+        // compiler-pure's testSectionParsers() via TrufflePureParser's
+        // Pure-side registry; no Java extensions needed.
         PureTruffleRuntime.Builder runtimeBuilder = PureTruffleRuntime.builder()
-                .withResolver(resolver)
-                .withParserExtensions(List.of(
-                        new TruffleCompiledGraphLanguageExtension(),
-                        new TruffleCompilerStatsLanguageExtension(),
-                        new TruffleTestFileLanguageExtension(),
-                        new TruffleReverseIndexLanguageExtension(),
-                        new TruffleErrorLanguageExtension()));
+                .withResolver(resolver);
         runtimeCustomizer.accept(runtimeBuilder);
         PureTruffleRuntime runtime = runtimeBuilder.build();
 

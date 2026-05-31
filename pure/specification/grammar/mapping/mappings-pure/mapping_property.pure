@@ -1,0 +1,90 @@
+// Property + QualifiedProperty helpers.
+//
+// Grammar:
+//   property: stereotypes? taggedValues? propertyName aggregation?
+//             COLON propertyReturnType defaultValue?
+//   qualifiedProperty: stereotypes? taggedValues? identifier
+//                      qualifiedPropertyBody COLON propertyReturnType
+//
+// Initial scope: simple properties with name + type + multiplicity +
+// stereotypes/taggedValues. aggregation + defaultValue (lambda) deferred;
+// QualifiedProperty's body (full code block) deferred until value-spec
+// parsing lands.
+
+import meta::pure::parser::mappings::*;
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+import meta::pure::protocol::grammar::*;
+
+function meta::pure::parser::mappings::buildProperty(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::function::property::Property[1]
+{
+   let returnTypeCtx = $ctx->getChild('propertyReturnType')->toOne();
+   let dvCtx         = $ctx->getChild('defaultValue');
+   let aggCtx        = $ctx->getChild('aggregation');
+   ^meta::pure::protocol::grammar::function::property::Property(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      name                = $ctx->getChild('propertyName')->toOne()->getText(),
+      genericType         = buildGenericType($returnTypeCtx->getChild('type')->toOne(), $lineOffset),
+      multiplicity        = buildMultiplicity($returnTypeCtx->getChild('multiplicity')->toOne()),
+      aggregation         = buildAggregation($aggCtx),
+      defaultValue        = if($dvCtx->isNotEmpty(),
+         | ^meta::pure::protocol::grammar::function::LambdaFunction(
+              p_sourceInformation = buildSourceInfo($dvCtx->toOne(), $lineOffset),
+              expressionSequence  = [buildCombinedExpression($dvCtx->toOne()->getChild('combinedExpression')->toOne(), $lineOffset)]),
+         | []),
+      stereotypes         = collectStereotypes($ctx, $lineOffset),
+      taggedValues        = collectTaggedValues($ctx, $lineOffset)
+   );
+}
+
+// Build the Enum_Pointer for Property.aggregation. Grammar:
+//   aggregation: GROUP_OPEN AGGREGATION_TYPE GROUP_CLOSE
+//   AGGREGATION_TYPE: 'composite' | 'shared'
+// Defaults to 'None' when the grammar's `aggregation?` is absent. Kept in
+// sync with the reference Java parser's buildProperty so the validator can
+// compare the slot strictly.
+function meta::pure::parser::mappings::buildAggregation(aggCtx: AntlrContext[0..1]): meta::pure::protocol::grammar::Enum_Pointer[1]
+{
+   let kind = if($aggCtx->isEmpty(),
+                 | 'None',
+                 | let raw = $aggCtx->toOne()->getTokenText('AGGREGATION_TYPE')->toOne();
+                   if($raw == 'composite', | 'Composite',
+                      | if($raw == 'shared', | 'Shared', | 'None'));
+              );
+   ^meta::pure::protocol::grammar::Enum_Pointer(
+      value              = 'meta::pure::metamodel::function::property::AggregationKind',
+      extraPointerValues = [^meta::pure::protocol::grammar::PointerValue(value = $kind)]
+   );
+}
+
+function meta::pure::parser::mappings::buildQualifiedProperty(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::function::property::QualifiedProperty[1]
+{
+   let returnTypeCtx = $ctx->getChild('propertyReturnType')->toOne();
+   let body          = $ctx->getChild('qualifiedPropertyBody')->toOne();
+   ^meta::pure::protocol::grammar::function::property::QualifiedProperty(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      name                = $ctx->getChild('identifier')->toOne()->getText(),
+      genericType         = buildGenericType($returnTypeCtx->getChild('type')->toOne(), $lineOffset),
+      multiplicity        = buildMultiplicity($returnTypeCtx->getChild('multiplicity')->toOne()),
+      parameters          = $body->getChildren('functionVariableExpression')->map(p | buildFunctionVariableExpression($p, $lineOffset)),
+      expressionSequence  = buildCodeBlock($body->getChild('codeBlock')->toOne(), $lineOffset),
+      stereotypes         = collectStereotypes($ctx, $lineOffset),
+      taggedValues        = collectTaggedValues($ctx, $lineOffset)
+   );
+}
+
+// `classBody.properties` is the wrapper around individual `property` and
+// `qualifiedProperty` ctxs. Two convenience collectors for the common case.
+function meta::pure::parser::mappings::collectProperties(ownerCtx: AntlrContext[1], bodyName: String[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::function::property::Property[*]
+{
+   $ownerCtx->getChild($bodyName)
+            ->map(b | $b->getChild('properties'))
+            ->map(p | $p->getChildren('property')->map(c | buildProperty($c, $lineOffset)))
+}
+
+function meta::pure::parser::mappings::collectQualifiedProperties(ownerCtx: AntlrContext[1], bodyName: String[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::function::property::QualifiedProperty[*]
+{
+   $ownerCtx->getChild($bodyName)
+            ->map(b | $b->getChild('properties'))
+            ->map(p | $p->getChildren('qualifiedProperty')->map(c | buildQualifiedProperty($c, $lineOffset)))
+}

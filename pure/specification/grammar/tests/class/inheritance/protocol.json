@@ -131,6 +131,14 @@
       },
       "properties" : [ {
         "_type" : "Property",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "None"
+          } ],
+          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
@@ -180,9 +188,9 @@
             "_type" : "Type_Pointer",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
-              "endColumn" : 21,
+              "endColumn" : 14,
               "endLine" : 18,
-              "startColumn" : 15,
+              "startColumn" : 8,
               "startLine" : 18
             },
             "value" : "Integer"
@@ -202,7 +210,7 @@
         "name" : "val",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
-          "endColumn" : 25,
+          "endColumn" : 18,
           "endLine" : 18,
           "startColumn" : 3,
           "startLine" : 18

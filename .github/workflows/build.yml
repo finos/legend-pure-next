@@ -678,15 +678,21 @@ jobs:
           path: ${{ matrix.artifact }}.tar
           retention-days: 1
 
-  # Pure -> <target> translator. The two targets (java, typescript) run in
-  # parallel as matrix entries — UI groups them under one `translations` parent.
-  # Each entry runs test-all (translator self-tests + runtime suites) then
-  # gallery (renders the Pure/<target> side-by-side HTML). Each downloads only
-  # its own language pdb (`language-<target>-pdb`), but waits for the full
-  # `languages` matrix to finish — that's the price of `needs: languages` being
-  # one coarse arrow instead of per-matrix-entry edges.
+  # Pure -> <target> gallery. Matrix entries:
+  #   - java / typescript : translators — `just build && just test-all && just gallery`
+  #                          (translator self-tests + runtime suites + render HTML).
+  #                          Each downloads its own language pdb.
+  #   - truffle           : backend introspection — `just gallery` only (gallery
+  #                          recipe is self-building; no test-all suite exists).
+  #                          No language pdb to download.
+  # `language_pdb_artifact` keys the optional per-target language-pdb download;
+  # empty for entries (like truffle) that don't have one. `gallery_cmd` is the
+  # entry's full just-recipe sequence — different per target so the truffle box
+  # doesn't pay for nonexistent test-all. All three wait for the full
+  # `translation-deps` matrix to finish — coarser than per-entry edges but
+  # simpler to read.
   translations:
-    name: Translation ${{ matrix.target }} (test-all + gallery)
+    name: Translation ${{ matrix.target }} (gallery)
     needs: translation-deps
     runs-on: ubuntu-24.04
     strategy:
@@ -695,8 +701,16 @@ jobs:
         include:
           - target: java
             gallery_file: shared/java-translation-gallery.html
+            language_pdb_artifact: language-java-pdb
+            gallery_cmd: just build && just test-all && just gallery
           - target: typescript
             gallery_file: shared/typescript-translation-gallery.html
+            language_pdb_artifact: language-typescript-pdb
+            gallery_cmd: just build && just test-all && just gallery
+          - target: truffle
+            gallery_file: shared/truffle-translation-gallery.html
+            language_pdb_artifact: ''
+            gallery_cmd: just gallery
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -741,9 +755,10 @@ jobs:
           name: translation-shared-pdb
 
       - name: Download language pdb
+        if: matrix.language_pdb_artifact != ''
         uses: actions/download-artifact@v8
         with:
-          name: language-${{ matrix.target }}-pdb
+          name: ${{ matrix.language_pdb_artifact }}
 
       - name: Restore artifacts
         run: |
@@ -752,14 +767,13 @@ jobs:
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
           tar -xf truffle-artifacts.tar
           tar -xf translation-shared-pdb.tar
-          tar -xf language-${{ matrix.target }}-pdb.tar
+          if [[ -n "${{ matrix.language_pdb_artifact }}" ]]; then
+            tar -xf ${{ matrix.language_pdb_artifact }}.tar
+          fi
 
-      - name: Translation ${{ matrix.target }} test-all + gallery
+      - name: Translation ${{ matrix.target }} gallery
         working-directory: pure/modules/translation/${{ matrix.target }}
-        run: |
-          just build
-          just test-all
-          just gallery
+        run: ${{ matrix.gallery_cmd }}
 
       - name: Upload translation gallery
         uses: actions/upload-artifact@v7
@@ -768,12 +782,11 @@ jobs:
           path: ${{ matrix.gallery_file }}
           retention-days: 1
 
-  # Publishes the translation galleries to GitHub Pages. The HTMLs are produced
-  # upstream by translation-java::gallery and translation-typescript::gallery
-  # and shipped as the gallery-java / gallery-typescript artifacts. Both files
-  # are self-contained (inline CSS/JS/data) so the deploy is just "drop into
-  # _site/". Runs only on push to main on the canonical repo so PRs and forks
-  # don't try to publish.
+  # Publishes the galleries to GitHub Pages. The HTMLs are produced upstream by
+  # the `translations` matrix (java/typescript/truffle) and shipped as
+  # gallery-<target> artifacts. All files are self-contained (inline CSS/JS/data)
+  # so the deploy is just "drop into _site/". Runs only on push to main on the
+  # canonical repo so PRs and forks don't try to publish.
   # One-time setup: repo Settings → Pages → Source = "GitHub Actions".
   publish-gallery:
     name: Publish galleries to GitHub Pages
@@ -796,20 +809,28 @@ jobs:
           name: gallery-typescript
           path: gallery-typescript
 
+      - name: Download truffle gallery
+        uses: actions/download-artifact@v8
+        with:
+          name: gallery-truffle
+          path: gallery-truffle
+
       - name: Stage site
         run: |
           set -euo pipefail
           mkdir -p _site
           cp gallery-java/java-translation-gallery.html             _site/java.html
           cp gallery-typescript/typescript-translation-gallery.html _site/typescript.html
+          cp gallery-truffle/truffle-translation-gallery.html       _site/truffle.html
           cat > _site/index.html <<'EOF'
           <!doctype html>
           <meta charset="utf-8">
-          <title>legend-pure-next translation galleries</title>
-          <h1>legend-pure-next translation galleries</h1>
+          <title>legend-pure-next galleries</title>
+          <h1>legend-pure-next galleries</h1>
           <ul>
-            <li><a href="java.html">Java translation gallery</a></li>
-            <li><a href="typescript.html">TypeScript translation gallery</a></li>
+            <li><a href="java.html">Pure &rarr; Java translation gallery</a></li>
+            <li><a href="typescript.html">Pure &rarr; TypeScript translation gallery</a></li>
+            <li><a href="truffle.html">Pure &rarr; Truffle AST gallery</a></li>
           </ul>
           EOF
 

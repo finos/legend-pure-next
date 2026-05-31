@@ -21,13 +21,11 @@ import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
 import org.finos.legend.pure.next.parser.TopLexer;
 import org.finos.legend.pure.next.parser.TopParser;
-import org.finos.legend.pure.truffle.parser.pureLanguage.TrufflePureLanguageProtocolBuilder;
-import org.finos.legend.pure.truffle.parser.topLevel.TruffleParserExtension;
+import org.finos.legend.pure.truffle.PureContext;
+import org.finos.legend.pure.truffle.PureLanguage;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Pure-source parser that returns a {@code PureDynamicObject} directly,
@@ -35,24 +33,74 @@ import java.util.Map;
  * protocol-Impl → PDO copy.
  *
  * <p>Drives ANTLR ({@link TopLexer}/{@link TopParser}) and delegates the
- * section + import + content-token → {@code PureFile}/{@code Section}
- * construction to the code-generated {@link TruffleTopLevelProtocolBuilder}
- * (compiled from {@code top-mappings.dsl} via the Truffle target). The
- * {@code ###Pure} section's body is in turn parsed via
- * {@link TrufflePureLanguageProtocolBuilder} — the M3 grammar visitor compiled from
- * {@code pure-language-mappings.dsl}.</p>
+ * entire parse to the Pure-side interpreter loaded from
+ * {@code shared/parser-mappings.pdb}: {@code parseDocument} walks the top
+ * tree, builds {@code PureFile} + {@code Section}, and dispatches each
+ * section body through the Pure-side registry
+ * ({@code pureSectionParser()} for {@code ###Pure} + optionally
+ * {@code testSectionParsers()} for the compiler-test sections). A section
+ * name without a matching registry entry is a hard error.</p>
+ * <p>The .dsl pipeline that previously generated {@code TruffleTopLevelProtocolBuilder}
+ * and {@code TrufflePureLanguageProtocolBuilder} has been retired entirely.</p>
  */
 public final class TrufflePureParser
 {
-    private static final String DEFAULT_SECTION_NAME = "Pure";
-
     private final TruffleMetadataAccess resolver;
-    private final Map<String, TruffleParserExtension> extensions;
+    private final Object parseDocumentFn;
+    /**
+     * Pure-side registry of built-in section parsers. Eagerly resolved at
+     * construction so the per-parse path is one executeFunction call. ###Pure
+     * comes from parser-mappings via {@code pureSectionParser()}. Test section
+     * parsers (CompiledGraph / CompilerStats / …) are appended via
+     * {@code testSectionParsers()} when compiler.pdb is loaded into the
+     * resolver — the call returns the empty list when the function isn't
+     * present so the optional dependency stays optional.
+     */
+    private final List<Object> pureSectionRegistry;
 
-    private TrufflePureParser(TruffleMetadataAccess resolver, Map<String, TruffleParserExtension> extensions)
+    private TrufflePureParser(TruffleMetadataAccess resolver)
     {
         this.resolver = resolver;
-        this.extensions = extensions;
+        this.parseDocumentFn = resolver == null ? null : resolver.getElement(
+                "meta::pure::parser::mappings::interpreter::parseDocument_AntlrContext_1__String_1__Boolean_1__Pair_MANY__PureFile_1_");
+        this.pureSectionRegistry = resolver == null
+                ? new java.util.ArrayList<>()
+                : buildPureSectionRegistry(resolver);
+    }
+
+    /**
+     * Compose the Pure-side section-parser registry by invoking the relevant
+     * aggregators. {@code pureSectionParser()} (parser-mappings) is required;
+     * {@code testSectionParsers()} (compiler-pure) is optional. Returns the
+     * concatenated list in registry order. The live {@link PureContext}
+     * (looked up via {@link PureLanguage#get}) is what drives the Pure-side
+     * evaluation — no PureTruffleRuntime dependency.
+     */
+    private static List<Object> buildPureSectionRegistry(TruffleMetadataAccess resolver)
+    {
+        PureContext ctx = PureLanguage.get(null);
+        List<Object> registry = new java.util.ArrayList<>();
+        Object pureFn = resolver.getElement(
+                "meta::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_");
+        if (pureFn != null)
+        {
+            registry.add(ctx.executeFunction(pureFn, new Object[0]));
+        }
+        Object testFn = resolver.getElement(
+                "meta::pure::compiler::test::testSectionParsers__Pair_MANY_");
+        if (testFn != null)
+        {
+            Object testList = ctx.executeFunction(testFn, new Object[0]);
+            if (testList instanceof org.finos.legend.pure.truffle.types.PureSequence ps)
+            {
+                for (int i = 0; i < ps.size(); i++) registry.add(ps.getBoxed(i));
+            }
+            else if (testList instanceof List<?> l)
+            {
+                registry.addAll((List<Object>) l);
+            }
+        }
+        return registry;
     }
 
     public static Builder builder()
@@ -82,38 +130,23 @@ public final class TrufflePureParser
         });
 
         TopParser.DocumentContext document = parser.document();
-        // Compose the section parser map: ###Pure goes to TrufflePureLanguageProtocolBuilder,
-        // other sections (CompiledGraph / CompilerStats / Error) come from the registered extensions.
-        Map<String, TruffleParserExtension> all = new LinkedHashMap<>(extensions);
-        all.put(DEFAULT_SECTION_NAME, new PureSectionTruffleExtension(resolver));
-        return new TruffleTopLevelProtocolBuilder(all, resolver, sourceId, syntheticHeader)
-                .buildDocument(document);
-    }
-
-    /**
-     * Adapter exposing {@link TrufflePureLanguageProtocolBuilder} as a {@link TruffleParserExtension}
-     * so the generated dispatcher routes {@code ###Pure} through it like any other
-     * section type — no special case in the parser itself.
-     */
-    private static final class PureSectionTruffleExtension implements TruffleParserExtension
-    {
-        private final TruffleMetadataAccess resolver;
-
-        PureSectionTruffleExtension(TruffleMetadataAccess resolver) { this.resolver = resolver; }
-
-        @Override public String sectionName() { return DEFAULT_SECTION_NAME; }
-
-        @Override
-        public List<Object> parseSection(String content, String sourceId, int lineOffset, TruffleMetadataAccess r)
+        // Whole parse is Pure-driven: parseDocument walks the top tree,
+        // dispatches each section through the Pure registry (pureSectionParser
+        // for ###Pure, optionally testSectionParsers for compiler-test
+        // sections). A section name not in the registry is a hard error.
+        if (parseDocumentFn == null)
         {
-            return new TrufflePureLanguageProtocolBuilder(this.resolver).parseElements(content, lineOffset);
+            throw new RuntimeException(
+                    "TrufflePureParser requires parser-mappings.pdb loaded into the resolver. "
+                            + "Register a TrufflePdbLoader for shared/parser-mappings.pdb.");
         }
+        return PureLanguage.get(null).executeFunction(parseDocumentFn,
+                new Object[] {document, sourceId, syntheticHeader, pureSectionRegistry});
     }
 
     public static final class Builder
     {
         private TruffleMetadataAccess resolver;
-        private final Map<String, TruffleParserExtension> extensions = new LinkedHashMap<>();
 
         private Builder() {}
 
@@ -123,29 +156,9 @@ public final class TrufflePureParser
             return this;
         }
 
-        /**
-         * Register {@link TruffleParserExtension}s for non-{@code Pure} sections (e.g.
-         * {@code ###CompiledGraph}). {@code ###Pure} is handled internally and must NOT
-         * be passed in.
-         */
-        public Builder withNonPureExtensions(List<? extends TruffleParserExtension> exts)
-        {
-            for (TruffleParserExtension ext : exts)
-            {
-                if (DEFAULT_SECTION_NAME.equals(ext.sectionName()))
-                {
-                    throw new IllegalArgumentException(
-                            "TrufflePureParser handles ###Pure internally — do not register a Pure-section "
-                                    + "extension. Got: " + ext);
-                }
-                extensions.put(ext.sectionName(), ext);
-            }
-            return this;
-        }
-
         public TrufflePureParser build()
         {
-            return new TrufflePureParser(resolver, Map.copyOf(extensions));
+            return new TrufflePureParser(resolver);
         }
     }
 }

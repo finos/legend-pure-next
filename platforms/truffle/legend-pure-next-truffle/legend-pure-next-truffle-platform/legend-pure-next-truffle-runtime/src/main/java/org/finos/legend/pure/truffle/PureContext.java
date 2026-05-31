@@ -167,7 +167,8 @@ public final class PureContext
         this.env = env;
     }
 
-    void initialize(TruffleMetadataAccess resolver, NativeNodeRegistry registry)
+    void initialize(TruffleMetadataAccess resolver, NativeNodeRegistry registry,
+                    java.util.Map<String, org.finos.legend.pure.next.parser.GrammarExtension> grammars)
     {
         this.resolver = resolver;
         // If the resolver is a TruffleModuleRegistry (the standard case after
@@ -178,13 +179,23 @@ public final class PureContext
         // module" behavior in that case.
         this.modules = (resolver instanceof org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry r) ? r : null;
         this.astBuilder = new PureASTBuilder(null, registry);
+        this.grammars = grammars == null ? java.util.Map.of() : java.util.Map.copyOf(grammars);
     }
+
+    /**
+     * Per-runtime grammar registry consulted by the {@code parseAntlr}
+     * native. Frozen at {@link #initialize}; rebuild requires a fresh
+     * {@link PureContext}.
+     */
+    private java.util.Map<String, org.finos.legend.pure.next.parser.GrammarExtension> grammars = java.util.Map.of();
 
     // ---------------------------------------------------------------
     // Accessors
     // ---------------------------------------------------------------
 
     public TruffleMetadataAccess resolver() { return resolver; }
+
+    public java.util.Map<String, org.finos.legend.pure.next.parser.GrammarExtension> grammars() { return grammars; }
 
     /**
      * The module registry, if the resolver was a {@link

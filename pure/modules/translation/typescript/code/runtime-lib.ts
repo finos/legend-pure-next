@@ -1114,8 +1114,23 @@ function __compare(a: any, b: any): number {
 // a JS number (a Float), coerce both to number — the Pure result type is Float.
 // `bigint <op> number` would otherwise throw a TypeError at runtime.
 function __num(x: any): any { return x instanceof Big ? Number(x.toString()) : (typeof x === "bigint" ? Number(x) : x); }
-// JSON.stringify with a bigint-safe replacer (raw JSON.stringify throws on a BigInt).
-function __json(v: any): string { return JSON.stringify(v, (_k: string, val: any) => typeof val === "bigint" ? val.toString() : (val instanceof Big ? val.toString() : val)); }
+// JSON.stringify with a bigint-safe + circular-safe replacer. Bidirectional
+// association binding (`__bindAssoc`) creates real cycles (`person.firm.employees[0] === person`)
+// — JSON.stringify on a cyclic graph throws "Converting circular structure to JSON",
+// which surfaced as the only assertEquals error message for association-wired
+// instances. Track seen objects in a WeakSet and emit "[Circular]" on revisit.
+function __json(v: any): string {
+  const seen = new WeakSet<object>();
+  return JSON.stringify(v, (_k: string, val: any) => {
+    if (typeof val === "bigint") return val.toString();
+    if (val instanceof Big) return val.toString();
+    if (val !== null && typeof val === "object") {
+      if (seen.has(val)) return "[Circular]";
+      seen.add(val);
+    }
+    return val;
+  });
+}
 function __bi(x: any): any { return typeof x === "bigint" ? x : BigInt(Math.trunc(Number(x))); }
 // Arithmetic: a Decimal (Big) operand wins -> exact big.js math (Pure plus/minus/
 // times with any Decimal operand returns Decimal). Else both-bigint stays exact
@@ -1456,11 +1471,26 @@ function __tryEval(thunk: () => any): any {
   }
   catch (e: any) {
     const msg = e && e.message !== undefined ? String(e.message) : String(e);
+    // Pure's `Error.stack` is `String[*]` — one frame per element. JS Error.stack
+    // is a multi-line string; split it, drop the first line (the duplicated
+    // message), and trim noise. Empty stack would fail
+    // `testTryEvalCapturesFailureStack`, which insists on at least one frame
+    // when an exception fires.
+    let frames: string[] = [];
+    const rawStack: string | undefined = e && typeof e.stack === "string" ? e.stack : undefined;
+    if (rawStack) {
+      const lines = rawStack.split("\n").map(s => s.trim()).filter(s => s.length > 0);
+      // V8/SpiderMonkey/JavaScriptCore all start the stack with "Error: <msg>"
+      // (or just the message). Skip leading lines that don't look like a frame
+      // — typically anything not starting with "at " or containing "@".
+      frames = lines.filter(s => s.startsWith("at ") || s.includes("@"));
+      if (frames.length === 0 && lines.length > 0) frames = lines;
+    }
     return {
       value: undefined,
       failure: {
         message: msg,
-        stack: [],
+        stack: frames,
         classifierGenericType: { type: __pureResolve("meta::pure::functions::lang::Error") }
       },
       classifierGenericType: { type: __pureResolve("meta::pure::functions::lang::TryResult") }
@@ -1493,12 +1523,20 @@ function __removeDuplicatesBy(coll: any, fn1: Function, fn2?: Function): any[] {
   return out;
 }
 
-// Pure-style typed match. Each arm: `{ check: (v) => boolean, run: (v, with?) => any }`.
-// The first arm whose check returns true gets `run(v, withArg)`. For the 2-arg
-// `match(var, fns)` form, withArg is undefined and arms ignore the second
-// parameter via JS arity.
-function __match(v: any, arms: Array<{check: (x: any) => boolean, run: (...xs: any[]) => any}>, withArg?: any): any {
-  for (const arm of arms) { if (arm.check(v)) return arm.run(v, withArg); }
+// Pure-style typed match. Each arm: `{ check, run, unwrap }`. The first arm
+// whose check returns true gets `run(boundValue, withArg)`. `unwrap`
+// distinguishes scalar arms (`n:T[1]` / `n:T[0..1]`) — which bind the
+// PARAM to the unwrapped element — from sequence arms (`n:T[*]`, `[1..*]`)
+// which bind the param to the array as-is. For the 2-arg `match(var, fns)`
+// form, withArg is undefined and arms ignore the second parameter via JS
+// arity.
+function __match(v: any, arms: Array<{check: (x: any) => boolean, run: (...xs: any[]) => any, unwrap?: boolean}>, withArg?: any): any {
+  for (const arm of arms) {
+    if (arm.check(v)) {
+      const bound = arm.unwrap ? __asArr(v)[0] : v;
+      return arm.run(bound, withArg);
+    }
+  }
   throw new Error("match: no arm matched value " + __toRepresentation(v));
 }
 
@@ -1530,7 +1568,10 @@ function __matchDynamic(value: any, lambdas: any, withArg?: any): any {
   for (const lam of __asArr(lambdas)) {
     const pt = __lambdaParamType(lam);
     if (pt && __matchType(value, pt.typePath, pt.lower, pt.upper)) {
-      return withArg !== undefined ? (lam as any)(value, withArg) : (lam as any)(value);
+      // Scalar-arity arm (upper === 1) binds the unwrapped element; sequence
+      // arms get the array as-is. Matches the static __match unwrap rule.
+      const bound = pt.upper === 1 ? __asArr(value)[0] : value;
+      return withArg !== undefined ? (lam as any)(bound, withArg) : (lam as any)(bound);
     }
   }
   throw new Error("match: no arm matched value " + __toRepresentation(value));
@@ -1726,6 +1767,33 @@ function __fold(coll: any, fn: any, seed: any): any {
 // Empty sequences are normalised to `undefined` at the slot read
 // (__rewrapStubs), so only undefined needs handling here.
 function __asArr(v: any): any[] { return v === undefined ? [] : (Array.isArray(v) ? v : [v]); }
+// Pure `concatenate(a, b)`: sequence-of-a followed by sequence-of-b. Both
+// arguments lift to arrays via __asArr, so an unset `[*]` slot (`undefined`)
+// or a single scalar (`Pure [1]`) both flow through without a `TypeError:
+// Cannot read property 'concat' of undefined` from JS Array.prototype.concat.
+function __concat(a: any, b: any): any[] { return [...__asArr(a), ...__asArr(b)]; }
+
+// `assertSameElements(expected, actual)` — order-insensitive equality on the
+// two sides as multisets. Element comparison goes through `__eq` so
+// reference-identical instances match in O(1) (no recursion through their
+// graph), which matters for bidirectionally-bound associations whose
+// JSON-serialized forms differ purely by which side of the cycle is the
+// starting point. Sort-then-JSON falls over on those; structural pairing
+// preserves correctness without requiring a canonical traversal.
+function __sameElements(a: any, b: any): boolean {
+  const aa = __asArr(a);
+  const bb = __asArr(b);
+  if (aa.length !== bb.length) return false;
+  const matched = new Array(bb.length).fill(false);
+  outer: for (const x of aa) {
+    for (let i = 0; i < bb.length; i++) {
+      if (matched[i]) continue;
+      if (__eq(x, bb[i])) { matched[i] = true; continue outer; }
+    }
+    return false;
+  }
+  return true;
+}
 function __isEmpty(v: any): boolean { return __asArr(v).length === 0; }
 function __isNotEmpty(v: any): boolean { return __asArr(v).length > 0; }
 function __filter(coll: any, fn: any): any[] { return __asArr(coll).filter(fn); }
@@ -1771,56 +1839,370 @@ function __orElse(v: any, def: any): any { return __isEmpty(v) ? def : v; }
 // off the element, not the array (arrays have no Pure properties).
 function __toOne(v: any): any { return __asArr(v)[0]; }
 
-// Pure passes each positional argument wrapped in a `List` ({values: [...]});
-// unwrap each list back into a positional value (single -> scalar, otherwise
-// the array).
+// Pure `eval(fn, args...)`: invoke a function-like value. Three callable
+// shapes are recognised in order, costliest last:
+//   1. plain JS function — translated lambdas (`__lambda`-tagged arrows),
+//      UDFs translated as top-level `function` decls.
+//   2. statically-translated Class-metadata entry — the translator emits
+//      `<Class>.properties` and `<Class>.qualifiedProperties` as arrays of
+//      `{ name, eval: closure }` so reflective filter→toOne→eval chains
+//      resolve in pure JS (closure does the slot read or runs the QP body).
+//   3. `__pureResolve` proxy — anything reached via reflection that DOESN'T
+//      have a statically-translated counterpart (today: cross-class refs,
+//      callables in modules the entry didn't transitively reference). Routes
+//      through `__metadataInvoke`, the Truffle eval bridge that calls
+//      `EvalNode.dispatch` host-side. This third path is a temporary back-
+//      stop and disappears once the translator self-hosts.
+function __eval(fn: any, ...args: any[]): any {
+  if (typeof fn === "function") return fn(...args);
+  if (fn && typeof fn === "object") {
+    if (typeof fn.eval === "function") return fn.eval(...args);
+    if (typeof fn.__purePath === "string") {
+      return __rewrapStubs(__metadataInvoke(fn.__purePath, args));
+    }
+  }
+  throw new TypeError("__eval: not callable: " + (fn === null ? "null" : typeof fn));
+}
+
+// Pure `evaluate(fn, paramsList)`: each arg is wrapped in a `List` ({values:
+// [...]}); unwrap each list to a positional value, then dispatch through
+// __eval (so a Property-as-receiver still routes through the structural read).
 function __evaluate(lambda: any, paramsList: any): any {
   const params = __asArr(paramsList).map((p: any) => {
     const vs = p && p.values !== undefined ? __asArr(p.values) : [p];
     return vs.length === 1 ? vs[0] : vs;
   });
-  return (lambda as any)(...params);
+  return __eval(lambda, ...params);
 }
 
-// Date arithmetic — operates directly on JS Date instances. Returns a NEW
-// Date (Pure date ops are non-mutating). All field accesses use UTC so the
-// emitted ISO string parses identically regardless of the host JVM's
-// timezone. `units` is a Pure enum string (DurationUnit.DAYS, etc.) reduced
-// to its last `::`-segment by upstream stringification.
-function __adjust(d: Date, n: any, units: any): Date {
-  const dt = new Date(d.getTime());
-  const N = Number(n); // n is a Pure Integer (bigint); coerce for Date math
-  const u = String(units).split(".").pop();
-  switch (u) {
-    case "DAYS":    dt.setUTCDate(dt.getUTCDate() + N); break;
-    case "HOURS":   dt.setUTCHours(dt.getUTCHours() + N); break;
-    case "MINUTES": dt.setUTCMinutes(dt.getUTCMinutes() + N); break;
-    case "SECONDS": dt.setUTCSeconds(dt.getUTCSeconds() + N); break;
-    case "WEEKS":   dt.setUTCDate(dt.getUTCDate() + 7 * N); break;
-    case "MONTHS":  dt.setUTCMonth(dt.getUTCMonth() + N); break;
-    case "YEARS":   dt.setUTCFullYear(dt.getUTCFullYear() + N); break;
+// Extract the name from a DurationUnit / Pure enum value. The translated
+// enum-value access (`DurationUnit.DAYS`) is the self-describing object
+// `{name: 'DAYS', classifierGenericType: …}`; older codepaths and some
+// captured values arrive as a string (`'DurationUnit.DAYS'` or `'DAYS'`).
+// Returns the bare value name (`'DAYS'`).
+function __durationName(units: any): string {
+  if (units && typeof units === "object" && typeof units.name === "string") return units.name;
+  const s = String(units);
+  return s.split(".").pop() || s;
+}
+
+// === Bigint-based Pure date arithmetic ===
+//
+// JS `Date` is a millisecond Number with usable range ~±275,000 years and
+// no sub-millisecond resolution. Pure dates can be arbitrary-year and have
+// microsecond/nanosecond literals. We sidestep both limits by parsing the
+// source `__lit` into a {Y:bigint, Mo, Da, H, Mi, S, frac:bigint, fracDigits}
+// struct, doing the arithmetic in bigint, and re-rendering directly to
+// `__lit`/`__fmt`. The Java-side toPureValue reads `__fmt` and rebuilds a
+// PureDate via string round-trip — so the result Date may even be `Invalid`
+// (`new Date(NaN)`); only the `__fmt` string matters for the comparison.
+
+// Pure granularity ladder for the date portion (gran) — sub-second precision
+// (`fracDigits`) is tracked independently as the EXACT digit count of the
+// source literal, so a 7-digit `.0000000` round-trips as 7 digits rather
+// than being snapped to the 3/6/9 rung that earlier versions used.
+const __GRAN_ORDER = ["Y", "YM", "YMD", "YMDH", "YMDHM", "YMDHMS"] as const;
+type __UnitMin = { gran: string; fracDigits: number };
+function __unitMin(unit: string): __UnitMin {
+  switch (unit) {
+    case "YEARS":        return { gran: "Y",       fracDigits: 0 };
+    case "MONTHS":       return { gran: "YMD",     fracDigits: 0 };
+    case "WEEKS":        return { gran: "YMD",     fracDigits: 0 };
+    case "DAYS":         return { gran: "YMD",     fracDigits: 0 };
+    case "HOURS":        return { gran: "YMDH",    fracDigits: 0 };
+    case "MINUTES":      return { gran: "YMDHM",   fracDigits: 0 };
+    case "SECONDS":      return { gran: "YMDHMS",  fracDigits: 0 };
+    case "MILLISECONDS": return { gran: "YMDHMS",  fracDigits: 3 };
+    case "MICROSECONDS": return { gran: "YMDHMS",  fracDigits: 6 };
+    case "NANOSECONDS":  return { gran: "YMDHMS",  fracDigits: 9 };
   }
-  return dt;
+  return { gran: "Y", fracDigits: 0 };
+}
+function __maxGranularity(a: string, b: string): string {
+  return __GRAN_ORDER.indexOf(a as any) >= __GRAN_ORDER.indexOf(b as any) ? a : b;
+}
+
+// Parsed bigint-field representation of a Pure date literal. `gran` records
+// the source's date-portion precision (Y/YM/YMD/YMDH/YMDHM/YMDHMS); sub-second
+// precision is `fracDigits` (the EXACT digit count of the source's `.fff…`,
+// preserving e.g. a 7-digit `.0000000` literal verbatim through round-trip).
+type __DF = {
+  Y: bigint;            // signed year — proleptic Gregorian
+  Mo: number;           // 1-12
+  Da: number;           // 1-31
+  H: number; Mi: number; S: number;
+  frac: bigint;         // fractional-second value at `fracDigits` precision
+  fracDigits: number;   // 0 (no sub-second) or N>0 (any positive count)
+  gran: string;         // one of __GRAN_ORDER (date portion only)
+};
+
+function __parseLitToFields(lit: string): __DF {
+  // Pure literals can start with `+`/`-` for extended years. The `Thh` /
+  // `Thh:mm` / `Thh:mm:ss` / `Thh:mm:ss.frac` forms are all permitted —
+  // matching the relaxed __pdate regex above.
+  const m = /^([+-]?\d+)(?:-(\d{1,2}))?(?:-(\d{1,2}))?(?:T(\d{1,2})(?::(\d{1,2})(?::(\d{1,2})(?:\.(\d+))?)?)?)?([zZ]|[+-]\d{2}:?\d{2})?$/.exec(lit);
+  if (m === null) {
+    return { Y: 0n, Mo: 1, Da: 1, H: 0, Mi: 0, S: 0, frac: 0n, fracDigits: 0, gran: "Y" };
+  }
+  const Y = BigInt(m[1]);
+  const Mo = m[2] !== undefined ? parseInt(m[2], 10) : 1;
+  const Da = m[3] !== undefined ? parseInt(m[3], 10) : 1;
+  const H  = m[4] !== undefined ? parseInt(m[4], 10) : 0;
+  const Mi = m[5] !== undefined ? parseInt(m[5], 10) : 0;
+  const S  = m[6] !== undefined ? parseInt(m[6], 10) : 0;
+  const fracStr = m[7] || "";
+  const fracDigits = fracStr.length;
+  const frac = fracDigits === 0 ? 0n : BigInt(fracStr);
+  // Date-portion granularity from which groups matched.
+  let gran: string;
+  if (m[4] === undefined) {
+    gran = m[3] === undefined ? (m[2] === undefined ? "Y" : "YM") : "YMD";
+  } else if (m[5] === undefined) {
+    gran = "YMDH";
+  } else if (m[6] === undefined) {
+    gran = "YMDHM";
+  } else {
+    gran = "YMDHMS";
+  }
+  return { Y, Mo, Da, H, Mi, S, frac, fracDigits, gran };
+}
+
+// Howard Hinnant's civil-from/to-days algorithm. Handles arbitrary signed
+// years correctly. Returns days since 1970-01-01.
+function __daysFromCivil(y: bigint, m: number, d: number): bigint {
+  const yy = m <= 2 ? y - 1n : y;
+  const era = (yy >= 0n ? yy : yy - 399n) / 400n;
+  const yoe = yy - era * 400n;
+  const mAdj = m > 2 ? m - 3 : m + 9;
+  const doy = BigInt(Math.floor((153 * mAdj + 2) / 5) + d - 1);
+  const doe = yoe * 365n + yoe / 4n - yoe / 100n + doy;
+  return era * 146097n + doe - 719468n;
+}
+function __civilFromDays(zArg: bigint): { Y: bigint; Mo: number; Da: number } {
+  const z = zArg + 719468n;
+  const era = (z >= 0n ? z : z - 146096n) / 146097n;
+  const doe = z - era * 146097n;
+  const yoe = (doe - doe / 1460n + doe / 36524n - doe / 146096n) / 365n;
+  const y = yoe + era * 400n;
+  const doy = doe - (365n * yoe + yoe / 4n - yoe / 100n);
+  const mp = (5n * doy + 2n) / 153n;
+  const d = Number(doy - (153n * mp + 2n) / 5n) + 1;
+  const m = Number(mp < 10n ? mp + 3n : mp - 9n);
+  return { Y: y + (m <= 2 ? 1n : 0n), Mo: m, Da: d };
+}
+function __isLeapYear(Y: bigint): boolean {
+  return (Y % 4n === 0n && Y % 100n !== 0n) || Y % 400n === 0n;
+}
+function __lastDayOfMonth(Y: bigint, Mo: number): number {
+  if (Mo === 4 || Mo === 6 || Mo === 9 || Mo === 11) return 30;
+  if (Mo !== 2) return 31;
+  return __isLeapYear(Y) ? 29 : 28;
+}
+
+// Pure year padding: minimum 4 digits, with sign preserved out front.
+function __padYear(Y: bigint): string {
+  return Y >= 0n ? Y.toString().padStart(4, "0") : "-" + (-Y).toString().padStart(4, "0");
+}
+// Render a field struct as a Pure date literal at the given date-portion
+// granularity. Sub-second digits, if present, render to exactly
+// `f.fracDigits` (preserved verbatim from the source literal — Pure tests
+// pin specific digit counts like `.0000000` for 7-digit us-padded output).
+function __renderLit(f: __DF, gran: string): string {
+  const p2 = (n: number) => String(n).padStart(2, "0");
+  const Y = __padYear(f.Y);
+  if (gran === "Y") return Y;
+  const Mo = p2(f.Mo);
+  if (gran === "YM") return Y + "-" + Mo;
+  const Da = p2(f.Da);
+  if (gran === "YMD") return Y + "-" + Mo + "-" + Da;
+  const H = p2(f.H);
+  if (gran === "YMDH") return Y + "-" + Mo + "-" + Da + "T" + H;
+  const Mi = p2(f.Mi);
+  if (gran === "YMDHM") return Y + "-" + Mo + "-" + Da + "T" + H + ":" + Mi;
+  const S = p2(f.S);
+  const base = Y + "-" + Mo + "-" + Da + "T" + H + ":" + Mi + ":" + S;
+  if (f.fracDigits === 0) return base;
+  return base + "." + f.frac.toString().padStart(f.fracDigits, "0");
+}
+
+// Extract bigint fields from a JS Date when no `__lit` is available — fallback
+// for callers that pass a plain Date. `__lit` is always preferred since it
+// preserves the source's exact sub-second digit count.
+function __dateToFields(d: Date): __DF {
+  const ms = d.getUTCMilliseconds();
+  return {
+    Y: BigInt(d.getUTCFullYear()),
+    Mo: d.getUTCMonth() + 1,
+    Da: d.getUTCDate(),
+    H: d.getUTCHours(),
+    Mi: d.getUTCMinutes(),
+    S: d.getUTCSeconds(),
+    frac: BigInt(ms),
+    fracDigits: ms === 0 ? 0 : 3,
+    gran: "YMDHMS",
+  };
+}
+
+// Add a signed bigint number of months to (Y, Mo) using floored division —
+// negative N must walk backward through Jan→Dec rather than wrap. Clamps
+// the day to the last valid day of the new month (Pure semantics: Feb 29 +
+// 1 YEAR = Feb 28 in a non-leap year; Jan 31 + 1 MONTH = Feb 28).
+function __addMonthsFields(f: __DF, N: bigint): void {
+  const totalMonths = f.Y * 12n + BigInt(f.Mo - 1) + N;
+  // Floored division for signed bigint.
+  let newY: bigint, newMo: bigint;
+  if (totalMonths >= 0n) {
+    newY = totalMonths / 12n;
+    newMo = totalMonths % 12n;
+  } else {
+    const q = (-totalMonths + 11n) / 12n;
+    newY = -q;
+    newMo = totalMonths - newY * 12n;
+  }
+  f.Y = newY;
+  f.Mo = Number(newMo) + 1;
+  const last = __lastDayOfMonth(f.Y, f.Mo);
+  if (f.Da > last) f.Da = last;
+}
+
+// Add a signed bigint count of `unit` (DAYS/WEEKS) to (Y, Mo, Da). Converts
+// the date to a day-from-epoch bigint, applies the delta, and back to civil.
+function __addDaysFields(f: __DF, deltaDays: bigint): void {
+  const jd = __daysFromCivil(f.Y, f.Mo, f.Da) + deltaDays;
+  const ymd = __civilFromDays(jd);
+  f.Y = ymd.Y; f.Mo = ymd.Mo; f.Da = ymd.Da;
+}
+
+// Time-unit arithmetic in bigint at `f.fracDigits` precision (10^-N seconds
+// per unit, where N = f.fracDigits). Caller pre-upgrades fracDigits via
+// {@link __upgradeFrac} so the unit's natural precision is representable
+// (e.g. MICROSECONDS unit upgrades fracDigits to at least 6). The delta is
+// passed as (deltaValue, deltaUnitDigits): a value at `deltaUnitDigits`
+// precision (e.g. for MICROSECONDS unit, deltaUnitDigits=6). We scale the
+// delta UP to `f.fracDigits` (which is now ≥ deltaUnitDigits after upgrade)
+// and apply. Day rollovers carry into Y/M/D via __addDaysFields.
+function __addTimeFields(f: __DF, deltaValue: bigint, deltaUnitDigits: number): void {
+  const N = f.fracDigits;
+  // After upgradeFrac, N >= deltaUnitDigits — scale delta up.
+  const scaledDelta = N >= deltaUnitDigits
+      ? deltaValue * (10n ** BigInt(N - deltaUnitDigits))
+      : deltaValue / (10n ** BigInt(deltaUnitDigits - N));
+  const scale = N === 0 ? 1n : 10n ** BigInt(N);                    // ticks per second
+  const ticksPerMinute = 60n * scale;
+  const ticksPerHour = 3600n * scale;
+  const ticksPerDay = 86400n * scale;
+  let total = BigInt(f.H) * ticksPerHour
+            + BigInt(f.Mi) * ticksPerMinute
+            + BigInt(f.S) * scale
+            + f.frac
+            + scaledDelta;
+  // Floored division / mod for the day carry.
+  let dayDelta: bigint;
+  if (total >= 0n) {
+    dayDelta = total / ticksPerDay;
+    total = total % ticksPerDay;
+  } else {
+    const q = (-total + ticksPerDay - 1n) / ticksPerDay;
+    dayDelta = -q;
+    total = total - dayDelta * ticksPerDay;
+  }
+  if (dayDelta !== 0n) __addDaysFields(f, dayDelta);
+  f.H = Number(total / ticksPerHour);
+  total = total % ticksPerHour;
+  f.Mi = Number(total / ticksPerMinute);
+  total = total % ticksPerMinute;
+  f.S = Number(total / scale);
+  f.frac = total % scale;
+}
+
+// Upgrade f.fracDigits in place to `target` (any positive count), scaling
+// f.frac up by 10^(target - current). Never downscales (would lose precision
+// the source committed to in the literal).
+function __upgradeFrac(f: __DF, target: number): void {
+  if (target <= f.fracDigits) return;
+  f.frac = f.frac * (10n ** BigInt(target - f.fracDigits));
+  f.fracDigits = target;
+}
+
+// Pure `adjust(date, n, units)`. Operates on bigint fields throughout so
+// extreme N (>10^10) and microsecond/nanosecond precision both work — JS
+// Date's millisecond range/precision is sidestepped entirely.
+function __adjust(d: Date, n: any, units: any): Date {
+  const u = __durationName(units);
+  const srcLit = (d as any).__lit;
+  const f: __DF = typeof srcLit === "string" ? __parseLitToFields(srcLit) : __dateToFields(d);
+  const N = typeof n === "bigint" ? n : BigInt(n);
+  const min = __unitMin(u);
+  // Upgrade sub-second precision so the unit's natural precision fits
+  // (`__addTimeFields` operates at f.fracDigits ticks/sec). Source's
+  // higher precision is preserved.
+  if (min.fracDigits > 0) __upgradeFrac(f, min.fracDigits);
+  switch (u) {
+    case "YEARS":        __addMonthsFields(f, 12n * N); break;
+    case "MONTHS":       __addMonthsFields(f, N); break;
+    case "WEEKS":        __addDaysFields(f, 7n * N); break;
+    case "DAYS":         __addDaysFields(f, N); break;
+    case "HOURS":        __addTimeFields(f, N * 3600n, 0); break;
+    case "MINUTES":      __addTimeFields(f, N * 60n,   0); break;
+    case "SECONDS":      __addTimeFields(f, N,         0); break;
+    case "MILLISECONDS": __addTimeFields(f, N,         3); break;
+    case "MICROSECONDS": __addTimeFields(f, N,         6); break;
+    case "NANOSECONDS":  __addTimeFields(f, N,         9); break;
+  }
+  // Date-portion granularity = max(source, unit minimum). Sub-second digit
+  // count comes from f.fracDigits (preserved verbatim from source).
+  f.gran = __maxGranularity(f.gran, min.gran);
+  const lit = __renderLit(f, f.gran);
+  // Wrap as a JS Date so callers (and __eq) keep their `instanceof Date`
+  // checks. The instance is Invalid for out-of-range years; that's fine —
+  // only __lit/__fmt are read on the round-trip back to Pure.
+  const out = new Date(NaN);
+  (out as any).__lit = lit;
+  (out as any).__fmt = lit;
+  return out;
 }
 function __dateDiff(a: Date, b: Date, units: any): any {
   const ms = b.getTime() - a.getTime();
-  const u = String(units).split(".").pop();
+  const u = __durationName(units);
   let n = 0;
   switch (u) {
-    case "DAYS":    n = Math.floor(ms / 86400000); break;
-    case "HOURS":   n = Math.floor(ms / 3600000); break;
-    case "MINUTES": n = Math.floor(ms / 60000); break;
-    case "SECONDS": n = Math.floor(ms / 1000); break;
-    case "WEEKS":   n = Math.floor(ms / (7 * 86400000)); break;
-    case "MONTHS":  n = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth()); break;
-    case "YEARS":   n = b.getUTCFullYear() - a.getUTCFullYear(); break;
+    case "DAYS":         n = Math.floor(ms / 86400000); break;
+    case "HOURS":        n = Math.floor(ms / 3600000); break;
+    case "MINUTES":      n = Math.floor(ms / 60000); break;
+    case "SECONDS":      n = Math.floor(ms / 1000); break;
+    case "MILLISECONDS": n = Math.floor(ms); break;
+    // Pure WEEKS counts week boundaries (Sundays) crossed in the direction
+    // of travel: forward counts Sundays in (a, b]; backward counts Sundays
+    // in [b, a). That yields the asymmetric behaviour the tests pin:
+    // Sat→Sun = +1 (forward crosses a Sun), Sun→Sat = 0 (backward starts ON
+    // a Sun which doesn't count), Sun→Sun-7d = -1 (backward reaches a Sun).
+    case "WEEKS":        n = __dateDiffWeeks(a, b); break;
+    case "MONTHS":       n = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth()); break;
+    case "YEARS":        n = b.getUTCFullYear() - a.getUTCFullYear(); break;
   }
   return BigInt(n); // Pure dateDiff -> Integer
 }
+function __dateDiffWeeks(a: Date, b: Date): number {
+  const dayA = Math.floor(a.getTime() / 86400000);
+  const dayB = Math.floor(b.getTime() / 86400000);
+  // sunIdx(day) = number of Sundays in (-inf, day]. 1970-01-01 was Thursday;
+  // the first Sunday on or after epoch is day 3 (1970-01-04). The +4 offset
+  // shifts that to integer week boundaries.
+  const sunIdx = (day: number) => Math.floor((day + 4) / 7);
+  return dayB >= dayA ? sunIdx(dayB) - sunIdx(dayA)
+                      : sunIdx(dayB - 1) - sunIdx(dayA - 1);
+}
 function __datePart(d: Date): Date {
-  // Return a Date at midnight UTC for the calendar day part. Tests assert by
-  // toString, so the resulting Date renders as 'YYYY-MM-DD' through __toString.
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  // Return a Date at midnight UTC for the calendar day part. Stamp the
+  // granularity tags so the Pure round-trip renders date-only (`%YYYY-MM-DD`)
+  // rather than degrading to `{}` for lack of __fmt.
+  const out = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const Y = String(out.getUTCFullYear()).padStart(4, "0");
+  const Mo = String(out.getUTCMonth() + 1).padStart(2, "0");
+  const Da = String(out.getUTCDate()).padStart(2, "0");
+  (out as any).__lit = Y + "-" + Mo + "-" + Da;
+  (out as any).__fmt = Y + "-" + Mo + "-" + Da;
+  return out;
 }
 
 // Date field getters — UTC throughout. monthNumber is 1-indexed (matches
@@ -2023,6 +2405,70 @@ function __subtypeViaGeneralizations(cls: any, tPath: string): boolean {
 // separator so resolver.getElement finds the canonical path. The `name` slot
 // is just the last `::`-segment; it's informational and gets dropped by the
 // lift.
+// Reflection-form `new(<genericType>)` produces a fresh instance whose
+// `classifierGenericType` is the supplied GenericType. For metamodel-typed
+// targets Pure resolves that to the canonical UDPGT-PE (same singleton the
+// holder form yields), not the freshly-constructed `{type: …, …}` literal —
+// so `instance.classifierGenericType instanceOf PackageableElement` holds and
+// `elementToPath()` returns the canonical path. This helper inspects the
+// supplied GT's `.type` slot at runtime: if its path lands under
+// `meta::pure::metamodel::`, swap in `__pureResolve('…optimization::GenericType_<path-with-_>')`;
+// otherwise pass the GT through unchanged for user-typed reflection.
+// `^Foo(classifierGenericType = ^UDGT(type=Bar), …)` — user is trying to swap
+// the metaclass. Pure rejects: the classifier's raw type is system-managed
+// (it identifies the metaclass) and must match the holder. Only
+// `typeArguments`/`multiplicityArguments`/`typeVariableValues` are
+// user-customisable. Mirrors the test expectation in
+// `testCantSetClassifierGenericType`.
+function __validateCgt(userCgt: any, holderTypePath: string): any {
+  if (userCgt === null || typeof userCgt !== "object") return userCgt;
+  const t = (userCgt as any).type;
+  if (t === null || typeof t !== "object") return userCgt;
+  const tp = (typeof t.path === "string" ? t.path : (typeof (t as any).__purePath === "string" ? (t as any).__purePath : ""));
+  if (tp !== holderTypePath) {
+    throw new Error("Cannot change classifierGenericType.type from '" + holderTypePath + "' to '" + tp + "'. The classifier's raw type is system-managed (derived from the instance's metaclass) — only typeArguments, multiplicityArguments and typeVariableValues are user-customizable. Use meta::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
+  }
+  return userCgt;
+}
+
+function __toCanonicalCgt(gt: any): any {
+  if (gt === null || typeof gt !== "object") return gt;
+  // `new($x->genericTypeHolder(), [])` reaches us with a
+  // GenericTypeAndMultiplicityHolder shape `{classifierGenericType: {...}}`
+  // — one level of wrapping above the GenericType itself. Unwrap so the
+  // `.type` lookup below finds the actual class PE, not undefined.
+  if ((gt as any).type === undefined && (gt as any).classifierGenericType !== undefined) {
+    gt = (gt as any).classifierGenericType;
+  }
+  // The holder's own `.type` is GenericTypeAndMultiplicityHolder — its
+  // first `typeArguments` entry is the actual class GenericType. Skip the
+  // holder and canonicalise from THAT.
+  const t0 = (gt as any).type;
+  const tp0 = t0 && typeof t0 === "object"
+      ? (typeof t0.path === "string" ? t0.path : (typeof (t0 as any).__purePath === "string" ? (t0 as any).__purePath : undefined))
+      : undefined;
+  if (tp0 === "meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder"
+      && Array.isArray((gt as any).typeArguments) && (gt as any).typeArguments.length > 0) {
+    gt = (gt as any).typeArguments[0];
+  }
+  const t = (gt as any).type;
+  if (t === null || typeof t !== "object") return gt;
+  const tp = (typeof t.path === "string" ? t.path : (typeof (t as any).__purePath === "string" ? (t as any).__purePath : undefined));
+  if (typeof tp !== "string") return gt;
+  // Mirror Pure runtime's `new(GenericType)` validation: `Class` is itself
+  // generic (`Class<T>`), so calling `new(^UDGT(type=Class))` without
+  // setting `typeArguments` is rejected. Error string is fixed (matches
+  // both Truffle's NewGenericTypeNode and the bootstrap MetaNatives path).
+  if (tp === "meta::pure::metamodel::type::Class") {
+    const tas = (gt as any).typeArguments;
+    if (!Array.isArray(tas) || tas.length === 0) {
+      throw new Error("Cannot instantiate Class<Class<T>> because the typeArgs are not set for the typeParam");
+    }
+  }
+  if (!tp.startsWith("meta::pure::metamodel::")) return gt;
+  return __pureResolve("meta::pure::metamodel::type::generics::optimization::GenericType_" + tp.split("::").join("_"));
+}
+
 // Inverse of __pathToElement: unwrap a PE reference back to its canonical
 // string path. Strings pass through (so AtomicValue class-name literals
 // emitted by genericType()/type() chains keep working); a __pureResolve
@@ -2035,14 +2481,22 @@ function __elementToPath(v: any): any {
 }
 
 function __pathToElement(p: string, sep?: string): any {
-  const norm = sep && sep !== "::" ? p.split(sep).join("::") : p;
-  // Return a __pureResolve proxy so downstream slot reads
-  // (`classifierGenericType`, `properties`, `generalizations`, …) route
-  // through the host resolver instead of hitting `undefined` on a plain
-  // `{name, path}` literal. Both `name` and `path` are still readable —
-  // `path` directly on the proxy target, `name` via the get-trap. Same
-  // pattern as `pathToElement` produces in Pure: a live PE reference.
-  return __pureResolve(norm);
+  // Strict form — throws when the element isn't found. Routes through the
+  // host so '::' / '' resolve to Root and missing paths fail loudly here
+  // (rather than later when the proxy's first slot read fires).
+  const resolved = __metadataPathToElement(p, sep ?? "::");
+  if (resolved === null || resolved === undefined) {
+    throw new Error("pathToElement: element not found: " + p);
+  }
+  return __pureResolve(resolved);
+}
+
+function __lenientPathToElement(p: string, sep?: string): any {
+  // Lenient form — returns undefined (Pure empty) instead of throwing on
+  // a missing element. Otherwise identical to __pathToElement.
+  const resolved = __metadataPathToElement(p, sep ?? "::");
+  if (resolved === null || resolved === undefined) return undefined;
+  return __pureResolve(resolved);
 }
 
 
@@ -2103,6 +2557,16 @@ function __regexpLike(str: string, pat: string, flags: any[]): boolean {
 declare function __metadataRead(address: string, prop: string): any;
 declare function __metadataSubtypeOf(subPath: string, supPath: string): boolean;
 declare function __metadataInstanceOf(valuePath: string, typePath: string): boolean;
+// Resolve `path` (with the given separator) to its canonical address —
+// '' / '::' → '' for Root; missing element → null. Backs both __pathToElement
+// (strict) and __lenientPathToElement (returns undefined on null).
+declare function __metadataPathToElement(path: string, separator: string): string | null;
+// Invoke the Pure value at `path` (Property / QualifiedProperty /
+// FunctionDefinition / NativeFunction / Lambda) with the given JS args.
+// Backs __eval's Proxy-callee path — same dispatch the Pure runtime's
+// `eval` native uses, so all five callable kinds work without per-kind
+// special-casing on the JS side.
+declare function __metadataInvoke(path: string, args: any[]): any;
 
 // Pure `cast(value, @T)` — runtime type-check against a CONCRETE target type.
 // Succeeds when the value's dynamic type is `T` or a subtype (upcast/identity)
@@ -2178,6 +2642,86 @@ function __checkConstraint(ok: boolean, name: string, owner: string, msgFn?: () 
   const m = msgFn ? msgFn() : undefined;
   throw new Error("Constraint :[" + name + "] violated in the Class " + owner
                   + (m !== undefined ? ", Message: " + m : ""));
+}
+
+// Multiplicity check at a parameterised cast site (`cast(@T|m)`): the
+// translator emits `__assertCastMul(value, witness)` when `m` is a
+// MultiplicityParameter bound to one of the function's witness params.
+// Throws "Cast multiplicity error: ..." (the test's PCT assertion looks for
+// "multiplicity" in the message) when counts diverge. Returns the original
+// value so the wrap is transparent in expression position.
+function __assertCastMul(value: any, witness: any): any {
+  const expected = __asArr(witness).length;
+  const actual = __asArr(value).length;
+  if (actual !== expected)
+  {
+    throw new Error("Cast multiplicity error: expected " + expected + ", got " + actual);
+  }
+  return value;
+}
+
+// Association-property immutability check: Pure rejects sharing an existing
+// association partner across constructions (would mutate the partner's
+// reverse-property). Every `^Type(...)` runs inside `__ctorScope`, which
+// allocates a fresh epoch at the OUTERMOST construction and tags each
+// newly-built instance with it. `__bindAssoc` then checks that every
+// partner shares the current epoch — fold/map-built nested constructions
+// inherit the outer epoch (same scope); a `let firmZ = ^...;` reused in a
+// later `^Person(firm=$firmZ)` carries a STALE epoch (closed scope) and
+// trips this error with the Pure-format message PCT tests pin verbatim.
+function __throwAssocImmutability(className: string, propName: string): any {
+  throw new Error("Immutability violation: association property '" + propName
+      + "' on '" + className + "' must be instantiated within the new/copy "
+      + "expression. Use `" + propName + " = ^Type(...)`, `" + propName
+      + " = ^$x()`, or `" + propName + " = []`.");
+}
+
+let __nextEpoch = 0;
+let __epochDepth = 0;
+let __currentEpoch = -1;
+
+// Wrap every `^Type(...)` emit. At the outermost nesting it allocates a
+// fresh epoch; nested constructions inherit it (so fold/map inside the
+// outer ^... share scope). Returns the value the builder produced, with
+// `__epoch` tagged on object PDOs for the bindAssoc check.
+function __ctorScope<T>(build: () => T): T {
+  const fresh = __epochDepth === 0;
+  if (fresh) __currentEpoch = __nextEpoch++;
+  __epochDepth++;
+  try {
+    const v = build();
+    __tagEpoch(v, __currentEpoch);
+    return v;
+  } finally {
+    __epochDepth--;
+  }
+}
+
+function __tagEpoch(obj: any, epoch: number): void {
+  if (obj === null || typeof obj !== "object" || Array.isArray(obj)) return;
+  if (obj.__epoch === undefined) {
+    try {
+      Object.defineProperty(obj, "__epoch", { value: epoch, enumerable: false, configurable: true, writable: true });
+    } catch { /* frozen / proxy — ignore, treated as out-of-scope */ }
+  }
+}
+
+// Read the i-th class-level typeVariable VALUE off an instance. `^X(10)`
+// stores `10` in `__this.classifierGenericType.typeVariableValues[i]` —
+// shape mirrors Pure's metamodel: each slot is either a Pure
+// AtomicValue/InstanceValue (`{values: [10]}`) or a bare JS value (when
+// the codegen path emitted a literal). Probe both before falling back to
+// the raw slot.
+function __readTypeVar(self: any, i: number): any {
+  const cgt = self && (self as any).classifierGenericType;
+  const tvv = cgt && (cgt as any).typeVariableValues;
+  if (!Array.isArray(tvv) || i >= tvv.length) return undefined;
+  const slot = tvv[i];
+  if (slot === null || slot === undefined) return slot;
+  if (typeof slot === "object" && Array.isArray((slot as any).values)) {
+    return (slot as any).values.length === 1 ? (slot as any).values[0] : (slot as any).values;
+  }
+  return slot;
 }
 
 function __castLeaf(p: string | undefined): string { return p ? (String(p).split("::").pop() as string) : "?"; }
@@ -2286,10 +2830,18 @@ function __newObj(base: any, fill: (self: any) => void): any {
 // pass through with a plain spread.
 function __spreadEager(src: any): any {
   if (src === null || typeof src !== "object" || Array.isArray(src)) return src;
-  if ("__purePath" in src) {
-    return { ...src, classifierGenericType: (src as any).classifierGenericType };
+  // Shallow copy of `src`, then defensively dupe any array-typed slot. A
+  // `[*]`/`[1..*]` property like `employees` is a JS array; without this
+  // clone the copy and the source share the same array reference, and a
+  // later `__bindAssoc` on the copy would push into the source's array
+  // (mutating the original). Pure forbids that — a copy is its own value.
+  const out: any = "__purePath" in src
+      ? { ...src, classifierGenericType: (src as any).classifierGenericType }
+      : { ...src };
+  for (const k of Object.keys(out)) {
+    if (Array.isArray(out[k])) out[k] = out[k].slice();
   }
-  return { ...src };
+  return out;
 }
 
 // Bidirectional association binding. When `^Person(firm=F)` runs, Pure wires
@@ -2304,13 +2856,48 @@ function __spreadEager(src: any): any {
 // undefined/null/primitive partners silently — Pure already requires
 // association partners to be instantiated within the new/copy expression;
 // an uninstantiated key produces an empty value, so there's nothing to bind.
-function __bindAssoc(thisObj: any, otherValue: any, reverseName: string, toMany: boolean): void {
+// Copy-time immutability check: a `^$base(...)` copy inherits every
+// association slot it doesn't explicitly override. Any inherited value
+// pointing to a closed-scope partner (e.g. `firmX` carried over by the
+// copy) violates the rule — Pure rejects the copy entirely.
+//
+// Gated on `__epochDepth === 1` (outermost ctor only): a NESTED copy like
+// `^$firmX()` inside `^$pierre(firm=^$firmX())` is in scope by virtue of
+// being part of the outer construction — Pure doesn't reject it just
+// because its own inherited partners are stale. Only the user-visible
+// top-level copy's inheritance is rejected.
+function __checkCopyAssocImmutability(base: any, className: string, propName: string): void {
+  if (__epochDepth !== 1) return;
+  if (base === null || typeof base !== "object") return;
+  const v = (base as any)[propName];
+  if (v === undefined || v === null) return;
+  const check = (x: any) => {
+    if (x === null || typeof x !== "object") return;
+    if (x.__epoch !== undefined && x.__epoch !== __currentEpoch) {
+      __throwAssocImmutability(className, propName);
+    }
+  };
+  if (Array.isArray(v)) for (const o of v) check(o); else check(v);
+}
+
+function __bindAssoc(thisObj: any, otherValue: any, reverseName: string, toMany: boolean,
+                     className?: string, propName?: string): void {
   if (otherValue === undefined || otherValue === null) return;
   if (Array.isArray(otherValue)) {
-    for (const o of otherValue) __bindAssoc(thisObj, o, reverseName, toMany);
+    for (const o of otherValue) __bindAssoc(thisObj, o, reverseName, toMany, className, propName);
     return;
   }
   if (typeof otherValue !== "object") return;
+  // Pure forbids sharing an existing association partner across constructions:
+  // every PDO is tagged with the epoch of the outermost `^Type(...)` it was
+  // built inside. A mismatch means the partner came from a now-closed scope
+  // (e.g. a let-bound `^Firm()` reused in a later `^Person(firm=$firmZ)`),
+  // which would mutate the partner's reverse slot — Pure's rule rejects it.
+  if (className && propName
+      && otherValue.__epoch !== undefined
+      && otherValue.__epoch !== __currentEpoch) {
+    __throwAssocImmutability(className, propName);
+  }
   if (toMany) {
     const cur = (otherValue as any)[reverseName];
     const arr = Array.isArray(cur) ? cur : (cur === undefined || cur === null ? [] : [cur]);
@@ -2400,7 +2987,12 @@ function __pdate(lit: string): Date {
   // carry non-3-digit sub-seconds, both of which JS Date rejects. The compiler
   // has already folded any timezone offset into the (UTC) literal, so no offset
   // conversion is needed here. __lit keeps the original for granularity.
-  const m = /^(\d{1,6})(?:-(\d{1,2}))?(?:-(\d{1,2}))?(?:T(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?(?:\.(\d+))?)?([zZ]|[+-]\d{2}:?\d{2})?$/.exec(lit);
+  // Time granularity is hierarchical: hour required if T present, minute
+  // optional, second only if minute, sub-second only if second. Pure literals
+  // like `%2015-04-15T17` (hour-only) must parse — the previous regex required
+  // `:MM`, producing Invalid Date → `BigInt(NaN)` RangeError downstream in
+  // __year/__hour/etc.
+  const m = /^(\d{1,6})(?:-(\d{1,2}))?(?:-(\d{1,2}))?(?:T(\d{1,2})(?::(\d{1,2})(?::(\d{1,2})(?:\.(\d+))?)?)?)?([zZ]|[+-]\d{2}:?\d{2})?$/.exec(lit);
   let parse = lit;
   if (m !== null) {
     // Years > 9999 need ISO-8601 extended format (`+NNNNNN`); JS Date rejects a
@@ -2437,13 +3029,14 @@ function __formatPureDate(d: Date): string {
     return parts === 1 ? Y : (parts === 2 ? Y + "-" + Mo : Y + "-" + Mo + "-" + Da);
   }
   const H = p2(d.getUTCHours()), Mi = p2(d.getUTCMinutes()), S = p2(d.getUTCSeconds());
-  // Time granularity from the literal: `hh:mm` (1 colon) omits seconds;
-  // `hh:mm:ss` (2 colons) includes them. Sub-second digits come verbatim from
+  // Time granularity from the literal, counting colons: 0 = `Thh` (hour-only),
+  // 1 = `Thh:mm`, 2 = `Thh:mm:ss`. Sub-second digits come verbatim from
   // the literal (a timezone offset shifts hours/minutes, not the fraction).
   const timeNoTz = lit.slice(tIdx + 1).replace(/([zZ]|[+-]\d{2}:?\d{2})$/, "");
   const colons = (timeNoTz.match(/:/g) || []).length;
   const dot = /\.(\d+)/.exec(timeNoTz);
-  let out = Y + "-" + Mo + "-" + Da + "T" + H + ":" + Mi;
+  let out = Y + "-" + Mo + "-" + Da + "T" + H;
+  if (colons >= 1) out += ":" + Mi;
   if (colons >= 2) out += ":" + S;
   if (dot !== null) out += "." + dot[1];
   return out;
@@ -2472,7 +3065,74 @@ function __toString(v: any): string {
       return "[" + v.values.map(__toString).join(", ") + "]";
     // `{name: 'X'}` enum-value / named-element literal.
     if (typeof v.name === "string") return v.name;
-    return JSON.stringify(v, (_k, val) => typeof val === "bigint" ? val.toString() : val);
+    return __json(v);
   }
   return String(v);
+}
+
+// Pure `print(v)`: format the value for stdout AND return the formatted
+// string. Pure's print rendering rules:
+//   - primitives use their Pure-literal toString (`'true'`, `'42'`, `'3.14'`)
+//   - top-level Strings render without surrounding quotes (`print('hello')`
+//     → `'hello'`); nested Strings inside an object render WITH quotes
+//     (`name: 'Alice'`)
+//   - empty / undefined → empty string
+//   - sequences render one element per line, joined by `\n`
+//   - class instances render as `<ClassName>` on a line, then each property
+//     on its own line indented 2 spaces deeper than the parent
+//   - enum values follow the class-instance shape (`Color\n  name: 'RED'`)
+function __pureFormat(v: any, depth: number): string {
+  if (v === undefined || v === null) return "";
+  if (Array.isArray(v)) {
+    if (v.length === 0) return "";
+    return v.map((e: any) => __pureFormat(e, depth)).join("\n");
+  }
+  // Strings: top level is bare (`print('hello')` -> `'hello'`); nested gets
+  // single-quoted (`name: 'Alice'`).
+  if (typeof v === "string") return depth === 0 ? v : "'" + v + "'";
+  if (typeof v === "bigint") return v.toString();
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (v instanceof Big) return v.toString();
+  if (v instanceof Date) return __formatPureDate(v);
+  if (typeof v === "object") {
+    // Class instance / enum value — both shapes have a self-describing
+    // `classifierGenericType.type` and walk their own enumerable property
+    // keys for the indented field list. Internal `__`/`_` keys (PDO bookkeeping)
+    // and unset `[0..1]` slots (undefined) are skipped, mirroring __eq's
+    // structural compare.
+    const cgt = (v as any).classifierGenericType;
+    if (cgt && cgt.type) {
+      const typePath = (cgt.type as any).__purePath || (cgt.type as any).path || "";
+      const className = typePath.split("::").pop() || "Object";
+      const childIndent = "  ".repeat(depth + 1);
+      const keys = Object.keys(v).filter(k =>
+        !k.startsWith("_") && k !== "classifierGenericType" && (v as any)[k] !== undefined);
+      let out = className;
+      for (const k of keys) {
+        const valFmt = __pureFormat((v as any)[k], depth + 1);
+        out += "\n" + childIndent + k + ": " + valFmt;
+      }
+      return out;
+    }
+    // Fallback for ad-hoc objects without a classifier — defer to __toString.
+    return __toString(v);
+  }
+  return String(v);
+}
+
+// Pure `print(v)`: side-effect to stdout via console.log AND return the
+// formatted string. Tests assert on the return value.
+function __print(v: any): string {
+  const s = __pureFormat(v, 0);
+  console.log(s);
+  return s;
+}
+
+// Pure `println(v)`: equivalent to `print(v) + print('\n')` — formatted value
+// with a trailing newline. console.log already appends its own newline to
+// stdout, so we side-effect once and return the value-plus-newline string.
+function __println(v: any): string {
+  const s = __pureFormat(v, 0) + "\n";
+  console.log(s);
+  return s;
 }

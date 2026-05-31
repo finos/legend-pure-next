@@ -15,8 +15,6 @@ import org.finos.legend.pure.ide.backend.PureBackend;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
-import org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension;
-import org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension;
 import org.finos.legend.pure.truffle.runtime.TruffleInMemoryModule;
 import org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry;
 import org.finos.legend.pure.truffle.runtime.TrufflePdbLoader;
@@ -138,11 +136,6 @@ public final class TruffleBackend implements PureBackend
                 compilerLoader.preloadAll();
                 PureTruffleRuntime rt = PureTruffleRuntime.builder()
                         .withResolver(reg)
-                        .withParserExtensions(List.of(
-                                new TruffleCompiledGraphLanguageExtension(),
-                                new TruffleCompilerStatsLanguageExtension(),
-                                new org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension(),
-                                new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()))
                         .withCompileImmediately(false)
                         .build();
                 return new Object[]{reg, rt};

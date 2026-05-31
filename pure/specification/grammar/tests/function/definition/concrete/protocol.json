@@ -202,6 +202,7 @@
                   }
                 },
                 "name" : "col",
+                "nameWildCard" : false,
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 78,
@@ -226,6 +227,7 @@
                   }
                 },
                 "name" : "col2",
+                "nameWildCard" : false,
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 91,

@@ -81,29 +81,40 @@ class TrufflePurePCTAndFuncFromPDBTest
         Path coreTestsPdb = sharedDir.resolve("core-tests.pdb");
         Path compilerPdb = sharedDir.resolve("compiler.pdb");
         Path compilerTestsPdb = sharedDir.resolve("compiler-tests.pdb");
+        Path parserMappingsPdb = sharedDir.resolve("parser-mappings.pdb");
 
         // Use truffle PDB loader — reads FlatBuffer directly into truffle-namespaced wrappers
         coreLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(corePdb);
         coreTestsLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(coreTestsPdb);
         compilerLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(compilerPdb);
         compilerTestsLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(compilerTestsPdb);
+        // parser-mappings.pdb is required for the `parse` Pure native to resolve
+        // `meta::pure::parser::mappings::interpreter::parseDocument` — TrufflePureParser
+        // dispatches every section through the Pure-side registry, no host fallback.
+        org.finos.legend.pure.truffle.runtime.TrufflePdbLoader parserMappingsLoader =
+                new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(parserMappingsPdb);
 
         // Module registry replaces the previous anonymous-class composite resolver.
-        // Registration order is dependency-first: core, core-tests, compiler,
-        // compiler-tests (each tests pdb depends on its lean pair).
+        // Registration order is dependency-first: core, parser-mappings, core-tests,
+        // compiler, compiler-tests (each tests pdb depends on its lean pair).
         resolver = new org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry();
         resolver.register(coreLoader);
+        resolver.register(parserMappingsLoader);
         resolver.register(coreTestsLoader);
         resolver.register(compilerLoader);
         resolver.register(compilerTestsLoader);
 
         // Wire composite resolver into each loader for cross-module FBW resolution
         coreLoader.setResolver(resolver);
+        parserMappingsLoader.setResolver(resolver);
         coreTestsLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
         compilerTestsLoader.setResolver(resolver);
 
-        PureLanguage.configure(resolver, NativeNodeRegistry.createDefault());
+        PureLanguage.configure(resolver, NativeNodeRegistry.createDefault(),
+                java.util.Map.of(
+                        "M3Parser", new org.finos.legend.pure.next.parser.M3GrammarExtension(),
+                        "TopParser", new org.finos.legend.pure.next.parser.TopGrammarExtension()));
         // Build the Engine with err redirected to a buffer + TraceCompilation
         // enabled. The {@link #assertNoCompilationFailures()} hook below scans
         // the buffer for `opt failed` lines and fails the build if any are

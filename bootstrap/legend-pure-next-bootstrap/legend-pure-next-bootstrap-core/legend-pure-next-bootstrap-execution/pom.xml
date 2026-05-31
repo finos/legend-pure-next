@@ -35,6 +35,14 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- ANTLR runtime (used directly by AntlrNatives + the GrammarExtension SPI;
+             pulled in transitively via compiler→parser, declared explicitly here
+             so the direct compile dep is visible). -->
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4-runtime</artifactId>
+        </dependency>
+
         <!-- Eclipse Collections -->
         <dependency>
             <groupId>org.eclipse.collections</groupId>

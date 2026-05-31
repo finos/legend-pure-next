@@ -64,10 +64,6 @@ public class AssertNatives
                 eval.executeFunction(args.get(0), List.of());
                 throw new PureAssertionError("Expected error with message containing: '" + expectedMessage + "' but no error was thrown");
             }
-            catch (PureAssertionError pae)
-            {
-                throw pae; // Don't catch our own assertion errors
-            }
             catch (Exception e)
             {
                 String actualMessage = e.getMessage();

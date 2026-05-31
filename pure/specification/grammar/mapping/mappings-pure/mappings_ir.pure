@@ -1,0 +1,40 @@
+// Parser-visitor mapping IR.
+//
+// Each top-level grammar rule that produces a PackageableElement is a `Rule`
+// whose `alts` carry the dispatch logic. Rule bodies are Pure lambdas; the
+// Pure runtime evaluates them via `eval`. There is no hand-rolled expression
+// IR — `let`, `fold`, `if`, `match`, `^Foo(...)`, helper calls are all native
+// Pure features used directly inside the lambda bodies.
+//
+// Helpers and non-top-level grammar rules are plain Pure functions in the
+// `meta::pure::parser::mappings` namespace; they don't need a `Rule` wrapper.
+
+import meta::pure::parser::mappings::*;
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+import meta::pure::protocol::grammar::*;
+
+Class meta::pure::parser::mappings::Rule extends meta::pure::metamodel::type::Any
+{
+   // The ANTLR grammar rule name (e.g. 'classDefinition'). The dispatcher
+   // matches `AntlrContext.grammarRuleName()` against this.
+   name : String[1];
+
+   // Ordered list of guarded alternatives. The first whose `predicate` returns
+   // true (or whose predicate is absent) wins; `returnExpr` is then evaluated
+   // with the same ANTLR ctx.
+   alts : Alt[*];
+}
+
+Class meta::pure::parser::mappings::Alt extends meta::pure::metamodel::type::Any
+{
+   // Optional guard. Absent = always matches (single-branch rule, catch-all).
+   predicate  : Function<{AntlrContext[1] -> Boolean[1]}>[0..1];
+
+   // Body. Called with the ANTLR ctx + the line offset of the enclosing
+   // section within the original source file. The offset is added to every
+   // line number that ends up in a `SourceInformation`; it's threaded down
+   // to `buildSourceInfo` / `buildOpSourceInfo` (and any helper that builds
+   // source info) so the protocol output matches the reference parser.
+   returnExpr : Function<{AntlrContext[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[1]}>[1];
+}

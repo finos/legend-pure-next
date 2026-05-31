@@ -19,6 +19,7 @@ import meta.pure.metamodel.function.FunctionWithParameters;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.next.parser.GrammarExtension;
 import org.finos.legend.pure.next.parser.ParserExtension;
 
 import java.util.ArrayList;
@@ -46,13 +47,17 @@ public class PureExecution
     private final MetadataAccess resolver;
 
 
-    private PureExecution(MetadataAccess resolver, Iterable<? extends NativeExtension> extensions, List<? extends ParserExtension> parserExtensions)
+    private PureExecution(MetadataAccess resolver,
+                          Iterable<? extends NativeExtension> extensions,
+                          List<? extends ParserExtension> parserExtensions,
+                          List<? extends GrammarExtension> grammarExtensions)
     {
         this.resolver = resolver;
         this.evaluator = new ValueSpecificationEvaluator(
                 NativeRepository.builder()
                         .withResolver(resolver)
                         .withParserExtensions(parserExtensions)
+                        .withGrammarExtensions(grammarExtensions)
                         .withNativeExtensions(extensions)
                         .build()
         );
@@ -63,6 +68,7 @@ public class PureExecution
         private MetadataAccess resolver;
         private final List<NativeExtension> nativeExtensions = new ArrayList<>();
         private final List<ParserExtension> parserExtensions = new ArrayList<>();
+        private final List<GrammarExtension> grammarExtensions = new ArrayList<>();
 
         public Builder withResolver(MetadataAccess resolver)
         {
@@ -88,9 +94,25 @@ public class PureExecution
             return this;
         }
 
+        /**
+         * Register grammar extensions consulted by the {@code parseAntlr}
+         * native. Each registered extension answers to one
+         * {@link GrammarExtension#grammarName()}; duplicates throw at build time.
+         */
+        public Builder withGrammarExtensions(Iterable<? extends GrammarExtension> extensions)
+        {
+            if (extensions != null)
+            {
+                extensions.forEach(this.grammarExtensions::add);
+            }
+            return this;
+        }
+
         public PureExecution build()
         {
-            return new PureExecution(resolver, nativeExtensions, parserExtensions);
+            // M3 + Top grammars are auto-registered by NativeRepository if not
+            // explicitly provided; see NativeRepository's private constructor.
+            return new PureExecution(resolver, nativeExtensions, parserExtensions, grammarExtensions);
         }
     }
 
@@ -99,10 +121,10 @@ public class PureExecution
         return new Builder();
     }
 
-    // Retained for backward compatibility
+    // Retained for backward compatibility.
     public PureExecution(MetadataAccess resolver)
     {
-        this(resolver, null, List.of());
+        this(resolver, null, List.of(), List.of());
     }
 
     public PureExecution()

@@ -291,14 +291,11 @@ public final class PureCompileMain
         // a clear "missing class" diagnostic instead of a downstream NPE.
         resolver.validate();
 
+        // Section parsers (CompiledGraph / CompilerStats / TestFile /
+        // ReverseIndex / Error) come from compiler-pure's testSectionParsers()
+        // via TrufflePureParser's Pure-side registry; no Java extensions needed.
         PureTruffleRuntime.Builder runtimeBuilder = PureTruffleRuntime.builder()
-                .withResolver(resolver)
-                .withParserExtensions(List.of(
-                        new org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension(),
-                        new org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension(),
-                        new org.finos.legend.pure.truffle.runtime.TruffleTestFileLanguageExtension(),
-                        new org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension(),
-                        new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()));
+                .withResolver(resolver);
         profiling.apply(runtimeBuilder);
         PureTruffleRuntime runtime = runtimeBuilder.build();
 
@@ -401,14 +398,11 @@ public final class PureCompileMain
         for (var loader : loaders) loader.preloadAll();
         resolver.validate();
 
+        // Section parsers (CompiledGraph / CompilerStats / TestFile /
+        // ReverseIndex / Error) come from compiler-pure's testSectionParsers()
+        // via TrufflePureParser's Pure-side registry; no Java extensions needed.
         PureTruffleRuntime.Builder runtimeBuilder = PureTruffleRuntime.builder()
-                .withResolver(resolver)
-                .withParserExtensions(List.of(
-                        new org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension(),
-                        new org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension(),
-                        new org.finos.legend.pure.truffle.runtime.TruffleTestFileLanguageExtension(),
-                        new org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension(),
-                        new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()));
+                .withResolver(resolver);
         profiling.apply(runtimeBuilder);
         PureTruffleRuntime runtime = runtimeBuilder.build();
 

@@ -83,7 +83,8 @@
                     "value" : "String"
                   }
                 },
-                "name" : "name"
+                "name" : "name",
+                "nameWildCard" : false
               } ]
             }
           }
@@ -148,7 +149,8 @@
                     "value" : 1
                   }
                 },
-                "name" : "name"
+                "name" : "name",
+                "nameWildCard" : false
               } ]
             }
           }
@@ -213,7 +215,8 @@
                     "value" : 1
                   }
                 },
-                "name" : "name"
+                "name" : "name",
+                "nameWildCard" : false
               } ]
             }
           }
@@ -625,7 +628,8 @@
                     "value" : "String"
                   }
                 },
-                "name" : "name"
+                "name" : "name",
+                "nameWildCard" : false
               }, {
                 "_type" : "Column",
                 "genericType" : {
@@ -642,7 +646,8 @@
                     "value" : "Integer"
                   }
                 },
-                "name" : "age"
+                "name" : "age",
+                "nameWildCard" : false
               } ]
             }
           }
@@ -738,7 +743,8 @@
                     "value" : 1
                   }
                 },
-                "name" : "name"
+                "name" : "name",
+                "nameWildCard" : false
               }, {
                 "_type" : "Column",
                 "genericType" : {
@@ -766,7 +772,8 @@
                     "value" : 1
                   }
                 },
-                "name" : "age"
+                "name" : "age",
+                "nameWildCard" : false
               } ]
             }
           }

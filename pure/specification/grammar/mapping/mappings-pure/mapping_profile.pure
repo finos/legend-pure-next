@@ -1,0 +1,52 @@
+// Mapping for the `Profile` top-level element.
+//
+// Grammar: profile: PROFILE qualifiedName CURLY_BRACKET_OPEN stereotypeDefinitions?
+//                   tagDefinitions? CURLY_BRACKET_CLOSE
+// stereotypeDefinitions: STEREOTYPES COLON [ identifier (COMMA identifier)* ] SEMICOLON
+// tagDefinitions:        TAGS        COLON [ identifier (COMMA identifier)* ] SEMICOLON
+//
+// Each named identifier becomes a `Stereotype` or `Tag` with the identifier
+// as its `value` slot. (Same shape the .dsl's profileStereotypeDef /
+// profileTagDef helpers emit.)
+
+import meta::pure::parser::mappings::*;
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+import meta::pure::protocol::grammar::*;
+import meta::pure::protocol::grammar::extension::*;
+
+function meta::pure::parser::mappings::profile(): Rule[1]
+{
+   ^Rule(name='profile', alts = [
+      ^Alt(returnExpr = {ctx: AntlrContext[1], o: Integer[1] |
+         let qn = $ctx->getChild('qualifiedName')->toOne()->getText();
+         ^Profile(
+            p_sourceInformation = buildSourceInfo($ctx, $o),
+            name              = simpleNameOf($qn),
+            package           = packagePtrOf($qn),
+            p_stereotypes     = $ctx->getChild('stereotypeDefinitions')
+                                     ->map(sd | $sd->getChildren('identifier')
+                                                   ->map(id | buildProfileStereotype($id, $o))),
+            p_tags            = $ctx->getChild('tagDefinitions')
+                                     ->map(td | $td->getChildren('identifier')
+                                                   ->map(id | buildProfileTag($id, $o)))
+         );
+      })
+   ])
+}
+
+function meta::pure::parser::mappings::buildProfileStereotype(ctx: AntlrContext[1], lineOffset: Integer[1]): Stereotype[1]
+{
+   ^Stereotype(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      value             = $ctx->getText()
+   )
+}
+
+function meta::pure::parser::mappings::buildProfileTag(ctx: AntlrContext[1], lineOffset: Integer[1]): Tag[1]
+{
+   ^Tag(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      value             = $ctx->getText()
+   )
+}

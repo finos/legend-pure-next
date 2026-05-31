@@ -860,3 +860,458 @@ function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_dea
 //    let lambda = {| $smith.firstName};
 //    ...
 // }
+
+// ----------------------------------------------------------------------------
+// SingleUseLetInline — inline {@code let x = RHS;} into its single use site
+// when RHS is side-effect-free, then drop the let.
+// ----------------------------------------------------------------------------
+
+// Basic case: single let, single use, pure RHS — inlines and drops the let.
+// Compose with InlineOpenVariables (no-op for the capture-free body but its
+// presence promotes the lambda to a UDF, which is what SingleUseLetInline
+// operates on — bare lambdas pass through, see the pass's lambda-arm note).
+// The capture provides Inline with something to do so the UDF wrap fires.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_singleUseLetInline_basic(): Boolean[1]
+{
+   let cap = 99;
+   let lambda = {|
+      let a = 5;
+      $a + 1 + $cap;
+   };
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        5 + 1 + 99
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.SingleUseLetInline]
+      )
+   );
+}
+
+// Chained lets: each is single-use into the next; iterating to fixpoint
+// collapses the whole chain in one pass.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_singleUseLetInline_chain(): Boolean[1]
+{
+   let cap = 99;
+   let lambda = {|
+      let a = 5;
+      let b = $a + 1;
+      $b * 2 + $cap;
+   };
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        (5 + 1) * 2 + 99
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.SingleUseLetInline]
+      )
+   );
+}
+
+// Multi-use let is NOT inlined — would duplicate the RHS, change cost,
+// and (if RHS had side effects) change semantics. Rule is strict on
+// use-count regardless.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_singleUseLetInline_multiUse_keeps(): Boolean[1]
+{
+   let cap = 99;
+   let lambda = {|
+      let a = 5;
+      $a + $a + $cap;
+   };
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        let a = 5;
+        $a + $a + 99;
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.SingleUseLetInline]
+      )
+   );
+}
+
+// Composing with PartialEvaluation — once SingleUseLetInline exposes the
+// literals, PartialEvaluation folds. The strict ordering puts
+// SingleUseLetInline before PartialEvaluation so this happens whichever
+// order the caller passes them.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_singleUseLetInline_thenPartialFolds(): Boolean[1]
+{
+   let cap = 100;
+   let lambda = {|
+      let a = 5;
+      let b = $a + 1;
+      $b * 2 + $cap;
+   };
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[1]
+      {
+        112
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.SingleUseLetInline,
+          meta::pure::translation::shared::CanonicalMode.PartialEvaluation]
+      )
+   );
+}
+
+// Filter chain + `let` expression at outer-lambda scope, referenced inside
+// one of the filter lambdas, with BOTH new options enabled
+// (SingleUseLetInline + FilterFusion) plus InlineOpenVariables to promote
+// the bare lambda into a UDF the let-inline pass can operate on.
+//
+// SingleUseLetInline counts cross-scope references (respecting lexical
+// shadowing), substitutes the let RHS into the inner reference, and drops
+// the outer let. FilterFusion then collapses the now-single-expression-
+// bodied chain into a single `filter(x | a && b)`.
+//
+// NOTE: a sibling shape — putting the `let` INSIDE the filter lambda
+// body — would also collapse via SingleUseLetInline and become a fusable
+// single-expression body, BUT trips a pre-existing compile-bug-then-print-
+// crash in InlineOpenVariables's recompile (the multi-expression filter
+// lambda emerges with a `CompilerNotSetMultiplicity` sentinel on its
+// parameter that survives compile and trips `printMultiplicity`). The
+// shape below side-steps that by keeping the filter lambdas single-
+// expression from the start.
+//
+// Avoids the pre-existing printer bug that surfaces when a let lives
+// INSIDE a filter lambda body and goes through the canonical recompile
+// (see {@link letBody_filterFusionOnly_skips} for that case).
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_singleUseLetInline_unblocksFilterFusion(): Boolean[1]
+{
+   let cap = 0;
+   let lambda = {|
+      let threshold = 10;
+      [1, 2, 3, 4, 5]->filter(x | $x > $cap)->filter(x | $x < $threshold);
+   };
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[*]
+      {
+        [1, 2, 3, 4, 5]->filter(x|$x > 0 && $x < 10)
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.SingleUseLetInline,
+          meta::pure::translation::shared::CanonicalMode.FilterFusion]
+      )
+   );
+}
+
+// ----------------------------------------------------------------------------
+// FilterFusion — collapse {@code xs->filter(c1)->filter(c2)} chains into a
+// single filter with the two conditions {@code &&}-joined.
+// ----------------------------------------------------------------------------
+
+// Basic pair: two adjacent filters fuse to one with `&&`-joined conditions.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_filterFusion_pair(): Boolean[1]
+{
+   let lambda = {| [1, 2, 3, 4, 5]->filter(x | $x > 0)->filter(x | $x < 10)};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[*]
+      {
+        [1, 2, 3, 4, 5]->filter(x|$x > 0 && $x < 10)
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.FilterFusion]
+      )
+   );
+}
+
+// Three-filter chain reduces to a single filter with two `&&`s — the
+// recursion is bottom-up so the inner pair fuses first, then the outer
+// pair fuses around the (now-fused) inner.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_filterFusion_chain3(): Boolean[1]
+{
+   let lambda = {| [1, 2, 3, 4, 5]->filter(x | $x > 0)->filter(x | $x < 10)->filter(x | $x == 3)};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[*]
+      {
+        [1, 2, 3, 4, 5]->filter(x|$x > 0 && $x < 10 && $x == 3)
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.FilterFusion]
+      )
+   );
+}
+
+// Differently-named params: outer's param is rewritten to the inner's name
+// in the combined body. Use disjoint identifier sets so no capture conflict.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_filterFusion_renamesOuterParam(): Boolean[1]
+{
+   let lambda = {| [1, 2, 3, 4, 5]->filter(a | $a > 0)->filter(b | $b < 10)};
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[*]
+      {
+        [1, 2, 3, 4, 5]->filter(a|$a > 0 && $a < 10)
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.FilterFusion]
+      )
+   );
+}
+
+// Single filter — no chain to collapse, leaves the AST alone (the
+// pre-check rejects the function as having a fusable chain, so the lambda
+// is returned unchanged — no synthetic-UDF wrap).
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_filterFusion_singleFilter_noChange(): Boolean[1]
+{
+   let lambda = {| [1, 2, 3, 4, 5]->filter(x | $x > 0)};
+
+   assertEquals(
+      '|[1, 2, 3, 4, 5]->meta::pure::functions::collection::filter(x|$x > 0)',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.FilterFusion]
+      )
+   );
+}
+
+// ----------------------------------------------------------------------------
+// Strict canonical ordering — the modes list is a SET; passes always run in
+// the order defined by {@link canonicalPassOrder} regardless of how the
+// caller arranged the list. This is load-bearing for FilterFusion in
+// particular: a filter lambda that still references a captured variable
+// would fail to recompile, so Inline must run first.
+// ----------------------------------------------------------------------------
+
+// Caller passes the modes in the "wrong" order (FilterFusion before
+// InlineOpenVariables). Strict ordering reorders to Inline → FilterFusion,
+// so the captured `$cap` is substituted before fusion sees the filter body.
+// Without strict ordering this would explode at recompile because the
+// fused lambda's `&&` operand would still be `$cap`-relative.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_strictOrder_inlineRunsBeforeFusion(): Boolean[1]
+{
+   let cap = 10;
+   let lambda = {| [1, 2, 3, 4, 5]->filter(x | $x > 0)->filter(x | $x < $cap)};
+
+   let expected = '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[*]
+      {
+        [1, 2, 3, 4, 5]->filter(x|$x > 0 && $x < 10)
+      }
+      ''';
+
+   assertEquals(
+      $expected,
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.FilterFusion,
+          meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]
+      )
+   );
+
+   // Caller-order invariance: same modes in the natural order produce the
+   // same canonical output.
+   assertEquals(
+      $expected,
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+          meta::pure::translation::shared::CanonicalMode.FilterFusion]
+      )
+   );
+}
+
+// Multi-expression filter body (a `let` inside the lambda) blocks fusion of
+// both adjacent pairs. With no captures and only FilterFusion enabled, the
+// pre-check returns false (no fusable chain) and the lambda is returned
+// unchanged — no synthetic-UDF wrap, no recompile.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_filterFusion_letBody_filterFusionOnly_skips(): Boolean[1]
+{
+   let lambda = {|
+      [1, 2, 3, 4, 5]->filter(x | $x > 0)
+                    ->filter(x | let threshold = 10; $x < $threshold;)
+                    ->filter(x | $x == 3)
+   };
+
+   assertEquals(
+      '|[1, 2, 3, 4, 5]->meta::pure::functions::collection::filter(x|$x > 0)->meta::pure::functions::collection::filter(x|let threshold = 10; $x < $threshold)->meta::pure::functions::collection::filter(x|$x == 3)',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.FilterFusion]
+      )
+   );
+}
+
+// `let` at outer-lambda scope (not inside a filter body), with a CAPTURED
+// variable on the let RHS, plus a fusable two-filter chain. Caller asks for
+// [FilterFusion, InlineOpenVariables] — strict ordering routes Inline first
+// so `$cap` is substituted into the let RHS, then FilterFusion collapses
+// the two filters and preserves the surrounding `let threshold = ...;`.
+// The let-bound `$threshold` survives in the fused predicate.
+//
+// NOTE: a sibling test with the `let` INSIDE a filter body alongside Inline
+// would surface a pre-existing printer bug (`printMultiplicity` chokes on
+// a multiplicity PDO that the canonical recompile leaves on the inner
+// lambda param). That bug is independent of FilterFusion — Inline alone on
+// the same fixture trips it. See {@link letBody_filterFusionOnly_skips}
+// for the in-filter let case under FilterFusion alone.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_filterFusion_letAtOuter_withInline_fuses(): Boolean[1]
+{
+   let cap = 10;
+   let lambda = {|
+      let threshold = $cap;
+      [1, 2, 3, 4, 5]->filter(x | $x > 0)->filter(x | $x < $threshold);
+   };
+
+   assertEquals(
+      '''
+      ###Pure
+      function __canonical__::__canonical__(): Integer[*]
+      {
+        let threshold = 10;
+        [1, 2, 3, 4, 5]->filter(x|$x > 0 && $x < $threshold);
+      }
+      ''',
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.FilterFusion,
+          meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]
+      )
+   );
+}
+
+// ----------------------------------------------------------------------------
+// Regression: the canonical decompile→recompile path leaves a
+// `CompilerNotSetMultiplicity` sentinel on a filter lambda parameter when
+// the lambda body is multi-expression (e.g. {@code (x | let t = ...; bool)}),
+// while parse→compile of the equivalent source infers it correctly to
+// {@code PureOne}. This isolates the bug to the canonical pipeline, NOT
+// the compiler/printer.
+//
+// The test asserts the divergence directly: same logical UDF, two
+// construction paths, two different parameter-multiplicity slot
+// contents. When the underlying bug is fixed, the second assertion will
+// flip — `CompilerNotSetMultiplicity` will become a real
+// `ConcreteMultiplicity` — and this test will fail, signalling the fix
+// can land and the canonical-side workarounds (the
+// {@code _noRoundtrip} marker, the documented test limitations) can
+// be removed.
+// ----------------------------------------------------------------------------
+
+// Helper — drill into a UDF whose body is exactly one `filter(coll, lam)`
+// FunctionExpression and return the filter lambda's first parameter's
+// multiplicity slot value. Both paths in the regression test produce this
+// same shape; the slot contents differ.
+function <<test.TestDependency>> meta::pure::translation::shared::tests::firstFilterLambdaParamMul(udf: UserDefinedFunction<Any>[1]): meta::pure::metamodel::multiplicity::Multiplicity[1]
+{
+   let filterFE = $udf.expressionSequence->at(0)->cast(@meta::pure::metamodel::valuespecification::FunctionExpression);
+   let av       = $filterFE.parametersValues->at(1)->cast(@meta::pure::metamodel::valuespecification::AtomicValue);
+   let lam      = $av.value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
+   $lam.parameters->at(0)->cast(@meta::pure::metamodel::valuespecification::VariableExpression).multiplicity->toOne();
+}
+
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_letInFilterBody_compilerInfersMul_canonicalLeavesSentinel(): Boolean[1]
+{
+   // -- Path A: parse + compile the source directly. The standard 3-arg
+   // compile (which delegates to the same 4-arg form canonical uses) should
+   // infer the filter lambda's parameter multiplicity to a real concrete
+   // multiplicity via setMissingLambdaParameterInformation.
+   let source = '###Pure\n'
+              + 'function test::f(): Integer[*]\n'
+              + '{\n'
+              + '  [1, 2, 3, 4, 5]->filter(x|let threshold = 10; $x < $threshold;)\n'
+              + '}\n';
+   let parsedFile = meta::pure::functions::meta::parse('regression.pure', $source);
+   let parsedResult = meta::pure::compiler::compile([$parsedFile], false, true);
+   assert($parsedResult.errors->isEmpty(), | 'parse-compile failed: ' + $parsedResult.errors->joinStrings('; '));
+   let parsedUDF = $parsedResult.context->toOne().elementMap->values()
+                       ->filter(e | $e->instanceOf(UserDefinedFunction))
+                       ->cast(@UserDefinedFunction<meta::pure::metamodel::type::Any>)
+                       ->filter(u | $u.functionName == 'f')
+                       ->toOne();
+   let parsedMul = $parsedUDF->firstFilterLambdaParamMul();
+   assert(!$parsedMul->instanceOf(meta::pure::metamodel::multiplicity::CompilerNotSetMultiplicity),
+      | 'Path A: parse+compile left CompilerNotSetMultiplicity on the filter lambda param — expected a concrete multiplicity. Type was: ' + $parsedMul->type()->toOne()->elementToPath()
+   );
+
+   // -- Path B: same logical UDF, built via the canonical pipeline. A
+   // capture is needed so InlineOpenVariables actually runs its decompile
+   // → recompile (no-capture lambdas pass through unchanged). The capture
+   // is wired into the filter lambda's let RHS so the multi-expression
+   // body shape is preserved through the recompile.
+   let cap = 10;
+   let lambda = {|
+      [1, 2, 3, 4, 5]->filter(x | let threshold = $cap; $x < $threshold;)
+   };
+   let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
+      [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]
+   );
+   let canonicalUDF = $canonical->cast(@UserDefinedFunction<meta::pure::metamodel::type::Any>);
+   let canonicalMul = $canonicalUDF->firstFilterLambdaParamMul();
+   // BUG MARKER — when this assertion fires (i.e. the canonical pipeline
+   // is fixed to infer the multiplicity correctly), flip to `assert(!...)`
+   // and remove the surrounding workarounds tracked in
+   // canonical_tests.pure and filterWithLetInLambdaBody_noRoundtrip.pure.
+   assert($canonicalMul->instanceOf(meta::pure::metamodel::multiplicity::CompilerNotSetMultiplicity),
+      | 'Path B regression: canonical recompile USED to leave CompilerNotSetMultiplicity on the filter lambda param. If this is firing the bug is fixed — flip the assertion and clean up workarounds. Type was: ' + $canonicalMul->type()->toOne()->elementToPath()
+   );
+   true;
+}
+
+// Mode-list dedup: passing the same mode twice gives the same result as
+// passing it once. Each pass is a fixpoint, so this is structurally true,
+// but the strict-ordering layer also dedups by virtue of filtering the
+// canonical-order list against the user's set.
+function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_strictOrder_dedupesModes(): Boolean[1]
+{
+   let lambda = {| [1, 2, 3]->filter(x | $x > 0)->filter(x | $x < 10)};
+
+   assertEquals(
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.FilterFusion]
+      ),
+      canonicalAndPrintWithModes(
+         $lambda,
+         [meta::pure::translation::shared::CanonicalMode.FilterFusion,
+          meta::pure::translation::shared::CanonicalMode.FilterFusion]
+      )
+   );
+}

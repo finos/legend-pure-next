@@ -1,0 +1,60 @@
+# pure/modules/Justfile — orchestrates the Pure module Justfiles
+# (language/{java,typescript}, translation/{shared,java,typescript,truffle}).
+#
+# Direct invocation:    just <recipe>            (from pure/modules/)
+# Via the root Justfile: just modules::<recipe>  (from repo root)
+#
+# Per-submodule recipes are addressable as `just <submodule>::<recipe>` from
+# here, e.g. `just translation_java::gallery`. Use `just --list <submodule>`
+# to see what each submodule offers.
+#
+# Build order honours the PDB-producer dependency chain:
+#   language/{java,typescript} + translation/shared  →  translation/{java,typescript,truffle}
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+mod language_java          "language/java/Justfile"
+mod language_typescript    "language/typescript/Justfile"
+mod translation_shared     "translation/shared/Justfile"
+mod translation_java       "translation/java/Justfile"
+mod translation_typescript "translation/typescript/Justfile"
+mod translation_truffle    "translation/truffle/Justfile"
+
+header := "h(){ s=\"[modules::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+
+# Layer 0 — language metamodels + shared translation utilities. Depend only on
+# bootstrap PDBs (core.pdb / compiler.pdb), so they can build in any order
+# among themselves.
+#
+# Layer 1 — translator modules. Each consumes Layer 0 outputs:
+#   translation_java       needs language_java::java.pdb + translation_shared::translation-shared.pdb
+#   translation_typescript needs language_typescript::typescript.pdb + translation_shared::translation-shared.pdb
+#   translation_truffle    needs translation_shared::translation-shared.pdb
+#
+# Order is enforced by listing Layer 0 recipes first; `just` runs prereqs
+# sequentially in declaration order.
+
+# Default: build all module PDBs.
+default: build
+
+# Build Layer 0 PDBs (language metamodels + translation_shared).
+build-layer0: language_java::build language_typescript::build translation_shared::build
+
+# Build every module PDB (Layer 0 → Layer 1).
+build: build-layer0 translation_java::build translation_typescript::build translation_truffle::build
+
+# Orchestrator's `build` already covers all sub-module deps — alias of `build` for symmetry with sub-Justfiles' `build-all`.
+build-all: build
+
+# Run Layer 0 `test-all` suites. translation_shared::test-all produces translation-shared.pdb (via build-tests), which Layer 1 test-alls then consume.
+test-all-layer0: language_java::test-all language_typescript::test-all translation_shared::test-all
+
+# Run every module's `test-all` (Layer 0 → Layer 1). NB: translation/truffle has no `test-all` — its surface is `gallery`.
+test-all: test-all-layer0 translation_java::test-all translation_typescript::test-all
+
+# Render every translator gallery (java + typescript + truffle). Assumes Layer 0 PDBs are built (gallery recipes call their own `build-tests`).
+gallery: translation_java::gallery translation_typescript::gallery translation_truffle::gallery
+
+# Remove every module's PDB outputs.
+clean: language_java::clean language_typescript::clean translation_shared::clean translation_java::clean translation_typescript::clean translation_truffle::clean

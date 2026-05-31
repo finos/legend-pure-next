@@ -1,0 +1,32 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::meta::antlr::*;
+
+// 0-based source line of the first non-NEWLINE child of {@code ctx} (the
+// {@code sectionContent} rule's first content token). Subtracts 1 when
+// {@code syntheticHeader} is true (the caller prepended {@code ###Pure\n}
+// and the header line shouldn't count toward the offset). Empty {@code ctx}
+// → 0.
+//
+// Used by the top-level parser to compute section bodies' line offsets so
+// nested parse errors report file-relative coordinates. Host-side because
+// Pure can't easily walk ParseTree-level children and distinguish
+// TerminalNode vs RuleContext at the child level. No PCT test: requires a
+// hand-constructed sectionContent context that's only producible through
+// top-level parsing.
+native function meta::pure::functions::meta::antlr::computeFirstNonNewlineLine(
+   ctx: AntlrContext[0..1],
+   syntheticHeader: Boolean[1]
+): Integer[1];

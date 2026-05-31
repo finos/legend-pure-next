@@ -45,9 +45,10 @@ public final class PureLanguage extends TruffleLanguage<PureContext>
      * Configure the Pure language before creating a polyglot Context.
      * The configuration is consumed by {@link #createContext} and cleared.
      */
-    public static void configure(TruffleMetadataAccess resolver, NativeNodeRegistry registry)
+    public static void configure(TruffleMetadataAccess resolver, NativeNodeRegistry registry,
+                                 java.util.Map<String, org.finos.legend.pure.next.parser.GrammarExtension> grammars)
     {
-        pendingConfig = new PendingConfig(resolver, registry);
+        pendingConfig = new PendingConfig(resolver, registry, grammars);
     }
 
     @Override
@@ -58,7 +59,7 @@ public final class PureLanguage extends TruffleLanguage<PureContext>
         PureContext ctx = new PureContext(this, env);
         if (config != null)
         {
-            ctx.initialize(config.resolver, config.registry);
+            ctx.initialize(config.resolver, config.registry, config.grammars);
         }
         return ctx;
     }
@@ -83,5 +84,6 @@ public final class PureLanguage extends TruffleLanguage<PureContext>
         return CONTEXT_REF.get(node);
     }
 
-    private record PendingConfig(TruffleMetadataAccess resolver, NativeNodeRegistry registry) {}
+    private record PendingConfig(TruffleMetadataAccess resolver, NativeNodeRegistry registry,
+                                  java.util.Map<String, org.finos.legend.pure.next.parser.GrammarExtension> grammars) {}
 }

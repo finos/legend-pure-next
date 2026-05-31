@@ -13,6 +13,12 @@
 set quiet := true
 set shell := ["bash", "-c"]
 
+# Sibling modules consumed by `build-all` (relative paths from this Justfile).
+# `build` itself only checks for the produced PDBs and fails loudly — these
+# mods are used solely to make `build-all` self-sufficient.
+mod _dep_language_java      "../../language/java/Justfile"
+mod _dep_translation_shared "../shared/Justfile"
+
 trn_root       := source_directory()
 repo_root      := trn_root / ".." / ".." / ".." / ".."
 shared_out     := repo_root / "shared"
@@ -44,6 +50,11 @@ build:
         --base-pdb {{shared_out}}/translation-shared.pdb \
         --source {{trn_root}} \
         --output-dir {{shared_out}} {{err_filter}}
+
+# Still needs bootstrap PDBs (core.pdb / core-tests.pdb) — `build` checks for those and fails loudly.
+
+# Build sibling-module deps (language_java, translation_shared) first, then this module.
+build-all: _dep_language_java::build _dep_translation_shared::build build
 
 # Compile via the Pure compiler running on Truffle.
 build-truffle:

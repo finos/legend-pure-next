@@ -19,6 +19,7 @@ import org.graalvm.nativeimage.hosted.RuntimeReflection;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.file.FileSystem;
@@ -60,7 +61,14 @@ public final class PureFeature implements Feature
             "meta/pure",  // covers metamodel, protocol, compiler, functions, etc.
             "org/finos/legend/pure/m3/module/pdbModule/fbs",  // FlatBuffer Def classes for PDB loading
             "org/finos/legend/pure/truffle/pdb",  // Truffle PDB wrapper/impl classes
-            "org/finos/legend/pure/truffle/runtime"  // TruffleInstanceFactory targets
+            "org/finos/legend/pure/truffle/runtime",  // TruffleInstanceFactory targets
+            // ANTLR-generated TopParser + M3Parser context classes. The Pure-side
+            // mappings (parser-mappings.pdb) drive `parseDocument` reflectively
+            // via AntlrNodes#invokeNamed → ctx.<rule>() — TopParser$DocumentContext.section(),
+            // M3Parser$ClassDefinitionContext.qualifiedName(), and so on.
+            // Without registration, native-image strips those methods and the
+            // reflective lookup fails at runtime.
+            "org/finos/legend/pure/next/parser"
     };
 
     @Override
@@ -128,6 +136,19 @@ public final class PureFeature implements Feature
         catch (Throwable ignored)
         {
             // Some interfaces may raise; keep going.
+        }
+        try
+        {
+            // Public fields — required for things like ANTLR's `M3Parser.ruleNames`
+            // (read by AntlrNodes#grammarRuleName via Class.getField).
+            for (Field f : cls.getFields())
+            {
+                RuntimeReflection.register(f);
+            }
+        }
+        catch (Throwable ignored)
+        {
+            // Same defensive guard as for methods.
         }
     }
 

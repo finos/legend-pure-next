@@ -1,0 +1,30 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::metamodel::function::*;
+
+// Lowers a Pure lambda to a Truffle RootNode (via the same path the runtime
+// uses on first invocation — PureContext.callTargetForLambda) and returns
+// the tree-form dump from Truffle's NodeUtil.printTreeToString. Powers the
+// Pure -> Truffle AST gallery.
+//
+// Implementation lives in the Truffle runtime
+// (org.finos.legend.pure.truffle.ast.natives.meta.TruffleAstForNode) and is
+// registered on the default NativeNodeRegistry — no extension jar required.
+// Bootstrap (java-direct) has no implementation; calling this from anywhere
+// other than `--backend truffle` will fall through to the bridged-native
+// path and throw "no implementation".
+native function meta::external::language::truffle::truffleAstFor(
+    lambda: LambdaFunction<meta::pure::metamodel::type::Any>[1]
+): String[1];

@@ -1,0 +1,113 @@
+# pure/modules/translation/truffle/Justfile — builds the Pure -> Truffle AST
+# gallery PDB.
+#
+# Direct invocation: just <recipe>   (from pure/modules/translation/truffle/)
+#
+# Inputs:  shared/core.pdb, shared/core-tests.pdb, shared/translation-shared.pdb.
+# Output:  shared/truffle-translation-gallery.pdb (+ -tests.pdb)
+#
+# Unlike java/typescript translation modules, this one isn't a translator —
+# it's a backend introspection tool. The `truffleAstFor` native (declared
+# in code/native.pure, implemented in the Truffle runtime) lowers a Pure
+# lambda to a Truffle RootNode and dumps the tree. The gallery walks every
+# PCT test, statically collects every `$f->eval(|lambda)` call, dumps each
+# lambda's AST, and renders Pure source side-by-side with the dump.
+#
+# Because the native is Truffle-only, the gallery can only be RUN via
+# pure-truffle. Bootstrap compilation works fine — the bridged-native
+# fallback would throw at runtime, but bootstrap never runs this code.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+# Sibling module consumed by `build-all` (relative path from this Justfile).
+# `build` itself only checks for the produced PDB and fails loudly — this
+# mod is used solely to make `build-all` self-sufficient.
+mod _dep_translation_shared "../shared/Justfile"
+
+trn_root       := source_directory()
+repo_root      := trn_root / ".." / ".." / ".." / ".."
+shared_out     := repo_root / "shared"
+pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+
+verbose := ""
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+header := "h(){ s=\"[truffle-translation::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
+
+# Default: build truffle-translation-gallery.pdb.
+default: build
+
+# Compile pure/modules/translation/truffle -> shared/truffle-translation-gallery.pdb.
+build:
+    @{{header}} 'build'
+    @{{substep}} 'compile pure/modules/translation/truffle -> shared/truffle-translation-gallery.pdb'
+    test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --base-pdb {{shared_out}}/translation-shared.pdb \
+        --source {{trn_root}} \
+        --output-dir {{shared_out}} {{err_filter}}
+
+# Still needs bootstrap PDBs (core.pdb / core-tests.pdb / compiler.pdb) — `build` checks for those and fails loudly.
+
+# Build sibling-module dep (translation_shared) first, then this module.
+build-all: _dep_translation_shared::build build
+
+# Compile with tests split into shared/truffle-translation-gallery-tests.pdb.
+build-tests:
+    @{{header}} 'build-tests'
+    @{{substep}} 'compile pure/modules/translation/truffle -> truffle-translation-gallery.pdb + -tests.pdb'
+    test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/core-tests.pdb         || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/core-tests.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --base-pdb {{shared_out}}/translation-shared.pdb \
+        --source {{trn_root}} \
+        --output-dir {{shared_out}} \
+        --tests split {{err_filter}}
+
+# Render the Pure -> Truffle AST gallery as a self-contained HTML page.
+gallery: build-tests _check-runtime-pdbs
+    @{{header}} 'gallery'
+    @{{substep}} 'render Pure -> Truffle AST gallery -> shared/truffle-translation-gallery.html'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/translation-shared.pdb \
+        --pdb {{shared_out}}/truffle-translation-gallery.pdb \
+        --pdb {{shared_out}}/truffle-translation-gallery-tests.pdb \
+        --function "meta::external::language::truffle::gallery::renderGallery_String_1__String_1_" \
+        --args "meta::pure::functions" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
+        | grep -v '^\[graal-tripwire\]' \
+        | awk '/<!DOCTYPE/{p=1} p' \
+        > {{shared_out}}/truffle-translation-gallery.html
+    @echo "wrote {{shared_out}}/truffle-translation-gallery.html ($(wc -c < {{shared_out}}/truffle-translation-gallery.html) bytes)"
+
+# Internal: fail loudly if the PDBs / pure-truffle the gallery needs aren't staged.
+_check-runtime-pdbs:
+    #!/usr/bin/env bash
+    if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
+        echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2
+        exit 1
+    fi
+    if [[ ! -x "{{pure_truffle}}" ]]; then
+        echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" >&2
+        exit 1
+    fi
+
+# Remove shared/truffle-translation-gallery.pdb (and the tests PDB).
+clean:
+    @{{header}} 'clean'
+    @{{substep}} 'remove shared/truffle-translation-gallery.pdb + -tests.pdb'
+    rm -f {{shared_out}}/truffle-translation-gallery.pdb {{shared_out}}/truffle-translation-gallery-tests.pdb

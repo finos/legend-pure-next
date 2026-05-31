@@ -41,6 +41,24 @@ function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testPa
     assertEquals(0.000d, $f->eval(|parseDecimal('-000.000')));
 }
 
+// Demonstrates that parseDecimal MUST preserve true Decimal precision, not
+// fall back to Double. The canonical 0.1 + 0.2 == 0.3 case: with BigDecimal
+// arithmetic the sum is exactly 0.3; with IEEE-754 doubles it's
+// 0.30000000000000004, which is not equal to 0.3. Both halves of the assert
+// go through parseDecimal (and through plus_Decimal), so if parseDecimal
+// returns Double and plus_Decimal is plain Double addition the precision
+// loss propagates and the test fails.
+//
+// The existing testParseDecimal cases pass with the buggy Double impl because
+// each `assertEquals` compares two values that took the SAME Double path
+// (literal + native both call Double.parseDouble on the same string), so the
+// bit patterns match. This test introduces arithmetic between two separately-
+// parsed Decimals, which surfaces the precision loss.
+function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testParseDecimalPreservesPrecisionThroughArithmetic<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(parseDecimal('0.3'), $f->eval(|parseDecimal('0.1') + parseDecimal('0.2')));
+}
+
 function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testParseDecimalWithPrecisionScale<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(123.13d, $f->eval(|parseDecimal('123.126', 5, 2)));
