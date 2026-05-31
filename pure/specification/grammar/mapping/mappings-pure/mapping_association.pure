@@ -1,0 +1,27 @@
+// Mapping for the `Association` top-level element.
+//
+// Grammar: association: ASSOCIATION stereotypes? taggedValues? qualifiedName associationBody?
+// associationBody contains a properties() block with property + qualifiedProperty lists.
+
+import meta::pure::parser::mappings::*;
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+import meta::pure::protocol::grammar::*;
+
+function meta::pure::parser::mappings::association(): Rule[1]
+{
+   ^Rule(name='association', alts = [
+      ^Alt(returnExpr = {ctx: AntlrContext[1], o: Integer[1] |
+         let qn = $ctx->getChild('qualifiedName')->toOne()->getText();
+         ^meta::pure::protocol::grammar::relationship::Association(
+            p_sourceInformation = buildSourceInfo($ctx, $o),
+            name                = simpleNameOf($qn),
+            package             = packagePtrOf($qn),
+            properties          = collectProperties($ctx, 'associationBody', $o),
+            qualifiedProperties = collectQualifiedProperties($ctx, 'associationBody', $o),
+            stereotypes         = collectStereotypes($ctx, $o),
+            taggedValues        = collectTaggedValues($ctx, $o)
+         );
+      })
+   ])
+}

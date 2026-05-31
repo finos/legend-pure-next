@@ -60,26 +60,36 @@ public final class ParseDecimalNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static double parseAndScale(String s, int scale)
+    private static BigDecimal parseAndScale(String s, int scale)
     {
         // BigDecimal.setScale walks into BigInteger arithmetic where
         // squareKaratsuba recursion would blow Graal's inline budget
         // (~490 levels). String parsing also reaches into JDK reflection
         // (Class.getGenericInfo → SignatureParser.parseClassSignature) on
         // some hot paths. Boundary keeps both off the inlining target list.
-        double d = new BigDecimal(s.trim())
-                .setScale(scale, RoundingMode.HALF_UP)
-                .doubleValue();
-        return d == 0.0 ? 0.0 : d;
+        return new BigDecimal(stripDecimalSuffix(s.trim())).setScale(scale, RoundingMode.HALF_UP);
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static double parsePlain(String s)
+    private static BigDecimal parsePlain(String s)
     {
-        // Double.parseDouble has its own deep call chain (NumberFormatException
-        // construction, Locale lookups, signature parsing in failure paths) —
-        // running it across a TruffleBoundary keeps PE-time inlining bounded.
-        double d = Double.parseDouble(s.trim());
-        return d == 0.0 ? 0.0 : d;
+        // BigDecimal(String) keeps the exact decimal representation of the
+        // source — no Double round-trip — so downstream arithmetic stays
+        // precise. The TruffleBoundary keeps the parser's deep call chain
+        // (NumberFormatException construction, JDK reflection) off PE-time
+        // inlining.
+        return new BigDecimal(stripDecimalSuffix(s.trim()));
+    }
+
+    /** Drop trailing Decimal-literal suffix 'd'/'D' so BigDecimal accepts the string. */
+    private static String stripDecimalSuffix(String s)
+    {
+        int len = s.length();
+        if (len > 0)
+        {
+            char last = s.charAt(len - 1);
+            if (last == 'd' || last == 'D') return s.substring(0, len - 1);
+        }
+        return s;
     }
 }

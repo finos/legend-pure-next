@@ -363,7 +363,43 @@ function meta::pure::translation::shared::singleValueToProtocol(
            ),
            multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
         ),
+   |if ($v->instanceOf(meta::pure::metamodel::type::Enum)
+        && !$v->instanceOf(meta::pure::metamodel::type::Enumeration),
+      | $v->enumValueToProtocol(),
       | $v->classInstanceToProtocol()
+   ));
+}
+
+// Captured Enum VALUE → protocol DotApplication of the form
+// `<EnumerationPE>.<valueName>`. Inlining the raw PDO via classInstanceToProtocol
+// leaves the canonical-recompile holding an AtomicValue whose `value` is an
+// enum-typed PDO whose classifierGenericType can collapse to Any during
+// downstream traversal (the PDB-reconstructed enum value's CGT is lazy via
+// PureEnumRegistry, and the post-recompile path is not guaranteed to preserve
+// the registry binding through every consumer). Emitting the access shape
+// instead — the same shape the parser produces for `TestEnum1.FIRST` — keeps
+// the recompiled body's enum reference symbolic; downstream translators
+// detect it via `enumValueAccess(fe)` (an AtomicValue receiver typed
+// Enumeration) and emit the short-name access `<ShortName>.<VALUE>` rather
+// than the structural fallback that walks Any's properties.
+function meta::pure::translation::shared::enumValueToProtocol(
+   v: Any[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let enumValue = $v->cast(@meta::pure::metamodel::type::Enum);
+   let enumerationPath = $v->genericType()->rawType()
+                            ->toOne('enumValueToProtocol: captured enum value has no rawType')
+                            ->cast(@meta::pure::metamodel::PackageableElement)
+                            ->elementToPath();
+   ^meta::pure::protocol::grammar::valuespecification::DotApplication(
+      functionName = $enumValue.name->toOne(),
+      parametersValues = [
+         ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+            value = ^meta::pure::protocol::grammar::Package_Pointer(value = $enumerationPath),
+            genericType = ^meta::pure::protocol::grammar::type::generics::CompilerNotSetGenericType(),
+            multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+         )
+      ]
    );
 }
 

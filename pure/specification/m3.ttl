@@ -2034,7 +2034,7 @@
     :multiplicity :PureOne .
 
 :Column_genericType a :Property ;
-    :stereotypes :ProtocolInfo_maybePointer ;
+    :stereotypes :ProtocolInfo_maybePointer, :ProtocolInfo_optionalInProtocol ;
     :abstractProperty_name [ :classifierGenericType :GenericType_meta_pure_metamodel_type_primitives_String ; :data "genericType" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_meta_pure_metamodel_relation_Column :GenericType_meta_pure_metamodel_type_generics_GenericType ) ; :multiplicityArguments :PureOne ] ;
     :owner :Column ;
@@ -2042,7 +2042,7 @@
     :multiplicity :PureOne .
 
 :Column_multiplicity a :Property ;
-    :stereotypes :ProtocolInfo_maybePointer ;
+    :stereotypes :ProtocolInfo_maybePointer, :ProtocolInfo_optionalInProtocol ;
     :abstractProperty_name [ :classifierGenericType :GenericType_meta_pure_metamodel_type_primitives_String ; :data "multiplicity" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_meta_pure_metamodel_relation_Column :GenericType_meta_pure_metamodel_multiplicity_Multiplicity ) ; :multiplicityArguments :PureOne ] ;
     :owner :Column ;

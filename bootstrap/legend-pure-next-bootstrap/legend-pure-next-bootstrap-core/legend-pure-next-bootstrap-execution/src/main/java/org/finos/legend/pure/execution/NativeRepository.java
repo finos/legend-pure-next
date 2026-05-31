@@ -20,6 +20,7 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.natives.boolean_.BooleanNatives;
 import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
 import org.finos.legend.pure.execution.natives.meta.CompilerNatives;
+import org.finos.legend.pure.next.parser.GrammarExtension;
 import org.finos.legend.pure.next.parser.ParserExtension;
 import org.finos.legend.pure.execution.natives.io.IONatives;
 import org.finos.legend.pure.execution.natives.lang.AssertNatives;
@@ -76,8 +77,10 @@ public class NativeRepository
     }
 
     /**
-     * Exception type for Pure assertion failures.
-     * Distinct from RuntimeException so that assertError can let it propagate.
+     * Marker exception for Pure assertion failures. {@code assertError} catches
+     * any exception and checks the message — a mismatched message re-throws,
+     * so there's no longer any propagate-by-type behavior; this class is purely
+     * for identifying the origin in stack traces / error formatting.
      */
     public static class PureAssertionError extends RuntimeException
     {
@@ -90,15 +93,46 @@ public class NativeRepository
     private final Map<String, NativeImpl> natives = new HashMap<>();
     private final Map<String, LazyNativeImpl> lazyNatives = new HashMap<>();
     private final MetadataAccess resolver;
+    /**
+     * Per-runtime grammar registry: name → {@link GrammarExtension}. Looked up
+     * by the {@code parseAntlr} native (registered in {@link #registerDefaults}).
+     * Frozen at construction; rebuilding the registry requires a new
+     * {@link NativeRepository} instance.
+     */
+    private final Map<String, GrammarExtension> grammars;
 
     public NativeRepository(MetadataAccess resolver)
     {
-        this(resolver, null, List.of());
+        this(resolver, null, List.of(), List.of());
     }
 
-    private NativeRepository(MetadataAccess resolver, Iterable<? extends NativeExtension> extensions, List<? extends ParserExtension> parserExtensions)
+    private NativeRepository(MetadataAccess resolver,
+                             Iterable<? extends NativeExtension> extensions,
+                             List<? extends ParserExtension> parserExtensions,
+                             List<? extends GrammarExtension> grammarExtensions)
     {
         this.resolver = resolver;
+        this.grammars = new HashMap<>();
+        for (GrammarExtension g : grammarExtensions)
+        {
+            if (this.grammars.put(g.grammarName(), g) != null)
+            {
+                throw new IllegalStateException(
+                        "Duplicate grammar registration for '" + g.grammarName() + "'");
+            }
+        }
+        // Defaults: M3Parser + TopParser. Any path that constructs a
+        // NativeRepository — Builder.build() OR the back-compat
+        // `new NativeRepository(resolver)` — gets them automatically. Explicit
+        // registrations under the same name win (we only add if absent).
+        if (!this.grammars.containsKey("M3Parser"))
+        {
+            this.grammars.put("M3Parser", new org.finos.legend.pure.next.parser.M3GrammarExtension());
+        }
+        if (!this.grammars.containsKey("TopParser"))
+        {
+            this.grammars.put("TopParser", new org.finos.legend.pure.next.parser.TopGrammarExtension());
+        }
         registerDefaults(parserExtensions);
         if (extensions != null)
         {
@@ -106,11 +140,22 @@ public class NativeRepository
         }
     }
 
+    /**
+     * Look up a registered grammar by name. Used by {@code AntlrNatives}'
+     * {@code parseAntlr} implementation; not part of the public API.
+     */
+    public GrammarExtension lookupGrammar(String name)
+    {
+        return grammars.get(name);
+    }
+
+
     public static class Builder
     {
         private MetadataAccess resolver;
         private final List<NativeExtension> nativeExtensions = new ArrayList<>();
         private final List<ParserExtension> parserExtensions = new ArrayList<>();
+        private final List<GrammarExtension> grammarExtensions = new ArrayList<>();
 
         public Builder withResolver(MetadataAccess resolver)
         {
@@ -136,9 +181,18 @@ public class NativeRepository
             return this;
         }
 
+        public Builder withGrammarExtensions(Iterable<? extends GrammarExtension> extensions)
+        {
+            if (extensions != null)
+            {
+                extensions.forEach(this.grammarExtensions::add);
+            }
+            return this;
+        }
+
         public NativeRepository build()
         {
-            return new NativeRepository(resolver, nativeExtensions, parserExtensions);
+            return new NativeRepository(resolver, nativeExtensions, parserExtensions, grammarExtensions);
         }
     }
 
@@ -325,6 +379,7 @@ public class NativeRepository
         IONatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.io.FileSystemNatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.date.DateNatives.register(natives, lazyNatives, resolver);
+        org.finos.legend.pure.execution.natives.meta.antlr.AntlrNatives.register(natives, lazyNatives, resolver, this);
         new CompilerNatives(parserExtensions).register(natives, lazyNatives, resolver);
     }
 

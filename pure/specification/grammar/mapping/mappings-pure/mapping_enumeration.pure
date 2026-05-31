@@ -1,0 +1,56 @@
+// Mapping for the `Enum` top-level element.
+//
+// Grammar: enumDefinition: ENUM stereotypes? taggedValues? qualifiedName
+//                          CURLY_BRACKET_OPEN enumValue (COMMA enumValue)* CURLY_BRACKET_CLOSE
+//
+// Each `enumValue` becomes a `Property` on the resulting `Enumeration`
+// (this matches the protocol shape the existing parser produces).
+//
+// This file: enumDefinition (top-level Rule) + buildEnumValue helper. Stereotype
+// / taggedValue handling is shared and lives in mapping_shared.pure (TODO).
+
+import meta::pure::parser::mappings::*;
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+import meta::pure::protocol::grammar::*;
+
+function meta::pure::parser::mappings::enumDefinition(): Rule[1]
+{
+   ^Rule(name='enumDefinition', alts = [
+      ^Alt(returnExpr = {ctx: AntlrContext[1], o: Integer[1] |
+         let qn = $ctx->getChild('qualifiedName')->toOne()->getText();
+         ^meta::pure::protocol::grammar::type::Enumeration(
+            p_sourceInformation = buildSourceInfo($ctx, $o),
+            name              = simpleNameOf($qn),
+            package           = packagePtrOf($qn),
+            properties        = $ctx->getChildren('enumValue')->map(v | buildEnumValue($v, $qn, $o)),
+            stereotypes       = collectStereotypes($ctx, $o),
+            taggedValues      = collectTaggedValues($ctx, $o)
+         );
+      })
+   ])
+}
+
+// Each enum value becomes a Property on the Enumeration. The protocol declares
+// genericType / multiplicity / aggregation as [1]; this helper fills all three
+// with their meaningful enum-value defaults (the enclosing Enumeration type,
+// cardinality 1, aggregation None). Reference Java parser does the same in
+// `PureLanguageProtocolBuilder.buildEnumValue` — kept in sync so the
+// MappingsInterpreterValidator can compare every slot strictly without skips.
+function meta::pure::parser::mappings::buildEnumValue(ctx: AntlrContext[1], enumPath: String[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::function::property::Property[1]
+{
+   ^meta::pure::protocol::grammar::function::property::Property(
+      name              = $ctx->getChild('identifier')->toOne()->getText(),
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      aggregation       = ^meta::pure::protocol::grammar::Enum_Pointer(
+         value              = 'meta::pure::metamodel::function::property::AggregationKind',
+         extraPointerValues = [^meta::pure::protocol::grammar::PointerValue(value = 'None')]),
+      genericType       = ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+         type = ^meta::pure::protocol::grammar::type::Type_Pointer(value = $enumPath)),
+      multiplicity      = ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+         lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = 1),
+         upperBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = 1)),
+      stereotypes       = collectStereotypes($ctx, $lineOffset),
+      taggedValues      = collectTaggedValues($ctx, $lineOffset)
+   )
+}

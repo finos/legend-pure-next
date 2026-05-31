@@ -108,6 +108,12 @@ public final class MetaNodeFactories
         registry.register("openVariableValues_LambdaFunction_1__Map_1_",
                 (args, gt, mul, fe) -> new OpenVariableValuesNode(args[0]));
 
+        // truffleAstFor(LambdaFunction[1]) : String[1] — lowers the lambda to a
+        // Truffle RootNode (via PureContext.callTargetForLambda) and returns
+        // NodeUtil.printTreeToString. Powers the Truffle gallery.
+        registry.register("truffleAstFor_LambdaFunction_1__String_1_",
+                (args, gt, mul, fe) -> new TruffleAstForNode(args[0]));
+
         // --- Element path natives ---
 
         // pathToElement(String[1], String[1]) : PackageableElement[1]

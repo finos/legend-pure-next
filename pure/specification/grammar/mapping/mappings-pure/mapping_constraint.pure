@@ -1,0 +1,62 @@
+// Constraint helpers — used by Class / Primitive constraints and by
+// PackageableFunction pre/post constraints.
+//
+// Grammar:
+//   constraint:      simpleConstraint | complexConstraint
+//   simpleConstraint: constraintId? combinedExpression
+//   complexConstraint: VALID_STRING constraintOwner? constraintExternalId?
+//                      constraintFunction constraintEnforcementLevel? constraintMessage?
+
+import meta::pure::parser::mappings::*;
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+import meta::pure::protocol::grammar::*;
+
+function meta::pure::parser::mappings::buildConstraint(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::constraint::Constraint[1]
+{
+   if($ctx->hasChild('simpleConstraint'),
+      | buildSimpleConstraint($ctx, $ctx->getChild('simpleConstraint')->toOne(), $lineOffset),
+      | buildComplexConstraint($ctx, $ctx->getChild('complexConstraint')->toOne(), $lineOffset))
+}
+
+function meta::pure::parser::mappings::buildSimpleConstraint(outerCtx: AntlrContext[1], ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::constraint::Constraint[1]
+{
+   let idCtx = $ctx->getChild('constraintId');
+   ^meta::pure::protocol::grammar::constraint::Constraint(
+      p_sourceInformation = buildSourceInfo($outerCtx, $lineOffset),
+      name                = if($idCtx->isNotEmpty(), |$idCtx->toOne()->getTokenText('VALID_STRING'), |[]),
+      functionDefinition  = ^meta::pure::protocol::grammar::function::LambdaFunction(
+         p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+         expressionSequence  = [buildCombinedExpression($ctx->getChild('combinedExpression')->toOne(), $lineOffset)]
+      )
+   );
+}
+
+function meta::pure::parser::mappings::buildComplexConstraint(outerCtx: AntlrContext[1], ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::constraint::Constraint[1]
+{
+   let ownerCtx     = $ctx->getChild('constraintOwner');
+   let extIdCtx     = $ctx->getChild('constraintExternalId');
+   let enforceCtx   = $ctx->getChild('constraintEnforcementLevel');
+   let messageCtx   = $ctx->getChild('constraintMessage');
+   let fnCtx        = $ctx->getChild('constraintFunction')->toOne();
+   ^meta::pure::protocol::grammar::constraint::Constraint(
+      p_sourceInformation = buildSourceInfo($outerCtx, $lineOffset),
+      name                = $ctx->getTokenText('VALID_STRING')->toOne(),
+      owner               = if($ownerCtx->isNotEmpty(), |$ownerCtx->toOne()->getTokenText('VALID_STRING'), |[]),
+      externalId          = if($extIdCtx->isNotEmpty(),
+                                | stripQuotes($extIdCtx->toOne()->getTokenText('STRING')->toOne()),
+                                | []),
+      functionDefinition  = ^meta::pure::protocol::grammar::function::LambdaFunction(
+         p_sourceInformation = buildSourceInfo($fnCtx, $lineOffset),
+         expressionSequence  = [buildCombinedExpression($fnCtx->getChild('combinedExpression')->toOne(), $lineOffset)]
+      ),
+      enforcementLevel    = if($enforceCtx->isNotEmpty(),
+                                | $enforceCtx->toOne()->getTokenText('ENFORCEMENT_LEVEL'),
+                                | []),
+      messageFunction     = if($messageCtx->isNotEmpty(),
+                                | ^meta::pure::protocol::grammar::function::LambdaFunction(
+                                     p_sourceInformation = buildSourceInfo($messageCtx->toOne(), $lineOffset),
+                                     expressionSequence  = [buildCombinedExpression($messageCtx->toOne()->getChild('combinedExpression')->toOne(), $lineOffset)]),
+                                | [])
+   );
+}

@@ -1,0 +1,45 @@
+// Mapping for the `Class` top-level element.
+//
+// Grammar: classDefinition: CLASS stereotypes? taggedValues? qualifiedName
+//                           typeParametersWithVarianceAndMultiplicityParameters?
+//                           typeVariableParameters? (EXTENDS type (COMMA type)*)?
+//                           constraints? classBody?
+//
+// Initial scope: name + package + stereotypes/taggedValues + properties +
+// qualifiedProperties + generalizations. typeParameters / multiplicityParameters /
+// typeVariables / constraints deferred (need type-variable + lambda machinery).
+
+import meta::pure::parser::mappings::*;
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+import meta::pure::protocol::grammar::*;
+
+function meta::pure::parser::mappings::classDefinition(): Rule[1]
+{
+   ^Rule(name='classDefinition', alts = [
+      ^Alt(returnExpr = {ctx: AntlrContext[1], o: Integer[1] |
+         let qn = $ctx->getChild('qualifiedName')->toOne()->getText();
+         let tpmp = $ctx->getChild('typeParametersWithVarianceAndMultiplicityParameters');
+         ^meta::pure::protocol::grammar::type::Class(
+            p_sourceInformation = buildSourceInfo($ctx, $o),
+            name                = simpleNameOf($qn),
+            package             = packagePtrOf($qn),
+            typeParameters      = $tpmp->map(t | $t->getChild('typeParametersWithVariance'))
+                                       ->map(tpv | $tpv->getChildren('typeParameterWithVariance')->map(p | buildTypeParameterWithVariance($p))),
+            multiplicityParameters = $tpmp->map(t | $t->getChild('multiplictyParameters'))
+                                          ->map(mp | $mp->getChildren('identifier')->map(i | buildMultParamDef($i))),
+            // typeVariableParameters: GROUP_OPEN functionVariableExpression* GROUP_CLOSE
+            // — each becomes a VariableExpression on Class.typeVariables.
+            typeVariables       = $ctx->getChild('typeVariableParameters')
+                                       ->map(tv | $tv->getChildren('functionVariableExpression')->map(v | buildFunctionVariableExpression($v, $o))),
+            generalizations     = $ctx->getChildren('type')->map(t | buildClassGeneralization($t, $o)),
+            constraints         = $ctx->getChild('constraints')
+                                       ->map(c | $c->getChildren('constraint')->map(con | buildConstraint($con, $o))),
+            properties          = collectProperties($ctx, 'classBody', $o),
+            qualifiedProperties = collectQualifiedProperties($ctx, 'classBody', $o),
+            stereotypes         = collectStereotypes($ctx, $o),
+            taggedValues        = collectTaggedValues($ctx, $o)
+         );
+      })
+   ])
+}

@@ -1125,6 +1125,14 @@
       },
       "properties" : [ {
         "_type" : "Property",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "None"
+          } ],
+          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
@@ -1160,6 +1168,14 @@
         }
       }, {
         "_type" : "Property",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "None"
+          } ],
+          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
@@ -1191,6 +1207,14 @@
         }
       }, {
         "_type" : "Property",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "None"
+          } ],
+          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
@@ -1222,6 +1246,14 @@
         }
       }, {
         "_type" : "Property",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "None"
+          } ],
+          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {

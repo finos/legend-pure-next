@@ -1,0 +1,33 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::test::pct::*;
+
+// 1-based column of the context's first matched token (ANTLR's 0-based
+// {@code getCharPositionInLine() + 1} to match the rest of the parser).
+native function <<PCT.function>>
+   meta::pure::functions::meta::antlr::getStartColumn(
+      ctx: AntlrContext[1]
+   ): Integer[1];
+
+function <<PCT.test>> meta::pure::functions::meta::antlr::tests::getStartColumn::testOneBased<Z|y>(
+   f: Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]
+): Boolean[1]
+{
+   // `  Class p::C{}` — class starts at 0-based column 2, so 1-based 3.
+   assertEquals(3,
+                $f->eval(|parseAntlr('  Class p::C{}', 'M3Parser', 's', 0)
+                            ->getTopLevelChildren()->at(0)->getStartColumn()));
+}

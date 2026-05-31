@@ -16,6 +16,12 @@
 set quiet := true
 set shell := ["bash", "-c"]
 
+# Sibling modules consumed by `build-all` (relative paths from this Justfile).
+# `build` itself only checks for the produced PDBs and fails loudly — these
+# mods are used solely to make `build-all` self-sufficient.
+mod _dep_language_typescript "../../language/typescript/Justfile"
+mod _dep_translation_shared  "../shared/Justfile"
+
 trn_root       := source_directory()
 repo_root      := trn_root / ".." / ".." / ".." / ".."
 shared_out     := repo_root / "shared"
@@ -37,8 +43,9 @@ default: build
 build:
     @{{header}} 'build'
     @{{substep}} 'compile pure/modules/translation/typescript -> shared/typescript-translation.pdb'
-    test -f {{shared_out}}/core.pdb       || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
-    test -f {{shared_out}}/typescript.pdb || (echo "ERROR: missing {{shared_out}}/typescript.pdb (run \`just language::typescript::build\` first)" && exit 1)
+    test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/typescript.pdb         || (echo "ERROR: missing {{shared_out}}/typescript.pdb (run \`just language::typescript::build\` first)" && exit 1)
+    test -f {{shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
@@ -47,12 +54,18 @@ build:
         --source {{trn_root}} \
         --output-dir {{shared_out}} {{err_filter}}
 
+# Still needs bootstrap PDBs (core.pdb / core-tests.pdb) — `build` checks for those and fails loudly.
+
+# Build sibling-module deps (language_typescript, translation_shared) first, then this module.
+build-all: _dep_language_typescript::build _dep_translation_shared::build build
+
 # Compile with tests split into shared/typescript-translation-tests.pdb.
 build-tests:
     @{{header}} 'build-tests'
     @{{substep}} 'compile pure/modules/translation/typescript -> shared/typescript-translation.pdb + typescript-translation-tests.pdb'
-    test -f {{shared_out}}/core.pdb       || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
-    test -f {{shared_out}}/typescript.pdb || (echo "ERROR: missing {{shared_out}}/typescript.pdb (run \`just language::typescript::build\` first)" && exit 1)
+    test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/typescript.pdb         || (echo "ERROR: missing {{shared_out}}/typescript.pdb (run \`just language::typescript::build\` first)" && exit 1)
+    test -f {{shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \

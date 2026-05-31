@@ -88,6 +88,14 @@ function <<PCT.test>> meta::pure::functions::math::tests::minus::testDecimalMinu
    assertEquals(-7.0d, $f->eval(|-4.0d-2.0d-1));
 }
 
+// IEEE-754 subtraction loses precision the same way: 0.3 - 0.1 in Double
+// yields 0.19999999999999998. In BigDecimal it's 0.2 exactly. Fails if
+// minus_Decimal unwraps to Double for the subtract (pre-fix behaviour).
+function <<PCT.test>> meta::pure::functions::math::tests::minus::testDecimalMinusPreservesPrecision<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+   assertEquals(0.2d, $f->eval(|0.3d - 0.1d));
+}
+
 function <<PCT.test>> meta::pure::functions::math::tests::minus::testSingleExpressionMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let val = 1;

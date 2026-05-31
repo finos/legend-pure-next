@@ -1,0 +1,46 @@
+// Top-level dispatcher.
+//
+// `parseElements` is the entry point called from Java (after Java has run
+// the ANTLR lexer/parser and produced the root `definition` context). It
+// iterates the top-level children of the parse tree, looks up the matching
+// Rule by grammar-rule name, picks the first alt whose predicate fires (or
+// the only one if there's no predicate), and evaluates its `returnExpr`
+// lambda — which IS the rule body.
+//
+// There is no separate primitive dispatch; the lambda bodies are plain Pure
+// code, run by the Pure runtime.
+
+import meta::pure::parser::mappings::*;
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+
+function meta::pure::parser::mappings::interpreter::parseElements(
+   root: AntlrContext[1],
+   rules: Rule[*],
+   lineOffset: Integer[1]
+): meta::pure::protocol::grammar::PackageableElement[*]
+{
+   // The `definition` ANTLR rule's top-level children include imports and EOF
+   // alongside the element ctxs (classDefinition, functionDefinition, ...).
+   // Filter to only those grammar-rule names with a matching Rule — the
+   // production parser's @Override visit* wrappers do the same implicitly by
+   // only emitting an `add to elements` call for the top-level rules.
+   let ruleNames = $rules.name;
+   $root->getTopLevelChildren()
+        ->filter(c | $ruleNames->contains($c->grammarRuleName()))
+        ->map(c | dispatchRule($c, $rules, $lineOffset));
+}
+
+function meta::pure::parser::mappings::interpreter::dispatchRule(
+   ctx: AntlrContext[1],
+   rules: Rule[*],
+   lineOffset: Integer[1]
+): meta::pure::protocol::grammar::PackageableElement[1]
+{
+   let ruleName = $ctx->grammarRuleName();
+   let rule     = $rules->filter(r | $r.name == $ruleName)->toOne();
+   let matched  = $rule.alts
+                     ->filter(a | $a.predicate->isEmpty() || $a.predicate->toOne()->eval($ctx))
+                     ->at(0);
+   $matched.returnExpr->eval($ctx, $lineOffset);
+}

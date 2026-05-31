@@ -35,6 +35,7 @@ boot           := bootstrap_root / "legend-pure-next-bootstrap"
 bcore          := boot / "legend-pure-next-bootstrap-core"
 spec           := repo_root / "pure" / "specification"
 compiler_src   := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
+mappings_src   := repo_root / "pure" / "specification" / "grammar" / "mapping" / "mappings-pure"
 boot_out       := bootstrap_root / "build"
 shared_out     := repo_root / "shared"
 cli            := boot_out / "pure-bootstrap.jar"
@@ -54,14 +55,22 @@ default: test
 # Build the Java compiler/CLI and stage core.pdb + compiler.pdb into shared/.
 build: (_mvn "skip-tests") stage build-compiler-pdb
 
+# Bootstrap is the root of the dep tree — alias of `build` for symmetry with sub-Justfiles' `build-all`.
+build-all: build
+
 # Copy bootstrap CLI jar to bootstrap/build/ and core.pdb / core-tests.pdb / generated specs to shared/.
 stage:
     @{{header}} 'stage'
-    @{{substep}} 'copy bootstrap jar + core.pdb + core-tests.pdb + generated specs'
+    @{{substep}} 'copy bootstrap jar + core.pdb + core-tests.pdb + parser-mappings.pdb + generated specs'
     mkdir -p {{boot_out}} {{shared_out}}/specification/protocol
     cp {{boot}}/legend-pure-next-bootstrap-cli/target/pure-bootstrap-*-fat.jar {{cli}}
     cp {{bcore}}/legend-pure-next-bootstrap-compiler/target/classes/core.pdb {{shared_out}}/core.pdb
     cp {{bcore}}/legend-pure-next-bootstrap-compiler/target/classes/core-tests.pdb {{shared_out}}/core-tests.pdb
+    # parser-mappings.pdb is produced by bootstrap-parser-validation's
+    # exec-maven-plugin execution into its target/classes/ during `mvn install`;
+    # mirror it into shared/ so Truffle's Justfile recipes find it there.
+    # Direct iteration on mappings.pure can still use `just build-parser-mappings-pdb`.
+    cp {{bcore}}/legend-pure-next-bootstrap-parser-validation/target/classes/parser-mappings.pdb {{shared_out}}/parser-mappings.pdb
     cp -r {{bcore}}/legend-pure-next-bootstrap-generators/target/generated-specification/* {{shared_out}}/specification/
 
 # Companion compiler-tests.pdb holds the compiler-pure tests; mirrors the
@@ -76,6 +85,20 @@ build-compiler-pdb:
         --source {{compiler_src}} \
         --output-dir {{shared_out}} \
         --tests split {{err_filter}}
+
+# Compile parser-mappings -> shared/parser-mappings.pdb via the bootstrap CLI.
+# Mirror of `build-compiler-pdb`; the same PDB is also produced as a classpath
+# resource by the bootstrap-parser-validation Maven module (exec-maven-plugin
+# in process-classes), and `stage` copies that target/classes/ copy into
+# shared/. This standalone recipe lets you regenerate the file directly after
+# editing mappings.pure / interpreter sources, without a full Maven build.
+build-parser-mappings-pdb:
+    @{{header}} 'build-parser-mappings-pdb'
+    @{{substep}} 'compile parser-mappings.pdb against core.pdb'
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --source {{mappings_src}} \
+        --output-dir {{shared_out}} {{err_filter}}
 
 # Build + run Java unit tests (surefire) + run Pure compiler-graph spec tests.
 test: test-java stage build-compiler-pdb test-pure-compiler

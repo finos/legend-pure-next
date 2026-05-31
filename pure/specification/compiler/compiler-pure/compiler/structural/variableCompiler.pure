@@ -22,7 +22,11 @@ import meta::pure::compiler::*;
 function meta::pure::compiler::structural::variableCompiler::compileParameter(p:meta::pure::protocol::grammar::valuespecification::VariableExpression[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<VariableExpression>[1]
 {
     let pType = $p.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-    let gtResult = $pType->compileGenericType($context, $packagePath, $typeParameters, 'parameter \'' + $p.name + '\'', $ownerContext);
+    // Anonymous params (inner FunctionType slots like `{X[1]->Y[1]}`) carry no
+    // name — skip the `parameter '<name>'` clause for them so the type-not-found
+    // error doesn't end up with a bogus `in parameter ''` segment.
+    let elementContext = if($p.name->isEmpty(), | '', | 'parameter \'' + $p.name->toOne() + '\'');
+    let gtResult = $pType->compileGenericType($context, $packagePath, $typeParameters, $elementContext, $ownerContext);
     let mMult = $p.multiplicity->toOne()->compileMultiplicity();
     ^CompilerResult<VariableExpression>(
         value = ^VariableExpression(

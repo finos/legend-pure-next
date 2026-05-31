@@ -15,6 +15,7 @@
 package org.finos.legend.pure.execution.natives.math;
 
 import meta.pure.metamodel.type.Type;
+import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
@@ -107,7 +108,7 @@ public class MathNatives
 
         // minus(Decimal[1]) : Decimal[1] — single-arg negate
         natives.put("minus_Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
-                _E_ValueSpecification.wrap(-((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue(), genericType, multiplicity, resolver));
+                _E_ValueSpecification.wrap(asBigDecimal(args.get(0)).negate(), genericType, multiplicity, resolver));
 
         // minus(Number[1]) : Number[1] — single-arg negate
         natives.put("minus_Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
@@ -128,9 +129,9 @@ public class MathNatives
         natives.put("abs_Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Math.abs(((Double) _E_ValueSpecification.unwrap(args.get(0)))), genericType, multiplicity, resolver));
 
-        // abs(Decimal[1]) : Decimal[1] — Decimal represented as Double
+        // abs(Decimal[1]) : Decimal[1]
         natives.put("abs_Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
-                _E_ValueSpecification.wrap(Math.abs(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()), genericType, multiplicity, resolver));
+                _E_ValueSpecification.wrap(asBigDecimal(args.get(0)).abs(), genericType, multiplicity, resolver));
 
         // times(Float[1], Float[1]) : Float[1]
         natives.put("times_Float_1__Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
@@ -153,34 +154,26 @@ public class MathNatives
 
         // times(Decimal[1], Decimal[1]) : Decimal[1]
         natives.put("times_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
-        {
-            double a = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
-            double b = ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue();
-            double d = java.math.BigDecimal.valueOf(a).multiply(java.math.BigDecimal.valueOf(b)).doubleValue();
-            return _E_ValueSpecification.wrap(d, genericType, multiplicity, resolver);
-        });
+                _E_ValueSpecification.wrap(asBigDecimal(args.get(0)).multiply(asBigDecimal(args.get(1))),
+                        genericType, multiplicity, resolver));
+
         // plus(Decimal[1], Decimal[1]) : Decimal[1]
         natives.put("plus_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
-                _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
-                                + ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
+                _E_ValueSpecification.wrap(asBigDecimal(args.get(0)).add(asBigDecimal(args.get(1))),
                         genericType, multiplicity, resolver));
 
         // minus(Decimal[1], Decimal[1]) : Decimal[1]
         natives.put("minus_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
-                _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
-                                - ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
+                _E_ValueSpecification.wrap(asBigDecimal(args.get(0)).subtract(asBigDecimal(args.get(1))),
                         genericType, multiplicity, resolver));
 
         // divide(Decimal[1], Decimal[1], Integer[1]) : Decimal[1]
         natives.put("divide_Decimal_1__Decimal_1__Integer_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
         {
-            double a = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
-            double b = ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue();
             int scale = ((Number) _E_ValueSpecification.unwrap(args.get(2))).intValue();
-            double d = java.math.BigDecimal.valueOf(a)
-                    .divide(java.math.BigDecimal.valueOf(b), scale, java.math.RoundingMode.HALF_UP)
-                    .doubleValue();
-            return _E_ValueSpecification.wrap(d, genericType, multiplicity, resolver);
+            return _E_ValueSpecification.wrap(
+                    asBigDecimal(args.get(0)).divide(asBigDecimal(args.get(1)), scale, java.math.RoundingMode.HALF_UP),
+                    genericType, multiplicity, resolver);
         });
 
         // ceiling(Number[1]) : Integer[1]
@@ -219,11 +212,10 @@ public class MathNatives
         // round(Decimal[1], Integer[1]) : Decimal[1]
         natives.put("round_Decimal_1__Integer_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
         {
-            double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
             int scale = ((Number) _E_ValueSpecification.unwrap(args.get(1))).intValue();
-            double result = java.math.BigDecimal.valueOf(v)
-                    .setScale(scale, java.math.RoundingMode.HALF_UP).doubleValue();
-            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+            return _E_ValueSpecification.wrap(
+                    asBigDecimal(args.get(0)).setScale(scale, java.math.RoundingMode.HALF_UP),
+                    genericType, multiplicity, resolver);
         });
 
         // sqrt(Number[1]) : Float[1]
@@ -334,5 +326,19 @@ public class MathNatives
                 _E_ValueSpecification.wrap(Math.exp(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
                         genericType, multiplicity, resolver));
 
+    }
+
+    /**
+     * Coerce a Decimal-typed Pure value to {@link java.math.BigDecimal} without
+     * routing through Double — preserves the exact decimal representation
+     * carried by the input. Used by every Decimal arithmetic native so the
+     * `0.1 + 0.2 == 0.3` family of identities holds.
+     */
+    private static java.math.BigDecimal asBigDecimal(ValueSpecification vs)
+    {
+        Object v = _E_ValueSpecification.unwrap(vs);
+        if (v instanceof java.math.BigDecimal bd) return bd;
+        if (v instanceof Number n) return new java.math.BigDecimal(n.toString());
+        return new java.math.BigDecimal(v.toString());
     }
 }

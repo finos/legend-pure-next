@@ -1,0 +1,5 @@
+{
+  "name": "parser-mappings",
+  "packagePattern": "(meta::pure::parser::mappings)(::.*)?",
+  "dependencies": ["core"]
+}

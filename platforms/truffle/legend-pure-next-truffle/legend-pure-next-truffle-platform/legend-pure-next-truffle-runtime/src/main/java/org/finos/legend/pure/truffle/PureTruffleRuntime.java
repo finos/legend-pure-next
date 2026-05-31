@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.finos.legend.pure.truffle.parser.topLevel.TruffleParserExtension;
 import org.finos.legend.pure.truffle.parser.TrufflePureParser;
 
 /**
@@ -52,7 +51,7 @@ public final class PureTruffleRuntime
     private final TruffleMetadataAccess resolver;
 
     private PureTruffleRuntime(TruffleMetadataAccess resolver,
-                               List<? extends TruffleParserExtension> parserExtensions,
+                               List<? extends org.finos.legend.pure.next.parser.GrammarExtension> grammarExtensions,
                                List<Path> sourceRoots,
                                Map<String, String> polyglotOptions)
     {
@@ -111,7 +110,15 @@ public final class PureTruffleRuntime
         }
 
         // Configure and create the Truffle polyglot context
-        PureLanguage.configure(resolver, NativeNodeRegistry.createDefault());
+        Map<String, org.finos.legend.pure.next.parser.GrammarExtension> grammarMap = new LinkedHashMap<>();
+        for (org.finos.legend.pure.next.parser.GrammarExtension g : grammarExtensions)
+        {
+            if (grammarMap.put(g.grammarName(), g) != null)
+            {
+                throw new IllegalStateException("Duplicate grammar registration for '" + g.grammarName() + "'");
+            }
+        }
+        PureLanguage.configure(resolver, NativeNodeRegistry.createDefault(), grammarMap);
         org.graalvm.polyglot.Context.Builder ctxBuilder = org.graalvm.polyglot.Context.newBuilder(PureLanguage.ID)
                 .allowAllAccess(true)
                 .allowExperimentalOptions(true);
@@ -133,13 +140,12 @@ public final class PureTruffleRuntime
         // Get the PureContext created by the language
         this.context = PureLanguage.get(null);
 
-        // Build the TrufflePureParser. The ###Pure section is parsed directly to PDOs
-        // via the generated TrufflePureLanguageProtocolBuilder; non-Pure sections (e.g. ###CompiledGraph)
-        // are handled by their TruffleParserExtension, also producing PDOs — no
-        // protocol-Impl intermediate.
+        // Build the TrufflePureParser. The entire parse pipeline (top-level
+        // dispatch + every section parser) runs through the Pure interpreter
+        // loaded from parser-mappings.pdb; callers compose the section
+        // registry as a Pure Pair list (see TrufflePureParser).
         this.context.setPureParser(TrufflePureParser.builder()
                 .resolver(resolver)
-                .withNonPureExtensions(new ArrayList<>(parserExtensions))
                 .build());
     }
 
@@ -244,7 +250,7 @@ public final class PureTruffleRuntime
     public static final class Builder
     {
         private TruffleMetadataAccess resolver;
-        private final List<TruffleParserExtension> parserExtensions = new ArrayList<>();
+        private final List<org.finos.legend.pure.next.parser.GrammarExtension> grammarExtensions = new ArrayList<>();
         private final List<Path> sourceRoots = new ArrayList<>();
         private final Map<String, String> polyglotOptions = new LinkedHashMap<>();
 
@@ -254,11 +260,17 @@ public final class PureTruffleRuntime
             return this;
         }
 
-        public Builder withParserExtensions(Iterable<? extends TruffleParserExtension> extensions)
+        /**
+         * Register grammar extensions consulted by the {@code parseAntlr}
+         * native. Reuses the bootstrap-side
+         * {@link org.finos.legend.pure.next.parser.GrammarExtension} interface
+         * — the M3/Top implementations work for both runtimes.
+         */
+        public Builder withGrammarExtensions(Iterable<? extends org.finos.legend.pure.next.parser.GrammarExtension> extensions)
         {
             if (extensions != null)
             {
-                extensions.forEach(parserExtensions::add);
+                extensions.forEach(grammarExtensions::add);
             }
             return this;
         }
@@ -322,7 +334,20 @@ public final class PureTruffleRuntime
                     polyglotOptions.put("engine.CompileImmediately", prop);
                 }
             }
-            return new PureTruffleRuntime(resolver, parserExtensions, sourceRoots, polyglotOptions);
+            // Always register the M3 + top-level grammars by default so the
+            // parseAntlr native works out of the box. Callers that need a
+            // custom grammar add it via withGrammarExtensions; conflicts on
+            // the same grammarName throw at runtime construction time.
+            List<org.finos.legend.pure.next.parser.GrammarExtension> allGrammars = new ArrayList<>(grammarExtensions);
+            boolean hasM3 = false, hasTop = false;
+            for (org.finos.legend.pure.next.parser.GrammarExtension g : allGrammars)
+            {
+                if ("M3Parser".equals(g.grammarName())) hasM3 = true;
+                if ("TopParser".equals(g.grammarName())) hasTop = true;
+            }
+            if (!hasM3) allGrammars.add(new org.finos.legend.pure.next.parser.M3GrammarExtension());
+            if (!hasTop) allGrammars.add(new org.finos.legend.pure.next.parser.TopGrammarExtension());
+            return new PureTruffleRuntime(resolver, allGrammars, sourceRoots, polyglotOptions);
         }
     }
 

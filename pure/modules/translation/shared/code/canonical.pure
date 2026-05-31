@@ -27,9 +27,13 @@ import meta::pure::translation::shared::*;
 // FunctionDefinition[1] and returns a FunctionDefinition[1]. Applying the
 // same pass twice gives the same result as once (fixpoint guarantee).
 //
-// Modes are ADDITIVE — passing `[InlineOpenVariables, PartialEvaluation]`
-// runs both passes in sequence. The order in the list IS the order of
-// application. Passing the empty list is a no-op.
+// Modes are a SET — the input list is deduped and the caller's ordering is
+// IGNORED. Passes are always applied in the strict order defined by
+// {@link canonicalPassOrder}, which encodes the dependency relationships
+// between passes (Inline → PartialEval → IfBranchPruning → FilterFusion →
+// DeadLetElim). This means {@code makeCanonical(f, [A, B])} and
+// {@code makeCanonical(f, [B, A])} are equivalent — the canonicalization
+// itself is canonical. Passing the empty list is a no-op.
 //
 // Pass catalogue:
 //
@@ -55,6 +59,26 @@ import meta::pure::translation::shared::*;
 //     pass openVariables = [] and every former capture is a local
 //     let-binding — useful when a downstream consumer wants the captured
 //     values named once at the top rather than duplicated at every use site.
+//
+//   SingleUseLetInline — for each top-level {@code let x = RHS;} binding
+//     in a function/lambda body, if {@code $x} is referenced exactly once
+//     by a subsequent expression and {@code RHS} is side-effect-free,
+//     substitute the use with {@code RHS} and drop the let. Recursive
+//     across nested scopes (lambda bodies inside the function get the same
+//     treatment at their own expressionSequence boundary). Iterates to a
+//     fixpoint per-scope so a chain {@code let a = ...; let b = $a + 1; $b}
+//     collapses fully in one pass.
+//
+//     Safety: side-effect detection uses the same
+//     {@code functionType.SideEffectFunction}-stereotype check as
+//     {@link PartialEvaluation}, plus a conservative "unresolved function
+//     reference = treat as side-effecting" rule. Unmoved evaluation order:
+//     when an intervening expression between the let and its use carries
+//     observable side effects, the inlining would re-order them — we side-
+//     step this by inlining only when uses count is 1 and the RHS itself
+//     is pure (the use's evaluation point is preserved; the let itself is
+//     deleted with no semantic effect because no other expression
+//     observed the binding).
 //
 //   PartialEvaluation — fold every FunctionExpression whose params are
 //     ALL literal AtomicValues by invoking the function via
@@ -85,6 +109,20 @@ import meta::pure::translation::shared::*;
 //     references resolve. Pre-checks for any peelable chain to skip the
 //     recompile cost on functions that don't contain one.
 //
+//   FilterFusion — collapse adjacent {@code xs->filter(c1)->filter(c2)}
+//     chains into a single {@code xs->filter(c | c1 && c2)} so the
+//     downstream backend only iterates the source once. Recursive
+//     bottom-up: a chain of N filters reduces to one with N-1 {@code &&}s.
+//     Fusion only fires when both lambdas have a single parameter and a
+//     single body expression (Pure grammar rejects multi-expression
+//     sequences inside parens, so multi-expr bodies can't be combined as
+//     {@code &&} operands), and when the outer body doesn't reference the
+//     inner parameter name as a free variable (would cause capture under
+//     the param rename). Adjacent fusable pairs in a longer chain still
+//     fuse around any non-fusable pair. Same protocol-rewrite +
+//     recompile pattern as NestedIfToMultiIf — the new {@code and}
+//     references resolve at recompile against the live registry.
+//
 //   IfBranchPruning — replace `if(literal_bool, |a, |b)` with the body of
 //     the taken branch when the condition is an AtomicValue holding a
 //     {@link Boolean} literal. Walks the multi-if form too: drops pairs
@@ -110,9 +148,11 @@ Enum meta::pure::translation::shared::CanonicalMode
 {
    InlineOpenVariables,
    LocalizeOpenVariables,
+   SingleUseLetInline,
    PartialEvaluation,
    NestedIfToMultiIf,
    IfBranchPruning,
+   FilterFusion,
    DeadLetElim
 }
 
@@ -124,16 +164,85 @@ function meta::pure::translation::shared::makeCanonical(f: FunctionDefinition<An
    makeCanonical($f, [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
 }
 
-// Apply the named passes in the order given. Each pass is a fixpoint, so
-// {@code [A, A, B]} and {@code [A, B]} are equivalent; but {@code [A, B]}
-// and {@code [B, A]} may differ (e.g. PartialEvaluation can't fold across
-// open variables, so it sees more constants after InlineOpenVariables).
+// Apply the named passes. The input list is treated as a SET — duplicates
+// collapse (each pass is a fixpoint, so applying twice equals once) and the
+// order in the list is IGNORED. The actual order of application is the
+// strict canonical order defined by {@link canonicalPassOrder}, regardless
+// of how the caller arranged the list. Concretely: even if a caller passes
+// {@code [FilterFusion, InlineOpenVariables]}, InlineOpenVariables runs
+// first because filter fusion can only see capture-free filter bodies after
+// the open-variable substitution has happened (a filter lambda that still
+// references {@code $cap} would fail to recompile during fusion).
+//
+// Rationale for a fixed order: pass dependencies are real (Inline before
+// PartialEval before IfBranchPruning before DeadLetElim, etc.); letting
+// callers pick an order led to silent miscompiles when the chosen order
+// hid a capture or a literal from a downstream pass. The set semantics
+// make {@code makeCanonical(f, [A, B])} and {@code makeCanonical(f, [B, A])}
+// equivalent — the canonicalization itself is canonical.
 function meta::pure::translation::shared::makeCanonical(
    f: FunctionDefinition<Any>[1],
    modes: meta::pure::translation::shared::CanonicalMode[*]
 ): FunctionDefinition<Any>[1]
 {
-   $modes->fold({mode, acc | $acc->applyCanonicalPass($mode)}, $f);
+   canonicalPassOrder()
+      ->filter(p | $modes->contains($p))
+      ->fold({mode, acc | $acc->applyCanonicalPass($mode)}, $f);
+}
+
+// The strict canonical ordering of passes. New passes must be inserted at
+// the position that respects their dependencies on prior passes. Order
+// chosen so each pass sees the most-reduced input from upstream passes:
+//
+//   1. InlineOpenVariables  — resolve captures so downstream passes see
+//                              complete literal bodies, not VariableExpressions.
+//   2. LocalizeOpenVariables — alternative to Inline (rare in combination —
+//                              after Inline, openVariables is empty so this
+//                              is a no-op; listed for completeness).
+//   3. SingleUseLetInline   — inline a top-level let-bound variable into its
+//                              single use site, dropping the let, when the
+//                              RHS is side-effect-free. Runs before
+//                              PartialEvaluation so the inlined RHS gets
+//                              folded together with the surrounding expr,
+//                              and before FilterFusion so a filter lambda
+//                              of the shape {@code (x | let y = ...; bool)}
+//                              collapses to single-expression form and
+//                              becomes fusable.
+//   4. PartialEvaluation    — fold literal-only sub-expressions; depends on
+//                              Inline having lowered captures to literals.
+//   5. NestedIfToMultiIf    — collapse if-cascades into multi-if form; safe
+//                              after PartialEvaluation has folded their
+//                              conditions.
+//   6. IfBranchPruning      — drop pairs with literal-false conds and
+//                              short-circuit at literal-true; depends on
+//                              PartialEvaluation surfacing those literals
+//                              and NestedIfToMultiIf placing them in the
+//                              multi-if shape we walk.
+//   7. FilterFusion         — collapse {@code xs->filter(c1)->filter(c2)}
+//                              into a single filter with {@code &&}; safe
+//                              after Inline (filter bodies are capture-free),
+//                              after SingleUseLetInline (multi-expr filter
+//                              lambdas of the form {@code (x | let y = ...; bool)}
+//                              collapse to fusable single-expression form),
+//                              and after IfBranchPruning (a conditional
+//                              filter clause may have collapsed to a single
+//                              expression).
+//   8. DeadLetElim          — drop unreferenced lets last, since earlier
+//                              passes can render previously-live bindings
+//                              dead (e.g. a let used only by a pruned
+//                              if-branch).
+function meta::pure::translation::shared::canonicalPassOrder(): meta::pure::translation::shared::CanonicalMode[*]
+{
+   [
+      meta::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+      meta::pure::translation::shared::CanonicalMode.LocalizeOpenVariables,
+      meta::pure::translation::shared::CanonicalMode.SingleUseLetInline,
+      meta::pure::translation::shared::CanonicalMode.PartialEvaluation,
+      meta::pure::translation::shared::CanonicalMode.NestedIfToMultiIf,
+      meta::pure::translation::shared::CanonicalMode.IfBranchPruning,
+      meta::pure::translation::shared::CanonicalMode.FilterFusion,
+      meta::pure::translation::shared::CanonicalMode.DeadLetElim
+   ];
 }
 
 function meta::pure::translation::shared::applyCanonicalPass(
@@ -154,12 +263,16 @@ function meta::pure::translation::shared::applyCanonicalPass(
                 // UserDefinedFunctions have no captures by construction — passthrough.
                 other: FunctionDefinition<Any>[1] | $other
              ])),
+      pair(| $mode == meta::pure::translation::shared::CanonicalMode.SingleUseLetInline,
+           | $f->singleUseLetInline()),
       pair(| $mode == meta::pure::translation::shared::CanonicalMode.PartialEvaluation,
            | $f->partialEvaluate()),
       pair(| $mode == meta::pure::translation::shared::CanonicalMode.NestedIfToMultiIf,
            | $f->nestedIfToMultiIf()),
       pair(| $mode == meta::pure::translation::shared::CanonicalMode.IfBranchPruning,
            | $f->ifBranchPrune()),
+      pair(| $mode == meta::pure::translation::shared::CanonicalMode.FilterFusion,
+           | $f->filterFusion()),
       pair(| $mode == meta::pure::translation::shared::CanonicalMode.DeadLetElim,
            | $f->deadLetElim())
    ],
@@ -1375,6 +1488,641 @@ function meta::pure::translation::shared::referencesVariable(vs: ValueSpecificat
               );
          ),
       other: ValueSpecification[1] | false
+   ]);
+}
+
+// ----------------------------------------------------------------------------
+// Pass — singleUseLetInline.
+//
+// Inline every top-level {@code let x = RHS;} binding into its single use
+// when {@code $x} is referenced exactly once by a subsequent expression and
+// {@code RHS} is side-effect-free. The let is then dropped (no other
+// expression observed the binding, so the deletion is invisible).
+//
+// Applies independently at every expressionSequence boundary in the AST —
+// function/UDF body, lambda bodies inside the function, lambda bodies
+// inside lambda bodies, ... — so a multi-expression filter lambda of the
+// shape {@code (x | let y = $x + 1; $y > 0)} collapses to single-
+// expression form {@code (x | $x + 1 > 0)} and unblocks downstream
+// FilterFusion.
+//
+// Iterates per-scope until fixpoint, so chains collapse fully:
+// {@code let a = 1; let b = $a + 1; $b * 2} -> {@code (1 + 1) * 2} in
+// one pass (then PartialEvaluation folds to {@code 4} if enabled).
+//
+// Safety:
+//   - RHS purity: walked recursively, conservatively rejects any
+//     FunctionExpression whose resolved {@code .func} carries the
+//     {@code functionType.SideEffectFunction} stereotype (IO, random,
+//     time, throw-on-error, eval-family with side-effecting target).
+//     Unresolved {@code .func} (empty slot) is also conservatively
+//     rejected — we can't prove it's pure.
+//   - Single-use: counted respecting lexical shadowing — a nested
+//     lambda re-binding {@code x} does NOT count its inner uses as
+//     references to the outer let.
+//   - Evaluation order: when RHS is pure, moving its evaluation point
+//     from after the let to wherever {@code $x} appears is invisible
+//     (no side effect is reordered). Intervening side-effecting
+//     expressions are unaffected — they sit where they were and run
+//     in the same relative order; only the (pure) RHS hops over them.
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::singleUseLetInline(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
+{
+   $f->match([
+      udf: UserDefinedFunction<Any>[1] |
+         ^$udf(expressionSequence = $udf.expressionSequence->inlineSingleUseLetsInSequence());,
+      // Lambdas pass through unchanged — same RawClosure limitation as
+      // partialEvaluate / deadLetElim: a bare LambdaFunction's body slots
+      // aren't directly readable through the metamodel accessors. Callers
+      // that want this pass on a lambda should compose with
+      // InlineOpenVariables (or LocalizeOpenVariables) — those passes
+      // recompile the lambda into a UserDefinedFunction first, and the
+      // strict canonical ordering guarantees they run before this one.
+      other: FunctionDefinition<Any>[1] | $other
+   ]);
+}
+
+// Apply single-use let inlining to one expressionSequence (a function/lambda
+// body). First recurse into every expression so nested scopes (lambda bodies)
+// are processed at their own boundary, then run the single-scope inliner
+// over the sequence at this scope.
+function meta::pure::translation::shared::inlineSingleUseLetsInSequence(exprs: ValueSpecification[*]): ValueSpecification[*]
+{
+   $exprs->map(e | $e->inlineSingleUseLetsRecurseIntoScopes())
+         ->inlineSingleUseLetsAtThisScope();
+}
+
+// Walk the VS recursively, recursing into nested expressionSequences
+// (AtomicValue-wrapped LambdaFunctions) and applying the same pass at each
+// boundary. Non-scope-creating nodes (FunctionExpression, Collection) just
+// propagate the walk to their children. NB: this DOES NOT inline at the
+// current node — that's done by `inlineSingleUseLetsAtThisScope` after the
+// parent sequence-walk returns.
+function meta::pure::translation::shared::inlineSingleUseLetsRecurseIntoScopes(vs: ValueSpecification[1]): ValueSpecification[1]
+{
+   $vs->match([
+      fe: FunctionExpression[1] |
+         ^$fe(parametersValues = $fe.parametersValues->map(p | $p->inlineSingleUseLetsRecurseIntoScopes())),
+      coll: meta::pure::metamodel::valuespecification::Collection[1] |
+         ^$coll(values = $coll.values->map(v | $v->inlineSingleUseLetsRecurseIntoScopes())),
+      av: AtomicValue[1] |
+         if (!$av.value->instanceOf(LambdaFunction),
+            | $av,
+            | let inner = $av.value->cast(@LambdaFunction<Any>);
+              let inlinedBody = $inner.expressionSequence->inlineSingleUseLetsInSequence();
+              ^$av(value = ^$inner(expressionSequence = $inlinedBody));
+         ),
+      other: ValueSpecification[1] | $other
+   ]);
+}
+
+// Process one expressionSequence: for the FIRST let-binding whose variable
+// is referenced exactly once in the tail AND whose RHS is side-effect-free,
+// substitute the use and drop the let; then recurse on the modified
+// sequence to catch chained inlinings. If no such let exists, leave the
+// sequence intact.
+function meta::pure::translation::shared::inlineSingleUseLetsAtThisScope(exprs: ValueSpecification[*]): ValueSpecification[*]
+{
+   if ($exprs->isEmpty(),
+      | [],
+      | let head = $exprs->at(0);
+        let tail = $exprs->drop(1);
+        let varName = $head->letBoundVarName();
+        if ($varName->isEmpty(),
+           | [$head]->concatenate($tail->inlineSingleUseLetsAtThisScope()),
+           | let name = $varName->toOne();
+             let rhs = $head->cast(@FunctionExpression).parametersValues->at(1);
+             let tailUses = $tail->map(e | $e->countVariableReferences($name))->fold({n, acc | $acc + $n}, 0);
+             if ($tailUses == 1 && $rhs->isSideEffectFreeForInlining(),
+                | let sub = ^meta::pure::translation::shared::ParamSub(name = $name, value = $rhs);
+                  let inlinedTail = $tail->map(e | $e->substituteVariables([$sub]));
+                  // Drop the let, restart from the modified tail (the
+                  // substitution may have exposed further single-use
+                  // patterns in the tail's lets).
+                  $inlinedTail->inlineSingleUseLetsAtThisScope();,
+                | [$head]->concatenate($tail->inlineSingleUseLetsAtThisScope())
+             );
+        );
+   );
+}
+
+// Count VariableExpression references to `name` in a value-spec tree,
+// respecting lexical shadowing in nested lambdas. Mirror of
+// `referencesVariable`'s recursion but accumulating an integer count.
+function meta::pure::translation::shared::countVariableReferences(vs: ValueSpecification[1], name: String[1]): Integer[1]
+{
+   $vs->match([
+      ve: meta::pure::metamodel::valuespecification::VariableExpression[1] |
+         if ($ve.name == $name, | 1, | 0);,
+      fe: FunctionExpression[1] |
+         $fe.parametersValues->map(p | $p->countVariableReferences($name))->fold({n, acc | $acc + $n}, 0);,
+      coll: meta::pure::metamodel::valuespecification::Collection[1] |
+         $coll.values->map(v | $v->countVariableReferences($name))->fold({n, acc | $acc + $n}, 0);,
+      av: AtomicValue[1] |
+         if (!$av.value->instanceOf(LambdaFunction),
+            | 0,
+            | let lam = $av.value->cast(@LambdaFunction<Any>);
+              if ($lam.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression)
+                     ->exists(p | $p.name == $name),
+                 | 0,
+                 | $lam.expressionSequence->map(e | $e->countVariableReferences($name))->fold({n, acc | $acc + $n}, 0)
+              );
+         ),
+      other: ValueSpecification[1] | 0
+   ]);
+}
+
+// Conservative "is this RHS safe to inline" walker. Recurses through
+// FunctionExpression / Collection / AtomicValue-with-Lambda. A
+// FunctionExpression is rejected if its `.func` is empty (unresolved, can't
+// prove pure) OR if the resolved func carries the SideEffectFunction
+// stereotype OR if it's an eval-family call with a side-effecting target.
+// Lambda VALUES (literal closures) are inherently pure to embed — the
+// lambda's body only runs when the closure is invoked, not at the position
+// the RHS is moved to.
+function meta::pure::translation::shared::isSideEffectFreeForInlining(vs: ValueSpecification[1]): Boolean[1]
+{
+   $vs->match([
+      ve: meta::pure::metamodel::valuespecification::VariableExpression[1] | true,
+      fe: FunctionExpression[1] |
+         if ($fe.func->isEmpty(),
+            | false,
+            | let f = $fe.func->toOne();
+              if ($f->hasSideEffect() || foldWouldTriggerEvalSideEffect($f, $fe.parametersValues),
+                 | false,
+                 | $fe.parametersValues->forAll(p | $p->isSideEffectFreeForInlining())
+              );
+         ),
+      coll: meta::pure::metamodel::valuespecification::Collection[1] |
+         $coll.values->forAll(v | $v->isSideEffectFreeForInlining()),
+      av: AtomicValue[1] | true,
+      other: ValueSpecification[1] | true
+   ]);
+}
+
+// ----------------------------------------------------------------------------
+// Pass — filterFusion.
+//
+// Collapse adjacent {@code xs->filter(p1 | c1)->filter(p2 | c2)} chains
+// into a single {@code xs->filter(p | c1 && c2-with-p2-renamed-to-p)}.
+// Recursion is bottom-up so 3+ filters in a chain reduce to one. {@code &&}
+// is short-circuit, so the semantics match — c2 only sees elements that
+// passed c1, the same as the pipelined original.
+//
+// Fusion only fires when both lambdas have a single parameter and a single
+// body expression. Multi-expression bodies (e.g. lambdas containing
+// {@code let} bindings) leave the chain alone: Pure grammar accepts only a
+// single {@code combinedExpression} inside parens, so we can't form
+// {@code (let x = ...; bool) && otherBool} as a valid expression. Adjacent
+// single-expression pairs in a longer chain still fuse around such a pair.
+//
+// Variable-capture safety: if the outer lambda's body references a free
+// variable named the same as the inner lambda's parameter, renaming would
+// capture that reference. Such pairs are left un-fused. (Filter lambdas
+// with disjoint identifier sets — the overwhelmingly common case — fuse.)
+//
+// Recompile-based pattern (same shape as NestedIfToMultiIf): detect at the
+// compiled level, rewrite the protocol form, and feed back through
+// {@code compile} so the freshly-emitted {@code and} reference resolves.
+// ----------------------------------------------------------------------------
+
+function meta::pure::translation::shared::filterFusion(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
+{
+   $f->match([
+      udf: UserDefinedFunction<Any>[1] |
+         if ($udf.expressionSequence->exists(vs | $vs->hasFusableFilterChainInVS()),
+            | $udf->filterFusionViaRecompileUDF(),
+            | $udf
+         );,
+      // Lambdas with a fusable chain are wrapped in a synthetic UDF for
+      // the recompile (same pattern as inlineOpenVariablesViaRecompile)
+      // and emerge as a UDF. Lambdas with no fusable chain pass through.
+      lf: LambdaFunction<Any>[1] |
+         if ($lf.expressionSequence->exists(vs | $vs->hasFusableFilterChainInVS()),
+            | $lf->filterFusionViaRecompileLambda(),
+            | $lf
+         );,
+      other: FunctionDefinition<Any>[1] | $other
+   ]);
+}
+
+function meta::pure::translation::shared::hasFusableFilterChainInVS(vs: ValueSpecification[1]): Boolean[1]
+{
+   $vs->match([
+      fe: FunctionExpression[1] |
+         $fe->isFusableFilterPair() || $fe.parametersValues->exists(p | $p->hasFusableFilterChainInVS()),
+      av: AtomicValue[1] |
+         if ($av.value->instanceOf(LambdaFunction),
+            | $av.value->cast(@LambdaFunction<Any>).expressionSequence->exists(e | $e->hasFusableFilterChainInVS()),
+            | false
+         ),
+      col: meta::pure::metamodel::valuespecification::Collection[1] |
+         $col.values->exists(v | $v->hasFusableFilterChainInVS()),
+      other: ValueSpecification[1] | false
+   ]);
+}
+
+// Compiled-side check: arity-2 `filter` whose first param is itself an
+// arity-2 `filter`. Both lambdas must be single-param, single-body-
+// expression and pass the capture-safety check.
+function meta::pure::translation::shared::isFusableFilterPair(fe: FunctionExpression[1]): Boolean[1]
+{
+   if (!($fe.functionName == 'filter' && $fe.parametersValues->size() == 2),
+      | false,
+      | let outerLam = $fe.parametersValues->at(1)->extractFilterLambda();
+        if ($outerLam->isEmpty(),
+           | false,
+           | let recv = $fe.parametersValues->at(0);
+             if (!$recv->instanceOf(FunctionExpression),
+                | false,
+                | let inner = $recv->cast(@FunctionExpression);
+                  if (!($inner.functionName == 'filter' && $inner.parametersValues->size() == 2),
+                     | false,
+                     | let innerLam = $inner.parametersValues->at(1)->extractFilterLambda();
+                       if ($innerLam->isEmpty(),
+                          | false,
+                          | filterLambdasFuseSafely($innerLam->toOne(), $outerLam->toOne())
+                       );
+                  );
+             );
+        );
+   );
+}
+
+// Returns the compiled LambdaFunction iff `vs` is an AtomicValue wrapping a
+// LambdaFunction with exactly one parameter and one body expression.
+function meta::pure::translation::shared::extractFilterLambda(vs: ValueSpecification[1]): LambdaFunction<Any>[0..1]
+{
+   if (!$vs->instanceOf(AtomicValue),
+      | []->cast(@LambdaFunction<Any>),
+      | let av = $vs->cast(@AtomicValue);
+        if (!$av.value->instanceOf(LambdaFunction),
+           | []->cast(@LambdaFunction<Any>),
+           | let lam = $av.value->cast(@LambdaFunction<Any>);
+             if (!($lam.parameters->size() == 1 && $lam.expressionSequence->size() == 1),
+                | []->cast(@LambdaFunction<Any>),
+                | $lam
+             );
+        );
+   );
+}
+
+// Capture-safety: when outer's param name differs from inner's, the outer
+// body will be rewritten to use inner's name. Refuse if the outer body
+// references the inner name as a free variable (would be captured by the
+// rename). When names match no rename is needed and any pair fuses.
+function meta::pure::translation::shared::filterLambdasFuseSafely(
+   innerLam: LambdaFunction<Any>[1],
+   outerLam: LambdaFunction<Any>[1]
+): Boolean[1]
+{
+   let innerName = $innerLam.parameters->at(0)->cast(@meta::pure::metamodel::valuespecification::VariableExpression).name->toOne();
+   let outerName = $outerLam.parameters->at(0)->cast(@meta::pure::metamodel::valuespecification::VariableExpression).name->toOne();
+   if ($innerName == $outerName,
+      | true,
+      | !$outerLam.expressionSequence->at(0)->referencesVariable($innerName)
+   );
+}
+
+function meta::pure::translation::shared::filterFusionViaRecompileUDF(udf: UserDefinedFunction<Any>[1]): UserDefinedFunction<Any>[1]
+{
+   let funcType = $udf.classifierGenericType.typeArguments
+                     ->at(0)
+                     ->rawType()
+                     ->toOne('filterFusion: UDF missing classifier function type')
+                     ->cast(@meta::pure::metamodel::type::FunctionType);
+   filterFusionRecompileFromParts(
+      $udf.expressionSequence,
+      $udf.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression),
+      $funcType.returnType,
+      $funcType.returnMultiplicity
+   );
+}
+
+function meta::pure::translation::shared::filterFusionViaRecompileLambda(lambda: LambdaFunction<Any>[1]): UserDefinedFunction<Any>[1]
+{
+   let funcType = $lambda.classifierGenericType.typeArguments
+                     ->at(0)
+                     ->rawType()
+                     ->toOne('filterFusion: lambda missing classifier function type')
+                     ->cast(@meta::pure::metamodel::type::FunctionType);
+   filterFusionRecompileFromParts(
+      $lambda.expressionSequence,
+      $lambda.parameters,
+      $funcType.returnType,
+      $funcType.returnMultiplicity
+   );
+}
+
+function meta::pure::translation::shared::filterFusionRecompileFromParts(
+   expressionSequence: ValueSpecification[*],
+   parameters: meta::pure::metamodel::valuespecification::VariableExpression[*],
+   returnType: GenericType[1],
+   returnMultiplicity: meta::pure::metamodel::multiplicity::Multiplicity[1]
+): UserDefinedFunction<Any>[1]
+{
+   let canonicalPkg  = '__canonical__';
+   let canonicalName = '__canonical__';
+   let protoUDF = toProtocolUserDefinedFunction(
+      $expressionSequence,
+      $parameters,
+      $returnType,
+      $returnMultiplicity,
+      newMap([]->cast(@Pair<String, List<Any>>)),
+      $canonicalPkg,
+      $canonicalName
+   );
+   let rewritten = ^$protoUDF(
+      expressionSequence = $protoUDF.expressionSequence->map(e | $e->fuseFiltersProtocol())
+   );
+   let pf = ^meta::pure::protocol::PureFile(
+      sourceId = '__canonical_filter_fusion__.pure',
+      sections = [^meta::pure::protocol::Section(
+         parserName = 'Pure',
+         imports    = [],
+         elements   = [$rewritten]
+      )]
+   );
+   let result = meta::pure::compiler::compile(
+      [$pf],
+      meta::pure::compiler::newCompilerContext(false),
+      false,
+      true
+   );
+   $result.context->toOne().elementMap->values()
+      ->filter(e | $e->instanceOf(UserDefinedFunction))
+      ->cast(@UserDefinedFunction<Any>)
+      ->filter(u | $u.functionName == $canonicalName)
+      ->toOne('filterFusion: function not found after recompile; errors=' + $result.errors->joinStrings(' | '));
+}
+
+// Protocol-AST walk — recurse first so inner filter chains are fused before
+// we look at the outer one. Mirrors rewriteIfsToMultiIfProtocol. Both
+// FunctionInvocation (prefix call `filter(xs, lam)`) and ArrowInvocation
+// (`xs->filter(lam)`) participate: decompile emits the FunctionInvocation
+// shape, but the fusion output is ArrowInvocation, so the outer pass over
+// a chain that already fused once-inside sees ArrowInvocation as its inner
+// receiver.
+function meta::pure::translation::shared::fuseFiltersProtocol(
+   vs: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   $vs->match([
+      fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+         let recursed = $fi.parametersValues->map(p | $p->fuseFiltersProtocol());
+         tryFuseFilterPairProtocol($fi.functionName, $recursed, $fi);,
+      ai: meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1] |
+         let recursed = $ai.parametersValues->map(p | $p->fuseFiltersProtocol());
+         tryFuseFilterPairProtocol($ai.functionName, $recursed, $ai);,
+      da: meta::pure::protocol::grammar::valuespecification::DotApplication[1] |
+         ^$da(parametersValues = $da.parametersValues->map(p | $p->fuseFiltersProtocol())),
+      col: meta::pure::protocol::grammar::valuespecification::Collection[1] |
+         ^$col(values = $col.values->map(v | $v->fuseFiltersProtocol())),
+      av: meta::pure::protocol::grammar::valuespecification::AtomicValue[1] |
+         // Lambdas land here via either decompile pass-through (compiled
+         // LambdaFunction PDO) or after a prior recursion (protocol
+         // LambdaFunction). Walk into the body and rebuild the AV cleanly
+         // (matching the grammar — see `mapping_value_spec.pure`: the parser
+         // emits the AV with `value` only and leaves
+         // `genericType`/`multiplicity` empty so the compiler infers them at
+         // resolution). Reusing the upstream AV via `^$av(value = ...)`
+         // would carry forward the decompiler's `CompilerNotSetMultiplicity`
+         // sentinel, which then survives compile and trips
+         // `printMultiplicity`.
+         if ($av.value->instanceOf(meta::pure::metamodel::function::LambdaFunction),
+            | let innerCompiled = $av.value->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+              let innerProto = $innerCompiled.expressionSequence
+                                 ->map(e | $e->toProtocolValueSpec(newMap([]->cast(@Pair<String, List<Any>>))))
+                                 ->map(e | $e->fuseFiltersProtocol());
+              let newLam = ^meta::pure::protocol::grammar::function::LambdaFunction(
+                 parameters         = $innerCompiled.parameters
+                                         ->map(p | $p->toProtocolParameter()),
+                 expressionSequence = $innerProto
+              );
+              ^meta::pure::protocol::grammar::valuespecification::AtomicValue(value = $newLam);,
+            | if ($av.value->instanceOf(meta::pure::protocol::grammar::function::LambdaFunction),
+                 | let pl = $av.value->cast(@meta::pure::protocol::grammar::function::LambdaFunction);
+                   ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+                      value = ^$pl(expressionSequence = $pl.expressionSequence->map(e | $e->fuseFiltersProtocol()))
+                   );,
+                 | $av
+              )
+         ),
+      other: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | $other
+   ]);
+}
+
+// If `(name, recursed)` is an arity-2 `filter` call whose receiver (post-
+// recursion) is also an arity-2 `filter` call, and both lambdas are
+// fuse-shaped + capture-safe, build the combined `filter(innerReceiver,
+// fusedLambda)` as a fresh ArrowInvocation. Otherwise return the original
+// node (`originalFE`) with the recursed parametersValues spliced back in,
+// preserving its concrete subtype (FunctionInvocation / ArrowInvocation).
+function meta::pure::translation::shared::tryFuseFilterPairProtocol(
+   name: String[1],
+   recursed: meta::pure::protocol::grammar::valuespecification::ValueSpecification[*],
+   originalFE: meta::pure::protocol::grammar::valuespecification::FunctionExpression[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   if (!($name == 'filter' && $recursed->size() == 2),
+      | rebuildFEWithParams($originalFE, $recursed),
+      | let outerLam = $recursed->at(1)->extractFilterLambdaProtocol();
+        if ($outerLam->isEmpty(),
+           | rebuildFEWithParams($originalFE, $recursed),
+           | let recv = $recursed->at(0);
+             let innerCall = protocolFilterCall($recv);
+             if ($innerCall->isEmpty(),
+                | rebuildFEWithParams($originalFE, $recursed),
+                | let innerParams = $innerCall->toOne().parametersValues;
+                  let innerLam = $innerParams->at(1)->extractFilterLambdaProtocol();
+                  if ($innerLam->isEmpty() || !filterLambdasFuseSafelyProtocol($innerLam->toOne(), $outerLam->toOne()),
+                     | rebuildFEWithParams($originalFE, $recursed),
+                     | buildFusedFilterProtocol($innerParams->at(0), $innerLam->toOne(), $outerLam->toOne())
+                  );
+             );
+        );
+   );
+}
+
+// Returns the FunctionExpression iff `vs` is an arity-2 `filter` call (in
+// either FunctionInvocation or ArrowInvocation form). Both subtypes share
+// parametersValues + functionName via FunctionExpression.
+function meta::pure::translation::shared::protocolFilterCall(
+   vs: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+): meta::pure::protocol::grammar::valuespecification::FunctionExpression[0..1]
+{
+   $vs->match([
+      fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+         if ($fi.functionName == 'filter' && $fi.parametersValues->size() == 2, | $fi, | []->cast(@meta::pure::protocol::grammar::valuespecification::FunctionExpression));,
+      ai: meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1] |
+         if ($ai.functionName == 'filter' && $ai.parametersValues->size() == 2, | $ai, | []->cast(@meta::pure::protocol::grammar::valuespecification::FunctionExpression));,
+      other: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] |
+         []->cast(@meta::pure::protocol::grammar::valuespecification::FunctionExpression)
+   ]);
+}
+
+// Rebuild the FE with a fresh parametersValues, preserving its concrete
+// subtype (FunctionInvocation / ArrowInvocation / DotApplication). The
+// protocol's FunctionExpression doesn't have a uniform copy constructor,
+// so dispatch on the concrete subtype.
+function meta::pure::translation::shared::rebuildFEWithParams(
+   fe: meta::pure::protocol::grammar::valuespecification::FunctionExpression[1],
+   params: meta::pure::protocol::grammar::valuespecification::ValueSpecification[*]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   $fe->match([
+      fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] | ^$fi(parametersValues = $params),
+      ai: meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1] | ^$ai(parametersValues = $params),
+      da: meta::pure::protocol::grammar::valuespecification::DotApplication[1] | ^$da(parametersValues = $params),
+      other: meta::pure::protocol::grammar::valuespecification::FunctionExpression[1] | $other
+   ]);
+}
+
+// Protocol-side mirror of extractFilterLambda. Returns the LambdaFunction
+// iff `vs` is `AtomicValue(value=LambdaFunction)` with exactly one parameter
+// and one body expression.
+function meta::pure::translation::shared::extractFilterLambdaProtocol(
+   vs: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+): meta::pure::protocol::grammar::function::LambdaFunction[0..1]
+{
+   if (!$vs->instanceOf(meta::pure::protocol::grammar::valuespecification::AtomicValue),
+      | []->cast(@meta::pure::protocol::grammar::function::LambdaFunction),
+      | let av = $vs->cast(@meta::pure::protocol::grammar::valuespecification::AtomicValue);
+        if (!$av.value->instanceOf(meta::pure::protocol::grammar::function::LambdaFunction),
+           | []->cast(@meta::pure::protocol::grammar::function::LambdaFunction),
+           | let lam = $av.value->cast(@meta::pure::protocol::grammar::function::LambdaFunction);
+             if (!($lam.parameters->size() == 1 && $lam.expressionSequence->size() == 1),
+                | []->cast(@meta::pure::protocol::grammar::function::LambdaFunction),
+                | $lam
+             );
+        );
+   );
+}
+
+// Protocol-side capture-safety check — same logic as the compiled-side
+// variant but walking protocol VS shapes.
+function meta::pure::translation::shared::filterLambdasFuseSafelyProtocol(
+   innerLam: meta::pure::protocol::grammar::function::LambdaFunction[1],
+   outerLam: meta::pure::protocol::grammar::function::LambdaFunction[1]
+): Boolean[1]
+{
+   let innerName = $innerLam.parameters->at(0).name;
+   let outerName = $outerLam.parameters->at(0).name;
+   if ($innerName == $outerName,
+      | true,
+      | !$outerLam.expressionSequence->at(0)->protocolReferencesVariable($innerName)
+   );
+}
+
+// Build the fused filter call: `innerReceiver->filter(p | innerBody && outerBody-renamed)`.
+// The combined lambda reuses the inner lambda's parameter (preserving any
+// type annotation), and the outer body's references to its own parameter
+// are renamed to the inner name so the combined body type-checks.
+function meta::pure::translation::shared::buildFusedFilterProtocol(
+   receiver: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1],
+   innerLam: meta::pure::protocol::grammar::function::LambdaFunction[1],
+   outerLam: meta::pure::protocol::grammar::function::LambdaFunction[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let innerParam = $innerLam.parameters->at(0);
+   let innerBody = $innerLam.expressionSequence->at(0);
+   let outerBody0 = $outerLam.expressionSequence->at(0);
+   let outerBody = if ($innerParam.name == $outerLam.parameters->at(0).name,
+                       | $outerBody0,
+                       | $outerBody0->renameProtocolVariable($outerLam.parameters->at(0).name, $innerParam.name)
+                      );
+   let andCall = ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      functionName     = 'and',
+      parametersValues = [$innerBody, $outerBody]
+   );
+   let fusedLam = ^meta::pure::protocol::grammar::function::LambdaFunction(
+      parameters         = [$innerParam],
+      expressionSequence = [$andCall]
+   );
+   // Match the grammar shape for an AtomicValue wrapping a lambda — see
+   // `mapping_value_spec.pure :: buildLambdaFunction` and its call sites:
+   // the parser emits the AV with `value` set and leaves
+   // `genericType`/`multiplicity` empty so the compiler infers them at
+   // resolution. Emitting `CompilerNotSetGenericType`/`CompilerNotSetMultiplicity`
+   // sentinels here would survive into the compiled output (latent bug in
+   // setMissingLambdaParameterInformation when the lambda body has a
+   // multi-expression sequence) and trip `printMultiplicity` on a value
+   // it doesn't have an arm for.
+   let fusedAV = ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+      value = $fusedLam
+   );
+   // Emit ArrowInvocation so the recompiled form prints as `xs->filter(...)`
+   // rather than the prefix `filter(xs, ...)`. The original source-side
+   // shape is overwhelmingly arrow form for chained filters; matching it
+   // preserves readability of the canonical output.
+   ^meta::pure::protocol::grammar::valuespecification::ArrowInvocation(
+      functionName     = 'filter',
+      parametersValues = [$receiver, $fusedAV]
+   );
+}
+
+// Protocol-AST variable rename. Walks down the tree replacing every
+// VariableExpression(name=from) with VariableExpression(name=to). Respects
+// lexical shadowing — does not descend into a lambda that re-binds `from`.
+function meta::pure::translation::shared::renameProtocolVariable(
+   vs: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1],
+   from: String[1],
+   to: String[1]
+): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   $vs->match([
+      ve: meta::pure::protocol::grammar::valuespecification::VariableExpression[1] |
+         if ($ve.name == $from, | ^$ve(name = $to), | $ve);,
+      fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+         ^$fi(parametersValues = $fi.parametersValues->map(p | $p->renameProtocolVariable($from, $to))),
+      da: meta::pure::protocol::grammar::valuespecification::DotApplication[1] |
+         ^$da(parametersValues = $da.parametersValues->map(p | $p->renameProtocolVariable($from, $to))),
+      col: meta::pure::protocol::grammar::valuespecification::Collection[1] |
+         ^$col(values = $col.values->map(v | $v->renameProtocolVariable($from, $to))),
+      av: meta::pure::protocol::grammar::valuespecification::AtomicValue[1] |
+         if (!$av.value->instanceOf(meta::pure::protocol::grammar::function::LambdaFunction),
+            | $av,
+            | let lam = $av.value->cast(@meta::pure::protocol::grammar::function::LambdaFunction);
+              if ($lam.parameters->exists(p | $p.name == $from),
+                 // shadowed by an inner lambda parameter — don't descend
+                 | $av,
+                 | ^$av(value = ^$lam(
+                      expressionSequence = $lam.expressionSequence->map(e | $e->renameProtocolVariable($from, $to))
+                   ))
+              );
+         ),
+      other: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | $other
+   ]);
+}
+
+// Protocol-side mirror of `referencesVariable`. Does `vs` reference a
+// VariableExpression named `name` anywhere in its subtree, respecting
+// lexical shadowing in nested lambdas.
+function meta::pure::translation::shared::protocolReferencesVariable(
+   vs: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1],
+   name: String[1]
+): Boolean[1]
+{
+   $vs->match([
+      ve: meta::pure::protocol::grammar::valuespecification::VariableExpression[1] |
+         $ve.name == $name,
+      fi: meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+         $fi.parametersValues->exists(p | $p->protocolReferencesVariable($name)),
+      da: meta::pure::protocol::grammar::valuespecification::DotApplication[1] |
+         $da.parametersValues->exists(p | $p->protocolReferencesVariable($name)),
+      col: meta::pure::protocol::grammar::valuespecification::Collection[1] |
+         $col.values->exists(v | $v->protocolReferencesVariable($name)),
+      av: meta::pure::protocol::grammar::valuespecification::AtomicValue[1] |
+         if (!$av.value->instanceOf(meta::pure::protocol::grammar::function::LambdaFunction),
+            | false,
+            | let lam = $av.value->cast(@meta::pure::protocol::grammar::function::LambdaFunction);
+              if ($lam.parameters->exists(p | $p.name == $name),
+                 | false,
+                 | $lam.expressionSequence->exists(e | $e->protocolReferencesVariable($name))
+              );
+         ),
+      other: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1] | false
    ]);
 }
 

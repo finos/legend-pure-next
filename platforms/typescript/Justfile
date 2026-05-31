@@ -22,6 +22,9 @@ build:
     @{{substep}} 'pnpm install + build'
     cd {{ts_root}} && pnpm install && pnpm run build
 
+# No external deps — alias of `build` for symmetry with sub-Justfiles' `build-all`.
+build-all: build
+
 # Build + run pnpm tests (placeholder until the TypeScript runtime grows real tests).
 test: build
     @{{header}} 'test'

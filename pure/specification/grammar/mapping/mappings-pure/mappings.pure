@@ -1,0 +1,20 @@
+// Aggregator — the dispatcher walks this list and matches each top-level
+// parse-tree context by `Rule.name` against the grammar-rule name.
+//
+// One `mapping_<element>.pure` file per top-level PackageableElement
+// declares its `Rule` function; this file only collects them.
+
+import meta::pure::parser::mappings::*;
+
+function meta::pure::parser::mappings::allRules(): Rule[*]
+{
+   [
+      enumDefinition(),
+      profile(),
+      classDefinition(),
+      primitiveDefinition(),
+      association(),
+      functionDefinition(),
+      nativeFunction()
+   ]
+}
