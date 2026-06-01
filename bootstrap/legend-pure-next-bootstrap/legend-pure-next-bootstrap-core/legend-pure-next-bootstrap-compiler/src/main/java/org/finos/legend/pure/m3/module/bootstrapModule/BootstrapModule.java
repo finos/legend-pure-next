@@ -100,6 +100,17 @@ public class BootstrapModule implements Module
         return extractFromClasspath("compiler.pdb");
     }
 
+    /**
+     * Load parser-mappings.pdb from the classpath. Produced by the
+     * bootstrap-parser-validation module's exec-maven-plugin execution into
+     * its own target/classes — any test module that depends on
+     * bootstrap-parser-validation gets it on the classpath.
+     */
+    public static Path locateParserMappingsPdb()
+    {
+        return extractFromClasspath("parser-mappings.pdb");
+    }
+
     private static Path extractFromClasspath(String resourceName)
     {
         try (java.io.InputStream in = BootstrapModule.class.getClassLoader().getResourceAsStream(resourceName))

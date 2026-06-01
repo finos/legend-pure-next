@@ -1,0 +1,5 @@
+{
+  "name": "truffle-translation-gallery",
+  "packagePattern": "(meta::external::language::truffle)(::.*)?",
+  "dependencies": ["core", "core-tests", "compiler", "translation-shared"]
+}

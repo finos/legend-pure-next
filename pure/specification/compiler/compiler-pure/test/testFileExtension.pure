@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::protocol::*;
+import meta::pure::protocol::grammar::*;
 
 // Pure-side type for the ###File test section. Each ###File chunk in a
 // compiler-test source declares an additional in-memory file the test
@@ -23,6 +24,21 @@ import meta::pure::protocol::*;
 Class meta::pure::compiler::test::TestFile extends meta::pure::protocol::grammar::PackageableElement
 {
     value : String[1];
+}
+
+// Section parser for ###File: wraps the raw section body in a TestFile PDO.
+// Consumed by the Pure-side section-dispatch table; see
+// meta::pure::compiler::test::testSectionParsers. The split-into-files
+// machinery (manageFileSections) runs later, against the typed Section model.
+function meta::pure::compiler::test::buildTestFileSection(
+   content: String[1], sourceId: String[1], lineOffset: Integer[1]
+): meta::pure::protocol::grammar::PackageableElement[*]
+{
+   ^meta::pure::compiler::test::TestFile(
+      name    = 'TestFile',
+      value   = $content,
+      package = ^Package_Pointer(value = $sourceId)
+   )
 }
 
 // Splits a parsed compiler-test source into one PureFile per logical file

@@ -251,9 +251,17 @@ public final class EqualNode extends PureNode
                 // Post enum-to-PDO migration: all enum values are PDO
                 // singletons sharing the {@code Enum} classInfo. Two values
                 // are the same enum type iff their {@code classifierGenericType}
-                // resolves to the same type.
-                Object eaCgt = PureObj.readBySlot(ea, SLOT_CLASSIFIER_GENERIC_TYPE);
-                Object ebCgt = PureObj.readBySlot(eb, SLOT_CLASSIFIER_GENERIC_TYPE);
+                // resolves to the same type. Read through
+                // {@link org.finos.legend.pure.truffle.PureContext#classifierGenericType}
+                // (NOT the raw slot) so codegen / PDB-loaded enum singletons —
+                // whose CGT slot is null on purpose, with the enumeration path
+                // resolved lazily via {@link PureEnumRegistry} — also produce
+                // a CGT here. A direct {@code readBySlot} would return null
+                // for both sides of e.g. {@code marshaled-CITY == loaded-CITY}
+                // and the comparison would falsely report unequal.
+                org.finos.legend.pure.truffle.PureContext lang = org.finos.legend.pure.truffle.PureLanguage.get(null);
+                Object eaCgt = lang != null ? lang.classifierGenericType(ea) : PureObj.readBySlot(ea, SLOT_CLASSIFIER_GENERIC_TYPE);
+                Object ebCgt = lang != null ? lang.classifierGenericType(eb) : PureObj.readBySlot(eb, SLOT_CLASSIFIER_GENERIC_TYPE);
                 if (eaCgt != null && ebCgt != null)
                 {
                     var typeA = _GenericType.type(eaCgt);

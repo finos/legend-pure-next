@@ -69,6 +69,7 @@ public final class NativeNodeRegistry
         org.finos.legend.pure.truffle.ast.natives.collection.CollectionNodeFactories.registerAll(registry);
         org.finos.legend.pure.truffle.ast.natives.lang.LangNodeFactories.registerAll(registry);
         org.finos.legend.pure.truffle.ast.natives.meta.MetaNodeFactories.registerAll(registry);
+        org.finos.legend.pure.truffle.ast.natives.meta.antlr.AntlrNodeFactories.registerAll(registry);
         org.finos.legend.pure.truffle.ast.natives.io.IONodeFactories.registerAll(registry);
         org.finos.legend.pure.truffle.ast.natives.assert_.AssertNodeFactories.registerAll(registry);
         org.finos.legend.pure.truffle.ast.natives.date.DateNodeFactories.registerAll(registry);

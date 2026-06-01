@@ -1,0 +1,43 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::test::pct::*;
+
+// Text of a terminal token (INTEGER, STRING, DATE, …). Returns empty when
+// the token wasn't matched in this alternative.
+native function <<PCT.function>>
+   meta::pure::functions::meta::antlr::getTokenText(
+      ctx: AntlrContext[1], name: String[1]
+   ): String[0..1];
+
+function <<PCT.test>> meta::pure::functions::meta::antlr::tests::getTokenText::testInteger<Z|y>(
+   f: Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]
+): Boolean[1]
+{
+   // Walk into a property's INTEGER multiplicity token: `x: Integer[42]`.
+   let text = $f->eval(|
+      parseAntlr('Class p::C{ x: Integer[42]; }', 'M3Parser', 's', 0)
+         ->getTopLevelChildren()->at(0)              // classDefinition
+         ->getChild('classBody')->toOne()
+         ->getChild('properties')->toOne()
+         ->getChildren('property')->at(0)
+         ->getChild('propertyReturnType')->toOne()
+         ->getChild('multiplicity')->toOne()
+         ->getChild('multiplicityArgument')->toOne()
+         ->getChild('toMultiplicity')->toOne()
+         ->getTokenText('INTEGER')->toOne()
+   );
+   assertEquals('42', $text);
+}

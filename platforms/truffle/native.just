@@ -54,6 +54,10 @@ build: _check-pdbs _check-graalvm
     mkdir -p {{truffle_out}}
     cp {{truffle_runtime}}/target/pure-truffle-native {{truffle_native}}
 
+# `build` already file-checks bootstrap PDBs (via `_check-pdbs` from parent truffle Justfile) — alias of `build` for symmetry.
+# A self-sufficient build-from-clean is `just build-all` at the repo root, which builds bootstrap + truffle (jar) + native.
+build-all: build
+
 # Run all native tests (compiler-graph spec + runTests + PCT).
 test: test-pure-compiler test-pure-runtime
 
@@ -69,6 +73,7 @@ test-pure-compiler: build
     @{{substep}} 'runCompiledGraphTests'
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
@@ -81,6 +86,7 @@ test-pure-runtime-testFunctions: build
     @{{substep}} 'runTests'
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
@@ -93,6 +99,7 @@ test-pure-runtime-PCTs: build
     @{{substep}} 'runPCTTests'
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
@@ -107,6 +114,7 @@ test-pure-self-host: build
     @{{substep}} 'compiler-pure → {{truffle_out}}/native/compiler.pdb (native), then run compiler tests'
     {{truffle_native}} compile \
         --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/parser-mappings.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
         --base-pdb {{shared_out}}/compiler.pdb \
         --source {{compiler_src}} \
@@ -114,6 +122,7 @@ test-pure-self-host: build
         --tests split {{err_filter}}
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{truffle_out}}/native/compiler.pdb \
         --pdb {{truffle_out}}/native/compiler-tests.pdb \

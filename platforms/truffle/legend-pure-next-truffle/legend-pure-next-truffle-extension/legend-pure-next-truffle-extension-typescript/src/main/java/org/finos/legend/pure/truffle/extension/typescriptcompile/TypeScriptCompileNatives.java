@@ -80,6 +80,14 @@ final class TypeScriptCompileNatives
     private static final ThreadLocal<org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess> ACTIVE_RESOLVER =
             new ThreadLocal<>();
 
+    /** PureContext snapshot for the active {@code invoke} call. The
+     *  {@code __metadataInvoke} bridge needs a live {@code PureContext} to
+     *  pass into {@link org.finos.legend.pure.truffle.ast.natives.lang.EvalNode#dispatch}
+     *  (for call-target lookup, native registry, etc.); same null-on-callback-
+     *  thread problem as the resolver. */
+    private static final ThreadLocal<org.finos.legend.pure.truffle.PureContext> ACTIVE_CONTEXT =
+            new ThreadLocal<>();
+
     /** Every TS module string handed to {@link #compile} is appended here so
      *  the translation gallery can display the EXACT source that the PCT
      *  adapter compiled and executed (rather than re-deriving it through a
@@ -131,8 +139,10 @@ final class TypeScriptCompileNatives
                         + (fn == null ? "undefined" : fn) + ")");
             }
             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver = currentResolver();
+            org.finos.legend.pure.truffle.PureContext pureCtx = org.finos.legend.pure.truffle.PureLanguage.get(null);
             INJECTED_GRAPH.set(graph);
             ACTIVE_RESOLVER.set(resolver);
+            ACTIVE_CONTEXT.set(pureCtx);
             try
             {
                 return toPureValue(fn.execute(args), resolver);
@@ -141,6 +151,7 @@ final class TypeScriptCompileNatives
             {
                 INJECTED_GRAPH.remove();
                 ACTIVE_RESOLVER.remove();
+                ACTIVE_CONTEXT.remove();
             }
         }
     }
@@ -191,6 +202,23 @@ final class TypeScriptCompileNatives
             c.getBindings("js").putMember("__metadataInstanceOf",
                     (java.util.function.BiFunction<Object, Object, Object>)
                             (Object valuePath, Object typePath) -> metadataInstanceOf(valuePath, typePath, activeResolver()));
+            // pathToElement bridge: resolves a string path (with optional
+            // separator) to its canonical address. Returns the canonical path
+            // (root → '', missing → null for lenient / null for strict — strict
+            // throwing is JS-side). Pure's `pathToElement('')` and
+            // `pathToElement('::')` both denote the Root package.
+            c.getBindings("js").putMember("__metadataPathToElement",
+                    (java.util.function.BiFunction<Object, Object, Object>)
+                            (Object path, Object sep) -> metadataPathToElement(path, sep, activeResolver()));
+            // ── TEMP Truffle eval bridge ──────────────────────────────────
+            // Lives in {@link TruffleEvalBridge}; deletes when the translator
+            // self-hosts and JS-side reflection invokes through in-process
+            // translate-and-eval (see TruffleEvalBridge javadoc).
+            c.getBindings("js").putMember("__metadataInvoke",
+                    (java.util.function.BiFunction<Object, Object, Object>)
+                            (Object path, Object args) -> TruffleEvalBridge.metadataInvoke(
+                                    path, args, activeResolver(), ACTIVE_CONTEXT.get()));
+            // ─────────────────────────────────────────────────────────────
             jsContext = c;
         }
         return jsContext;
@@ -284,6 +312,61 @@ final class TypeScriptCompileNatives
         String classifierPath = classifierPathOf(value, resolver);
         if (classifierPath == null) return false;
         return metadataSubtypeOf(classifierPath, typePathRaw, resolver);
+    }
+
+    // The {@code __metadataInvoke} bridge implementation lives in the
+    // standalone {@link TruffleEvalBridge} class — see that class for the
+    // "why isolated" rationale. These package-private accessors expose the
+    // marshalers / resolvers the bridge needs without making them part of
+    // the public surface of this class.
+
+    static Object toPureValuePublic(Value v,
+                                    org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        return toPureValue(v, resolver);
+    }
+
+    static Object resolveAddressPublic(String address,
+                                       org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        return resolveAddress(address, resolver);
+    }
+
+    static Object marshalSinglePublic(Object value, String childAddr,
+                                      org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        return marshalSingle(value, childAddr, resolver);
+    }
+
+    /**
+     * {@code __metadataPathToElement(path, separator)} — resolve a string
+     * path to its canonical {@code ::}-separated address, or null if the
+     * element is missing. Mirrors {@code PathToElementNode}: '' / '::' →
+     * Root package (return empty string so the JS-side proxy targets the
+     * resolver's root); otherwise normalize separator → '::' and check
+     * existence. Returns null when the element isn't found — JS-side
+     * strict {@code __pathToElement} throws, lenient
+     * {@code __lenientPathToElement} returns undefined.
+     */
+    private static Object metadataPathToElement(Object pathRaw, Object sepRaw,
+                                                org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        if (!(pathRaw instanceof String path))
+        {
+            throw new RuntimeException("__metadataPathToElement: expected String path, got "
+                    + (pathRaw == null ? "null" : pathRaw.getClass().getName()));
+        }
+        String separator = sepRaw instanceof String s ? s : "::";
+        String norm = "::".equals(separator) ? path : path.replace(separator, "::");
+        if (norm.isEmpty() || "::".equals(norm))
+        {
+            // Root package. Resolver canonicalises as either '' or '::' —
+            // try both so the JS proxy targets whichever the resolver holds.
+            if (resolver.getElement("") != null) return "";
+            if (resolver.getElement("::") != null) return "::";
+            return "";
+        }
+        return resolver.getElement(norm) != null ? norm : null;
     }
 
     /** The path of the value's classifier, via {@code classifierGenericType.type}. */
@@ -772,6 +855,32 @@ final class TypeScriptCompileNatives
                 map.put(key, toPureValue(v.getMember(key), resolver));
             }
             return map;
+        }
+        // Enum-value shape: the JS object's `classifierGenericType.type`
+        // resolves to an Enumeration metaobject (LA_GeographicEntityType, …),
+        // and the object's `name` is the enum value's identifier. Lift as an
+        // Enum PDO (NOT an instance of the Enumeration class) + register in
+        // PureEnumRegistry so its lazy classifierGenericType resolves to the
+        // correct enumeration. Same shape AtomicValueEnumReconstructor builds
+        // for PDB-loaded enum values, so Pure-side `==` against
+        // `LA_GeographicEntityType.CITY` matches by classifier+name.
+        if (cls instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdoCls
+                && "meta::pure::metamodel::type::Enumeration".equals(pdoCls.purePath()))
+        {
+            String enumValueName = v.hasMember("name") && v.getMember("name").isString()
+                    ? v.getMember("name").asString()
+                    : null;
+            if (enumValueName != null)
+            {
+                org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject enumPdo =
+                        new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
+                                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(
+                                        "meta::pure::metamodel::type::Enum", resolver),
+                                null, resolver, null);
+                enumPdo.writeProperty("name", enumValueName);
+                org.finos.legend.pure.truffle.runtime.dynobj.PureEnumRegistry.register(enumPdo, classPath);
+                return enumPdo;
+            }
         }
         Object cgt = org.finos.legend.pure.truffle.PureLanguage.get(null).cgtForType(classPath);
         Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, resolver);

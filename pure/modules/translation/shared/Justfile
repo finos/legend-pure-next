@@ -44,6 +44,9 @@ build:
         --source {{shared_root}} \
         --output-dir {{shared_out}} {{err_filter}}
 
+# No sibling-module deps (only bootstrap PDBs, file-checked above) — alias of `build` for symmetry.
+build-all: build
+
 # Compile with tests split into shared/translation-shared-tests.pdb (needed by `test-all`).
 build-tests:
     @{{header}} 'build-tests'
@@ -74,6 +77,7 @@ test-all: build-tests
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{shared_out}}/translation-shared.pdb \
         --pdb {{shared_out}}/translation-shared-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1_" \

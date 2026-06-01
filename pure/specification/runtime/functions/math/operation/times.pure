@@ -57,3 +57,13 @@ function <<PCT.test>> meta::pure::functions::math::tests::times::testDecimalTime
     assertEquals(353791.470d, $f->eval(|19.905d*17774));
     assertEquals(353791.470d, $f->eval(|19.905d*17774d));
 }
+
+// Canonical IEEE-754 precision-loss case for multiplication: 0.1 * 0.2 in
+// Double yields 0.020000000000000004 (the bits for 0.1 and 0.2 aren't exact).
+// In BigDecimal it's 0.02 exactly. If times_Decimal unwraps to Double for the
+// multiply (as it did before the BigDecimal-everywhere fix), the test fails;
+// if it stays in BigDecimal end-to-end, it passes.
+function <<PCT.test>> meta::pure::functions::math::tests::times::testDecimalTimesPreservesPrecision<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(0.02d, $f->eval(|0.1d * 0.2d));
+}

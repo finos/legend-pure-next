@@ -1,0 +1,117 @@
+// Top-level parser visitor (TopParser, not M3).
+//
+// Walks the document/section/importStatement context tree produced by the
+// bootstrap TopParser ANTLR grammar and builds a `PureFile` PDO with its
+// `Section` children. Section content is dispatched through a single
+// Pure-side registry of (name, parserLambda) pairs supplied by the caller;
+// a section name with no matching entry is a hard error.
+//
+// Replaces the bespoke `top-mappings.dsl` text DSL and its Java codegen.
+
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+import meta::pure::protocol::grammar::*;
+
+// Entry point. Called from Java/Truffle with:
+//   ctx              - the TopParser.DocumentContext (opaque AntlrContext)
+//   sourceId         - the source identifier (e.g. file path)
+//   syntheticHeader  - true when the caller prepended `###Pure\n` because
+//                      the input had no explicit ### header
+//   registry         - Pure-side Pair<name, parserLambda>[*]. Every section
+//                      name found in the document must have a matching entry
+//                      here; missing entries throw.
+function meta::pure::parser::mappings::interpreter::parseDocument(
+   ctx: AntlrContext[1],
+   sourceId: String[1],
+   syntheticHeader: Boolean[1],
+   registry: meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>[*]
+): meta::pure::protocol::PureFile[1]
+{
+   ^meta::pure::protocol::PureFile(
+      sourceId = $sourceId,
+      sections = $ctx->getChildren('section')->map(s | buildSection($s, $sourceId, $syntheticHeader, $registry))
+   )
+}
+
+// One section: `###Name (import …)* sectionBody?`. The body's text is
+// dispatched to the registry entry matching the section name.
+function meta::pure::parser::mappings::interpreter::buildSection(
+   ctx: AntlrContext[1],
+   sourceId: String[1],
+   syntheticHeader: Boolean[1],
+   registry: meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>[*]
+): meta::pure::protocol::Section[1]
+{
+   let header     = $ctx->getTokenText('SECTION_HEADER')->toOne();
+   let sectionName = $header->substring(3, $header->length());
+   let imports    = $ctx->getChildren('importStatement')->map(i | buildImport($i));
+   let sectionContent = $ctx->getChild('sectionContent');
+   let content = if($sectionContent->isNotEmpty(),
+                    | $sectionContent->toOne()->getChildren('contentToken')
+                                              ->map(t | $t->getText())
+                                              ->joinStrings('')->trim(),
+                    | '');
+   let lineOffset = computeFirstNonNewlineLine($sectionContent, $syntheticHeader);
+   let elements = if($content == '',
+                     | [],
+                     | dispatchSection($registry, $sectionName, $content, $sourceId, $lineOffset));
+   ^meta::pure::protocol::Section(
+      parserName = $sectionName,
+      imports    = $imports,
+      elements   = $elements
+   );
+}
+
+// Pure-side section dispatch: look up `name` in the registry, evaluate the
+// matching lambda, throw if no entry. There is no host-side fallback —
+// every section type must be in the registry.
+function meta::pure::parser::mappings::interpreter::dispatchSection(
+   registry: meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>[*],
+   name: String[1],
+   content: String[1],
+   sourceId: String[1],
+   lineOffset: Integer[1]
+): meta::pure::protocol::grammar::PackageableElement[*]
+{
+   let match = $registry->filter(p | $p.first == $name)->head();
+   if($match->isNotEmpty(),
+      | $match->toOne().second->eval($content, $sourceId, $lineOffset),
+      | let thrown = fail('No parser registered for section: ###' + $name);
+        []->cast(@meta::pure::protocol::grammar::PackageableElement););
+}
+
+// `import x::y::z` (no semicolon — IMPORT_STATEMENT captures the full literal).
+// Strip the leading `import ` and trim trailing whitespace.
+function meta::pure::parser::mappings::interpreter::buildImport(ctx: AntlrContext[1]): String[1]
+{
+   let raw = $ctx->getTokenText('IMPORT_STATEMENT')->toOne();
+   $raw->substring(7, $raw->length())->trim();
+}
+
+// Built-in section parser for `###Pure`: parses the section body with the
+// M3 grammar via parseAntlr and dispatches to the Pure interpreter
+// (parseElements / allRules from the M3 mapping rules). Bundled into the
+// default registry by callers that want vanilla Pure-source parsing.
+function meta::pure::parser::mappings::interpreter::pureSectionParser():
+   meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>[1]
+{
+   ^meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>(
+      first  = 'Pure',
+      second = {c:String[1], s:String[1], o:Integer[1] |
+                  meta::pure::parser::mappings::interpreter::parseElements(
+                     meta::pure::functions::meta::antlr::parseAntlr($c, 'M3Parser', $s, $o),
+                     meta::pure::parser::mappings::allRules(),
+                     $o)});
+}
+
+// No-op section parser: matches `name` and produces zero elements. Useful for
+// callers that want to acknowledge a section type without parsing its body
+// (e.g. structural validators that only need the top-level shape).
+function meta::pure::parser::mappings::interpreter::noOpSectionParser(name: String[1]):
+   meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>[1]
+{
+   ^meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>(
+      first  = $name,
+      second = {c:String[1], s:String[1], o:Integer[1] |
+                  []->cast(@meta::pure::protocol::grammar::PackageableElement)});
+}

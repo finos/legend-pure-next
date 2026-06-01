@@ -1,0 +1,204 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::truffle::*;
+import meta::external::language::truffle::gallery::*;
+import meta::pure::functions::printer::compiled::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::test::*;
+import meta::pure::translation::shared::gallery::*;
+
+// ============================================================================
+// Pure -> Truffle AST gallery. Walks every <<PCT.test>> function under
+// `rootPackagePath` (via `collectPCTTests`) and renders a tree-based HTML
+// document:
+//   - left:  collapsible tree of PCT functions (folders are filesystem dirs
+//            of the spec file that owns each test, leaves are the .pure
+//            files). Each node carries an aggregated pass/fail icon.
+//   - right: per-test side-by-side cards (Pure source / Truffle AST dump).
+//            Clicking a tree node filters the right pane to its subtree.
+//
+// Per test we capture two independent signals:
+//   * runtime status (pass/fail) — invoke the test via the stdlib in-memory
+//     adapter (just `eval()` on the current Truffle context), record whether
+//     the test's assertions threw. Drives the tree icon.
+//   * AST-build status (ok/partial/failed) — does each `$f->eval(|lambda)`
+//     statically reachable inside the test lower to a Truffle AST without
+//     throwing. Drives the in-card badge on the AST column.
+//
+// All HTML chrome (tree, JS, CSS) lives in the shared
+// `meta::pure::translation::shared::gallery` module; this file only emits
+// per-test cards with the data attributes the chrome consumes.
+//
+// Entry point: `renderGallery(rootPackagePath)`. The `gallery` Justfile
+// recipe pipes stdout to `shared/truffle-translation-gallery.html`.
+// ============================================================================
+
+function <<test.TestDependency>> meta::external::language::truffle::gallery::renderGallery(rootPackagePath: String[1]): String[1]
+{
+    let root  = pathToElement($rootPackagePath)->cast(@meta::pure::metamodel::Package);
+    let tests = meta::pure::test::collectPCTTests($root);
+    let ctx   = buildPrintContext($tests->cast(@meta::pure::metamodel::PackageableElement), PrintMode.ManageImports);
+    let total = $tests->size();
+    // No progress reporting: stdout is captured to the gallery file by the
+    // calling Justfile, so println would corrupt the HTML output.
+    let sections = $tests->map(t | $t->renderTestCard($ctx));
+    renderGalleryShell(
+        'Pure &rarr; Truffle AST gallery',
+        'Truffle AST',
+        'truffle',
+        '#5d8acb',
+        $rootPackagePath,
+        'pure/modules/translation/truffle/code/gallery.pure',
+        $total,
+        $sections->joinStrings('\n')
+    );
+}
+
+// Per-test card. Statically walks the test body collecting every
+// `$f->eval(|lambda)` call, lowers each lambda to a Truffle AST (for display),
+// and runs the whole test through the in-memory adapter (for runtime pass/fail).
+//
+// Tagged <<test.TestDependency>> because it transitively references the PCT
+// in-memory adapter (`testAdapterForInMemoryExecution`), which lives in the
+// tests PDB. Same rationale on `runTestViaAdapter` below.
+function <<test.TestDependency>> meta::external::language::truffle::gallery::renderTestCard(
+    test: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
+    ctx: meta::pure::functions::printer::compiled::PrintContext[1]
+): String[1]
+{
+    let path    = $test->elementToPath();
+    let pureSrc = printCompiledElement($test, $ctx);
+    let lambdas = $test.expressionSequence->collectAdapterEvalLambdas();
+    // IMPORTANT: run the test FIRST so the Truffle inline caches inside each
+    // lambda's AST (PropertyRead.boundName/boundSlot, RawLambdaCallNode's
+    // cachedTarget, etc.) populate with their post-execution state — only
+    // then is the AST dump semantically meaningful (which property was
+    // actually read, which call target bound). PureContext.lambdaCache
+    // returns the same RootCallTarget on the subsequent truffleAstFor call,
+    // so we're dumping the very nodes the test exercised.
+    let runResult = $test->runTestViaAdapter();
+    let astParts = $lambdas->map(l | $l->truffleAstForLambda());
+    let anyOk    = $astParts->exists(p | $p.first);
+    let anyFail  = $astParts->exists(p | !$p.first);
+    let astSrc = if ($astParts->isEmpty(),
+                     | '// no $f->eval(...) call found in this test',
+                     | $astParts->map(p | $p.second)->joinStrings('\n\n// -----\n\n'));
+    let translationStatus = if ($astParts->isEmpty(), | 'failed',
+                                |if ($anyFail && $anyOk, | 'partial',
+                                |if ($anyFail,           | 'failed',
+                                                         | 'ok')));
+    let runtimeStatus = if ($runResult.first, | 'pass', | 'fail');
+    let runtimeMsg = $runResult.second;
+
+    let sourceId = $test->sourceIdOf();
+    let suffix = if ($lambdas->size() > 1, | ' (' + $lambdas->size()->toString() + ' lambdas)', | '');
+    let badge = if ($runtimeStatus == 'pass', | '&#10003;', | '&#10007;');
+    let runMsgHtml = if ($runtimeStatus == 'fail' && $runtimeMsg->length() > 0,
+                         | '<div class="run-msg">' + escapeHtml($runtimeMsg) + '</div>',
+                         | '');
+    '<section class="pair ' + $translationStatus + ' runtime-' + $runtimeStatus + '"' +
+        ' data-path="' + escapeAttr($path) + '"' +
+        ' data-source="' + escapeAttr($sourceId) + '"' +
+        ' data-runtime="' + $runtimeStatus + '"' +
+        ' data-translation="' + $translationStatus + '">' +
+    '<h2><span class="runtime-badge">' + $badge + '</span>' + escapeHtml($path) + escapeHtml($suffix) + '</h2>' +
+    $runMsgHtml +
+    '<div class="cols">' +
+    '<div class="col pure"><div class="lang-tag">Pure</div><pre><code>' + escapeHtml($pureSrc) + '</code></pre></div>' +
+    '<div class="col truffle"><div class="lang-tag">Truffle AST</div><pre><code>' + escapeHtml($astSrc) + '</code></pre></div>' +
+    '</div></section>';
+}
+
+// Run the test through the in-memory adapter (i.e. just eval the test on the
+// current Truffle context — same path `just truffle::test-pure-runtime-PCTs`
+// takes). `tryEval` swallows any exception thrown during eval + assertion
+// check, so we treat "no failure" as a pass.
+function <<test.TestDependency>> meta::external::language::truffle::gallery::runTestViaAdapter(
+    test: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]
+): meta::pure::functions::collection::Pair<Boolean, String>[1]
+{
+    let attempt = tryEval(| meta::pure::functions::io::withSilencedPrint(|
+        meta::pure::functions::lang::evaluate(
+            $test,
+            meta::pure::functions::collection::list(
+                meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_))));
+    if ($attempt.failure->isNotEmpty(),
+        | pair(false, $attempt.failure->toOne().message),
+        | pair(true, ''));
+}
+
+function meta::external::language::truffle::gallery::sourceIdOf(
+    el: meta::pure::metamodel::PackageableElement[1]
+): String[1]
+{
+    let sids = $el.sourceInformation->map(si | $si.sourceId);
+    if ($sids->isEmpty(), | '', | $sids->toOne());
+}
+
+// Lower one captured lambda to a Truffle AST dump. Returns (ok, dump-or-error)
+// so the renderer can mark partially-lowered cards distinctly from fully OK
+// or fully failed ones.
+function meta::external::language::truffle::gallery::truffleAstForLambda(
+    lambda: meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1]
+): meta::pure::functions::collection::Pair<Boolean, String>[1]
+{
+    let attempt = tryEval(| truffleAstFor($lambda));
+    if ($attempt.failure->isNotEmpty(),
+        | pair(false, '// AST lowering failed: ' + $attempt.failure->toOne().message),
+        | pair(true, $attempt.value));
+}
+
+// Recursively walk a tree of value specifications collecting the lambda
+// argument of every `eval` call (these are the `$f->eval(|expr...)` calls
+// the PCT tests use to defer to the adapter). We don't bother filtering
+// the eval receiver — any `eval` with at least one arg whose first param
+// is a lambda-bearing AtomicValue counts. False positives are vanishingly
+// rare in practice and would only widen the gallery, not break it.
+function meta::external::language::truffle::gallery::collectAdapterEvalLambdas(
+    exprs: meta::pure::metamodel::valuespecification::ValueSpecification[*]
+): meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[*]
+{
+    $exprs->map(e | $e->collectAdapterEvalLambdasOne());
+}
+
+function meta::external::language::truffle::gallery::collectAdapterEvalLambdasOne(
+    vs: meta::pure::metamodel::valuespecification::ValueSpecification[1]
+): meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[*]
+{
+    $vs->match([
+        fe: FunctionExpression[1] |
+            let self = if ($fe.functionName == 'eval' && $fe.parametersValues->size() >= 2,
+                | extractLambdaArg($fe.parametersValues->at($fe.parametersValues->size() - 1)),
+                | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+            );
+            concatenate($self, $fe.parametersValues->collectAdapterEvalLambdas());,
+        other: ValueSpecification[1] | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+    ])
+}
+
+function meta::external::language::truffle::gallery::extractLambdaArg(
+    vs: meta::pure::metamodel::valuespecification::ValueSpecification[1]
+): meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[*]
+{
+    if ($vs->instanceOf(AtomicValue),
+        | let val = $vs->cast(@AtomicValue).value;
+          if ($val->size() == 1 && $val->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction),
+              | $val->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>),
+              | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+          );,
+        | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+    );
+}

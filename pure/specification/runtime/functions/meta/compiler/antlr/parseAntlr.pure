@@ -1,0 +1,63 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::test::pct::*;
+
+// Parse `source` with the ANTLR grammar registered under `grammarName` and
+// return the root context. The host-side {@code GrammarExtension} registry
+// (set via {@code PureExecution.Builder.withGrammarExtensions} / its Truffle
+// equivalent) provides the lexer/parser; built-in defaults include
+// {@code 'M3Parser'} and {@code 'TopParser'}. Errors fold {@code sourceId} +
+// (line + lineOffset) into the message so file-relative coordinates show
+// through when the call is nested in a section body.
+native function <<PCT.function>>
+   meta::pure::functions::meta::antlr::parseAntlr(
+      source: String[1],
+      grammarName: String[1],
+      sourceId: String[1],
+      lineOffset: Integer[1]
+   ): AntlrContext[1];
+
+function <<PCT.test>> meta::pure::functions::meta::antlr::tests::parseAntlr::testParseM3<Z|y>(
+   f: Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]
+): Boolean[1]
+{
+   let ruleName = $f->eval(|
+      parseAntlr('Enum protocol::AnEnum { Val }', 'M3Parser', 'testSource', 0)
+         ->grammarRuleName()
+   );
+   assertEquals('definition', $ruleName);
+}
+
+function <<PCT.test>> meta::pure::functions::meta::antlr::tests::parseAntlr::testParseTop<Z|y>(
+   f: Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]
+): Boolean[1]
+{
+   let ruleName = $f->eval(|
+      parseAntlr('###Pure\nClass p::C {}', 'TopParser', 'testSource', 0)
+         ->grammarRuleName()
+   );
+   assertEquals('document', $ruleName);
+}
+
+function <<PCT.test>> meta::pure::functions::meta::antlr::tests::parseAntlr::testUnknownGrammarThrows<Z|y>(
+   f: Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]
+): Boolean[1]
+{
+   assertError(
+      | $f->eval(|parseAntlr('x', 'NoSuchGrammar', 's', 0)),
+      'Unknown grammar: NoSuchGrammar'
+   );
+}

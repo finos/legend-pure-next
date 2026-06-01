@@ -521,24 +521,23 @@ public class StringNatives
         natives.put("parseFloat_String_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(Double.parseDouble(((String) _E_ValueSpecification.unwrap(args.get(0))).trim()), genericType, multiplicity, resolver));
 
-        // parseDecimal(String[1]) : Decimal[1]  — represented as Double in this engine
+        // parseDecimal(String[1]) : Decimal[1] — BigDecimal preserves the exact
+        // decimal representation of the source so downstream arithmetic doesn't
+        // round-trip through Double.
         natives.put("parseDecimal_String_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
         {
-            double d = Double.parseDouble(((String) _E_ValueSpecification.unwrap(args.get(0))).trim());
-            if (d == 0.0) d = 0.0; // normalize -0.0 to 0.0
-            return _E_ValueSpecification.wrap(d, genericType, multiplicity, resolver);
+            java.math.BigDecimal bd = new java.math.BigDecimal(stripDecimalSuffix(((String) _E_ValueSpecification.unwrap(args.get(0))).trim()));
+            return _E_ValueSpecification.wrap(bd, genericType, multiplicity, resolver);
         });
 
         // parseDecimal(String[1], Integer[1], Integer[1]) : Decimal[1]
         natives.put("parseDecimal_String_1__Integer_1__Integer_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
         {
-            String str = ((String) _E_ValueSpecification.unwrap(args.get(0))).trim();
+            String str = stripDecimalSuffix(((String) _E_ValueSpecification.unwrap(args.get(0))).trim());
             int scale = ((Number) _E_ValueSpecification.unwrap(args.get(2))).intValue();
-            double d = new java.math.BigDecimal(str)
-                    .setScale(scale, java.math.RoundingMode.HALF_UP)
-                    .doubleValue();
-            if (d == 0.0) d = 0.0;
-            return _E_ValueSpecification.wrap(d, genericType, multiplicity, resolver);
+            java.math.BigDecimal bd = new java.math.BigDecimal(str)
+                    .setScale(scale, java.math.RoundingMode.HALF_UP);
+            return _E_ValueSpecification.wrap(bd, genericType, multiplicity, resolver);
         });
 
         // parseBoolean(String[1]) : Boolean[1]
@@ -912,5 +911,23 @@ public class StringNatives
         {
             return dateStr;
         }
+    }
+
+    /**
+     * Drop a trailing decimal-literal suffix {@code 'd'} / {@code 'D'} from
+     * a numeric string so {@link java.math.BigDecimal#BigDecimal(String)}
+     * accepts it. Pure source carries {@code 1.0d} for Decimal literals and
+     * some callers pass the literal text straight to parseDecimal;
+     * {@code Double.parseDouble} used to accept the suffix, BigDecimal does not.
+     */
+    private static String stripDecimalSuffix(String s)
+    {
+        int len = s.length();
+        if (len > 0)
+        {
+            char last = s.charAt(len - 1);
+            if (last == 'd' || last == 'D') return s.substring(0, len - 1);
+        }
+        return s;
     }
 }

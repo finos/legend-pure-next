@@ -1,0 +1,227 @@
+// Generic-type + Multiplicity helpers used by every element that takes a
+// type/multiplicity (properties, function parameters, generalizations,
+// return types, …).
+//
+// Initial scope: the simplest forms only —
+//   type:         qualifiedName              → UserDefinedGenericType wrapping Type_Pointer
+//   multiplicity: '[' INTEGER ']'            → UserDefinedAdHocMultiplicity lo=int, hi=int
+//                 '[' INTEGER '..' INTEGER ']'
+//                 '[' INTEGER '..' STAR ']'  → upperBound empty
+//                 '[' STAR ']'               → lo=0, upperBound empty
+// Type arguments, multiplicity arguments, type-variable values, FunctionType,
+// RelationType, multiplicity identifier / '?' forms are deferred until the
+// fixtures that need them are added to the validator corpus.
+
+import meta::pure::parser::mappings::*;
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+import meta::pure::protocol::grammar::*;
+
+function meta::pure::parser::mappings::buildGenericType(typeCtx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1]
+{
+   // NOTE: production's `type` rule does NOT set p_sourceInformation on
+   // UserDefinedGenericType — only on the inner Type_Pointer. Mirroring exactly.
+   if($typeCtx->hasChild('qualifiedName'),
+      | ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+           type = ^meta::pure::protocol::grammar::type::Type_Pointer(
+              p_sourceInformation = buildSourceInfo($typeCtx->getChild('qualifiedName')->toOne(), $lineOffset),
+              value               = $typeCtx->getChild('qualifiedName')->toOne()->getText()
+           ),
+           typeArguments         = $typeCtx->getChild('typeArguments')
+                                            ->map(t | $t->getChildren('typeOrUndefined')->map(c | buildTypeOrUndefined($c, $lineOffset))),
+           multiplicityArguments = $typeCtx->getChild('multiplicityArguments')
+                                            ->map(m | $m->getChildren('multiplicityArgument')->map(a | parseMultiplicityArgument($a))),
+           typeVariableValues    = $typeCtx->getChild('typeVariableValues')
+                                            ->map(t | $t->getChildren('instanceLiteral')->map(l | buildInstanceLiteral($l, $lineOffset)))
+        ),
+   | if($typeCtx->hasToken('GROUP_OPEN'),
+      // `(col:T, col2:U)` — RelationType. Production parser leaves
+      // p_sourceInformation null on the wrapper type ([0..1]); mirror.
+      | ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+           type = ^meta::pure::protocol::grammar::relation::RelationType(
+              columns = $typeCtx->getChildren('columnType')->map(c | buildColumnType($c, $lineOffset))
+           )
+        ),
+   | if($typeCtx->hasToken('CURLY_BRACKET_OPEN'),
+      // `{T[m] -> R[n]}` — FunctionType. Production leaves p_sourceInformation
+      // null on the wrapper ([0..1]); mirror.
+      | ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+           type = ^meta::pure::protocol::grammar::type::FunctionType(
+              parameters          = $typeCtx->getChildren('functionTypePureType')->map(p | buildFunctionTypePureType($p, $lineOffset)),
+              returnType          = buildGenericType($typeCtx->getChild('type')->toOne(), $lineOffset),
+              returnMultiplicity  = buildMultiplicity($typeCtx->getChild('multiplicity')->toOne())
+           )
+        ),
+   | ^meta::pure::protocol::grammar::type::generics::UndefinedGenericType())));
+}
+
+// A column inside a relation-type literal. genericType and multiplicity are
+// [0..1] in protocol (tagged optionalInProtocol in m3.ttl) — emit [] when the
+// grammar omits them so compile-pure's isEmpty() branches in
+// relationColumnResolver fire and substitute the right defaults.
+function meta::pure::parser::mappings::buildColumnType(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::relation::Column[1]
+{
+   let nameCtx = $ctx->getChild('mayColumnName');
+   let typeCtx = $ctx->getChild('mayColumnType');
+   let nmCol   = $nameCtx->map(n | $n->getChild('columnName'))->concatenate([]);
+   let nmQ     = $nameCtx->map(n | $n->hasToken('QUESTION'))->concatenate([]);
+   let tType   = $typeCtx->map(t | $t->getChild('type'))->concatenate([]);
+   ^meta::pure::protocol::grammar::relation::Column(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      name                = if($nmCol->isNotEmpty(),
+                                | stripIfQuoted($nmCol->toOne()->getText())->toOne(),
+                                | ''),
+      nameWildCard        = if($nmQ->isNotEmpty() && $nmQ->toOne(), |true, |false),
+      genericType         = if($tType->isNotEmpty(),
+                                | buildGenericType($tType->toOne(), $lineOffset),
+                                | []),
+      multiplicity        = if($ctx->hasChild('multiplicity'),
+                                | buildMultiplicity($ctx->getChild('multiplicity')->toOne()),
+                                | [])
+   );
+}
+
+// A function-type parameter slot: `name: T[m]`.
+function meta::pure::parser::mappings::buildFunctionTypePureType(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::VariableExpression[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+      name         = '',
+      genericType  = buildGenericType($ctx->getChild('type')->toOne(), $lineOffset),
+      multiplicity = buildMultiplicity($ctx->getChild('multiplicity')->toOne())
+   )
+}
+
+function meta::pure::parser::mappings::stripIfQuoted(text: String[1]): String[1]
+{
+   if($text->startsWith('\''), | stripQuotes($text), | $text)
+}
+
+// typeOrUndefined: `?` → UndefinedGenericType; else delegate to typeWithOperation.
+function meta::pure::parser::mappings::buildTypeOrUndefined(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1]
+{
+   if($ctx->hasToken('QUESTION'),
+      | ^meta::pure::protocol::grammar::type::generics::UndefinedGenericType(),
+      | buildTypeWithOperation($ctx->getChild('typeWithOperation')->toOne(), $lineOffset))
+}
+
+// typeWithOperation: type (= equalType)? (+/- addSubOp)* (⊆ subsetType)?
+// Each operation wraps the running result in a GenericTypeOperation.
+function meta::pure::parser::mappings::buildTypeWithOperation(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1]
+{
+   let base   = buildGenericType($ctx->getChild('type')->toOne(), $lineOffset);
+   let withEq = wrapEqual($ctx, $base, $lineOffset);
+   let withAS = $ctx->getChildren('typeAddSubOperation')->fold({op, acc | wrapAddSub($op, $acc, $lineOffset)}, $withEq);
+   wrapSubset($ctx, $withAS, $lineOffset);
+}
+
+function meta::pure::parser::mappings::wrapEqual(ctx: AntlrContext[1], base: meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1]
+{
+   let eq = $ctx->getChild('equalType');
+   if($eq->isNotEmpty(),
+      | ^meta::pure::protocol::grammar::relation::GenericTypeOperation(
+           operationType = genericTypeOperationKind('Equal'),
+           left          = $base->cast(@meta::pure::protocol::grammar::type::generics::GenericType),
+           right         = buildGenericType($eq->toOne()->getChild('type')->toOne(), $lineOffset)->cast(@meta::pure::protocol::grammar::type::generics::GenericType)),
+      | $base);
+}
+
+function meta::pure::parser::mappings::wrapAddSub(opCtx: AntlrContext[1], base: meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1]
+{
+   let isAdd = $opCtx->hasChild('addType');
+   ^meta::pure::protocol::grammar::relation::GenericTypeOperation(
+      operationType = genericTypeOperationKind(if($isAdd, |'Union', |'Difference')),
+      left          = $base->cast(@meta::pure::protocol::grammar::type::generics::GenericType),
+      right         = buildGenericType($opCtx->getChild(if($isAdd, |'addType', |'subType'))->toOne()
+                                              ->getChild('type')->toOne(), $lineOffset)
+                       ->cast(@meta::pure::protocol::grammar::type::generics::GenericType)
+   );
+}
+
+function meta::pure::parser::mappings::wrapSubset(ctx: AntlrContext[1], base: meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1]
+{
+   let ss = $ctx->getChild('subsetType');
+   if($ss->isNotEmpty(),
+      | ^meta::pure::protocol::grammar::relation::GenericTypeOperation(
+           operationType = genericTypeOperationKind('Subset'),
+           left          = $base->cast(@meta::pure::protocol::grammar::type::generics::GenericType),
+           right         = buildGenericType($ss->toOne()->getChild('type')->toOne(), $lineOffset)->cast(@meta::pure::protocol::grammar::type::generics::GenericType)),
+      | $base);
+}
+
+function meta::pure::parser::mappings::genericTypeOperationKind(name: String[1]): meta::pure::protocol::grammar::Enum_Pointer[1]
+{
+   ^meta::pure::protocol::grammar::Enum_Pointer(
+      value              = 'meta::pure::metamodel::relation::GenericTypeOperationType',
+      extraPointerValues = [^meta::pure::protocol::grammar::PointerValue(value = $name)]
+   )
+}
+
+// Wrap a `type` ctx in a Generalization (the `extends T` form).
+function meta::pure::parser::mappings::buildClassGeneralization(typeCtx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::relationship::Generalization[1]
+{
+   ^meta::pure::protocol::grammar::relationship::Generalization(
+      p_sourceInformation = buildSourceInfo($typeCtx, $lineOffset),
+      general             = buildGenericType($typeCtx, $lineOffset)
+   )
+}
+
+// `[ multiplicityArgument ]` → Multiplicity_Protocol.
+function meta::pure::parser::mappings::buildMultiplicity(mulCtx: AntlrContext[1]): meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]
+{
+   parseMultiplicityArgument($mulCtx->getChild('multiplicityArgument')->toOne())
+}
+
+// -----------------------------------------------------------------------
+// Type-parameter + multiplicity-parameter declarations (e.g. `<T|m>` on
+// a Class). Each `typeParameterWithVariance` becomes a `TypeParameter`
+// (with `contravariant=true` when MINUS prefixes the name); each
+// multiplicity-parameter identifier becomes a `UserDefinedMultiplicityParameter`.
+// -----------------------------------------------------------------------
+
+// Production only sets `contravariant=true` when MINUS is present, leaves
+// null otherwise. m3_protocol.pure has contravariant: Boolean[1] — required.
+// Pure-side: always emit (true/false). Printer skips slots whose value
+// matches a known default (false here), so the diff stays clean.
+function meta::pure::parser::mappings::buildTypeParameterWithVariance(ctx: AntlrContext[1]): meta::pure::protocol::grammar::type::generics::TypeParameter[1]
+{
+   ^meta::pure::protocol::grammar::type::generics::TypeParameter(
+      name          = $ctx->getChild('identifier')->toOne()->getText(),
+      contravariant = $ctx->hasToken('MINUS')
+   )
+}
+
+function meta::pure::parser::mappings::buildTypeParameter(ctx: AntlrContext[1]): meta::pure::protocol::grammar::type::generics::TypeParameter[1]
+{
+   ^meta::pure::protocol::grammar::type::generics::TypeParameter(
+      name          = $ctx->getChild('identifier')->toOne()->getText(),
+      contravariant = false
+   )
+}
+
+function meta::pure::parser::mappings::buildMultParamDef(ctx: AntlrContext[1]): meta::pure::protocol::grammar::multiplicity::UserDefinedMultiplicityParameter[1]
+{
+   ^meta::pure::protocol::grammar::multiplicity::UserDefinedMultiplicityParameter(
+      name = $ctx->getText()
+   )
+}
+
+function meta::pure::parser::mappings::parseMultiplicityArgument(argCtx: AntlrContext[1]): meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]
+{
+   let fromMul = $argCtx->getChild('fromMultiplicity');
+   let toMul   = $argCtx->getChild('toMultiplicity');
+   let toStar  = if($toMul->isNotEmpty(), |$toMul->toOne()->hasToken('STAR'), |false);
+   let toInt   = if($toMul->isNotEmpty(), |$toMul->toOne()->getTokenText('INTEGER'), |[]);
+
+   if($argCtx->hasToken('QUESTION'),
+      | ^meta::pure::protocol::grammar::multiplicity::UndefinedMultiplicity(),
+      | if($argCtx->hasChild('identifier'),
+           | ^meta::pure::protocol::grammar::multiplicity::UserDefinedMultiplicityParameter(name = $argCtx->getChild('identifier')->toOne()->getText()),
+           | ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+                lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(
+                   value = if($fromMul->isNotEmpty(),
+                              | parseInteger($fromMul->toOne()->getText()),
+                              | if($toStar, | 0, | parseInteger($toInt->toOne())))
+                ),
+                upperBound = if($toStar, | [], | ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = parseInteger($toInt->toOne())))
+             )));
+}

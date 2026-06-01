@@ -102,10 +102,6 @@ public final class AssertErrorNode extends PureNode
             throw new PureException.AssertionError("Expected error with message containing: '"
                     + expectedMessage + "' but no error was thrown", this);
         }
-        catch (PureException.AssertionError pae)
-        {
-            throw pae;
-        }
         catch (Exception e)
         {
             // Bootstrap (Java direct) embeds the Pure stack trace into the

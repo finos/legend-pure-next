@@ -1,0 +1,158 @@
+// Mapping for `function` (UserDefinedFunction) and `native function`
+// (NativeFunction) top-level elements.
+//
+// Grammar:
+//   functionDefinition: FUNCTION stereotypes? taggedValues? qualifiedName
+//                       typeAndMultiplicityParameters? functionTypeSignature
+//                       constraints? codeBlock
+//   nativeFunction:     NATIVE FUNCTION stereotypes? taggedValues? qualifiedName
+//                       typeAndMultiplicityParameters? functionTypeSignature
+//
+// Initial scope: name + package + parameters + returnType + returnMultiplicity +
+// stereotypes/taggedValues + the canonical function-id signature mangle.
+// constraints + actual function body parsing deferred (need value-spec
+// machinery; for the spike fixture function/definition/concrete, the body
+// is `[]` — an empty Collection — handled by the minimal buildCodeBlock).
+
+import meta::pure::parser::mappings::*;
+import meta::pure::functions::meta::antlr::*;
+import meta::pure::parser::mappings::interpreter::*;
+import meta::pure::protocol::grammar::*;
+
+function meta::pure::parser::mappings::functionDefinition(): Rule[1]
+{
+   ^Rule(name='functionDefinition', alts = [
+      ^Alt(returnExpr = {ctx: AntlrContext[1], o: Integer[1] |
+         let qn  = $ctx->getChild('qualifiedName')->toOne()->getText();
+         let sig = $ctx->getChild('functionTypeSignature')->toOne();
+         let tmp = $ctx->getChild('typeAndMultiplicityParameters');
+         let constraintsCtxs = $ctx->getChild('constraints')
+                                    ->map(c | $c->getChildren('constraint'))
+                                    ->concatenate([]);
+         ^meta::pure::protocol::grammar::function::UserDefinedFunction(
+            p_sourceInformation = buildSourceInfo($ctx, $o),
+            name                = functionId($ctx),
+            package             = packagePtrOf($qn),
+            functionName        = simpleNameOf($qn),
+            typeParameters      = $tmp->map(t | $t->getChild('typeParameters'))
+                                       ->map(tp | $tp->getChildren('typeParameter')->map(p | buildTypeParameter($p))),
+            multiplicityParameters = $tmp->map(t | $t->getChild('multiplictyParameters'))
+                                          ->map(mp | $mp->getChildren('identifier')->map(i | buildMultParamDef($i))),
+            parameters          = $sig->getChildren('functionVariableExpression')->map(p | buildFunctionVariableExpression($p, $o)),
+            returnGenericType   = buildGenericType($sig->getChild('type')->toOne(), $o),
+            returnMultiplicity  = buildMultiplicity($sig->getChild('multiplicity')->toOne()),
+            preConstraints      = $constraintsCtxs->filter(c | !$c->getText()->contains('$return'))
+                                                  ->map(c | buildConstraint($c, $o)),
+            postConstraints     = $constraintsCtxs->filter(c | $c->getText()->contains('$return'))
+                                                  ->map(c | buildConstraint($c, $o)),
+            expressionSequence  = buildCodeBlock($ctx->getChild('codeBlock')->toOne(), $o),
+            stereotypes         = collectStereotypes($ctx, $o),
+            taggedValues        = collectTaggedValues($ctx, $o)
+         );
+      })
+   ])
+}
+
+function meta::pure::parser::mappings::nativeFunction(): Rule[1]
+{
+   ^Rule(name='nativeFunction', alts = [
+      ^Alt(returnExpr = {ctx: AntlrContext[1], o: Integer[1] |
+         let qn  = $ctx->getChild('qualifiedName')->toOne()->getText();
+         let sig = $ctx->getChild('functionTypeSignature')->toOne();
+         let tmp = $ctx->getChild('typeAndMultiplicityParameters');
+         ^meta::pure::protocol::grammar::function::NativeFunction(
+            p_sourceInformation = buildSourceInfo($ctx, $o),
+            name                = nativeFunctionId($ctx),
+            package             = packagePtrOf($qn),
+            functionName        = simpleNameOf($qn),
+            typeParameters      = $tmp->map(t | $t->getChild('typeParameters'))
+                                       ->map(tp | $tp->getChildren('typeParameter')->map(p | buildTypeParameter($p))),
+            multiplicityParameters = $tmp->map(t | $t->getChild('multiplictyParameters'))
+                                          ->map(mp | $mp->getChildren('identifier')->map(i | buildMultParamDef($i))),
+            parameters          = $sig->getChildren('functionVariableExpression')->map(p | buildFunctionVariableExpression($p, $o)),
+            returnGenericType   = buildGenericType($sig->getChild('type')->toOne(), $o),
+            returnMultiplicity  = buildMultiplicity($sig->getChild('multiplicity')->toOne()),
+            stereotypes         = collectStereotypes($ctx, $o),
+            taggedValues        = collectTaggedValues($ctx, $o)
+         );
+      })
+   ])
+}
+
+// -----------------------------------------------------------------------
+// Function variable expressions (parameter slots): `name: Type[mult]`.
+// -----------------------------------------------------------------------
+
+function meta::pure::parser::mappings::buildFunctionVariableExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::VariableExpression[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+      p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
+      name                = $ctx->getChild('identifier')->toOne()->getText(),
+      genericType         = buildGenericType($ctx->getChild('type')->toOne(), $lineOffset),
+      multiplicity        = buildMultiplicity($ctx->getChild('multiplicity')->toOne())
+   )
+}
+
+// buildCodeBlock now lives in mapping_value_spec.pure (real implementation
+// walking programLines into the precedence ladder).
+
+// -----------------------------------------------------------------------
+// Canonical Pure function signature mangle.
+//   simpleName + (params? "_" + paramSig + "__" + … + "__" + paramSigN : "")
+//              + "__" + returnTypeSig + "_" + returnMultSig + "_"
+// -----------------------------------------------------------------------
+
+function meta::pure::parser::mappings::functionId(ctx: AntlrContext[1]): String[1]
+{
+   let qn  = $ctx->getChild('qualifiedName')->toOne()->getText();
+   let sig = $ctx->getChild('functionTypeSignature')->toOne();
+   simpleNameOf($qn)
+      + buildParamListSig($sig)
+      + '__' + buildTypeSig($sig->getChild('type')->toOne())
+      + '_' + buildMultSig($sig->getChild('multiplicity')->toOne()) + '_';
+}
+
+function meta::pure::parser::mappings::nativeFunctionId(ctx: AntlrContext[1]): String[1]
+{
+   functionId($ctx)
+}
+
+function meta::pure::parser::mappings::buildParamListSig(sigCtx: AntlrContext[1]): String[1]
+{
+   let params = $sigCtx->getChildren('functionVariableExpression');
+   if($params->size() > 0,
+      | '_' + $params->map(p | buildParamSig($p))->joinStrings('__'),
+      | '');
+}
+
+function meta::pure::parser::mappings::buildParamSig(paramCtx: AntlrContext[1]): String[1]
+{
+   buildTypeSig($paramCtx->getChild('type')->toOne())
+      + '_' + buildMultSig($paramCtx->getChild('multiplicity')->toOne())
+}
+
+function meta::pure::parser::mappings::buildTypeSig(typeCtx: AntlrContext[1]): String[1]
+{
+   let qn = $typeCtx->getChild('qualifiedName');
+   if($qn->isNotEmpty(), | simpleNameOf($qn->toOne()->getText()), | 'UNKNOWN');
+}
+
+function meta::pure::parser::mappings::buildMultSig(mulCtx: AntlrContext[1]): String[1]
+{
+   let arg     = $mulCtx->getChild('multiplicityArgument')->toOne();
+   let fromMul = $arg->getChild('fromMultiplicity');
+   let toMul   = $arg->getChild('toMultiplicity');
+   let toStar  = if($toMul->isNotEmpty(), |$toMul->toOne()->hasToken('STAR'), |false);
+
+   if($arg->hasToken('QUESTION'),
+      | 'UNDEFINED',
+      | if($arg->hasChild('identifier'),
+           | $arg->getChild('identifier')->toOne()->getText(),
+           | if($fromMul->isNotEmpty() && $toStar,
+                | '$' + $fromMul->toOne()->getText() + '_MANY$',
+                | if($fromMul->isNotEmpty(),
+                     | '$' + $fromMul->toOne()->getText() + '_' + $toMul->toOne()->getText() + '$',
+                     | if($toStar,
+                          | 'MANY',
+                          | $toMul->toOne()->getText())))));
+}

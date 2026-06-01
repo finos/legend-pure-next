@@ -48,7 +48,10 @@ public final class VariableCompiler
         GenericType genericType = GenericTypeCompiler.compile(grammarParam._genericType(), imports, model, context);
         if (genericType == null)
         {
-            if (grammarParam._name() != null)
+            // Anonymous params (inner FunctionType slots like `{X[1]->Y[1]}`) carry
+            // no name — skip the `parameter '<name>'` clause for them so the
+            // type-not-found error doesn't end up with a bogus `in parameter ''`.
+            if (grammarParam._name() != null && !grammarParam._name().isEmpty())
             {
                 context.enrichCurrentErrorsFrom(errorsBefore, "parameter '" + grammarParam._name() + "'");
             }

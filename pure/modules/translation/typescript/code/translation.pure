@@ -61,6 +61,12 @@ Class meta::external::language::typescript::translation::TypeVarBinding
 {
    witnessVar   : String[1];
    isCollection : Boolean[1];
+   // When the witness's declared type is `T[m]` with `m` a MultiplicityParameter,
+   // store m's name here. Lets `castCoder` honour `cast(@T|m)` by emitting a
+   // count-check against the witness — same param witnesses both the type and
+   // the multiplicity. Empty when the witness's multiplicity is a concrete
+   // multiplicity ([1], [*], [1..*], …) rather than a parameter.
+   mulParamName : String[0..1];
 }
 
 function meta::external::language::typescript::translation::defaultConvention(): Convention[1]
@@ -282,14 +288,21 @@ function meta::external::language::typescript::translation::defaultConvention():
          pair('getIfAbsentPutWithKey', getIfAbsentPutWithKeyCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('getMapStats',       getMapStatsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('keyExpression',     keyExpressionCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('lenientPathToElement', pathToElementCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+         pair('lenientPathToElement', lenientPathToElementCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('elementPath',       elementToPathCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('genericTypeHolder', genericTypeHolderCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('parse',             parseCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
          pair('readFile',          readFileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('directoryTree',     directoryTreeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('useNodeAsScalar',   identityCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-         pair('useAsScalar',       identityCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+         pair('directoryTree',     directoryTreeCoder_ValueSpecification_MANY__Convention_1__Expression_1_)
+         // Removed: identityCoder for `useNodeAsScalar` / `useAsScalar`. These are
+         // user test helpers (defined in `lang/flow/match.pure`) with real bodies
+         // — they should translate through the default UDF dispatch like any
+         // other Pure function. The pass-through stub was a workaround for the
+         // match unwrap bug ("Sat→Sun returned [Node] instead of Node"); now
+         // that __match honours the arm's `unwrap` flag, the wrap is no
+         // longer needed and was DROPPING the outer call so e.g.
+         // `useNodeAsScalar(match(...))` collapsed to just `match(...)` —
+         // returning the M_Node instead of its `.name` string.
       ]),
       lambdaIndex = []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
    );
@@ -557,19 +570,45 @@ function meta::external::language::typescript::translation::translateExpression(
          // name would need its own coder entry.
          let isProperty = $fe->instanceOf(meta::pure::metamodel::valuespecification::DotApplication)
                           || ($fe.func->isNotEmpty() && $fe.func->toOne()->instanceOf(AbstractProperty));
+         // QualifiedProperty with arguments beyond the receiver (`$p.fullName(true)`)
+         // is dispatched as a top-level helper call rather than as a bare
+         // property access — the bare-access form `obj.fullName` reads
+         // `undefined`, and calling that with `(true)` would crash. Helpers
+         // are emitted in `buildSourceFile` alongside referenced UDFs.
+         // Any QualifiedProperty access — `$p.res()` (zero extra args) or
+         // `$p.fullName(true)` (with args) — dispatches through the owning
+         // Class's static-metadata const. The bare slot access form
+         // (`__pdo(p).res`) reads `undefined` because QPs aren't stored on
+         // the instance; only the static metadata holds the eval closure.
+         let isQpWithArgs = $fe.func->isNotEmpty()
+                            && $fe.func->toOne()->instanceOf(meta::pure::metamodel::function::property::QualifiedProperty);
          let enumAccess = $fe->enumValueAccess();
+         // Class metadata access (`<Class>.properties` / `.qualifiedProperties`):
+         // route through the locally-emitted `const <ShortClassName>` instead of
+         // the `__pureResolve` proxy. Closures on each entry let reflective
+         // `prop->eval(instance)` chains resolve in pure JS (no Truffle bridge).
+         let classMeta = $fe->classMetadataAccess();
          if ($selfDepth->isNotEmpty(),
              | tsCall(tsId('__ctorAt'), [tsNumLit($selfDepth->toOne()->toString())]),
              |if ($recvDepth->isNotEmpty(),
              | tsAccess(tsCall(tsId('__ctorAt'), [tsNumLit($recvDepth->toOne()->toString())]), $fe.functionName),
              |if ($isProperty,
-             // Enum-value access (`SomeEnumeration.VALUE`) reads the generated
-             // `const <ShortName>` member rather than reflecting the property
-             // off the metaobject — the const carries the self-describing
-             // value (name + classifierGenericType) for downstream reflection.
-             | if ($enumAccess->isNotEmpty(),
-                  | tsAccess(tsId(safeJsName($enumAccess->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->split('::')->last()->toOne())), $fe.functionName),
-                  | tsAccess(tsCall(tsId('__pdo'), [translateExpression($fe.parametersValues->at(0), $conv)]), $fe.functionName)),
+             // QualifiedProperty-with-args (`$p.fullName(true)`) — bare slot
+             // access would emit `__pdo(p).fullName` then call `undefined`.
+             // Route through the owner Class's static-metadata const:
+             // `<OwnerShortName>.qualifiedProperties.find(q => q.name===<qpName>).eval(p, …args)`.
+             // Same closure shape as the reflective access path uses.
+             | if ($isQpWithArgs,
+                  | $fe->qpWithArgsDispatch($conv),
+                  // Enum-value access (`SomeEnumeration.VALUE`) reads the generated
+                  // `const <ShortName>` member rather than reflecting the property
+                  // off the metaobject — the const carries the self-describing
+                  // value (name + classifierGenericType) for downstream reflection.
+                  | if ($enumAccess->isNotEmpty(),
+                       | tsAccess(tsId(safeJsName($enumAccess->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->split('::')->last()->toOne())), $fe.functionName),
+                       |if ($classMeta->isNotEmpty(),
+                       | tsAccess(tsId(safeJsName($classMeta->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->split('::')->last()->toOne())), $fe.functionName),
+                       | tsAccess(tsCall(tsId('__pdo'), [translateExpression($fe.parametersValues->at(0), $conv)]), $fe.functionName)))),
              | // Coder dispatch tolerates fully-qualified function names by
              //   falling back to the last `::`-separated segment. The canonical
              //   recompile occasionally produces FQNs (`meta::pure::functions::
@@ -761,14 +800,17 @@ function meta::external::language::typescript::translation::isFloatTyped(vs: Val
       && $rt->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath() == 'meta::pure::metamodel::type::primitives::Float';
 }
 
-// eval(fn, args...) -> `fn(args...)`. Pure's eval invokes a function value
-// with positional args; in JS that's plain call syntax.
+// eval(fn, args...) -> `__eval(fn, args...)`. Pure's eval invokes a
+// function-like value with positional args. A plain `tsCall($callee, args)`
+// would emit `fn(...args)`, which is fine for a JS function (translated
+// lambda or UDF) but throws "is not a function" when the callee is a
+// `__pureResolve` Proxy — the shape `<Class>.properties->filter(...)->toOne()`
+// produces. `__eval` dispatches: function → direct call; Property proxy →
+// receiver-slot read.
 function meta::external::language::typescript::translation::evalCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() >= 1, | 'evalCoder expects at least 1 argument (the callee)');
-   let callee   = translateExpression($args->at(0), $conv);
-   let restArgs = $args->slice(1, $args->size())->map(a | $a->translateExpression($conv));
-   tsCall($callee, $restArgs);
+   tsCall(tsId('__eval'), $args->map(a | $a->translateExpression($conv)));
 }
 
 // ^Class(k=v, ...) compiles to new(holder, [keyExpression('k', v), ...]).
@@ -789,16 +831,41 @@ function meta::external::language::typescript::translation::newCoder(args: Value
    // (e.g. `new(^UserDefinedGenericType(type=...))`): the instance's
    // classifierGenericType IS the supplied GenericType.
    if (!$args->at(0)->instanceOf(meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder),
-      | tsObject([tsEntry('classifierGenericType', translateExpression($args->at(0), $conv))]),
+      | // Reflection form `new(<genericType>)`. Wrap the supplied GenericType
+        // value through `__toCanonicalCgt`: when the GT's `.type` resolves
+        // under `meta::pure::metamodel::`, swap it for the canonical UDPGT-PE
+        // proxy so `instance.classifierGenericType` is a PE (matching the
+        // holder branch's `classifierGenericTypeEntry` behaviour and the
+        // canonical-anchor invariant tests like
+        // `testNewGenericTypeAnchorsAtCanonical` assert).
+        tsObject([tsEntry('classifierGenericType', tsCall(tsId('__toCanonicalCgt'), [translateExpression($args->at(0), $conv)]))]),
       | let keyExprs = if ($args->size() >= 2,
            | $args->at(1)->cast(@meta::pure::metamodel::valuespecification::Collection).values,
            | []->cast(@ValueSpecification));
-        let entries = $keyExprs->map(ke | $ke->extractKeyEntry($conv));
+        // Compute target class up-front so we can validate association keys
+        // (must-be-inline-construction) at this layer instead of threading
+        // the class through every helper.
+        let rawEntries = $keyExprs->map(ke | $ke->extractKeyEntry($conv));
         // `classifierGenericType` is the canonical self-describing tag the Java
         // lift reads to pick the class. Skip the auto-tag when the construction
         // sets `classifierGenericType` explicitly (metamodel constructions like
         // `^Class(classifierGenericType=...)`) — its own `.type` drives the lift.
-        let hasExplicitCgt = $entries->exists(e | $e.name == 'classifierGenericType');
+        let hasExplicitCgt = $rawEntries->exists(e | $e.name == 'classifierGenericType');
+        // When the user supplies their own classifierGenericType, validate at
+        // runtime that its `.type` matches the holder's target — Pure forbids
+        // swapping the metaclass via the cgt slot (only typeArguments /
+        // multiplicityArguments / typeVariableValues are user-customisable).
+        // Re-wrap that single entry's initializer with `__validateCgt(<value>, '<targetPath>')`.
+        let holderTargetPath = $args->at(0)->holderTargetType()->map(t |
+           if ($t->instanceOf(meta::pure::metamodel::PackageableElement),
+              | $t->cast(@meta::pure::metamodel::PackageableElement)->elementToPath(),
+              | ''));
+        let entries = if (!$hasExplicitCgt || $holderTargetPath->isEmpty() || $holderTargetPath->toOne() == '',
+           | $rawEntries,
+           | $rawEntries->map(e |
+               if ($e.name == 'classifierGenericType',
+                  | ^$e(initializer = tsCall(tsId('__validateCgt'), [$e.initializer, tsStrLit($holderTargetPath->toOne())])),
+                  | $e)));
         let cgtEntry = if ($hasExplicitCgt, | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment), | $args->at(0)->classifierGenericTypeEntry());
         let allEntries = $entries->concatenate($cgtEntry);
         // When any key references `~` (parent-reference to the instance being
@@ -831,9 +898,10 @@ function meta::external::language::typescript::translation::newCoder(args: Value
         let withBinds = if ($target->isEmpty() || !$target->toOne()->instanceOf(meta::pure::metamodel::type::Class),
            | $instExpr,
            | $instExpr->wrapWithAssociationBinds($target->toOne()->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>), $allEntries, $conv));
-        if ($target->isEmpty(),
+        let withConstraints = if ($target->isEmpty(),
            | $withBinds,
            | $withBinds->wrapWithConstraintChecks($target->toOne(), $siteTypeVarValues, $conv));
+        $withConstraints->wrapInCtorScope();
    );
 }
 
@@ -882,12 +950,19 @@ function meta::external::language::typescript::translation::genericTypeToCgtObje
       gtv: meta::pure::metamodel::type::generics::GenericTypeValue[1] | $gtv.typeArguments,
       e:   meta::pure::metamodel::type::generics::GenericType[*]      | []->cast(@meta::pure::metamodel::type::generics::GenericType)
    ]);
+   let tvValues = $gt->match([
+      gtv: meta::pure::metamodel::type::generics::GenericTypeValue[1] | $gtv.typeVariableValues,
+      e:   meta::pure::metamodel::type::generics::GenericType[*]      | []->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)
+   ]);
    let typeEntry = if ($rt->isEmpty() || !$rt->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
                        | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment),
                        | [tsEntry('type', encodePeRef($rt->toOne()))]);
    let taEntry   = if ($typeArgs->isEmpty(),
                        | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment),
                        | [tsEntry('typeArguments', tsArrayLit($typeArgs->map(ta | $ta->genericTypeToCgtObject())))]);
+   let tvvEntry  = if ($tvValues->isEmpty(),
+                       | []->cast(@meta::external::language::typescript::metamodel::PropertyAssignment),
+                       | [tsEntry('typeVariableValues', tsArrayLit($tvValues->map(v | translateExpression($v, defaultConvention()))))]);
    // Stamp `__equalityKeys` so the runtime `__eq` compares instances by Pure's
    // <<equality.Key>> contract (an EMPTY list means "no keys → identity"). Only
    // for NON-metamodel user/platform classes (Pair, List, model classes, …);
@@ -907,7 +982,7 @@ function meta::external::language::typescript::translation::genericTypeToCgtObje
                               [tsEntry('__equalityKeys', tsArrayLit($cls->equalityKeyNames()->map(k | tsStrLit($k))))];
                          );
                        );
-   tsObject($typeEntry->concatenate($taEntry)->concatenate($eqEntry));
+   tsObject($typeEntry->concatenate($taEntry)->concatenate($tvvEntry)->concatenate($eqEntry));
 }
 
 // Collect a class's `<<equality.Key>>` property names, including inherited
@@ -1025,6 +1100,60 @@ function meta::external::language::typescript::translation::classChain(cls: meta
                     ->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>);
    let superChains = $supers->map(s | $s->classChain());
    concatenate([$self], $superChains);
+}
+
+// Return the VALUE expression of a keyExpression FE — i.e. the RHS of `k=v`.
+// Handles both encodings extractKeyEntry handles: bare `keyExpression('k', v)`
+// and the `new(@KeyExpression|1, [..])` form. Returns the un-translated VS so
+// callers can inspect its shape (e.g. is it `^Type(...)` vs a `$var` ref?).
+function meta::external::language::typescript::translation::extractKeyValueVS(ke: ValueSpecification[1]): ValueSpecification[1]
+{
+   let kfe = $ke->cast(@FunctionExpression);
+   if ($kfe.functionName == 'keyExpression',
+      | $kfe.parametersValues->at(1),
+      | let inner = $kfe.parametersValues->at(1)->cast(@meta::pure::metamodel::valuespecification::Collection).values;
+        let exprFe = $inner->filter(i | $i->cast(@FunctionExpression).parametersValues->at(0)->cast(@AtomicValue).value->cast(@String) == 'expression')->toOne()->cast(@FunctionExpression);
+        $exprFe.parametersValues->at(1);
+   );
+}
+
+// If `entry` is an association property of `cls` and its value is NOT a
+// fresh construction (`^Type(...)` / `^$x(...)` / `[]`), replace the entry's
+// initializer with a runtime throw — Pure rejects sharing an existing
+// association partner across constructions to keep bidirectional binding
+// non-mutating. Pass-through when no class is supplied, when the key isn't
+// an association on `cls`, or when the value IS inline.
+function meta::external::language::typescript::translation::validateAssocKeyOrWrap(
+   entry: meta::external::language::typescript::metamodel::PropertyAssignment[1],
+   ke: ValueSpecification[1],
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[0..1]
+): meta::external::language::typescript::metamodel::PropertyAssignment[1]
+{
+   let isAssoc = $cls->isNotEmpty() && $cls->toOne()->findAssociationPartner($entry.name)->isNotEmpty();
+   let isFresh = if ($isAssoc, | $ke->extractKeyValueVS()->isFreshConstruction(), | true);
+   if (!$isAssoc || $isFresh,
+      | $entry,
+      | let clsPath = $cls->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
+        let throwCall = tsCall(tsId('__throwAssocImmutability'), [tsStrLit($clsPath), tsStrLit($entry.name)]);
+        ^$entry(initializer = $throwCall);
+   );
+}
+
+// Is `vs` a value Pure accepts for an association property?
+//   - `^Type(...)`     → inline construction (FE `new`).
+//   - `^$x(...)`       → copy (FE `copy`).
+//   - `[]`             → explicit empty Collection.
+// Pure rejects anything else (variable refs, function calls, etc.) with an
+// "Immutability violation" error; we mirror that at runtime via
+// {@link __throwAssocImmutability}.
+function meta::external::language::typescript::translation::isFreshConstruction(vs: ValueSpecification[1]): Boolean[1]
+{
+   // Pure's freshness rule: reject only when the value is a plain
+   // variable reference (`$x`) that escaped the construction scope.
+   // Function expressions — `^Type(...)`, `^$x()`, `fold(...)`,
+   // `map(...)`, etc. — register their children into the outer scope
+   // and are accepted. Empty collections also pass.
+   !$vs->instanceOf(VariableExpression);
 }
 
 function meta::external::language::typescript::translation::extractKeyEntry(ke: ValueSpecification[1], conv: Convention[1]): meta::external::language::typescript::metamodel::PropertyAssignment[1]
@@ -1162,7 +1291,12 @@ function meta::external::language::typescript::translation::containsCoder(args: 
 function meta::external::language::typescript::translation::concatenateCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 2, | 'concatenateCoder expects exactly 2 arguments');
-   methodCall($args, 'concat', $conv);
+   // `__concat(a, b)` lifts each side via `__asArr` so an unset `[*]` slot
+   // (`undefined` in JS) or a scalar Pure `[1]` value flows through cleanly.
+   // Direct `a.concat(b)` would throw `TypeError: Cannot read property 'concat'
+   // of undefined` for the empty-slot case (Pure-side `^X(...)` without
+   // setting an `[*]` slot leaves it empty, not `[]`).
+   tsCall(tsId('__concat'), $args->map(a | $a->translateExpression($conv)));
 }
 
 function meta::external::language::typescript::translation::addCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1209,11 +1343,14 @@ function meta::external::language::typescript::translation::sortCoder(args: Valu
 
 function meta::external::language::typescript::translation::removeDuplicatesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // 1-arg form: `[...new Set(coll)]` (referential dedup).
+   // 1-arg form: `[...new Set(__asArr(coll))]` (referential dedup).
+   // The `__asArr` lift is what lets a scalar Pure value (a single class PE
+   // proxy, a bare number, …) flow through `new Set(...)`: the bare Proxy
+   // isn't iterable, so without the lift the spread throws "not iterable".
    // 2-arg form: removeDuplicates(coll, eqFn) — runtime helper that uses the
    //   supplied predicate to compare pairs.
    if ($args->size() == 1,
-      | tsArrayLit([tsSpread(tsNew(tsId('Set'), [translateExpression($args->at(0), $conv)]))]),
+      | tsArrayLit([tsSpread(tsNew(tsId('Set'), [tsCall(tsId('__asArr'), [translateExpression($args->at(0), $conv)])]))]),
       | tsCall(tsId('__removeDuplicatesBy'), $args->map(a | $a->translateExpression($conv)))
    );
 }
@@ -1525,11 +1662,15 @@ function meta::external::language::typescript::translation::assertEmptyCoder(arg
 
 function meta::external::language::typescript::translation::assertIsCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // assertIs is identity in Pure. JS `===` matches for primitives.
+   // assertIs is reference identity in Pure. Delegate to the runtime helper:
+   // raw JS `===` fails for two `__pathToElement('p')` lookups that produce
+   // different reference shapes (a `{name, path}` literal vs a __pureResolve
+   // proxy), while `__assertIs` falls back to `.path` / `.name` matching for
+   // the PE-stub case and throws a detailed `expected … is …` message on
+   // mismatch (instead of the generic `assertIs failed`).
    let expected = translateExpression($args->at(0), $conv);
    let actual   = translateExpression($args->at(1), $conv);
-   let cond = tsBinary($expected, '===', $actual);
-   assertHelper($cond, tsStrLit('assertIs failed'));
+   tsCall(tsId('__assertIs'), [$expected, $actual]);
 }
 
 function meta::external::language::typescript::translation::assertIsNotCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -1573,8 +1714,17 @@ function meta::external::language::typescript::translation::withTypeVarWitness(c
       let rt = $p.genericType->rawType();
       if ($rt->isEmpty() || !$rt->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter),
          | []->cast(@meta::pure::functions::collection::Pair<String, TypeVarBinding>),
-         | pair($rt->toOne()->cast(@meta::pure::metamodel::type::generics::TypeParameter).name->toOne(),
-                ^TypeVarBinding(witnessVar = safeJsName($p.name), isCollection = $p.multiplicity->isToManyMult())));
+         | // If the param's multiplicity is a MultiplicityParameter, capture its
+           // name on the binding so a `cast(@T|m)` against this T can validate
+           // against the witness's count.
+           let mulName = if ($p.multiplicity->instanceOf(meta::pure::metamodel::multiplicity::MultiplicityParameter),
+                              | $p.multiplicity->cast(@meta::pure::metamodel::multiplicity::MultiplicityParameter).name,
+                              | []->cast(@String));
+           pair($rt->toOne()->cast(@meta::pure::metamodel::type::generics::TypeParameter).name->toOne(),
+                ^TypeVarBinding(witnessVar = safeJsName($p.name),
+                                isCollection = $p.multiplicity->isToManyMult(),
+                                mulParamName = $mulName));
+      );
    );
    if ($witness->isEmpty(), | $conv, | ^$conv(typeVarWitness = newMap($witness)));
 }
@@ -1594,13 +1744,57 @@ function meta::external::language::typescript::translation::castCoder(args: Valu
       let tgt    = $holder->holderTargetType();
       if ($tgt->isEmpty(), | $src, |
          let typed = $tgt->toOne()->castResolvedExpr($src, $conv);
+         // Multiplicity check for parameterized targets like `@T|m`. When the
+         // holder's multiplicity is a MultiplicityParameter that matches a
+         // witness binding's `mulParamName`, validate the source's count
+         // against the witness's runtime length. Pure's `cast(@T|m)` rejects a
+         // count mismatch with a "multiplicity" error.
+         let mulChecked = $holder->castMulCheckWrap($typed, $conv);
          let gt    = $holder->holderUserGenericType();
          let siteTypeVarValues = $gt->match([
             gtv: meta::pure::metamodel::type::generics::GenericTypeValue[1] | $gtv.typeVariableValues,
             e:   meta::pure::metamodel::type::generics::GenericType[*]      | []->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)
          ]);
-         $typed->wrapWithConstraintChecks($tgt->toOne(), $siteTypeVarValues, $conv);
+         $mulChecked->wrapWithConstraintChecks($tgt->toOne(), $siteTypeVarValues, $conv);
       );
+   );
+}
+
+// When `holder.multiplicity` is a MultiplicityParameter bound to one of the
+// function's witnesses (the `mulParamName` slot on its TypeVarBinding), wrap
+// `value` so it asserts its count matches the witness's at runtime. Otherwise
+// returns `value` unchanged.
+function meta::external::language::typescript::translation::castMulCheckWrap(
+   holder: meta::pure::metamodel::valuespecification::ValueSpecification[1],
+   value: Expression[1],
+   conv: Convention[1]
+): Expression[1]
+{
+   if (!$holder->instanceOf(meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder)
+        || $conv.typeVarWitness->isEmpty(),
+      | $value,
+      | // The user-supplied multiplicity for `@T|m` lives in
+        // `holder.genericType.multiplicityArguments[0]` — NOT
+        // `holder.multiplicity`, which is the holder VALUE's own
+        // multiplicity (always PureOne for a `@…` literal). Same pattern as
+        // `holderTargetType` pulling the user type out of `typeArguments`.
+        let h    = $holder->cast(@meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder);
+        let gt   = $h.genericType;
+        let mArgs = $gt->match([
+           gtv: meta::pure::metamodel::type::generics::GenericTypeValue[1] | $gtv.multiplicityArguments,
+           e:   meta::pure::metamodel::type::generics::GenericType[*]      | []->cast(@meta::pure::metamodel::multiplicity::Multiplicity)
+        ]);
+        if ($mArgs->isEmpty() || !$mArgs->at(0)->instanceOf(meta::pure::metamodel::multiplicity::MultiplicityParameter),
+           | $value,
+           | let mulName  = $mArgs->at(0)->cast(@meta::pure::metamodel::multiplicity::MultiplicityParameter).name->toOne();
+             let bindings = $conv.typeVarWitness->toOne()->values();
+             let matching = $bindings->filter(b | $b.mulParamName->isNotEmpty() && $b.mulParamName->toOne() == $mulName);
+             if ($matching->isEmpty(),
+                | $value,
+                | tsCall(tsId('__assertCastMul'),
+                         [$value, tsId($matching->at(0).witnessVar)]);
+             );
+        );
    );
 }
 
@@ -1637,12 +1831,22 @@ function meta::external::language::typescript::translation::wrapWithAssociationB
    conv: Convention[1]
 ): Expression[1]
 {
+   let clsPath = $cls->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
    let binds = $entries->map(e |
       $cls->findAssociationPartner($e.name)
-          ->map(p | tsExprStmt(tsCall(tsId('__bindAssoc'), [tsId('__this'), tsAccess(tsId('__this'), $e.name), tsStrLit($p.first), tsBoolLit($p.second)]))->cast(@meta::external::language::typescript::metamodel::Statement)));
+          ->map(p | tsExprStmt(tsCall(tsId('__bindAssoc'), [tsId('__this'), tsAccess(tsId('__this'), $e.name), tsStrLit($p.first), tsBoolLit($p.second), tsStrLit($clsPath), tsStrLit($e.name)]))->cast(@meta::external::language::typescript::metamodel::Statement)));
    if ($binds->isEmpty(),
       | $instExpr,
       | tsCall(tsArrowBlock([tsParamNoType('__this')], tsBlock($binds->concatenate([tsReturn(tsId('__this'))->cast(@meta::external::language::typescript::metamodel::Statement)]))), [$instExpr]));
+}
+
+// Wrap a construction expression in `__ctorScope(() => <expr>)`. Every
+// `^Type(...)` and `^$x(...)` emit goes through this, so each new instance
+// is tagged with the current epoch and the bindAssoc check can detect
+// out-of-scope partners. Nested constructions inherit the outer epoch.
+function meta::external::language::typescript::translation::wrapInCtorScope(instExpr: Expression[1]): Expression[1]
+{
+   tsCall(tsId('__ctorScope'), [tsArrowExpr([], $instExpr)]);
 }
 
 // Wrap an instance expression in an IIFE that runs every user constraint
@@ -1855,28 +2059,21 @@ function meta::external::language::typescript::translation::compareCoder(args: V
 // Display + serialization coders.
 // ----------------------------------------------------------------------------
 
-// print(x) -> console.log(x), return x (Pure's print returns its input).
-// Use a block-body arrow so the `console.log(x); return x;` sequence is
-// unambiguous (an expression-body arrow with a comma operator is parsed as
-// `(arrow), rest` at the comma-expression's call site).
+// print(x) -> __print(x): runtime helper that formats x as a Pure-print
+// string, console.log's it, and returns the string. Pure's print is
+// SideEffect-tagged but ALSO returns the formatted rendering — tests pin
+// the return value (`assertEquals('42', $f->eval(|print(42)))`), so a
+// passthrough that returned the raw value broke every io test.
 function meta::external::language::typescript::translation::printCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   let x = translateExpression($args->at(0), $conv);
-   tsCall(
-      tsArrowBlock(
-         [tsParamNoType('__p')],
-         tsBlock([
-            tsExprStmt(tsCall(tsAccess(tsId('console'), 'log'), [tsId('__p')])),
-            tsReturn(tsId('__p'))
-         ])
-      ),
-      [$x]
-   );
+   tsCall(tsId('__print'), [translateExpression($args->at(0), $conv)]);
 }
 
+// println(x) -> __println(x): print's formatted-string output with a
+// trailing `\n`. Mirrors the Pure spec definition `print(v) + print('\n')`.
 function meta::external::language::typescript::translation::printlnCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   $args->printCoder($conv);
+   tsCall(tsId('__println'), [translateExpression($args->at(0), $conv)]);
 }
 
 // format(tpl, args) — Pure's signature is `format(String[1], Any[*]):String[1]`.
@@ -1948,9 +2145,57 @@ function meta::external::language::typescript::translation::copyCoder(args: Valu
    // user Class (pointer, metamodel-internal, etc.) — those can't carry the
    // user-association schema we need.
    let srcType = $args->at(0).genericType->rawType();
-   if ($srcType->isEmpty() || !$srcType->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+   let withBinds = if ($srcType->isEmpty() || !$srcType->toOne()->instanceOf(meta::pure::metamodel::type::Class),
       | $copyExpr,
-      | $copyExpr->wrapWithAssociationBinds($srcType->toOne()->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>), $entries, $conv));
+      | $copyExpr->wrapWithCopyAssocChecks($srcType->toOne()->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>), $entries, $conv));
+   $withBinds->wrapInCtorScope();
+}
+
+// Copy variant of wrapWithAssociationBinds: in addition to binding every
+// explicitly-set association key (whose own value gets its scope checked
+// inside `__bindAssoc`), check every association property the copy
+// INHERITS from the source. A copy of `pierre` that doesn't touch `firm`
+// still carries `pierre.firm` (firmX) — if firmX is in a closed scope,
+// the copy violates immutability and must throw, even though `firm` was
+// never named in the override list.
+function meta::external::language::typescript::translation::wrapWithCopyAssocChecks(
+   instExpr: Expression[1],
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1],
+   entries: meta::external::language::typescript::metamodel::PropertyAssignment[*],
+   conv: Convention[1]
+): Expression[1]
+{
+   let clsPath = $cls->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
+   let allAssocs = $cls->allAssociationProperties();
+   let inheritedChecks = $allAssocs->map(p |
+      tsExprStmt(tsCall(tsId('__checkCopyAssocImmutability'), [tsId('__this'), tsStrLit($clsPath), tsStrLit($p.first)]))->cast(@meta::external::language::typescript::metamodel::Statement));
+   let binds = $entries->map(e |
+      $cls->findAssociationPartner($e.name)
+          ->map(p | tsExprStmt(tsCall(tsId('__bindAssoc'), [tsId('__this'), tsAccess(tsId('__this'), $e.name), tsStrLit($p.first), tsBoolLit($p.second), tsStrLit($clsPath), tsStrLit($e.name)]))->cast(@meta::external::language::typescript::metamodel::Statement)));
+   if ($inheritedChecks->isEmpty() && $binds->isEmpty(),
+      | $instExpr,
+      | tsCall(tsArrowBlock([tsParamNoType('__this')], tsBlock($inheritedChecks->concatenate($binds)->concatenate([tsReturn(tsId('__this'))->cast(@meta::external::language::typescript::metamodel::Statement)]))), [$instExpr]));
+}
+
+// Return every association property declared (incl. inherited) on `cls`
+// as (propName, partnerToMany) pairs. Mirrors findAssociationPartner's
+// scan but returns the full list instead of looking up by name.
+function meta::external::language::typescript::translation::allAssociationProperties(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]
+): Pair<String,Boolean>[*]
+{
+   // `propertiesFromAssociations` is the canonical slot for associations
+   // declared TO this class — but it isn't always populated on PDB-loaded
+   // classes. Fall back to scanning `.properties` for any whose owner is
+   // an Association (the lift side-effect of associationProperty handling)
+   // and dedup by name.
+   let direct = $cls.propertiesFromAssociations;
+   let viaProps = $cls.properties
+                     ->filter(p | $p.owner->isNotEmpty() && $p.owner->toOne()->instanceOf(meta::pure::metamodel::relationship::Association));
+   let all = $direct->concatenate($viaProps);
+   let names = $all->map(p | $p.name->toOne())->removeDuplicates();
+   $names->map(n | let p = $all->filter(x | $x.name->toOne() == $n)->at(0);
+                   pair($n, $p.multiplicity->isToManyMult()););
 }
 
 function meta::external::language::typescript::translation::regexpLikeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -2137,7 +2382,18 @@ function meta::external::language::typescript::translation::matchArmEntry(arm: V
       tsCall(tsId('__matchType'),
              [tsId('__v'), tsStrLit($typePath), tsNumLit($lower), $upperExpr])
    );
-   tsObject([tsEntry('check', $check), tsEntry('run', $armArrow)]);
+   // Scalar arm — `n:T[1]` or `n:T[0..1]` — binds `n` to the unwrapped element,
+   // not the surrounding sequence. Without this flag, an arm body like
+   // `n:M_Node[1]|$n` receives the singleton ARRAY and downstream `node.name`
+   // reads `undefined` (the array has no `.name` slot). Sequence arms
+   // (`n:T[*]`, `[1..*]`, etc.) keep the array shape and stay unflagged.
+   let unwrap = $concMult.upperBound->isNotEmpty()
+                && $concMult.upperBound->toOne().value->toOne() == 1;
+   tsObject([
+      tsEntry('check',  $check),
+      tsEntry('run',    $armArrow),
+      tsEntry('unwrap', tsBoolLit($unwrap))
+   ]);
 }
 
 // pathToElement(p:String[1][, sep:String[1]]) -> the resolved element.
@@ -2151,6 +2407,16 @@ function meta::external::language::typescript::translation::pathToElementCoder(a
 {
    let argExprs = $args->map(a | $a->translateExpression($conv));
    tsCall(tsId('__pathToElement'), $argExprs);
+}
+
+// lenientPathToElement(p[, sep]) -> the resolved element or undefined (Pure
+// empty) when the path doesn't exist. Pure's lenient form returns `[0..1]`
+// and is used to test for element presence — `__pathToElement` (strict) would
+// throw instead, which the host's `__metadataRead` does on first slot access.
+function meta::external::language::typescript::translation::lenientPathToElementCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   let argExprs = $args->map(a | $a->translateExpression($conv));
+   tsCall(tsId('__lenientPathToElement'), $argExprs);
 }
 
 // elementToPath(e:PackageableElement[1]) -> the element's path. Dispatch
@@ -2579,18 +2845,17 @@ function meta::external::language::typescript::translation::extractMatchArmLambd
 
 function meta::external::language::typescript::translation::assertSameElementsCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   // assertSameElements(expected, actual) — order-insensitive equality on the
-   // serialized sorted contents. Approximation: JSON.stringify on sorted copies.
+   // assertSameElements(expected, actual) — order-insensitive multiset
+   // equality. Delegate to the `__sameElements` runtime helper: it walks both
+   // sides through `__asArr` (scalar/array/undefined → array), then pairs
+   // elements via `__eq` (which short-circuits on reference identity). The
+   // earlier sort-then-JSON form broke on bidirectional association cycles
+   // because the cyclic JSON representation depends on the traversal entry
+   // point — `expected` and `actual` produced different strings even when
+   // they pointed at the same instance.
    let expected = translateExpression($args->at(0), $conv);
    let actual   = translateExpression($args->at(1), $conv);
-   let cond = tsBinary(
-      tsCall(tsId('__json'),
-             [tsCall(tsAccess(tsArrayLit([tsSpread($expected)]), 'sort'), [])]),
-      '===',
-      tsCall(tsId('__json'),
-             [tsCall(tsAccess(tsArrayLit([tsSpread($actual)]), 'sort'), [])])
-   );
-   assertHelper($cond, tsStrLit('assertSameElements failed'));
+   assertHelper(tsCall(tsId('__sameElements'), [$expected, $actual]), tsStrLit('assertSameElements failed'));
 }
 
 function meta::external::language::typescript::translation::translateAtomicValue(a: AtomicValue[1], conv: Convention[1]): Expression[1]
@@ -2932,7 +3197,19 @@ function meta::external::language::typescript::translation::buildSourceFile(
       []->cast(@meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>));
    let enumDecls = $enums->map(e | $e->translateEnumerationDecl($conv));
 
-   tsSourceFile('translated.ts', $enumDecls->concatenate($udfDecls)->concatenate($fn));
+   // Collect user Classes whose `.properties` / `.qualifiedProperties` are
+   // reflectively accessed and emit a `const <ShortClassName> = { path,
+   // properties, qualifiedProperties }` for each. Each entry's `eval` field
+   // is a closure (regular Property reads a slot; QualifiedProperty translates
+   // the body via the same coder pipeline). This makes reflective
+   // `<Class>.properties->filter(...)->toOne()->eval(instance)` chains resolve
+   // in pure JS, without routing through the Truffle `__metadataInvoke`
+   // bridge.
+   let classes = $enumScanExprs->collectReferencedClasses(
+      []->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>));
+   let classDecls = $classes->map(c | $c->translateClassDecl($conv));
+
+   tsSourceFile('translated.ts', $enumDecls->concatenate($classDecls)->concatenate($udfDecls)->concatenate($fn));
 }
 
 // Walk an expression tree collecting every UserDefinedFunction reached via
@@ -3102,6 +3379,205 @@ function meta::external::language::typescript::translation::collectEnumFromValue
                      ->fold({p, acc | $p->eval($v)->fold({pv, a | $pv->collectEnumFromValue($a)}, $acc)}, $seen),
                 | $seen));
         );
+}
+
+// Emit a QualifiedProperty-with-args call as a static-metadata dispatch:
+// `<OwnerShortName>.qualifiedProperties.find(q => __eq(q.name,'<qpName>')).eval(receiver, …args)`.
+// Pre-condition: `fe.func` is a QP with non-empty owner; checked by
+// `isQpWithArgs` at the call site. The owner Class is collected by
+// `collectReferencedClasses` so its `const <ShortClassName>` decl emits.
+function meta::external::language::typescript::translation::qpWithArgsDispatch(
+   fe: FunctionExpression[1],
+   conv: Convention[1]
+): Expression[1]
+{
+   let qp        = $fe.func->toOne()->cast(@meta::pure::metamodel::function::property::QualifiedProperty<meta::pure::metamodel::type::Any>);
+   let owner     = $qp.owner->toOne();
+   let ownerPE   = $owner->cast(@meta::pure::metamodel::PackageableElement);
+   let ownerName = safeJsName($ownerPE->elementToPath()->split('::')->last()->toOne());
+   let qpName    = $fe.functionName;
+   let argExprs  = $fe.parametersValues->map(p | $p->translateExpression($conv));
+   // Filter by NAME AND ARITY — Pure allows two QPs with the same name
+   // but different parameter counts (`res()` and `res(z)`). The eval
+   // arrow's `.length` is `1 + extraArgs` (receiver + supplied args), so
+   // matching it against the call-site arg count disambiguates which
+   // overload to dispatch.
+   let arity = $argExprs->size();
+   let find = tsCall(
+      tsAccess(tsAccess(tsId($ownerName), 'qualifiedProperties'), 'find'),
+      [tsArrowExpr([tsParamNoType('q')],
+                    tsBinary(tsCall(tsId('__eq'), [tsAccess(tsId('q'), 'name'), tsStrLit($qpName)]),
+                             '&&',
+                             tsBinary(tsAccess(tsAccess(tsId('q'), 'eval'), 'length'), '===', tsNumLit($arity->toString()))))]);
+   tsCall(tsAccess($find, 'eval'), $argExprs);
+}
+
+// If `fe` is a QualifiedProperty-with-args call (`$p.fullName(true)`), return
+// the QP's owning Class so `collectReferencedClasses` registers it for static
+// metadata emission. Empty otherwise.
+function meta::external::language::typescript::translation::qpOwnerClass(
+   fe: FunctionExpression[1]
+): meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[0..1]
+{
+   $fe.func
+      ->filter(f | $f->instanceOf(meta::pure::metamodel::function::property::QualifiedProperty)
+                   && $fe.parametersValues->size() > 1)
+      ->map(f | $f->cast(@meta::pure::metamodel::function::property::QualifiedProperty<meta::pure::metamodel::type::Any>).owner)
+      ->filter(o | $o->isNotEmpty() && $o->toOne()->instanceOf(meta::pure::metamodel::type::Class))
+      ->map(o | $o->toOne()->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>))
+      ->last();
+}
+
+// If `fe` is a metadata access `<ClassPE>.properties` or `<ClassPE>.qualifiedProperties`
+// — a property access whose receiver is an AtomicValue holding a user Class PE
+// and whose called slot is one of the reflective metadata slots we statically
+// emit — return that Class; else empty. The static-emit path replaces the
+// proxy-via-`__metadataRead` round-trip with a local TS const whose entries
+// carry closures, so reflective `prop->eval(instance)` resolves in pure JS
+// (no Truffle bridge needed for the common case).
+function meta::external::language::typescript::translation::classMetadataAccess(
+   fe: FunctionExpression[1]
+): meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[0..1]
+{
+   if ($fe.functionName != 'properties' && $fe.functionName != 'qualifiedProperties',
+      | []->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>),
+      | $fe.parametersValues->filter(r | $r->instanceOf(AtomicValue))
+                            ->map(r | $r->cast(@AtomicValue).value)
+                            ->filter(v | $v->instanceOf(meta::pure::metamodel::type::Class)
+                                       && !$v->instanceOf(meta::pure::metamodel::type::Enumeration)
+                                       // Skip metamodel classes — those are handled by
+                                       // encodePeRef / __pureResolve (we don't want to
+                                       // statically materialise `meta::pure::metamodel::type::Class`).
+                                       && !$v->cast(@meta::pure::metamodel::PackageableElement)
+                                              ->elementToPath()->startsWith('meta::pure::metamodel::'))
+                            ->map(v | $v->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>))
+                            ->last()
+   );
+}
+
+// Walk an expression tree collecting every user Class whose `.properties` /
+// `.qualifiedProperties` slot is accessed. Mirrors `collectReferencedEnumerations`.
+function meta::external::language::typescript::translation::collectReferencedClasses(
+   exprs: ValueSpecification[*],
+   seen: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[*]
+): meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[*]
+{
+   $exprs->fold({e, acc | $e->collectReferencedClassesOne($acc)}, $seen);
+}
+
+function meta::external::language::typescript::translation::collectReferencedClassesOne(
+   vs: ValueSpecification[1],
+   seen: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[*]
+): meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[*]
+{
+   $vs->match([
+      {fe: FunctionExpression[1] |
+         let fromArgs = $fe.parametersValues->collectReferencedClasses($seen);
+         let withMeta = $fe->classMetadataAccess()->fold({cls, acc | $acc->addClass($cls)}, $fromArgs);
+         // QualifiedProperty-with-args dispatch needs the OWNING Class's
+         // statically-emitted metadata const. Collect the owner via the helper
+         // so its `const <ShortClassName>` decl gets emitted alongside the
+         // dispatch in `qpWithArgsDispatch`.
+         $fe->qpOwnerClass()->fold({c, acc | $acc->addClass($c)}, $withMeta);
+      },
+      {lf: meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1] |
+         $lf.expressionSequence->collectReferencedClasses($seen);
+      },
+      {col: meta::pure::metamodel::valuespecification::Collection[1] |
+         $col.values->collectReferencedClasses($seen);
+      },
+      {av: AtomicValue[1] |
+         // Recurse into AtomicValues wrapping LambdaFunctions (match-arm bodies,
+         // qualifiedProperty defaults, etc.) so a nested `MyClass.properties`
+         // inside an arm body still registers its Class for emission.
+         if ($av.value->isNotEmpty()
+              && $av.value->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction),
+            | $av.value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+                 .expressionSequence->collectReferencedClasses($seen),
+            | $seen
+         );
+      },
+      other: ValueSpecification[1] | $seen
+   ]);
+}
+
+function meta::external::language::typescript::translation::addClass(
+   seen: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[*],
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]
+): meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[*]
+{
+   if ($seen->contains($cls), | $seen, | $seen->concatenate($cls));
+}
+
+// Emit `const <ShortClassName> = { properties: [...], qualifiedProperties: [...] }`
+// — each entry is `{ name, eval }` where `eval` is a closure that receives
+// the receiver instance (plus any extra QP params) and returns the slot value /
+// QP body result. The closure path keeps reflective
+// `<Class>.properties->filter(...)->toOne()->eval(instance)` chains resolvable
+// in pure JS without routing through Truffle's `EvalNode.dispatch`.
+function meta::external::language::typescript::translation::translateClassDecl(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1],
+   conv: Convention[1]
+): meta::external::language::typescript::metamodel::VariableStatement[1]
+{
+   let pe        = $cls->cast(@meta::pure::metamodel::PackageableElement);
+   let shortName = safeJsName($pe->elementToPath()->split('::')->last()->toOne());
+   let typeVars  = $cls.typeVariables;
+   let propEntries = $cls.properties->map(p | $p->translatePropertyEntry($conv));
+   let qpEntries   = $cls.qualifiedProperties->map(q | translateQpEntry($typeVars, $q, $conv));
+   tsConst($shortName, [], tsObject([
+      tsEntry('path',                tsStrLit($pe->elementToPath())),
+      tsEntry('properties',          tsArrayLit($propEntries)),
+      tsEntry('qualifiedProperties', tsArrayLit($qpEntries))
+   ]));
+}
+
+// Per-property emitter: `{ name, eval: (self) => __pdo(self).<name> }`.
+function meta::external::language::typescript::translation::translatePropertyEntry(
+   p: meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Nil, meta::pure::metamodel::type::Any|*>[1],
+   conv: Convention[1]
+): Expression[1]
+{
+   let pname = $p.name->toOne();
+   let arrow = tsArrowExpr(
+                  [tsParamNoType('self')],
+                  tsAccess(tsCall(tsId('__pdo'), [tsId('self')]), $pname));
+   tsObject([tsEntry('name', tsStrLit($pname)),
+             tsEntry('eval', $arrow)]);
+}
+
+// Per-qualifiedProperty emitter: `{ name, eval: (this, ...args) => <body> }`.
+// The QP body translates through the same coder pipeline as a UDF; params
+// (including `this`) bind directly to JS arrow params.
+//
+// `typeVars` are the owning Class's typeVariables (e.g. `x: Integer[1]`).
+// When non-empty, the QP body may reference them as `$x` — pre-bind each
+// from `__this.classifierGenericType.typeVariableValues[i]` at runtime via
+// `__readTypeVar`. Bindings emit as `let` statements so the QP arrow turns
+// into a block; the body's translated expression becomes the trailing
+// `return`.
+function meta::external::language::typescript::translation::translateQpEntry(
+   typeVars: meta::pure::metamodel::valuespecification::VariableExpression[*],
+   q: meta::pure::metamodel::function::property::QualifiedProperty<meta::pure::metamodel::type::Any>[1],
+   conv: Convention[1]
+): Expression[1]
+{
+   let qpName   = $q.name->toOne();
+   let qpFn     = $q->cast(@meta::pure::metamodel::function::FunctionDefinition<meta::pure::metamodel::type::Any>);
+   let qpParams = $qpFn.parameters->map(p | tsParamNoType(safeJsName($p.name)));
+   let qpBody   = $qpFn.expressionSequence;
+   let receiverName = safeJsName($qpFn.parameters->at(0).name);
+   let tvBindings = range(0, $typeVars->size())->map(i |
+      tsLet(safeJsName($typeVars->at($i).name->toOne()), [],
+            tsCall(tsId('__readTypeVar'), [tsId($receiverName), tsNumLit($i->toString())]))
+         ->cast(@meta::external::language::typescript::metamodel::Statement)
+   );
+   let qpArrow  = if ($tvBindings->isEmpty() && $qpBody->size() == 1,
+                       | tsArrowExpr($qpParams, translateExpression($qpBody->toOne(), $conv)),
+                       | tsArrowBlock($qpParams,
+                            tsBlock($tvBindings->concatenate($qpBody->buildTsFunctionBody($conv).statements))));
+   tsObject([tsEntry('name', tsStrLit($qpName)),
+             tsEntry('eval', $qpArrow)]);
 }
 
 // Emit `const <ShortName> = { VALUE: {name:'VALUE', classifierGenericType:

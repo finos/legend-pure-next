@@ -84,23 +84,25 @@ public class TruffleCompileToPdbTest
         Path buildDir = locateBuildDir();
         TrufflePdbLoader coreLoader = new TrufflePdbLoader(buildDir.resolve("core.pdb"));
         TrufflePdbLoader compilerLoader = new TrufflePdbLoader(buildDir.resolve("compiler.pdb"));
+        TrufflePdbLoader parserMappingsLoader = new TrufflePdbLoader(buildDir.resolve("parser-mappings.pdb"));
         TruffleModuleRegistry registry = new TruffleModuleRegistry();
         registry.register(coreLoader);
         registry.register(compilerLoader);
+        registry.register(parserMappingsLoader);
         resolver = registry;
         coreLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
+        parserMappingsLoader.setResolver(resolver);
         coreLoader.preloadAll();
         compilerLoader.preloadAll();
+        parserMappingsLoader.preloadAll();
 
+        // Section parsers (CompiledGraph / CompilerStats / TestFile /
+        // ReverseIndex / Error) are loaded from compiler-pure's
+        // testSectionParsers() Pure function via TrufflePureParser; no Java
+        // extensions needed here.
         runtime = PureTruffleRuntime.builder()
                 .withResolver(resolver)
-                .withParserExtensions(List.of(
-                        new TruffleCompiledGraphLanguageExtension(),
-                        new TruffleCompilerStatsLanguageExtension(),
-                        new TruffleTestFileLanguageExtension(),
-                        new TruffleReverseIndexLanguageExtension(),
-                        new TruffleErrorLanguageExtension()))
                 .build();
 
         // 3-arg silent variant — tests pull errors/stats structurally off the

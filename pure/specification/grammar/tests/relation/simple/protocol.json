@@ -60,6 +60,7 @@
                   }
                 },
                 "name" : "val",
+                "nameWildCard" : false,
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 47,
@@ -95,6 +96,7 @@
                   }
                 },
                 "name" : "other",
+                "nameWildCard" : false,
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 67,
@@ -119,6 +121,7 @@
                   }
                 },
                 "name" : "ok",
+                "nameWildCard" : false,
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 78,

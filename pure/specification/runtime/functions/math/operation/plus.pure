@@ -91,3 +91,11 @@ function <<PCT.test>> meta::pure::functions::math::tests::plus::testDecimalPlus<
     assertEquals(4.0d, $f->eval(|plus(1.0d, 3)));
     assertEquals(-1.0d, $f->eval(|-4.0d+2.0d+1));
 }
+
+// Canonical IEEE-754 precision-loss case for addition: 0.1 + 0.2 in Double
+// yields 0.30000000000000004. In BigDecimal it's 0.3 exactly. Fails if
+// plus_Decimal unwraps to Double for the add (the pre-fix behaviour).
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testDecimalPlusPreservesPrecision<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(0.3d, $f->eval(|0.1d + 0.2d));
+}

@@ -13,13 +13,26 @@
 // limitations under the License.
 
 import meta::pure::protocol::*;
+import meta::pure::protocol::grammar::*;
 
-// Pure-side type for the ###CompilerStats test section. Mirrors
-// meta::pure::compiler::test::CompiledGraph; the Java parser extension
-// (CompilerStatsLanguageExtension) creates a CompilerStatsImpl from the raw
-// section text and the test harness's assertCompilerStatsOnResult reads its
-// `value` to compare against the actual stats.
+// Pure-side type for the ###CompilerStats test section. The test harness's
+// assertCompilerStatsOnResult reads its `value` to compare against the
+// actual stats produced by the compiler.
 Class meta::pure::compiler::test::CompilerStats extends meta::pure::protocol::grammar::PackageableElement
 {
     value : String[1];
+}
+
+// Section parser for ###CompilerStats: wraps the raw section body in a
+// CompilerStats PDO. Consumed by the Pure-side section-dispatch table; see
+// meta::pure::compiler::test::testSectionParsers.
+function meta::pure::compiler::test::buildCompilerStatsSection(
+   content: String[1], sourceId: String[1], lineOffset: Integer[1]
+): meta::pure::protocol::grammar::PackageableElement[*]
+{
+   ^meta::pure::compiler::test::CompilerStats(
+      name    = 'CompilerStats',
+      value   = $content,
+      package = ^Package_Pointer(value = $sourceId)
+   )
 }

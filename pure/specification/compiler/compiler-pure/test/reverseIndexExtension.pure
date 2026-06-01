@@ -13,8 +13,23 @@
 // limitations under the License.
 
 import meta::pure::protocol::*;
+import meta::pure::protocol::grammar::*;
 
 Class meta::pure::compiler::test::ReverseIndex extends meta::pure::protocol::grammar::PackageableElement
 {
     value : String[1];
+}
+
+// Section parser for ###ReverseIndex: wraps the raw section body in a
+// ReverseIndex PDO. Consumed by the Pure-side section-dispatch table; see
+// meta::pure::compiler::test::testSectionParsers.
+function meta::pure::compiler::test::buildReverseIndexSection(
+   content: String[1], sourceId: String[1], lineOffset: Integer[1]
+): meta::pure::protocol::grammar::PackageableElement[*]
+{
+   ^meta::pure::compiler::test::ReverseIndex(
+      name    = 'ReverseIndex',
+      value   = $content,
+      package = ^Package_Pointer(value = $sourceId)
+   )
 }

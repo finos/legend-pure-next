@@ -32,5 +32,6 @@
         <module>legend-pure-next-bootstrap-compiler</module>
         <module>legend-pure-next-bootstrap-parser</module>
         <module>legend-pure-next-bootstrap-execution</module>
+        <module>legend-pure-next-bootstrap-parser-validation</module>
     </modules>
 </project>

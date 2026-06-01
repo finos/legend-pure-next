@@ -2043,12 +2043,16 @@ public class PureLanguageSerializer
         // Tagged values
         serializeTaggedValues(sb, prop._taggedValues());
 
-        // Aggregation kind
+        // Aggregation kind — omit when `None` (the implicit default; both
+        // builders always populate the slot for validator parity, but `(none)`
+        // is noise in printed source).
         if (prop._aggregation() != null)
         {
-            // Read enum value name from Enum_Pointer's extraPointerValues
             String aggName = prop._aggregation()._extraPointerValues().getFirst()._value();
-            sb.append("(").append(aggName.toLowerCase()).append(") ");
+            if (!"None".equals(aggName))
+            {
+                sb.append("(").append(aggName.toLowerCase()).append(") ");
+            }
         }
 
         sb.append(prop._name());

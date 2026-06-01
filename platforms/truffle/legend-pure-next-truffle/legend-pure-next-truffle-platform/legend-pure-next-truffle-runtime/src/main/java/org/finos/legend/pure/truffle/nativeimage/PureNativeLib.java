@@ -20,9 +20,6 @@ import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
 import org.finos.legend.pure.truffle.runtime.TrufflePdbLoader;
-import org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension;
-import org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension;
-import org.finos.legend.pure.truffle.runtime.TruffleTestFileLanguageExtension;
 import org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry;
 import org.graalvm.nativeimage.IsolateThread;
 import org.graalvm.nativeimage.c.function.CEntryPoint;
@@ -195,14 +192,10 @@ public final class PureNativeLib
         for (var l : loaders) l.setResolver(resolver);
         for (var l : loaders) l.preloadAll();
 
+        // Section parsers come from compiler-pure's testSectionParsers() via
+        // the Pure-side registry — no Java extensions needed.
         PureTruffleRuntime runtime = PureTruffleRuntime.builder()
                 .withResolver(resolver)
-                .withParserExtensions(List.of(
-                        new TruffleCompiledGraphLanguageExtension(),
-                        new TruffleCompilerStatsLanguageExtension(),
-                        new TruffleTestFileLanguageExtension(),
-                        new org.finos.legend.pure.truffle.runtime.TruffleReverseIndexLanguageExtension(),
-                        new org.finos.legend.pure.truffle.runtime.TruffleErrorLanguageExtension()))
                 .build();
         try
         {

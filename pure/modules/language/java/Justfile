@@ -52,6 +52,9 @@ build:
         --source {{java_root}} \
         --output-dir {{shared_out}} {{err_filter}}
 
+# No sibling-module deps — alias of `build` for symmetry with translation/* modules.
+build-all: build
+
 # Uses compiler.pdb and exercises the same compiler-pure code that
 # compile-via-pure runs, but JIT-compiled by Truffle. Useful when iterating on
 # pure/specification/compiler/compiler-pure since it picks changes up
