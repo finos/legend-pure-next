@@ -553,7 +553,7 @@ public class M3MetamodelReader
 
     private void addTypeArgument(MutableList<String> result, Resource taRes)
     {
-        // Check for FunctionType
+        // FunctionType arguments need the {A[m]->B[n]} surface form, not the rawType name.
         Statement rawTypeStmt = getM3Statement(taRes, "type");
         if (rawTypeStmt != null && rawTypeStmt.getObject().isResource())
         {
@@ -565,24 +565,12 @@ public class M3MetamodelReader
             }
         }
 
-        // Check for typeParameter reference
-        Statement tpStmt = getM3Statement(taRes, "typeParameter");
-        if (tpStmt != null && tpStmt.getObject().isResource())
-        {
-            String tpName = getName(tpStmt.getObject().asResource());
-            if (tpName != null)
-            {
-                result.add(tpName);
-                return;
-            }
-        }
-
-        // Otherwise look for rawType
         String typeName = extractGenericTypeString(taRes);
-        if (typeName != null)
+        if (typeName == null)
         {
-            result.add(typeName);
+            throw new IllegalStateException("typeArgument " + taRes + " did not resolve to a type name");
         }
+        result.add(typeName);
     }
 
     private String formatFunctionTypeArgument(Resource ftRes)
@@ -590,75 +578,76 @@ public class M3MetamodelReader
         StringBuilder sb = new StringBuilder();
         sb.append("{");
 
-        Statement paramStmt = getM3Statement(ftRes, "parameters");
-        if (paramStmt != null && paramStmt.getObject().isResource())
+        // Nullary FunctionTypes (e.g., {->Any[1]}) have no parameters at all — that's valid.
+        MutableList<Statement> paramStmts = listM3Statements(ftRes, "parameters");
+        for (int i = 0; i < paramStmts.size(); i++)
         {
+            Statement paramStmt = paramStmts.get(i);
+            if (!paramStmt.getObject().isResource())
+            {
+                throw new IllegalStateException("FunctionType " + ftRes + " parameter[" + i + "] is not a resource");
+            }
             Resource paramRes = paramStmt.getObject().asResource();
             Statement gtStmt = getM3StatementMulti(paramRes, "genericType", "ValueSpecification_genericType");
-            if (gtStmt != null && gtStmt.getObject().isResource())
+            if (gtStmt == null || !gtStmt.getObject().isResource())
             {
-                Resource gt = gtStmt.getObject().asResource();
-                Statement tp = getM3Statement(gt, "typeParameter");
-                if (tp != null && tp.getObject().isResource())
-                {
-                    sb.append(getName(tp.getObject().asResource()));
-                }
-                else 
-                {
-                    sb.append("Any");
-                }
+                throw new IllegalStateException("FunctionType " + ftRes + " parameter " + paramRes + " has no genericType");
             }
-            else
+            Resource gt = gtStmt.getObject().asResource();
+            String paramTypeName = extractGenericTypeString(gt);
+            if (paramTypeName == null)
             {
-                sb.append("Any");
+                throw new IllegalStateException("FunctionType " + ftRes + " parameter genericType " + gt + " did not resolve to a type name");
             }
+            if (i > 0)
+            {
+                sb.append(", ");
+            }
+            sb.append(paramTypeName);
             Statement multStmt = getM3StatementMulti(paramRes, "multiplicity", "ValueSpecification_multiplicity");
-            if (multStmt != null && multStmt.getObject().isResource())
+            if (multStmt == null || !multStmt.getObject().isResource())
             {
-                String multName = getLocalName(multStmt.getObject().asResource());
-                sb.append(mapMultiplicity(multName));
+                throw new IllegalStateException("FunctionType " + ftRes + " parameter " + paramRes + " has no multiplicity");
             }
+            String paramMultName = getLocalName(multStmt.getObject().asResource());
+            sb.append(mapMultiplicity(paramMultName));
         }
 
         sb.append("->");
 
         Statement retStmt = getM3Statement(ftRes, "returnType");
-        if (retStmt != null && retStmt.getObject().isResource())
+        if (retStmt == null || !retStmt.getObject().isResource())
         {
-            Resource retRes = retStmt.getObject().asResource();
-            Statement tp = getM3Statement(retRes, "typeParameter");
-            if (tp != null && tp.getObject().isResource())
+            throw new IllegalStateException("FunctionType " + ftRes + " has no returnType");
+        }
+        Resource retRes = retStmt.getObject().asResource();
+        String retTypeName = extractGenericTypeString(retRes);
+        if (retTypeName == null)
+        {
+            throw new IllegalStateException("FunctionType " + ftRes + " returnType " + retRes + " did not resolve to a type name");
+        }
+        sb.append(retTypeName);
+
+        Statement retMultStmt = getM3Statement(ftRes, "returnMultiplicity");
+        if (retMultStmt == null || !retMultStmt.getObject().isResource())
+        {
+            throw new IllegalStateException("FunctionType " + ftRes + " has no returnMultiplicity");
+        }
+        Resource retMultRes = retMultStmt.getObject().asResource();
+        Statement mpStmt = getM3Statement(retMultRes, "MultiplicityParameter_name");
+        if (mpStmt != null)
+        {
+            String mpName = getLiteralString(mpStmt);
+            if (mpName == null)
             {
-                sb.append(getName(tp.getObject().asResource()));
+                throw new IllegalStateException("FunctionType " + ftRes + " returnMultiplicity " + retMultRes + " has empty MultiplicityParameter_name");
             }
-            else
-            {
-                sb.append("Any");
-            }
+            sb.append("[").append(mpName).append("]");
         }
         else
         {
-            sb.append("Any");
-        }
-
-        Statement retMultStmt = getM3Statement(ftRes, "returnMultiplicity");
-        if (retMultStmt != null && retMultStmt.getObject().isResource())
-        {
-            Resource retMultRes = retMultStmt.getObject().asResource();
-            Statement mpStmt = getM3Statement(retMultRes, "MultiplicityParameter_name");
-            if (mpStmt != null)
-            {
-                String mpName = getLiteralString(mpStmt);
-                if (mpName != null)
-                {
-                    sb.append("[").append(mpName).append("]");
-                }
-            }
-            else
-            {
-                String multName = getLocalName(retMultRes);
-                sb.append(mapMultiplicity(multName));
-            }
+            String retMultName = getLocalName(retMultRes);
+            sb.append(mapMultiplicity(retMultName));
         }
 
         sb.append("}");
@@ -675,11 +664,16 @@ public class M3MetamodelReader
     private String extractRawPropertyType(Resource propRes)
     {
         Statement genTypeStmt = getM3Statement(propRes, "genericType");
-        if (genTypeStmt != null && genTypeStmt.getObject().isResource())
+        if (genTypeStmt == null || !genTypeStmt.getObject().isResource())
         {
-            return extractRawTypeNameFromGenericType(genTypeStmt.getObject());
+            throw new IllegalStateException("Property " + propRes + " has no genericType");
         }
-        return "Object";
+        String name = extractRawTypeNameFromGenericType(genTypeStmt.getObject());
+        if (name == null)
+        {
+            throw new IllegalStateException("Property " + propRes + " genericType did not resolve to a raw type name");
+        }
+        return name;
     }
 
     /**
@@ -688,25 +682,26 @@ public class M3MetamodelReader
     private String extractFullPropertyType(Resource propRes)
     {
         Statement genTypeStmt = getM3Statement(propRes, "genericType");
-        if (genTypeStmt != null && genTypeStmt.getObject().isResource())
+        if (genTypeStmt == null || !genTypeStmt.getObject().isResource())
         {
-            String full = extractGenericTypeString(genTypeStmt.getObject());
-            if (full != null)
-            {
-                return full;
-            }
+            throw new IllegalStateException("Property " + propRes + " has no genericType");
         }
-        return "Any";
+        String full = extractGenericTypeString(genTypeStmt.getObject());
+        if (full == null)
+        {
+            throw new IllegalStateException("Property " + propRes + " genericType did not resolve to a full type name");
+        }
+        return full;
     }
 
     private String extractMultiplicity(Resource propRes)
     {
         Statement multStmt = getM3Statement(propRes, "multiplicity");
-        if (multStmt != null && multStmt.getObject().isResource())
+        if (multStmt == null || !multStmt.getObject().isResource())
         {
-            return getLocalName(multStmt.getObject().asResource());
+            throw new IllegalStateException("Property " + propRes + " has no multiplicity");
         }
-        return null;
+        return getLocalName(multStmt.getObject().asResource());
     }
 
     // =========================================================================
@@ -751,7 +746,7 @@ public class M3MetamodelReader
         String tpName = getName(tpRes);
         if (tpName == null)
         {
-            return "";
+            throw new IllegalStateException("TypeParameter " + tpRes + " has no name");
         }
         Statement contraStmt = getM3Statement(tpRes, "contravariant");
         if (contraStmt != null)
@@ -775,16 +770,20 @@ public class M3MetamodelReader
             {
                 // Direct literal or typed primitive node form
                 result.add(val);
+                return;
             }
-            else if (mpStmt.getObject().isResource())
+            if (!mpStmt.getObject().isResource())
             {
-                // Blank node form: :multiplicityParameters [ :name "m" ]
-                String name = getName(mpStmt.getObject().asResource());
-                if (name != null)
-                {
-                    result.add(name);
-                }
+                throw new IllegalStateException("multiplicityParameter on " + classRes + " is neither a literal nor a resource");
             }
+            // Blank node form: :multiplicityParameters [ :name "m" ]
+            Resource mpRes = mpStmt.getObject().asResource();
+            String name = getName(mpRes);
+            if (name == null)
+            {
+                throw new IllegalStateException("multiplicityParameter " + mpRes + " on " + classRes + " has no name");
+            }
+            result.add(name);
         });
         return result;
     }
