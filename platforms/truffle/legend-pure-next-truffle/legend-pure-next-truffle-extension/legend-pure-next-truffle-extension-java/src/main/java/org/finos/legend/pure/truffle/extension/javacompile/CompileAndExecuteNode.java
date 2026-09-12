@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,9 +18,9 @@ package org.finos.legend.pure.truffle.extension.javacompile;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
-import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
+import org.finos.legend.pure.truffle.interpreter.ast.PureNode;
+import org.finos.legend.pure.truffle.interpreter.ast.natives.collection.CollectionHelper;
+import org.finos.legend.pure.truffle.interpreter.ast.natives.string.StringHelper;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.util.ArrayList;

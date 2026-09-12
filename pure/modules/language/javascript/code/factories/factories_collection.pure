@@ -1,0 +1,152 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Factories for JavaScript Array operations.
+//
+// Each helper emits a method call on a collection expression:
+//   jsMap(items, 'x', expr)    -> items.map(x => expr)
+//   jsReduce(items, 'a', 'v',
+//            expr, init)       -> items.reduce((a, v) => expr, init)
+//   jsLength(items)            -> items.length
+//
+// Naming policy: each factory is named after the JavaScript Array method
+// it emits (map / filter / reduce / find / some / every / flatMap / forEach
+// / includes / indexOf / concat / join / slice / reverse / sort). No
+// language-foreign aliases ('exists', 'fold', 'contains') — the goal is
+// that what the user types is what the output reads as.
+
+import meta::external::language::javascript::factories::*;
+import meta::external::language::javascript::metamodel::*;
+
+// =============================================================================
+// Lambda-taking methods, single parameter.
+// =============================================================================
+
+function meta::external::language::javascript::factories::jsMap(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'map'), [jsArrowExpr([jsParam($param)], $body)]);
+}
+
+function meta::external::language::javascript::factories::jsFilter(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'filter'), [jsArrowExpr([jsParam($param)], $body)]);
+}
+
+function meta::external::language::javascript::factories::jsForEach(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'forEach'), [jsArrowExpr([jsParam($param)], $body)]);
+}
+
+function meta::external::language::javascript::factories::jsFind(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'find'), [jsArrowExpr([jsParam($param)], $body)]);
+}
+
+function meta::external::language::javascript::factories::jsSome(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'some'), [jsArrowExpr([jsParam($param)], $body)]);
+}
+
+function meta::external::language::javascript::factories::jsEvery(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'every'), [jsArrowExpr([jsParam($param)], $body)]);
+}
+
+function meta::external::language::javascript::factories::jsFlatMap(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'flatMap'), [jsArrowExpr([jsParam($param)], $body)]);
+}
+
+// =============================================================================
+// Lambda-taking methods, two parameters.
+// =============================================================================
+
+// items.reduce((acc, val) => body, init)
+function meta::external::language::javascript::factories::jsReduce(collection: Expression[1], accName: String[1], valName: String[1], body: Expression[1], init: Expression[1]): CallExpression[1]
+{
+   jsCall(
+      jsAccess($collection, 'reduce'),
+      [
+         jsArrowExpr([jsParam($accName), jsParam($valName)], $body),
+         $init
+      ]
+   );
+}
+
+// items.sort((a, b) => body)   -- custom comparator
+function meta::external::language::javascript::factories::jsSortBy(collection: Expression[1], aName: String[1], bName: String[1], body: Expression[1]): CallExpression[1]
+{
+   jsCall(
+      jsAccess($collection, 'sort'),
+      [jsArrowExpr([jsParam($aName), jsParam($bName)], $body)]
+   );
+}
+
+// =============================================================================
+// Value-argument methods (no lambda).
+// =============================================================================
+
+function meta::external::language::javascript::factories::jsIncludes(collection: Expression[1], value: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'includes'), [$value]);
+}
+
+function meta::external::language::javascript::factories::jsIndexOf(collection: Expression[1], value: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'indexOf'), [$value]);
+}
+
+function meta::external::language::javascript::factories::jsConcat(collection: Expression[1], other: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'concat'), [$other]);
+}
+
+function meta::external::language::javascript::factories::jsJoin(collection: Expression[1], separator: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'join'), [$separator]);
+}
+
+function meta::external::language::javascript::factories::jsSlice(collection: Expression[1], start: Expression[1], end: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'slice'), [$start, $end]);
+}
+
+// =============================================================================
+// No-argument methods and property.
+// =============================================================================
+
+function meta::external::language::javascript::factories::jsLength(collection: Expression[1]): PropertyAccessExpression[1]
+{
+   jsAccess($collection, 'length');
+}
+
+function meta::external::language::javascript::factories::jsReverse(collection: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'reverse'), []);
+}
+
+function meta::external::language::javascript::factories::jsSort(collection: Expression[1]): CallExpression[1]
+{
+   jsCall(jsAccess($collection, 'sort'), []);
+}
+
+// =============================================================================
+// Array literal helper — fully-typed convenience for emitting `[a, b, c]`.
+// =============================================================================
+
+function meta::external::language::javascript::factories::jsArrayLit(elements: Expression[*]): ArrayLiteralExpression[1]
+{
+   ^ArrayLiteralExpression(elements=$elements);
+}

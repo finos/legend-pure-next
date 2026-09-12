@@ -26,11 +26,12 @@ website/yarn-error.log*
 
 # Build outputs (includes specification artifacts generated from m3.ttl)
 **/build/
+**/node_modules/
+**/generated/
 /shared/
 
 
 **/graal_dumps/
 
 # Platforms
-/platforms/typescript/node_modules/
-/platforms/typescript/dist/
+/platforms/javascript/node_modules/

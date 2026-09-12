@@ -9,7 +9,7 @@
 # events) so these recipes verify only end-to-end correctness, not JIT
 # behaviour. Use the JVM-mode `just truffle::test-pure-*` recipes for that.
 #
-# Requires GraalVM 25 with `native-image` on PATH; `_check-graalvm` (in the
+# Requires GraalVM 25 with `native-image` on PATH; `_depCheck_graalvm` (in the
 # parent truffle Justfile) catches a non-GraalVM JDK before any native-image
 # work starts.
 
@@ -20,7 +20,7 @@ native_root     := source_directory()
 truffle_root    := native_root
 repo_root       := truffle_root / ".." / ".."
 truffle         := truffle_root / "legend-pure-next-truffle"
-truffle_runtime := truffle / "legend-pure-next-truffle-platform" / "legend-pure-next-truffle-runtime"
+truffle_runtime := truffle / "legend-pure-next-truffle-runtime"
 spec            := repo_root / "pure" / "specification"
 compiler_src    := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 truffle_out     := truffle_root / "build"
@@ -39,7 +39,7 @@ substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\
 default: test
 
 # Build the GraalVM native-image binary (requires `native-image` on PATH).
-build: _check-pdbs _check-graalvm
+build: _depCheck_pdbs _depCheck_graalvm
     #!/usr/bin/env bash
     set -euo pipefail
     {{header}} 'build'
@@ -54,7 +54,7 @@ build: _check-pdbs _check-graalvm
     mkdir -p {{truffle_out}}
     cp {{truffle_runtime}}/target/pure-truffle-native {{truffle_native}}
 
-# `build` already file-checks bootstrap PDBs (via `_check-pdbs` from parent truffle Justfile) — alias of `build` for symmetry.
+# `build` already file-checks bootstrap PDBs (via `_depCheck_pdbs` from parent truffle Justfile) — alias of `build` for symmetry.
 # A self-sufficient build-from-clean is `just build-all` at the repo root, which builds bootstrap + truffle (jar) + native.
 build-all: build
 
@@ -134,7 +134,7 @@ test-pure-self-host: build
         {{truffle_out}}/native/compiler.pdb {{err_filter}}
 
 # Internal: fail loudly if shared/core.pdb or shared/compiler.pdb is missing.
-_check-pdbs:
+_depCheck_pdbs:
     #!/usr/bin/env bash
     if [[ ! -f "{{shared_out}}/core.pdb" || ! -f "{{shared_out}}/compiler.pdb" ]]; then
         echo "Error: <repo>/shared/core.pdb or compiler.pdb missing." >&2
@@ -143,7 +143,7 @@ _check-pdbs:
     fi
 
 # Internal: enforce GraalVM JDK at $JAVA_HOME (native-image needs it).
-_check-graalvm:
+_depCheck_graalvm:
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ -z "${JAVA_HOME:-}" ]]; then

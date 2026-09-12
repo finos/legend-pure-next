@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +17,12 @@ import meta::pure::test::pct::*;
 
 Profile meta::pure::test::pct::PCT
 {
-    stereotypes : [test, adapter, function, platformOnly, testQualifierProfile];
+    // `requiresCompiler` marks tests that dynamically compile source
+    // (compileSource): they need the compiler module loaded, which some
+    // harnesses cannot provide (e.g. the bootstrap surefire PCT runner —
+    // compiler.pdb is built AFTER the maven reactor). Harnesses without a
+    // compiler module SKIP these tests visibly rather than erroring.
+    stereotypes : [test, adapter, function, platformOnly, testQualifierProfile, requiresCompiler];
     tags: [grammarDoc, grammarCharacters, adapterName];
 }
 

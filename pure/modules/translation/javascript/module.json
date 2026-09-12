@@ -1,0 +1,5 @@
+{
+  "name": "javascript-translation",
+  "packagePattern": "(meta::external::language::javascript::translation)(::.*)?",
+  "dependencies": ["core", "core-tests", "javascript", "translation-shared"]
+}

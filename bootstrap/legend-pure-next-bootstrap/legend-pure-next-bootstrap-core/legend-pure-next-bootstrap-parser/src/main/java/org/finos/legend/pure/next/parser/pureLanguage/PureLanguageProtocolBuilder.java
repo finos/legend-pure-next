@@ -589,9 +589,12 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
         return buildSimpleExpression(ctx.simpleExpression());
     }
 
+    // The grammar RULE is named sliceExpression (after the Python-slice-looking
+    // syntax), but the semantics are range — `[start:stop:step]` is a collection
+    // GENERATOR — mirroring the reference AntlrContextToM3CoreInstance.
     protected ValueSpecification buildSliceExpression(final M3Parser.SliceExpressionContext ctx)
     {
-        return new FunctionInvocationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName("slice")._parametersValues(ListAdapter.adapt(ctx.expression()).collect(this::buildExpression));
+        return new FunctionInvocationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName("range")._parametersValues(ListAdapter.adapt(ctx.expression()).collect(this::buildExpression));
     }
 
     protected ValueSpecification buildLetExpression(final M3Parser.LetExpressionContext ctx)
@@ -662,13 +665,15 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
 
     protected TypeParameterImpl buildTypeParameter(final M3Parser.TypeParameterContext ctx)
     {
-        return new TypeParameterImpl()._name(ctx.identifier().getText());
+        // contravariant is Boolean[1] (mandatory) in the protocol — always set it.
+        return new TypeParameterImpl()._name(ctx.identifier().getText())._contravariant(false);
     }
 
     protected TypeParameterImpl buildTypeParameterWithVariance(final M3Parser.TypeParameterWithVarianceContext ctx)
     {
+        // contravariant is Boolean[1] (mandatory) — set it whether or not MINUS is present.
         TypeParameterImpl __result = new TypeParameterImpl()._name(ctx.identifier().getText());
-        if (ctx.MINUS() != null) __result._contravariant(true);
+        __result._contravariant(ctx.MINUS() != null);
         return __result;
     }
 

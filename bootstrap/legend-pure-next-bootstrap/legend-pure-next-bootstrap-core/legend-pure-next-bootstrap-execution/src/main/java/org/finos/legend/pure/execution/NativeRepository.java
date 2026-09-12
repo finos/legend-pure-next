@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -379,6 +380,8 @@ public class NativeRepository
         IONatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.io.FileSystemNatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.date.DateNatives.register(natives, lazyNatives, resolver);
+        org.finos.legend.pure.execution.natives.variant.VariantNatives.register(natives, lazyNatives, resolver);
+        org.finos.legend.pure.execution.natives.pdb.PdbBinaryNatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.meta.antlr.AntlrNatives.register(natives, lazyNatives, resolver, this);
         new CompilerNatives(parserExtensions).register(natives, lazyNatives, resolver);
     }

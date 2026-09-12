@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -75,13 +76,23 @@ public class CompressedArchiveWriter
             // restrict the extension-contributed sections (e.g. function
             // index) to the same scope. Without this, lean PDBs pick up
             // test-only function entries from the module's full metadata.
-            java.util.Set<String> writtenPaths = new java.util.HashSet<>();
+            // LinkedHashSet: iteration is the element WRITE order, which
+            // extensions use to emit their sections (functionIndex) in the
+            // same deterministic order as the element entries.
+            java.util.Set<String> writtenPaths = new java.util.LinkedHashSet<>();
 
+            // Serialize first WITHOUT writing: entry order is part of the wire
+            // contract — entries (and hence elementIndex/functionIndex) are
+            // SORTED by path so archives are deterministic regardless of the
+            // producing compiler's registration order. The writer writes what
+            // it is given faithfully — notably the stored root ('::') entry
+            // and the lean split's canonical-but-empty test packages (their
+            // children live in the companion -tests PDB); filtering belongs
+            // to the element COLLECTORS, not here.
+            java.util.TreeMap<String, Object[]> pending = new java.util.TreeMap<>();
             for (PackageableElement element : elements)
             {
                 String path = elementPath(element);
-
-                // Delegate serialization to extensions
                 String typeName = null;
                 byte[] data = null;
                 for (PDBExtension ext : extensions)
@@ -98,10 +109,16 @@ public class CompressedArchiveWriter
                 {
                     continue; // No extension handles this element
                 }
+                pending.put(path, new Object[]{typeName, data});
+            }
 
+            for (java.util.Map.Entry<String, Object[]> e : pending.entrySet())
+            {
+                String path = e.getKey();
+                String typeName = (String) e.getValue()[0];
+                byte[] data = (byte[]) e.getValue()[1];
                 elementEntries.add(new String[]{path, typeName});
                 writtenPaths.add(path);
-
                 // Entry name format: "elements/meta/pure/metamodel/type/ElementName.TypeName"
                 String entryPath = "elements/" + path.replace("::", "/") + "." + typeName;
                 ZipEntry entry = new ZipEntry(entryPath);

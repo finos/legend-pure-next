@@ -1,0 +1,110 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::metamodel::function::*;
+import meta::pure::protocol::*;
+import meta::pure::test::pct::*;
+
+// Compile Pure source ON THE FLY and return the compiled elements as
+// SELF-CONTAINED VALUES — executable via evaluate / eval, but deliberately
+// NOT registered anywhere: the metadata module registry is immutable after
+// platform boot, and this native mutates no global state. Dynamic elements
+// are consequently not addressable via pathToElement and cannot serve as
+// dependencies of later compiles. This is THE dynamic-evaluation primitive —
+// see meta::pure::functions::lang::tests::evaluate for the PCT coverage.
+// Each platform backs it with its own compiler entry point: the interpreters
+// compile in-memory; the JavaScript host parses with the bundled parser,
+// compiles with the translated compiler, and translates the result to
+// JavaScript for invocation.
+// `dependencies` names the BOOT-REGISTERED metadata modules (loaded .pdbs)
+// the source compiles against — the in-process equivalent of the CLI's --pdb
+// flags. Naming a module the host hasn't loaded fails loudly.
+Class meta::pure::functions::meta::CompileSourceResult
+{
+   // the compiled elements (empty when the compile failed)
+   elements : PackageableElement[*];
+   // compile diagnostics (empty on success) — errors are DATA, not exceptions:
+   // a failed compile is a normal outcome of compiling user-provided source
+   errors   : String[*];
+}
+
+// The native compiles an already-parsed PureFile — the ONLY platform surface.
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::compileSource(file:PureFile[1], dependencies:String[*]):meta::pure::functions::meta::CompileSourceResult[1];
+
+// String convenience: parse + compile. Plain Pure code (shared by every
+// platform), so hosts implement exactly one compilation native.
+function <<PCT.function>> meta::pure::functions::meta::compileSource(sourceId:String[1], content:String[1], dependencies:String[*]):meta::pure::functions::meta::CompileSourceResult[1]
+{
+   meta::pure::functions::meta::compileSource(meta::pure::functions::meta::parse($sourceId, $content), $dependencies);
+}
+
+
+function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::meta::tests::compileSource::testCompileSourceFromPureFile<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(6, $f->eval(|
+        let file = meta::pure::functions::meta::parse('csFromFile',
+                      'function cs::pf::triple(x:Integer[1]):Integer[1] { $x * 3 }');
+        let r = meta::pure::functions::meta::compileSource($file, 'core');
+        assert($r.errors->isEmpty());
+        $r.elements->filter(e | $e->instanceOf(PackageableFunction))->cast(@PackageableFunction<Any>)->toOne()
+            ->evaluate([^List<Integer>(values=2)])->cast(@Integer)->toOne();
+    ));
+}
+
+
+function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::meta::tests::compileSource::testCompileSourceReturnsCompiledElements<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(['cs::t1', 'cs::t1::twice_Integer_1__Integer_1_'], $f->eval(|
+        let r = meta::pure::functions::meta::compileSource('csReturns',
+                     'function cs::t1::twice(x:Integer[1]):Integer[1] { $x * 2 }', 'core');
+        assert($r.errors->isEmpty());
+        // the compiled packages and the function come back as values, in path order
+        $r.elements->map(e | $e->elementToPath())->sort()->filter(p | $p != 'cs');
+    ));
+}
+
+// The platform graph is IMMUTABLE: compiling must not register anything —
+// the compiled elements are valid only as the returned values of THIS call.
+function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::meta::tests::compileSource::testCompileSourceDoesNotMutatePlatformGraph<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(true, $f->eval(|
+        meta::pure::functions::meta::compileSource('csIsolated',
+            'function cs::isolated::hidden(x:Integer[1]):Integer[1] { $x }', 'core');
+        // after the call, the compiled path is NOT addressable in the graph
+        assertError(
+            | pathToElement('cs::isolated::hidden_Integer_1__Integer_1_'),
+            'Element not found: cs::isolated::hidden_Integer_1__Integer_1_');
+    ));
+}
+
+function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::meta::tests::compileSource::testCompileSourceUnknownDependencyFails<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(true, $f->eval(|
+        assertError(
+            | meta::pure::functions::meta::compileSource('csBadDep',
+                  'function cs::t2::id(x:Integer[1]):Integer[1] { $x }', 'no-such-module'),
+            'compileSource: dependency module \'no-such-module\' is not loaded');
+    ));
+}
+
+function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::meta::tests::compileSource::testCompileSourceCompileErrorFails<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(true, $f->eval(|
+        let r = meta::pure::functions::meta::compileSource('csBadSource',
+                     'function cs::t3::broken(x:Integer[1]):Integer[1] { $x + \'oops\' }', 'core');
+        assertEquals('No matching function \'plus\' found for argument types (Integer[1], String[1]) (at csBadSource:1c52-1c62)',
+                     $r.errors->toOne());
+        $r.elements->isEmpty();
+    ));
+}

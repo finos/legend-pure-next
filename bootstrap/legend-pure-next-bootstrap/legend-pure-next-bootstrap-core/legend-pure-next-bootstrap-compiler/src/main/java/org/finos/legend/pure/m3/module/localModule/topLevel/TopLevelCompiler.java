@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -102,7 +103,12 @@ public class TopLevelCompiler
     public TopLevelCompiler(Package root, List<? extends CompilerExtension> extensions)
     {
         this.root = root;
-        this.elementIndex = Maps.mutable.empty();
+        // Registration-ordered (LinkedHashMap-backed): elementPaths() iteration
+        // is the declaration/registration order, so every order-sensitive
+        // derived artifact (PDB element entries, elementIndex, functionIndex)
+        // is deterministic and reproducible by the ports — a hash-ordered
+        // registry would leak arbitrary iteration order into golden bytes.
+        this.elementIndex = org.eclipse.collections.impl.map.mutable.MapAdapter.adapt(new LinkedHashMap<>());
         this.pureLanguageCompilerExtension = new PureLanguageCompilerExtension();
         MutableList<CompilerExtension> allExtensions = Lists.mutable.with(this.pureLanguageCompilerExtension);
         allExtensions.addAllIterable(extensions);

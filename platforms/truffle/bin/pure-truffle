@@ -44,4 +44,4 @@ exec java \
     -XX:+EnableJVMCI \
     -XX:+UseJVMCICompiler \
     -cp "${CLASSPATH}" \
-    org.finos.legend.pure.truffle.PureCompileMain "$@"
+    org.finos.legend.pure.truffle.cli.PureCompileMain "$@"

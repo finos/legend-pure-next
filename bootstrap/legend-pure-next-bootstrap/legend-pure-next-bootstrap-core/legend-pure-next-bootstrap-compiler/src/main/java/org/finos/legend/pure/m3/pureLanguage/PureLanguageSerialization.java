@@ -189,10 +189,21 @@ public class PureLanguageSerialization
                 {
                     return archiveSections(all);
                 }
-                List<FunctionIndexEntry> filtered = new java.util.ArrayList<>();
+                // Order the index by keepPaths iteration (the caller's element
+                // WRITE order — see CompressedArchiveWriter's LinkedHashSet),
+                // not by the metadata map's internal order, so the emitted
+                // functionIndex bytes are deterministic and match what the
+                // ports produce from the same element list.
+                java.util.Map<String, FunctionIndexEntry> byPath = new java.util.LinkedHashMap<>();
                 for (FunctionIndexEntry e : all)
                 {
-                    if (keepPaths.contains(e.fullPath()))
+                    byPath.putIfAbsent(e.fullPath(), e);
+                }
+                List<FunctionIndexEntry> filtered = new java.util.ArrayList<>();
+                for (String path : keepPaths)
+                {
+                    FunctionIndexEntry e = byPath.get(path);
+                    if (e != null)
                     {
                         filtered.add(e);
                     }

@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,6 +63,14 @@ public final class ModelMetadataAccess implements MetadataAccess
     {
         return Lists.mutable.<T>empty()
                 .withAll(this.modules.flatCollect(m -> m.getMetadataAccessExtension(clz)).select(Objects::nonNull));
+    }
+
+    @Override
+    public java.util.Set<String> moduleNames()
+    {
+        java.util.Set<String> names = new java.util.HashSet<>();
+        this.modules.forEach(m -> names.add(m.getName()));
+        return names;
     }
 
     @Override

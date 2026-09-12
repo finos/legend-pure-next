@@ -91,7 +91,7 @@ build-tests:
 # Needs core-tests.pdb because runTests is <<test.TestDependency>>.
 
 # Run all Pure tests under meta::external::language::java via pure-truffle.
-test-all: build-tests _check-runtime-pdbs
+test-all: build-tests _depCheck_runtime-pdbs
     @{{header}} 'test-all'
     @{{substep}} 'runTests meta::external::language::java (Truffle)'
     {{pure_truffle}} execute \
@@ -103,7 +103,7 @@ test-all: build-tests _check-runtime-pdbs
         --args "meta::external::language::java" {{err_filter}}
 
 # Internal: fail loudly if PDBs / pure-truffle aren't staged.
-_check-runtime-pdbs:
+_depCheck_runtime-pdbs:
     #!/usr/bin/env bash
     if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
         echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
  Copyright 2026 Goldman Sachs
+ ©2026 JP Morgan Chase & Co. All rights reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -42,18 +43,6 @@
         <dependency>
             <groupId>org.finos.legend.pure</groupId>
             <artifactId>legend-pure-next-truffle-runtime</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <!-- Truffle-pdb-generation: holds PureSequence + the PDB value/runtime
-             types the truffle-runtime depends on. Pulled in transitively by
-             truffle-runtime, but declared explicitly so the extension's
-             compile classpath doesn't depend on transitive resolution through
-             a `provided` edge. -->
-        <dependency>
-            <groupId>org.finos.legend.pure</groupId>
-            <artifactId>legend-pure-next-truffle-pdb-generation</artifactId>
             <version>0.0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>

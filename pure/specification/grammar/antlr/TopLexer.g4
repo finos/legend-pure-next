@@ -16,8 +16,16 @@ lexer grammar TopLexer;
 //   NEWLINE         – line break
 // ==========================================================================
 
+// Section header — '###Name' at start of input or after a NEWLINE.
+// The lexer disambiguates by declaration order: at line start, both SECTION_HEADER
+// and CONTENT_LINE match `###Pure` with equal length (CONTENT_LINE's char set
+// includes `#`), but SECTION_HEADER wins as the earlier-declared rule. Mid-line
+// `###` is consumed by CONTENT_LINE's longest-match before SECTION_HEADER ever
+// gets to try. This replaces the target-specific semantic predicate
+// `{getCharPositionInLine() == 0}?` so the same grammar works for Java and
+// JavaScript codegen without an inline-action divergence.
 SECTION_HEADER
-    : {getCharPositionInLine() == 0}? '###' IDENTIFIER
+    : '###' IDENTIFIER
     ;
 
 IMPORT_STATEMENT
@@ -54,12 +62,15 @@ BLOCK_COMMENT
     : '/*' .*? '*/' -> skip
     ;
 
-// Any text (line) that does not start with ###, //, or a string literal.
-// `'` is excluded so the STRING_CONTENT rule above can start matching at
-// the opening quote — otherwise CONTENT_LINE would greedy-eat the `'` and
-// the lexer would never see the start of a string literal.
+// Any text (line) that doesn't start with `///`, a string literal, or end at
+// `;`/`\n`. `'` is excluded so STRING_CONTENT can match the opening quote —
+// otherwise CONTENT_LINE would greedy-eat the `'` and the lexer would never
+// see the start of a string literal. `#` is INCLUDED in the char set (unlike
+// the historical exclusion) so mid-line `###` falls into CONTENT_LINE rather
+// than starting a SECTION_HEADER — see SECTION_HEADER's doc above for the
+// declaration-order tie-breaking that lets a line-start `###Name` still win.
 CONTENT_LINE
-    : ~[;/\r\n#']+
+    : ~[;/\r\n']+
     ;
 
 // A '/' that is not part of a comment

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
  Copyright 2026 Goldman Sachs
+ ©2026 JP Morgan Chase & Co. All rights reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -37,6 +38,6 @@
 
     <modules>
         <module>legend-pure-next-truffle-extension-java</module>
-        <module>legend-pure-next-truffle-extension-typescript</module>
+        <module>legend-pure-next-truffle-extension-javascript</module>
     </modules>
 </project>

@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -139,11 +140,24 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
               let tvCtx = $tvResult.context;
               let restored = ^$tvCtx(currentElementPath = $saved);
               let si = compileSourceInformation($pp.p_sourceInformation, $context);
+              // The default-value lambda's AtomicValue carries the enum
+              // value's position too (Java EnumerationHandler stamps it at
+              // creation; the Pure skeleton is built from bare names, so the
+              // position lands here in pass 2 with the property's own SI).
+              let dv = $prop.defaultValue;
+              let dvStamped = if($dv->isEmpty() || $si->isEmpty(),
+                  | $dv,
+                  | let lam = $dv->toOne()->cast(@LambdaFunction<Any>);
+                    ^$lam(expressionSequence = $lam.expressionSequence->map(e |
+                        if($e->instanceOf(AtomicValue),
+                            | let av = $e->cast(@AtomicValue); ^$av(sourceInformation = $si->toOne());,
+                            | $e))););
               ^$acc(
                   values += ^$prop(
                       stereotypes = $stereoResult.values,
                       taggedValues = $tvResult.values,
-                      sourceInformation = $si
+                      sourceInformation = $si,
+                      defaultValue = $dvStamped
                   ),
                   context = $restored
               );

@@ -59,6 +59,7 @@
       } ],
       "typeParameters" : [ {
         "_type" : "TypeParameter",
+        "contravariant" : false,
         "name" : "T"
       } ]
     } ],

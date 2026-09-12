@@ -16,8 +16,8 @@ set shell := ["bash", "-c"]
 # Sibling modules consumed by `build-all` (relative paths from this Justfile).
 # `build` itself only checks for the produced PDBs and fails loudly — these
 # mods are used solely to make `build-all` self-sufficient.
-mod _dep_language_java      "../../language/java/Justfile"
-mod _dep_translation_shared "../shared/Justfile"
+mod _mod_language_java      "../../language/java/Justfile"
+mod _mod_translation_shared "../shared/Justfile"
 
 trn_root       := source_directory()
 repo_root      := trn_root / ".." / ".." / ".." / ".."
@@ -54,7 +54,7 @@ build:
 # Still needs bootstrap PDBs (core.pdb / core-tests.pdb) — `build` checks for those and fails loudly.
 
 # Build sibling-module deps (language_java, translation_shared) first, then this module.
-build-all: _dep_language_java::build _dep_translation_shared::build build
+build-all: _mod_language_java::build _mod_translation_shared::build build
 
 # Compile via the Pure compiler running on Truffle.
 build-truffle:
@@ -102,7 +102,7 @@ test-all: test-translation test-pure-runtime
 # assertions, in-process javac round-trips, and per-PCT-test wrappers (code/tests/*).
 
 # Run the translator's own <<test.Test>> suite (meta::external::language::java::translation).
-test-translation: build-tests _check-runtime-pdbs
+test-translation: build-tests _depCheck_runtime-pdbs
     @{{header}} 'test-translation'
     @{{substep}} 'runTests meta::external::language::java::translation (Truffle)'
     {{pure_truffle}} execute \
@@ -126,7 +126,7 @@ test-translation: build-tests _check-runtime-pdbs
 test-pure-runtime: test-pure-runtime-testFunctions
 
 # Run runTests over meta::pure::functions via Truffle, with the java-translation extension loaded.
-test-pure-runtime-testFunctions: build-tests _check-runtime-pdbs
+test-pure-runtime-testFunctions: build-tests _depCheck_runtime-pdbs
     @{{header}} 'test-pure-runtime-testFunctions'
     @{{substep}} 'runTests meta::pure::functions (Truffle, extension loaded)'
     {{pure_truffle}} execute \
@@ -141,7 +141,7 @@ test-pure-runtime-testFunctions: build-tests _check-runtime-pdbs
         --args "meta::pure::functions" {{err_filter}}
 
 # Run PCT tests over meta::pure::functions via the translator adapter (lambdas -> Java -> javac -> invoke).
-test-pure-runtime-PCTs: build-tests _check-runtime-pdbs
+test-pure-runtime-PCTs: build-tests _depCheck_runtime-pdbs
     @{{header}} 'test-pure-runtime-PCTs'
     @{{substep}} 'runPCTTests meta::pure::functions (Truffle, translator adapter)'
     # Uses runPCTTestsViaTranslator (in code/runtime.pure) which delegates to
@@ -170,7 +170,7 @@ test-pure-runtime-PCTs: build-tests _check-runtime-pdbs
 # quoting wrapper, no `\n` escaping), so a plain redirect is enough.
 
 # Build the Pure -> Java translation gallery as a self-contained HTML page.
-gallery: build-tests _check-runtime-pdbs
+gallery: build-tests _depCheck_runtime-pdbs
     @{{header}} 'gallery'
     @{{substep}} 'render Pure -> Java gallery -> shared/java-translation-gallery.html'
     {{pure_truffle}} execute \
@@ -189,7 +189,7 @@ gallery: build-tests _check-runtime-pdbs
     @echo "wrote {{shared_out}}/java-translation-gallery.html ($(wc -c < {{shared_out}}/java-translation-gallery.html) bytes)"
 
 # Internal: fail loudly if the PDBs the runtime recipes need aren't staged.
-_check-runtime-pdbs:
+_depCheck_runtime-pdbs:
     #!/usr/bin/env bash
     if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
         echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2

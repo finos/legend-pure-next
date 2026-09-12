@@ -1,0 +1,185 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::javascript::*;
+import meta::external::language::javascript::factories::*;
+import meta::external::language::javascript::metamodel::*;
+import meta::external::language::javascript::serialization::*;
+import meta::external::language::javascript::translation::*;
+import meta::external::language::javascript::translation::pdb::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::translation::shared::*;
+
+// ============================================================================
+// Bulk PDB → JavaScript translation. Walks every PackageableElement under
+// `rootPackagePath` and emits a single JS source file containing:
+//
+//   - Nothing for a Pure `Class` — instances are plain object literals, and
+//     JS has no `interface`/`type`.
+//   - One `const <Name>` per Pure `Enumeration`, mapping each enum value
+//     name to `{name: '<value>'}`. Matches the in-memory translator's
+//     enum-value shape (see classInstanceToObjectLiteral).
+//   - One `function <name>(...)` per Pure `UserDefinedFunction`, translated
+//     through the same `translateFunction` pipeline used by the
+//     per-test adapter. Bodies are emitted unchanged from the regular
+//     translation path.
+//
+// Entry point: `translatePackageToJs(rootPackagePath)` returns the bundled JS
+// source as a single String.
+//
+// Limitations:
+//   - Constraints, associations, and qualified properties are not emitted.
+//   - Name collisions across packages use the short name only — the bundle
+//     assumes unique short names within `rootPackagePath`. If a PDB has
+//     duplicates, only the last definition under the same short name wins.
+// ============================================================================
+
+function <<test.TestDependency>> meta::external::language::javascript::translation::pdb::translatePackageToJs(rootPackagePath: String[1]): String[1]
+{
+   let root = pathToElement($rootPackagePath)->cast(@meta::pure::metamodel::Package);
+   let elements = $root->collectAllElements();
+   let header = '// Auto-generated from Pure PDB rooted at ' + $rootPackagePath + '\n' +
+                '// Source: pure/modules/translation/javascript/pure/translatePackageToJs.pure\n\n';
+   let parts = $elements->map(e | $e->translateElement());
+   let nonEmpty = $parts->filter(p | $p != '');
+   $header + $nonEmpty->joinStrings('\n\n');
+}
+
+// Walk a Package recursively, returning every PE we know how to translate:
+// Classes, Enumerations, UserDefinedFunctions. Skips functions whose body
+// is wholly built from natives the translator already covers (everything is
+// included by default; the runtime preamble carries the natives).
+function <<test.TestDependency>> meta::external::language::javascript::translation::pdb::collectAllElements(
+   pkg: meta::pure::metamodel::Package[1]
+): meta::pure::metamodel::PackageableElement[*]
+{
+   let direct = $pkg.children
+                   ->map(c | meta::pure::test::resolveChild($c))
+                   ->filter(e | $e->isTranslatableElement());
+   let subPackages = $pkg.children
+                        ->map(c | meta::pure::test::resolveChild($c))
+                        ->filter(e | $e->instanceOf(meta::pure::metamodel::Package))
+                        ->cast(@meta::pure::metamodel::Package);
+   concatenate($direct, $subPackages->map(p | $p->collectAllElements()));
+}
+
+function meta::external::language::javascript::translation::pdb::isTranslatableElement(
+   e: meta::pure::metamodel::PackageableElement[1]
+): Boolean[1]
+{
+   $e->instanceOf(meta::pure::metamodel::function::UserDefinedFunction)
+      || $e->instanceOf(meta::pure::metamodel::type::Class)
+      || $e->instanceOf(meta::pure::metamodel::type::Enumeration);
+}
+
+// Dispatch on element kind. Returns '' for elements we skip silently (e.g.
+// abstract / typemodifiers-marked classes that wouldn't translate cleanly).
+function meta::external::language::javascript::translation::pdb::translateElement(
+   e: meta::pure::metamodel::PackageableElement[1]
+): String[1]
+{
+   if ($e->instanceOf(meta::pure::metamodel::function::UserDefinedFunction),
+      | let udf = $e->cast(@meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>);
+        $udf->translateUdfElement();,
+   |if ($e->instanceOf(meta::pure::metamodel::type::Enumeration),
+      | let en = $e->cast(@meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>);
+        $en->translateEnumeration();,
+   |if ($e->instanceOf(meta::pure::metamodel::type::Class),
+      | let cls = $e->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>);
+        $cls->translateClass();,
+      | ''
+   )));
+}
+
+// Pure Classes have no runtime representation in the emitted JavaScript —
+// instances are plain object literals built by the translator. There is no
+// `interface`/`type` in JS, so a Class emits nothing (the '' is dropped by the
+// caller's non-empty filter).
+// Publish the class's static metadata into the path-keyed registry
+// (`__registerClass('<path>', {properties: [{name, eval}], …})`) so reflective
+// `<Class>.properties->…->eval(instance)` chains and QP dispatch
+// (`__classRef(path).qualifiedProperties…`) resolve in the bundle, exactly as
+// the per-lambda adapter emits them next to each translated lambda. Classes
+// whose property/QP bodies the translator can't render yet degrade to a
+// comment — references then fall back to the `__pureResolve` proxy.
+function meta::external::language::javascript::translation::pdb::translateClass(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   let path = $cls->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
+   let attempt = tryEval(|
+      jsSourceFile('translated.js', [$cls->translateClassDecl(defaultConvention())])->serialize());
+   if ($attempt.failure->isNotEmpty(),
+      | '// class registration failed for ' + $path + ': ' + $attempt.failure->toOne().message,
+      | '// Class ' + $path + '\n' + $attempt.value);
+}
+
+// `Enum Pkg::Color { RED, GREEN }` → the same SELF-DESCRIBING const the
+// per-lambda adapter emits (translateEnumerationDecl): each member carries
+// `{ name, classifierGenericType: { type: <enum ref> } }`, so enum-value
+// reflection — `genericType()`, `type()`, `instanceOf`, equality across
+// enumerations — works on values read from the bundle, not just `$v.name`.
+function meta::external::language::javascript::translation::pdb::translateEnumeration(
+   en: meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   let decl = $en->translateEnumerationDecl(defaultConvention());
+   let stmt = ^$decl(modifiers = ModifierFlag.Export);
+   '// Enumeration ' + $en->elementToPath() + '\n' +
+   jsSourceFile('translated.js', [$stmt])->serialize();
+}
+
+// Translate a UDF through the existing `translateFunction` pipeline, then
+// serialize the resulting SourceFile. Strip the `export function execute(...)`
+// wrapper and rename to the UDF's short name so the bundle reads like a
+// hand-written TS module.
+function meta::external::language::javascript::translation::pdb::translateUdfElement(
+   udf: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]
+): String[1]
+{
+   let path = $udf->elementToPath();
+   // Unique per-overload JS identifier (signature-mangled); short-name aliases
+   // for non-overloaded functions are emitted once, by translatePackageToJs.
+   let jsName = jsUdfName($udf);
+   let attempt = tryEval(| $udf->renderUdfTs($jsName));
+   if ($attempt.failure->isNotEmpty(),
+      | '// translation failed for ' + $path + ': ' + $attempt.failure->toOne().message,
+      | '// ' + $path + '\n' + $attempt.value);
+}
+
+function meta::external::language::javascript::translation::pdb::renderUdfTs(
+   udf: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
+   shortName: String[1]
+): String[1]
+{
+   // safeJsName escapes Pure parameter names that clash with TS reserved
+   // words (`default`, `class`, `function`, …) — the body's variable refs
+   // are already mangled the same way (see translateExpression's
+   // VariableExpression arm), so signature ↔ body stays consistent.
+   //
+   // conventionForRoot (not defaultConvention) so lambdas inside the body get
+   // wrapLambdaWithAst's metadata address (`<udfPath>$lambda/<idx>`) — bare
+   // arrows can't answer reflective reads (.expressionSequence, genericType).
+   let jsParams = $udf.parameters->map(p | jsParam(safeJsName($p.name)));
+   let body = $udf.expressionSequence->buildJsFunctionBody(conventionForRoot($udf)->withTypeVarWitness($udf.parameters));
+   let fn = ^FunctionDeclaration(
+      name           = $shortName,
+      modifiers      = [ModifierFlag.Export],
+      parameters     = $jsParams,
+      body           = $body
+   );
+   jsSourceFile('translated.js', [$fn])->serialize();
+}

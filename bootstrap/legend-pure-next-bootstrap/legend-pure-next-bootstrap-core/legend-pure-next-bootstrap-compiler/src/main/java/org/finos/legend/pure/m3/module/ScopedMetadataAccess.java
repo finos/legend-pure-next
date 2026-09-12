@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -69,6 +70,15 @@ public final class ScopedMetadataAccess implements MetadataAccess
     public <T extends MetadataAccessExtension> MutableList<T> getMetadataAccessExtension(Class<T> clz)
     {
         return self.getMetadataAccessExtension(clz).withAll(this.dependencies.flatCollect(x -> x.getMetadataAccessExtension(clz)).select(Objects::nonNull));
+    }
+
+    @Override
+    public java.util.Set<String> moduleNames()
+    {
+        java.util.Set<String> names = new java.util.HashSet<>();
+        names.add(this.self.getName());
+        this.dependencies.forEach(m -> names.add(m.getName()));
+        return names;
     }
 
     @Override

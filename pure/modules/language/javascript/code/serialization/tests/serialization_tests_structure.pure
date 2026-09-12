@@ -1,0 +1,87 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::javascript::factories::*;
+import meta::external::language::javascript::metamodel::*;
+import meta::external::language::javascript::serialization::*;
+import meta::external::language::javascript::serialization::tests::*;
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::emptyClass(): Boolean[1]
+{
+   testStmt('class Empty {}', jsClass('Empty', []));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::exportedEmptyClass(): Boolean[1]
+{
+   testStmt('export class Empty {}', jsExportedClass('Empty', []));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::classWithOneProperty(): Boolean[1]
+{
+   testStmt('''
+            class Person {
+              name;
+            }''',
+            jsClass('Person', [jsProperty('name')]));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::classWithOneMethod(): Boolean[1]
+{
+   testStmt('''
+            class Greeter {
+              greet(name) {
+                return name;
+              }
+            }''',
+            jsClass('Greeter', [
+               jsMethod('greet',
+                  [jsParam('name')],
+                  jsBlock([jsReturn(jsId('name'))]))
+            ]));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::simpleImport(): Boolean[1]
+{
+   testStmt(
+      'import { Foo } from \'./bar.js\';',
+      jsImport('./bar.js', [jsNamedImport('Foo')]));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::multipleNamedImports(): Boolean[1]
+{
+   testStmt(
+      'import { Foo, Bar, Baz } from \'./things.js\';',
+      jsImport('./things.js', [jsNamedImport('Foo'), jsNamedImport('Bar'), jsNamedImport('Baz')]));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::greeterEndToEnd(): Boolean[1]
+{
+   let method = jsMethod(
+      'greet',
+      [jsParam('name')],
+      jsBlock([
+         jsReturn(jsBinary(jsStrLit('Hello, '), '+', jsId('name')))
+      ])
+   );
+   let cls = jsExportedClass('Greeter', [$method]);
+   let sf  = jsSourceFile('greeter.ts', [$cls]);
+   testFile('''
+            export class Greeter {
+              greet(name) {
+                return 'Hello, ' + name;
+              }
+            }
+            ''',
+            $sf);
+}

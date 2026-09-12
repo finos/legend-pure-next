@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -2854,7 +2855,7 @@ function <<access.private>> meta::external::language::java::translation::buildSi
    // referenced via `fe.func`. Each becomes a top-level Java helper class
    // with one `public static execute(...)` method, so call sites translated
    // via {@link translateUdfCall} can invoke `HelperClass.execute(args)`.
-   // Mirrors the TypeScript translator's collectReferencedUdfs/translateUdf
+   // Mirrors the JavaScript translator's collectReferencedUdfs/translateUdf
    // pattern; tests like {@code testLetAsLastStatement} that delegate to a
    // sibling UDF would otherwise fail with "No coder for Pure function".
    let udfs = $conv->collectReferencedUdfs(

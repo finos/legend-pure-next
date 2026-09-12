@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2026 Goldman Sachs
+ ©2026 JP Morgan Chase & Co. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-truffle-extension</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-truffle-extension-javascript</artifactId>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Truffle - Extension - JavaScript</name>
+    <description>
+        Truffle native bridge for `meta::external::language::javascript::compileAndExecute`.
+        Evaluates the translator-emitted (plain JavaScript) source in a long-lived
+        GraalJS polyglot Context — no transpile step — and invokes a named
+        top-level function on it. Registered via the TruffleNativesExtension SPI.
+
+        Build pre-req: the `runtime-lib.js` and `antlr-bundle.js` resources from
+        pure/modules/translation/javascript/js are copied into target/classes at
+        `process-resources` (see the maven-resources-plugin config below).
+    </description>
+
+    <dependencies>
+        <!-- Truffle runtime: provides PureNode, NativeNodeRegistry, the
+             TruffleNativesExtension SPI, plus PureSequence and the
+             CollectionHelper / StringHelper utility classes. -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-truffle-runtime</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Shared Variant/JSON value classes (PureVariant, JsonValue) used by
+             the JS->Truffle marshaller. Provided at runtime via the fat jar
+             (truffle-runtime already depends on bootstrap-execution). -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-bootstrap-execution</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.graalvm.truffle</groupId>
+            <artifactId>truffle-api</artifactId>
+            <version>${truffle.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Polyglot API: `Context`, `Source`, `Value`. Already on the
+             runtime classpath via legend-pure-next-truffle-runtime. -->
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>polyglot</artifactId>
+            <version>${truffle.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- GraalJS engine. Brought in by this extension so the runtime fat
+             jar stays JS-free unless this extension is on the classpath. -->
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>js-community</artifactId>
+            <version>${truffle.version}</version>
+            <type>pom</type>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit-jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.15.0</version>
+                <configuration>
+                    <release>25</release>
+                </configuration>
+            </plugin>
+            <!-- Copies `runtime-lib.js` from pure/modules/translation/javascript/js
+                 and the antlr bundle into target/classes so they ship inside the
+                 extension jar as classpath resources. The translated code is plain
+                 JS, so no TypeScript compiler is bundled — the native eval's it
+                 directly. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-runtime-resources</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../../../../../pure/modules/translation/javascript/js</directory>
+                                    <includes>
+                                        <include>runtime-lib.js</include>
+                                    </includes>
+                                </resource>
+                                <!-- ANTLR bundle (parser half): vendored antlr4 runtime +
+                                     generated JS Top/M3 lexers and parsers + the 17 ANTLR-bridge
+                                     native impls, in a single no-imports IIFE. Built by
+                                     `just modules::translation_javascript::antlr-bundle`, which
+                                     needs only pnpm + the antlr4 jar + the .g4 grammars — no PDBs.
+                                     That is what lets this jar be packaged before javascript.pdb
+                                     exists.
+
+                                     parser-mappings-bundle.js (the mappings half) is OPTIONAL and
+                                     usually absent here: it needs pure-truffle and the javascript
+                                     translation PDBs, which are produced downstream of this build.
+                                     A missing include is a silent skip, and the extension installs
+                                     a throwing `__pureParseTop` stub when it is not on the
+                                     classpath — so only Pure's `parse` is affected. Rebuild the
+                                     extension after `parser-mappings-bundle` to pick it up. -->
+                                <resource>
+                                    <directory>${project.basedir}/../../../../../pure/modules/translation/javascript/js/build</directory>
+                                    <includes>
+                                        <include>antlr-bundle.js</include>
+                                        <include>parser-mappings-bundle.js</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Stages GraalJS transitive runtime jars (js-language, regex,
+                 icu4j, ...) into target/dependency/ so the Truffle launcher
+                 wrapper can copy them next to the extension jar. The
+                 `js-community` POM dep itself is excluded — only the real jars
+                 it pulls in are needed at runtime. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-graaljs-runtime-deps</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/dependency</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                            <excludeGroupIds>org.finos.legend.pure</excludeGroupIds>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

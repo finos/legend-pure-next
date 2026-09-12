@@ -1,0 +1,138 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// .fbs schema parser in Pure — input layer of the self-hosted PDB writer
+// GENERATOR. Counterpart of the reference FbsSchemaParser.java, extended to
+// also capture field ids/types/vector-ness (the reference discards them because
+// the generated Java reads slot ids from flatc-generated accessors; our
+// generator emits fbBuilder calls directly, so it needs the ids). m3.fbs is
+// machine-generated (explicit `(id: N)` on every field, one declaration per
+// line), so a line-based parse is exact — no regex needed.
+
+// Parse state threaded through the line fold.
+Class meta::pure::compiler::pdb::schema::ParseState
+{
+   tables       : meta::pure::compiler::pdb::schema::FbsTable[*];
+   unions       : meta::pure::compiler::pdb::schema::FbsUnion[*];
+   enums        : meta::pure::compiler::pdb::schema::FbsEnum[*];
+   currentTable : String[0..1];
+   currentFields: meta::pure::compiler::pdb::schema::FbsField[*];
+}
+
+function meta::pure::compiler::pdb::schema::startsWith(s:String[1], prefix:String[1]):Boolean[1]
+{
+   ($s->length() >= $prefix->length()) && ($s->substring(0, $prefix->length()) == $prefix);
+}
+
+function meta::pure::compiler::pdb::schema::parseFbs(src:String[1]):meta::pure::compiler::pdb::schema::FbsSchema[1]
+{
+   let end = $src->replace('\r', '')->split('\n')
+      ->map(l | $l->trim())
+      ->filter(l | ($l != '') && !$l->meta::pure::compiler::pdb::schema::startsWith('//'))
+      ->fold({line, s | $s->meta::pure::compiler::pdb::schema::parseLine($line)},
+             ^meta::pure::compiler::pdb::schema::ParseState(tables = [], unions = [], enums = [], currentFields = []));
+   ^meta::pure::compiler::pdb::schema::FbsSchema(tables = $end.tables, unions = $end.unions, enums = $end.enums);
+}
+
+function meta::pure::compiler::pdb::schema::parseLine(s:meta::pure::compiler::pdb::schema::ParseState[1], line:String[1]):meta::pure::compiler::pdb::schema::ParseState[1]
+{
+   if($line->meta::pure::compiler::pdb::schema::startsWith('table '),
+      // `table Name {`
+      | ^$s(currentTable = $line->substring(6, $line->indexOf('{'))->trim(), currentFields = []),
+      | if($line->meta::pure::compiler::pdb::schema::startsWith('union '),
+         // `union Name { A, B, C }` (single line)
+         | let name    = $line->substring(6, $line->indexOf('{'))->trim();
+           let members = $line->substring($line->indexOf('{') + 1, $line->indexOf('}'))
+                              ->split(',')->map(m | $m->trim())->filter(m | $m != '');
+           ^$s(unions = $s.unions->concatenate(^meta::pure::compiler::pdb::schema::FbsUnion(name = $name, members = $members)));,
+         | if($line->meta::pure::compiler::pdb::schema::startsWith('enum '),
+            // `enum Name : byte { A, B, C }` (single line)
+            | let name    = $line->substring(5, $line->indexOf(':'))->trim();
+              let values  = $line->substring($line->indexOf('{') + 1, $line->indexOf('}'))
+                                 ->split(',')->map(m | $m->trim())->filter(m | $m != '');
+              ^$s(enums = $s.enums->concatenate(^meta::pure::compiler::pdb::schema::FbsEnum(name = $name, values = $values)));,
+            | if($line == '}',
+               // close the current table (a lone `}` outside a table is ignored)
+               | if($s.currentTable->isEmpty(),
+                    | $s,
+                    | ^$s(tables = $s.tables->concatenate(^meta::pure::compiler::pdb::schema::FbsTable(name = $s.currentTable->toOne(), fields = $s.currentFields)),
+                          currentTable = [], currentFields = [])),
+               | if($s.currentTable->isNotEmpty() && $line->contains(':') && $line->endsWith(';'),
+                  // `name: Type (id: N);`  or  `name: [Type] (id: N);`
+                  | ^$s(currentFields = $s.currentFields->concatenate(meta::pure::compiler::pdb::schema::parseField($line, $s.currentFields->size()))),
+                  // namespace / root_type / attribute / anything else: ignore
+                  | $s)))));
+}
+
+function meta::pure::compiler::pdb::schema::parseField(line:String[1], declIndex:Integer[1]):meta::pure::compiler::pdb::schema::FbsField[1]
+{
+   let name     = $line->substring(0, $line->indexOf(':'))->trim();
+   let afterCol = $line->substring($line->indexOf(':') + 1, $line->length())->trim();
+   // type token = up to the ` (` of the attribute clause (m3.fbs always emits one)
+   let typeTok  = if($afterCol->contains('('),
+                     | $afterCol->substring(0, $afterCol->indexOf('('))->trim(),
+                     | $afterCol->substring(0, $afterCol->indexOf(';'))->trim());
+   let isVec    = $typeTok->meta::pure::compiler::pdb::schema::startsWith('[');
+   let type     = if($isVec, | $typeTok->substring(1, $typeTok->indexOf(']'))->trim(), | $typeTok);
+   // `(id: N)` — explicit ids keep the wire format stable across builds (the
+   // element Def tables, with gaps for union type bytes). Tables that declare
+   // none (the index tables: FunctionIndex, ElementIndex, Manifest, …) get
+   // FlatBuffers' implicit ids: sequential in declaration order.
+   let id       = if($line->contains('(id:'),
+                     | let after = $line->substring($line->indexOf('(id:') + 4, $line->length());
+                       $after->substring(0, $after->indexOf(')'))->trim()->parseInteger();,
+                     | $declIndex);
+   ^meta::pure::compiler::pdb::schema::FbsField(name = $name, id = $id, type = $type, vector = $isVec);
+}
+
+// --- tests ---------------------------------------------------------------------
+// Parses the exact declarations m3.fbs contains (copied verbatim from it).
+function <<test.Test>> meta::pure::compiler::pdb::schema::tests::testParseFbs():Boolean[1]
+{
+   let src = '// a comment\n' +
+             'enum PointerKind : byte { Element, Property, QualifiedProperty, Stereotype, Tag }\n' +
+             '\n' +
+             'union ClassifierGenericTypePropertyUnion { PointerRef, AncestorRef, InferredGenericTypeDef, UserDefinedGenericTypeDef }\n' +
+             'table PointerRef {\n' +
+             '    kind: PointerKind (id: 0);\n' +
+             '    path: [string] (id: 1);\n' +
+             '}\n' +
+             'table AncestorRef {\n' +
+             '    depth: int (id: 0);\n' +
+             '}\n' +
+             'table FunctionIndexEntry {\n' +
+             '    full_path: string;\n' +
+             '    function_name: string;\n' +
+             '    is_native: bool;\n' +
+             '}\n';
+   let schema = meta::pure::compiler::pdb::schema::parseFbs($src);
+   assertEquals(3, $schema.tables->size());
+   assertEquals(['PointerRef','AncestorRef','FunctionIndexEntry'], $schema.tables.name);
+   // no `(id: N)` -> FlatBuffers implicit ids, sequential in declaration order
+   let fie = meta::pure::compiler::pdb::schema::table($schema, 'FunctionIndexEntry')->toOne();
+   assertEquals([0,1,2], $fie.fields.id);
+   let pr = meta::pure::compiler::pdb::schema::table($schema, 'PointerRef')->toOne();
+   assertEquals(['kind','path'], $pr.fields.name);
+   assertEquals([0,1], $pr.fields.id);
+   assertEquals(['PointerKind','string'], $pr.fields.type);
+   assertEquals([false,true], $pr.fields.vector);
+   assertEquals(['PointerRef','AncestorRef','InferredGenericTypeDef','UserDefinedGenericTypeDef'],
+                meta::pure::compiler::pdb::schema::unionMembers($schema, 'ClassifierGenericTypePropertyUnion'));
+   assertEquals(['Element','Property','QualifiedProperty','Stereotype','Tag'],
+                meta::pure::compiler::pdb::schema::enumValues($schema, 'PointerKind'));
+   assert(meta::pure::compiler::pdb::schema::isEnum($schema, 'PointerKind'));
+   assertEquals('union', meta::pure::compiler::pdb::schema::categorize($schema, 'ClassifierGenericTypePropertyUnion'));
+   assertEquals('table', meta::pure::compiler::pdb::schema::categorize($schema, 'PointerRef'));
+   assertEquals('scalar', meta::pure::compiler::pdb::schema::categorize($schema, 'string'));
+}

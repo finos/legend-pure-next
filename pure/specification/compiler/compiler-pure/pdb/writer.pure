@@ -1,0 +1,423 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Runtime support for the self-hosted PDB writer: the parsed-.fbs schema model
+// consumed by the Pure GENERATOR (pdb/fbsParser.pure feeds it, the generator
+// walks it to emit one writeX per Def table), plus the shared encode helpers
+// the EMITTED writer calls (the reference GeneratedFlatBufferWriter.java also
+// keeps writePointerRef/writeAncestorRef as shared hand-written helpers).
+// Encoding decisions and byte layout follow the reference implementation —
+// including field-ADD ORDER, which determines vtable slot layout.
+
+import meta::pure::metamodel::pointer::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::compiler::helper::packageableElement::*;
+
+// --- parsed .fbs schema model -------------------------------------------------
+Class meta::pure::compiler::pdb::schema::FbsField
+{
+   name   : String[1];
+   id     : Integer[1];
+   type   : String[1];
+   vector : Boolean[1];
+}
+
+Class meta::pure::compiler::pdb::schema::FbsTable
+{
+   name   : String[1];
+   fields : meta::pure::compiler::pdb::schema::FbsField[*];
+}
+
+Class meta::pure::compiler::pdb::schema::FbsUnion
+{
+   name    : String[1];
+   members : String[*];
+}
+
+Class meta::pure::compiler::pdb::schema::FbsEnum
+{
+   name   : String[1];
+   values : String[*];
+}
+
+Class meta::pure::compiler::pdb::schema::FbsSchema
+{
+   tables : meta::pure::compiler::pdb::schema::FbsTable[*];
+   unions : meta::pure::compiler::pdb::schema::FbsUnion[*];
+   enums  : meta::pure::compiler::pdb::schema::FbsEnum[*];
+}
+
+function meta::pure::compiler::pdb::schema::table(s:meta::pure::compiler::pdb::schema::FbsSchema[1], name:String[1]):meta::pure::compiler::pdb::schema::FbsTable[0..1]
+{
+   $s.tables->filter(t | $t.name == $name)->head();
+}
+
+function meta::pure::compiler::pdb::schema::unionMembers(s:meta::pure::compiler::pdb::schema::FbsSchema[1], name:String[1]):String[*]
+{
+   $s.unions->filter(u | $u.name == $name).members;
+}
+
+function meta::pure::compiler::pdb::schema::isEnum(s:meta::pure::compiler::pdb::schema::FbsSchema[1], name:String[1]):Boolean[1]
+{
+   $s.enums->exists(e | $e.name == $name);
+}
+
+function meta::pure::compiler::pdb::schema::enumValues(s:meta::pure::compiler::pdb::schema::FbsSchema[1], name:String[1]):String[*]
+{
+   $s.enums->filter(e | $e.name == $name).values;
+}
+
+// Category of a field type: 'union' | 'table' | 'enum' | 'scalar' (string included).
+function meta::pure::compiler::pdb::schema::categorize(s:meta::pure::compiler::pdb::schema::FbsSchema[1], type:String[1]):String[1]
+{
+   if($s.unions->exists(u | $u.name == $type), | 'union',
+      | if($s.tables->exists(t | $t.name == $type), | 'table',
+         | if(meta::pure::compiler::pdb::schema::isEnum($s, $type), | 'enum', | 'scalar')));
+}
+
+// Little-endian byte width of a scalar type (string is a 4-byte uoffset element).
+function meta::pure::compiler::pdb::schema::scalarWidth(type:String[1]):Integer[1]
+{
+   if(['bool','byte','ubyte']->contains($type), | 1,
+      | if(['short','ushort']->contains($type), | 2,
+         | if(['long','ulong','double']->contains($type), | 8, | 4)));
+}
+
+// --- shared encode helpers (called by the emitted writer) ----------------------
+
+// PointerKind name -> discriminant (m3.fbs `enum PointerKind : byte { Element, Property, QualifiedProperty, Stereotype, Tag }`).
+function meta::pure::compiler::pdb::writer::pointerKind(name:String[1]):Integer[1]
+{
+   if([pair(| $name == 'Element',           | 0),
+       pair(| $name == 'Property',          | 1),
+       pair(| $name == 'QualifiedProperty', | 2),
+       pair(| $name == 'Stereotype',        | 3),
+       pair(| $name == 'Tag',               | 4)],
+      | fail('unknown PointerKind: ' + $name); 0;
+   );
+}
+
+// Accumulator for building a list of string offsets.
+Class meta::pure::compiler::pdb::writer::StringsAndBuilder
+{
+   builder : meta::pure::compiler::pdb::fbb::Builder[1];
+   offsets : Integer[*];
+}
+
+// A union-field encode result: offset + 1-based member discriminant (0 = absent).
+Class meta::pure::compiler::pdb::writer::UnionRes
+{
+   builder  : meta::pure::compiler::pdb::fbb::Builder[1];
+   offset   : Integer[1];
+   typeByte : Integer[1];
+}
+
+// AncestorRef depth for a back-reference: distance from the top of the write
+// stack (reference: _depth - _writing.get(obj) - 1; stack index == pushed depth).
+// IDENTITY comparison (is), not ==: the reference `_writing` is an
+// IdentityHashMap, and the graph holds reconciliation COPIES that are
+// structurally equal to (but distinct from) their originals — structural ==
+// would conflate a copy with the on-stack original and emit an AncestorRef
+// where the reference inlines the copy.
+function meta::pure::compiler::pdb::writer::ancestorDepth(stack:Any[*], obj:Any[1]):Integer[1]
+{
+   let idx = range(0, $stack->size())->filter(i | is($stack->at($i), $obj))->last()->toOne();
+   $stack->size() - $idx - 1;
+}
+
+// Is the object already on the write path? (reference `_writing.containsKey` —
+// identity semantics, see ancestorDepth).
+function meta::pure::compiler::pdb::writer::onStack(stack:Any[*], obj:Any[1]):Boolean[1]
+{
+   $stack->exists(x | is($x, $obj));
+}
+
+// PointerRef { kind (id 0, byte enum, default Element/0), path: [string] (id 1) }.
+// Matches the reference writePointerRef byte-for-byte: strings created in path
+// order, then the offset vector, then the table adding kind THEN path.
+function meta::pure::compiler::pdb::writer::encodePointerRef(b:meta::pure::compiler::pdb::fbb::Builder[1], segs:String[*], kind:Integer[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let strs = $segs->fold(
+      {seg, acc |
+         let r = $acc.builder->meta::pure::compiler::pdb::fbb::createSharedString($seg);
+         ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = $r.builder, offsets = $acc.offsets->concatenate($r.offset));
+      },
+      ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = $b, offsets = []));
+   let b1 = $strs.builder->meta::pure::compiler::pdb::fbb::startVector(4, $segs->size(), 4);
+   // offsets prepended in reverse so element 0 ends up front-most.
+   let b2 = $strs.offsets->reverse()->fold({off, acc | $acc->meta::pure::compiler::pdb::fbb::addOffset($off)}, $b1);
+   let vec = $b2->meta::pure::compiler::pdb::fbb::endVector($segs->size());
+   let t0 = $vec.builder->meta::pure::compiler::pdb::fbb::startObject(2);
+   let t1 = $t0->meta::pure::compiler::pdb::fbb::addFieldScalar(0, $kind, 0, 1);   // kind first (reference order)
+   let t2 = $t1->meta::pure::compiler::pdb::fbb::addFieldOffset(1, $vec.offset);   // then path
+   $t2->meta::pure::compiler::pdb::fbb::endObject();
+}
+
+// Kind + path segments for a pointer target — the reference writePointerRef
+// instanceof chain, SAME ARM ORDER (pointer subclasses before their live bases;
+// member pointers are 2 segments [ownerPath, name] UNSPLIT; elements 1 segment).
+Class meta::pure::compiler::pdb::writer::KindAndSegs
+{
+   kind : Integer[1];
+   segs : String[*];
+}
+
+function meta::pure::compiler::pdb::writer::pointerKindAndSegs(v:Any[1]):meta::pure::compiler::pdb::writer::KindAndSegs[1]
+{
+   $v->match([
+      qpp : QualifiedPropertyPointer<Any>[1] | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 2, segs = [$qpp.path, $qpp.element]),
+      pp  : PropertyPointer<Nil, Any|*>[1]   | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 1, segs = [$pp.path, $pp.element]),
+      cp  : ColumnPointer<Nil, Any|*>[1]     | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 1, segs = [$cp.path, $cp.element]),
+      sp  : StereotypePointer[1]             | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 3, segs = [$sp.path, $sp.element]),
+      tp  : TagPointer[1]                    | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 4, segs = [$tp.path, $tp.element]),
+      ep  : EnumPointer[1]                   | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 1, segs = [$ep.path, $ep.element]),
+      // Root PackagePointers carry path='' (toPackagePointer's parentless
+      // special case); on the wire the root's canonical path is '::' — the
+      // live root Package's name, which is what a Java-compiled graph stores
+      // (its root reference is the live Package, path '::'). Same
+      // normalization fullPath applies for display.
+      tcp : TempCompilerPointer[1]           | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 0, segs = if($tcp.path == '', | ['::'], | [$tcp.path])),
+      qp  : QualifiedProperty<Any>[1]        | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 2, segs = [$qp.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath(), $qp.name->toOne()]),
+      ap  : AbstractProperty<Any>[1]         | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 1, segs = [$ap.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath(), $ap.name->toOne()]),
+      s   : Stereotype[1]                    | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 3, segs = [$s.profile->toOne()->fullPath(), $s.value->toOne()]),
+      t   : Tag[1]                           | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 4, segs = [$t.profile->toOne()->fullPath(), $t.value->toOne()]),
+      pe  : meta::pure::metamodel::PackageableElement[1] | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 0, segs = [$pe->fullPath()]),
+      // Live relation column whose owner is a RelationType (not packageable):
+      // unresolvable either way, but the segment must be deterministic and
+      // platform-independent — toString would differ between the JVM
+      // interpreter and the JS runtime. Mirrors the reference writer's
+      // explicit Column arm (column name).
+      col : meta::pure::metamodel::relation::Column<Nil, Any|*>[1] | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 0, segs = [if($col.name->isEmpty(), | $col->toString(), | $col.name->toOne())]),
+      a   : Any[1]                           | ^meta::pure::compiler::pdb::writer::KindAndSegs(kind = 0, segs = [$a->toString()])
+   ]);
+}
+
+// PointerRef for any pointer-able value (the emitted writer's `writePointerRef`).
+function meta::pure::compiler::pdb::writer::writePointerRefFor(b:meta::pure::compiler::pdb::fbb::Builder[1], v:Any[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let ks = meta::pure::compiler::pdb::writer::pointerKindAndSegs($v);
+   meta::pure::compiler::pdb::writer::encodePointerRef($b, $ks.segs, $ks.kind);
+}
+
+// AncestorRef { depth: int (id 0, default 0) }.
+function meta::pure::compiler::pdb::writer::encodeAncestorRef(b:meta::pure::compiler::pdb::fbb::Builder[1], depth:Integer[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let t0 = $b->meta::pure::compiler::pdb::fbb::startObject(1);
+   let t1 = $t0->meta::pure::compiler::pdb::fbb::addFieldScalar(0, $depth, 0, 4);
+   $t1->meta::pure::compiler::pdb::fbb::endObject();
+}
+
+// --- helpers for the EMITTED writer (pdb/generated/generatedWriter.pure) --------
+
+// Accumulator for a union-typed list field: parallel offset + discriminant lists.
+Class meta::pure::compiler::pdb::writer::UnionListAcc
+{
+   builder : meta::pure::compiler::pdb::fbb::Builder[1];
+   offsets : Integer[*];
+   types   : Integer[*];
+}
+
+// Offset vector, as flatc's createXVector: startVector(4, n, 4), addOffset per
+// element in REVERSE (prepend leaves element 0 front-most), length prefix.
+function meta::pure::compiler::pdb::writer::createOffsetVector(b:meta::pure::compiler::pdb::fbb::Builder[1], offsets:Integer[*]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let b1 = $b->meta::pure::compiler::pdb::fbb::startVector(4, $offsets->size(), 4);
+   let b2 = $offsets->reverse()->fold({off, acc | $acc->meta::pure::compiler::pdb::fbb::addOffset($off)}, $b1);
+   $b2->meta::pure::compiler::pdb::fbb::endVector($offsets->size());
+}
+
+// Byte vector (union type vectors): startVector(1, n, 1), bytes reversed.
+function meta::pure::compiler::pdb::writer::createByteVector(b:meta::pure::compiler::pdb::fbb::Builder[1], bytes:Integer[*]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let b1 = $b->meta::pure::compiler::pdb::fbb::startVector(1, $bytes->size(), 1);
+   let b2 = $bytes->reverse()->fold({v, acc | $acc->meta::pure::compiler::pdb::fbb::addScalar($v, 1)}, $b1);
+   $b2->meta::pure::compiler::pdb::fbb::endVector($bytes->size());
+}
+
+// fbs `string` field value -> wire string (reference: enum values via _name(),
+// everything else via toString()/String.valueOf).
+function meta::pure::compiler::pdb::writer::asFbsString(v:Any[1]):String[1]
+{
+   if($v->instanceOf(meta::pure::metamodel::type::Enum),
+      | $v->cast(@meta::pure::metamodel::type::Enum).name->toOne(),
+      | $v->toString());
+}
+
+// Fail-loud terminal else of an emitted union dispatch (reference NEVER
+// silent-fails: a 0-typed slot reads as "absent" and crashes far away).
+function meta::pure::compiler::pdb::writer::failUnion(b:meta::pure::compiler::pdb::fbb::Builder[1], unionName:String[1]):meta::pure::compiler::pdb::writer::UnionRes[1]
+{
+   fail('PDB writer: value not handled by any FBS union arm of ' + $unionName);
+   ^meta::pure::compiler::pdb::writer::UnionRes(builder = $b, offset = 0, typeByte = 0);
+}
+
+// IntegerValueDef { val: long (id 0) }
+function meta::pure::compiler::pdb::writer::encodeIntegerValueDef(b:meta::pure::compiler::pdb::fbb::Builder[1], v:Integer[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   $b->meta::pure::compiler::pdb::fbb::startObject(1)
+     ->meta::pure::compiler::pdb::fbb::addFieldScalar(0, $v, 0, 8)
+     ->meta::pure::compiler::pdb::fbb::endObject();
+}
+
+// BooleanValueDef { val: bool (id 0) }
+function meta::pure::compiler::pdb::writer::encodeBooleanValueDef(b:meta::pure::compiler::pdb::fbb::Builder[1], v:Boolean[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   $b->meta::pure::compiler::pdb::fbb::startObject(1)
+     ->meta::pure::compiler::pdb::fbb::addFieldScalar(0, if($v, |1, |0), 0, 1)
+     ->meta::pure::compiler::pdb::fbb::endObject();
+}
+
+// FloatValueDef { val: double (id 0) }
+function meta::pure::compiler::pdb::writer::encodeFloatValueDef(b:meta::pure::compiler::pdb::fbb::Builder[1], v:Float[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   $b->meta::pure::compiler::pdb::fbb::startObject(1)
+     ->meta::pure::compiler::pdb::fbb::addFieldFloat(0, $v)
+     ->meta::pure::compiler::pdb::fbb::endObject();
+}
+
+// StringValueDef and DecimalValueDef share the shape { val: string (id 0) }.
+function meta::pure::compiler::pdb::writer::encodeStringishValueDef(b:meta::pure::compiler::pdb::fbb::Builder[1], s:String[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let r = $b->meta::pure::compiler::pdb::fbb::createSharedString($s);
+   $r.builder->meta::pure::compiler::pdb::fbb::startObject(1)
+             ->meta::pure::compiler::pdb::fbb::addFieldOffset(0, $r.offset)
+             ->meta::pure::compiler::pdb::fbb::endObject();
+}
+
+// AtomicValue enum content: '<enumerationPath>.<valueName>' when the genericType
+// names a packageable element, else just the value name (reference writer).
+function meta::pure::compiler::pdb::writer::atomicEnumPath(gt:Any[0..1], valueName:String[1]):String[1]
+{
+   if($gt->isNotEmpty() && $gt->toOne()->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
+      | let t = $gt->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type;
+        if($t->isNotEmpty() && $t->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
+           | $t->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath() + '.' + $valueName,
+           | $valueName);,
+      | $valueName);
+}
+
+// Decimal-typed Float disambiguation (reference: genericType._type()._name() == 'Decimal').
+function meta::pure::compiler::pdb::writer::isDecimalTyped(gt:Any[0..1]):Boolean[1]
+{
+   $gt->isNotEmpty()
+      && $gt->toOne()->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue)
+      && $gt->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type
+            ->exists(t | $t->instanceOf(meta::pure::metamodel::PackageableElement)
+                         && ($t->cast(@meta::pure::metamodel::PackageableElement).name == 'Decimal'));
+}
+
+// --- validation helpers (byte-neutral: only fire on invalid graphs) --------------
+// Ports of the reference writer's hand-written pointerPath/sourceInfo used in
+// validation messages, and the two semantic checks the reference emits.
+
+function meta::pure::compiler::pdb::writer::pointerPath(obj:Any[1]):String[1]
+{
+   $obj->match([
+      pe : meta::pure::metamodel::PackageableElement[1] | $pe->fullPath(),
+      qp : QualifiedProperty<Any>[1] |
+         if($qp.owner->isNotEmpty() && $qp.owner->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
+            | $qp.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath() + '.qp:' + $qp.name->joinStrings(''),
+            | $qp->toString()),
+      ap : AbstractProperty<Any>[1] |
+         if($ap.owner->isNotEmpty() && $ap.owner->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
+            | $ap.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath() + '.' + $ap.name->joinStrings(''),
+            | $ap->toString()),
+      s : Stereotype[1] | if($s.profile->isNotEmpty(), | $s.profile->toOne()->fullPath() + '.' + $s.value->joinStrings(''), | $s->toString()),
+      t : Tag[1]        | if($t.profile->isNotEmpty(), | $t.profile->toOne()->fullPath() + '#' + $t.value->joinStrings(''), | $t->toString()),
+      a : Any[1]        | $a->toString()
+   ]);
+}
+
+function meta::pure::compiler::pdb::writer::sourceInfo(obj:Any[1]):String[1]
+{
+   let si = $obj.sourceInformation;
+   if($si->isEmpty(),
+      | '',
+      | let s = $si->toOne();
+        ' at ' + $s.sourceId->joinStrings('') + ':' + $s.startLine->toOne()->toString() + 'c' + $s.startColumn->toOne()->toString(););
+}
+
+// The reference's self-classified-GenericTypeValue guard (emitted in every
+// single-valued union writer): a value that self-references its owner is only
+// valid as the canonical UDGT anchor — anything else is an upstream construction
+// bug, surfaced loudly at write time instead of round-tripping corrupt data.
+function meta::pure::compiler::pdb::writer::checkGtvAnchor(v:Any[0..1], obj:Any[1]):Boolean[1]
+{
+   if($v->isNotEmpty() && ($v->toOne() == $obj) && $obj->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
+      | let t = $obj->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type;
+        if($t->isNotEmpty() && $t->toOne()->instanceOf(meta::pure::metamodel::PackageableElement)
+              && ($t->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath() != 'meta::pure::metamodel::type::generics::UserDefinedGenericType'),
+           | fail('Self-classified GenericTypeValue is only valid as the canonical UDGT anchor (type=UserDefinedGenericType). Got type=' + $t->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath());,
+           | true);,
+      | true);
+}
+
+// --- tests ---------------------------------------------------------------------
+// Wire-format pins: the expected byte lists were produced by THE REFERENCE
+// IMPLEMENTATION (bootstrap generated fbs classes + com.google.flatbuffers.
+// FlatBufferBuilder) building the same values. Byte-identity is the bar.
+function <<test.Test>> meta::pure::compiler::pdb::writer::tests::testEncodePointerRefWireFormat():Boolean[1]
+{
+   let res = meta::pure::compiler::pdb::fbb::newBuilder()
+               ->meta::pure::compiler::pdb::writer::encodePointerRef(['a::b','c'], meta::pure::compiler::pdb::writer::pointerKind('Property'));
+   let fin = $res.builder->meta::pure::compiler::pdb::fbb::finish($res.offset);
+   assertEquals(
+      [12,0,0,0, 8,0,12,0, 11,0,4,0, 8,0,0,0, 8,0,0,0, 0,0,0,1, 2,0,0,0, 16,0,0,0, 4,0,0,0, 1,0,0,0, 99,0,0,0, 4,0,0,0, 97,58,58,98, 0,0,0,0],
+      $fin->meta::pure::compiler::pdb::fbb::result());
+}
+
+function <<test.Test>> meta::pure::compiler::pdb::writer::tests::testPointerKindAndSegs():Boolean[1]
+{
+   // Element: a real PackageableElement -> kind 0 (Element), 1 unsplit segment.
+   let cls = meta::pure::functions::meta::pathToElement('meta::pure::metamodel::type::Class');
+   let ke  = meta::pure::compiler::pdb::writer::pointerKindAndSegs($cls);
+   assertEquals(0, $ke.kind);
+   assertEquals(['meta::pure::metamodel::type::Class'], $ke.segs);
+   // Member pointers: 2 segments [ownerPath, member], reference kinds.
+   let ks = meta::pure::compiler::pdb::writer::pointerKindAndSegs(^StereotypePointer(path = 'a::P', element = 'doc'));
+   assertEquals(3, $ks.kind);
+   assertEquals(['a::P','doc'], $ks.segs);
+   let kp = meta::pure::compiler::pdb::writer::pointerKindAndSegs(^PropertyPointer<Nil, Any|*>(path = 'a::C', element = 'f'));
+   assertEquals(1, $kp.kind);
+   assertEquals(['a::C','f'], $kp.segs);
+   // TempCompilerPointer (non-member): kind 0, 1 segment.
+   let kt = meta::pure::compiler::pdb::writer::pointerKindAndSegs(^PackagePointer(path = 'x::y'));
+   assertEquals(0, $kt.kind);
+   assertEquals(['x::y'], $kt.segs);
+}
+
+function <<test.Test>> meta::pure::compiler::pdb::writer::tests::testSharedStringDedupWireFormat():Boolean[1]
+{
+   // A repeated path segment reuses the SAME string (reference createSharedString):
+   // 48 bytes, both vector elements pointing at one 'a::b'.
+   let res = meta::pure::compiler::pdb::fbb::newBuilder()
+               ->meta::pure::compiler::pdb::writer::encodePointerRef(['a::b','a::b'], meta::pure::compiler::pdb::writer::pointerKind('Property'));
+   let fin = $res.builder->meta::pure::compiler::pdb::fbb::finish($res.offset);
+   assertEquals(
+      [12,0,0,0, 8,0,12,0, 11,0,4,0, 8,0,0,0, 8,0,0,0, 0,0,0,1, 2,0,0,0, 8,0,0,0, 4,0,0,0, 4,0,0,0, 97,58,58,98, 0,0,0,0],
+      $fin->meta::pure::compiler::pdb::fbb::result());
+}
+
+function <<test.Test>> meta::pure::compiler::pdb::writer::tests::testEncodeAncestorRefWireFormat():Boolean[1]
+{
+   // depth=0 is the scalar default -> elided (empty vtable, minimal table).
+   let r0 = meta::pure::compiler::pdb::fbb::newBuilder()->meta::pure::compiler::pdb::writer::encodeAncestorRef(0);
+   assertEquals([8,0,0,0, 4,0,4,0, 4,0,0,0],
+      $r0.builder->meta::pure::compiler::pdb::fbb::finish($r0.offset)->meta::pure::compiler::pdb::fbb::result());
+   // depth=2 is written (int32 field at id 0).
+   let r2 = meta::pure::compiler::pdb::fbb::newBuilder()->meta::pure::compiler::pdb::writer::encodeAncestorRef(2);
+   assertEquals([12,0,0,0, 0,0, 6,0,8,0,4,0, 6,0,0,0, 2,0,0,0],
+      $r2.builder->meta::pure::compiler::pdb::fbb::finish($r2.offset)->meta::pure::compiler::pdb::fbb::result());
+}

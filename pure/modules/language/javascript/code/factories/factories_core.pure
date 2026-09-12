@@ -1,0 +1,165 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// v1 factories — ergonomic constructors for the minimal metamodel subset that
+// the v1 serializer can emit. JavaScript-only: no type-node builders.
+
+import meta::external::language::javascript::factories::*;
+import meta::external::language::javascript::metamodel::*;
+
+// =============================================================================
+// Import sources — tag identifiers with where they come from so the resolver
+// can synthesize the correct ImportDeclaration.
+// =============================================================================
+
+function meta::external::language::javascript::factories::jsLocalSource(target: SourceFile[1]): LocalSource[1]
+{ ^LocalSource(target=$target) }
+
+function meta::external::language::javascript::factories::jsExternalSource(moduleSpecifier: String[1]): ExternalSource[1]
+{ ^ExternalSource(moduleSpecifier=$moduleSpecifier) }
+
+// SpreadElement — `...expr` for use inside array literals and call argument lists.
+function meta::external::language::javascript::factories::jsSpread(expression: Expression[1]): SpreadElement[1]
+{ ^SpreadElement(expression=$expression) }
+
+// SpreadAssignment — `...expr` inside an object literal.
+function meta::external::language::javascript::factories::jsSpreadEntry(expression: Expression[1]): SpreadAssignment[1]
+{ ^SpreadAssignment(expression=$expression) }
+
+// =============================================================================
+// Expressions
+// =============================================================================
+
+function meta::external::language::javascript::factories::jsId(text: String[1]): Identifier[1]
+{ ^Identifier(text=$text) }
+
+function meta::external::language::javascript::factories::jsIdFrom(text: String[1], source: ImportSource[1]): Identifier[1]
+{ ^Identifier(text=$text, source=$source) }
+
+function meta::external::language::javascript::factories::jsIdAliased(localName: String[1], originalName: String[1], source: ImportSource[1]): Identifier[1]
+{ ^Identifier(text=$localName, source=$source, originalName=$originalName) }
+
+function meta::external::language::javascript::factories::jsThis(): ThisExpression[1]
+{ ^ThisExpression() }
+
+function meta::external::language::javascript::factories::jsStrLit(text: String[1]): StringLiteral[1]
+{ ^StringLiteral(text=$text) }
+
+function meta::external::language::javascript::factories::jsNumLit(text: String[1]): NumericLiteral[1]
+{ ^NumericLiteral(text=$text) }
+
+function meta::external::language::javascript::factories::jsBoolLit(value: Boolean[1]): BooleanLiteral[1]
+{ ^BooleanLiteral(value=$value) }
+
+function meta::external::language::javascript::factories::jsNull(): NullLiteral[1]
+{ ^NullLiteral() }
+
+function meta::external::language::javascript::factories::jsAccess(obj: Expression[1], member: String[1]): PropertyAccessExpression[1]
+{ ^PropertyAccessExpression(expression=$obj, name=$member) }
+
+function meta::external::language::javascript::factories::jsOptAccess(obj: Expression[1], member: String[1]): PropertyAccessExpression[1]
+{ ^PropertyAccessExpression(expression=$obj, name=$member, isOptional=true) }
+
+function meta::external::language::javascript::factories::jsCall(callee: Expression[1], arguments: Expression[*]): CallExpression[1]
+{ ^CallExpression(expression=$callee, arguments=$arguments) }
+
+function meta::external::language::javascript::factories::jsOptCall(callee: Expression[1], arguments: Expression[*]): CallExpression[1]
+{ ^CallExpression(expression=$callee, arguments=$arguments, isOptional=true) }
+
+// Nullish coalescing `a ?? b` — sugar over jsBinary.
+function meta::external::language::javascript::factories::jsNullishCoalesce(left: Expression[1], right: Expression[1]): BinaryExpression[1]
+{ ^BinaryExpression(left=$left, operatorToken='??', right=$right) }
+
+function meta::external::language::javascript::factories::jsBinary(left: Expression[1], operator: String[1], right: Expression[1]): BinaryExpression[1]
+{ ^BinaryExpression(left=$left, operatorToken=$operator, right=$right) }
+
+// =============================================================================
+// Async / await.
+// =============================================================================
+
+function meta::external::language::javascript::factories::jsAwait(expression: Expression[1]): AwaitExpression[1]
+{ ^AwaitExpression(expression=$expression) }
+
+// Function/Method/Arrow async variants — flip the Async modifier (or
+// `isAsync` slot on ArrowFunction, matching ts-morph's shape).
+function meta::external::language::javascript::factories::jsAsyncFunction(name: String[1], parameters: ParameterDeclaration[*], body: Block[0..1]): FunctionDeclaration[1]
+{ ^FunctionDeclaration(name=$name, modifiers=[ModifierFlag.Async], parameters=$parameters, body=$body) }
+
+function meta::external::language::javascript::factories::jsAsyncMethod(name: String[1], parameters: ParameterDeclaration[*], body: Block[0..1]): MethodDeclaration[1]
+{ ^MethodDeclaration(name=$name, modifiers=[ModifierFlag.Async], parameters=$parameters, body=$body) }
+
+function meta::external::language::javascript::factories::jsAsyncArrowExpr(parameters: ParameterDeclaration[*], body: Expression[1]): ArrowFunction[1]
+{ ^ArrowFunction(parameters=$parameters, expressionBody=$body, isAsync=true) }
+
+function meta::external::language::javascript::factories::jsAsyncArrowBlock(parameters: ParameterDeclaration[*], body: Block[1]): ArrowFunction[1]
+{ ^ArrowFunction(parameters=$parameters, body=$body, isAsync=true) }
+
+function meta::external::language::javascript::factories::jsArrowExpr(parameters: ParameterDeclaration[*], body: Expression[1]): ArrowFunction[1]
+{ ^ArrowFunction(parameters=$parameters, expressionBody=$body) }
+
+function meta::external::language::javascript::factories::jsArrowBlock(parameters: ParameterDeclaration[*], body: Block[1]): ArrowFunction[1]
+{ ^ArrowFunction(parameters=$parameters, body=$body) }
+
+// =============================================================================
+// Statements
+// =============================================================================
+
+function meta::external::language::javascript::factories::jsBlock(statements: Statement[*]): Block[1]
+{ ^Block(statements=$statements) }
+
+function meta::external::language::javascript::factories::jsReturn(expression: Expression[0..1]): ReturnStatement[1]
+{ ^ReturnStatement(expression=$expression) }
+
+function meta::external::language::javascript::factories::jsExprStmt(expression: Expression[1]): ExpressionStatement[1]
+{ ^ExpressionStatement(expression=$expression) }
+
+// =============================================================================
+// Declarations & structure
+// =============================================================================
+
+function meta::external::language::javascript::factories::jsParam(name: String[1]): ParameterDeclaration[1]
+{ ^ParameterDeclaration(name=jsId($name)) }
+
+function meta::external::language::javascript::factories::jsMethod(name: String[1], parameters: ParameterDeclaration[*], body: Block[0..1]): MethodDeclaration[1]
+{ ^MethodDeclaration(name=$name, modifiers=[], parameters=$parameters, body=$body) }
+
+function meta::external::language::javascript::factories::jsFunction(name: String[1], parameters: ParameterDeclaration[*], body: Block[0..1]): FunctionDeclaration[1]
+{ ^FunctionDeclaration(name=$name, modifiers=[], parameters=$parameters, body=$body) }
+
+function meta::external::language::javascript::factories::jsProperty(name: String[1]): PropertyDeclaration[1]
+{ ^PropertyDeclaration(name=$name, modifiers=[]) }
+
+function meta::external::language::javascript::factories::jsClass(name: String[1], members: ClassMember[*]): ClassDeclaration[1]
+{ ^ClassDeclaration(name=$name, modifiers=[], members=$members) }
+
+function meta::external::language::javascript::factories::jsGetter(name: String[1], body: Block[0..1]): GetAccessor[1]
+{ ^GetAccessor(name=$name, modifiers=[], body=$body) }
+
+function meta::external::language::javascript::factories::jsSetter(name: String[1], parameter: ParameterDeclaration[1], body: Block[0..1]): SetAccessor[1]
+{ ^SetAccessor(name=$name, modifiers=[], parameter=$parameter, body=$body) }
+
+function meta::external::language::javascript::factories::jsExportedClass(name: String[1], members: ClassMember[*]): ClassDeclaration[1]
+{ ^ClassDeclaration(name=$name, modifiers=[ModifierFlag.Export], members=$members) }
+
+function meta::external::language::javascript::factories::jsImport(moduleSpecifier: String[1], namedImports: ImportSpecifier[*]): ImportDeclaration[1]
+{ ^ImportDeclaration(moduleSpecifier=$moduleSpecifier, namedImports=$namedImports) }
+
+function meta::external::language::javascript::factories::jsNamedImport(name: String[1]): ImportSpecifier[1]
+{ ^ImportSpecifier(name=$name) }
+
+function meta::external::language::javascript::factories::jsNamedImportAliased(name: String[1], alias: String[1]): ImportSpecifier[1]
+{ ^ImportSpecifier(name=$name, alias=$alias) }
+
+function meta::external::language::javascript::factories::jsSourceFile(filePath: String[1], statements: Statement[*]): SourceFile[1]
+{ ^SourceFile(filePath=$filePath, statements=$statements) }

@@ -1,0 +1,349 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The self-hosted PDB READER — format tools only. Stateless decoders over
+// (bytes, position) node handles: FlatBuffer table/vtable/field/string/vector/
+// union access, PointerRef/AncestorRef descriptions, *ValueDef unwrapping and
+// STORED-zip directory parsing. Deliberately NOT here: element identity,
+// caching, PointerRef resolution against a registry, and AncestorRef cycle
+// closure — those live in each platform's wiring (the JVM's generated
+// *FlatBufferWrapper keeps per-property caches, resolves pointers through
+// MetadataAccess and walks its _fbParent chain for AncestorRefs; the JS host
+// does the same in its bridge). A reader here can stay lazy for the same
+// reason the wrappers are: every decode is O(field) from the handle, so the
+// host materializes exactly what it touches.
+//
+// The schema (field slot ids, union member order, enum value order) comes from
+// the parsed m3.fbs (pdb/fbsParser.pure) — reading has no add-order concerns,
+// so a generic schema-driven reader replaces the writer's generated code.
+
+import meta::pure::functions::binary::*;
+import meta::pure::compiler::pdb::schema::*;
+
+// --- little-endian integer decoding (pure Pure — no natives needed) -----------
+
+// Unsigned little-endian integer of `width` bytes at absolute `pos`.
+function meta::pure::compiler::pdb::reader::leUInt(bytes:Integer[*], pos:Integer[1], width:Integer[1]):Integer[1]
+{
+   range(0, $width)->reverse()->fold({i, acc | ($acc * 256) + $bytes->at($pos + $i)}, 0);
+}
+
+// Signed (two's-complement) little-endian integer of `width` bytes: the top
+// byte is applied signed so the magnitude never exceeds the value itself.
+function meta::pure::compiler::pdb::reader::leInt(bytes:Integer[*], pos:Integer[1], width:Integer[1]):Integer[1]
+{
+   let top = $bytes->at($pos + $width - 1);
+   let topSigned = if($top >= 128, | $top - 256, | $top);
+   range(0, $width - 1)->reverse()->fold({i, acc | ($acc * 256) + $bytes->at($pos + $i)}, $topSigned);
+}
+
+// --- FlatBuffer node handles ---------------------------------------------------
+
+// A table position in a finished FlatBuffer, tagged with its schema table name.
+Class meta::pure::compiler::pdb::reader::FbsNode
+{
+   bytes : Integer[*];
+   pos   : Integer[1];
+   type  : String[1];
+}
+
+// The root table of a finished buffer (uoffset at position 0).
+function meta::pure::compiler::pdb::reader::rootNode(bytes:Integer[*], rootType:String[1]):meta::pure::compiler::pdb::reader::FbsNode[1]
+{
+   ^meta::pure::compiler::pdb::reader::FbsNode(
+      bytes = $bytes,
+      pos   = meta::pure::compiler::pdb::reader::leUInt($bytes, 0, 4),
+      type  = $rootType);
+}
+
+// Absolute position of field `id`'s data in the table, or -1 when absent.
+// (table pos holds a SIGNED soffset to the vtable; vtable = [len, tableSize,
+// field slots...] of u16s; a 0 slot — or an id beyond the trimmed vtable —
+// means the field was elided.)
+function meta::pure::compiler::pdb::reader::fieldPos(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):Integer[1]
+{
+   let bytes = $node.bytes;
+   let vtPos = $node.pos - meta::pure::compiler::pdb::reader::leInt($bytes, $node.pos, 4);
+   let vtLen = meta::pure::compiler::pdb::reader::leUInt($bytes, $vtPos, 2);
+   let slot  = 4 + (2 * $id);
+   if($slot >= $vtLen,
+      | -1,
+      | let off = meta::pure::compiler::pdb::reader::leUInt($bytes, $vtPos + $slot, 2);
+        if($off == 0, | -1, | $node.pos + $off););
+}
+
+// Integer scalar field (present-or-default). `signed` selects two's-complement.
+function meta::pure::compiler::pdb::reader::readIntField(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], width:Integer[1], signed:Boolean[1], default:Integer[1]):Integer[1]
+{
+   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   if($fp == -1,
+      | $default,
+      | if($signed,
+           | meta::pure::compiler::pdb::reader::leInt($node.bytes, $fp, $width),
+           | meta::pure::compiler::pdb::reader::leUInt($node.bytes, $fp, $width)));
+}
+
+function meta::pure::compiler::pdb::reader::readBoolField(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], default:Boolean[1]):Boolean[1]
+{
+   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   if($fp == -1, | $default, | $node.bytes->at($fp) != 0);
+}
+
+// fbs `double` field (present-or-0.0), via the leBytesToFloat native.
+function meta::pure::compiler::pdb::reader::readFloatField(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):Float[1]
+{
+   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   if($fp == -1, | 0.0, | leBytesToFloat($node.bytes->slice($fp, $fp + 8)));
+}
+
+// Decode the string whose uoffset lives at absolute position `p`.
+function meta::pure::compiler::pdb::reader::stringAt(bytes:Integer[*], p:Integer[1]):String[1]
+{
+   let sPos = $p + meta::pure::compiler::pdb::reader::leUInt($bytes, $p, 4);
+   let len  = meta::pure::compiler::pdb::reader::leUInt($bytes, $sPos, 4);
+   utf8BytesToString($bytes->slice($sPos + 4, $sPos + 4 + $len));
+}
+
+function meta::pure::compiler::pdb::reader::readStringField(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):String[0..1]
+{
+   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   if($fp == -1, | [], | meta::pure::compiler::pdb::reader::stringAt($node.bytes, $fp));
+}
+
+// Nested table field: follow the uoffset indirection.
+function meta::pure::compiler::pdb::reader::readTableField(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], typeName:String[1]):meta::pure::compiler::pdb::reader::FbsNode[0..1]
+{
+   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   if($fp == -1,
+      | [],
+      | ^meta::pure::compiler::pdb::reader::FbsNode(
+           bytes = $node.bytes,
+           pos   = $fp + meta::pure::compiler::pdb::reader::leUInt($node.bytes, $fp, 4),
+           type  = $typeName));
+}
+
+// Vector plumbing: a vector field's data is [u32 count, elements...].
+function meta::pure::compiler::pdb::reader::vectorPositions(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], elemSize:Integer[1]):Integer[*]
+{
+   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   if($fp == -1,
+      | [],
+      | let vecPos = $fp + meta::pure::compiler::pdb::reader::leUInt($node.bytes, $fp, 4);
+        let count  = meta::pure::compiler::pdb::reader::leUInt($node.bytes, $vecPos, 4);
+        range(0, $count)->map(i | $vecPos + 4 + ($i * $elemSize)););
+}
+
+function meta::pure::compiler::pdb::reader::readStringVector(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):String[*]
+{
+   meta::pure::compiler::pdb::reader::vectorPositions($node, $id, 4)
+      ->map(p | meta::pure::compiler::pdb::reader::stringAt($node.bytes, $p));
+}
+
+function meta::pure::compiler::pdb::reader::readTableVector(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], typeName:String[1]):meta::pure::compiler::pdb::reader::FbsNode[*]
+{
+   meta::pure::compiler::pdb::reader::vectorPositions($node, $id, 4)
+      ->map(p | ^meta::pure::compiler::pdb::reader::FbsNode(
+                   bytes = $node.bytes,
+                   pos   = $p + meta::pure::compiler::pdb::reader::leUInt($node.bytes, $p, 4),
+                   type  = $typeName));
+}
+
+function meta::pure::compiler::pdb::reader::readByteVector(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):Integer[*]
+{
+   meta::pure::compiler::pdb::reader::vectorPositions($node, $id, 1)->map(p | $node.bytes->at($p));
+}
+
+// Single union field: the discriminant byte lives in the implicit `<field>_type`
+// slot at id-1 (1-based member index, 0 = absent); the value table at `id`.
+function meta::pure::compiler::pdb::reader::readUnionField(s:meta::pure::compiler::pdb::schema::FbsSchema[1], node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], unionName:String[1]):meta::pure::compiler::pdb::reader::FbsNode[0..1]
+{
+   let typeByte = meta::pure::compiler::pdb::reader::readIntField($node, $id - 1, 1, false, 0);
+   if($typeByte == 0,
+      | [],
+      | meta::pure::compiler::pdb::reader::readTableField($node, $id,
+           meta::pure::compiler::pdb::schema::unionMembers($s, $unionName)->at($typeByte - 1)));
+}
+
+// Union vector: parallel [ubyte] discriminants at id-1 and value tables at id.
+function meta::pure::compiler::pdb::reader::readUnionVector(s:meta::pure::compiler::pdb::schema::FbsSchema[1], node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], unionName:String[1]):meta::pure::compiler::pdb::reader::FbsNode[*]
+{
+   let types   = meta::pure::compiler::pdb::reader::readByteVector($node, $id - 1);
+   let members = meta::pure::compiler::pdb::schema::unionMembers($s, $unionName);
+   let values  = meta::pure::compiler::pdb::reader::vectorPositions($node, $id, 4);
+   range(0, $values->size())->map(i |
+      ^meta::pure::compiler::pdb::reader::FbsNode(
+         bytes = $node.bytes,
+         pos   = $values->at($i) + meta::pure::compiler::pdb::reader::leUInt($node.bytes, $values->at($i), 4),
+         type  = $members->at($types->at($i) - 1)));
+}
+
+// --- reference descriptions -----------------------------------------------------
+
+// A decoded PointerRef: kind discriminant (m3.fbs PointerKind, 0 = Element)
+// and UNSPLIT path segments. Resolution against an element registry is wiring.
+Class meta::pure::compiler::pdb::reader::ReadPointerRef
+{
+   kind : Integer[1];
+   segs : String[*];
+}
+
+// A decoded AncestorRef: a back-reference `depth` levels up the WRITE stack of
+// this element's blob. Closing the cycle (returning the ancestor instance) is
+// wiring — the host resolves it against its parent chain, as the JVM wrapper
+// walks _fbParent; an immutable Pure reader cannot (and must not) materialize
+// cyclic instances.
+Class meta::pure::compiler::pdb::reader::ReadAncestorRef
+{
+   depth : Integer[1];
+}
+
+// PointerRef/AncestorRef nodes become descriptions; everything else stays a node.
+function meta::pure::compiler::pdb::reader::decodeNode(node:meta::pure::compiler::pdb::reader::FbsNode[1]):Any[1]
+{
+   if($node.type == 'PointerRef',
+      | ^meta::pure::compiler::pdb::reader::ReadPointerRef(
+           kind = meta::pure::compiler::pdb::reader::readIntField($node, 0, 1, false, 0),
+           segs = meta::pure::compiler::pdb::reader::readStringVector($node, 1)),
+      | if($node.type == 'AncestorRef',
+           | ^meta::pure::compiler::pdb::reader::ReadAncestorRef(
+                depth = meta::pure::compiler::pdb::reader::readIntField($node, 0, 4, true, 0)),
+           | $node));
+}
+
+// --- schema-driven field access --------------------------------------------------
+
+// Read a field by its fbs name, decoding by the schema-declared category:
+// scalars surface their defaults when elided (bool false / int 0 / double 0.0 /
+// enum first value); strings, tables and unions are [0..1]; vectors are [*].
+// Table and union results pass through decodeNode, so PointerRef/AncestorRef
+// surface as descriptions. (Pure-property→fbs-field naming — toFbsFieldName +
+// the p_tags quirk — lives with the generator; wiring composes the two.)
+function meta::pure::compiler::pdb::reader::readField(s:meta::pure::compiler::pdb::schema::FbsSchema[1], node:meta::pure::compiler::pdb::reader::FbsNode[1], fbsFieldName:String[1]):Any[*]
+{
+   let tdef  = meta::pure::compiler::pdb::schema::table($s, $node.type);
+   if($tdef->isEmpty(), | fail('unknown table: ' + $node.type), | true);
+   let field = $tdef->toOne().fields->filter(f | $f.name == $fbsFieldName)->head();
+   if($field->isEmpty(), | fail('unknown field ' + $fbsFieldName + ' on ' + $node.type), | true);
+   let f   = $field->toOne();
+   let cat = meta::pure::compiler::pdb::schema::categorize($s, $f.type);
+   if([pair(| $f.vector && ($cat == 'union'),     | meta::pure::compiler::pdb::reader::readUnionVector($s, $node, $f.id, $f.type)->map(n | meta::pure::compiler::pdb::reader::decodeNode($n))),
+       pair(| $f.vector && ($cat == 'table'),     | meta::pure::compiler::pdb::reader::readTableVector($node, $f.id, $f.type)->map(n | meta::pure::compiler::pdb::reader::decodeNode($n))),
+       pair(| $f.vector && ($f.type == 'string'), | meta::pure::compiler::pdb::reader::readStringVector($node, $f.id)),
+       pair(| $f.vector,                          | meta::pure::compiler::pdb::reader::readByteVector($node, $f.id)),
+       pair(| $cat == 'union',                    | meta::pure::compiler::pdb::reader::readUnionField($s, $node, $f.id, $f.type)->map(n | meta::pure::compiler::pdb::reader::decodeNode($n))),
+       pair(| $cat == 'table',                    | meta::pure::compiler::pdb::reader::readTableField($node, $f.id, $f.type)->map(n | meta::pure::compiler::pdb::reader::decodeNode($n))),
+       pair(| $cat == 'enum',                     | meta::pure::compiler::pdb::schema::enumValues($s, $f.type)->at(meta::pure::compiler::pdb::reader::readIntField($node, $f.id, 1, false, 0))),
+       pair(| $f.type == 'string',                | meta::pure::compiler::pdb::reader::readStringField($node, $f.id)),
+       pair(| $f.type == 'bool',                  | meta::pure::compiler::pdb::reader::readBoolField($node, $f.id, false)),
+       pair(| $f.type == 'double',                | meta::pure::compiler::pdb::reader::readFloatField($node, $f.id))],
+      | meta::pure::compiler::pdb::reader::readIntField($node, $f.id, meta::pure::compiler::pdb::schema::scalarWidth($f.type), true, 0)
+   );
+}
+
+// The root Def node of one `elements/<path>.<TypeName>` entry's bytes.
+function meta::pure::compiler::pdb::reader::elementNode(bytes:Integer[*], typeName:String[1]):meta::pure::compiler::pdb::reader::FbsNode[1]
+{
+   meta::pure::compiler::pdb::reader::rootNode($bytes, $typeName + 'Def');
+}
+
+// Unwrap a scalar `*ValueDef` (the FlatBuffer encoding of an AtomicValue's raw
+// payload) back to the bare value; `val` is field id 0 in all five.
+function meta::pure::compiler::pdb::reader::unwrapValueDef(node:meta::pure::compiler::pdb::reader::FbsNode[1]):Any[1]
+{
+   if([pair(| $node.type == 'IntegerValueDef', | meta::pure::compiler::pdb::reader::readIntField($node, 0, 8, true, 0)),
+       pair(| $node.type == 'FloatValueDef',   | meta::pure::compiler::pdb::reader::readFloatField($node, 0)),
+       pair(| $node.type == 'BooleanValueDef', | meta::pure::compiler::pdb::reader::readBoolField($node, 0, false)),
+       pair(| ($node.type == 'StringValueDef') || ($node.type == 'DecimalValueDef'),
+            | let s = meta::pure::compiler::pdb::reader::readStringField($node, 0);
+              if($s->isEmpty(), | '', | $s->toOne());)],
+      | fail('not a ValueDef: ' + $node.type); 0;
+   );
+}
+
+// --- STORED-zip directory --------------------------------------------------------
+
+Class meta::pure::compiler::pdb::reader::ZipEntryInfo
+{
+   name    : String[1];
+   method  : Integer[1];
+   size    : Integer[1];
+   dataPos : Integer[1];
+}
+
+Class meta::pure::compiler::pdb::reader::ZipDirAcc
+{
+   pos     : Integer[1];
+   entries : meta::pure::compiler::pdb::reader::ZipEntryInfo[*];
+}
+
+function meta::pure::compiler::pdb::reader::isEocdAt(bytes:Integer[*], p:Integer[1]):Boolean[1]
+{
+   ($p >= 0) && ($bytes->at($p) == 80) && ($bytes->at($p + 1) == 75) && ($bytes->at($p + 2) == 5) && ($bytes->at($p + 3) == 6);
+}
+
+// Parse the central directory of a zip archive. EOCD is found by scanning back
+// from the end for its signature (archives we write carry no comment, so the
+// first probe hits; foreign archives with comments still resolve).
+function meta::pure::compiler::pdb::reader::readZipEntries(bytes:Integer[*]):meta::pure::compiler::pdb::reader::ZipEntryInfo[*]
+{
+   let size = $bytes->size();
+   // no-comment archives (everything we write) have EOCD exactly 22 from the
+   // end; scan back only when a trailing comment shifts it.
+   let noComment = $size - 22;
+   let eocd = if(meta::pure::compiler::pdb::reader::isEocdAt($bytes, $noComment),
+      | $noComment,
+      | let found = range(0, $size - 21)
+           ->map(k | $size - 22 - $k)
+           ->filter(p | meta::pure::compiler::pdb::reader::isEocdAt($bytes, $p))
+           ->head();
+        if($found->isEmpty(), | fail('not a zip archive: no end-of-central-directory record'); 0;, | $found->toOne()););
+   let e       = $eocd;
+   let count   = meta::pure::compiler::pdb::reader::leUInt($bytes, $e + 10, 2);
+   let cdStart = meta::pure::compiler::pdb::reader::leUInt($bytes, $e + 16, 4);
+   let dir = range(0, $count)->fold({i, acc |
+      let p = $acc.pos;
+      if(($bytes->at($p) == 80) && ($bytes->at($p + 1) == 75) && ($bytes->at($p + 2) == 1) && ($bytes->at($p + 3) == 2), | true,
+         | fail('bad central directory entry at ' + $p->toString()));
+      let method     = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 10, 2);
+      let compSize   = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 20, 4);
+      let nameLen    = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 28, 2);
+      let extraLen   = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 30, 2);
+      let commentLen = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 32, 2);
+      let lho        = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 42, 4);
+      let name       = utf8BytesToString($bytes->slice($p + 46, $p + 46 + $nameLen));
+      // data begins after the LOCAL header, whose name/extra lengths can
+      // differ from the central entry's — read them from the local header.
+      let lNameLen   = meta::pure::compiler::pdb::reader::leUInt($bytes, $lho + 26, 2);
+      let lExtraLen  = meta::pure::compiler::pdb::reader::leUInt($bytes, $lho + 28, 2);
+      ^meta::pure::compiler::pdb::reader::ZipDirAcc(
+         pos     = $p + 46 + $nameLen + $extraLen + $commentLen,
+         entries = $acc.entries->concatenate(
+            ^meta::pure::compiler::pdb::reader::ZipEntryInfo(
+               name    = $name,
+               method  = $method,
+               size    = $compSize,
+               dataPos = $lho + 30 + $lNameLen + $lExtraLen)));
+   }, ^meta::pure::compiler::pdb::reader::ZipDirAcc(pos = $cdStart, entries = []));
+   $dir.entries;
+}
+
+// The raw bytes of one entry. STORED (method 0) only: the self-hosted format
+// writes STORED, and legacy deflate archives are inflated by host wiring.
+function meta::pure::compiler::pdb::reader::zipEntryData(bytes:Integer[*], entry:meta::pure::compiler::pdb::reader::ZipEntryInfo[1]):Integer[*]
+{
+   if($entry.method != 0,
+      | fail('unsupported zip method ' + $entry.method->toString() + ' for entry ' + $entry.name + ' (only STORED is self-hosted; inflate legacy archives in the host)'),
+      | true);
+   $bytes->slice($entry.dataPos, $entry.dataPos + $entry.size);
+}

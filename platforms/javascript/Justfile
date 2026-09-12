@@ -1,0 +1,127 @@
+# platforms/javascript/Justfile — builds and tests the JavaScript runtime.
+#
+# Direct invocation:    just <recipe>             (from platforms/javascript/)
+# Via the root Justfile: just javascript::<recipe> (from repo root)
+#
+# Plain JavaScript stub — no build step (no TypeScript, no bundler). The
+# recipes run the package.json `build`/`test` scripts, which are placeholders
+# until the in-browser interpreter is implemented.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+js_root   := source_directory()
+repo_root := js_root / ".." / ".."
+shared    := repo_root / "shared"
+pure_truffle := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+
+# Pure package -> standalone JS, emitted into generated/ (gitignored).
+translate_fn := "meta::external::language::javascript::translation::pdb::translatePackageToJs_String_1__String_1_"
+
+header := "h(){ s=\"[javascript::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
+
+# Default: build + run tests.
+default: test
+
+# No build step — plain JS. Runs the package.json `build` placeholder script.
+build:
+    @{{header}} 'build'
+    @{{substep}} 'pnpm run build (no-op)'
+    cd {{js_root}} && pnpm run build
+
+# No external deps — alias of `build` for symmetry with sub-Justfiles' `build-all`.
+build-all: build
+
+# Translate one Pure package to generated/<out> via the JVM translator. All
+# emitted JS is gitignored. Functions are emitted under full-path-mangled names,
+# so files compose: load them all and cross-file refs resolve as globals.
+_emit PKG OUT:
+    @{{substep}} 'translate {{PKG}} -> generated/{{OUT}}'
+    test -f {{shared}}/compiler.pdb || (echo "ERROR: missing {{shared}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared}}/javascript.pdb || (echo "ERROR: missing {{shared}}/javascript.pdb (run \`just modules::build\` first — the generate step runs the TRANSLATED translator from the modules tree's pdbs)" && exit 1)
+    test -f {{shared}}/translation-shared.pdb || (echo "ERROR: missing {{shared}}/translation-shared.pdb (run \`just modules::build\` first)" && exit 1)
+    test -f {{shared}}/javascript-translation.pdb || (echo "ERROR: missing {{shared}}/javascript-translation.pdb (run \`just modules::build\` first)" && exit 1)
+    test -f {{shared}}/javascript-translation-tests.pdb || (echo "ERROR: missing {{shared}}/javascript-translation-tests.pdb (run \`just modules::build\` first — translatePackageToJs is <<test.TestDependency>> and lives in the -tests pdb)" && exit 1)
+    test -f {{shared}}/javascript-tests.pdb || (echo "ERROR: missing {{shared}}/javascript-tests.pdb (run \`just modules::build\` first — split-built lean pdbs carry refs into their -tests companion)" && exit 1)
+    test -f {{shared}}/translation-shared-tests.pdb || (echo "ERROR: missing {{shared}}/translation-shared-tests.pdb (run \`just modules::build\` first — split-built lean pdbs carry refs into their -tests companion)" && exit 1)
+    mkdir -p {{js_root}}/generated
+    cd {{repo_root}} && {{pure_truffle}} execute \
+        --pdb {{shared}}/core.pdb --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{shared}}/javascript.pdb --pdb {{shared}}/javascript-tests.pdb \
+        --pdb {{shared}}/translation-shared.pdb --pdb {{shared}}/translation-shared-tests.pdb \
+        --pdb {{shared}}/javascript-translation.pdb --pdb {{shared}}/javascript-translation-tests.pdb \
+        --function "{{translate_fn}}" --args "{{PKG}}" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
+        | grep -v '^\[graal-tripwire\]' > {{js_root}}/generated/{{OUT}}
+    @echo "  wrote generated/{{OUT}} ($(wc -c < {{js_root}}/generated/{{OUT}} | tr -d ' ') bytes)"
+
+# Generate the compiler.
+generate: (_emit "meta::pure::compiler" "compiler.js")
+    @{{header}} 'generate'
+
+# Generate the core library the compiler depends on (metamodel enums + function
+# library + UI). Classes emit nothing; metamodel enums (AggregationKind, …) emit
+# `export const`, which the compiler references.
+generate-core: (_emit "meta::pure::metamodel" "core-metamodel.js") (_emit "meta::pure::functions" "core-functions.js") (_emit "meta::pure::ui" "core-ui.js")
+    @{{header}} 'generate-core'
+
+# Generate just the PDB reader/schema package (a small subset of compiler.js).
+# The parser-only host (grammar/parser.js) loads this to back its metadata
+# bridge with the translated Pure reader without pulling in the whole compiler.
+generate-pdb-reader: (_emit "meta::pure::compiler::pdb" "pdb-reader.js")
+    @{{header}} 'generate-pdb-reader'
+
+# Generate the in-process translator stack for the execution host
+# (src/execution): the Pure→JS translator itself translated to JS, its shared
+# canonicalization pipeline, the JS-language metamodel/factories it builds on,
+# and the meta::pure::test helpers (resolveChild & co.) its package walker calls.
+generate-translator: (_emit "meta::pure::test" "test-utils.js") (_emit "meta::pure::translation::shared" "translation-shared.js") (_emit "meta::external::language::javascript" "js-lang.js") (_emit "meta::external::language::javascript::translation" "translator.js")
+    @{{header}} 'generate-translator'
+
+# Generate everything the standalone compiler + execution hosts need.
+generate-all: generate-core generate generate-pdb-reader generate-translator
+
+# Run the grammar-corpus suite (standalone JS parser vs committed protocol.json).
+# Needs the parser bundle (build/antlr-bundle.js) plus generated/pdb-reader.js
+# (the parser host's metadata bridge decodes core.pdb with the Pure reader).
+test: build generate-pdb-reader
+    @{{header}} 'test'
+    @{{substep}} 'grammar corpus (pnpm run test:grammar)'
+    cd {{js_root}} && pnpm run test:grammar
+
+# Run the compiler-conformance suite (standalone JS compiler vs committed
+# ###CompiledGraph). Requires the generated/ compiler JS, so depends on
+# generate-all.
+test-compiler: generate-all
+    @{{header}} 'test-compiler'
+    @{{substep}} 'compiler conformance (pnpm run test:compiler)'
+    cd {{js_root}} && pnpm run test:compiler
+
+# Run the PCT suite through the execution host (src/execution): translate
+# meta::pure::functions IN-PROCESS with the translated translator, eval the
+# emitted JS, and run every <<PCT.test>> against it. PCTs are stabilising
+# (translated-runtime gaps remain) — invoke directly, not part of test-all
+# (mirrors the truffle translation module's stance).
+test-execution: generate-all
+    @{{header}} 'test-execution'
+    @{{substep}} 'PCT via in-process translator (pnpm run test:execution)'
+    cd {{js_root}} && pnpm run test:execution
+
+# Both suites — grammar parsing + compiler conformance.
+test-all: test test-compiler
+
+# Serve the browser demo. Served from the repo root so web/index.html's
+# relative paths to the parser bundle resolve; open the printed URL.
+serve:
+    @{{header}} 'serve'
+    @{{substep}} 'static server at repo root'
+    @echo "  open  http://localhost:8000/platforms/javascript/web/index.html"
+    cd {{js_root}}/../.. && python3 -m http.server 8000
+
+# Remove node_modules/ (no dist — plain JS).
+clean:
+    @{{header}} 'clean'
+    @{{substep}} 'remove node_modules/'
+    rm -rf {{js_root}}/node_modules

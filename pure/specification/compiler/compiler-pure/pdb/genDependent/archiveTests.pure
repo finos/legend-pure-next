@@ -1,0 +1,170 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Wire-format tests for the ARCHIVE layer (pdb/genDependent/archive.pure). The expected
+// bytes for the element entries, elementIndex and manifest sections were
+// produced by THE REFERENCE PIPELINE — CompressedArchiveWriter +
+// PureLanguageExtension/GeneratedFlatBufferWriter writing a real .pdb, then
+// reopening it and dumping each entry (scratchpad probe RefBytesArchive.java,
+// 2026-07-04) — over the identical two-element graph. The zip container is
+// pinned against the STORED layout itself (the reference deflate container is
+// a packaging choice; per-entry bytes are the parity contract).
+//
+// Probe graph: Package 'myPkg' { children: [-> myProf] } and Profile
+// 'myPkg::myProf' { package: myPkg, p_stereotypes: [Stereotype 'st1'
+// { profile: -> myProf }] }. Both paths resolve WITHOUT the 'myPkg::' prefix
+// for children: the path helpers (Java _PackageableElement.path and Pure
+// fullPath/packagePath, exact ports of each other) treat a parentless package
+// as the root and contribute nothing to child paths. The Java probe uses live
+// references where Pure uses ProfilePointers — both land in kind-0 single-
+// segment PointerRefs, byte-identical.
+
+function meta::pure::compiler::pdb::archive::tests::testElements():Any[*]
+{
+   // cgt anchors: name-only on the wire (PointerRef arm), but their `type`
+   // must be the REAL class element — in interpreted Pure the cgt is the
+   // instance's runtime type descriptor and drives the match dispatch.
+   let anchorPkg  = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
+                       type = meta::pure::functions::meta::pathToElement('meta::pure::metamodel::Package')->cast(@Class<Any>));
+   let anchorProf = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
+                       type = meta::pure::functions::meta::pathToElement('meta::pure::metamodel::extension::Profile')->cast(@Class<Any>));
+   let anchorSt   = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
+                       type = meta::pure::functions::meta::pathToElement('meta::pure::metamodel::extension::Stereotype')->cast(@Class<Any>));
+   let pkg  = ^meta::pure::metamodel::Package(name = 'myPkg',
+                 classifierGenericType = $anchorPkg,
+                 children = ^meta::pure::metamodel::pointer::ProfilePointer(path = 'myProf'));
+   let prof = ^meta::pure::metamodel::extension::Profile(name = 'myProf',
+                 package = $pkg,
+                 classifierGenericType = $anchorProf,
+                 p_stereotypes = ^meta::pure::metamodel::extension::Stereotype(value = 'st1',
+                    profile = ^meta::pure::metamodel::pointer::ProfilePointer(path = 'myProf'),
+                    classifierGenericType = $anchorSt));
+   [$pkg, $prof];
+}
+
+// The reference bytes of elements/myPkg.Package (probe, 2026-07-04).
+function meta::pure::compiler::pdb::archive::tests::refPackageBytes():Integer[*]
+{
+   [24,0,0,0,20,0,20,0,19,0,12,0,0,0,0,0,0,0,8,0,0,0,4,0,20,0,0,0,16,0,0,0,48,0,0,0,64,0,0,0,0,0,0,1,1,0,0,0,4,0,0,0,216,255,255,255,4,0,0,0,1,0,0,0,4,0,0,0,6,0,0,0,109,121,80,114,111,102,0,0,5,0,0,0,109,121,80,107,103,0,0,0,8,0,8,0,0,0,4,0,8,0,0,0,4,0,0,0,1,0,0,0,4,0,0,0,12,0,0,0,116,101,115,116,65,110,99,104,111,114,71,84,0,0,0,0];
+}
+
+// The reference bytes of elements/myProf.Profile (probe, 2026-07-04).
+function meta::pure::compiler::pdb::archive::tests::refProfileBytes():Integer[*]
+{
+   [28,0,0,0,0,0,22,0,24,0,23,0,16,0,0,0,0,0,0,0,8,0,12,0,0,0,4,0,22,0,0,0,20,0,0,0,100,0,0,0,108,0,0,0,140,0,0,0,0,0,0,1,1,0,0,0,20,0,0,0,0,0,14,0,20,0,19,0,12,0,0,0,4,0,8,0,14,0,0,0,16,0,0,0,20,0,0,0,32,0,0,0,0,0,0,1,3,0,0,0,115,116,49,0,184,255,255,255,4,0,0,0,1,0,0,0,20,0,0,0,200,255,255,255,4,0,0,0,1,0,0,0,68,0,0,0,6,0,0,0,109,121,80,114,111,102,0,0,228,255,255,255,4,0,0,0,1,0,0,0,4,0,0,0,5,0,0,0,109,121,80,107,103,0,0,0,8,0,8,0,0,0,4,0,8,0,0,0,4,0,0,0,1,0,0,0,4,0,0,0,12,0,0,0,116,101,115,116,65,110,99,104,111,114,71,84,0,0,0,0];
+}
+
+// The reference bytes of the elementIndex section (probe, 2026-07-04).
+function meta::pure::compiler::pdb::archive::tests::refElementIndexBytes():Integer[*]
+{
+   [12,0,0,0,0,0,6,0,8,0,4,0,6,0,0,0,4,0,0,0,2,0,0,0,52,0,0,0,4,0,0,0,220,255,255,255,20,0,0,0,4,0,0,0,7,0,0,0,80,114,111,102,105,108,101,0,6,0,0,0,109,121,80,114,111,102,0,0,8,0,12,0,4,0,8,0,8,0,0,0,20,0,0,0,4,0,0,0,7,0,0,0,80,97,99,107,97,103,101,0,5,0,0,0,109,121,80,107,103,0,0,0];
+}
+
+// The reference bytes of the manifest section for ('test', '*', ['core']).
+function meta::pure::compiler::pdb::archive::tests::refManifestBytes():Integer[*]
+{
+   [123,10,32,32,34,110,97,109,101,34,58,32,34,116,101,115,116,34,44,10,32,32,34,112,97,99,107,97,103,101,80,97,116,116,101,114,110,34,58,32,34,42,34,44,10,32,32,34,100,101,112,101,110,100,101,110,99,105,101,115,34,58,32,91,34,99,111,114,101,34,93,10,125,10];
+}
+
+function <<test.Test>> meta::pure::compiler::pdb::archive::tests::testElementTypeNameAndEntryName():Boolean[1]
+{
+   let els = meta::pure::compiler::pdb::archive::tests::testElements();
+   assertEquals('Package', meta::pure::compiler::pdb::archive::elementTypeName($els->at(0))->toOne());
+   assertEquals('Profile', meta::pure::compiler::pdb::archive::elementTypeName($els->at(1))->toOne());
+   assertEquals('elements/meta/pure/metamodel/type/Any.Class',
+                meta::pure::compiler::pdb::archive::entryName('meta::pure::metamodel::type::Any', 'Class'));
+   // element kinds no extension handles are skipped, not errors
+   assert(meta::pure::compiler::pdb::archive::elementTypeName('a string')->isEmpty());
+}
+
+// Whole element blobs, envelope-finished (finish + result), against the bytes
+// the reference pipeline stored in the zip entries.
+function <<test.Test>> meta::pure::compiler::pdb::archive::tests::testElementEntryWireFormat():Boolean[1]
+{
+   let els = meta::pure::compiler::pdb::archive::tests::testElements();
+   assertEquals(meta::pure::compiler::pdb::archive::tests::refPackageBytes(),
+                meta::pure::compiler::pdb::archive::writeElementBlob($els->at(0)));
+   assertEquals(meta::pure::compiler::pdb::archive::tests::refProfileBytes(),
+                meta::pure::compiler::pdb::archive::writeElementBlob($els->at(1)));
+}
+
+// elementIndex: flatc add order (element_type slot 1 before element_path slot
+// 0), plain createString, entry order preserved.
+function <<test.Test>> meta::pure::compiler::pdb::archive::tests::testElementIndexWireFormat():Boolean[1]
+{
+   let infos = meta::pure::compiler::pdb::archive::elementEntryInfos(meta::pure::compiler::pdb::archive::tests::testElements());
+   assertEquals(['myPkg', 'myProf'], $infos.path);
+   assertEquals(['Package', 'Profile'], $infos.typeName);
+   assertEquals(meta::pure::compiler::pdb::archive::tests::refElementIndexBytes(),
+                meta::pure::compiler::pdb::archive::elementIndexBytes($infos));
+}
+
+function <<test.Test>> meta::pure::compiler::pdb::archive::tests::testManifestWireFormat():Boolean[1]
+{
+   assertEquals(meta::pure::compiler::pdb::archive::tests::refManifestBytes(),
+                meta::pure::functions::binary::stringToUtf8Bytes(
+                   meta::pure::compiler::pdb::archive::manifestJson('test', '*', 'core')));
+   assertEquals('"a\\"b\\\\c"', meta::pure::compiler::pdb::archive::quoteJson('a"b\\c'));
+}
+
+// The full entry list of a .pdb: elements in declaration order, then
+// elementIndex, then manifest — every entry byte-identical to what the
+// reference pipeline wrote into the probe .pdb.
+function <<test.Test>> meta::pure::compiler::pdb::archive::tests::testArchiveEntriesVsJavaPdb():Boolean[1]
+{
+   let entries = meta::pure::compiler::pdb::archive::archiveEntries(
+                    meta::pure::compiler::pdb::archive::tests::testElements(), 'test', '*', 'core');
+   assertEquals(['elements/myPkg.Package', 'elements/myProf.Profile', 'elementIndex', 'manifest'], $entries.name);
+   assertEquals(meta::pure::compiler::pdb::archive::tests::refPackageBytes(),      $entries->at(0).data);
+   assertEquals(meta::pure::compiler::pdb::archive::tests::refProfileBytes(),      $entries->at(1).data);
+   assertEquals(meta::pure::compiler::pdb::archive::tests::refElementIndexBytes(), $entries->at(2).data);
+   assertEquals(meta::pure::compiler::pdb::archive::tests::refManifestBytes(),     $entries->at(3).data);
+}
+
+// STORED zip container layout (APPNOTE): local header + data, central
+// directory, EOCD — method 0, CRC 0, DOS date 1980-01-01. Hand-computed pin
+// for a single 3-byte entry named 'a'.
+function <<test.Test>> meta::pure::compiler::pdb::archive::tests::testZipStoredLayout():Boolean[1]
+{
+   let zip = meta::pure::compiler::pdb::archive::zipStored(
+                ^meta::pure::compiler::pdb::archive::ArchiveEntry(name = 'a', data = [1, 2, 3]));
+   assertEquals([
+      // local file header (30) + name 'a'
+      80,75,3,4, 20,0, 0,0, 0,0, 0,0, 33,0, 0,0,0,0, 3,0,0,0, 3,0,0,0, 1,0, 0,0, 97,
+      // data
+      1,2,3,
+      // central directory header (46) + name 'a'
+      80,75,1,2, 20,0, 20,0, 0,0, 0,0, 0,0, 33,0, 0,0,0,0, 3,0,0,0, 3,0,0,0, 1,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,0, 0,0,0,0, 97,
+      // end of central directory (22): 1 entry, cd size 47, cd offset 34
+      80,75,5,6, 0,0, 0,0, 1,0, 1,0, 47,0,0,0, 34,0,0,0, 0,0],
+      $zip);
+}
+
+// Whole archive: zip of the pinned entries. Sizes compose from the pinned
+// parts, so a total-length + marker check suffices on top of the entry pins.
+function <<test.Test>> meta::pure::compiler::pdb::archive::tests::testWriteArchive():Boolean[1]
+{
+   let bytes = meta::pure::compiler::pdb::archive::writeArchive(
+                  meta::pure::compiler::pdb::archive::tests::testElements(), 'test', '*', 'core');
+   // local headers: 4 sigs; central: 4; EOCD: 1
+   assertEquals([80, 75, 3, 4], $bytes->slice(0, 4));
+   assertEquals([80, 75, 5, 6], $bytes->slice($bytes->size() - 22, $bytes->size() - 18));
+   let names = ['elements/myPkg.Package', 'elements/myProf.Profile', 'elementIndex', 'manifest'];
+   let dataSizes = meta::pure::compiler::pdb::archive::tests::refPackageBytes()->size()
+                 + meta::pure::compiler::pdb::archive::tests::refProfileBytes()->size()
+                 + meta::pure::compiler::pdb::archive::tests::refElementIndexBytes()->size()
+                 + meta::pure::compiler::pdb::archive::tests::refManifestBytes()->size();
+   let nameSizes = $names->map(n | $n->length())->fold({x, a | $x + $a}, 0);
+   assertEquals($dataSizes + (2 * $nameSizes) + (4 * 30) + (4 * 46) + 22, $bytes->size());
+}

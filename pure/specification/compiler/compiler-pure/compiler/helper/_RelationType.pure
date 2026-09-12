@@ -3,9 +3,101 @@ import meta::pure::compiler::helper::column::*;
 import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::metamodel::type::*;
 import meta::pure::metamodel::type::generics::*;
 import meta::pure::metamodel::multiplicity::*;
 import meta::pure::metamodel::relation::*;
+
+// RelationType construction (inference/colSpec paths)
+//
+// The reference RelationColumnResolver builds every inferred RelationType the
+// same way: `new RelationTypeImpl()` wrapped ONCE in an InferredGenericType,
+// and that ONE object is reused as every column's owner
+// (column.classifierGenericType.typeArguments[0]) and as the RelationType's
+// own classifier typeArgument. That shared identity is what the PDB writer
+// turns into AncestorRef back-edges, so a plain `^RelationType<Any>(columns=…)`
+// (whose auto-classifier carries Any and whose columns keep a metaclass owner)
+// diverges structurally from Java direct even though it prints identically.
+// Immutable Pure expresses the cycle with parent-references — the wrapping
+// InferredGenericType is constructed OUTERMOST so the inner slots can reach it.
+// (The grammar path — relationTypeCompiler.pure — self-wires the same two
+// slots but through a UserDefinedGenericType, matching Java's
+// RelationTypeCompiler; these helpers are the INFERENCE-path shape only.)
+
+// New inferred RelationType from columns: returns the shared
+// InferredGenericType wrapping the instance (what Java passes around as
+// `enrichedGT`/`ownerGT` — callers put it in the TypeHolder's typeArguments;
+// the instance is reachable as `.type`). Column owners are REWIRED to the
+// shared wrapper (callers build columns with any placeholder owner).
+//
+// Parent-ref depths ('~' chain: 0 = immediately-enclosing ^-construction):
+//   column owner  ~.~.~.~ : 0 = copied classifier, 1 = copied Column,
+//                           2 = RelationType, 3 = the InferredGenericType
+//   classifier    ~.~.~   : 0 = classifier UDGT, 1 = RelationType,
+//                           2 = the InferredGenericType
+function meta::pure::compiler::helper::relationType::newRelationType(columns:Column<Nil, Any|*>[*]):GenericType[1]
+{
+    ^InferredGenericType(type = ^RelationType<Any>(
+        columns = $columns->map(c |
+            let oldCgt = $c.classifierGenericType->toOne()->cast(@GenericTypeValue);
+            let valueGT = $oldCgt.typeArguments->at(1);
+            ^$c(classifierGenericType = ^$oldCgt(typeArguments = [~.~.~.~, $valueGT]));
+        ),
+        classifierGenericType = ^UserDefinedGenericType(
+            type = RelationType,
+            typeArguments = [~.~.~]
+        )
+    ));
+}
+
+// UserDefined flavor (findCommonRelationType / evaluateRelationTypeOperation —
+// Java wires those through a UserDefinedGenericType-of-instance instead of an
+// Inferred one). CRITICAL identity detail: Java shares ONE ownerGT object
+// between the classifier's typeArgument and EVERY column's owner
+// (`GenericType ownerGT = buildUserDefinedGenericType(result)` used in both
+// slots). That shared identity is wire-visible: when serialization enters the
+// RelationType THROUGH the classifier typeArgument (e.g. via a reconcile
+// copy's shared classifier), the wrapper is on the write stack and the column
+// owners serialize as AncestorRefs to it — fresh per-slot wraps would inline
+// instead and diverge. So the shared UDGT is constructed OUTERMOST (like
+// newRelationType's Inferred) and the instance is returned via `.type`.
+//
+// Parent-ref depths: column owner ~.~.~.~ (0 = copied classifier, 1 = copied
+// Column, 2 = RelationType, 3 = the shared UDGT); classifier typeArg ~.~.~
+// (0 = classifier UDGT, 1 = RelationType, 2 = the shared UDGT).
+function meta::pure::compiler::helper::relationType::newRelationTypeUDGTOwned(columns:Column<Nil, Any|*>[*]):RelationType<Any>[1]
+{
+    let w = ^UserDefinedGenericType(type = ^RelationType<Any>(
+        columns = $columns->map(c |
+            let oldCgt = $c.classifierGenericType->toOne()->cast(@GenericTypeValue);
+            let valueGT = $oldCgt.typeArguments->at(1);
+            ^$c(classifierGenericType = ^$oldCgt(typeArguments = [~.~.~.~, $valueGT]));
+        ),
+        classifierGenericType = ^UserDefinedGenericType(
+            type = RelationType,
+            typeArguments = [~.~.~]
+        )
+    ));
+    $w.type->toOne()->cast(@RelationType<Any>);
+}
+
+// Merge variant (funcColSpecArray/aggColSpecArray): the merged columns KEEP
+// the owners they got from their inner colSpec enrichment (Java's
+// mergeColSpecArrayTypeHolder sets `mergedRT._columns(mergedColumns)` as-is),
+// and the classifier typeArgument gets its OWN fresh InferredGenericType wrap
+// of the instance (Java line-for-line: the holder gets yet another fresh
+// wrap, which the caller builds via buildInferredGenericType). Returns the
+// RelationType itself.
+function meta::pure::compiler::helper::relationType::newRelationTypeKeepingColumnOwners(columns:Column<Nil, Any|*>[*]):RelationType<Any>[1]
+{
+    ^RelationType<Any>(
+        columns = $columns,
+        classifierGenericType = ^UserDefinedGenericType(
+            type = RelationType,
+            typeArguments = [^InferredGenericType(type = ~.~.~)]
+        )
+    );
+}
 
 // RelationType printing
 
@@ -101,14 +193,17 @@ function meta::pure::compiler::helper::relationType::findCommonRelationType_buil
                   | findCommonMultiplicity($colMuls),
                   | []
               );
-              ^Column<Any,Any|*>(
-                  name = $colName,
-                  nameWildCard = false,
-                  genericType = if($commonType->isEmpty(), | buildInferredGenericType(Any), | $commonType->toOne()),
-                  multiplicity = if($commonMul->isEmpty(), | PureOne, | $commonMul->toOne())
+              // Java: _Column.build(colName, ownerGT, commonType, commonMul, false)
+              // — owner placeholder is rewired to the instance by the helper.
+              buildColumn(
+                  $colName,
+                  buildUserDefinedGenericType(RelationType),
+                  if($commonType->isEmpty(), | buildInferredGenericType(Any), | $commonType->toOne()),
+                  if($commonMul->isEmpty(), | PureOne, | $commonMul->toOne()),
+                  false
               );
           });
-          ^RelationType<Any>(columns = $commonColumns);
+          newRelationTypeUDGTOwned($commonColumns->cast(@Column<Nil, Any|*>));
     );
 }
 
@@ -143,18 +238,36 @@ function meta::pure::compiler::helper::relationType::evaluateRelationTypeOperati
         op : GenericTypeOperationType[1] |
             if([pair(| $op == GenericTypeOperationType.Union,
                      | let leftCols = $leftRT.columns->cast(@Column<Any,Any|*>)->map(c |
-                           ^Column<Any,Any|*>(name = $c.name, nameWildCard = if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard), genericType = $c.genericType, multiplicity = $c.multiplicity)
+                           buildColumn(
+                               if($c.name->isEmpty(), | '', | $c.name->toOne()),
+                               buildUserDefinedGenericType(RelationType),
+                               if($c.genericType->isEmpty(), | buildInferredGenericType(Any), | $c.genericType->toOne()),
+                               if($c.multiplicity->isEmpty(), | PureOne, | $c.multiplicity->toOne()),
+                               if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard->toOne())
+                           )
                        );
                        let rightCols = $rightRT.columns->cast(@Column<Any,Any|*>)->map(c |
-                           ^Column<Any,Any|*>(name = $c.name, nameWildCard = if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard), genericType = $c.genericType, multiplicity = $c.multiplicity)
+                           buildColumn(
+                               if($c.name->isEmpty(), | '', | $c.name->toOne()),
+                               buildUserDefinedGenericType(RelationType),
+                               if($c.genericType->isEmpty(), | buildInferredGenericType(Any), | $c.genericType->toOne()),
+                               if($c.multiplicity->isEmpty(), | PureOne, | $c.multiplicity->toOne()),
+                               if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard->toOne())
+                           )
                        );
-                       ^RelationType<Any>(columns = $leftCols->concatenate($rightCols));),
+                       newRelationTypeUDGTOwned($leftCols->concatenate($rightCols)->cast(@Column<Nil, Any|*>));),
                  pair(| $op == GenericTypeOperationType.Difference,
                       | let rightNames = $rightRT.columns->cast(@Column<Any,Any|*>)->map(c | $c.name->toOne());
                         let kept = $leftRT.columns->cast(@Column<Any,Any|*>)->filter(c | !$rightNames->contains($c.name->toOne()))->map(c |
-                            ^Column<Any,Any|*>(name = $c.name, nameWildCard = if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard), genericType = $c.genericType, multiplicity = $c.multiplicity)
+                            buildColumn(
+                               if($c.name->isEmpty(), | '', | $c.name->toOne()),
+                               buildUserDefinedGenericType(RelationType),
+                               if($c.genericType->isEmpty(), | buildInferredGenericType(Any), | $c.genericType->toOne()),
+                               if($c.multiplicity->isEmpty(), | PureOne, | $c.multiplicity->toOne()),
+                               if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard->toOne())
+                           )
                         );
-                        ^RelationType<Any>(columns = $kept);)],
+                        newRelationTypeUDGTOwned($kept->cast(@Column<Nil, Any|*>));)],
                | []
             )
     ]);
@@ -207,10 +320,17 @@ function meta::pure::compiler::helper::relationType::makeRelationTypeAsConcreteA
                     let origCol = $p.values->at(0)->cast(@Column<Any,Any|*>);
                     let gt = $p.values->at(2)->cast(@GenericType);
                     let mul = $p.values->at(3)->cast(@Multiplicity);
-                    ^Column<Any,Any|*>(name = $origCol.name, nameWildCard = if($origCol.nameWildCard->isEmpty(), | false, | $origCol.nameWildCard), genericType = if($gt->isNotEmpty(), | $gt->toOne(), | buildInferredGenericType(Any)), multiplicity = if($mul->isNotEmpty(), | $mul->toOne(), | PureOne));
+                    // Java rebuilds ALL columns via _Column.build with the shared
+                    // Inferred-of-instance owner; the helper rewires the placeholder.
+                    buildColumn(
+                        if($origCol.name->isEmpty(), | '', | $origCol.name->toOne()),
+                        buildUserDefinedGenericType(RelationType),
+                        if($gt->isNotEmpty(), | $gt->toOne(), | buildInferredGenericType(Any)),
+                        if($mul->isNotEmpty(), | $mul->toOne(), | PureOne),
+                        if($origCol.nameWildCard->isEmpty(), | false, | $origCol.nameWildCard->toOne())
+                    );
                 );
-                let newRT = ^RelationType<Any>(columns = $newCols);
-                buildInferredGenericType($newRT);,
+                newRelationType($newCols->cast(@Column<Nil, Any|*>));,
               | []
           );
     );

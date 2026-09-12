@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!--
+  Pure compiler + executor in the browser — no JVM, no GraalVM.
+
+  Loads the same self-contained parser bundle translation/javascript builds
+  (runtime-lib.js + antlr-bundle.js + parser-mappings-bundle.js) as plain <script>s, then main.js (an ES
+  module) fetches the metamodel (m3.fbs + .pdb files), backs the metadata
+  bridge with the in-browser PDB reader (src/pdb), imports the generated
+  compiler + translator JS, and wires Run (button or F9):
+    parse -> compile -> translate each element to JS in-process (the
+    translated translator doing the translating) -> eval -> call
+    `function go():Any[*]` and render the returned values, with the compiled
+    graph (printCompiledGraph) and the generated JavaScript shown below.
+  Parse/compile errors are highlighted in the source via a backdrop overlay
+  behind the textarea. Open via a static server from the repo root (e.g.
+  `just serve` from platforms/javascript) so the relative paths resolve.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Legend Pure — standalone JS compiler</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; margin: 1.5rem; max-width: 70rem; }
+    pre { background: #f5f5f5; padding: 1rem; overflow: auto; max-height: 30rem; }
+    button { font-size: 14px; padding: 6px 14px; margin: 8px 0; }
+    #status { color: #555; margin-left: 0.75rem; }
+
+    /* Backdrop-highlight editor: a #highlights div renders the same text behind a
+       transparent-background <textarea>, with <mark>s around error spans. Both
+       share identical box metrics + `white-space: pre` (no wrapping, via wrap=off)
+       so glyphs line up; the textarea scrolls and we mirror its scroll offset. */
+    #editor { position: relative; height: 14rem; margin: 0.5rem 0; }
+    #highlights, #src {
+      position: absolute; inset: 0; margin: 0;
+      box-sizing: border-box; padding: 8px; border: 1px solid #ccc;
+      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+      tab-size: 2; white-space: pre; overflow: hidden;
+    }
+    #highlights { z-index: 1; color: transparent; background: #fff; pointer-events: none; }
+    #highlights mark { background: #ffc2c2; color: transparent; border-radius: 2px; }
+    #src { z-index: 2; color: #111; caret-color: #111; background: transparent; resize: none; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Legend Pure — standalone JavaScript compiler &amp; executor</h1>
+  <p>Parses, compiles <em>and runs</em> Pure source entirely in the browser (no JVM).
+     The parser bundle, the compiler JS and the translator JS are the artifacts
+     <code>translation/javascript</code> produces; the metamodel is read from the
+     committed <code>.pdb</code> files by the in-browser PDB reader.
+     <strong>Run (or F9)</strong> compiles, translates each element to JavaScript
+     in-process, evals it, then calls <code>function go():Any[*]</code>; the
+     compiled graph and the generated JavaScript are shown below the result.
+     Errors are highlighted in the source.</p>
+
+  <div id="editor">
+    <div id="highlights"></div>
+    <textarea id="src" wrap="off" spellcheck="false">Class test::Person
+{
+  firstName: String[1];
+  lastName: String[1];
+}
+
+function test::greet(p: test::Person[1]): String[1]
+{
+  'Hello, ' + $p.firstName + ' ' + $p.lastName + '!'
+}
+
+function go(): Any[*]
+{
+  let people = [^test::Person(firstName = 'Pierre', lastName = 'Doe'),
+                ^test::Person(firstName = 'Ada', lastName = 'Lovelace')];
+  $people->map(p | test::greet($p));
+}
+</textarea>
+  </div>
+  <div>
+    <button id="run" disabled>Run ▶ (F9)</button>
+    <span id="status">Loading…</span>
+  </div>
+  <section id="outSec" hidden>
+    <h3>Result</h3>
+    <pre id="out"></pre>
+  </section>
+  <section id="graphSec" hidden>
+    <h3>Compiled graph</h3>
+    <pre id="graph"></pre>
+  </section>
+  <section id="genSec" hidden>
+    <h3>Generated JavaScript</h3>
+    <pre id="gen"></pre>
+  </section>
+
+  <!-- The standalone parser + runtime: helpers first, then the antlr bundle
+       (defines globalThis.__pureParseTop and the parser-mappings). Order
+       matters. main.js (module) runs after these classic scripts. -->
+  <script src="../../../pure/modules/translation/javascript/js/runtime-lib.js"></script>
+  <script src="../../../pure/modules/translation/javascript/js/build/antlr-bundle.js"></script>
+  <!-- Mappings half: the translated parser-mappings + __pureParseTop. Must come
+       after antlr-bundle.js, whose __parseAntlr it calls. -->
+  <script src="../../../pure/modules/translation/javascript/js/build/parser-mappings-bundle.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

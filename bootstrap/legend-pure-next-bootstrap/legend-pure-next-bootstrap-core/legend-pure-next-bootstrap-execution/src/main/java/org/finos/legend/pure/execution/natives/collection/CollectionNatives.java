@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -273,6 +274,11 @@ public class CollectionNatives
             long start = (Long) _E_ValueSpecification.unwrap(args.get(0));
             long stop = (Long) _E_ValueSpecification.unwrap(args.get(1));
             long step = (Long) _E_ValueSpecification.unwrap(args.get(2));
+            if (step == 0)
+            {
+                // Contract message — pinned by tests::range::testRangeStepError.
+                throw new org.finos.legend.pure.execution.PureAssertionError("range step must not be 0");
+            }
             List<ValueSpecification> result = new ArrayList<>();
             for (long i = start; step > 0 ? i < stop : i > stop; i += step)
             {

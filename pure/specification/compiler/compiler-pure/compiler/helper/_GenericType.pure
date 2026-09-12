@@ -1160,6 +1160,23 @@ function meta::pure::compiler::helper::genericType::canonicalAnchorFor(newType:T
     );
 }
 
+// Java reconcileInferred's raw-type gate, ported: reference identity for
+// anonymous types (FunctionType/RelationType instances — `is()`), path
+// equality for PackageableElements (the JVM has one canonical object per
+// element, so Java's `==` works there; compile-pure's pointer/live duality
+// needs the path compare). Deliberately NOT structural: a reconcile copy is
+// structurally equal to its original by construction.
+function meta::pure::compiler::helper::genericType::reconcileTypeIdentical(t1:Type[1], t2:Type[1]):Boolean[1]
+{
+    if(is($t1, $t2),
+        | true,
+        | $t1->match([
+              pa:PackageableElement[1] | $t2->match([pb:PackageableElement[1] | $pa->elementToPath() == $pb->elementToPath(), other:Any[1] | false]),
+              other:Any[1] | false
+          ])
+    );
+}
+
 function meta::pure::compiler::helper::genericType::reconcileInferred(expected:GenericType[1], actual:GenericType[1], context:meta::pure::compiler::CompilerContext[1]):GenericType[1]
 {
     $expected->match([
@@ -1170,9 +1187,32 @@ function meta::pure::compiler::helper::genericType::reconcileInferred(expected:G
                     let actualType = $actualV.type;
                     if($expectedType->isEmpty() || $actualType->isEmpty(),
                         | $actual,
-                        | if(!typeEquals($expectedType->toOne(), $actualType->toOne()),
+                        // Java's gate is REFERENCE inequality (expectedType !=
+                        // actualType): the reconcile copy is made only when
+                        // both sides hold the SAME Type object; a structurally
+                        // equal but DISTINCT anonymous type (e.g. a substituted
+                        // RelationType vs the original) takes the
+                        // resolveForTarget branch and keeps `actual` — copying
+                        // there would replace Java's self-wired original with
+                        // a copy on the wire. PackageableElements compare by
+                        // path (Pure's pointer/live duality stands in for the
+                        // JVM's canonical element identity).
+                        | if(!reconcileTypeIdentical($expectedType->toOne(), $actualType->toOne()),
                             | let resolvedExpected = resolveForTarget($expected, $actualType->toOne(), $context);
-                              if($resolvedExpected->isNotEmpty(),
+                              // Recurse only when resolution actually reached the
+                              // actual's raw type (identity) — otherwise return
+                              // actual, as Java does when resolveForTarget yields
+                              // null. Without this, a structurally-equal-but-
+                              // distinct anonymous type resolves to another
+                              // distinct copy and the recursion never terminates
+                              // (Java can't loop here: its reference gate and
+                              // canonical elements make resolution converge).
+                              let resolvedUsable = $resolvedExpected->isNotEmpty()
+                                  && $resolvedExpected->toOne()->match([
+                                        gtv:GenericTypeValue[1] | $gtv.type->isNotEmpty() && reconcileTypeIdentical($gtv.type->toOne(), $actualType->toOne()),
+                                        other:GenericType[1] | true
+                                     ]);
+                              if($resolvedUsable,
                                   | reconcileInferred($resolvedExpected->toOne(), $actual, $context),
                                   | $actual
                               );,
@@ -1246,8 +1286,13 @@ function meta::pure::compiler::helper::genericType::reconcileInferredRT(expected
                   | asInferredMultiplicity($expectedCol.multiplicity->toOne()),
                   | if($actualCol.multiplicity->isNotEmpty(), | $actualCol.multiplicity->toOne(), | PureOne)
               );
-              ^Column<Any,Any|*>(name = $actualCol.name, nameWildCard = if($actualCol.nameWildCard->isEmpty(), | false, | $actualCol.nameWildCard), genericType = $reconciledGT, multiplicity = $reconciledMul);
+              // Java's copy REUSES the original column's classifierGenericType
+              // object (ColumnImpl()._classifierGenericType(actualCol._classifierGenericType()))
+              // — the owner cycle back to the original RelationType travels with it.
+              ^Column<Any,Any|*>(classifierGenericType = $actualCol.classifierGenericType, name = $actualCol.name, nameWildCard = if($actualCol.nameWildCard->isEmpty(), | false, | $actualCol.nameWildCard), genericType = $reconciledGT, multiplicity = $reconciledMul);
           );
-          ^RelationType<Any>(columns = $newCols);
+          // Same for the RelationType copy: the original's classifier (with its
+          // self-wired typeArgument) is shared by reference, not rebuilt.
+          ^RelationType<Any>(classifierGenericType = $actualRT.classifierGenericType, columns = $newCols);
     );
 }

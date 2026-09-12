@@ -35,6 +35,7 @@ boot           := bootstrap_root / "legend-pure-next-bootstrap"
 bcore          := boot / "legend-pure-next-bootstrap-core"
 spec           := repo_root / "pure" / "specification"
 compiler_src   := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
+gen_writer     := compiler_src / "pdb" / "generated" / "generatedWriter.pure"
 mappings_src   := repo_root / "pure" / "specification" / "grammar" / "mapping" / "mappings-pure"
 boot_out       := bootstrap_root / "build"
 shared_out     := repo_root / "shared"
@@ -76,8 +77,91 @@ stage:
 # Companion compiler-tests.pdb holds the compiler-pure tests; mirrors the
 # core.pdb/core-tests.pdb split so the same test discovery path works.
 
+# Generate pdb/generated/generatedWriter.pure (gitignored build output).
+#
+# The writer defines meta::pure::compiler::pdb::gen::*, which everything under
+# pdb/genDependent/ needs — so compiling compiler-pure needs it to already exist,
+# while producing it needs a compiled generator. That is a MODULE-granularity
+# cycle, not a real bootstrap one: generator.pure itself has no gen:: dependency
+# (its references to those names are all inside the strings it emits). So pass 1
+# compiles a copy of compiler-pure with the consumers removed — enough to run the
+# generator — and pass 2 (build-compiler-pdb) compiles the whole thing with the
+# output in place. Costs about 6s.
+#
+# Generating every build rather than committing the file is deliberate: it is
+# derived from m3.fbs + the LIVE METAMODEL, so any class reordered or reparented
+# changes what it should be. Committed, it silently went stale once already.
+generate-writer:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'generate-writer'
+    # printGeneratedWriter reads 'shared/specification/m3.fbs' RELATIVE to cwd,
+    # and just runs recipes from the Justfile's directory — so anchor at the root.
+    cd "{{repo_root}}"
+    if [[ ! -f "{{shared_out}}/core.pdb" ]]; then
+        echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" >&2
+        exit 1
+    fi
+    stage=$(mktemp -d); body=$(mktemp); log=$(mktemp)
+    trap 'rm -rf "$stage"; rm -f "$body" "$log"' EXIT
+    mkdir -p "$stage/src" "$stage/out"
+    cp -R "{{compiler_src}}/." "$stage/src/"
+    # Drop the generated writer and everything that depends on it. They live in
+    # pdb/genDependent/ precisely so this is one directory rather than a filename
+    # list that drifts: membership is not always a direct gen:: call, e.g.
+    # archiveTests.pure makes none but needs ArchiveEntry from archive.pure, so a
+    # grep for callers would miss it. A gen::-dependent file left outside that
+    # directory fails pass 1 loudly, naming the unresolved functions.
+    rm -rf "$stage/src/pdb/generated" "$stage/src/pdb/genDependent"
+    {{substep}} 'pass 1: compile compiler-pure without the gen:: consumers'
+    if ! {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --source "$stage/src" \
+        --output-dir "$stage/out" \
+        --tests split > "$log" 2>&1; then
+        echo "" >&2
+        echo "ERROR: pass 1 could not compile compiler-pure without pdb/genDependent/." >&2
+        echo "Most likely a source OUTSIDE pdb/genDependent/ now depends on the generated" >&2
+        echo "writer (meta::pure::compiler::pdb::gen::*). Move it into pdb/genDependent/," >&2
+        echo "or drop the dependency. Compiler errors:" >&2
+        echo "" >&2
+        grep -E "can.t be found|Can.t resolve|error" "$log" | head -20 >&2
+        exit 1
+    fi
+    {{substep}} 'run printGeneratedWriter -> pdb/generated/generatedWriter.pure'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb "$stage/out/compiler.pdb" \
+        --pdb "$stage/out/compiler-tests.pdb" \
+        --function "meta::pure::compiler::pdb::generator::printGeneratedWriter__Boolean_1_" 2>/dev/null \
+      | awk '/===GENWRITER-BEGIN===/{f=1;next} /===GENWRITER-END===/{f=0} f' > "$body"
+    if [[ ! -s "$body" ]]; then
+        echo "ERROR: printGeneratedWriter produced no output between its markers" >&2
+        exit 1
+    fi
+    mkdir -p "$(dirname "{{gen_writer}}")"
+    # The generator emits only its AUTO-GENERATED banner, so the licence header
+    # is prepended here — the file is compiled into compiler.pdb like any source.
+    printf '%s\n' \
+        '// ©2026 JP Morgan Chase & Co. All rights reserved.' \
+        '//' \
+        '// Licensed under the Apache License, Version 2.0 (the "License");' \
+        '// you may not use this file except in compliance with the License.' \
+        '// You may obtain a copy of the License at' \
+        '//' \
+        '//      http://www.apache.org/licenses/LICENSE-2.0' \
+        '//' \
+        '// Unless required by applicable law or agreed to in writing, software' \
+        '// distributed under the License is distributed on an "AS IS" BASIS,' \
+        '// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.' \
+        '// See the License for the specific language governing permissions and' \
+        '// limitations under the License.' > "{{gen_writer}}"
+    cat "$body" >> "{{gen_writer}}"
+    echo "  wrote {{gen_writer}} ($(grep -c '^function ' "$body") generated functions)"
+
 # Compile compiler-pure -> shared/compiler.pdb (lean) + compiler-tests.pdb via the bootstrap CLI.
-build-compiler-pdb:
+build-compiler-pdb: generate-writer
     @{{header}} 'build-compiler-pdb'
     @{{substep}} 'compile compiler.pdb + compiler-tests.pdb against core.pdb'
     {{pure_bootstrap}} compile \

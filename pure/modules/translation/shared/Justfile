@@ -8,7 +8,7 @@
 #
 # Target-language-agnostic. Provides:
 #   - makeCanonical: a Pure-AST simplification pipeline (open-variable inlining,
-#     constant folding, ...) shared by Java + TypeScript translators.
+#     constant folding, ...) shared by Java + JavaScript translators.
 #   - collectDependencies: AST-walk that returns the transitive PackageableElement
 #     callees of a function. Today walks the AST at runtime; future optimization
 #     is to read the compiler's reverseIndex out of the PDB — needs a
@@ -67,7 +67,7 @@ build-tests:
 # Truffle-only (see comment at top of canonical_tests.pure).
 
 # Run the canonical_tests.pure suite via Truffle (meta::pure::translation::shared::tests).
-# Named `test-all` for symmetry with translation/{java,typescript}/Justfile, even
+# Named `test-all` for symmetry with translation/{java,javascript}/Justfile, even
 # though there's only one suite here today.
 test-all: build-tests
     @{{header}} 'test-all'

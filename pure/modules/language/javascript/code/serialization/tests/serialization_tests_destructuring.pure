@@ -1,0 +1,150 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::javascript::factories::*;
+import meta::external::language::javascript::metamodel::*;
+import meta::external::language::javascript::serialization::*;
+import meta::external::language::javascript::serialization::tests::*;
+
+// =============================================================================
+// Object destructuring
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::constObjectDestructureSimple(): Boolean[1]
+{
+   testStmt(
+      'const { a, b } = obj;',
+      jsConst(jsObjectBinding([jsBindName('a'), jsBindName('b')]), jsId('obj')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::constObjectDestructureRename(): Boolean[1]
+{
+   testStmt(
+      'const { source: alias } = obj;',
+      jsConst(jsObjectBinding([jsBindRename('source', 'alias')]), jsId('obj')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::constObjectDestructureDefault(): Boolean[1]
+{
+   testStmt(
+      'const { x = 0, y = 1 } = obj;',
+      jsConst(
+         jsObjectBinding([
+            jsBindDefault('x', jsNumLit('0')),
+            jsBindDefault('y', jsNumLit('1'))
+         ]),
+         jsId('obj')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::constObjectDestructureRest(): Boolean[1]
+{
+   testStmt(
+      'const { head, ...rest } = obj;',
+      jsConst(jsObjectBinding([jsBindName('head'), jsBindRest('rest')]), jsId('obj')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::constObjectDestructureNested(): Boolean[1]
+{
+   testStmt(
+      'const { user: { name } } = obj;',
+      jsConst(
+         jsObjectBinding([
+            jsBindNested('user', jsObjectBinding([jsBindName('name')]))
+         ]),
+         jsId('obj')));
+}
+
+// =============================================================================
+// Array destructuring
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::constArrayDestructureSimple(): Boolean[1]
+{
+   testStmt(
+      'const [a, b] = arr;',
+      jsConst(jsArrayBinding([jsBindName('a'), jsBindName('b')]), jsId('arr')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::constArrayDestructureRest(): Boolean[1]
+{
+   testStmt(
+      'const [head, ...tail] = arr;',
+      jsConst(jsArrayBinding([jsBindName('head'), jsBindRest('tail')]), jsId('arr')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::letArrayDestructureDefault(): Boolean[1]
+{
+   testStmt(
+      'let [first = 0, second = 0] = arr;',
+      jsLet(
+         jsArrayBinding([
+            jsBindDefault('first', jsNumLit('0')),
+            jsBindDefault('second', jsNumLit('0'))
+         ]),
+         jsId('arr')));
+}
+
+// =============================================================================
+// Parameter destructuring
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::paramObjectDestructure(): Boolean[1]
+{
+   // Standalone test: just the parameter renders as `{ x, y }`
+   testStmt(
+      '''
+      class C {
+        f({ x, y }) {}
+      }''',
+      jsClass('C', [
+         jsMethod(
+            'f',
+            [jsParam(jsObjectBinding([jsBindName('x'), jsBindName('y')]))],
+            jsBlock([]))
+      ]));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::paramArrayDestructure(): Boolean[1]
+{
+   testStmt(
+      '''
+      class C {
+        f([a, b]) {
+          return a + b;
+        }
+      }''',
+      jsClass('C', [
+         jsMethod(
+            'f',
+            [jsParam(jsArrayBinding([jsBindName('a'), jsBindName('b')]))],
+            jsBlock([jsReturn(jsBinary(jsId('a'), '+', jsId('b')))]))
+      ]));
+}
+
+// =============================================================================
+// Mixed
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::constMixedDestructure(): Boolean[1]
+{
+   testStmt(
+      'const { name: userName, age = 0, ...rest } = user;',
+      jsConst(
+         jsObjectBinding([
+            jsBindRename('name', 'userName'),
+            jsBindDefault('age', jsNumLit('0')),
+            jsBindRest('rest')
+         ]),
+         jsId('user')));
+}

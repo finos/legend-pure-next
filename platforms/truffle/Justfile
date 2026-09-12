@@ -4,7 +4,7 @@
 # Via the root Justfile: just truffle::<recipe> (from repo root)
 #
 # Truffle reads core.pdb / compiler.pdb out of <repo>/shared/ (produced by
-# bootstrap). All recipes that need them depend on `_check-pdbs` which fails
+# bootstrap). All recipes that need them depend on `_depCheck_pdbs` which fails
 # loudly with a pointer to `just bootstrap::build-compiler-pdb` if they're missing.
 #
 # A single parameterized private recipe `_mvn mode` invokes Maven; `mode` is
@@ -13,10 +13,8 @@
 #   `build` → `(_mvn "skip-tests")` (mvn install -DskipTests) — fast, no Java tests
 #   `test-java` → `(_mvn "with-tests")` (mvn install)         — surefire runs unit tests inline
 # Maven runs once on the truffle parent pom; the reactor walks
-# parent → platform → pdb-generation → runtime → ide → extension → extension-java
-# in a single launch. pdb-generation's pom already removes its generated
-# MapImpl during its own `compile` phase, so no inter-module file shuffling
-# is needed at the Justfile level.
+# parent → platform → runtime → ide → extension → extension-java
+# in a single launch.
 
 set quiet := true
 set shell := ["bash", "-c"]
@@ -25,18 +23,17 @@ set shell := ["bash", "-c"]
 mod native "native.just"
 
 # Upstream dep consumed by `build-all` (relative path from this Justfile).
-# `build` itself only checks for the produced PDBs and fails loudly (via `_check-pdbs`) —
+# `build` itself only checks for the produced PDBs and fails loudly (via `_depCheck_pdbs`) —
 # this mod is used solely to make `build-all` self-sufficient.
-mod _dep_bootstrap "../../bootstrap/Justfile"
+mod _mod_bootstrap "../../bootstrap/Justfile"
 
 truffle_root      := source_directory()
 repo_root         := truffle_root / ".." / ".."
 truffle           := truffle_root / "legend-pure-next-truffle"
-truffle_platform  := truffle / "legend-pure-next-truffle-platform"
-truffle_runtime   := truffle_platform / "legend-pure-next-truffle-runtime"
+truffle_runtime   := truffle / "legend-pure-next-truffle-runtime"
 truffle_extension := truffle / "legend-pure-next-truffle-extension"
 truffle_ext_java  := truffle_extension / "legend-pure-next-truffle-extension-java"
-truffle_ext_ts    := truffle_extension / "legend-pure-next-truffle-extension-typescript"
+truffle_ext_js    := truffle_extension / "legend-pure-next-truffle-extension-javascript"
 spec              := repo_root / "pure" / "specification"
 compiler_src      := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 truffle_out       := truffle_root / "build"
@@ -59,7 +56,7 @@ default: test
 build: (_mvn "skip-tests")
 
 # Build bootstrap (produces shared/core.pdb + compiler.pdb) first, then this module.
-build-all: _dep_bootstrap::build build
+build-all: _mod_bootstrap::build build
 
 # Build + run Java unit tests (surefire) + run Pure compiler-graph spec tests.
 test: test-java test-pure-compiler
@@ -214,15 +211,13 @@ clean:
 # `mode` is "skip-tests" (fast, no Java tests) or "with-tests" (surefire runs unit tests).
 # Walks the unified truffle reactor in one launch:
 #   parent (legend-pure-next-truffle)
-#     → platform (legend-pure-next-truffle-platform)
-#         → pdb-generation
 #         → runtime
 #     → ide
 #     → extension (legend-pure-next-truffle-extension)
 #         → extension-java
-# Maven derives the build order from compile deps (runtime depends on
-# pdb-generation; extension-java depends on runtime).
-_mvn mode: _check-pdbs _check-graalvm
+# Maven derives the build order from compile deps (extension-java depends
+# on runtime).
+_mvn mode: _depCheck_pdbs _depCheck_graalvm
     @{{header}} '_mvn'
     @{{substep}} '{{ if mode == "skip-tests" { "mvn install -DskipTests (truffle reactor)" } else { "mvn install (truffle reactor + unit tests)" } }}'
     # `--fail-at-end` so all surefire suites run even when one module's tests
@@ -236,15 +231,15 @@ _mvn mode: _check-pdbs _check-graalvm
     # launcher (bin/pure-truffle) globs build/*.jar onto the classpath so
     # ServiceLoader finds them via META-INF/services.
     cp {{truffle_ext_java}}/target/legend-pure-next-truffle-extension-java-*.jar {{truffle_out}}/
-    cp {{truffle_ext_ts}}/target/legend-pure-next-truffle-extension-typescript-*.jar {{truffle_out}}/
+    cp {{truffle_ext_js}}/target/legend-pure-next-truffle-extension-javascript-*.jar {{truffle_out}}/
     # GraalJS runtime jars (js-language, regex, icu4j, ...) — staged by the
     # TS extension's maven-dependency-plugin into target/dependency/. Only
     # the TS extension brings these; copying everything in dependency/ is
     # safe because version-pinned to truffle.version.
-    cp {{truffle_ext_ts}}/target/dependency/*.jar {{truffle_out}}/ 2>/dev/null || true
+    cp {{truffle_ext_js}}/target/dependency/*.jar {{truffle_out}}/ 2>/dev/null || true
 
 # Internal: fail loudly if shared/core.pdb or shared/compiler.pdb is missing.
-_check-pdbs:
+_depCheck_pdbs:
     #!/usr/bin/env bash
     if [[ ! -f "{{shared_out}}/core.pdb" || ! -f "{{shared_out}}/compiler.pdb" ]]; then
         echo "Error: <repo>/shared/core.pdb or compiler.pdb missing." >&2
@@ -259,7 +254,7 @@ _check-pdbs:
 # Maven uses $JAVA_HOME (not `java` on PATH) so we MUST verify JAVA_HOME
 # specifically — a GraalVM `java` on PATH with JAVA_HOME pointing elsewhere
 # slips past a PATH-only check and breaks Maven later.
-_check-graalvm:
+_depCheck_graalvm:
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ -z "${JAVA_HOME:-}" ]]; then

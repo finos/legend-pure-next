@@ -6,7 +6,7 @@
 # Inputs:  shared/core.pdb, shared/core-tests.pdb, shared/translation-shared.pdb.
 # Output:  shared/truffle-translation-gallery.pdb (+ -tests.pdb)
 #
-# Unlike java/typescript translation modules, this one isn't a translator —
+# Unlike java/javascript translation modules, this one isn't a translator —
 # it's a backend introspection tool. The `truffleAstFor` native (declared
 # in code/native.pure, implemented in the Truffle runtime) lowers a Pure
 # lambda to a Truffle RootNode and dumps the tree. The gallery walks every
@@ -23,7 +23,7 @@ set shell := ["bash", "-c"]
 # Sibling module consumed by `build-all` (relative path from this Justfile).
 # `build` itself only checks for the produced PDB and fails loudly — this
 # mod is used solely to make `build-all` self-sufficient.
-mod _dep_translation_shared "../shared/Justfile"
+mod _mod_translation_shared "../shared/Justfile"
 
 trn_root       := source_directory()
 repo_root      := trn_root / ".." / ".." / ".." / ".."
@@ -57,7 +57,7 @@ build:
 # Still needs bootstrap PDBs (core.pdb / core-tests.pdb / compiler.pdb) — `build` checks for those and fails loudly.
 
 # Build sibling-module dep (translation_shared) first, then this module.
-build-all: _dep_translation_shared::build build
+build-all: _mod_translation_shared::build build
 
 # Compile with tests split into shared/truffle-translation-gallery-tests.pdb.
 build-tests:
@@ -76,11 +76,12 @@ build-tests:
         --tests split {{err_filter}}
 
 # Render the Pure -> Truffle AST gallery as a self-contained HTML page.
-gallery: build-tests _check-runtime-pdbs
+gallery: build-tests _depCheck_runtime-pdbs
     @{{header}} 'gallery'
     @{{substep}} 'render Pure -> Truffle AST gallery -> shared/truffle-translation-gallery.html'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/translation-shared.pdb \
@@ -95,10 +96,14 @@ gallery: build-tests _check-runtime-pdbs
     @echo "wrote {{shared_out}}/truffle-translation-gallery.html ($(wc -c < {{shared_out}}/truffle-translation-gallery.html) bytes)"
 
 # Internal: fail loudly if the PDBs / pure-truffle the gallery needs aren't staged.
-_check-runtime-pdbs:
+_depCheck_runtime-pdbs:
     #!/usr/bin/env bash
     if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
         echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2
+        exit 1
+    fi
+    if [[ ! -f "{{shared_out}}/parser-mappings.pdb" ]]; then
+        echo "ERROR: missing {{shared_out}}/parser-mappings.pdb (run \`just bootstrap::build\` first) — TrufflePureParser needs it for parseDocument" >&2
         exit 1
     fi
     if [[ ! -x "{{pure_truffle}}" ]]; then
