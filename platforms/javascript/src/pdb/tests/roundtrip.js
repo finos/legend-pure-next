@@ -17,7 +17,7 @@
 // TRANSLATED SELF-HOSTED PURE WRITER (meta::pure::compiler::pdb::archive +
 // gen::writeX, compiled into generated/compiler.js — the same Pure code that
 // runs on the JVM), reopen those bytes with the TRANSLATED SELF-HOSTED PURE
-// READER (pdb/reader.pure via store.js/pure-reader.js), and re-print the graph
+// READER (pdb/reader/reader.pure via store.js/pure-reader.js), and re-print the graph
 // straight out of the reader. Diffing that against the direct print is a
 // faithful writer⇄reader check — self-hosted Pure code on both sides.
 //

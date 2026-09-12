@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Wire-format tests for the ARCHIVE layer (pdb/genDependent/archive.pure). The expected
+// Wire-format tests for the ARCHIVE layer (pdb/archive/archive.pure). The expected
 // bytes for the element entries, elementIndex and manifest sections were
 // produced by THE REFERENCE PIPELINE — CompressedArchiveWriter +
 // PureLanguageExtension/GeneratedFlatBufferWriter writing a real .pdb, then

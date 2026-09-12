@@ -25,7 +25,7 @@
 // host materializes exactly what it touches.
 //
 // The schema (field slot ids, union member order, enum value order) comes from
-// the parsed m3.fbs (pdb/fbsParser.pure) — reading has no add-order concerns,
+// the parsed m3.fbs (pdb/schema/parser.pure) — reading has no add-order concerns,
 // so a generic schema-driven reader replaces the writer's generated code.
 
 import meta::pure::functions::binary::*;

@@ -287,7 +287,7 @@ function meta::pure::compiler::pdb::generator::emitValidation(p:PropPlan[1], pro
    if($p.kind == 'value',
       | '',
       | let mname = multiplicityName($prop);
-        let tail = ': \' + meta::pure::compiler::pdb::writer::pointerPath($obj) + meta::pure::compiler::pdb::writer::sourceInfo($obj)), | true);\n';
+        let tail = ': \' + meta::pure::compiler::pdb::writerHelper::pointerPath($obj) + meta::pure::compiler::pdb::writerHelper::sourceInfo($obj)), | true);\n';
         if($mname == 'PureOne',
            | '   if($obj.' + $p.name + '->isEmpty(), | fail(\'Validation error: Property ' + $p.name + ' on ' + $clsName + ' has multiplicity [1] but is null' + $tail,
            | if($mname == 'OneMany',
@@ -305,29 +305,29 @@ function meta::pure::compiler::pdb::generator::emitPhase1Step(p:PropPlan[1], pre
    if([
       pair(| ($p.kind == 'union') && ($p.vector == false),
            | ^EmitAcc(prev = $r + '.builder', code =
-                ['   meta::pure::compiler::pdb::writer::checkGtvAnchor($obj.', $p.name, ', $obj);\n',
+                ['   meta::pure::compiler::pdb::writerHelper::checkGtvAnchor($obj.', $p.name, ', $obj);\n',
                  '   let r', $i, ' = meta::pure::compiler::pdb::gen::writeUnion_', $p.unionName->toOne(), '(', $prev, ', $obj.', $p.name, ', $stack);\n']->joinStrings(''))),
       pair(| $p.kind == 'union',
            | ^EmitAcc(prev = $r + '.builder', code =
-                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let u = meta::pure::compiler::pdb::gen::writeUnion_', $p.unionName->toOne(), '($acc.builder, $item, $stack); ^meta::pure::compiler::pdb::writer::UnionListAcc(builder = $u.builder, offsets = $acc.offsets->concatenate($u.offset), types = $acc.types->concatenate($u.typeByte));}, ^meta::pure::compiler::pdb::writer::UnionListAcc(builder = ', $prev, ', offsets = [], types = []));\n']->joinStrings(''))),
+                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let u = meta::pure::compiler::pdb::gen::writeUnion_', $p.unionName->toOne(), '($acc.builder, $item, $stack); ^meta::pure::compiler::pdb::writerHelper::UnionListAcc(builder = $u.builder, offsets = $acc.offsets->concatenate($u.offset), types = $acc.types->concatenate($u.typeByte));}, ^meta::pure::compiler::pdb::writerHelper::UnionListAcc(builder = ', $prev, ', offsets = [], types = []));\n']->joinStrings(''))),
       pair(| ($p.kind == 'pointer') && ($p.vector == false),
            | ^EmitAcc(prev = $r + '.builder', code =
-                ['   let r', $i, ' = if($obj.', $p.name, '->isEmpty(), | ', $bo, ', | meta::pure::compiler::pdb::writer::writePointerRefFor(', $prev, ', $obj.', $p.name, '->toOne()));\n']->joinStrings(''))),
+                ['   let r', $i, ' = if($obj.', $p.name, '->isEmpty(), | ', $bo, ', | meta::pure::compiler::pdb::writerHelper::writePointerRefFor(', $prev, ', $obj.', $p.name, '->toOne()));\n']->joinStrings(''))),
       pair(| $p.kind == 'pointer',
            | ^EmitAcc(prev = $r + '.builder', code =
-                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let p = meta::pure::compiler::pdb::writer::writePointerRefFor($acc.builder, $item); ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = $p.builder, offsets = $acc.offsets->concatenate($p.offset));}, ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = ', $prev, ', offsets = []));\n']->joinStrings(''))),
+                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let p = meta::pure::compiler::pdb::writerHelper::writePointerRefFor($acc.builder, $item); ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $p.builder, offsets = $acc.offsets->concatenate($p.offset));}, ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = ', $prev, ', offsets = []));\n']->joinStrings(''))),
       pair(| ($p.kind == 'table') && ($p.vector == false),
            | ^EmitAcc(prev = $r + '.builder', code =
                 ['   let r', $i, ' = if($obj.', $p.name, '->isEmpty() || ($obj.', $p.name, '->toOne() == $obj), | ', $bo, ', | meta::pure::compiler::pdb::gen::write', $p.writeName->toOne(), '(', $prev, ', $obj.', $p.name, '->toOne()->cast(@', $p.castType->toOne(), '), $stack));\n']->joinStrings(''))),
       pair(| $p.kind == 'table',
            | ^EmitAcc(prev = $r + '.builder', code =
-                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let t = meta::pure::compiler::pdb::gen::write', $p.writeName->toOne(), '($acc.builder, $item->cast(@', $p.castType->toOne(), '), $stack); ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = $t.builder, offsets = $acc.offsets->concatenate($t.offset));}, ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = ', $prev, ', offsets = []));\n']->joinStrings(''))),
+                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let t = meta::pure::compiler::pdb::gen::write', $p.writeName->toOne(), '($acc.builder, $item->cast(@', $p.castType->toOne(), '), $stack); ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $t.builder, offsets = $acc.offsets->concatenate($t.offset));}, ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = ', $prev, ', offsets = []));\n']->joinStrings(''))),
       pair(| ($p.kind == 'string') && ($p.vector == false),
            | ^EmitAcc(prev = $r + '.builder', code =
-                ['   let r', $i, ' = if($obj.', $p.name, '->isEmpty(), | ', $bo, ', | meta::pure::compiler::pdb::fbb::createSharedString(', $prev, ', meta::pure::compiler::pdb::writer::asFbsString($obj.', $p.name, '->toOne())));\n']->joinStrings(''))),
+                ['   let r', $i, ' = if($obj.', $p.name, '->isEmpty(), | ', $bo, ', | meta::pure::compiler::pdb::fbb::createSharedString(', $prev, ', meta::pure::compiler::pdb::writerHelper::asFbsString($obj.', $p.name, '->toOne())));\n']->joinStrings(''))),
       pair(| $p.kind == 'string',
            | ^EmitAcc(prev = $r + '.builder', code =
-                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let s = meta::pure::compiler::pdb::fbb::createSharedString($acc.builder, meta::pure::compiler::pdb::writer::asFbsString($item)); ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = $s.builder, offsets = $acc.offsets->concatenate($s.offset));}, ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = ', $prev, ', offsets = []));\n']->joinStrings('')))
+                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let s = meta::pure::compiler::pdb::fbb::createSharedString($acc.builder, meta::pure::compiler::pdb::writerHelper::asFbsString($item)); ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $s.builder, offsets = $acc.offsets->concatenate($s.offset));}, ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = ', $prev, ', offsets = []));\n']->joinStrings('')))
    ],
       // bool / long / value: nothing in phase 1
       | ^EmitAcc(prev = $prev, code = ''));
@@ -338,10 +338,10 @@ function meta::pure::compiler::pdb::generator::emitVectorStep(p:PropPlan[1], pre
    let i = $p.idx->toString();
    if($p.vector == false,
       | ^EmitAcc(prev = $prev, code = ''),
-      | let vecLet = '   let vec' + $i + ' = if($r' + $i + '.offsets->isEmpty(), | ^meta::pure::compiler::pdb::fbb::BuilderAndOffset(builder = ' + $prev + ', offset = 0), | meta::pure::compiler::pdb::writer::createOffsetVector(' + $prev + ', $r' + $i + '.offsets));\n';
+      | let vecLet = '   let vec' + $i + ' = if($r' + $i + '.offsets->isEmpty(), | ^meta::pure::compiler::pdb::fbb::BuilderAndOffset(builder = ' + $prev + ', offset = 0), | meta::pure::compiler::pdb::writerHelper::createOffsetVector(' + $prev + ', $r' + $i + '.offsets));\n';
         if($p.kind == 'union',
            | ^EmitAcc(prev = '$tvec' + $i + '.builder', code = $vecLet +
-                '   let tvec' + $i + ' = if($r' + $i + '.offsets->isEmpty(), | ^meta::pure::compiler::pdb::fbb::BuilderAndOffset(builder = $vec' + $i + '.builder, offset = 0), | meta::pure::compiler::pdb::writer::createByteVector($vec' + $i + '.builder, $r' + $i + '.types));\n'),
+                '   let tvec' + $i + ' = if($r' + $i + '.offsets->isEmpty(), | ^meta::pure::compiler::pdb::fbb::BuilderAndOffset(builder = $vec' + $i + '.builder, offset = 0), | meta::pure::compiler::pdb::writerHelper::createByteVector($vec' + $i + '.builder, $r' + $i + '.types));\n'),
            | ^EmitAcc(prev = '$vec' + $i + '.builder', code = $vecLet)););
 }
 
@@ -388,14 +388,14 @@ function meta::pure::compiler::pdb::generator::emitClass(schema:FbsSchema[1], cl
    // then the FunctionExpression unresolved-`func` check ('~' parent-ref chains exempt).
    let validations = $plans->map(p | emitValidation($p, $props->at($p.idx), $clsName))->joinStrings('');
    let funcCheck = if(allSuperClasses($cls).name->contains('FunctionExpression'),
-      | '   if($obj.func->isEmpty() && ($obj.functionName != \'~\'), | fail(\'Validation error: Property func on resolved ' + $clsName + ' is null (functionName=\' + $obj.functionName->joinStrings(\'\') + \') - compile-pure left an unresolved call: \' + meta::pure::compiler::pdb::writer::pointerPath($obj) + meta::pure::compiler::pdb::writer::sourceInfo($obj)), | true);\n',
+      | '   if($obj.func->isEmpty() && ($obj.functionName != \'~\'), | fail(\'Validation error: Property func on resolved ' + $clsName + ' is null (functionName=\' + $obj.functionName->joinStrings(\'\') + \') - compile-pure left an unresolved call: \' + meta::pure::compiler::pdb::writerHelper::pointerPath($obj) + meta::pure::compiler::pdb::writerHelper::sourceInfo($obj)), | true);\n',
       | '');
 
    let phase1 = $plans->fold({p, acc | let step = emitPhase1Step($p, $acc.prev); ^EmitAcc(code = $acc.code + $step.code, prev = $step.prev);},
                              ^EmitAcc(code = $validations + $funcCheck, prev = '$b'));
    let withValue = if($clsName == 'AtomicValue',
       | ^EmitAcc(prev = '$rV.builder', code = $phase1.code +
-           '   let rV = if($obj.value->isEmpty(), | ^meta::pure::compiler::pdb::writer::UnionRes(builder = ' + $phase1.prev + ', offset = 0, typeByte = 0), | meta::pure::compiler::pdb::gen::writeAtomicValueContent(' + $phase1.prev + ', $obj.value->toOne(), $obj, $stack));\n'),
+           '   let rV = if($obj.value->isEmpty(), | ^meta::pure::compiler::pdb::writerHelper::UnionRes(builder = ' + $phase1.prev + ', offset = 0, typeByte = 0), | meta::pure::compiler::pdb::gen::writeAtomicValueContent(' + $phase1.prev + ', $obj.value->toOne(), $obj, $stack));\n'),
       | $phase1);
    let vectors = $plans->fold({p, acc | let step = emitVectorStep($p, $acc.prev); ^EmitAcc(code = $acc.code + $step.code, prev = $step.prev);}, $withValue);
    let start = ^EmitAcc(code = $vectors.code + '   let t = ' + $vectors.prev + '->meta::pure::compiler::pdb::fbb::startObject(' + $fieldCount->toString() + ');\n', prev = '$t');
@@ -409,8 +409,8 @@ function meta::pure::compiler::pdb::generator::emitClass(schema:FbsSchema[1], cl
 
    'function meta::pure::compiler::pdb::gen::write' + $clsName + '(b:meta::pure::compiler::pdb::fbb::Builder[1], obj:' + $objType + '[1], stack:Any[*]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]\n' +
    '{\n' +
-   '   if(meta::pure::compiler::pdb::writer::onStack($stack, $obj),\n' +
-   '      | meta::pure::compiler::pdb::writer::encodeAncestorRef($b, meta::pure::compiler::pdb::writer::ancestorDepth($stack, $obj)),\n' +
+   '   if(meta::pure::compiler::pdb::writerHelper::onStack($stack, $obj),\n' +
+   '      | meta::pure::compiler::pdb::writerHelper::encodeAncestorRef($b, meta::pure::compiler::pdb::writerHelper::ancestorDepth($stack, $obj)),\n' +
    '      | meta::pure::compiler::pdb::gen::write' + $clsName + '_body($b, $obj, $stack->concatenate($obj)));\n' +
    '}\n' +
    '\n' +
@@ -418,10 +418,56 @@ function meta::pure::compiler::pdb::generator::emitClass(schema:FbsSchema[1], cl
    '{\n' + $body + '}\n';
 }
 
+// Top-level element kinds — the writer classes that are metamodel
+// PackageableElements. DERIVED, never listed: archive.pure used to carry two
+// hand-written 11-arm match dispatches (elementTypeName + writeElementBlob) kept
+// in sync only by a comment, and a forgotten arm either dropped the element from
+// the archive silently (elementTypeName's Any catch-all) or failed at runtime
+// (writeElementBlob has none). Same class of drift as a stale generated writer.
+//
+// writerClasses already restricts to non-abstract, non-pointer classes under
+// meta::pure::metamodel that own a Def table, so the protocol/grammar
+// PackageableElement extensions (compiler::test::CompiledGraph & co.) are
+// excluded twice over: wrong package, and no Def table.
+function meta::pure::compiler::pdb::generator::elementClasses(schema:FbsSchema[1]):Class<Any>[*]
+{
+   writerClasses($schema)->filter(c | allSuperClasses($c).name->contains('PackageableElement'));
+}
+
+// Arm types are disjoint concrete classes, so match order carries no meaning
+// here — these emit in writerClasses order (alphabetical) rather than copying the
+// reference's hand-authored instanceof order, which is not derivable from the
+// schema. elementTypeName's `Any` catch-all must stay LAST; it is appended after
+// the derived arms, never sorted among them.
+function meta::pure::compiler::pdb::generator::emitElementTypeName(schema:FbsSchema[1]):String[1]
+{
+   let arms = elementClasses($schema)->map(c |
+      '      v' + $c.name->toOne() + ' : ' + $c->elementToPath() + typeArgsSuffix($c)
+         + '[1] | \'' + $c.name->toOne() + '\',\n');
+   'function meta::pure::compiler::pdb::gen::elementTypeName(e:Any[1]):String[0..1]\n'
+      + '{\n   $e->match([\n'
+      + $arms->joinStrings('')
+      + '      x : Any[1] | []\n   ]);\n}\n';
+}
+
+function meta::pure::compiler::pdb::generator::emitWriteElementBlob(schema:FbsSchema[1]):String[1]
+{
+   let fbb = 'meta::pure::compiler::pdb::fbb';
+   let arms = elementClasses($schema)->map(c |
+      '      v' + $c.name->toOne() + ' : ' + $c->elementToPath() + typeArgsSuffix($c)
+         + '[1] | meta::pure::compiler::pdb::gen::write' + $c.name->toOne()
+         + '(' + $fbb + '::newBuilder(), $v' + $c.name->toOne() + ', []),\n');
+   'function meta::pure::compiler::pdb::gen::writeElementBlob(e:Any[1]):Integer[*]\n'
+      + '{\n   let r = $e->match([\n'
+      + $arms->joinStrings('')->substring(0, $arms->joinStrings('')->length() - 2) + '\n'
+      + '   ]);\n'
+      + '   $r.builder->' + $fbb + '::finish($r.offset)->' + $fbb + '::result();\n}\n';
+}
+
 function meta::pure::compiler::pdb::generator::emitUnion(u:FbsUnion[1], classes:Class<Any>[*]):String[1]
 {
    let members = $u.members;
-   let ur = '^meta::pure::compiler::pdb::writer::UnionRes(builder = $r.builder, offset = $r.offset, typeByte = ';
+   let ur = '^meta::pure::compiler::pdb::writerHelper::UnionRes(builder = $r.builder, offset = $r.offset, typeByte = ';
    // FLAT multi-arm dispatch (`if([pair(|cond,|then), ...], |else)`) rather
    // than nested ifs: a 56-member union (AnyUnion) as a nested-if chain nests
    // one FunctionExpression level per member and trips the interpreter's
@@ -432,26 +478,26 @@ function meta::pure::compiler::pdb::generator::emitUnion(u:FbsUnion[1], classes:
       let byte = unionByteFor($members, $m)->toString();
       if($m == 'PointerRef',
          | 'pair(| $vv->instanceOf(meta::pure::metamodel::PackageableElement) || $vv->instanceOf(meta::pure::metamodel::function::property::AbstractProperty) || $vv->instanceOf(meta::pure::metamodel::extension::Stereotype) || $vv->instanceOf(meta::pure::metamodel::extension::Tag),\n' +
-           '           | let r = meta::pure::compiler::pdb::writer::writePointerRefFor($b, $vv); ' + $ur + $byte + ');)',
+           '           | let r = meta::pure::compiler::pdb::writerHelper::writePointerRefFor($b, $vv); ' + $ur + $byte + ');)',
          | if($m == 'AncestorRef',
-            | 'pair(| meta::pure::compiler::pdb::writer::onStack($stack, $vv),\n' +
-              '           | let r = meta::pure::compiler::pdb::writer::encodeAncestorRef($b, meta::pure::compiler::pdb::writer::ancestorDepth($stack, $vv)); ' + $ur + $byte + ');)',
+            | 'pair(| meta::pure::compiler::pdb::writerHelper::onStack($stack, $vv),\n' +
+              '           | let r = meta::pure::compiler::pdb::writerHelper::encodeAncestorRef($b, meta::pure::compiler::pdb::writerHelper::ancestorDepth($stack, $vv)); ' + $ur + $byte + ');)',
             | let simple = stripDef($m);
               let cls = classByName($classes, $simple);
               let full = $cls->elementToPath();
               'pair(| $vv->instanceOf(' + $full + '),\n' +
               '           | let r = meta::pure::compiler::pdb::gen::write' + $simple + '($b, $vv->cast(@' + $full + typeArgsSuffix($cls) + '), $stack); ' + $ur + $byte + ');)';));
    });
-   let inner = 'if([\n       ' + $arms->joinStrings(',\n       ') + '],\n      | meta::pure::compiler::pdb::writer::failUnion($b, \'' + $u.name + '\'))';
+   let inner = 'if([\n       ' + $arms->joinStrings(',\n       ') + '],\n      | meta::pure::compiler::pdb::writerHelper::failUnion($b, \'' + $u.name + '\'))';
 
-   'function meta::pure::compiler::pdb::gen::writeUnion_' + $u.name + '(b:meta::pure::compiler::pdb::fbb::Builder[1], v:Any[0..1], stack:Any[*]):meta::pure::compiler::pdb::writer::UnionRes[1]\n' +
+   'function meta::pure::compiler::pdb::gen::writeUnion_' + $u.name + '(b:meta::pure::compiler::pdb::fbb::Builder[1], v:Any[0..1], stack:Any[*]):meta::pure::compiler::pdb::writerHelper::UnionRes[1]\n' +
    '{\n' +
    '   if($v->isEmpty(),\n' +
-   '      | ^meta::pure::compiler::pdb::writer::UnionRes(builder = $b, offset = 0, typeByte = 0),\n' +
+   '      | ^meta::pure::compiler::pdb::writerHelper::UnionRes(builder = $b, offset = 0, typeByte = 0),\n' +
    '      | meta::pure::compiler::pdb::gen::writeUnionValue_' + $u.name + '($b, $v->toOne(), $stack));\n' +
    '}\n' +
    '\n' +
-   'function meta::pure::compiler::pdb::gen::writeUnionValue_' + $u.name + '(b:meta::pure::compiler::pdb::fbb::Builder[1], vv:Any[1], stack:Any[*]):meta::pure::compiler::pdb::writer::UnionRes[1]\n' +
+   'function meta::pure::compiler::pdb::gen::writeUnionValue_' + $u.name + '(b:meta::pure::compiler::pdb::fbb::Builder[1], vv:Any[1], stack:Any[*]):meta::pure::compiler::pdb::writerHelper::UnionRes[1]\n' +
    '{\n   ' + $inner + ';\n}\n';
 }
 
@@ -472,7 +518,7 @@ function meta::pure::compiler::pdb::generator::emitAtomicValueContent(schema:Fbs
    let avPath  = classByName($classes, 'AtomicValue')->elementToPath();
    let lf      = classByName($classes, 'LambdaFunction');
    let lfCast  = $lf->elementToPath() + typeArgsSuffix($lf);
-   let ur = '^meta::pure::compiler::pdb::writer::UnionRes(builder = $r.builder, offset = $r.offset, typeByte = ';
+   let ur = '^meta::pure::compiler::pdb::writerHelper::UnionRes(builder = $r.builder, offset = $r.offset, typeByte = ';
 
    // Assembled from a FLAT parts list, and the EMITTED dispatch is the flat
    // multi-arm `if([pair(|cond,|then), ...], |else)` form — nested-if chains
@@ -480,26 +526,26 @@ function meta::pure::compiler::pdb::generator::emitAtomicValueContent(schema:Fbs
    // FunctionExpression per level and trip the interpreter's
    // protocol-conversion depth guard on the self-host parse.
    [
-      'function meta::pure::compiler::pdb::gen::writeAtomicValueContent(b:meta::pure::compiler::pdb::fbb::Builder[1], vv:Any[1], obj:' + $avPath + '[1], stack:Any[*]):meta::pure::compiler::pdb::writer::UnionRes[1]\n',
+      'function meta::pure::compiler::pdb::gen::writeAtomicValueContent(b:meta::pure::compiler::pdb::fbb::Builder[1], vv:Any[1], obj:' + $avPath + '[1], stack:Any[*]):meta::pure::compiler::pdb::writerHelper::UnionRes[1]\n',
       '{\n',
       '   if([\n',
       '       pair(| $vv->instanceOf(meta::pure::metamodel::function::LambdaFunction),\n',
       '           | let r = meta::pure::compiler::pdb::gen::writeLambdaFunction($b, $vv->cast(@' + $lfCast + '), $stack); ' + $ur + $bLambda + ');),\n',
       '       pair(| $vv->instanceOf(meta::pure::metamodel::PackageableElement),\n',
-      '           | let r = meta::pure::compiler::pdb::writer::writePointerRefFor($b, $vv); ' + $ur + $bPtr + ');),\n',
+      '           | let r = meta::pure::compiler::pdb::writerHelper::writePointerRefFor($b, $vv); ' + $ur + $bPtr + ');),\n',
       '       pair(| $vv->instanceOf(meta::pure::metamodel::type::Enum),\n',
-      '           | let r = meta::pure::compiler::pdb::writer::encodeStringishValueDef($b, meta::pure::compiler::pdb::writer::atomicEnumPath($obj.genericType, $vv->cast(@meta::pure::metamodel::type::Enum).name->toOne())); ' + $ur + $bStr + ');),\n',
+      '           | let r = meta::pure::compiler::pdb::writerHelper::encodeStringishValueDef($b, meta::pure::compiler::pdb::writerHelper::atomicEnumPath($obj.genericType, $vv->cast(@meta::pure::metamodel::type::Enum).name->toOne())); ' + $ur + $bStr + ');),\n',
       '       pair(| $vv->instanceOf(Integer),\n',
-      '           | let r = meta::pure::compiler::pdb::writer::encodeIntegerValueDef($b, $vv->cast(@Integer)); ' + $ur + $bInt + ');),\n',
+      '           | let r = meta::pure::compiler::pdb::writerHelper::encodeIntegerValueDef($b, $vv->cast(@Integer)); ' + $ur + $bInt + ');),\n',
       '       pair(| $vv->instanceOf(Decimal),\n',
-      '           | let r = meta::pure::compiler::pdb::writer::encodeStringishValueDef($b, $vv->toString()); ' + $ur + $bDec + ');),\n',
-      '       pair(| $vv->instanceOf(Float) && meta::pure::compiler::pdb::writer::isDecimalTyped($obj.genericType),\n',
-      '           | let r = meta::pure::compiler::pdb::writer::encodeStringishValueDef($b, $vv->toString()); ' + $ur + $bDec + ');),\n',
+      '           | let r = meta::pure::compiler::pdb::writerHelper::encodeStringishValueDef($b, $vv->toString()); ' + $ur + $bDec + ');),\n',
+      '       pair(| $vv->instanceOf(Float) && meta::pure::compiler::pdb::writerHelper::isDecimalTyped($obj.genericType),\n',
+      '           | let r = meta::pure::compiler::pdb::writerHelper::encodeStringishValueDef($b, $vv->toString()); ' + $ur + $bDec + ');),\n',
       '       pair(| $vv->instanceOf(Float),\n',
-      '           | let r = meta::pure::compiler::pdb::writer::encodeFloatValueDef($b, $vv->cast(@Float)); ' + $ur + $bFloat + ');),\n',
+      '           | let r = meta::pure::compiler::pdb::writerHelper::encodeFloatValueDef($b, $vv->cast(@Float)); ' + $ur + $bFloat + ');),\n',
       '       pair(| $vv->instanceOf(Boolean),\n',
-      '           | let r = meta::pure::compiler::pdb::writer::encodeBooleanValueDef($b, $vv->cast(@Boolean)); ' + $ur + $bBool + ');)],\n',
-      '      | let r = meta::pure::compiler::pdb::writer::encodeStringishValueDef($b, $vv->toString()); ' + $ur + $bStr + ');\n',
+      '           | let r = meta::pure::compiler::pdb::writerHelper::encodeBooleanValueDef($b, $vv->cast(@Boolean)); ' + $ur + $bBool + ');)],\n',
+      '      | let r = meta::pure::compiler::pdb::writerHelper::encodeStringishValueDef($b, $vv->toString()); ' + $ur + $bStr + ');\n',
       '   );\n',
       '}\n'
    ]->joinStrings('');
@@ -510,17 +556,19 @@ function meta::pure::compiler::pdb::generator::generateWriter(fbsPath:String[1])
    let schema = parseFbs(meta::pure::functions::io::readFile($fbsPath));
    let classes = writerClasses($schema);
    let header = '// AUTO-GENERATED by meta::pure::compiler::pdb::generator (from m3.fbs + the live\n' +
-                '// metamodel) - DO NOT EDIT. Regenerate: see pdb/generator.pure printGeneratedWriter.\n' +
+                '// metamodel) - DO NOT EDIT. Regenerate: see pdb/writer/generator.pure printGeneratedWriter.\n' +
                 '// Byte-compatible with the reference bootstrap GeneratedFlatBufferWriter.\n\n';
    $header
       + $schema.unions->filter(u | $u.name != 'AtomicValueContentUnion')->map(u | emitUnion($u, $classes))->joinStrings('\n')
       + '\n' + emitAtomicValueContent($schema, $classes)
-      + '\n' + $classes->map(c | emitClass($schema, $c, $classes))->joinStrings('\n');
+      + '\n' + $classes->map(c | emitClass($schema, $c, $classes))->joinStrings('\n')
+      + '\n' + emitElementTypeName($schema)
+      + '\n' + emitWriteElementBlob($schema);
 }
 
 // Entry point for `pure-bootstrap execute` (run from the repo root):
 // prints the generated writer between markers for extraction into
-// pdb/generated/generatedWriter.pure (the generated-code area of this module —
+// pdb/writer/generated/generatedWriter.pure (the generated-code area of this module —
 // committed, like shared/specification/m3.fbs, to break the self-host cycle).
 function meta::pure::compiler::pdb::generator::printGeneratedWriter():Boolean[1]
 {

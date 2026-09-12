@@ -23,7 +23,7 @@
 // (e.g. a freshly written archive layered over the base PDBs for a
 // round-trip, then removed).
 //
-// Decoding is done by the TRANSLATED SELF-HOSTED PURE READER (pdb/reader.pure
+// Decoding is done by the TRANSLATED SELF-HOSTED PURE READER (pdb/reader/reader.pure
 // via pure-reader.js) — only touched elements are inflated/decoded; archive
 // opening and inflation stay host wiring (zip/zip.js).
 //

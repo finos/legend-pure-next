@@ -44,46 +44,26 @@ Class meta::pure::compiler::pdb::archive::ElementEntryInfo
    element  : Any[1];
 }
 
-// The archive TypeName for a serializable top-level element — the reference
-// PureLanguageSerialization.elementTypeName instanceof chain, same arm order.
-// Empty for element kinds no extension handles (they are skipped, not errors).
+
+
+
+// The two generated dispatches, behind names. Every mangled string in this file
+// appears exactly once; callers — archive internals and archiveTests alike — see
+// ordinary typed functions and carry no dependency on pdb::gen.
 function meta::pure::compiler::pdb::archive::elementTypeName(e:Any[1]):String[0..1]
 {
-   $e->match([
-      c  : meta::pure::metamodel::type::Class<Any>[1]                                | 'Class',
-      en : meta::pure::metamodel::type::Enumeration<Any>[1]                          | 'Enumeration',
-      a  : meta::pure::metamodel::relationship::Association[1]                       | 'Association',
-      p  : meta::pure::metamodel::extension::Profile[1]                              | 'Profile',
-      u  : meta::pure::metamodel::function::UserDefinedFunction<Any>[1]              | 'UserDefinedFunction',
-      n  : meta::pure::metamodel::function::NativeFunction<Any>[1]                   | 'NativeFunction',
-      pt : meta::pure::metamodel::type::PrimitiveType[1]                             | 'PrimitiveType',
-      im : meta::pure::metamodel::multiplicity::InferredPackageableMultiplicity[1]   | 'InferredPackageableMultiplicity',
-      um : meta::pure::metamodel::multiplicity::UserDefinedPackageableMultiplicity[1]| 'UserDefinedPackageableMultiplicity',
-      gt : meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType[1]| 'UserDefinedPackageableGenericType',
-      pk : meta::pure::metamodel::Package[1]                                         | 'Package',
-      x  : Any[1]                                                                    | []
-   ]);
+   // evaluate returns Any[*]; head() narrows to the declared [0..1] — the
+   // generated dispatch yields [] for element kinds it has no arm for.
+   meta::pure::functions::lang::eval(
+      meta::pure::compiler::pdb::writerHelper::genFn('elementTypeName_Any_1__String_$0_1$_')
+         ->cast(@meta::pure::metamodel::function::Function<{Any[1]->String[0..1]}>), $e);
 }
 
-// Serialize one element to its finished FlatBuffer blob (fresh builder per
-// element — per-element shared-string and vtable pools, as the reference's
-// per-element FlatBufferBuilder). Same dispatch arms as writeElementTypeName.
 function meta::pure::compiler::pdb::archive::writeElementBlob(e:Any[1]):Integer[*]
 {
-   let r = $e->match([
-      c  : meta::pure::metamodel::type::Class<Any>[1]                                | meta::pure::compiler::pdb::gen::writeClass(meta::pure::compiler::pdb::fbb::newBuilder(), $c, []),
-      en : meta::pure::metamodel::type::Enumeration<Any>[1]                          | meta::pure::compiler::pdb::gen::writeEnumeration(meta::pure::compiler::pdb::fbb::newBuilder(), $en, []),
-      a  : meta::pure::metamodel::relationship::Association[1]                       | meta::pure::compiler::pdb::gen::writeAssociation(meta::pure::compiler::pdb::fbb::newBuilder(), $a, []),
-      p  : meta::pure::metamodel::extension::Profile[1]                              | meta::pure::compiler::pdb::gen::writeProfile(meta::pure::compiler::pdb::fbb::newBuilder(), $p, []),
-      u  : meta::pure::metamodel::function::UserDefinedFunction<Any>[1]              | meta::pure::compiler::pdb::gen::writeUserDefinedFunction(meta::pure::compiler::pdb::fbb::newBuilder(), $u, []),
-      n  : meta::pure::metamodel::function::NativeFunction<Any>[1]                   | meta::pure::compiler::pdb::gen::writeNativeFunction(meta::pure::compiler::pdb::fbb::newBuilder(), $n, []),
-      pt : meta::pure::metamodel::type::PrimitiveType[1]                             | meta::pure::compiler::pdb::gen::writePrimitiveType(meta::pure::compiler::pdb::fbb::newBuilder(), $pt, []),
-      im : meta::pure::metamodel::multiplicity::InferredPackageableMultiplicity[1]   | meta::pure::compiler::pdb::gen::writeInferredPackageableMultiplicity(meta::pure::compiler::pdb::fbb::newBuilder(), $im, []),
-      um : meta::pure::metamodel::multiplicity::UserDefinedPackageableMultiplicity[1]| meta::pure::compiler::pdb::gen::writeUserDefinedPackageableMultiplicity(meta::pure::compiler::pdb::fbb::newBuilder(), $um, []),
-      gt : meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType[1]| meta::pure::compiler::pdb::gen::writeUserDefinedPackageableGenericType(meta::pure::compiler::pdb::fbb::newBuilder(), $gt, []),
-      pk : meta::pure::metamodel::Package[1]                                         | meta::pure::compiler::pdb::gen::writePackage(meta::pure::compiler::pdb::fbb::newBuilder(), $pk, [])
-   ]);
-   $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset)->meta::pure::compiler::pdb::fbb::result();
+   meta::pure::functions::lang::eval(
+      meta::pure::compiler::pdb::writerHelper::genFn('writeElementBlob_Any_1__Integer_MANY_')
+         ->cast(@meta::pure::metamodel::function::Function<{Any[1]->Integer[*]}>), $e);
 }
 
 // "elements/meta/pure/metamodel/type/Any.Class" — the reference entry naming.
@@ -127,9 +107,9 @@ function meta::pure::compiler::pdb::archive::elementIndexBytes(infos:meta::pure:
                           ->meta::pure::compiler::pdb::fbb::addFieldOffset(1, $to.offset)
                           ->meta::pure::compiler::pdb::fbb::addFieldOffset(0, $po.offset)
                           ->meta::pure::compiler::pdb::fbb::endObject();
-      ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = $t.builder, offsets = $acc.offsets->concatenate($t.offset));
-   }, ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = meta::pure::compiler::pdb::fbb::newBuilder(), offsets = []));
-   let vec = meta::pure::compiler::pdb::writer::createOffsetVector($acc.builder, $acc.offsets);
+      ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $t.builder, offsets = $acc.offsets->concatenate($t.offset));
+   }, ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = meta::pure::compiler::pdb::fbb::newBuilder(), offsets = []));
+   let vec = meta::pure::compiler::pdb::writerHelper::createOffsetVector($acc.builder, $acc.offsets);
    let idx = $vec.builder->meta::pure::compiler::pdb::fbb::startObject(1)
                          ->meta::pure::compiler::pdb::fbb::addFieldOffset(0, $vec.offset)
                          ->meta::pure::compiler::pdb::fbb::endObject();
@@ -150,15 +130,15 @@ function meta::pure::compiler::pdb::archive::functionIndexBytes(fnInfos:meta::pu
 {
    let acc = $fnInfos->fold(
       {info, acc | meta::pure::compiler::pdb::archive::functionIndexEntryStep($info, $acc)},
-      ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = meta::pure::compiler::pdb::fbb::newBuilder(), offsets = []));
-   let vec = meta::pure::compiler::pdb::writer::createOffsetVector($acc.builder, $acc.offsets);
+      ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = meta::pure::compiler::pdb::fbb::newBuilder(), offsets = []));
+   let vec = meta::pure::compiler::pdb::writerHelper::createOffsetVector($acc.builder, $acc.offsets);
    let idx = $vec.builder->meta::pure::compiler::pdb::fbb::startObject(1)
                          ->meta::pure::compiler::pdb::fbb::addFieldOffset(0, $vec.offset)
                          ->meta::pure::compiler::pdb::fbb::endObject();
    $idx.builder->meta::pure::compiler::pdb::fbb::finish($idx.offset)->meta::pure::compiler::pdb::fbb::result();
 }
 
-function meta::pure::compiler::pdb::archive::functionIndexEntryStep(info:meta::pure::compiler::pdb::archive::ElementEntryInfo[1], acc:meta::pure::compiler::pdb::writer::StringsAndBuilder[1]):meta::pure::compiler::pdb::writer::StringsAndBuilder[1]
+function meta::pure::compiler::pdb::archive::functionIndexEntryStep(info:meta::pure::compiler::pdb::archive::ElementEntryInfo[1], acc:meta::pure::compiler::pdb::writerHelper::StringsAndBuilder[1]):meta::pure::compiler::pdb::writerHelper::StringsAndBuilder[1]
 {
    let fn = $info.element->cast(@meta::pure::metamodel::function::PackageableFunction<Any>);
    let po = $acc.builder->meta::pure::compiler::pdb::fbb::createString($info.path);
@@ -170,14 +150,16 @@ function meta::pure::compiler::pdb::archive::functionIndexEntryStep(info:meta::p
    let ft = $fn.classifierGenericType->toOne().typeArguments->at(0)
                ->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type
                ->cast(@meta::pure::metamodel::type::FunctionType);
-   let fo = meta::pure::compiler::pdb::gen::writeFunctionType($no.builder, $ft, []);
+   let fo = meta::pure::compiler::pdb::writerHelper::evalGenWrite(
+               'writeFunctionType_Builder_1__FunctionType_1__Any_MANY__BuilderAndOffset_1_',
+               $no.builder, $ft, []);
    let t  = $fo.builder->meta::pure::compiler::pdb::fbb::startObject(4)
                ->meta::pure::compiler::pdb::fbb::addFieldOffset(2, $fo.offset)
                ->meta::pure::compiler::pdb::fbb::addFieldOffset(1, $no.offset)
                ->meta::pure::compiler::pdb::fbb::addFieldOffset(0, $po.offset)
                ->meta::pure::compiler::pdb::fbb::addFieldScalar(3, if($info.typeName == 'NativeFunction', | 1, | 0), 0, 1)
                ->meta::pure::compiler::pdb::fbb::endObject();
-   ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = $t.builder, offsets = $acc.offsets->concatenate($t.offset));
+   ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $t.builder, offsets = $acc.offsets->concatenate($t.offset));
 }
 
 // --- reverseReferenceIndex section -------------------------------------------------

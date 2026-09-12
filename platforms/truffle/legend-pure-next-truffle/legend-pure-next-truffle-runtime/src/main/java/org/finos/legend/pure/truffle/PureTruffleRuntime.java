@@ -122,7 +122,7 @@ public final class PureTruffleRuntime
                     // a phantom read cycle 331 levels deep.
                     .option("compiler.MaximumGraalGraphSize", "300000")
                     // The self-hosted PDB writer (pdb::gen / pdb::fbb / pdb::
-                    // archive / pdb::writer) is cold one-shot code: it runs
+                    // archive / pdb::writerHelper) is cold one-shot code: it runs
                     // once at the end of a compile to serialize the graph.
                     // Under CompileImmediately its huge generated write
                     // functions produce pathological Graal units (multi-minute

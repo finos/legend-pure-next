@@ -12,7 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Wire-format tests for the EMITTED writer (pdb/generatedWriter.pure).
+// NOTE: these call gen::* STATICALLY, unlike archive.pure which resolves through
+// writerHelper::genFn. evaluate() introspects an argument's runtime type via its
+// classifierGenericType.type and reads typeParameters on it, which fails when that
+// is a ClassPointer — and these fixtures use ClassPointer anchors on purpose, to
+// exercise the writer's pointer handling. So these two files are the only
+// remaining compile-time consumers of the generated writer, and pass 1 of
+// bootstrap::generate-writer excludes them by name.
+// Wire-format tests for the EMITTED writer (pdb/writer/generated/generatedWriter.pure).
 // The expected byte lists were produced by THE REFERENCE IMPLEMENTATION
 // (bootstrap GeneratedFlatBufferWriter + com.google.flatbuffers.FlatBufferBuilder)
 // serializing the identical instance graph (scratchpad probe RefBytesElement.java,
@@ -36,7 +43,7 @@ function <<test.Test>> meta::pure::compiler::pdb::gen::tests::testWriteSourceInf
    let udgt = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $cpSI, classifierGenericType = $upgt);
    let si   = ^meta::pure::metamodel::SourceInformation(classifierGenericType = $udgt,
                  sourceId = 'test.pure', startLine = 1, startColumn = 2, endLine = 3, endColumn = 4);
-   let r   = meta::pure::compiler::pdb::gen::writeSourceInformation(meta::pure::compiler::pdb::fbb::newBuilder(), $si, []);
+   let r   = meta::pure::compiler::pdb::writerHelper::evalGenWrite('writeSourceInformation_Builder_1__SourceInformation_1__Any_MANY__BuilderAndOffset_1_', meta::pure::compiler::pdb::fbb::newBuilder(), $si, []);
    let fin = $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset);
    assertEquals(
       [28,0,0,0,0,0,0,0,20,0,52,0,51,0,44,0,0,0,36,0,20,0,12,0,32,0,4,0,20,0,0,0,1,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,20,0,0,0,3,0,0,0,0,0,0,0,40,0,0,0,0,0,0,4,9,0,0,0,116,101,115,116,46,112,117,114,101,0,18,0,20,0,19,0,12,0,0,0,0,0,0,0,11,0,4,0,18,0,0,0,16,0,0,0,0,0,0,1,80,0,0,0,0,0,0,1,192,255,255,255,4,0,0,0,1,0,0,0,4,0,0,0,40,0,0,0,109,101,116,97,58,58,112,117,114,101,58,58,109,101,116,97,109,111,100,101,108,58,58,83,111,117,114,99,101,73,110,102,111,114,109,97,116,105,111,110,0,0,0,0,8,0,8,0,0,0,4,0,8,0,0,0,4,0,0,0,1,0,0,0,4,0,0,0,12,0,0,0,116,101,115,116,65,110,99,104,111,114,71,84,0,0,0,0],
@@ -62,7 +69,7 @@ function <<test.Test>> meta::pure::compiler::pdb::gen::tests::testWriteAtomicVal
    let floatGT = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'FloatGT', type = $avCls);
    let av = ^meta::pure::metamodel::valuespecification::AtomicValue(classifierGenericType = $anchor,
                multiplicity = $pureOne, genericType = $floatGT, value = 3.14);
-   let r   = meta::pure::compiler::pdb::gen::writeAtomicValue(meta::pure::compiler::pdb::fbb::newBuilder(), $av, []);
+   let r   = meta::pure::compiler::pdb::writerHelper::evalGenWrite('writeAtomicValue_Builder_1__AtomicValue_1__Any_MANY__BuilderAndOffset_1_', meta::pure::compiler::pdb::fbb::newBuilder(), $av, []);
    let fin = $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset);
    assertEquals(
       [28,0,0,0,0,0,22,0,34,0,33,0,28,0,0,0,27,0,20,0,19,0,12,0,11,0,4,0,22,0,0,0,36,0,0,0,0,0,0,2,44,0,0,0,0,0,0,1,64,0,0,0,0,0,0,1,92,0,0,0,0,1,6,0,16,0,4,0,6,0,0,0,31,133,235,81,184,30,9,64,0,0,0,0,200,255,255,255,4,0,0,0,1,0,0,0,4,0,0,0,7,0,0,0,70,108,111,97,116,71,84,0,228,255,255,255,4,0,0,0,1,0,0,0,4,0,0,0,7,0,0,0,80,117,114,101,79,110,101,0,8,0,8,0,0,0,4,0,8,0,0,0,4,0,0,0,1,0,0,0,4,0,0,0,12,0,0,0,116,101,115,116,65,110,99,104,111,114,71,84,0,0,0,0],

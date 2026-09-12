@@ -1,0 +1,97 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The parsed .fbs schema model — the SHARED vocabulary of the PDB format, read
+// by every layer and owned by none of them:
+//   schema/parser.pure  builds an FbsSchema from m3.fbs text (same package; the
+//   generator.pure  walks it to emit one gen::writeX per Def table
+//   reader.pure     reads field slot ids / union member order / enum values from it
+//   writer.pure     categorizes field types through it
+//
+// It lived in writer.pure until it was split out here: reading is schema-driven
+// and has nothing to do with writing, so making reader.pure depend on a file
+// named "writer" misrepresented the architecture. One file, one package.
+//
+// Field ids come from m3.fbs, which FbsFieldIdRegistry pins per field for wire
+// stability — so `id` is the stable identity of a field, not its position.
+
+Class meta::pure::compiler::pdb::schema::FbsField
+{
+   name   : String[1];
+   id     : Integer[1];
+   type   : String[1];
+   vector : Boolean[1];
+}
+
+Class meta::pure::compiler::pdb::schema::FbsTable
+{
+   name   : String[1];
+   fields : meta::pure::compiler::pdb::schema::FbsField[*];
+}
+
+Class meta::pure::compiler::pdb::schema::FbsUnion
+{
+   name    : String[1];
+   members : String[*];
+}
+
+Class meta::pure::compiler::pdb::schema::FbsEnum
+{
+   name   : String[1];
+   values : String[*];
+}
+
+Class meta::pure::compiler::pdb::schema::FbsSchema
+{
+   tables : meta::pure::compiler::pdb::schema::FbsTable[*];
+   unions : meta::pure::compiler::pdb::schema::FbsUnion[*];
+   enums  : meta::pure::compiler::pdb::schema::FbsEnum[*];
+}
+
+function meta::pure::compiler::pdb::schema::table(s:meta::pure::compiler::pdb::schema::FbsSchema[1], name:String[1]):meta::pure::compiler::pdb::schema::FbsTable[0..1]
+{
+   $s.tables->filter(t | $t.name == $name)->head();
+}
+
+function meta::pure::compiler::pdb::schema::unionMembers(s:meta::pure::compiler::pdb::schema::FbsSchema[1], name:String[1]):String[*]
+{
+   $s.unions->filter(u | $u.name == $name).members;
+}
+
+function meta::pure::compiler::pdb::schema::isEnum(s:meta::pure::compiler::pdb::schema::FbsSchema[1], name:String[1]):Boolean[1]
+{
+   $s.enums->exists(e | $e.name == $name);
+}
+
+function meta::pure::compiler::pdb::schema::enumValues(s:meta::pure::compiler::pdb::schema::FbsSchema[1], name:String[1]):String[*]
+{
+   $s.enums->filter(e | $e.name == $name).values;
+}
+
+// Category of a field type: 'union' | 'table' | 'enum' | 'scalar' (string included).
+function meta::pure::compiler::pdb::schema::categorize(s:meta::pure::compiler::pdb::schema::FbsSchema[1], type:String[1]):String[1]
+{
+   if($s.unions->exists(u | $u.name == $type), | 'union',
+      | if($s.tables->exists(t | $t.name == $type), | 'table',
+         | if(meta::pure::compiler::pdb::schema::isEnum($s, $type), | 'enum', | 'scalar')));
+}
+
+// Little-endian byte width of a scalar type (string is a 4-byte uoffset element).
+function meta::pure::compiler::pdb::schema::scalarWidth(type:String[1]):Integer[1]
+{
+   if(['bool','byte','ubyte']->contains($type), | 1,
+      | if(['short','ushort']->contains($type), | 2,
+         | if(['long','ulong','double']->contains($type), | 8, | 4)));
+}
+
