@@ -285,7 +285,7 @@ test-pure-compiler:
         --args "{{spec}}/compiler/tests" {{err_filter}}
 
 # Self-host: compile compiler-pure on Pure-on-Java, run compiler tests, then diff PDBs vs Java direct (and Truffle if present; assumes `just build` was run).
-test-pure-self-host:
+test-pure-self-host: generate-writer
     @{{header}} 'test-pure-self-host'
     @{{substep}} 'compiler-pure → compiler.pdb (Pure-compiled) (Pure compiler)'
     {{pure_bootstrap}} compile-via-pure \

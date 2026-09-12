@@ -203,9 +203,16 @@ jobs:
       #                          (truffle build + diff-pdb pull these from local m2)
       # The downstream `bootstrap-self-host` job also needs the bootstrap mvn
       # artifacts to run `compile-via-pure`.
+      # pdb/generated/ carries generatedWriter.pure, produced by generate-writer
+      # during the build above. It is gitignored, so a fresh checkout does not
+      # have it — and the self-host jobs compile compiler-pure from source. Without
+      # it they silently compile 193 fewer elements (every gen::write*), which
+      # surfaces only as a self-host diff. Ship it with shared/ rather than making
+      # each job regenerate it.
       - name: Tar bootstrap artifacts
         run: |
-          tar -cf bootstrap-artifacts.tar shared/ bootstrap/build/
+          tar -cf bootstrap-artifacts.tar shared/ bootstrap/build/ \
+            pure/specification/compiler/compiler-pure/pdb/generated/
           tar -cf bootstrap-mvn.tar -C ~/.m2/repository org/finos/legend/pure
 
       - name: Upload bootstrap artifacts
