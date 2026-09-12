@@ -1,0 +1,107 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::javascript::factories::*;
+import meta::external::language::javascript::imports::*;
+import meta::external::language::javascript::metamodel::*;
+import meta::external::language::javascript::serialization::*;
+import meta::external::language::javascript::serialization::tests::*;
+
+// =============================================================================
+// await expression
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::awaitSimple(): Boolean[1]
+{
+   testExpr('await fetch()', jsAwait(jsCall(jsId('fetch'), [])));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::awaitMemberAccess(): Boolean[1]
+{
+   testExpr('await user.save()',
+            jsAwait(jsCall(jsAccess(jsId('user'), 'save'), [])));
+}
+
+// =============================================================================
+// async function / method / arrow
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::asyncFunctionDeclaration(): Boolean[1]
+{
+   testStmt('''
+            async function load() {
+              return await fetchUser();
+            }''',
+            jsAsyncFunction('load', [],
+               jsBlock([jsReturn(jsAwait(jsCall(jsId('fetchUser'), [])))])));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::asyncMethod(): Boolean[1]
+{
+   testStmt('''
+            class Repo {
+              async findOne(id) {
+                return await this.db.get(id);
+              }
+            }''',
+            jsClass('Repo', [
+               jsAsyncMethod('findOne',
+                  [jsParam('id')],
+                  jsBlock([
+                     jsReturn(jsAwait(jsCall(jsAccess(jsAccess(jsThis(), 'db'), 'get'), [jsId('id')])))
+                  ]))
+            ]));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::asyncArrowExpression(): Boolean[1]
+{
+   testExpr('async (id) => await fetchUser(id)',
+            jsAsyncArrowExpr(
+               [jsParam('id')],
+               jsAwait(jsCall(jsId('fetchUser'), [jsId('id')]))));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::asyncArrowBlock(): Boolean[1]
+{
+   testExpr('''
+            async (id) => {
+              return await fetchUser(id);
+            }''',
+            jsAsyncArrowBlock(
+               [jsParam('id')],
+               jsBlock([jsReturn(jsAwait(jsCall(jsId('fetchUser'), [jsId('id')])))])));
+}
+
+// =============================================================================
+// Walker descends through await — imports inside `await ...` get picked up
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::awaitInsideResolvesImports(): Boolean[1]
+{
+   let apiFile = jsSourceFile('src/api.ts', []);
+   let appFile = jsSourceFile('src/app.ts', [
+      jsAsyncFunction('main', [],
+         jsBlock([
+            jsExprStmt(jsAwait(jsCall(jsIdFrom('fetchAll', jsLocalSource($apiFile)), [])))
+         ]))
+   ]);
+   testFile('''
+            import { fetchAll } from './api.js';
+
+            async function main() {
+              await fetchAll();
+            }
+            ''',
+            $appFile->resolveImports());
+}

@@ -1,0 +1,48 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+import meta::pure::functions::binary::*;
+
+// Decode UTF-8 bytes (each 0..255) to a String — the inverse of
+// stringToUtf8Bytes. Byte-level primitive backing binary deserialization
+// (the self-hosted PDB reader); identity across platforms is the contract.
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::utf8BytesToString(bytes:Integer[*]):String[1];
+
+function <<PCT.test>> meta::pure::functions::binary::tests::utf8BytesToString::testAscii<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('a::b', $f->eval(|[97, 58, 58, 98]->utf8BytesToString()));
+}
+
+function <<PCT.test>> meta::pure::functions::binary::tests::utf8BytesToString::testEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('', $f->eval(|[]->utf8BytesToString()));
+}
+
+function <<PCT.test>> meta::pure::functions::binary::tests::utf8BytesToString::testTwoByte<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    // U+00E9 LATIN SMALL LETTER E WITH ACUTE
+    assertEquals('é', $f->eval(|[195, 169]->utf8BytesToString()));
+}
+
+function <<PCT.test>> meta::pure::functions::binary::tests::utf8BytesToString::testThreeByte<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    // U+20AC EURO SIGN
+    assertEquals('€', $f->eval(|[226, 130, 172]->utf8BytesToString()));
+}
+
+function <<PCT.test>> meta::pure::functions::binary::tests::utf8BytesToString::testRoundTrip<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('meta::pure – é€', $f->eval(|'meta::pure – é€'->stringToUtf8Bytes()->utf8BytesToString()));
+}

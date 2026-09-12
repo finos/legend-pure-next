@@ -1,0 +1,369 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// PDB archive packaging: turns a list of PackageableElements into the bytes of
+// a .pdb archive, mirroring the reference CompressedArchiveWriter +
+// PureLanguageSerialization. Each element becomes one zip entry
+// "elements/<path with '/'>.<TypeName>" holding a finished FlatBuffer whose
+// root is the element's *Def table (there is no wrapper table on the wire —
+// the type name travels in the entry name). The archive also carries an
+// "elementIndex" section (ElementIndex FlatBuffer) and a "manifest" section
+// (module.json text). The zip container uses STORED entries (method 0) with
+// CRC-32 = 0: readers of .pdb archives do not validate CRCs, and the reference
+// deflate container is a packaging choice, not part of the format contract —
+// entry parity is byte-level per entry, not per archive.
+
+import meta::pure::functions::binary::*;
+import meta::pure::compiler::helper::packageableElement::*;
+
+// --- element envelope ---------------------------------------------------------
+
+// A single archive entry: name + raw bytes.
+Class meta::pure::compiler::pdb::archive::ArchiveEntry
+{
+   name : String[1];
+   data : Integer[*];
+}
+
+// Path + serialized type name for one written element (feeds the elementIndex).
+Class meta::pure::compiler::pdb::archive::ElementEntryInfo
+{
+   path     : String[1];
+   typeName : String[1];
+   element  : Any[1];
+}
+
+// The archive TypeName for a serializable top-level element — the reference
+// PureLanguageSerialization.elementTypeName instanceof chain, same arm order.
+// Empty for element kinds no extension handles (they are skipped, not errors).
+function meta::pure::compiler::pdb::archive::elementTypeName(e:Any[1]):String[0..1]
+{
+   $e->match([
+      c  : meta::pure::metamodel::type::Class<Any>[1]                                | 'Class',
+      en : meta::pure::metamodel::type::Enumeration<Any>[1]                          | 'Enumeration',
+      a  : meta::pure::metamodel::relationship::Association[1]                       | 'Association',
+      p  : meta::pure::metamodel::extension::Profile[1]                              | 'Profile',
+      u  : meta::pure::metamodel::function::UserDefinedFunction<Any>[1]              | 'UserDefinedFunction',
+      n  : meta::pure::metamodel::function::NativeFunction<Any>[1]                   | 'NativeFunction',
+      pt : meta::pure::metamodel::type::PrimitiveType[1]                             | 'PrimitiveType',
+      im : meta::pure::metamodel::multiplicity::InferredPackageableMultiplicity[1]   | 'InferredPackageableMultiplicity',
+      um : meta::pure::metamodel::multiplicity::UserDefinedPackageableMultiplicity[1]| 'UserDefinedPackageableMultiplicity',
+      gt : meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType[1]| 'UserDefinedPackageableGenericType',
+      pk : meta::pure::metamodel::Package[1]                                         | 'Package',
+      x  : Any[1]                                                                    | []
+   ]);
+}
+
+// Serialize one element to its finished FlatBuffer blob (fresh builder per
+// element — per-element shared-string and vtable pools, as the reference's
+// per-element FlatBufferBuilder). Same dispatch arms as writeElementTypeName.
+function meta::pure::compiler::pdb::archive::writeElementBlob(e:Any[1]):Integer[*]
+{
+   let r = $e->match([
+      c  : meta::pure::metamodel::type::Class<Any>[1]                                | meta::pure::compiler::pdb::gen::writeClass(meta::pure::compiler::pdb::fbb::newBuilder(), $c, []),
+      en : meta::pure::metamodel::type::Enumeration<Any>[1]                          | meta::pure::compiler::pdb::gen::writeEnumeration(meta::pure::compiler::pdb::fbb::newBuilder(), $en, []),
+      a  : meta::pure::metamodel::relationship::Association[1]                       | meta::pure::compiler::pdb::gen::writeAssociation(meta::pure::compiler::pdb::fbb::newBuilder(), $a, []),
+      p  : meta::pure::metamodel::extension::Profile[1]                              | meta::pure::compiler::pdb::gen::writeProfile(meta::pure::compiler::pdb::fbb::newBuilder(), $p, []),
+      u  : meta::pure::metamodel::function::UserDefinedFunction<Any>[1]              | meta::pure::compiler::pdb::gen::writeUserDefinedFunction(meta::pure::compiler::pdb::fbb::newBuilder(), $u, []),
+      n  : meta::pure::metamodel::function::NativeFunction<Any>[1]                   | meta::pure::compiler::pdb::gen::writeNativeFunction(meta::pure::compiler::pdb::fbb::newBuilder(), $n, []),
+      pt : meta::pure::metamodel::type::PrimitiveType[1]                             | meta::pure::compiler::pdb::gen::writePrimitiveType(meta::pure::compiler::pdb::fbb::newBuilder(), $pt, []),
+      im : meta::pure::metamodel::multiplicity::InferredPackageableMultiplicity[1]   | meta::pure::compiler::pdb::gen::writeInferredPackageableMultiplicity(meta::pure::compiler::pdb::fbb::newBuilder(), $im, []),
+      um : meta::pure::metamodel::multiplicity::UserDefinedPackageableMultiplicity[1]| meta::pure::compiler::pdb::gen::writeUserDefinedPackageableMultiplicity(meta::pure::compiler::pdb::fbb::newBuilder(), $um, []),
+      gt : meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType[1]| meta::pure::compiler::pdb::gen::writeUserDefinedPackageableGenericType(meta::pure::compiler::pdb::fbb::newBuilder(), $gt, []),
+      pk : meta::pure::metamodel::Package[1]                                         | meta::pure::compiler::pdb::gen::writePackage(meta::pure::compiler::pdb::fbb::newBuilder(), $pk, [])
+   ]);
+   $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset)->meta::pure::compiler::pdb::fbb::result();
+}
+
+// "elements/meta/pure/metamodel/type/Any.Class" — the reference entry naming.
+function meta::pure::compiler::pdb::archive::entryName(path:String[1], typeName:String[1]):String[1]
+{
+   'elements/' + $path->split('::')->joinStrings('/') + '.' + $typeName;
+}
+
+// The serializable elements with their paths and type names; unhandled
+// element kinds are dropped (reference: no extension claims them, so they are
+// silently skipped). Wire contract (mirrors CompressedArchiveWriter): entries
+// SORTED by path — deterministic regardless of the producing compiler's
+// registration order. The writer writes what it is given faithfully;
+// filtering belongs to the element collectors.
+function meta::pure::compiler::pdb::archive::elementEntryInfos(elements:Any[*]):meta::pure::compiler::pdb::archive::ElementEntryInfo[*]
+{
+   $elements->map(e |
+      let tn = meta::pure::compiler::pdb::archive::elementTypeName($e);
+      if($tn->isEmpty(),
+         | [],
+         | ^meta::pure::compiler::pdb::archive::ElementEntryInfo(
+              path     = $e->cast(@meta::pure::metamodel::PackageableElement)->fullPath(),
+              typeName = $tn->toOne(),
+              element  = $e));
+   )->sort({a, b | $a.path->compare($b.path)});
+}
+
+// --- elementIndex section ------------------------------------------------------
+
+// ElementIndex FlatBuffer: per entry, createString(path) then createString(type)
+// (plain, NOT shared — the reference uses builder.createString here), then the
+// entry table adding element_type (slot 1) BEFORE element_path (slot 0) — the
+// flatc createElementIndexEntry add order — then the offset vector and the
+// single-field ElementIndex root.
+function meta::pure::compiler::pdb::archive::elementIndexBytes(infos:meta::pure::compiler::pdb::archive::ElementEntryInfo[*]):Integer[*]
+{
+   let acc = $infos->fold({info, acc |
+      let po = $acc.builder->meta::pure::compiler::pdb::fbb::createString($info.path);
+      let to = $po.builder->meta::pure::compiler::pdb::fbb::createString($info.typeName);
+      let t  = $to.builder->meta::pure::compiler::pdb::fbb::startObject(2)
+                          ->meta::pure::compiler::pdb::fbb::addFieldOffset(1, $to.offset)
+                          ->meta::pure::compiler::pdb::fbb::addFieldOffset(0, $po.offset)
+                          ->meta::pure::compiler::pdb::fbb::endObject();
+      ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = $t.builder, offsets = $acc.offsets->concatenate($t.offset));
+   }, ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = meta::pure::compiler::pdb::fbb::newBuilder(), offsets = []));
+   let vec = meta::pure::compiler::pdb::writer::createOffsetVector($acc.builder, $acc.offsets);
+   let idx = $vec.builder->meta::pure::compiler::pdb::fbb::startObject(1)
+                         ->meta::pure::compiler::pdb::fbb::addFieldOffset(0, $vec.offset)
+                         ->meta::pure::compiler::pdb::fbb::endObject();
+   $idx.builder->meta::pure::compiler::pdb::fbb::finish($idx.offset)->meta::pure::compiler::pdb::fbb::result();
+}
+
+// --- functionIndex section -------------------------------------------------------
+
+// FunctionIndex FlatBuffer, mirroring the reference serializeFunctionIndex
+// (bootstrap) / writeFunctionIndex (truffle): ONE builder for the whole
+// section (cross-entry vtable dedup, unlike the per-element blobs); entries in
+// element order. Per entry: createString(full_path), createString(function_name),
+// the FunctionTypeDef table, then the entry table adding function_type (slot 2),
+// function_name (slot 1), full_path (slot 0), is_native (slot 3, bool default
+// false) — the flatc createFunctionIndexEntry add order — then the offset
+// vector and the single-field FunctionIndex root.
+function meta::pure::compiler::pdb::archive::functionIndexBytes(fnInfos:meta::pure::compiler::pdb::archive::ElementEntryInfo[*]):Integer[*]
+{
+   let acc = $fnInfos->fold(
+      {info, acc | meta::pure::compiler::pdb::archive::functionIndexEntryStep($info, $acc)},
+      ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = meta::pure::compiler::pdb::fbb::newBuilder(), offsets = []));
+   let vec = meta::pure::compiler::pdb::writer::createOffsetVector($acc.builder, $acc.offsets);
+   let idx = $vec.builder->meta::pure::compiler::pdb::fbb::startObject(1)
+                         ->meta::pure::compiler::pdb::fbb::addFieldOffset(0, $vec.offset)
+                         ->meta::pure::compiler::pdb::fbb::endObject();
+   $idx.builder->meta::pure::compiler::pdb::fbb::finish($idx.offset)->meta::pure::compiler::pdb::fbb::result();
+}
+
+function meta::pure::compiler::pdb::archive::functionIndexEntryStep(info:meta::pure::compiler::pdb::archive::ElementEntryInfo[1], acc:meta::pure::compiler::pdb::writer::StringsAndBuilder[1]):meta::pure::compiler::pdb::writer::StringsAndBuilder[1]
+{
+   let fn = $info.element->cast(@meta::pure::metamodel::function::PackageableFunction<Any>);
+   let po = $acc.builder->meta::pure::compiler::pdb::fbb::createString($info.path);
+   let no = $po.builder->meta::pure::compiler::pdb::fbb::createString($fn.functionName->toOne());
+   // The FunctionType lives in slot 0 of the classifier's typeArguments —
+   // Function<{params -> retType}> — same resolution as the reference
+   // writeFunctionTypeOf. Fresh write stack: the reference writer's stack is
+   // empty between top-level write calls.
+   let ft = $fn.classifierGenericType->toOne().typeArguments->at(0)
+               ->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type
+               ->cast(@meta::pure::metamodel::type::FunctionType);
+   let fo = meta::pure::compiler::pdb::gen::writeFunctionType($no.builder, $ft, []);
+   let t  = $fo.builder->meta::pure::compiler::pdb::fbb::startObject(4)
+               ->meta::pure::compiler::pdb::fbb::addFieldOffset(2, $fo.offset)
+               ->meta::pure::compiler::pdb::fbb::addFieldOffset(1, $no.offset)
+               ->meta::pure::compiler::pdb::fbb::addFieldOffset(0, $po.offset)
+               ->meta::pure::compiler::pdb::fbb::addFieldScalar(3, if($info.typeName == 'NativeFunction', | 1, | 0), 0, 1)
+               ->meta::pure::compiler::pdb::fbb::endObject();
+   ^meta::pure::compiler::pdb::writer::StringsAndBuilder(builder = $t.builder, offsets = $acc.offsets->concatenate($t.offset));
+}
+
+// --- reverseReferenceIndex section -------------------------------------------------
+
+// UTF-8 text, `target:` line then two-space-indented caller lines, targets and
+// callers each sorted lexicographically — character-for-character the reference
+// ReverseIndexSection.serialize (shared with the test ###ReverseIndex renderer).
+// Callers are already unique (recordReference dedups on insert; the reference
+// keeps them in a Set).
+function meta::pure::compiler::pdb::archive::reverseIndexText(referencedBy:Map<String, List<String>>[1]):String[1]
+{
+   $referencedBy->keys()->sort()->map(target |
+      $target + ':\n' +
+      $referencedBy->get($target)->toOne().values->sort()->map(c | '  ' + $c + '\n')->joinStrings(''))
+   ->joinStrings('');
+}
+
+// Adapter for hosts that carry the (already partition-filtered) reverse index
+// as parallel primitive lists — targets[i] with its callers '\n'-joined — so
+// they can call the Map-taking writeArchive without host-side Pure-Map
+// construction. Paths never contain '\n', so the join is lossless.
+function meta::pure::compiler::pdb::archive::referencedByFromLists(targets:String[*], joinedCallers:String[*]):Map<String, List<String>>[1]
+{
+   newMap($targets->zip($joinedCallers)->map(p |
+      pair($p.first, ^List<String>(values = $p.second->split('\n')))));
+}
+
+// --- manifest section -----------------------------------------------------------
+
+// One JSON string value, escaped as the reference ModuleManifest.quote does.
+// (Control characters below 0x20 other than \n \r \t would need \u escapes;
+// module names and package patterns never contain them.)
+function meta::pure::compiler::pdb::archive::quoteJson(s:String[1]):String[1]
+{
+   '"' + $s->chunk(1)->map(c |
+      if([pair(| $c == '\\', | '\\\\'),
+          pair(| $c == '"',  | '\\"'),
+          pair(| $c == '\n', | '\\n'),
+          pair(| $c == '\r', | '\\r'),
+          pair(| $c == '\t', | '\\t')],
+         | $c))->joinStrings('') + '"';
+}
+
+// module.json text — character-for-character the reference ModuleManifest.toJson.
+function meta::pure::compiler::pdb::archive::manifestJson(name:String[1], packagePattern:String[1], dependencies:String[*]):String[1]
+{
+   '{\n' +
+   '  "name": ' + meta::pure::compiler::pdb::archive::quoteJson($name) + ',\n' +
+   '  "packagePattern": ' + meta::pure::compiler::pdb::archive::quoteJson($packagePattern) + ',\n' +
+   '  "dependencies": [' + $dependencies->map(d | meta::pure::compiler::pdb::archive::quoteJson($d))->joinStrings(', ') + ']\n' +
+   '}\n';
+}
+
+// --- STORED zip container --------------------------------------------------------
+
+function meta::pure::compiler::pdb::archive::u16(v:Integer[1]):Integer[*]
+{
+   intToLeBytes($v, 2);
+}
+
+function meta::pure::compiler::pdb::archive::u32(v:Integer[1]):Integer[*]
+{
+   intToLeBytes($v, 4);
+}
+
+// Minimal STORED zip: local header + data per entry, then the central
+// directory, then EOCD. Method 0, flags 0, DOS timestamp 1980-01-01 (date
+// 0x21, time 0), CRC-32 = 0 (not validated by .pdb readers). Field layout
+// follows APPNOTE; sizes are exact since nothing is compressed.
+//
+// Assembly is O(n): local-header offsets are prefix sums over per-entry
+// sizes (integers only), then each region is produced by ONE ->map whose
+// per-entry lambdas return byte lists — map flattens, so the runtime
+// assembles each region linearly. (An earlier fold that concatenated the
+// accumulated locals per entry re-copied the whole archive once per entry —
+// quadratic, minutes of copying on a full compiler.pdb write.)
+function meta::pure::compiler::pdb::archive::zipStored(entries:meta::pure::compiler::pdb::archive::ArchiveEntry[*]):Integer[*]
+{
+   // Per-entry total size of (local header + name + data): 30 fixed + name + data.
+   let sizes = $entries->map(e | 30 + stringToUtf8Bytes($e.name)->size() + $e.data->size());
+   // offsets->at(i) = local-header offset of entry i; last value = central-dir offset.
+   let offsets = $sizes->fold({s, acc | $acc->concatenate($acc->at($acc->size() - 1) + $s)}, [0]);
+   let locals = range(0, $entries->size())->map(i |
+      meta::pure::compiler::pdb::archive::zipLocalBytes($entries->at($i)));
+   let central = range(0, $entries->size())->map(i |
+      meta::pure::compiler::pdb::archive::zipCentralBytes($entries->at($i), $offsets->at($i)));
+   let n = $entries->size();
+   // disk number, central-dir start disk, entries on disk, entries total,
+   // central dir size, central dir offset, comment length.
+   let eocd = [80, 75, 5, 6]->concatenate(
+      [pair(0, 2), pair(0, 2), pair($n, 2), pair($n, 2),
+       pair($central->size(), 4), pair($offsets->at($n), 4), pair(0, 2)]
+         ->map(f | intToLeBytes($f.first, $f.second)));
+   $locals->concatenate($central)->concatenate($eocd);
+}
+
+// One entry's local header + name + data. Header fields as (value, width)
+// pairs mapped through intToLeBytes — map flattens, keeping both the
+// expression tree shallow (a long ->concatenate chain trips the interpreter's
+// protocol-conversion depth guard on the self-host parse) and the value list
+// flat. Field order: version-needed, flags, method(stored), mod-time,
+// mod-date(1980-01-01), crc-32(0), compressed size, uncompressed size,
+// name len, extra len.
+function meta::pure::compiler::pdb::archive::zipLocalBytes(e:meta::pure::compiler::pdb::archive::ArchiveEntry[1]):Integer[*]
+{
+   let nameBytes = stringToUtf8Bytes($e.name);
+   let dataLen   = $e.data->size();
+   [80, 75, 3, 4]->concatenate(
+      [pair(20, 2), pair(0, 2), pair(0, 2), pair(0, 2), pair(33, 2),
+       pair(0, 4), pair($dataLen, 4), pair($dataLen, 4), pair($nameBytes->size(), 2), pair(0, 2)]
+         ->map(f | intToLeBytes($f.first, $f.second)))
+      ->concatenate($nameBytes)
+      ->concatenate($e.data);
+}
+
+// One entry's central-directory record. Field order: version-made-by,
+// version-needed, flags, method, mod-time, mod-date, crc-32, compressed size,
+// uncompressed size, name len, extra len, comment len, disk start,
+// internal attrs, external attrs, local offset.
+function meta::pure::compiler::pdb::archive::zipCentralBytes(e:meta::pure::compiler::pdb::archive::ArchiveEntry[1], localOffset:Integer[1]):Integer[*]
+{
+   let nameBytes = stringToUtf8Bytes($e.name);
+   let dataLen   = $e.data->size();
+   [80, 75, 1, 2]->concatenate(
+      [pair(20, 2), pair(20, 2), pair(0, 2), pair(0, 2), pair(0, 2), pair(33, 2),
+       pair(0, 4), pair($dataLen, 4), pair($dataLen, 4), pair($nameBytes->size(), 2),
+       pair(0, 2), pair(0, 2), pair(0, 2), pair(0, 2), pair(0, 4), pair($localOffset, 4)]
+         ->map(f | intToLeBytes($f.first, $f.second)))
+      ->concatenate($nameBytes);
+}
+
+// --- whole archive ----------------------------------------------------------------
+
+// All entries of a .pdb for the given elements: one element entry per
+// serializable element (declaration order), then elementIndex (omitted when no
+// element was written, as the reference does), then manifest, then functionIndex
+// (omitted when no function was written), then reverseReferenceIndex (omitted
+// when no reference was recorded) — the reference CompressedArchiveWriter
+// section order (extension sections before caller-provided ones).
+function meta::pure::compiler::pdb::archive::archiveEntries(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*], referencedBy:Map<String, List<String>>[1]):meta::pure::compiler::pdb::archive::ArchiveEntry[*]
+{
+   let infos = meta::pure::compiler::pdb::archive::elementEntryInfos($elements);
+   let elementEntries = $infos->map(i |
+      ^meta::pure::compiler::pdb::archive::ArchiveEntry(
+         name = meta::pure::compiler::pdb::archive::entryName($i.path, $i.typeName),
+         data = meta::pure::compiler::pdb::archive::writeElementBlob($i.element)));
+   let indexEntry = if($infos->isEmpty(),
+      | [],
+      | ^meta::pure::compiler::pdb::archive::ArchiveEntry(
+           name = 'elementIndex',
+           data = meta::pure::compiler::pdb::archive::elementIndexBytes($infos)));
+   let manifestEntry = ^meta::pure::compiler::pdb::archive::ArchiveEntry(
+      name = 'manifest',
+      data = stringToUtf8Bytes(meta::pure::compiler::pdb::archive::manifestJson($moduleName, $packagePattern, $dependencies)));
+   let fnInfos = $infos->filter(i | ['UserDefinedFunction', 'NativeFunction']->contains($i.typeName));
+   let functionIndexEntry = if($fnInfos->isEmpty(),
+      | [],
+      | ^meta::pure::compiler::pdb::archive::ArchiveEntry(
+           name = 'functionIndex',
+           data = meta::pure::compiler::pdb::archive::functionIndexBytes($fnInfos)));
+   let reverseEntry = if($referencedBy->keys()->isEmpty(),
+      | [],
+      | ^meta::pure::compiler::pdb::archive::ArchiveEntry(
+           name = 'reverseReferenceIndex',
+           data = stringToUtf8Bytes(meta::pure::compiler::pdb::archive::reverseIndexText($referencedBy))));
+   $elementEntries->concatenate($indexEntry)->concatenate($manifestEntry)
+      ->concatenate($functionIndexEntry)->concatenate($reverseEntry);
+}
+
+// Back-compat: no recorded references.
+function meta::pure::compiler::pdb::archive::archiveEntries(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*]):meta::pure::compiler::pdb::archive::ArchiveEntry[*]
+{
+   meta::pure::compiler::pdb::archive::archiveEntries($elements, $moduleName, $packagePattern, $dependencies,
+      newMap([]->cast(@Pair<String, List<String>>)));
+}
+
+// A whole .pdb archive as bytes.
+function meta::pure::compiler::pdb::archive::writeArchive(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*], referencedBy:Map<String, List<String>>[1]):Integer[*]
+{
+   meta::pure::compiler::pdb::archive::zipStored(
+      meta::pure::compiler::pdb::archive::archiveEntries($elements, $moduleName, $packagePattern, $dependencies, $referencedBy));
+}
+
+// A whole .pdb archive as bytes, with no recorded references.
+function meta::pure::compiler::pdb::archive::writeArchive(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*]):Integer[*]
+{
+   meta::pure::compiler::pdb::archive::writeArchive($elements, $moduleName, $packagePattern, $dependencies,
+      newMap([]->cast(@Pair<String, List<String>>)));
+}

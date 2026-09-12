@@ -1,0 +1,48 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+import meta::pure::functions::binary::*;
+
+// Little-endian two's-complement bytes (each 0..255) of a signed integer in
+// exactly `width` bytes. Byte-level primitive backing binary serialization
+// (the self-hosted PDB writer); byte-identity across platforms is the contract.
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::intToLeBytes(value:Integer[1], width:Integer[1]):Integer[*];
+
+function <<PCT.test>> meta::pure::functions::binary::tests::intToLeBytes::testSmallPositive<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(1, $f->eval(|1->intToLeBytes(1)));
+    assertEquals([2, 1], $f->eval(|258->intToLeBytes(2)));
+    assertEquals([1, 0, 0, 0], $f->eval(|1->intToLeBytes(4)));
+}
+
+function <<PCT.test>> meta::pure::functions::binary::tests::intToLeBytes::testZero<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals([0, 0], $f->eval(|0->intToLeBytes(2)));
+    assertEquals([0, 0, 0, 0], $f->eval(|0->intToLeBytes(4)));
+}
+
+function <<PCT.test>> meta::pure::functions::binary::tests::intToLeBytes::testNegativeTwosComplement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals([255, 255], $f->eval(|(-1)->intToLeBytes(2)));
+    // -64 as an int32 — the backward-vtable soffset the FlatBuffer layer emits.
+    assertEquals([192, 255, 255, 255], $f->eval(|(-64)->intToLeBytes(4)));
+}
+
+function <<PCT.test>> meta::pure::functions::binary::tests::intToLeBytes::testWide<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals([255, 255, 255, 127], $f->eval(|2147483647->intToLeBytes(4)));
+    assertEquals([1, 0, 0, 0, 0, 0, 0, 0], $f->eval(|1->intToLeBytes(8)));
+    assertEquals([0, 202, 154, 59, 0, 0, 0, 0], $f->eval(|1000000000->intToLeBytes(8)));
+}

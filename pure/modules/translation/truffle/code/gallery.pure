@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -185,7 +186,10 @@ function meta::external::language::truffle::gallery::collectAdapterEvalLambdasOn
                 | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
             );
             concatenate($self, $fe.parametersValues->collectAdapterEvalLambdas());,
-        other: ValueSpecification[1] | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+        // Lambda-valued AtomicValue: descend into the lambda body so evals
+        // wrapped in an outer lambda — assertError(|$f->eval(|...)), ... —
+        // are still collected.
+        other: ValueSpecification[1] | $other->extractLambdaArg().expressionSequence->collectAdapterEvalLambdas()
     ])
 }
 

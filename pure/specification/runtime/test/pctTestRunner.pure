@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -67,7 +68,7 @@ function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:S
 // Two-arg overload: callers supply the adapter — e.g. a translator-backed
 // adapter that compiles each PCT lambda to another language, runs it, and
 // returns the result. Each backend (Truffle in-memory, java translator,
-// future sql/typescript translators) provides its own adapter; the runner
+// future sql/javascript translators) provides its own adapter; the runner
 // itself only knows how to hand the adapter to each PCT closure.
 function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1], adapter:Function<Any>[1]):String[1]
 {

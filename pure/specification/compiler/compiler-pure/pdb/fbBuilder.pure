@@ -1,0 +1,257 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// FlatBuffer builder in Pure — the byte layer of the self-hosted PDB writer.
+// Faithful to the reference implementation's byte output (bootstrap generated
+// fbs classes + com.google.flatbuffers.FlatBufferBuilder): root uoffset at 0,
+// tables with a soffset-to-vtable header, forward uoffsets, length-prefixed
+// vectors, null-terminated strings. Built back-to-front, modelled functionally:
+// `bytes` holds the buffer with the FRONT (index 0) as the most recently
+// written byte, so `size(bytes)` == the mutable builder's `length - space` and
+// every offset formula matches the reference.
+//
+// Only three stateless primitives are native — meta::pure::functions::binary::
+// {intToLeBytes, floatToLeBytes, stringToUtf8Bytes}, PCT functions with
+// per-platform conformance tests; everything else is pure Pure and translates
+// to every platform unchanged.
+
+// ---------------------------------------------------------------------------
+
+Class meta::pure::compiler::pdb::fbb::Builder
+{
+   // Buffer, built back-to-front: index 0 is the FRONT (newest byte). The final
+   // FlatBuffer is exactly `bytes` (root uoffset lands at index 0 after finish).
+   bytes       : Integer[*];
+   minalign    : Integer[1];
+   // Current in-progress object: vtable[i] = the byte-position (offset-from-front,
+   // i.e. size at write time) where field id `i` was written, or 0 if absent.
+   vtable      : Integer[*];
+   objectStart : Integer[1];
+   // Shared-string pool (the reference uses builder.createSharedString throughout,
+   // so byte-identity requires the same exact-match dedup).
+   strings     : meta::pure::compiler::pdb::fbb::SharedString[*];
+   // Positions (offset-from-front at write time) of every distinct vtable written
+   // so far — the reference FlatBufferBuilder DEDUPES identical vtables across the
+   // whole buffer (endTable searches these and reuses via a negative soffset), so
+   // byte-identity requires the same pool.
+   vtables     : Integer[*];
+}
+
+Class meta::pure::compiler::pdb::fbb::SharedString
+{
+   s   : String[1];
+   off : Integer[1];
+}
+
+// A builder step that also yields an offset (table/vector/string position).
+Class meta::pure::compiler::pdb::fbb::BuilderAndOffset
+{
+   builder : meta::pure::compiler::pdb::fbb::Builder[1];
+   offset  : Integer[1];
+}
+
+function meta::pure::compiler::pdb::fbb::newBuilder():meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   ^meta::pure::compiler::pdb::fbb::Builder(bytes = [], minalign = 1, vtable = [], objectStart = 0, strings = [], vtables = []);
+}
+
+// Bytes written so far == the reference's `offset()`.
+function meta::pure::compiler::pdb::fbb::offset(b:meta::pure::compiler::pdb::fbb::Builder[1]):Integer[1]
+{
+   $b.bytes->size();
+}
+
+// Prepend raw bytes to the FRONT (== the mutable builder's decreasing `space`).
+// `newBytes` are given in final memory order (front-most first).
+function meta::pure::compiler::pdb::fbb::prepend(b:meta::pure::compiler::pdb::fbb::Builder[1], newBytes:Integer[*]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   ^$b(bytes = $newBytes->concatenate($b.bytes));
+}
+
+function meta::pure::compiler::pdb::fbb::pad(b:meta::pure::compiler::pdb::fbb::Builder[1], n:Integer[1]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   if($n <= 0, |$b, |$b->meta::pure::compiler::pdb::fbb::prepend(range(0, $n)->map(i | 0)));
+}
+
+// Align so that after `additionalBytes` more are written, a `size`-aligned field
+// lands on a `size` boundary (reference `prep`; no grow — the list is unbounded).
+function meta::pure::compiler::pdb::fbb::prep(b:meta::pure::compiler::pdb::fbb::Builder[1], size:Integer[1], additionalBytes:Integer[1]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   let b2 = if($size > $b.minalign, |^$b(minalign = $size), |$b);
+   let used = $b2->meta::pure::compiler::pdb::fbb::offset() + $additionalBytes;
+   // alignSize = (-used) & (size-1)  ==  (size - (used mod size)) mod size
+   let alignSize = mod($size - mod($used, $size), $size);
+   $b2->meta::pure::compiler::pdb::fbb::pad($alignSize);
+}
+
+// Scalar (little-endian): align to its own width, then prepend its bytes.
+function meta::pure::compiler::pdb::fbb::addScalar(b:meta::pure::compiler::pdb::fbb::Builder[1], value:Integer[1], width:Integer[1]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   $b->meta::pure::compiler::pdb::fbb::prep($width, 0)
+     ->meta::pure::compiler::pdb::fbb::prepend(meta::pure::functions::binary::intToLeBytes($value, $width));
+}
+
+// A forward uoffset to a previously-written object at offset `off`
+// (reference addOffset: value = offset() - off + 4, after prepping 4).
+function meta::pure::compiler::pdb::fbb::addOffset(b:meta::pure::compiler::pdb::fbb::Builder[1], off:Integer[1]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   let b2 = $b->meta::pure::compiler::pdb::fbb::prep(4, 0);
+   $b2->meta::pure::compiler::pdb::fbb::prepend(meta::pure::functions::binary::intToLeBytes($b2->meta::pure::compiler::pdb::fbb::offset() - $off + 4, 4));
+}
+
+// --- strings & vectors -------------------------------------------------------
+
+// Null-terminated string. Length prefix excludes the terminator.
+function meta::pure::compiler::pdb::fbb::createString(b:meta::pure::compiler::pdb::fbb::Builder[1], s:String[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let utf8 = meta::pure::functions::binary::stringToUtf8Bytes($s);
+   let b1 = $b->meta::pure::compiler::pdb::fbb::addScalar(0, 1);                    // null terminator
+   let b2 = $b1->meta::pure::compiler::pdb::fbb::startVector(1, $utf8->size(), 1);
+   // the whole utf8 block is one front-most-first prepend
+   let b3 = $b2->meta::pure::compiler::pdb::fbb::prepend($utf8);
+   $b3->meta::pure::compiler::pdb::fbb::endVector($utf8->size());
+}
+
+// Shared string: exact-match dedup, as the reference's builder.createSharedString.
+function meta::pure::compiler::pdb::fbb::createSharedString(b:meta::pure::compiler::pdb::fbb::Builder[1], s:String[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let hit = $b.strings->filter(e | $e.s == $s)->head();
+   if($hit->isNotEmpty(),
+      | ^meta::pure::compiler::pdb::fbb::BuilderAndOffset(builder = $b, offset = $hit.off->toOne()),
+      | let r = $b->meta::pure::compiler::pdb::fbb::createString($s);
+        ^meta::pure::compiler::pdb::fbb::BuilderAndOffset(
+           builder = ^$r.builder(strings = $r.builder.strings->concatenate(^meta::pure::compiler::pdb::fbb::SharedString(s = $s, off = $r.offset))),
+           offset  = $r.offset););
+}
+
+// Reserve space for `count` elements of `elemSize` (plus the 4-byte length prefix).
+function meta::pure::compiler::pdb::fbb::startVector(b:meta::pure::compiler::pdb::fbb::Builder[1], elemSize:Integer[1], count:Integer[1], alignment:Integer[1]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   $b->meta::pure::compiler::pdb::fbb::prep(4, $elemSize * $count)
+     ->meta::pure::compiler::pdb::fbb::prep($alignment, $elemSize * $count);
+}
+
+// Write the length prefix; the vector's offset is the resulting position.
+function meta::pure::compiler::pdb::fbb::endVector(b:meta::pure::compiler::pdb::fbb::Builder[1], count:Integer[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   let b1 = $b->meta::pure::compiler::pdb::fbb::prepend(meta::pure::functions::binary::intToLeBytes($count, 4));
+   ^meta::pure::compiler::pdb::fbb::BuilderAndOffset(builder = $b1, offset = $b1->meta::pure::compiler::pdb::fbb::offset());
+}
+
+// Finish: prepend the root uoffset.
+function meta::pure::compiler::pdb::fbb::finish(b:meta::pure::compiler::pdb::fbb::Builder[1], rootTable:Integer[1]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   $b->meta::pure::compiler::pdb::fbb::prep($b.minalign, 4)
+     ->meta::pure::compiler::pdb::fbb::addOffset($rootTable);
+}
+
+// --- tables (vtable) ---------------------------------------------------------
+// Two-phase per the reference: build ALL child offsets first, THEN
+// startObject + addField* + endObject — only one vtable is ever in flight,
+// so it can live on the threaded builder.
+
+function meta::pure::compiler::pdb::fbb::setAt(list:Integer[*], i:Integer[1], v:Integer[1]):Integer[*]
+{
+   range(0, $list->size())->map(j | if($j == $i, |$v, |$list->at($j)));
+}
+
+function meta::pure::compiler::pdb::fbb::startObject(b:meta::pure::compiler::pdb::fbb::Builder[1], numFields:Integer[1]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   ^$b(vtable = range(0, $numFields)->map(x | 0), objectStart = $b->meta::pure::compiler::pdb::fbb::offset());
+}
+
+// Record the current position as the data slot for vtable field `voffset`.
+function meta::pure::compiler::pdb::fbb::slot(b:meta::pure::compiler::pdb::fbb::Builder[1], voffset:Integer[1]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   ^$b(vtable = meta::pure::compiler::pdb::fbb::setAt($b.vtable, $voffset, $b->meta::pure::compiler::pdb::fbb::offset()));
+}
+
+// Scalar field: written (and slotted) only when it differs from the default.
+function meta::pure::compiler::pdb::fbb::addFieldScalar(b:meta::pure::compiler::pdb::fbb::Builder[1], voff:Integer[1], value:Integer[1], default:Integer[1], width:Integer[1]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   if($value == $default, |$b,
+      |$b->meta::pure::compiler::pdb::fbb::addScalar($value, $width)->meta::pure::compiler::pdb::fbb::slot($voff));
+}
+
+// Float (fbs `double`) field: written only when it differs from the 0.0 default
+// (flatc addDouble elision).
+function meta::pure::compiler::pdb::fbb::addFieldFloat(b:meta::pure::compiler::pdb::fbb::Builder[1], voff:Integer[1], value:Float[1]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   if($value == 0.0, |$b,
+      |$b->meta::pure::compiler::pdb::fbb::prep(8, 0)
+         ->meta::pure::compiler::pdb::fbb::prepend(meta::pure::functions::binary::floatToLeBytes($value))
+         ->meta::pure::compiler::pdb::fbb::slot($voff));
+}
+
+// Offset field: written (and slotted) only when non-zero (i.e. present).
+function meta::pure::compiler::pdb::fbb::addFieldOffset(b:meta::pure::compiler::pdb::fbb::Builder[1], voff:Integer[1], off:Integer[1]):meta::pure::compiler::pdb::fbb::Builder[1]
+{
+   if($off == 0, |$b,
+      |$b->meta::pure::compiler::pdb::fbb::addOffset($off)->meta::pure::compiler::pdb::fbb::slot($voff));
+}
+
+// Does the previously-written vtable at buffer position `e` byte-match the
+// candidate byte list? An existing vtable's first short is its byte length —
+// compare that, then the full run.
+function meta::pure::compiler::pdb::fbb::vtableMatches(bytes:Integer[*], e:Integer[1], cand:Integer[*]):Boolean[1]
+{
+   let base = $bytes->size() - $e;
+   (($bytes->at($base) + (256 * $bytes->at($base + 1))) == $cand->size())
+      && range(0, $cand->size())->forAll(k | $bytes->at($base + $k) == $cand->at($k));
+}
+
+// Close the table: compute the trimmed vtable as a SMALL byte list, look it up
+// in the dedup pool, then write the soffset with its FINAL value followed (on
+// a pool miss) by the vtable bytes. PATCH-FREE: the vtable's position is fully
+// determined before anything is written (current offset + soffset alignment +
+// 4), so the placeholder-then-patch dance of the mutable reference builder is
+// unnecessary here — and each patch re-copied the whole buffer, which made
+// large-archive writes quadratic. Byte output is identical: same values land
+// in the same final positions.
+function meta::pure::compiler::pdb::fbb::endObject(b:meta::pure::compiler::pdb::fbb::Builder[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+{
+   // Where the 4-byte soffset will land (== "vtableloc"): current offset,
+   // plus the padding addScalar's prep(4, 0) will insert, plus 4.
+   let vtableloc = $b->meta::pure::compiler::pdb::fbb::offset()
+      + mod(4 - mod($b->meta::pure::compiler::pdb::fbb::offset(), 4), 4) + 4;
+   // trimmed vtable size = (highest field id with a non-zero slot) + 1; 0 if none.
+   let nonZeroIdx = range(0, $b.vtable->size())->filter(i | $b.vtable->at($i) != 0);
+   let trimmedSize = if($nonZeroIdx->isEmpty(), |0, |$nonZeroIdx->last()->toOne() + 1);
+   // Candidate vtable bytes in final front→back order: vtable size, object
+   // size, then slot offsets low-id first (each u16 little-endian; shorts
+   // after the 4-aligned soffset never pad, so this flat list is exact).
+   let candVals = [($trimmedSize + 2) * 2, $vtableloc - $b.objectStart]
+      ->concatenate(range(0, $trimmedSize)->map(i |
+         let p = $b.vtable->at($i);
+         if($p != 0, |$vtableloc - $p, |0);));
+   let cand = $candVals->map(v | meta::pure::functions::binary::intToLeBytes($v, 2));
+   let hit = $b.vtables->filter(e | meta::pure::compiler::pdb::fbb::vtableMatches($b.bytes, $e, $cand))->head();
+   if($hit->isEmpty(),
+      | // no identical vtable yet: soffset points forward across the candidate
+        // (value == candidate length), then the vtable itself goes in front.
+        let b1 = $b->meta::pure::compiler::pdb::fbb::addScalar($cand->size(), 4)
+                   ->meta::pure::compiler::pdb::fbb::prepend($cand);
+        ^meta::pure::compiler::pdb::fbb::BuilderAndOffset(
+           builder = ^$b1(vtables = $b1.vtables->concatenate($vtableloc + $cand->size())),
+           offset  = $vtableloc);,
+      | // identical vtable exists: discard the candidate and point the soffset
+        // back at it (negative value).
+        let b1 = $b->meta::pure::compiler::pdb::fbb::addScalar($hit->toOne() - $vtableloc, 4);
+        ^meta::pure::compiler::pdb::fbb::BuilderAndOffset(builder = $b1, offset = $vtableloc););
+}
+
+function meta::pure::compiler::pdb::fbb::result(b:meta::pure::compiler::pdb::fbb::Builder[1]):Integer[*]
+{
+   $b.bytes;
+}

@@ -19,7 +19,7 @@
     </properties>
 
     <modules>
-        <module>legend-pure-next-truffle-platform</module>
+        <module>legend-pure-next-truffle-runtime</module>
         <module>legend-pure-next-truffle-ide</module>
         <module>legend-pure-next-truffle-extension</module>
     </modules>

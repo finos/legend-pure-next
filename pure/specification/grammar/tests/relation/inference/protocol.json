@@ -387,15 +387,19 @@
       } ],
       "typeParameters" : [ {
         "_type" : "TypeParameter",
+        "contravariant" : false,
         "name" : "T"
       }, {
         "_type" : "TypeParameter",
+        "contravariant" : false,
         "name" : "Z"
       }, {
         "_type" : "TypeParameter",
+        "contravariant" : false,
         "name" : "K"
       }, {
         "_type" : "TypeParameter",
+        "contravariant" : false,
         "name" : "V"
       } ]
     } ],

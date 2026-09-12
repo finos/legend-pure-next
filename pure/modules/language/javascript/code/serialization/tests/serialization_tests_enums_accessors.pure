@@ -1,0 +1,86 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::javascript::factories::*;
+import meta::external::language::javascript::metamodel::*;
+import meta::external::language::javascript::serialization::*;
+import meta::external::language::javascript::serialization::tests::*;
+
+// =============================================================================
+// Get / Set accessors
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::classWithGetter(): Boolean[1]
+{
+   testStmt('''
+            class Box {
+              get value() {
+                return 1;
+              }
+            }''',
+            jsClass('Box', [
+               jsGetter('value', jsBlock([jsReturn(jsNumLit('1'))]))
+            ]));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::classWithSetter(): Boolean[1]
+{
+   testStmt('''
+            class Box {
+              set value(v) {
+                return;
+              }
+            }''',
+            jsClass('Box', [
+               jsSetter('value', jsParam('v'), jsBlock([jsReturn([])]))
+            ]));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::classWithGetterAndSetter(): Boolean[1]
+{
+   testStmt('''
+            class Box {
+              get value() {
+                return this.v;
+              }
+
+              set value(v) {
+                return;
+              }
+            }''',
+            jsClass('Box', [
+               jsGetter('value', jsBlock([jsReturn(jsAccess(jsThis(), 'v'))])),
+               jsSetter('value', jsParam('v'), jsBlock([jsReturn([])]))
+            ]));
+}
+
+// =============================================================================
+// Shorthand property assignment — emits `{ x }`, not `{ x: x }`.
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::shorthandSingle(): Boolean[1]
+{
+   testExpr('{ x }', jsObject([jsEntryShorthand('x')]));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::shorthandMixed(): Boolean[1]
+{
+   // Shorthand and long-form sit side by side in the same literal.
+   testExpr('{ x, name: \'Ada\', y }',
+            jsObject([
+               jsEntryShorthand('x'),
+               jsEntry('name', jsStrLit('Ada')),
+               jsEntryShorthand('y')
+            ]));
+}

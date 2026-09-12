@@ -1,0 +1,308 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::javascript::factories::*;
+import meta::external::language::javascript::imports::*;
+import meta::external::language::javascript::metamodel::*;
+import meta::external::language::javascript::serialization::*;
+import meta::external::language::javascript::serialization::tests::*;
+
+// =============================================================================
+// Expression-position imports — Identifiers with a source picked up by the
+// deep walker through method/function bodies and nested expressions.
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveCallTarget(): Boolean[1]
+{
+   // A function call whose callee is imported from another file.
+   let userFile = jsSourceFile('src/user.ts', []);
+   let appFile  = jsSourceFile('src/app.ts', [
+      jsFunction('main',
+         [],
+         jsBlock([
+            jsExprStmt(jsCall(jsIdFrom('createUser', jsLocalSource($userFile)), []))
+         ]))
+   ]);
+   testFile('''
+            import { createUser } from './user.js';
+
+            function main() {
+              createUser();
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveNewTarget(): Boolean[1]
+{
+   // A constructor call (`new Foo()`) whose target is imported.
+   let userFile = jsSourceFile('src/user.ts', []);
+   let appFile  = jsSourceFile('src/app.ts', [
+      jsFunction('make',
+         [],
+         jsBlock([
+            jsExprStmt(^NewExpression(expression=jsIdFrom('User', jsLocalSource($userFile)), arguments=[]))
+         ]))
+   ]);
+   testFile('''
+            import { User } from './user.js';
+
+            function make() {
+              new User();
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveCallArgument(): Boolean[1]
+{
+   // An imported identifier passed as a call argument.
+   let utilFile = jsSourceFile('src/util.ts', []);
+   let appFile  = jsSourceFile('src/app.ts', [
+      jsFunction('run', [],
+         jsBlock([
+            jsExprStmt(jsCall(jsId('log'), [jsIdFrom('DEFAULT_OPTIONS', jsLocalSource($utilFile))]))
+         ]))
+   ]);
+   testFile('''
+            import { DEFAULT_OPTIONS } from './util.js';
+
+            function run() {
+              log(DEFAULT_OPTIONS);
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveMethodBody(): Boolean[1]
+{
+   // Walker must descend into method body.
+   let svcFile = jsSourceFile('src/svc.ts', []);
+   let appFile = jsSourceFile('src/app.ts', [
+      jsClass('Controller', [
+         jsMethod('handle', [],
+            jsBlock([
+               jsReturn(jsCall(jsIdFrom('serviceCall', jsLocalSource($svcFile)), []))
+            ]))
+      ])
+   ]);
+   testFile('''
+            import { serviceCall } from './svc.js';
+
+            class Controller {
+              handle() {
+                return serviceCall();
+              }
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveTwoNamesSameSource(): Boolean[1]
+{
+   // Two distinct names imported from the same source file → one import line.
+   let userFile = jsSourceFile('src/user.ts', []);
+   let appFile  = jsSourceFile('src/app.ts', [
+      jsFunction('build',
+         [],
+         jsBlock([
+            jsConst('a', jsCall(jsIdFrom('User', jsLocalSource($userFile)), [])),
+            jsReturn(jsCall(jsIdFrom('createUser', jsLocalSource($userFile)), []))
+         ]))
+   ]);
+   testFile('''
+            import { User, createUser } from './user.js';
+
+            function build() {
+              const a = User();
+              return createUser();
+            }
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveExternalCall(): Boolean[1]
+{
+   // External (npm) call import via Identifier source.
+   let appFile = jsSourceFile('src/app.ts', [
+      jsConst('schema',
+         jsCall(jsIdFrom('z', jsExternalSource('zod')), []))
+   ]);
+   testFile('''
+            import { z } from 'zod';
+
+            const schema = z();
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveBinaryOperand(): Boolean[1]
+{
+   // Imported identifier inside a binary expression.
+   let constFile = jsSourceFile('src/constants.ts', []);
+   let appFile   = jsSourceFile('src/app.ts', [
+      jsConst('cutoff',
+         jsBinary(jsIdFrom('BASE', jsLocalSource($constFile)), '+', jsNumLit('10')))
+   ]);
+   testFile('''
+            import { BASE } from './constants.js';
+
+            const cutoff = BASE + 10;
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveArrowBody(): Boolean[1]
+{
+   // Walker descends through arrow function bodies.
+   let utilFile = jsSourceFile('src/util.ts', []);
+   let appFile  = jsSourceFile('src/app.ts', [
+      jsConst('mapper',
+         jsArrowExpr(
+            [jsParam('x')],
+            jsCall(jsIdFrom('transform', jsLocalSource($utilFile)), [jsId('x')])))
+   ]);
+   testFile('''
+            import { transform } from './util.js';
+
+            const mapper = (x) => transform(x);
+            ''',
+            $appFile->resolveImports());
+}
+
+// =============================================================================
+// Aliased imports — collision resolution via `import { Foo as MyFoo }`.
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::aliasedExternalImport(): Boolean[1]
+{
+   // Two sources both export `User`. Generator uses jsIdAliased to give
+   // the external one a different local name. Resolver emits the alias.
+   let internalUserFile = jsSourceFile('src/user.ts', []);
+   let appFile          = jsSourceFile('src/app.ts', [
+      jsConst('local',    jsCall(jsIdFrom('User', jsLocalSource($internalUserFile)), [])),
+      jsConst('external', jsCall(jsIdAliased('ExternalUser', 'User', jsExternalSource('external-lib')), []))
+   ]);
+   testFile('''
+            import { User as ExternalUser } from 'external-lib';
+            import { User } from './user.js';
+
+            const local = User();
+
+            const external = ExternalUser();
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::aliasedIdentifierImport(): Boolean[1]
+{
+   // Same collision case, both at expression position (value).
+   let appFile = jsSourceFile('src/app.ts', [
+      jsConst('lib',   jsCall(jsIdFrom('flow', jsExternalSource('lodash')), [])),
+      jsConst('flow2', jsCall(jsIdAliased('rxFlow', 'flow', jsExternalSource('rxjs')), []))
+   ]);
+   testFile('''
+            import { flow } from 'lodash';
+            import { flow as rxFlow } from 'rxjs';
+
+            const lib = flow();
+
+            const flow2 = rxFlow();
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::aliasReusedDedupes(): Boolean[1]
+{
+   // Same aliased ref used twice should produce a single import specifier.
+   let appFile = jsSourceFile('src/app.ts', [
+      jsConst('a', jsCall(jsIdAliased('extUser', 'user', jsExternalSource('ext')), [])),
+      jsConst('b', jsCall(jsIdAliased('extUser', 'user', jsExternalSource('ext')), []))
+   ]);
+   testFile('''
+            import { user as extUser } from 'ext';
+
+            const a = extUser();
+
+            const b = extUser();
+            ''',
+            $appFile->resolveImports());
+}
+
+// =============================================================================
+// tsconfig path aliases — `@/...` style specifiers via resolveImportsWithAliases.
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::pathAliasReplacesRelative(): Boolean[1]
+{
+   // PathAlias('@/', 'src/') turns 'src/lib/user.ts' into '@/lib/user.js'.
+   let userFile = jsSourceFile('src/lib/user.ts', []);
+   let appFile  = jsSourceFile('src/app.ts', [
+      jsConst('u', jsCall(jsIdFrom('User', jsLocalSource($userFile)), []))
+   ]);
+   let aliases = [pathAlias('@/', 'src/')];
+   testFile('''
+            import { User } from '@/lib/user.js';
+
+            const u = User();
+            ''',
+            $appFile->resolveImportsWithAliases($aliases));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::pathAliasFirstMatchWins(): Boolean[1]
+{
+   // Two aliases: more-specific '@lib/' before '@/'. First match wins.
+   let userFile = jsSourceFile('src/lib/user.ts', []);
+   let appFile  = jsSourceFile('src/app.ts', [
+      jsConst('u', jsCall(jsIdFrom('User', jsLocalSource($userFile)), []))
+   ]);
+   let aliases = [pathAlias('@lib/', 'src/lib/'), pathAlias('@/', 'src/')];
+   testFile('''
+            import { User } from '@lib/user.js';
+
+            const u = User();
+            ''',
+            $appFile->resolveImportsWithAliases($aliases));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::pathAliasFallbackToRelative(): Boolean[1]
+{
+   // Target doesn't match any alias's prefix → fall back to relative path.
+   let userFile = jsSourceFile('other/user.ts', []);  // NOT under 'src/'
+   let appFile  = jsSourceFile('src/app.ts', [
+      jsConst('u', jsCall(jsIdFrom('User', jsLocalSource($userFile)), []))
+   ]);
+   let aliases = [pathAlias('@/', 'src/')];
+   testFile('''
+            import { User } from '../other/user.js';
+
+            const u = User();
+            ''',
+            $appFile->resolveImportsWithAliases($aliases));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::pathAliasExternalsUnaffected(): Boolean[1]
+{
+   // External sources keep their bare specifier (aliases only apply to LocalSource).
+   let appFile = jsSourceFile('src/app.ts', [
+      jsConst('s', jsCall(jsIdFrom('Schema', jsExternalSource('zod')), []))
+   ]);
+   let aliases = [pathAlias('@/', 'src/')];
+   testFile('''
+            import { Schema } from 'zod';
+
+            const s = Schema();
+            ''',
+            $appFile->resolveImportsWithAliases($aliases));
+}

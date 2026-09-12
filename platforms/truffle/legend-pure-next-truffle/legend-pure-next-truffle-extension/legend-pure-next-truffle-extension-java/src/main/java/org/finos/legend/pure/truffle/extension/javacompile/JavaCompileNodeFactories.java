@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,8 +15,8 @@
 
 package org.finos.legend.pure.truffle.extension.javacompile;
 
-import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
-import org.finos.legend.pure.truffle.builder.TruffleNativesExtension;
+import org.finos.legend.pure.truffle.interpreter.NativeNodeRegistry;
+import org.finos.legend.pure.truffle.interpreter.TruffleNativesExtension;
 
 /**
  * Registers specialized Truffle nodes for the Pure→Java translator's

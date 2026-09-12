@@ -53,7 +53,7 @@ function my::events::concertsByArtistPrefix(prefix: String[1], minCapacity: Inte
 ## Why Legend Pure Next?
 
 - **Simpler.** A focused codebase — parser, compiler, runtime — without years of accumulated layers.
-- **Nimbler.** One specification, multiple backends (java-direct, Truffle/GraalVM, TypeScript). A model written once runs on the JVM or in the browser.
+- **Nimbler.** One specification, multiple backends (java-direct, Truffle/GraalVM, JavaScript). A model written once runs on the JVM or in the browser.
 - **Self-describing.** The metamodel is RDF, the compiler's helper layer is written in Pure itself, and the same description drives code generation for every backend.
 
 ## Architecture at a glance
@@ -65,7 +65,7 @@ pure/specification        →  m3.ttl metamodel + ANTLR grammar (the source of t
 pure/modules              →  Pure language stdlib + translation modules (Pure → target lang)
 bootstrap/                →  Java-direct backend (parser, compiler, runtime, Web IDE)
 platforms/truffle/        →  GraalVM Truffle backend for optimized execution
-platforms/typescript/     →  TypeScript backend (run Pure in browsers / Node)
+platforms/javascript/     →  JavaScript backend (run Pure in browsers / Node)
 platforms/java/           →  Generated-Java backend (to come)
 ```
 
@@ -116,19 +116,19 @@ Pure code that ships with the platform. Two siblings, each fanning out per backe
 pure/modules/
 ├── language/      →  Native function bodies for the stdlib, per backend
 │   ├── java/
-│   └── typescript/
+│   └── javascript/
 └── translation/   →  Pure-source → target-language translators
     ├── shared/      backend-agnostic helpers
     ├── java/
-    └── typescript/
+    └── javascript/
 ```
 
 **Language** ([`language/`](pure/modules/language/)) — backs the stdlib declared under `pure/specification/runtime/functions/` with executable implementations. Each backend directory has the same shape:
-- [`language/java/code/`](pure/modules/language/java/code/) and [`language/typescript/code/`](pure/modules/language/typescript/code/) — `native.pure` (maps each Pure native to its target-language implementation), plus `factories/`, `metamodel/`, `serialization/` for backend-specific scaffolding. TypeScript also ships a small smoke `demo.pure`.
+- [`language/java/code/`](pure/modules/language/java/code/) and [`language/javascript/code/`](pure/modules/language/javascript/code/) — `native.pure` (maps each Pure native to its target-language implementation), plus `factories/`, `metamodel/`, `serialization/` for backend-specific scaffolding. JavaScript also ships a small smoke `demo.pure`.
 
 **Translation** ([`translation/`](pure/modules/translation/)) — translators that lower a Pure program into idiomatic target-language source. Each translator has the same skeleton (`translation.pure` entry point, `runtime.pure` helpers, `gallery.pure` driver, `tests/`):
 - [`translation/shared/code/`](pure/modules/translation/shared/code/) — backend-agnostic infrastructure: `canonical.pure`, `decompile.pure`, `dependencies.pure`, `gallery_shell.pure` (the HTML harness both galleries instantiate).
-- [`translation/typescript/code/`](pure/modules/translation/typescript/code/) — Pure → TypeScript, paired with `platforms/typescript/`. Adds `pdb.pure` + `reflect.pure` (PDB-to-TS bulk translation, Pure-graph reflection) and ships a `runtime-lib.ts` to consumers.
+- [`translation/javascript/code/`](pure/modules/translation/javascript/code/) — Pure → JavaScript, paired with `platforms/javascript/`. Adds `translatePackageToJs.pure` (PDB-to-TS bulk translation) and ships a `runtime-lib.js` to consumers.
 - [`translation/java/code/`](pure/modules/translation/java/code/) — Pure → Java. The translator exists today and powers the Java gallery; **the matching platform is in flight** (see [Platforms](#platforms--platforms) below).
 
 ---
@@ -161,15 +161,15 @@ Execution targets that reuse the bootstrap front-end. Each ships a **gallery** r
 platforms/
 ├── truffle/      →  GraalVM Truffle backend (optimized execution)
 │   └─ Gallery: <a href="https://finos.github.io/legend-pure-next/truffle.html">Live ↗</a>
-├── typescript/   →  TypeScript runtime (browser / Node)
-│   └─ Gallery: <a href="https://finos.github.io/legend-pure-next/typescript.html">Live ↗</a>
+├── javascript/   →  JavaScript runtime (browser / Node)
+│   └─ Gallery: <a href="https://finos.github.io/legend-pure-next/javascript.html">Live ↗</a>
 └── java/         →  Generated-Java backend (to come)
     └─ Gallery: <a href="https://finos.github.io/legend-pure-next/java.html">Live ↗</a>
 </pre>
 
 **Truffle** ([`truffle/`](platforms/truffle/)) — partial-evaluating execution + native-image build for fast one-shot runs. Internally: `truffle-platform/` (PDB writer + runtime), `truffle-extension/` (TS + Java translator bridges), `truffle-ide/`.
 
-**TypeScript** ([`typescript/`](platforms/typescript/)) — Pure models + queries run in the browser or Node. Paired with [`pure/modules/translation/typescript/`](pure/modules/translation/typescript/).
+**JavaScript** ([`javascript/`](platforms/javascript/)) — Pure models + queries run in the browser or Node. Paired with [`pure/modules/translation/javascript/`](pure/modules/translation/javascript/).
 
 **Java** ([`java/`](platforms/java/)) _(to come)_ — AOT translation from Pure to idiomatic Java source. The translator already lives at [`pure/modules/translation/java/`](pure/modules/translation/java/); the platform will wrap it into a first-class build/run target.
 
@@ -180,7 +180,7 @@ platforms/
 - Java 21 (GraalVM recommended if you want the Truffle backend)
 - [flatc 25.2.10](https://github.com/google/flatbuffers/releases/tag/v25.2.10) on your `PATH`
 - [`just`](https://github.com/casey/just) as the top-level build runner
-- Node.js + [pnpm](https://pnpm.io/) for the TypeScript platform
+- Node.js + [pnpm](https://pnpm.io/) for the JavaScript platform
 
 ### Build & test
 
@@ -193,7 +193,7 @@ just ide          # launch the Web IDE
 just clean        # delete build artifacts
 ```
 
-Per-platform recipes are addressable as `just bootstrap::<recipe>`, `just truffle::<recipe>`, `just typescript::<recipe>`. Run `just --list bootstrap` (etc.) to see what each offers.
+Per-platform recipes are addressable as `just bootstrap::<recipe>`, `just truffle::<recipe>`, `just javascript::<recipe>`. Run `just --list bootstrap` (etc.) to see what each offers.
 
 ## Usage example
 

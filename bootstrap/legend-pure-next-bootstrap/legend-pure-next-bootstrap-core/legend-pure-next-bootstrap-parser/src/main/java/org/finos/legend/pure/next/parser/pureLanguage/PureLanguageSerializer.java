@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1219,9 +1220,11 @@ public class PureLanguageSerializer
         String funcName = String.valueOf(sfe._functionName());
         MutableList<ValueSpecification> params = sfe._parametersValues();
 
-        // Handle slice: [expr:expr] or [:expr] or [expr:expr:expr]
-        if ("slice".equals(funcName) && params != null
-                && !params.isEmpty())
+        // Handle range sugar: [expr:expr] or [:expr] or [expr:expr:expr] — the
+        // sliceExpression grammar rule's sugar (the rule name follows the
+        // Python-slice-looking syntax; the semantics are range).
+        if ("range".equals(funcName) && params != null
+                && !params.isEmpty() && params.size() <= 3)
         {
             sb.append("[");
             if (params.size() == 1)

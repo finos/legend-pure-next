@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +23,7 @@
 // skipped — usually a sign that a canonical-recompile output or a deserialized
 // PDB element leaked through without post-processing.
 //
-// All runtimes (java-direct, Truffle, TypeScript) must surface this as a
+// All runtimes (java-direct, Truffle, JavaScript) must surface this as a
 // hard crash with a context-bearing message, not return an empty/default
 // value silently. The tests below pin that contract.
 // ----------------------------------------------------------------------------

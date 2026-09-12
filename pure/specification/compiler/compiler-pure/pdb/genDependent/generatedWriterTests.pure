@@ -1,0 +1,70 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Wire-format tests for the EMITTED writer (pdb/generatedWriter.pure).
+// The expected byte lists were produced by THE REFERENCE IMPLEMENTATION
+// (bootstrap GeneratedFlatBufferWriter + com.google.flatbuffers.FlatBufferBuilder)
+// serializing the identical instance graph (scratchpad probe RefBytesElement.java,
+// 2026-07-04). Byte-identity of the whole element blob is the bar.
+
+// A whole SourceInformation element: exercises a union field (classifierGenericType
+// -> UserDefinedGenericTypeDef arm), a nested table (writeUserDefinedGenericType)
+// with its own union fields (PointerRef arms for a packageable GenericTypeValue
+// and a ClassPointer through TypePropertyUnion), shared strings, long scalars in
+// non-monotonic slot order (endLine=3, sourceId=6, startColumn=4, endColumn=5,
+// startLine=7), and vtable trimming — 240 bytes.
+function <<test.Test>> meta::pure::compiler::pdb::gen::tests::testWriteSourceInformationWireFormat():Boolean[1]
+{
+   let cpSI = ^meta::pure::metamodel::pointer::ClassPointer<Any>(path = 'meta::pure::metamodel::SourceInformation');
+   // upgt is udgt's classifierGenericType, and in Pure the cgt IS the instance's
+   // runtime type descriptor — its `type` must be the real UserDefinedGenericType
+   // class or udgt fails instanceOf dispatch. Never serialized (upgt itself goes
+   // through the PointerRef arm, path only), so byte-neutral.
+   let upgt = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
+                 type = meta::pure::functions::meta::pathToElement('meta::pure::metamodel::type::generics::UserDefinedGenericType')->cast(@Class<Any>));
+   let udgt = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $cpSI, classifierGenericType = $upgt);
+   let si   = ^meta::pure::metamodel::SourceInformation(classifierGenericType = $udgt,
+                 sourceId = 'test.pure', startLine = 1, startColumn = 2, endLine = 3, endColumn = 4);
+   let r   = meta::pure::compiler::pdb::gen::writeSourceInformation(meta::pure::compiler::pdb::fbb::newBuilder(), $si, []);
+   let fin = $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset);
+   assertEquals(
+      [28,0,0,0,0,0,0,0,20,0,52,0,51,0,44,0,0,0,36,0,20,0,12,0,32,0,4,0,20,0,0,0,1,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,20,0,0,0,3,0,0,0,0,0,0,0,40,0,0,0,0,0,0,4,9,0,0,0,116,101,115,116,46,112,117,114,101,0,18,0,20,0,19,0,12,0,0,0,0,0,0,0,11,0,4,0,18,0,0,0,16,0,0,0,0,0,0,1,80,0,0,0,0,0,0,1,192,255,255,255,4,0,0,0,1,0,0,0,4,0,0,0,40,0,0,0,109,101,116,97,58,58,112,117,114,101,58,58,109,101,116,97,109,111,100,101,108,58,58,83,111,117,114,99,101,73,110,102,111,114,109,97,116,105,111,110,0,0,0,0,8,0,8,0,0,0,4,0,8,0,0,0,4,0,0,0,1,0,0,0,4,0,0,0,12,0,0,0,116,101,115,116,65,110,99,104,111,114,71,84,0,0,0,0],
+      $fin->meta::pure::compiler::pdb::fbb::result());
+}
+
+// An AtomicValue holding a Float (3.14): exercises the AtomicValueContentUnion
+// special case (FloatValueDef, IEEE-754 double via the floatToLeBytes native)
+// plus the multiplicity/genericType property unions through their PointerRef
+// arms, and vtable dedup across the value tables — 184 bytes
+// (reference probe RefBytesFloat.java, 2026-07-04).
+function <<test.Test>> meta::pure::compiler::pdb::gen::tests::testWriteAtomicValueFloatWireFormat():Boolean[1]
+{
+   let avCls = meta::pure::functions::meta::pathToElement('meta::pure::metamodel::valuespecification::AtomicValue')->cast(@Class<Any>);
+   // name-only packageable instances terminate the property chains through the
+   // PointerRef union arms (only their names are serialized); the extra required
+   // props (`type`, `lowerBound`) satisfy the ^-checker and are byte-neutral.
+   // anchor is av's cgt = its runtime type descriptor, so its `type` must be the
+   // real AtomicValue class.
+   let anchor  = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT', type = $avCls);
+   let pureOne = ^meta::pure::metamodel::multiplicity::UserDefinedPackageableMultiplicity(name = 'PureOne',
+                    lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = 1));
+   let floatGT = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'FloatGT', type = $avCls);
+   let av = ^meta::pure::metamodel::valuespecification::AtomicValue(classifierGenericType = $anchor,
+               multiplicity = $pureOne, genericType = $floatGT, value = 3.14);
+   let r   = meta::pure::compiler::pdb::gen::writeAtomicValue(meta::pure::compiler::pdb::fbb::newBuilder(), $av, []);
+   let fin = $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset);
+   assertEquals(
+      [28,0,0,0,0,0,22,0,34,0,33,0,28,0,0,0,27,0,20,0,19,0,12,0,11,0,4,0,22,0,0,0,36,0,0,0,0,0,0,2,44,0,0,0,0,0,0,1,64,0,0,0,0,0,0,1,92,0,0,0,0,1,6,0,16,0,4,0,6,0,0,0,31,133,235,81,184,30,9,64,0,0,0,0,200,255,255,255,4,0,0,0,1,0,0,0,4,0,0,0,7,0,0,0,70,108,111,97,116,71,84,0,228,255,255,255,4,0,0,0,1,0,0,0,4,0,0,0,7,0,0,0,80,117,114,101,79,110,101,0,8,0,8,0,0,0,4,0,8,0,0,0,4,0,0,0,1,0,0,0,4,0,0,0,12,0,0,0,116,101,115,116,65,110,99,104,111,114,71,84,0,0,0,0],
+      $fin->meta::pure::compiler::pdb::fbb::result());
+}

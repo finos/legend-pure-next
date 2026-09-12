@@ -1,0 +1,161 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::javascript::factories::*;
+import meta::external::language::javascript::imports::*;
+import meta::external::language::javascript::metamodel::*;
+import meta::external::language::javascript::serialization::*;
+import meta::external::language::javascript::serialization::tests::*;
+
+// =============================================================================
+// relativeModuleSpecifier — path arithmetic
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::pathSameDir(): Boolean[1]
+{
+   assertEquals('./b.js', relativeModuleSpecifier('a.ts', 'b.ts'));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::pathSameDirNested(): Boolean[1]
+{
+   assertEquals('./c.js', relativeModuleSpecifier('a/b.ts', 'a/c.ts'));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::pathDownToSubdir(): Boolean[1]
+{
+   assertEquals('./lib/user.js', relativeModuleSpecifier('src/app.ts', 'src/lib/user.ts'));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::pathUpFromSubdir(): Boolean[1]
+{
+   assertEquals('../user.js', relativeModuleSpecifier('src/lib/app.ts', 'src/user.ts'));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::pathSiblingDir(): Boolean[1]
+{
+   assertEquals('../util/c.js', relativeModuleSpecifier('a/lib/b.ts', 'a/util/c.ts'));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::pathDeepSibling(): Boolean[1]
+{
+   assertEquals('../../lib/db.js', relativeModuleSpecifier('src/api/handlers/user.ts', 'src/lib/db.ts'));
+}
+
+// =============================================================================
+// resolveImports — end-to-end
+// =============================================================================
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveSingleLocalImport(): Boolean[1]
+{
+   // userFile defines createUser; appFile calls it.
+   let userFile = jsSourceFile('src/user.ts', []);
+   let appFile  = jsSourceFile('src/app.ts', [
+      jsConst('u', jsCall(jsIdFrom('createUser', jsLocalSource($userFile)), []))
+   ]);
+   testFile('''
+            import { createUser } from './user.js';
+
+            const u = createUser();
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveDedupesNames(): Boolean[1]
+{
+   // Same createUser referenced from multiple sites → one import.
+   let userFile = jsSourceFile('src/user.ts', []);
+   let appFile  = jsSourceFile('src/app.ts', [
+      jsConst('a', jsCall(jsIdFrom('createUser', jsLocalSource($userFile)), [])),
+      jsConst('b', jsCall(jsIdFrom('createUser', jsLocalSource($userFile)), []))
+   ]);
+   testFile('''
+            import { createUser } from './user.js';
+
+            const a = createUser();
+
+            const b = createUser();
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveExternalImport(): Boolean[1]
+{
+   let appFile = jsSourceFile('src/app.ts', [
+      jsConst('s', jsCall(jsIdFrom('z', jsExternalSource('zod')), []))
+   ]);
+   testFile('''
+            import { z } from 'zod';
+
+            const s = z();
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveMixedImports(): Boolean[1]
+{
+   // External imports first (sorted), then locals — names alphabetic inside.
+   let userFile  = jsSourceFile('src/user.ts', []);
+   let orderFile = jsSourceFile('src/order.ts', []);
+   let appFile   = jsSourceFile('src/app.ts', [
+      jsConst('z',     jsCall(jsIdFrom('z',     jsExternalSource('zod')), [])),
+      jsConst('user',  jsCall(jsIdFrom('User',  jsLocalSource($userFile)), [])),
+      jsConst('order', jsCall(jsIdFrom('Order', jsLocalSource($orderFile)), [])),
+      jsConst('lib',   jsCall(jsIdFrom('flow',  jsExternalSource('lodash')), []))
+   ]);
+   testFile('''
+            import { flow } from 'lodash';
+            import { z } from 'zod';
+            import { Order } from './order.js';
+            import { User } from './user.js';
+
+            const z = z();
+
+            const user = User();
+
+            const order = Order();
+
+            const lib = flow();
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveMergesSameSource(): Boolean[1]
+{
+   // Two names imported from one external source merge into one declaration.
+   let appFile = jsSourceFile('src/app.ts', [
+      jsConst('s', jsCall(jsIdFrom('Schema', jsExternalSource('zod')), [])),
+      jsConst('z', jsCall(jsIdFrom('z', jsExternalSource('zod')), []))
+   ]);
+   testFile('''
+            import { Schema, z } from 'zod';
+
+            const s = Schema();
+
+            const z = z();
+            ''',
+            $appFile->resolveImports());
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::resolveSkipsSelfImport(): Boolean[1]
+{
+   // A LocalSource pointing at thisFile must NOT produce an import line.
+   let selfFile = jsSourceFile('src/self.ts', []);
+   let withRef  = ^$selfFile(statements=[
+      jsConst('p', jsCall(jsIdFrom('inner', jsLocalSource($selfFile)), []))
+   ]);
+   testFile('''
+            const p = inner();
+            ''',
+            $withRef->resolveImports());
+}

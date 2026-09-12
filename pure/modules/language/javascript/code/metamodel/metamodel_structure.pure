@@ -1,0 +1,257 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Declarations and their members. See metamodel_type.pure for the strategy.
+
+import meta::external::language::javascript::metamodel::*;
+
+// =============================================================================
+// Statement / Declaration / Expression bases
+// =============================================================================
+
+Class meta::external::language::javascript::metamodel::Statement extends Node
+{
+}
+
+// Declaration is a Statement: in JavaScript, top-level class/interface/function
+// declarations sit in the same statement list as `if`, `return`, etc.
+Class meta::external::language::javascript::metamodel::Declaration extends Statement
+{
+}
+
+// =============================================================================
+// Modifiers — flat enum, carried as a list to permit combinations like
+// `export default`. Only the JS-meaningful keyword modifiers survive; TS-only
+// access/type modifiers (public/private/protected/readonly/abstract/declare)
+// have no runtime form and were dropped.
+// =============================================================================
+
+Enum meta::external::language::javascript::metamodel::ModifierFlag
+{
+   Static,
+   Async,
+   Export,
+   Default
+}
+
+// =============================================================================
+// SourceFile — one .ts file. Top-level node; parent of all statements.
+// =============================================================================
+
+Class meta::external::language::javascript::metamodel::SourceFile extends Node
+{
+   <<equality.Key>> filePath   : String[1];          // e.g. 'src/foo/bar.ts'
+   statements : Statement[*];                        // imports + declarations + statements
+   leadingComment : String[0..1];                    // optional file banner
+}
+
+// =============================================================================
+// ImportDeclaration — ES module imports.
+//
+//   import 'side-effect-only.js';
+//   import Default from './x.js';
+//   import { a, b as c } from './y.js';
+//   import * as ns from './z.js';
+//
+// One declaration can mix a default binding with named bindings:
+//   import Default, { a } from './w.js';
+// but cannot mix namespace and named.
+// =============================================================================
+
+Class meta::external::language::javascript::metamodel::ImportDeclaration extends Statement
+[
+   $this.namespaceImport->isEmpty() || $this.namedImports->isEmpty()
+]
+{
+   <<equality.Key>> moduleSpecifier : String[1];     // exact text between quotes
+   defaultImport   : String[0..1];                   // local name for the default import
+   namedImports    : ImportSpecifier[*];
+   namespaceImport : String[0..1];                   // `* as <name>`
+}
+
+Class meta::external::language::javascript::metamodel::ImportSpecifier extends Node
+{
+   <<equality.Key>> name  : String[1];               // name as exported
+   alias : String[0..1];                             // local alias (`name as alias`)
+}
+
+// =============================================================================
+// ClassDeclaration
+//   class Name extends Base { ... }
+// `extendsClause` is an Expression (JS classes extend an expression, not a
+// type reference).
+// =============================================================================
+
+Class meta::external::language::javascript::metamodel::ClassMember extends Node
+{
+   modifiers : ModifierFlag[*];
+}
+
+Class meta::external::language::javascript::metamodel::ClassDeclaration extends Declaration
+{
+   <<equality.Key>> name           : String[1];
+   modifiers      : ModifierFlag[*];
+   extendsClause  : meta::external::language::javascript::metamodel::Expression[0..1];
+   members        : ClassMember[*];
+}
+
+Class meta::external::language::javascript::metamodel::PropertyDeclaration extends ClassMember
+{
+   <<equality.Key>> name : String[1];
+   initializer : meta::external::language::javascript::metamodel::Expression[0..1];
+}
+
+Class meta::external::language::javascript::metamodel::MethodDeclaration extends ClassMember
+{
+   <<equality.Key>> name : String[1];
+   parameters     : ParameterDeclaration[*];
+   body           : Block[0..1];                     // empty body permitted
+}
+
+Class meta::external::language::javascript::metamodel::ConstructorDeclaration extends ClassMember
+{
+   parameters : ParameterDeclaration[*];
+   body       : Block[0..1];
+}
+
+// =============================================================================
+// GetAccessor / SetAccessor — class members of the form
+//   get x() { ... }
+//   set x(v) { ... }
+// =============================================================================
+
+Class meta::external::language::javascript::metamodel::GetAccessor extends ClassMember
+{
+   <<equality.Key>> name : String[1];
+   body       : Block[0..1];
+}
+
+Class meta::external::language::javascript::metamodel::SetAccessor extends ClassMember
+{
+   <<equality.Key>> name : String[1];
+   parameter  : ParameterDeclaration[1];
+   body       : Block[0..1];
+}
+
+// =============================================================================
+// FunctionDeclaration — top-level functions.
+// =============================================================================
+
+Class meta::external::language::javascript::metamodel::FunctionDeclaration extends Declaration
+{
+   <<equality.Key>> name : String[1];
+   modifiers      : ModifierFlag[*];
+   parameters     : ParameterDeclaration[*];
+   body           : Block[0..1];
+}
+
+// =============================================================================
+// ParameterDeclaration — used by methods, functions, constructors, arrows.
+//
+// `name` is a BindingName so destructuring patterns are first-class:
+//   - leaf Identifier:           `function f(x: T)`
+//   - ObjectBindingPattern:      `function f({a, b}: T)`
+//   - ArrayBindingPattern:       `function f([a, b]: T)`
+// =============================================================================
+
+Class meta::external::language::javascript::metamodel::ParameterDeclaration extends Node
+{
+   <<equality.Key>> name : BindingName[1];
+   initializer : meta::external::language::javascript::metamodel::Expression[0..1];
+}
+
+// =============================================================================
+// ImportSource — where a referenced symbol comes from, used by the imports
+// resolver to synthesize ImportDeclarations at the top of a SourceFile.
+//
+//   LocalSource    — another SourceFile in the same project tree.
+//                    Module specifier is computed as a relative path.
+//   ExternalSource — an npm package or bare module string. The specifier
+//                    is the raw `from` text, e.g. 'zod' or '@scope/foo'.
+//
+// Attached to Identifier via its optional `source` slot. An identifier
+// without a source is assumed to be in-scope (already imported, or a
+// built-in).
+// =============================================================================
+
+Class meta::external::language::javascript::metamodel::ImportSource extends Node
+{
+}
+
+Class meta::external::language::javascript::metamodel::LocalSource extends ImportSource
+{
+   <<equality.Key>> target : SourceFile[1];
+}
+
+Class meta::external::language::javascript::metamodel::ExternalSource extends ImportSource
+{
+   <<equality.Key>> moduleSpecifier : String[1];
+}
+
+// =============================================================================
+// BindingName / BindingPattern — the LHS of `let x = …` and parameter names.
+//
+// In the TS compiler:
+//     BindingName    = Identifier | BindingPattern
+//     BindingPattern = ObjectBindingPattern | ArrayBindingPattern
+//
+// We mirror that exactly. `Identifier` (defined in metamodel_code.pure) also
+// extends BindingName so the same leaf node plays both expression and
+// binding-name roles, matching ts.Identifier.
+// =============================================================================
+
+Class meta::external::language::javascript::metamodel::BindingName extends Node
+{
+}
+
+Class meta::external::language::javascript::metamodel::BindingPattern extends BindingName
+{
+}
+
+Class meta::external::language::javascript::metamodel::ObjectBindingPattern extends BindingPattern
+{
+   elements : BindingElement[*];
+}
+
+Class meta::external::language::javascript::metamodel::ArrayBindingPattern extends BindingPattern
+{
+   elements : BindingElement[*];
+}
+
+// BindingElement — one position inside a BindingPattern.
+//
+//   const { a, b: alias, c = 1, ...rest } = obj
+//          ^  ^^^^^^^^^  ^^^^^  ^^^^^^^
+//          |  rename      default rest
+//          simple
+//
+// `propertyName` carries the source-side property name when it differs
+// from the target binding name (the rename case `b: alias`). When absent,
+// the binding name is also the source property.
+//
+// `name` is itself a BindingName, allowing nested destructuring:
+//   const { user: { name } } = obj
+//
+// v1 limitations:
+//   - propertyName is String, not PropertyName: computed-key destructure
+//     `const { [k]: v } = obj` is deferred.
+//   - Array holes (`const [, a] = arr`) are not modeled.
+Class meta::external::language::javascript::metamodel::BindingElement extends Node
+{
+   propertyName : String[0..1];
+   <<equality.Key>> name : BindingName[1];
+   initializer  : meta::external::language::javascript::metamodel::Expression[0..1];
+   isRest       : Boolean[0..1];
+}

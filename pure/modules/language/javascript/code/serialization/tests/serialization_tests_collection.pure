@@ -1,0 +1,128 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::external::language::javascript::factories::*;
+import meta::external::language::javascript::metamodel::*;
+import meta::external::language::javascript::serialization::*;
+import meta::external::language::javascript::serialization::tests::*;
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::mapIdentity(): Boolean[1]
+{
+   testExpr('items.map((x) => x)', jsMap(jsId('items'), 'x', jsId('x')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::mapProjectProperty(): Boolean[1]
+{
+   testExpr('users.map((u) => u.name)', jsMap(jsId('users'), 'u', jsAccess(jsId('u'), 'name')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::filterByEquality(): Boolean[1]
+{
+   testExpr(
+      'items.filter((x) => x.active === true)',
+      jsFilter(jsId('items'), 'x', jsBinary(jsAccess(jsId('x'), 'active'), '===', jsBoolLit(true))));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::someExists(): Boolean[1]
+{
+   testExpr('items.some((x) => x > 0)', jsSome(jsId('items'), 'x', jsBinary(jsId('x'), '>', jsNumLit('0'))));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::everyForAll(): Boolean[1]
+{
+   testExpr('items.every((x) => x !== null)', jsEvery(jsId('items'), 'x', jsBinary(jsId('x'), '!==', jsNull())));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::findFirst(): Boolean[1]
+{
+   testExpr(
+      'users.find((u) => u.id === target)',
+      jsFind(jsId('users'), 'u', jsBinary(jsAccess(jsId('u'), 'id'), '===', jsId('target'))));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::flatMapFlatten(): Boolean[1]
+{
+   testExpr(
+      'groups.flatMap((g) => g.items)',
+      jsFlatMap(jsId('groups'), 'g', jsAccess(jsId('g'), 'items')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::forEachSideEffect(): Boolean[1]
+{
+   testExpr(
+      'items.forEach((x) => console.log(x))',
+      jsForEach(jsId('items'), 'x', jsCall(jsAccess(jsId('console'), 'log'), [jsId('x')])));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::reduceSum(): Boolean[1]
+{
+   testExpr(
+      'items.reduce((acc, v) => acc + v, 0)',
+      jsReduce(jsId('items'), 'acc', 'v',
+               jsBinary(jsId('acc'), '+', jsId('v')),
+               jsNumLit('0')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::includesValue(): Boolean[1]
+{
+   testExpr('items.includes(42)', jsIncludes(jsId('items'), jsNumLit('42')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::joinWithSeparator(): Boolean[1]
+{
+   testExpr('items.join(\', \')', jsJoin(jsId('items'), jsStrLit(', ')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::sliceRange(): Boolean[1]
+{
+   testExpr('items.slice(0, 5)', jsSlice(jsId('items'), jsNumLit('0'), jsNumLit('5')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::lengthProperty(): Boolean[1]
+{
+   testExpr('items.length', jsLength(jsId('items')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::reverseNoArgs(): Boolean[1]
+{
+   testExpr('items.reverse()', jsReverse(jsId('items')));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::sortByComparator(): Boolean[1]
+{
+   testExpr(
+      'items.sort((a, b) => a - b)',
+      jsSortBy(jsId('items'), 'a', 'b', jsBinary(jsId('a'), '-', jsId('b'))));
+}
+
+function <<test.Test>> meta::external::language::javascript::serialization::tests::arrayLitFromExpressions(): Boolean[1]
+{
+   testExpr('[1, 2, 3]', jsArrayLit([jsNumLit('1'), jsNumLit('2'), jsNumLit('3')]));
+}
+
+// Chained pipeline: items.filter(x => x.active).map(x => x.name).join(', ')
+function <<test.Test>> meta::external::language::javascript::serialization::tests::chainedPipeline(): Boolean[1]
+{
+   testExpr(
+      'items.filter((x) => x.active).map((x) => x.name).join(\', \')',
+      jsJoin(
+         jsMap(
+            jsFilter(jsId('items'), 'x', jsAccess(jsId('x'), 'active')),
+            'x',
+            jsAccess(jsId('x'), 'name')
+         ),
+         jsStrLit(', ')
+      )
+   );
+}

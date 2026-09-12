@@ -1,4 +1,5 @@
 # Copyright 2022 Goldman Sachs
+# ©2026 JP Morgan Chase & Co. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,7 +40,7 @@
 #               │      │                     The `compileAndExecute` native is only registered in the
 #               │      │                     truffle Java extension, so this can't run on bootstrap.)
 #               │      │
-#               │      └── language-typescript (GraalVM 25 — same shape for the TypeScript module.)
+#               │      └── language-javascript (GraalVM 25 — same shape for the JavaScript module.)
 #               │
 #               └── truffle-native-self-host (GraalVM 25 — `just truffle::native::test-pure-self-host`:
 #                                            builds native-image binary, compiles compiler-pure via the
@@ -47,7 +48,7 @@
 #
 # bootstrap-self-host, printer-compiled, printer-protocol, truffle-self-host,
 # and truffle-native-self-host all run in parallel after bootstrap finishes;
-# language-java and language-typescript run in parallel after truffle-self-host
+# language-java and language-javascript run in parallel after truffle-self-host
 # (they need its uploaded truffle CLI jar + extension jars to invoke pure-truffle).
 # All consume upstream outputs via actions/upload-artifact + actions/download-artifact.
 #
@@ -79,10 +80,10 @@ env:
   MAVEN_VERSION: '3.9.11'
   JUST_VERSION: '1.49.0'
   FLATC_VERSION: '25.2.10'
-  #   NODE_VERSION      ↔ node on PATH locally; the TS Truffle extension needs
-  #                       node + pnpm to fetch the tsc compiler (typescript.js)
+  #   NODE_VERSION      ↔ node on PATH locally; the JS translation runtime needs
+  #                       node + pnpm to esbuild-bundle the antlr natives
   #   PNPM_VERSION      ↔ `pnpm --version` locally; major must match
-  #                       platforms/typescript/pnpm-lock.yaml's lockfileVersion
+  #                       pure/modules/translation/javascript/js/pnpm-lock.yaml's lockfileVersion
   NODE_VERSION: '22'
   PNPM_VERSION: '9'
 
@@ -202,9 +203,16 @@ jobs:
       #                          (truffle build + diff-pdb pull these from local m2)
       # The downstream `bootstrap-self-host` job also needs the bootstrap mvn
       # artifacts to run `compile-via-pure`.
+      # pdb/generated/ carries generatedWriter.pure, produced by generate-writer
+      # during the build above. It is gitignored, so a fresh checkout does not
+      # have it — and the self-host jobs compile compiler-pure from source. Without
+      # it they silently compile 193 fewer elements (every gen::write*), which
+      # surfaces only as a self-host diff. Ship it with shared/ rather than making
+      # each job regenerate it.
       - name: Tar bootstrap artifacts
         run: |
-          tar -cf bootstrap-artifacts.tar shared/ bootstrap/build/
+          tar -cf bootstrap-artifacts.tar shared/ bootstrap/build/ \
+            pure/specification/compiler/compiler-pure/pdb/generated/
           tar -cf bootstrap-mvn.tar -C ~/.m2/repository org/finos/legend/pure
 
       - name: Upload bootstrap artifacts
@@ -435,13 +443,9 @@ jobs:
         with:
           just-version: ${{ env.JUST_VERSION }}
 
-      # The TypeScript Truffle extension jar bundles typescript.js (the tsc
-      # compiler) as a classpath resource, copied from
-      # platforms/typescript/node_modules at maven process-resources time.
-      # node_modules must be populated before the reactor build below, or
-      # maven-resources-plugin silently skips the missing source dir, the jar
-      # ships without typescript.js, and language-typescript's compileAndExecute
-      # tests fail at runtime with "typescript.js not found on classpath".
+      # Node + pnpm for the JS translation runtime (esbuild bundle of the antlr
+      # natives + runtime helpers). The extension jar bundles plain-JS resources
+      # (runtime-lib.js, antlr-bundle.js) — no TypeScript compiler.
       - name: Set up Node
         uses: actions/setup-node@v4.3.0
         with:
@@ -451,10 +455,6 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
-
-      - name: Install TypeScript compiler (provides typescript.js for the TS extension jar)
-        working-directory: platforms/typescript
-        run: pnpm install --frozen-lockfile
 
       - name: Download bootstrap artifacts
         uses: actions/download-artifact@v8
@@ -466,6 +466,17 @@ jobs:
           tar -xf bootstrap-artifacts.tar
           mkdir -p ~/.m2/repository
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
+
+      # Parser half of the antlr bundle, BEFORE the reactor build: the
+      # extension-javascript pom bakes js/build/antlr-bundle.js into the jar at
+      # process-resources, and a missing file there is a silent skip that only
+      # surfaces much later as "antlr-bundle.js not found on classpath" in the
+      # language-javascript job. `antlr-bundle` depends solely on pnpm + the
+      # antlr4 jar + the .g4 grammars, so it can run here; the mappings half
+      # (parser-mappings-bundle) needs javascript.pdb, produced downstream, and
+      # is intentionally not built — the extension stubs Pure's `parse` without it.
+      - name: Build antlr parser bundle
+        run: just modules::translation_javascript::antlr-bundle
 
       # `truffle::test` runs the truffle reactor with surefire (Java unit
       # tests) and then the Pure compiler-graph spec suite on Truffle.
@@ -480,8 +491,8 @@ jobs:
         run: just truffle::test-pure-self-host
 
       # Pack the truffle CLI fat jar + extension jars (JavaCompileNatives,
-      # TypeScriptCompileNatives + GraalJS runtime). Downstream language-java
-      # and language-typescript jobs need these to run pure-truffle.
+      # JavaScriptCompileNatives + GraalJS runtime). Downstream language-java
+      # and language-javascript jobs need these to run pure-truffle.
       - name: Tar truffle artifacts
         run: tar -cf truffle-artifacts.tar platforms/truffle/build/
 
@@ -579,7 +590,7 @@ jobs:
   #                            pure-truffle runs `runTests meta::external::language::java`
   #                            (the Java extension's JavaCompileNatives registers
   #                            `compileAndExecute`, which bootstrap doesn't have).
-  #   - language-typescript : symmetric; the TS extension's GraalJS-backed
+  #   - language-javascript : symmetric; the TS extension's GraalJS-backed
   #                            `compileAndExecute`.
   #   - translation-shared  : Pure-AST -> Pure-AST canonicalisation shared by
   #                            the two translators; `just test-all` both builds
@@ -601,11 +612,11 @@ jobs:
             build_cmd: just build
             pdb_files: shared/java.pdb
             artifact: language-java-pdb
-          - target: language-typescript
-            working_dir: pure/modules/language/typescript
+          - target: language-javascript
+            working_dir: pure/modules/language/javascript
             build_cmd: just build
-            pdb_files: shared/typescript.pdb
-            artifact: language-typescript-pdb
+            pdb_files: shared/javascript.pdb
+            artifact: language-javascript-pdb
           - target: translation-shared
             working_dir: pure/modules/translation/shared
             build_cmd: ''
@@ -679,7 +690,7 @@ jobs:
           retention-days: 1
 
   # Pure -> <target> gallery. Matrix entries:
-  #   - java / typescript : translators — `just build && just test-all && just gallery`
+  #   - java / javascript : translators — `just build && just test-all && just gallery`
   #                          (translator self-tests + runtime suites + render HTML).
   #                          Each downloads its own language pdb.
   #   - truffle           : backend introspection — `just gallery` only (gallery
@@ -703,9 +714,9 @@ jobs:
             gallery_file: shared/java-translation-gallery.html
             language_pdb_artifact: language-java-pdb
             gallery_cmd: just build && just test-all && just gallery
-          - target: typescript
-            gallery_file: shared/typescript-translation-gallery.html
-            language_pdb_artifact: language-typescript-pdb
+          - target: javascript
+            gallery_file: shared/javascript-translation-gallery.html
+            language_pdb_artifact: language-javascript-pdb
             gallery_cmd: just build && just test-all && just gallery
           - target: truffle
             gallery_file: shared/truffle-translation-gallery.html
@@ -783,7 +794,7 @@ jobs:
           retention-days: 1
 
   # Publishes the galleries to GitHub Pages. The HTMLs are produced upstream by
-  # the `translations` matrix (java/typescript/truffle) and shipped as
+  # the `translations` matrix (java/javascript/truffle) and shipped as
   # gallery-<target> artifacts. All files are self-contained (inline CSS/JS/data)
   # so the deploy is just "drop into _site/". Runs only on push to main on the
   # canonical repo so PRs and forks don't try to publish.
@@ -803,11 +814,11 @@ jobs:
           name: gallery-java
           path: gallery-java
 
-      - name: Download typescript gallery
+      - name: Download javascript gallery
         uses: actions/download-artifact@v8
         with:
-          name: gallery-typescript
-          path: gallery-typescript
+          name: gallery-javascript
+          path: gallery-javascript
 
       - name: Download truffle gallery
         uses: actions/download-artifact@v8
@@ -820,7 +831,7 @@ jobs:
           set -euo pipefail
           mkdir -p _site
           cp gallery-java/java-translation-gallery.html             _site/java.html
-          cp gallery-typescript/typescript-translation-gallery.html _site/typescript.html
+          cp gallery-javascript/javascript-translation-gallery.html _site/javascript.html
           cp gallery-truffle/truffle-translation-gallery.html       _site/truffle.html
           cat > _site/index.html <<'EOF'
           <!doctype html>
@@ -829,7 +840,7 @@ jobs:
           <h1>legend-pure-next galleries</h1>
           <ul>
             <li><a href="java.html">Pure &rarr; Java translation gallery</a></li>
-            <li><a href="typescript.html">Pure &rarr; TypeScript translation gallery</a></li>
+            <li><a href="javascript.html">Pure &rarr; JavaScript translation gallery</a></li>
             <li><a href="truffle.html">Pure &rarr; Truffle AST gallery</a></li>
           </ul>
           EOF

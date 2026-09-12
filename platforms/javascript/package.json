@@ -1,0 +1,15 @@
+{
+  "name": "@finos/legend-pure-next",
+  "version": "0.0.1",
+  "description": "JavaScript interpreter and browser runtime for Legend Pure Next.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "echo 'no build — plain JavaScript' && exit 0",
+    "test": "node src/grammar/tests/grammar-tests.js",
+    "test:grammar": "node src/grammar/tests/grammar-tests.js",
+    "test:compiler": "node --stack-size=4000 src/compiler/tests/compiler-tests.js",
+    "test:execution": "node --stack-size=4000 src/execution/tests/pct-tests.js"
+  },
+  "license": "Apache-2.0"
+}

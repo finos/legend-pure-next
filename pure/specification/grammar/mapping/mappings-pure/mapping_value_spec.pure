@@ -158,22 +158,39 @@ function meta::pure::parser::mappings::buildOrExpression(ctx: AntlrContext[1], l
 {
    let operands = $ctx->getChildren('andExpression');
    $operands->tail()->fold(
-      {op, acc | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
-         p_sourceInformation = buildBinaryOpSourceInfo($acc, $op, $lineOffset),
-         functionName        = 'or',
-         parametersValues    = [$acc, buildAndExpression($op, $lineOffset)])},
+      {op, acc | buildOrStep($acc, $op, $lineOffset)},
       buildAndExpression($operands->at(0), $lineOffset));
+}
+
+// Fold-step bodies live in named functions rather than inside the fold
+// lambdas: Graal inlines lambda bodies into the enclosing function's
+// compilation unit, and with the whole expression-builder tree pulled in,
+// these units flirt with the AArch64 ±1MB branch-displacement limit
+// (BranchTargetOutOfBoundsException / "code is too large" bailouts).
+function meta::pure::parser::mappings::buildOrStep(acc: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], rhsCtx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildBinaryOpSourceInfo($acc, $rhsCtx, $lineOffset),
+      functionName        = 'or',
+      parametersValues    = [$acc, buildAndExpression($rhsCtx, $lineOffset)]
+   );
 }
 
 function meta::pure::parser::mappings::buildAndExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
    let operands = $ctx->getChildren('equalityExpression');
    $operands->tail()->fold(
-      {op, acc | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
-         p_sourceInformation = buildBinaryOpSourceInfo($acc, $op, $lineOffset),
-         functionName        = 'and',
-         parametersValues    = [$acc, buildEqualityExpression($op, $lineOffset)])},
+      {op, acc | buildAndStep($acc, $op, $lineOffset)},
       buildEqualityExpression($operands->at(0), $lineOffset));
+}
+
+function meta::pure::parser::mappings::buildAndStep(acc: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], rhsCtx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildBinaryOpSourceInfo($acc, $rhsCtx, $lineOffset),
+      functionName        = 'and',
+      parametersValues    = [$acc, buildEqualityExpression($rhsCtx, $lineOffset)]
+   );
 }
 
 // `==` → equal(...); `!=` → not(equal(...)). Operator-token-driven.
@@ -249,22 +266,36 @@ function meta::pure::parser::mappings::buildAdditiveExpression(ctx: AntlrContext
 {
    let operands = $ctx->getChildren('multiplicativeExpression');
    range(1, $operands->size())->fold(
-      {i, acc | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
-         p_sourceInformation = buildBinaryOpSourceInfo($acc, $operands->at($i), $lineOffset),
-         functionName        = if($ctx->getChildTextAt(2 * $i - 1)->toOne() == '-', |'minus', |'plus'),
-         parametersValues    = [$acc, buildMultiplicativeExpression($operands->at($i), $lineOffset)])},
+      {i, acc | buildAdditiveStep($ctx, $acc, $operands->at($i), $i, $lineOffset)},
       buildMultiplicativeExpression($operands->at(0), $lineOffset));
+}
+
+function meta::pure::parser::mappings::buildAdditiveStep(ctx: AntlrContext[1], acc: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], rhsCtx: AntlrContext[1], i: Integer[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let opText = $ctx->getChildTextAt(2 * $i - 1)->toOne();
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildBinaryOpSourceInfo($acc, $rhsCtx, $lineOffset),
+      functionName        = if($opText == '-', |'minus', |'plus'),
+      parametersValues    = [$acc, buildMultiplicativeExpression($rhsCtx, $lineOffset)]
+   );
 }
 
 function meta::pure::parser::mappings::buildMultiplicativeExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
    let operands = $ctx->getChildren('expression');
    range(1, $operands->size())->fold(
-      {i, acc | ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
-         p_sourceInformation = buildBinaryOpSourceInfo($acc, $operands->at($i), $lineOffset),
-         functionName        = if($ctx->getChildTextAt(2 * $i - 1)->toOne() == '/', |'divide', |'times'),
-         parametersValues    = [$acc, buildExpression($operands->at($i), $lineOffset)])},
+      {i, acc | buildMultiplicativeStep($ctx, $acc, $operands->at($i), $i, $lineOffset)},
       buildExpression($operands->at(0), $lineOffset));
+}
+
+function meta::pure::parser::mappings::buildMultiplicativeStep(ctx: AntlrContext[1], acc: meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], rhsCtx: AntlrContext[1], i: Integer[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+{
+   let opText = $ctx->getChildTextAt(2 * $i - 1)->toOne();
+   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+      p_sourceInformation = buildBinaryOpSourceInfo($acc, $rhsCtx, $lineOffset),
+      functionName        = if($opText == '/', |'divide', |'times'),
+      parametersValues    = [$acc, buildExpression($rhsCtx, $lineOffset)]
+   );
 }
 
 // -----------------------------------------------------------------------
@@ -296,12 +327,16 @@ function meta::pure::parser::mappings::buildNonArrowOrEqualExpression(ctx: Antlr
    | atomic($ctx, '<unsupported nonArrowOrEqualExpression>', 'String', $lineOffset)))))));
 }
 
-// `[a:b]` etc → `slice(a, b)` FunctionInvocation.
+// `[:stop]` / `[start:stop]` / `[start:stop:step]` → `range(...)`. The grammar
+// RULE is named sliceExpression (after the Python-slice-looking syntax), but
+// the semantics are range — a collection GENERATOR, not a collection slice —
+// mirroring the reference AntlrContextToM3CoreInstance, which builds a
+// FunctionInvocation named 'range' with the parsed expressions in order.
 function meta::pure::parser::mappings::buildSliceExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
    ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
       p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
-      functionName        = 'slice',
+      functionName        = 'range',
       parametersValues    = $ctx->getChildren('expression')->map(e | buildExpression($e, $lineOffset))
    )
 }

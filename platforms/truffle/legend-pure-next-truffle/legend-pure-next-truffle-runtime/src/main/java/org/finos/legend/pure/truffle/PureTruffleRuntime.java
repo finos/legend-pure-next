@@ -1,0 +1,458 @@
+// Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package org.finos.legend.pure.truffle;
+
+import com.oracle.truffle.api.frame.FrameDescriptor;
+import com.oracle.truffle.api.nodes.RootNode;
+import org.finos.legend.pure.truffle.runtime.module.TruffleMetadataAccess;
+import org.finos.legend.pure.truffle.interpreter.ast.literal.AtomicValueNode;
+import org.finos.legend.pure.truffle.interpreter.ast.PureNode;
+import org.finos.legend.pure.truffle.interpreter.PureSourceHelper;
+import org.finos.legend.pure.truffle.interpreter.NativeNodeRegistry;
+import org.finos.legend.pure.truffle.types.PureSequence;
+import org.finos.legend.pure.truffle.interpreter.ast.root.PureRootNode;
+
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.finos.legend.pure.truffle.parser.TrufflePureParser;
+
+/**
+ * Plain Java entry point for running Pure code through the Truffle interpreter.
+ *
+ * <p>Mirrors {@code PureExecution}'s Builder pattern. Bypasses the Polyglot
+ * Context boundary: we don't embed Pure as a language; we just use Truffle
+ * as an AST/execution runtime.</p>
+ */
+public final class PureTruffleRuntime
+{
+    private final org.graalvm.polyglot.Context polyglotContext;
+    private final org.graalvm.polyglot.Engine engine;
+    private final ByteArrayOutputStream graalLog;
+    private final PureContext context;
+    private final TruffleMetadataAccess resolver;
+
+    private PureTruffleRuntime(TruffleMetadataAccess resolver,
+                               List<? extends org.finos.legend.pure.next.parser.GrammarExtension> grammarExtensions,
+                               List<Path> sourceRoots,
+                               Map<String, String> polyglotOptions)
+    {
+        this.resolver = resolver;
+
+        // Register source roots before any AST is built — once a Source is
+        // cached for a sourceId, later root additions don't update its content.
+        for (Path root : sourceRoots)
+        {
+            PureSourceHelper.addSourceRoot(root);
+        }
+
+        // Build a shared Engine with the Graal compilation tripwire wired in:
+        //   - TraceCompilation logs every `opt done` / `opt failed` event
+        //   - err is redirected into a buffer we scan in graalCompilationFailures()
+        //   - CompileImmediately forces every reached function through Tier-1
+        //     so the tripwire surfaces bailouts in code paths the suite calls
+        //     just once (Truffle's default lazy threshold ~10 invocations
+        //     would otherwise hide them).
+        // Skipped under native-image AOT — the runtime never JITs there, so
+        // there are no compilation events and no risk of "Too deep inlining"
+        // bailouts at all.
+        if (org.graalvm.nativeimage.ImageInfo.inImageRuntimeCode())
+        {
+            this.graalLog = null;
+            this.engine = null;
+        }
+        else
+        {
+            this.graalLog = new ByteArrayOutputStream();
+            org.graalvm.polyglot.Engine.Builder engineBuilder = org.graalvm.polyglot.Engine.newBuilder()
+                    .allowExperimentalOptions(true)
+                    .err(new PrintStream(graalLog, true, StandardCharsets.UTF_8))
+                    .option("engine.TraceCompilation", "true")
+                    .option("engine.WarnInterpreterOnly", "false")
+                    .option("engine.CompilationFailureAction", "Silent")
+                    // Lambda-body inlining makes some parent FDs into large
+                    // compilation units; default budgets cause PermanentBailout
+                    // ("Too deep inlining") on hot paths. Bump.
+                    .option("compiler.InliningExpansionBudget", "100000")
+                    .option("compiler.InliningInliningBudget", "100000")
+                    // Big enough that lambda-heavy parent FDs don't hit
+                    // "Too deep inlining" PermanentBailouts or GraphTooBig
+                    // bailouts. NOTE: this cannot double as a code-size guard
+                    // for the AArch64 ±1MB branch-displacement range —
+                    // measured: a graph within a 110000 cap still emitted a
+                    // 1.17MB method (graph size does not bound code size),
+                    // while the tighter cap made three legitimate compiler
+                    // lambdas bail with GraphTooBig. The resulting
+                    // BranchTargetOutOfBoundsException is instead classified
+                    // as an unavoidable code-size bailout — see
+                    // isUnavoidableCodeSizeBailout.
+                    // NOTE: a GraphTooBig bailout landing marginally OVER this
+                    // cap (e.g. 300008/300000) does NOT mean the cap is too
+                    // tight — PE expands greedily until the budget is
+                    // exhausted, so an expansion with unbounded appetite
+                    // always lands "just over" WHATEVER the cap is (measured:
+                    // raising to 340000 moved the same two parser-mapping
+                    // bailouts to 340004/340102). Diagnose with
+                    // `--engine-option compiler.TraceInlining=true` plus a
+                    // temporarily-raised cap (the trace only prints for
+                    // COMPLETED compiles) and -Dpure.truffle.graalLogDump.
+                    // Past instance: a dead `fb instanceof PropertyAccessor`
+                    // branch in PureDynamicObject.decodeFromFb devirtualized
+                    // once the generated helpers were deleted and PE inlined
+                    // a phantom read cycle 331 levels deep.
+                    .option("compiler.MaximumGraalGraphSize", "300000")
+                    // The self-hosted PDB writer (pdb::gen / pdb::fbb / pdb::
+                    // archive / pdb::writer) is cold one-shot code: it runs
+                    // once at the end of a compile to serialize the graph.
+                    // Under CompileImmediately its huge generated write
+                    // functions produce pathological Graal units (multi-minute
+                    // compiles, code-size bailouts, and compiler-thread OOM on
+                    // writeDotApplication_body), so exclude the namespace from
+                    // compilation — it stays interpreted, correctness is
+                    // covered by byte-parity tests against the Java reference.
+                    .option("engine.CompileOnly", "~meta::pure::compiler::pdb::");
+            // Instrument options (cpusampler.*, pureprofiler.*) and explicit
+            // engine.* overrides must go on the Engine, not the Context — when
+            // a Context shares an Engine, instrument-scope options can only
+            // be set when the Engine is built. Routing them here lets
+            // `--cpu-sampler` / `--pure-profiler` flags actually take effect.
+            for (Map.Entry<String, String> e : polyglotOptions.entrySet())
+            {
+                if (isEngineOption(e.getKey()))
+                {
+                    engineBuilder.option(e.getKey(), e.getValue());
+                }
+            }
+            this.engine = engineBuilder.build();
+        }
+
+        // Configure and create the Truffle polyglot context
+        Map<String, org.finos.legend.pure.next.parser.GrammarExtension> grammarMap = new LinkedHashMap<>();
+        for (org.finos.legend.pure.next.parser.GrammarExtension g : grammarExtensions)
+        {
+            if (grammarMap.put(g.grammarName(), g) != null)
+            {
+                throw new IllegalStateException("Duplicate grammar registration for '" + g.grammarName() + "'");
+            }
+        }
+        PureLanguage.configure(resolver, NativeNodeRegistry.createDefault(), grammarMap);
+        org.graalvm.polyglot.Context.Builder ctxBuilder = org.graalvm.polyglot.Context.newBuilder(PureLanguage.ID)
+                .allowAllAccess(true)
+                .allowExperimentalOptions(true);
+        if (engine != null)
+        {
+            ctxBuilder.engine(engine);
+        }
+        for (Map.Entry<String, String> e : polyglotOptions.entrySet())
+        {
+            if (!isEngineOption(e.getKey()))
+            {
+                ctxBuilder.option(e.getKey(), e.getValue());
+            }
+        }
+        this.polyglotContext = ctxBuilder.build();
+        this.polyglotContext.initialize(PureLanguage.ID);
+        this.polyglotContext.enter();
+
+        // Get the PureContext created by the language
+        this.context = PureLanguage.get(null);
+
+        // Build the TrufflePureParser. The entire parse pipeline (top-level
+        // dispatch + every section parser) runs through the Pure interpreter
+        // loaded from parser-mappings.pdb; callers compose the section
+        // registry as a Pure Pair list (see TrufflePureParser).
+        this.context.setPureParser(TrufflePureParser.builder()
+                .resolver(resolver)
+                .build());
+    }
+
+    private static boolean isEngineOption(String key)
+    {
+        // Engine-level instruments and engine.* options must be configured
+        // when the Engine is built; setting them on a Context that shares
+        // an Engine throws an IllegalArgumentException.
+        return key.startsWith("engine.")
+                || key.startsWith("compiler.")
+                || key.startsWith("cpusampler")
+                || key.startsWith("pureprofiler");
+    }
+
+    /**
+     * Close the underlying polyglot context (and the shared Engine, if any).
+     * Triggers any attached engine tools (e.g. {@code cpusampler}) to flush
+     * their output, and flushes any in-flight Graal compilations to the
+     * captured err buffer so {@link #graalCompilationFailures()} sees them.
+     */
+    public void close()
+    {
+        try
+        {
+            polyglotContext.leave();
+        }
+        catch (RuntimeException ignored)
+        {
+            // already left or never entered
+        }
+        polyglotContext.close();
+        if (engine != null)
+        {
+            engine.close();
+        }
+        // Diagnostics: dump the FULL captured Graal err stream (all
+        // engine.Trace* output, not just the opt-failed lines the tripwire
+        // filters) when requested, e.g.
+        //   -Dpure.truffle.graalLogDump=/tmp/graal.log \
+        //   --engine-option engine.TraceInlining=true
+        String dumpPath = System.getProperty("pure.truffle.graalLogDump");
+        if (dumpPath != null && graalLog != null)
+        {
+            try
+            {
+                java.nio.file.Files.write(java.nio.file.Path.of(dumpPath), graalLog.toByteArray());
+            }
+            catch (java.io.IOException e)
+            {
+                System.err.println("Failed to dump graal log to " + dumpPath + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Lines from the captured Graal err stream that match {@code opt failed}.
+     * Empty under native-image AOT (no JIT events at all).
+     *
+     * <p>Callers should invoke {@link #close()} first so in-flight Graal
+     * compilations have flushed their events into the buffer.</p>
+     */
+    public List<String> graalCompilationFailures()
+    {
+        if (graalLog == null)
+        {
+            return List.of();
+        }
+        return graalLog.toString(StandardCharsets.UTF_8).lines()
+                .filter(line -> line.contains("opt failed"))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Subset of {@link #graalCompilationFailures()} that excludes bailouts
+     * we cannot fix by tuning Truffle — specifically HotSpot's per-method
+     * code-installation size ceiling ("Code installation failed: code is
+     * too large"). That limit is a JVM property (max emitted machine-code
+     * bytes per installed method, dictated by branch-displacement encoding);
+     * no {@code engine.*} or {@code compiler.*} option lifts it, and the
+     * affected lambda gracefully stays Tier-1 without breaking correctness.
+     *
+     * <p>Tripwires that translate failures into process exit / test failures
+     * should call this variant; the unfiltered {@link
+     * #graalCompilationFailures()} remains for diagnostic / logging use.</p>
+     */
+    public List<String> graalActionableCompilationFailures()
+    {
+        return graalCompilationFailures().stream()
+                .filter(line -> !isUnavoidableCodeSizeBailout(line))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * True for an {@code opt failed} line whose bailout reason is a
+     * per-method code-size ceiling no configuration can lift. Two forms:
+     * <ul>
+     * <li>"Code installation failed: code is too large" — HotSpot's
+     * code-installation ceiling;</li>
+     * <li>{@code BranchTargetOutOfBoundsException} — the Graal AArch64
+     * assembler's ±1MB branch-displacement limit (it emits no far-branch
+     * veneers for huge methods).</li>
+     * </ul>
+     * Both degrade gracefully: the method stays Tier 1.
+     *
+     * <p>Tolerating the AArch64 form was decided (2026-07-05) after every
+     * alternative was tried and measured on the parser's mutually-recursive
+     * expression ladder, whose FULL inlining at Tier 2 exceeds 1MB from
+     * whichever entry point gets hot: hoisting fold-lambda bodies into named
+     * step functions (failure moved to the next entry point);
+     * MaximumGraalGraphSize 200000 (still emitted a 1.19MB method); 110000
+     * (still emitted 1.17MB — graph size does not bound code size — AND made
+     * three legitimate big compiler lambdas bail with GraphTooBig). Source
+     * splitting remains good hygiene for Tier-1 units (keep the buildXxxStep
+     * pattern in mapping_value_spec.pure), but it cannot prevent Tier-2
+     * ladder inlining.</p>
+     */
+    public static boolean isUnavoidableCodeSizeBailout(String optFailedLine)
+    {
+        return optFailedLine != null
+                && (optFailedLine.contains("Code installation failed: code is too large")
+                        || optFailedLine.contains("BranchTargetOutOfBoundsException"));
+    }
+
+    /**
+     * Total Graal compilation events ({@code opt done} + {@code opt failed})
+     * recorded during this runtime's lifetime. 0 under native-image AOT.
+     */
+    public long graalCompilationAttempts()
+    {
+        if (graalLog == null)
+        {
+            return 0;
+        }
+        return graalLog.toString(StandardCharsets.UTF_8).lines()
+                .filter(line -> line.contains("opt done") || line.contains("opt failed"))
+                .count();
+    }
+
+    public static final class Builder
+    {
+        private TruffleMetadataAccess resolver;
+        private final List<org.finos.legend.pure.next.parser.GrammarExtension> grammarExtensions = new ArrayList<>();
+        private final List<Path> sourceRoots = new ArrayList<>();
+        private final Map<String, String> polyglotOptions = new LinkedHashMap<>();
+
+        public Builder withResolver(TruffleMetadataAccess resolver)
+        {
+            this.resolver = resolver;
+            return this;
+        }
+
+        /**
+         * Register grammar extensions consulted by the {@code parseAntlr}
+         * native. Reuses the bootstrap-side
+         * {@link org.finos.legend.pure.next.parser.GrammarExtension} interface
+         * — the M3/Top implementations work for both runtimes.
+         */
+        public Builder withGrammarExtensions(Iterable<? extends org.finos.legend.pure.next.parser.GrammarExtension> extensions)
+        {
+            if (extensions != null)
+            {
+                extensions.forEach(grammarExtensions::add);
+            }
+            return this;
+        }
+
+        /**
+         * Register a directory whose contents should be embedded in Truffle
+         * {@link com.oracle.truffle.api.source.Source} objects when their
+         * sourceId resolves under it. Required for {@code --cpu-sampler}
+         * flamegraphs to render Pure source lines.
+         */
+        public Builder withSourceRoot(Path root)
+        {
+            if (root != null)
+            {
+                this.sourceRoots.add(root);
+            }
+            return this;
+        }
+
+        /**
+         * Pass through a polyglot engine option, e.g.
+         * {@code option("cpusampler", "true")}.
+         */
+        public Builder withPolyglotOption(String key, String value)
+        {
+            this.polyglotOptions.put(key, value);
+            return this;
+        }
+
+        /**
+         * Force Graal to compile every reached CallTarget on first invocation
+         * (no warm-up threshold). Sets {@code engine.CompileImmediately=true}.
+         *
+         * <p>Use this in functional tests so the graalCompilationFailures
+         * tripwire sees a compilation event for every Pure function the test
+         * suite touches — without it, single-call paths stay in the interpreter
+         * and any inlining bailout in them slips by silently. Off by default
+         * in production runs (CLI compile/execute) where it would multiply
+         * startup cost.</p>
+         *
+         * <p>Explicit calls override the {@code pure.truffle.compileImmediately}
+         * system-property default. Pass {@code false} from benchmarks to keep
+         * measuring steady-state warm wall regardless of the property.</p>
+         */
+        public Builder withCompileImmediately(boolean enabled)
+        {
+            this.polyglotOptions.put("engine.CompileImmediately", String.valueOf(enabled));
+            return this;
+        }
+
+        public PureTruffleRuntime build()
+        {
+            // System-property default: surefire's argLine sets this so every
+            // test that drives PureTruffleRuntime gets aggressive JIT
+            // automatically. Explicit withCompileImmediately(...) calls win.
+            if (!polyglotOptions.containsKey("engine.CompileImmediately"))
+            {
+                String prop = System.getProperty("pure.truffle.compileImmediately");
+                if (prop != null)
+                {
+                    polyglotOptions.put("engine.CompileImmediately", prop);
+                }
+            }
+            // Always register the M3 + top-level grammars by default so the
+            // parseAntlr native works out of the box. Callers that need a
+            // custom grammar add it via withGrammarExtensions; conflicts on
+            // the same grammarName throw at runtime construction time.
+            List<org.finos.legend.pure.next.parser.GrammarExtension> allGrammars = new ArrayList<>(grammarExtensions);
+            boolean hasM3 = false, hasTop = false;
+            for (org.finos.legend.pure.next.parser.GrammarExtension g : allGrammars)
+            {
+                if ("M3Parser".equals(g.grammarName())) hasM3 = true;
+                if ("TopParser".equals(g.grammarName())) hasTop = true;
+            }
+            if (!hasM3) allGrammars.add(new org.finos.legend.pure.next.parser.M3GrammarExtension());
+            if (!hasTop) allGrammars.add(new org.finos.legend.pure.next.parser.TopGrammarExtension());
+            return new PureTruffleRuntime(resolver, allGrammars, sourceRoots, polyglotOptions);
+        }
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * Execute a compiled {@link FunctionDefinition} with the given raw Java args.
+     * Uses StandaloneEvaluator as primary path. TruffleEvaluator stays on
+     * EvaluatorHolder for BridgedNativeCallNode fallback on remaining bridge
+     * signatures.
+     */
+    public Object execute(Object function, Object... args)
+    {
+        Object result = context.executeFunction(function, args);
+        if (result instanceof PureSequence ps && ps.isEmpty())
+        {
+            return null;
+        }
+        return result;
+    }
+
+    /**
+     * Phase A smoke test — compiles and runs a constant-returning RootNode.
+     */
+    public static Object hello()
+    {
+        PureNode body = new AtomicValueNode(42L);
+        RootNode root = new PureRootNode(null, "hello", FrameDescriptor.newBuilder().build(), body);
+        return root.getCallTarget().call();
+    }
+}

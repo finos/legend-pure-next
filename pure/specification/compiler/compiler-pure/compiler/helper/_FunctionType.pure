@@ -184,7 +184,10 @@ function meta::pure::compiler::helper::functionType::findCommonFunctionType_buil
               );
               let pName = $functionTypes->at(0).parameters->at($i).name;
               ^VariableExpression(
-                  name = if($pName->isEmpty() || $pName->toOne() == '', | 'p' + $i->toString(), | $pName->toOne()),
+                  // Unnamed source params stay unnamed — signature-level
+                  // VariableExpressions are never resolved by name, and the
+                  // wire should reflect the source (no synthesized p<idx>).
+                  name = if($pName->isEmpty(), | '', | $pName->toOne()),
                   genericType = $commonParamType->toOne(),
                   multiplicity = if($commonParamMul->isEmpty(), | PureOne, | $commonParamMul->toOne())
               );
@@ -250,14 +253,35 @@ function meta::pure::compiler::helper::functionType::reconcileInferredFT(expecte
     let newParams = if($expected.parameters->size() == $actual.parameters->size(),
         | $expected.parameters->zip($actual.parameters)->map(p |
             let actualParam = $p.second;
-            let rGT = meta::pure::compiler::helper::genericType::reconcileInferred($p.first.genericType->toOne(), $actualParam.genericType->toOne(), $context);
+            let apGT = $actualParam.genericType->toOne();
+            let epGT = $p.first.genericType;
+            // Java does NOT recurse reconcileInferred into parameter generic
+            // types — it keeps the actual's GT by reference (or takes
+            // asInferred(expected) when the actual is Inferred and compatible).
+            // Recursing here plants RelationType reconcile-copies inside
+            // FunctionType params where Java's graph keeps the original
+            // (wire: inline RelationTypeDef where Java has the AncestorRef
+            // self-cycle). Only the RETURN type gets the full reconcile.
+            let rGT = if($apGT->instanceOf(meta::pure::metamodel::Inferred)
+                          && $epGT->isNotEmpty()
+                          && meta::pure::compiler::helper::genericType::isCompatibleGenericType($epGT->toOne(), $apGT, $context),
+                | meta::pure::compiler::helper::genericType::asInferredGenericType($epGT->toOne()),
+                | $apGT
+            );
+            let apMul = $actualParam.multiplicity->toOne();
+            let rMul = if($apMul->instanceOf(meta::pure::metamodel::Inferred)
+                           && $p.first.multiplicity->isNotEmpty()
+                           && meta::pure::compiler::helper::multiplicity::multiplicitySubsumes($p.first.multiplicity->toOne(), $apMul),
+                | meta::pure::compiler::helper::multiplicity::asInferredMultiplicity($p.first.multiplicity->toOne()),
+                | $apMul
+            );
             // Build a fresh VE without sourceInformation, mirroring Java _FunctionType.reconcileInferred
             // which constructs `new VariableExpressionImpl(model)._name(...)._genericType(...)._multiplicity(...)`
             // — Java never carries SI through reconciliation, so Pure must not either.
             ^VariableExpression(
                 name = $actualParam.name->toOne(),
                 genericType = $rGT,
-                multiplicity = $actualParam.multiplicity->toOne()
+                multiplicity = $rMul
             )->cast(@VariableExpression);
         ),
         | $actual.parameters

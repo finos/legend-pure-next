@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,10 +16,11 @@ import org.finos.legend.pure.ide.backend.PureBackend;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
-import org.finos.legend.pure.truffle.runtime.TruffleInMemoryModule;
-import org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry;
-import org.finos.legend.pure.truffle.runtime.TrufflePdbLoader;
-import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
+import org.finos.legend.pure.truffle.runtime.module.TruffleModule;
+import org.finos.legend.pure.truffle.runtime.module.localModule.TruffleInMemoryModule;
+import org.finos.legend.pure.truffle.runtime.module.TruffleModuleRegistry;
+import org.finos.legend.pure.truffle.runtime.module.pdbModule.TrufflePdbLoader;
+import org.finos.legend.pure.truffle.runtime.helper._Any;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.io.ByteArrayOutputStream;
@@ -250,7 +252,7 @@ public final class TruffleBackend implements PureBackend
                     Object compileResult = runtime.execute(compileFn, parsedFiles, Boolean.FALSE);
                     lastCompileResult = compileResult;
                     List<String> thisCompileErrors = new ArrayList<>();
-                    collectStrings(PureObj.read(compileResult, "errors"), thisCompileErrors);
+                    collectStrings(_Any.read(compileResult, "errors"), thisCompileErrors);
                     compileErrors.addAll(thisCompileErrors);
 
                     // Only swap the in-memory registration when this compile
@@ -270,14 +272,14 @@ public final class TruffleBackend implements PureBackend
                     {
                         registry.unregister(memModuleName);
                     }
-                    Object elementsField = PureObj.read(compileResult, "elements");
+                    Object elementsField = _Any.read(compileResult, "elements");
                     if (elementsField instanceof PureSequence elements)
                     {
                         // Depend on every already-registered module so the
                         // user's elements can reference core / compiler /
                         // any other base PDB without cycle errors.
                         List<String> deps = new ArrayList<>();
-                        for (org.finos.legend.pure.truffle.runtime.TruffleModule existing : registry.modules())
+                        for (TruffleModule existing : registry.modules())
                         {
                             deps.add(existing.name());
                         }
@@ -377,10 +379,10 @@ public final class TruffleBackend implements PureBackend
      */
     private static CompileStats readCompileStats(Object compileResult)
     {
-        Object stats = PureObj.read(compileResult, "statistics");
+        Object stats = _Any.read(compileResult, "statistics");
         if (stats == null) { return null; }
         List<CompileStats.ElementStats> elements = new ArrayList<>();
-        Object elementStatistics = PureObj.read(stats, "elementStatistics");
+        Object elementStatistics = _Any.read(stats, "elementStatistics");
         if (elementStatistics instanceof PureSequence seq)
         {
             for (int i = 0, n = seq.size(); i < n; i++)
@@ -388,23 +390,23 @@ public final class TruffleBackend implements PureBackend
                 Object es = seq.getBoxed(i);
                 if (es == null) { continue; }
                 elements.add(new CompileStats.ElementStats(
-                        asString(PureObj.read(es, "elementPath")),
-                        asString(PureObj.read(es, "elementType")),
-                        asLong(PureObj.read(es, "totalMillis")),
-                        asLong(PureObj.read(es, "inferenceRollbacks")),
-                        asLong(PureObj.read(es, "candidateEvaluations"))));
+                        asString(_Any.read(es, "elementPath")),
+                        asString(_Any.read(es, "elementType")),
+                        asLong(_Any.read(es, "totalMillis")),
+                        asLong(_Any.read(es, "inferenceRollbacks")),
+                        asLong(_Any.read(es, "candidateEvaluations"))));
             }
         }
         return new CompileStats(
-                asLong(PureObj.read(stats, "totalMillis")),
-                asLong(PureObj.read(stats, "parsingMillis")),
-                asLong(PureObj.read(stats, "firstPassMillis")),
-                asLong(PureObj.read(stats, "secondPassMillis")),
-                asLong(PureObj.read(stats, "thirdPassMillis")),
-                asLong(PureObj.read(stats, "elementCount")),
-                asLong(PureObj.read(stats, "sourceFileCount")),
-                asLong(PureObj.read(stats, "inferenceRollbackCount")),
-                asLong(PureObj.read(stats, "candidateEvaluationCount")),
+                asLong(_Any.read(stats, "totalMillis")),
+                asLong(_Any.read(stats, "parsingMillis")),
+                asLong(_Any.read(stats, "firstPassMillis")),
+                asLong(_Any.read(stats, "secondPassMillis")),
+                asLong(_Any.read(stats, "thirdPassMillis")),
+                asLong(_Any.read(stats, "elementCount")),
+                asLong(_Any.read(stats, "sourceFileCount")),
+                asLong(_Any.read(stats, "inferenceRollbackCount")),
+                asLong(_Any.read(stats, "candidateEvaluationCount")),
                 elements);
     }
 
@@ -454,7 +456,7 @@ public final class TruffleBackend implements PureBackend
     {
         for (String path : module.elementPaths())
         {
-            org.finos.legend.pure.truffle.runtime.TruffleModule owner = registry.moduleOfPath(path);
+            TruffleModule owner = registry.moduleOfPath(path);
             return owner instanceof TrufflePdbLoader;
         }
         return false;

@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -162,13 +163,20 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
           // overwriting the first and losing one property — which is what made
           // `Package.parent` errors appear in self-host that don't appear under Java.
           let isSelfAssoc = $class2Path == $class1Path;
+          // Qualified properties register on the class that owns the FIRST
+          // property (prop2's type — the same class the QPs were compiled
+          // against): mirrors Java AssociationHandler's
+          // `ownerCls._qualifiedPropertiesFromAssociations().addAll(compiledQPs)`.
+          let registeredQPs = $compiledAssoc.qualifiedProperties;
           let ctx4 = if($isSelfAssoc,
               | let cls = $ctx3->resolveElement($class1Path)->toOne()->cast(@Class<Any>);
-                let updatedCls = ^$cls(propertiesFromAssociations = $cls.propertiesFromAssociations->concatenate($registeredProp1)->concatenate($registeredProp2));
+                let updatedCls = ^$cls(propertiesFromAssociations = $cls.propertiesFromAssociations->concatenate($registeredProp1)->concatenate($registeredProp2),
+                                       qualifiedPropertiesFromAssociations = $cls.qualifiedPropertiesFromAssociations->concatenate($registeredQPs));
                 ^$ctx3(elementMap = $ctx3.elementMap->put($class1Path, $updatedCls));,
               | let class2 = $ctx3->resolveElement($class2Path)->toOne()->cast(@Class<Any>);
                 let class1 = $ctx3->resolveElement($class1Path)->toOne()->cast(@Class<Any>);
-                let updatedClass2 = ^$class2(propertiesFromAssociations = $class2.propertiesFromAssociations->concatenate($registeredProp1));
+                let updatedClass2 = ^$class2(propertiesFromAssociations = $class2.propertiesFromAssociations->concatenate($registeredProp1),
+                                             qualifiedPropertiesFromAssociations = $class2.qualifiedPropertiesFromAssociations->concatenate($registeredQPs));
                 let updatedClass1 = ^$class1(propertiesFromAssociations = $class1.propertiesFromAssociations->concatenate($registeredProp2));
                 ^$ctx3(elementMap = $ctx3.elementMap->put($class2Path, $updatedClass2)->put($class1Path, $updatedClass1));
           );

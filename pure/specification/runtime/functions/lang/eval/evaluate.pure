@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,9 +14,55 @@
 // limitations under the License.
 
 import meta::pure::functions::lang::tests::model::*;
+import meta::pure::metamodel::function::*;
 import meta::pure::test::pct::*;
 
 native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::evaluate(func:Function<Any>[1], params:List<Any>[*]):Any[*];
+
+// --- REAL dynamic evaluation: compile a source string on the fly, then
+// evaluate the freshly compiled function held as a VALUE (no global
+// registration — the module registry is immutable after boot). Exercises the
+// full loop — parse -> compile -> dispatch — on every platform (the
+// interpreters compile in-memory; the JavaScript host compiles with the
+// translated compiler and translates the result for invocation).
+
+function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::lang::tests::evaluate::testEvaluateDynamicallyCompiledFunction<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(4, $f->eval(|
+        let els = meta::pure::functions::meta::compileSource('dynamicEval1',
+                     'function my::dyn::addOne(x:Integer[1]):Integer[1] { $x + 1 }', 'core').elements;
+        let fn = $els->filter(e | $e->instanceOf(PackageableFunction))
+                     ->cast(@PackageableFunction<Any>)->toOne();
+        $fn->evaluate([^List<Integer>(values=3)])->toOne();
+    ));
+}
+
+function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::lang::tests::evaluate::testEvaluateDynamicallyCompiledFunctionMultipleParams<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('a::b', $f->eval(|
+        let els = meta::pure::functions::meta::compileSource('dynamicEval2',
+                     'function my::dyn::joinTwo(a:String[1], b:String[1]):String[1] { $a + \'::\' + $b }', 'core').elements;
+        let fn = $els->filter(e | $e->instanceOf(PackageableFunction))
+                     ->cast(@PackageableFunction<Any>)->toOne();
+        $fn->evaluate([^List<String>(values='a'), ^List<String>(values='b')])->toOne();
+    ));
+}
+
+
+// Same sourceId compiled twice: each call returns its own self-contained,
+// independently evaluable values (call-scoped validity, no cross-talk).
+function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::lang::tests::evaluate::testEvaluateDynamicallyCompiledFunctionIsRepeatable<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals([10, 10], $f->eval(|
+        let first  = meta::pure::functions::meta::compileSource('csRepeat',
+                        'function cs::rep::ten():Integer[1] { 10 }', 'core')
+                     .elements->filter(e | $e->instanceOf(PackageableFunction))->cast(@PackageableFunction<Any>)->toOne();
+        let second = meta::pure::functions::meta::compileSource('csRepeat',
+                        'function cs::rep::ten():Integer[1] { 10 }', 'core')
+                     .elements->filter(e | $e->instanceOf(PackageableFunction))->cast(@PackageableFunction<Any>)->toOne();
+        [$first->evaluate([])->cast(@Integer)->toOne(), $second->evaluate([])->cast(@Integer)->toOne()];
+    ));
+}
 
 
 function <<PCT.test>> meta::pure::functions::lang::tests::evaluate::testEvaluateOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]

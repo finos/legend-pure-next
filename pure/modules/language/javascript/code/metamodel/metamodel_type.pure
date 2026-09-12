@@ -1,0 +1,53 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/*
+   Strategy
+   --------
+   This metamodel describes JavaScript source syntax for the purpose of
+   emission. It is plain ECMAScript: no type annotations, no interfaces,
+   no type aliases, no generics — every construct has a runtime meaning.
+   (Type syntax is stripped by esbuild before execution anyway, so the
+   model carries only what runs.)
+
+   Scope
+   -----
+   A deliberately small surface: enough JavaScript to express light
+   implementations (functions, classes, statements, expressions,
+   destructuring, template literals). Grown demand-driven, one node at a
+   time, as real emitters need new forms.
+
+   Modeling notes
+   --------------
+   - `Node` is the root marker, mirroring ts.Node. Statement and Expression
+     live in metamodel_code.pure; declarations that are also statements live
+     in metamodel_structure.pure.
+   - `Identifier` is a single class with a `text` slot, not a bare string,
+     leaving room for attaching source position / import source later.
+   - Modifiers are a flat enum (`ModifierFlag`) carried as a list. Only the
+     JS-meaningful flags survive: Static, Async, Export, Default.
+   - Bodies are modelled as `Block[0..1]` so empty-body forms are
+     first-class. Arrow-function concise bodies are a separate slot
+     (`expressionBody`).
+*/
+
+import meta::external::language::javascript::metamodel::*;
+
+// =============================================================================
+// Node — root of the syntax tree. Marker base; mirrors ts.Node.
+// =============================================================================
+
+Class meta::external::language::javascript::metamodel::Node
+{
+}

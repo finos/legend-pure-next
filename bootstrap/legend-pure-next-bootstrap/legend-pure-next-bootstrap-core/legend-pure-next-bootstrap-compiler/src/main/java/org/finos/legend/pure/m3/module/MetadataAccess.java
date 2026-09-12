@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,6 +49,17 @@ public interface MetadataAccess
      * Get all element paths.
      */
     Set<String> elementPaths();
+
+    /**
+     * Names of the loaded modules (the boot-registered .pdbs). Used by
+     * dependency-scoped operations (e.g. the compileSource native validating
+     * its `dependencies` argument). Accesses without module structure return
+     * the empty set.
+     */
+    default Set<String> moduleNames()
+    {
+        return java.util.Collections.emptySet();
+    }
 
     /**
      * @return the top type (Any)

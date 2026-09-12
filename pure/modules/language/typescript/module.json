@@ -1,5 +1,0 @@
-{
-  "name": "typescript",
-  "packagePattern": "meta::external::language::typescript(::.*)?",
-  "dependencies": ["core"]
-}

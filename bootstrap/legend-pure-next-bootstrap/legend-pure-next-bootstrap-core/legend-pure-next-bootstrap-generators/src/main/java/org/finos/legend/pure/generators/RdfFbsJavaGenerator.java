@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +18,7 @@ package org.finos.legend.pure.generators;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.sorted.MutableSortedSet;
+import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Maps;
 import org.eclipse.collections.impl.factory.SortedSets;
 import org.finos.legend.pure.specification.generation.fbs.FbsSchema;
@@ -134,10 +136,63 @@ public class RdfFbsJavaGenerator
     }
 
     /**
+     * Order a union's concrete Def members most-derived-first so the emitted
+     * {@code instanceof} chain never lets a base type shadow its subtype. If a
+     * base member is checked before its subtype, every subtype instance matches
+     * the base branch and is silently written into the base's Def table (e.g. a
+     * {@code UserDefinedGenericTypeAndMultiplicityHolder} downcast into the plain
+     * {@code GenericTypeAndMultiplicityHolderDef}), erasing the concrete type.
+     *
+     * <p>{@code PointerRef}/{@code AncestorRef} keep their original slots — only
+     * concrete Def members are permuted, into the Def slots they already occupy.
+     * Byte discriminators are looked up per member, so ordering here does not
+     * touch the wire format.</p>
+     */
+    private MutableList<String> dispatchOrder(FbsSchema.FbsUnion u)
+    {
+        MutableList<String> members = Lists.mutable.withAll(u.members());
+        MutableList<Integer> defSlots = Lists.mutable.empty();
+        MutableList<String> defMembers = Lists.mutable.empty();
+        for (int i = 0; i < members.size(); i++)
+        {
+            String m = members.get(i);
+            if (!"PointerRef".equals(m) && !"AncestorRef".equals(m))
+            {
+                defSlots.add(i);
+                defMembers.add(m);
+            }
+        }
+        // Stable sort by number of in-union supertypes, descending: a subtype has
+        // strictly more Def supertypes present than any of them, so it sorts first.
+        MutableList<String> sorted = defMembers.toSortedList(
+                (a, b) -> Integer.compare(defSupertypeCount(defMembers, b), defSupertypeCount(defMembers, a)));
+        for (int k = 0; k < defSlots.size(); k++)
+        {
+            members.set(defSlots.get(k), sorted.get(k));
+        }
+        return members;
+    }
+
+    /** How many other Def members in the union are (transitive) supertypes of {@code member}. */
+    private int defSupertypeCount(MutableList<String> defMembers, String member)
+    {
+        String t = stripDefSuffix(member);
+        int count = 0;
+        for (String other : defMembers)
+        {
+            if (!other.equals(member) && collectAllSubtypes(m3Model, stripDefSuffix(other)).contains(t))
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
      * Emit writer code for a single-valued union-typed property. Walks the
-     * schema's union members in declaration order and emits the appropriate
-     * branch for each — PointerRef / AncestorRef are special-cased; concrete
-     * Def members become {@code instanceof}-dispatched calls to {@code writeX}.
+     * union members most-derived-first (see {@link #dispatchOrder}) and emits the
+     * appropriate branch for each — PointerRef / AncestorRef are special-cased;
+     * concrete Def members become {@code instanceof}-dispatched calls to {@code writeX}.
      */
     private void emitSingleUnionWriter(StringBuilder sb, String className, PropertyInfo prop, String fbField)
     {
@@ -155,7 +210,7 @@ public class RdfFbsJavaGenerator
         sb.append("        if (obj._").append(prop.name).append("() != null)\n");
         sb.append("        {\n");
         boolean priorBranch = false;
-        for (String member : u.members())
+        for (String member : dispatchOrder(u))
         {
             int byteVal = u.byteFor(member);
             String prefix = priorBranch ? "            else if" : "            if";
@@ -243,7 +298,7 @@ public class RdfFbsJavaGenerator
         sb.append("            {\n");
         sb.append("                var _item = ").append(fbField).append("List.get(i);\n");
         boolean priorBranch = false;
-        for (String member : u.members())
+        for (String member : dispatchOrder(u))
         {
             int byteVal = u.byteFor(member);
             String prefix = priorBranch ? "                else if" : "                if";
@@ -1272,6 +1327,15 @@ public class RdfFbsJavaGenerator
         sb.append("        {\n");
         sb.append("            kind = 0; // Element\n");
         sb.append("            segments = new String[]{_PackageableElement.path(pe)};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof meta.pure.metamodel.relation.Column col && col._name() != null)\n");
+        sb.append("        {\n");
+        sb.append("            // Live relation column whose owner is a RelationType (not a\n");
+        sb.append("            // packageable element): the ref is unresolvable either way, but\n");
+        sb.append("            // the segment must be DETERMINISTIC — String.valueOf would embed\n");
+        sb.append("            // a JVM identity hash into the archive.\n");
+        sb.append("            kind = 0;\n");
+        sb.append("            segments = new String[]{col._name()};\n");
         sb.append("        }\n");
         sb.append("        else\n");
         sb.append("        {\n");

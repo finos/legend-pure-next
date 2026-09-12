@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,4 +45,28 @@ function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphPass
     );
     assertEquals(1, $result->size());
     assertEquals('Class', $result->at(0).name);
+}
+
+// Pointer-rewriting branch: manufacture a PrimitiveTypePointer (a
+// TempCompilerPointer subtype) whose `.path` slot names a real PE, drop it
+// into the input map as the sole value, and verify resolveAndReturnGraph
+// replaces the pointer in the output list with the live target element
+// (looked up via the resolver since 'meta::pure::metamodel::type::primitives::String'
+// isn't itself a key in the map). PrimitiveTypePointer is non-parameterized,
+// which sidesteps a TS-translator bug in parameterized-class construction
+// (^ClassPointer<T>(...) emits a bogus classifierGenericType path) while
+// still exercising the same pointer-detection + resolution path.
+function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphRewritesPrimitiveTypePointer<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let result = $f->eval(|
+        let ptr = ^meta::pure::metamodel::pointer::PrimitiveTypePointer(
+            path = 'meta::pure::metamodel::type::primitives::String'
+        )->cast(@meta::pure::metamodel::PackageableElement);
+        let map = newMap([pair('myPtr', $ptr)]);
+        meta::pure::functions::meta::resolveAndReturnGraph($map);
+    );
+    assertEquals(1, $result->size());
+    // Rewriting succeeded if the entry's `.name` is 'String' — the pointer
+    // itself has no name, the live target does.
+    assertEquals('String', $result->at(0).name);
 }

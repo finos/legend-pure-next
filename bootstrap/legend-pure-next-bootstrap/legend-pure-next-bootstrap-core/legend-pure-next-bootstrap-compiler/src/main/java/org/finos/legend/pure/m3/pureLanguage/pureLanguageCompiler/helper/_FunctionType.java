@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -147,7 +148,7 @@ public final class _FunctionType
 
                 String pName = functionTypes.getFirst()._parameters().get(idx) != null ? functionTypes.getFirst()._parameters().get(idx)._name() : null;
                 VariableExpressionImpl param = _VariableExpression.newVariableExpression(model)
-                        ._name((pName == null || pName.isEmpty()) ? "p" + idx : pName);
+                        ._name(pName == null ? "" : pName); // unnamed source params stay unnamed on the wire
                 if (commonParamType != null)
                 {
                     param._genericType(commonParamType);
@@ -336,7 +337,7 @@ public final class _FunctionType
                 if (resolvedGT != p._genericType() || resolvedMul != p._multiplicity())
                 {
                     String pName = p._name();
-                    return (VariableExpression) _VariableExpression.newVariableExpression(model)._name((pName == null || pName.isEmpty()) ? "p" + index : pName)._genericType(resolvedGT)._multiplicity(resolvedMul);
+                    return (VariableExpression) _VariableExpression.newVariableExpression(model)._name(pName == null ? "" : pName)._genericType(resolvedGT)._multiplicity(resolvedMul);
                 }
                 return p;
             });

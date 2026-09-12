@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -66,10 +67,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let lambda = $paramValues->at($lambdaIdx)->cast(@AtomicValue).value->toOne()->cast(@LambdaFunction<Any>);
     let lastExpr = $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1);
     let colName = $paramValues->at($nameIdx)->cast(@AtomicValue).value->toOne()->cast(@String);
-    let enrichedRT = ^RelationType<Any>(columns = [
+    // Self-wired inferred RelationType (owner/classifier cycle) — the shared
+    // wrapper GT is what Java's enrichColumnTypeHolder passes around as ownerGT.
+    let enrichedGT = meta::pure::compiler::helper::relationType::newRelationType([
         meta::pure::compiler::helper::column::buildColumn($colName, buildUserDefinedGenericType(RelationType), if($lastExpr.genericType->isNotEmpty(), | $lastExpr.genericType->toOne(), | ^CompilerNotSetGenericType()), if($lastExpr.multiplicity->isNotEmpty(), | $lastExpr.multiplicity->toOne(), | PureOne), false)
     ]);
-    let enrichedGT = buildInferredGenericType($enrichedRT);
     let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
     let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
     let compilerCGT = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
@@ -92,7 +94,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
             | []->cast(@Column<Nil, Any|*>)
         );
     );
-    let mergedRT = ^RelationType<Any>(columns = $mergedColumns);
+    // Merged columns keep their inner-colSpec owners; only the classifier is
+    // self-wired, and the holder gets its own fresh wrap (Java's merge shape).
+    let mergedRT = meta::pure::compiler::helper::relationType::newRelationTypeKeepingColumnOwners($mergedColumns);
     let enrichedGT = buildInferredGenericType($mergedRT);
     let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
     let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
@@ -153,8 +157,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             ^$acc(values += $newCol);
                       );
                   }, ^CompilerListResult<Any>(context = $context));
-                  let enrichedRT = ^RelationType<Any>(columns = $lookupResult.values->cast(@Column<Nil, Any|*>));
-                  let enrichedGT = buildInferredGenericType($enrichedRT);
+                  let enrichedGT = meta::pure::compiler::helper::relationType::newRelationType($lookupResult.values->cast(@Column<Nil, Any|*>));
                   let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
     let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
                   let compilerCGT = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
@@ -178,8 +181,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   let resolvedColMul = if($wildcardCol.multiplicity->isNotEmpty(), | makeAsConcreteAsPossible($wildcardCol.multiplicity->toOne(), $bindings), | PureOne);
                   let columnNames = extractColumnNames($paramValues->at(0));
                   let enrichedCols = $columnNames->map(colName | meta::pure::compiler::helper::column::buildColumn($colName, buildUserDefinedGenericType(RelationType), $resolvedColType, $resolvedColMul, false));
-                  let enrichedRT = ^RelationType<Any>(columns = $enrichedCols);
-                  let enrichedGT = buildInferredGenericType($enrichedRT);
+                  let enrichedGT = meta::pure::compiler::helper::relationType::newRelationType($enrichedCols);
                   let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
     let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
                   let compilerCGT = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);

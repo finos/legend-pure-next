@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,7 +37,7 @@ import java.util.stream.Stream;
  *
  * <p>These enable Pure-native workflows that need to walk the filesystem and
  * read files, such as the in-Pure test runner. In the browser, equivalent
- * implementations must be provided by the TypeScript interpreter (typically
+ * implementations must be provided by the JavaScript interpreter (typically
  * backed by a virtual FS).</p>
  */
 public class FileSystemNatives
