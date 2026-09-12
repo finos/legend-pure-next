@@ -35,7 +35,7 @@ boot           := bootstrap_root / "legend-pure-next-bootstrap"
 bcore          := boot / "legend-pure-next-bootstrap-core"
 spec           := repo_root / "pure" / "specification"
 compiler_src   := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
-gen_writer     := compiler_src / "pdb" / "generated" / "generatedWriter.pure"
+gen_writer     := compiler_src / "pdb" / "writer" / "generated" / "generatedWriter.pure"
 mappings_src   := repo_root / "pure" / "specification" / "grammar" / "mapping" / "mappings-pure"
 boot_out       := bootstrap_root / "build"
 shared_out     := repo_root / "shared"
@@ -77,16 +77,21 @@ stage:
 # Companion compiler-tests.pdb holds the compiler-pure tests; mirrors the
 # core.pdb/core-tests.pdb split so the same test discovery path works.
 
-# Generate pdb/generated/generatedWriter.pure (gitignored build output).
+# Generate pdb/writer/generated/generatedWriter.pure (gitignored build output).
 #
-# The writer defines meta::pure::compiler::pdb::gen::*, which everything under
-# pdb/genDependent/ needs — so compiling compiler-pure needs it to already exist,
-# while producing it needs a compiled generator. That is a MODULE-granularity
-# cycle, not a real bootstrap one: generator.pure itself has no gen:: dependency
-# (its references to those names are all inside the strings it emits). So pass 1
-# compiles a copy of compiler-pure with the consumers removed — enough to run the
-# generator — and pass 2 (build-compiler-pdb) compiles the whole thing with the
-# output in place. Costs about 6s.
+# The writer defines meta::pure::compiler::pdb::gen::*, and producing it needs a
+# compiled generator — which lives in the same module. Nothing references those
+# names at COMPILE time: archive.pure and the pdb tests resolve them through
+# writerHelper::genFn + evalGenWrite (pathToElement, then eval on a Function cast
+# to a concrete signature). So pass 1 compiles a staged copy of compiler-pure with
+# only the generated file removed, runs the generator against it, and pass 2
+# (build-compiler-pdb) compiles the whole tree with the output in place. ~6s.
+#
+# Both passes are needed: a clean tree has no compiler.pdb, so the generator has
+# to be compiled before it can run, and the output has to be in the PDB for
+# pathToElement to find it. Pass 1 works on a COPY so a stale or broken generated
+# file can never wedge the build — that is what let it self-heal when the
+# writerHelper package was renamed under it.
 #
 # Generating every build rather than committing the file is deliberate: it is
 # derived from m3.fbs + the LIVE METAMODEL, so any class reordered or reparented
@@ -106,29 +111,29 @@ generate-writer:
     trap 'rm -rf "$stage"; rm -f "$body" "$log"' EXIT
     mkdir -p "$stage/src" "$stage/out"
     cp -R "{{compiler_src}}/." "$stage/src/"
-    # Drop the generated writer and everything that depends on it. They live in
-    # pdb/genDependent/ precisely so this is one directory rather than a filename
-    # list that drifts: membership is not always a direct gen:: call, e.g.
-    # archiveTests.pure makes none but needs ArchiveEntry from archive.pure, so a
-    # grep for callers would miss it. A gen::-dependent file left outside that
-    # directory fails pass 1 loudly, naming the unresolved functions.
-    rm -rf "$stage/src/pdb/generated" "$stage/src/pdb/genDependent"
-    {{substep}} 'pass 1: compile compiler-pure without the gen:: consumers'
+    # Only the generated writer: every caller resolves gen:: at runtime, so the
+    # rest of compiler-pure — tests included — compiles without it.
+    rm -rf "$stage/src/pdb/writer/generated"
+    {{substep}} 'pass 1: compile compiler-pure without the generated writer'
     if ! {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --source "$stage/src" \
         --output-dir "$stage/out" \
         --tests split > "$log" 2>&1; then
         echo "" >&2
-        echo "ERROR: pass 1 could not compile compiler-pure without pdb/genDependent/." >&2
-        echo "Most likely a source OUTSIDE pdb/genDependent/ now depends on the generated" >&2
-        echo "writer (meta::pure::compiler::pdb::gen::*). Move it into pdb/genDependent/," >&2
-        echo "or drop the dependency. Compiler errors:" >&2
+        echo "ERROR: pass 1 could not compile compiler-pure without pdb/writer/generated/." >&2
+        echo "Something now has a COMPILE-TIME reference to the generated writer" >&2
+        echo "(meta::pure::compiler::pdb::gen::*). Resolve it at runtime instead, via" >&2
+        echo "meta::pure::compiler::pdb::writerHelper::evalGenWrite (or genFn + eval on" >&2
+        echo "a Function cast to the concrete signature). Note evaluate() is NOT a" >&2
+        echo "substitute: it introspects an argument's runtime type and fails on the" >&2
+        echo "ClassPointer anchors the wire-format fixtures use on purpose." >&2
+        echo "Compiler errors:" >&2
         echo "" >&2
         grep -E "can.t be found|Can.t resolve|error" "$log" | head -20 >&2
         exit 1
     fi
-    {{substep}} 'run printGeneratedWriter -> pdb/generated/generatedWriter.pure'
+    {{substep}} 'run printGeneratedWriter -> pdb/writer/generated/generatedWriter.pure'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \

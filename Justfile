@@ -45,7 +45,7 @@ test: bootstrap::test truffle::test modules::build javascript::test
 # Delete every generated/ directory so the suites below cannot pass against
 # stale output. These are all gitignored build artifacts, each with a recipe
 # that rebuilds it — nothing here is recoverable only from a backup:
-#   pure/specification/compiler/compiler-pure/pdb/generated  <- bootstrap::generate-writer
+#   pure/specification/compiler/compiler-pure/pdb/writer/generated      <- bootstrap::generate-writer
 #   pure/modules/translation/javascript/js/generated         <- modules::translation_javascript::antlr-generate-parsers
 #   platforms/javascript/generated                           <- javascript::generate-all
 # Found by name rather than listed, so a new one is covered automatically; if it

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Host wiring over the TRANSLATED SELF-HOSTED PURE READER (pdb/reader.pure +
-// pdb/fbsParser.pure, compiled into generated/compiler.js — the same Pure code
+// Host wiring over the TRANSLATED SELF-HOSTED PURE READER (pdb/reader/reader.pure +
+// pdb/schema/parser.pure, compiled into generated/compiler.js — the same Pure code
 // that runs on the JVM and Truffle). reader.pure is deliberately format-only:
 // element identity, caching and reference resolution are the host's job, and
 // this module is that thin layer for JS — translated-function lookup, byte-list

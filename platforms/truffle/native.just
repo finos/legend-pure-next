@@ -141,8 +141,8 @@ _depCheck_pdbs:
         echo "Run 'just bootstrap::build-compiler-pdb' first (or 'just build' from the repo root)." >&2
         exit 1
     fi
-    if [[ ! -f "{{repo_root}}/pure/specification/compiler/compiler-pure/pdb/generated/generatedWriter.pure" ]]; then
-        echo "Error: <repo>/pure/specification/compiler/compiler-pure/pdb/generated/generatedWriter.pure missing." >&2
+    if [[ ! -f "{{repo_root}}/pure/specification/compiler/compiler-pure/pdb/writer/generated/generatedWriter.pure" ]]; then
+        echo "Error: <repo>/pure/specification/compiler/compiler-pure/pdb/writer/generated/generatedWriter.pure missing." >&2
         echo "It is generated (gitignored) and compiler-pure does not compile correctly without it:" >&2
         echo "every meta::pure::compiler::pdb::gen::write* is simply absent, so the self-host" >&2
         echo "compile quietly produces 193 fewer elements instead of failing." >&2

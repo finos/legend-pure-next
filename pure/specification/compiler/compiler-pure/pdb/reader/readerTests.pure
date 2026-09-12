@@ -12,7 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Tests for the self-hosted PDB READER (pdb/reader.pure). Two kinds of
+// NOTE: these call gen::* STATICALLY, unlike archive.pure which resolves through
+// writerHelper::genFn. evaluate() introspects an argument's runtime type via its
+// classifierGenericType.type and reads typeParameters on it, which fails when that
+// is a ClassPointer — and these fixtures use ClassPointer anchors on purpose, to
+// exercise the writer's pointer handling. So these two files are the only
+// remaining compile-time consumers of the generated writer, and pass 1 of
+// bootstrap::generate-writer excludes them by name.
+// Tests for the self-hosted PDB READER (pdb/reader/reader.pure). Two kinds of
 // evidence: (1) decoding the REFERENCE bytes already pinned for the writer
 // (probe RefBytesArchive.java entries — real CompressedArchiveWriter output),
 // and (2) write→read round trips through the byte-identical Pure writer (its
@@ -157,7 +164,7 @@ function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadSourceI
    let udgt = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $cpSI, classifierGenericType = $upgt);
    let si   = ^meta::pure::metamodel::SourceInformation(classifierGenericType = $udgt,
                  sourceId = 'test.pure', startLine = 1, startColumn = 2, endLine = 3, endColumn = 4);
-   let r     = meta::pure::compiler::pdb::gen::writeSourceInformation(meta::pure::compiler::pdb::fbb::newBuilder(), $si, []);
+   let r     = meta::pure::compiler::pdb::writerHelper::evalGenWrite('writeSourceInformation_Builder_1__SourceInformation_1__Any_MANY__BuilderAndOffset_1_', meta::pure::compiler::pdb::fbb::newBuilder(), $si, []);
    let bytes = $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset)->meta::pure::compiler::pdb::fbb::result();
    let node  = meta::pure::compiler::pdb::reader::rootNode($bytes, 'SourceInformationDef');
    assertEquals('test.pure', meta::pure::compiler::pdb::reader::readField($s, $node, 'source_id'));
@@ -187,7 +194,7 @@ function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadAtomicV
    let floatGT = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'FloatGT', type = $avCls);
    let av = ^meta::pure::metamodel::valuespecification::AtomicValue(classifierGenericType = $anchor,
                multiplicity = $pureOne, genericType = $floatGT, value = 3.14);
-   let r     = meta::pure::compiler::pdb::gen::writeAtomicValue(meta::pure::compiler::pdb::fbb::newBuilder(), $av, []);
+   let r     = meta::pure::compiler::pdb::writerHelper::evalGenWrite('writeAtomicValue_Builder_1__AtomicValue_1__Any_MANY__BuilderAndOffset_1_', meta::pure::compiler::pdb::fbb::newBuilder(), $av, []);
    let bytes = $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset)->meta::pure::compiler::pdb::fbb::result();
    let node  = meta::pure::compiler::pdb::reader::rootNode($bytes, 'AtomicValueDef');
    let value = meta::pure::compiler::pdb::reader::readField($s, $node, 'value')
@@ -205,7 +212,7 @@ function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadAtomicV
 function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadRefs():Boolean[1]
 {
    let s  = meta::pure::compiler::pdb::reader::tests::testSchema();
-   let pr = meta::pure::compiler::pdb::writer::encodePointerRef(
+   let pr = meta::pure::compiler::pdb::writerHelper::encodePointerRef(
                meta::pure::compiler::pdb::fbb::newBuilder(), ['a::b', 'st'], 3);
    let prBytes = $pr.builder->meta::pure::compiler::pdb::fbb::finish($pr.offset)->meta::pure::compiler::pdb::fbb::result();
    let prNode  = meta::pure::compiler::pdb::reader::rootNode($prBytes, 'PointerRef');
@@ -214,7 +221,7 @@ function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadRefs():
    assertEquals(['a::b', 'st'], $ref.segs);
    assertEquals('Stereotype', meta::pure::compiler::pdb::reader::readField($s, $prNode, 'kind'));
 
-   let ar = meta::pure::compiler::pdb::writer::encodeAncestorRef(
+   let ar = meta::pure::compiler::pdb::writerHelper::encodeAncestorRef(
                meta::pure::compiler::pdb::fbb::newBuilder(), 2);
    let arBytes = $ar.builder->meta::pure::compiler::pdb::fbb::finish($ar.offset)->meta::pure::compiler::pdb::fbb::result();
    let arNode  = meta::pure::compiler::pdb::reader::rootNode($arBytes, 'AncestorRef');

@@ -33,7 +33,7 @@
 // hand-maintained subtype table.
 //
 // The PDB decoding itself is done by the TRANSLATED SELF-HOSTED PURE READER
-// (pdb/reader.pure). The compiler host gets it as part of generated/compiler.js;
+// (pdb/reader/reader.pure). The compiler host gets it as part of generated/compiler.js;
 // this parser-only host loads the small generated/pdb-reader.js instead
 // (`just javascript::generate-pdb-reader`), so it still doesn't depend on the
 // whole generated compiler.

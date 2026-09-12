@@ -209,7 +209,7 @@ function warmCompilerCache() {
 async function setup() {
     status.textContent = "Loading metamodel (m3.fbs + PDBs)…";
     // Schema TEXT — the store parses it lazily with the translated Pure parser
-    // (pdb/fbsParser.pure), which is only available once the generated compiler
+    // (pdb/schema/parser.pure), which is only available once the generated compiler
     // modules below have loaded; the first metadata read comes after that.
     const schemaText = await fetchText(`${SHARED}/specification/m3.fbs`);
     const modules = [];

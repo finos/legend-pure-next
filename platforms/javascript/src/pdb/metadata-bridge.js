@@ -15,7 +15,7 @@
 // Install the metadata-bridge globals the translated runtime calls. The graph
 // queries (subtypeOf / instanceOf / pathToElement) are backed by the PDB store;
 // `read` marshals fields decoded by the TRANSLATED SELF-HOSTED PURE READER
-// (pdb/reader.pure via pure-reader.js) into the shapes the runtime expects.
+// (pdb/reader/reader.pure via pure-reader.js) into the shapes the runtime expects.
 // This module is the wiring half reader.pure deliberately leaves to the host:
 // element identity (the __pureResolve proxies), per-(address,prop) caching,
 // PointerRef resolution and AncestorRef cycle closure.
