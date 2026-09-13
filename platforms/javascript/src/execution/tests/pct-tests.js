@@ -16,7 +16,7 @@
 //
 //   1. TRANSLATE meta::pure::functions IN-PROCESS — the translated translator
 //      reads every element (stdlib + the <<PCT.test>> corpus from
-//      core-tests.pdb) through the PDB metadata bridge and emits one JS
+//      core-tests.pdb) through the PDB-backed metadata access and emits one JS
 //      source. Its size and per-element translation-failure count are
 //      reported against generated/core-functions.js (the JVM emission from
 //      the same PDBs); byte parity is aspirational for now — the failure
@@ -26,7 +26,7 @@
 //      the in-process output — so the tests below run what step 1 produced).
 //   3. RUN every <<PCT.test>> under meta::pure::functions. Discovery is the
 //      translated meta::pure::test::collectPCTTests walking Package children
-//      through the metadata bridge (same logic every other platform runs);
+//      through the metadata globals (same logic every other platform runs);
 //      each test gets the translated in-memory adapter and passes or throws.
 //
 // Run: node --stack-size=4000 src/execution/tests/pct-tests.js

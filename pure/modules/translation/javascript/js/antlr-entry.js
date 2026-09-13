@@ -18,7 +18,7 @@
 // translator emits for calls to `meta::pure::functions::meta::antlr::*`.
 //
 // The bundle output (build/antlr-bundle.js) is a single no-imports IIFE so
-// it runs unchanged in GraalJS (which has no module resolution) AND in the
+// it runs unchanged in any host without module resolution AND in the
 // browser (where any module bundler can include it as a side-effect script
 // before loading translated parser-mappings code).
 //

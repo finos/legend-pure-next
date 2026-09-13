@@ -3,8 +3,8 @@
 #
 # Direct invocation: just <recipe>   (from pure/modules/translation/truffle/)
 #
-# Inputs:  shared/core.pdb, shared/core-tests.pdb, shared/translation-shared.pdb.
-# Output:  shared/truffle-translation-gallery.pdb (+ -tests.pdb)
+# Inputs:  shared/core.pdb, shared/core-tests.pdb, pure/modules/translation/shared/build/translation-shared.pdb.
+# Output:  build/truffle-translation-gallery.pdb (+ -tests.pdb)
 #
 # Unlike java/javascript translation modules, this one isn't a translator —
 # it's a backend introspection tool. The `truffleAstFor` native (declared
@@ -28,6 +28,9 @@ mod _mod_translation_shared "../shared/Justfile"
 trn_root       := source_directory()
 repo_root      := trn_root / ".." / ".." / ".." / ".."
 shared_out     := repo_root / "shared"
+# Module build outputs: each module writes its own pdbs (and gallery) into its build/.
+translation_shared_out     := repo_root / "pure" / "modules" / "translation" / "shared" / "build"
+translation_truffle_out    := repo_root / "pure" / "modules" / "translation" / "truffle" / "build"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
 
@@ -40,60 +43,62 @@ substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\
 # Default: build truffle-translation-gallery.pdb.
 default: build
 
-# Compile pure/modules/translation/truffle -> shared/truffle-translation-gallery.pdb.
+# Compile pure/modules/translation/truffle -> build/truffle-translation-gallery.pdb.
 build:
     @{{header}} 'build'
-    @{{substep}} 'compile pure/modules/translation/truffle -> shared/truffle-translation-gallery.pdb'
+    @{{substep}} 'compile pure/modules/translation/truffle -> build/truffle-translation-gallery.pdb'
     test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
-    test -f {{shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
+    test -f {{translation_shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{translation_shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
+    mkdir -p {{translation_truffle_out}}
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
         --base-pdb {{shared_out}}/compiler.pdb \
-        --base-pdb {{shared_out}}/translation-shared.pdb \
+        --base-pdb {{translation_shared_out}}/translation-shared.pdb \
         --source {{trn_root}} \
-        --output-dir {{shared_out}} {{err_filter}}
+        --output-dir {{translation_truffle_out}} {{err_filter}}
 
 # Still needs bootstrap PDBs (core.pdb / core-tests.pdb / compiler.pdb) — `build` checks for those and fails loudly.
 
 # Build sibling-module dep (translation_shared) first, then this module.
 build-all: _mod_translation_shared::build build
 
-# Compile with tests split into shared/truffle-translation-gallery-tests.pdb.
+# Compile with tests split into build/truffle-translation-gallery-tests.pdb.
 build-tests:
     @{{header}} 'build-tests'
     @{{substep}} 'compile pure/modules/translation/truffle -> truffle-translation-gallery.pdb + -tests.pdb'
     test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -f {{shared_out}}/core-tests.pdb         || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)
-    test -f {{shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
+    test -f {{translation_shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{translation_shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
+    mkdir -p {{translation_truffle_out}}
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
         --base-pdb {{shared_out}}/compiler.pdb \
-        --base-pdb {{shared_out}}/translation-shared.pdb \
+        --base-pdb {{translation_shared_out}}/translation-shared.pdb \
         --source {{trn_root}} \
-        --output-dir {{shared_out}} \
+        --output-dir {{translation_truffle_out}} \
         --tests split {{err_filter}}
 
 # Render the Pure -> Truffle AST gallery as a self-contained HTML page.
 gallery: build-tests _depCheck_runtime-pdbs
     @{{header}} 'gallery'
-    @{{substep}} 'render Pure -> Truffle AST gallery -> shared/truffle-translation-gallery.html'
+    @{{substep}} 'render Pure -> Truffle AST gallery -> build/truffle-translation-gallery.html'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
-        --pdb {{shared_out}}/translation-shared.pdb \
-        --pdb {{shared_out}}/truffle-translation-gallery.pdb \
-        --pdb {{shared_out}}/truffle-translation-gallery-tests.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_truffle_out}}/truffle-translation-gallery.pdb \
+        --pdb {{translation_truffle_out}}/truffle-translation-gallery-tests.pdb \
         --function "meta::external::language::truffle::gallery::renderGallery_String_1__String_1_" \
         --args "meta::pure::functions" \
         2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
         | grep -v '^\[graal-tripwire\]' \
         | awk '/<!DOCTYPE/{p=1} p' \
-        > {{shared_out}}/truffle-translation-gallery.html
-    @echo "wrote {{shared_out}}/truffle-translation-gallery.html ($(wc -c < {{shared_out}}/truffle-translation-gallery.html) bytes)"
+        > {{translation_truffle_out}}/truffle-translation-gallery.html
+    @echo "wrote {{translation_truffle_out}}/truffle-translation-gallery.html ($(wc -c < {{translation_truffle_out}}/truffle-translation-gallery.html) bytes)"
 
 # Internal: fail loudly if the PDBs / pure-truffle the gallery needs aren't staged.
 _depCheck_runtime-pdbs:
@@ -111,8 +116,8 @@ _depCheck_runtime-pdbs:
         exit 1
     fi
 
-# Remove shared/truffle-translation-gallery.pdb (and the tests PDB).
+# Remove build/truffle-translation-gallery.pdb (and the tests PDB).
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove shared/truffle-translation-gallery.pdb + -tests.pdb'
-    rm -f {{shared_out}}/truffle-translation-gallery.pdb {{shared_out}}/truffle-translation-gallery-tests.pdb
+    @{{substep}} 'remove build/truffle-translation-gallery.pdb + -tests.pdb'
+    rm -f {{translation_truffle_out}}/truffle-translation-gallery.pdb {{translation_truffle_out}}/truffle-translation-gallery-tests.pdb

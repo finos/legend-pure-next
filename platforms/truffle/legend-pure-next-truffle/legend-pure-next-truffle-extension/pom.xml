@@ -38,6 +38,5 @@
 
     <modules>
         <module>legend-pure-next-truffle-extension-java</module>
-        <module>legend-pure-next-truffle-extension-javascript</module>
     </modules>
 </project>

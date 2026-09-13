@@ -151,7 +151,7 @@ public final class TypeCache implements TruffleTypeCache
     {
         // Prefer the caller's resolver; only fall back to PureLanguage.get(null)
         // when none was threaded in. The fallback is null on threads outside an
-        // active Pure execution (e.g. the GraalJS JavaScript bridge), so the
+        // active Pure execution, so the
         // resolver-aware ancestors(type, resolver) path must be used there.
         // Linearization needs the resolver to dereference {@link
         // meta.pure.metamodel.pointer.TempCompilerPointer} subtypes that

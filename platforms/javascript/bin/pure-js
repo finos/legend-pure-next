@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Shell wrapper for the Node-backed Pure execution host — the JavaScript
+# counterpart of platforms/truffle/bin/pure-truffle. It takes the same
+# `execute` arguments, so module recipes drive either host the same way:
+#
+#     pure-js execute [--pdb <file>...] --function <path> [--args <arg>...]
+#
+# Unlike Truffle, which interprets PDBs directly, this host runs JavaScript
+# already translated from them: run `just javascript::generate-all` first (and
+# again after the translated modules change).
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+JS_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+if [[ ! -f "${JS_DIR}/generated/translator.js" ]]; then
+    echo "Error: generated JavaScript not found under ${JS_DIR}/generated" >&2
+    echo "Run 'just javascript::generate-all' first." >&2
+    exit 1
+fi
+
+exec node --stack-size=4000 "${JS_DIR}/src/execution/cli.js" "$@"

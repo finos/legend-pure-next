@@ -44,7 +44,7 @@ import meta::pure::translation::shared::gallery::*;
 // per-test cards with the data attributes the chrome consumes.
 //
 // Entry point: `renderGallery(rootPackagePath)`. The `gallery` Justfile
-// recipe pipes stdout to `shared/truffle-translation-gallery.html`.
+// recipe pipes stdout to `pure/modules/translation/truffle/build/truffle-translation-gallery.html`.
 // ============================================================================
 
 function <<test.TestDependency>> meta::external::language::truffle::gallery::renderGallery(rootPackagePath: String[1]): String[1]

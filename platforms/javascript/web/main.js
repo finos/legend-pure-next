@@ -16,8 +16,8 @@
 // module after the classic <script>s (runtime-lib.js + antlr-bundle.js) have
 // defined the runtime helpers and globalThis.__pureParseTop.
 //
-// It backs the metadata bridge with the in-browser PDB reader (src/pdb): fetch
-// m3.fbs + the .pdb files, build a registry, installBridges — the same bridge
+// It backs the metadata globals with the in-browser PDB reader (src/modules): fetch
+// m3.fbs + the .pdb files, build a registry, installMetadataGlobals — the same globals
 // the Node host uses, just fed by `fetch` instead of `fs`. Then it imports the
 // generated compiler + translator JS (Object.assign onto globalThis, mirroring
 // the Node execution host) and wires Run (button or F9):
@@ -26,19 +26,26 @@
 //   (printCompiledGraph) and the generated JavaScript shown below the result.
 // Parse/compile errors are highlighted in the source.
 
-import { openZip } from "../src/pdb/zip/zip.js";
-import { createRegistry, createPdbModule, createInMemoryModule } from "../src/pdb/modules.js";
-import { installBridges } from "../src/pdb/metadata-bridge.js";
-import { installHostCompileSource, translateCompiledElements } from "../src/execution/compile-source.js";
+import { openZip } from "../src/modules/pdb/zip/zip.js";
+import { createRegistry, createPdbModule, createInMemoryModule } from "../src/modules/registry.js";
+import { installMetadataGlobals } from "../src/modules/pdb/marshal.js";
+import { installHostCompileSource, translateProgramElements } from "../src/execution/compile-source.js";
 
-const SHARED = "../../../shared";
+const REPO = "../../..";
+const SHARED = `${REPO}/shared`;
 const GEN = "../generated";
 
 // Same module list as the Node execution host (src/execution/execution.js):
 // core + compiler compile user code; javascript/translation-shared/
 // javascript-translation are the translator's own metamodels (it
 // instanceOf/matches against those classes while building its output AST).
-const PDBS = ["core.pdb", "core-tests.pdb", "compiler.pdb", "javascript.pdb", "javascript-translation.pdb", "translation-shared.pdb"];
+// Repo-relative: bootstrap outputs in shared/, module outputs in each module's build/.
+const PDBS = [
+    "shared/core.pdb", "shared/core-tests.pdb", "shared/compiler.pdb",
+    "pure/modules/language/javascript/build/javascript.pdb",
+    "pure/modules/translation/javascript/build/javascript-translation.pdb",
+    "pure/modules/translation/shared/build/translation-shared.pdb",
+];
 // Generated JS loaded into the shared global scope: the core library the
 // emitted code calls into, then the translator stack, then the compiler.
 const GEN_MODULES = [
@@ -213,10 +220,10 @@ async function setup() {
     // modules below have loaded; the first metadata read comes after that.
     const schemaText = await fetchText(`${SHARED}/specification/m3.fbs`);
     const modules = [];
-    for (const f of PDBS) modules.push(createPdbModule(f.replace(/\.pdb$/, ""), openZip(await fetchBytes(`${SHARED}/${f}`))));
+    for (const f of PDBS) modules.push(createPdbModule(f.slice(f.lastIndexOf("/") + 1).replace(/\.pdb$/, ""), openZip(await fetchBytes(`${REPO}/${f}`))));
     const registry = createRegistry(schemaText, modules);
-    registry.register(runtimeModule); // __metadataInvoke routes here via the bridge
-    installBridges(registry); // sets globalThis.__metadata* (real, PDB-backed)
+    registry.register(runtimeModule); // __metadataInvoke routes here via the metadata globals
+    installMetadataGlobals(registry); // sets globalThis.__metadata* (real, PDB-backed)
 
     status.textContent = "Loading compiler + translator…";
     for (const m of GEN_MODULES) Object.assign(globalThis, await import(`${GEN}/${m}`));
@@ -276,7 +283,9 @@ function run() {
     // the compiled values are self-contained, the boot registry stays
     // immutable.
     const elements = compiled.elements || [];
-    const emitted = translateCompiledElements(elements, evalJs, "editor");
+    // PLATFORM mode: the editor's compile IS the program, so its elements join
+    // the graph and reflection over them resolves.
+    const emitted = translateProgramElements(elements, evalJs, "editor", runtimeModule);
     show(gen, emitted.map((e) => e.source).join("\n\n") || "// nothing translatable");
 
     const goEl = elements.find((el) => el && el.__purePath === GO_PATH);

@@ -22,13 +22,13 @@
 //                             the translated `parser-mappings` + the
 //                             `globalThis.__pureParseTop(sourceId, content)`
 //                             entry point. Split from the parser half so the
-//                             truffle extension jar can be packaged without
+//                             parser half can be built without PDBs, without
 //                             it; both are needed here. Load order matters.
 //
 // The parser-mappings run `cast(@meta::pure::protocol::grammar::…)` checks while
 // building the AST; those resolve through `__metadataSubtypeOf`. On the JVM the
-// metamodel answers them — here we back the same metadata bridge with the PDB
-// reader (src/pdb), reading the protocol-grammar types from core.pdb. So JS
+// metamodel answers them — here we back the same metadata globals with the PDB
+// reader (src/modules), reading the protocol-grammar types from core.pdb. So JS
 // parsing carries the same metadata dependency the Truffle host has, with no
 // hand-maintained subtype table.
 //
@@ -42,8 +42,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import vm from "node:vm";
-import { createStore } from "../pdb/node-store.js";
-import { installBridges } from "../pdb/metadata-bridge.js";
+import { createStore } from "../modules/node-store.js";
+import { installMetadataGlobals } from "../modules/pdb/marshal.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SHARED = join(HERE, "../../../../shared");
@@ -88,7 +88,7 @@ export function loadBundle() {
 // loadCompiler's Object.assign(globalThis, await import(...)). Skipped when
 // the compiler host already brought the same functions in via compiler.js.
 // Shared with the execution host (src/execution), which needs the reader for
-// its PDB-backed metadata bridge without the whole generated compiler.
+// its PDB-backed metadata access without the whole generated compiler.
 let pdbReaderLoaded = false;
 export function loadPdbReader() {
     if (pdbReaderLoaded || typeof globalThis.meta$pure$compiler$pdb$schema$parseFbs_String_1__FbsSchema_1_ === "function") return;
@@ -105,12 +105,12 @@ let parserReady = false;
  * Load the Pure parser into the current context (idempotent) and return a
  * `{ parse }` API. `parse(sourceId, content)` returns the PureFile AST.
  *
- * `pdbPaths` back the metadata bridge; core.pdb carries the protocol-grammar
+ * `pdbPaths` back the metadata globals; core.pdb carries the protocol-grammar
  * types the parser-mapping casts resolve against.
  */
 export function loadParser(pdbPaths = [join(SHARED, "core.pdb")]) {
     if (!parserReady) {
-        installBridges(createStore(join(SHARED, "specification/m3.fbs"), pdbPaths));
+        installMetadataGlobals(createStore(join(SHARED, "specification/m3.fbs"), pdbPaths));
         loadBundle();
         loadPdbReader();
         parserReady = true;

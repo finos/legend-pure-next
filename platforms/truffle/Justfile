@@ -33,7 +33,6 @@ truffle           := truffle_root / "legend-pure-next-truffle"
 truffle_runtime   := truffle / "legend-pure-next-truffle-runtime"
 truffle_extension := truffle / "legend-pure-next-truffle-extension"
 truffle_ext_java  := truffle_extension / "legend-pure-next-truffle-extension-java"
-truffle_ext_js    := truffle_extension / "legend-pure-next-truffle-extension-javascript"
 spec              := repo_root / "pure" / "specification"
 compiler_src      := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 truffle_out       := truffle_root / "build"
@@ -231,12 +230,6 @@ _mvn mode: _depCheck_pdbs _depCheck_graalvm
     # launcher (bin/pure-truffle) globs build/*.jar onto the classpath so
     # ServiceLoader finds them via META-INF/services.
     cp {{truffle_ext_java}}/target/legend-pure-next-truffle-extension-java-*.jar {{truffle_out}}/
-    cp {{truffle_ext_js}}/target/legend-pure-next-truffle-extension-javascript-*.jar {{truffle_out}}/
-    # GraalJS runtime jars (js-language, regex, icu4j, ...) — staged by the
-    # TS extension's maven-dependency-plugin into target/dependency/. Only
-    # the TS extension brings these; copying everything in dependency/ is
-    # safe because version-pinned to truffle.version.
-    cp {{truffle_ext_js}}/target/dependency/*.jar {{truffle_out}}/ 2>/dev/null || true
 
 # Internal: fail loudly if shared/core.pdb or shared/compiler.pdb is missing.
 _depCheck_pdbs:

@@ -17,7 +17,7 @@
 //
 // The translator (pure/modules/translation/javascript, compiled into
 // generated/translator.js + js-lang.js + translation-shared.js) reads the
-// elements it translates through the same PDB-backed metadata bridge the
+// elements it translates through the same PDB-backed metadata access the
 // compiler host uses. So the full loop is self-hosted: Pure code committed to
 // the PDBs -> translated to JS text by translated Pure code -> eval'd into
 // this very context -> callable alongside everything else.
@@ -34,30 +34,39 @@
 //
 // The registry gets an IN-MEMORY MODULE alongside the PDB modules: invoking a
 // metadata-backed function proxy (runtime-lib routes `__eval` on a proxy to
-// `__metadataInvoke`, the bridge routes that to the registry) resolves the
+// `__metadataInvoke`, the metadata globals route that to the registry) resolves the
 // proxy's Pure path to its translated global and calls it — here the
 // translated code IS the runtime.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import vm from "node:vm";
-import { createStore } from "../pdb/node-store.js";
-import { createInMemoryModule } from "../pdb/modules.js";
-import { installBridges } from "../pdb/metadata-bridge.js";
+import { createStore } from "../modules/node-store.js";
+import { createInMemoryModule } from "../modules/memory/module.js";
+import { installMetadataGlobals } from "../modules/pdb/marshal.js";
 import { loadBundle, loadPdbReader } from "../grammar/parser.js";
 import { installHostCompileSource } from "./compile-source.js";
+import { installHostJsNatives } from "./js-natives.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));   // .../platforms/javascript/src/execution
 const REPO = join(HERE, "../../../..");                 // -> repo root
 const SHARED = join(REPO, "shared");
 const GEN = join(HERE, "../../generated");              // -> platforms/javascript/generated
 
-// PDBs backing the metadata bridge: the code being translated (core +
+// PDBs backing the metadata globals: the code being translated (core +
 // core-tests) plus the translator's own metamodels (JS language, translation
 // conventions, shared canonicalization) — the translator instanceOf/matches
 // against those classes while building its output AST.
-const PDBS = ["core.pdb", "core-tests.pdb", "compiler.pdb", "javascript.pdb", "javascript-translation.pdb", "translation-shared.pdb"];
+// Repo-relative: bootstrap outputs live in shared/, module outputs in each
+// module's own build/ dir.
+const PDBS = [
+    "shared/core.pdb", "shared/core-tests.pdb", "shared/compiler.pdb",
+    "pure/modules/language/javascript/build/javascript.pdb",
+    "pure/modules/translation/javascript/build/javascript-translation.pdb",
+    "pure/modules/translation/javascript/build/javascript-translation-tests.pdb",
+    "pure/modules/translation/shared/build/translation-shared.pdb",
+];
 // Generated JS loaded into the shared global scope: the core library the
 // emitted code calls into, the meta::pure::test helpers (package walking,
 // PCT discovery, the in-memory adapter), and the translator stack.
@@ -87,11 +96,37 @@ export function resolveFn(path, arity) {
 }
 
 /** Evaluate emitted JS into the shared global scope (same contract as the
- * generated modules: export-stripped classic script -> global declarations). */
+ * generated modules: export-stripped classic script -> global declarations).
+ * Returns the script's completion value, so a caller can scope a module in a
+ * function expression and get its exports back (js-natives compileModule). */
 export function evalJs(source, filename = "translated.js") {
-    vm.runInThisContext(source.replace(/^export /gm, ""), { filename });
+    const text = source.replace(/^export /gm, "");
+    evaluatedSources.set(filename, text);
+    const result = vm.runInThisContext(text, { filename });
     runtimeModule.invalidate();
+    return result;
 }
+
+// Source text by the file name V8 reports in a call site: sources evaluated
+// above, and the generated modules (imported, so reported as file: URLs).
+// runtime-lib maps call sites back to Pure positions through the markers in
+// that text (__pureStackFrames).
+const evaluatedSources = new Map();
+const moduleSources = new Map();
+globalThis.__hostSourceText = (fileName) => {
+    if (evaluatedSources.has(fileName)) return evaluatedSources.get(fileName);
+    if (!String(fileName).startsWith("file:")) return undefined;
+    if (!moduleSources.has(fileName)) {
+        let text;
+        try {
+            text = readFileSync(fileURLToPath(fileName), "utf8");
+        } catch {
+            text = undefined;
+        }
+        moduleSources.set(fileName, text);
+    }
+    return moduleSources.get(fileName);
+};
 
 /** Invoke a translated function by its Pure path. */
 export function call(path, ...args) {
@@ -104,21 +139,24 @@ export function call(path, ...args) {
 
 /**
  * Load the execution host into the current context (idempotent) and return
- * `{ translatePackage, evalJs, call, resolveFn, store }`.
+ * `{ translatePackage, evalJs, call, resolveFn, store }`. `pdbs` replaces the
+ * default PDB set (bin/pure-js passes its `--pdb` arguments through).
  */
-export async function loadExecution() {
+export async function loadExecution({ pdbs } = {}) {
     if (!loaded) {
         store = createStore(
             join(SHARED, "specification/m3.fbs"),
-            PDBS.map((f) => join(SHARED, f)),
+            pdbs ? pdbs.map((f) => resolve(f)) : PDBS.map((f) => join(REPO, f)),
         );
-        store.register(runtimeModule); // __metadataInvoke routes here via the bridge
-        installBridges(store);
+        store.register(runtimeModule); // __metadataInvoke routes here via the metadata globals
+        installMetadataGlobals(store);
         loadBundle();
         loadPdbReader();
         for (const m of GEN_MODULES) Object.assign(globalThis, await import(join(GEN, m)));
         runtimeModule.invalidate();
         installHostCompileSource(store, evalJs);
+        // meta::external::language::javascript::{compileModule,execute,drainCompiledSources}
+        installHostJsNatives(evalJs, runtimeModule);
         loaded = true;
     }
     return {
