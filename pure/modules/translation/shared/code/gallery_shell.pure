@@ -49,6 +49,12 @@ function meta::pure::translation::shared::gallery::renderGalleryShell(
 {
     let css = renderGalleryShellCss($accentColor, $accentClass);
     let js  = renderGalleryShellJs();
+    // When this page was rendered (UTC, Pure DateTime format). currentTimeMillis
+    // is the clock every host implements, so derive the timestamp from it.
+    let generatedAt = %1970-01-01T00:00:00.000+0000
+                         ->meta::pure::functions::date::adjust(meta::pure::functions::date::currentTimeMillis(),
+                                                               meta::pure::functions::date::DurationUnit.MILLISECONDS)
+                         ->toString();
     '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>' + $title + '</title><style>' + $css + '</style></head>' +
     '<body>' +
         '<aside id="sidebar">' +
@@ -61,7 +67,7 @@ function meta::pure::translation::shared::gallery::renderGalleryShell(
             '<header>' +
                 '<div class="crumb" id="crumb">All tests</div>' +
                 '<p class="subtitle">' + $total->toString() + ' &lt;&lt;PCT.test&gt;&gt; tests from <code>' + $rootPath +
-                    '</code>. Auto-generated from <code>' + $galleryFilePath + '</code>.</p>' +
+                    '</code>. Auto-generated from <code>' + $galleryFilePath + '</code> on <time datetime="' + $generatedAt + '">' + $generatedAt + '</time> (UTC).</p>' +
             '</header>' +
             '<div id="cards">' + $sectionsHtml + '</div>' +
             '<div id="empty" class="empty" hidden>No tests match.</div>' +

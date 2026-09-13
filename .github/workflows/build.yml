@@ -670,10 +670,14 @@ jobs:
           path: ${{ matrix.artifact }}.tar
           retention-days: 1
 
-  # Pure -> <target> gallery, rendered on Truffle. Matrix entries:
+  # Pure -> <target> translation modules. Matrix entries:
   #   - java              : translator — `just build && just test-all && just gallery`
-  #                          (translator self-tests + runtime suites + render HTML).
-  #                          Downloads its own language pdb.
+  #                          (translator self-tests + runtime suites + render HTML),
+  #                          executed by pure-truffle. Downloads its own language pdb.
+  #   - javascript        : translator — the same recipes, executed by the Node
+  #                          host (platforms/javascript/bin/pure-js); `antlr-all`
+  #                          first, because that host loads the parser bundles.
+  #                          Needs Node + pnpm (the steps guarded on this target).
   #   - truffle           : backend introspection — `just gallery` only (gallery
   #                          recipe is self-building; no test-all suite exists).
   #                          No language pdb to download.
@@ -682,11 +686,9 @@ jobs:
   # entry's full just-recipe sequence — different per target so the truffle box
   # doesn't pay for nonexistent test-all. Both wait for the full
   # `translation-deps` matrix to finish — coarser than per-entry edges but
-  # simpler to read. JavaScript is not here: its gallery and suites need the
-  # compileModule/execute natives, which only Node implements — see
-  # javascript-platform.
+  # simpler to read.
   translations:
-    name: Translation ${{ matrix.target }} (gallery)
+    name: Translation ${{ matrix.target }}
     needs: translation-deps
     runs-on: ubuntu-24.04
     strategy:
@@ -697,6 +699,10 @@ jobs:
             gallery_file: pure/modules/translation/java/build/java-translation-gallery.html
             language_pdb_artifact: language-java-pdb
             gallery_cmd: just build && just test-all && just gallery
+          - target: javascript
+            gallery_file: pure/modules/translation/javascript/build/javascript-translation-gallery.html
+            language_pdb_artifact: language-javascript-pdb
+            gallery_cmd: just build && just antlr-all && just test-all && just gallery
           - target: truffle
             gallery_file: pure/modules/translation/truffle/build/truffle-translation-gallery.html
             language_pdb_artifact: ''
@@ -728,6 +734,19 @@ jobs:
         uses: extractions/setup-just@v4
         with:
           just-version: ${{ env.JUST_VERSION }}
+
+      # The javascript entry runs its suites and gallery on the Node host.
+      - name: Set up Node
+        if: matrix.target == 'javascript'
+        uses: actions/setup-node@v4.3.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up pnpm
+        if: matrix.target == 'javascript'
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Download bootstrap artifacts
         uses: actions/download-artifact@v8
@@ -761,7 +780,7 @@ jobs:
             tar -xf ${{ matrix.language_pdb_artifact }}.tar
           fi
 
-      - name: Translation ${{ matrix.target }} gallery
+      - name: Translation ${{ matrix.target }}
         working-directory: pure/modules/translation/${{ matrix.target }}
         run: ${{ matrix.gallery_cmd }}
 
@@ -773,17 +792,15 @@ jobs:
           retention-days: 1
 
   # Standalone JavaScript platform (platforms/javascript) — the Node sibling of
-  # truffle-self-host. Everything here runs on Node:
-  #   - `javascript::test-all`: grammar corpus, compiler conformance, PCT corpus
-  #   - `modules::translation_javascript::test-all` / `::gallery`: the
-  #     translation module's suites and gallery (published below) — the same
-  #     recipes translation/java runs on Truffle, driven through bin/pure-js
-  # No GraalVM and no truffle-artifacts. The JS natives exist only on this
-  # platform, and every generator it needs — the emitted bundles, the parser
-  # mappings bundle, the javascript-translation pdbs — runs on pure-bootstrap.
+  # truffle-self-host: the platform's own suites (`javascript::test-all`:
+  # grammar corpus, compiler conformance, in-process PCT corpus). The
+  # javascript translation module's suites and gallery run in the `translations`
+  # matrix, like java's. No GraalVM and no truffle-artifacts: every generator
+  # the platform needs (the emitted bundles, the parser mappings bundle, the
+  # javascript-translation pdbs they are emitted from) runs on pure-bootstrap.
   # translation-deps supplies javascript.pdb and translation-shared.pdb.
   javascript-platform:
-    name: JavaScript platform (suites + gallery on Node)
+    name: JavaScript platform (Node suites)
     needs: translation-deps
     runs-on: ubuntu-24.04
     steps:
@@ -848,28 +865,15 @@ jobs:
       - name: JavaScript platform tests
         run: just javascript::test-all
 
-      - name: JavaScript translation tests
-        run: just modules::translation_javascript::test-all
-
-      - name: JavaScript translation gallery
-        run: just modules::translation_javascript::gallery
-
-      - name: Upload javascript gallery
-        uses: actions/upload-artifact@v7
-        with:
-          name: gallery-javascript
-          path: pure/modules/translation/javascript/build/javascript-translation-gallery.html
-          retention-days: 1
-
   # Publishes the galleries to GitHub Pages. The HTMLs are produced upstream by
-  # the `translations` matrix (java/truffle) and javascript-platform, shipped as
+  # the `translations` matrix (java/javascript/truffle) and shipped as
   # gallery-<target> artifacts. All files are self-contained (inline CSS/JS/data)
   # so the deploy is just "drop into _site/". Runs only on push to main on the
   # canonical repo so PRs and forks don't try to publish.
   # One-time setup: repo Settings → Pages → Source = "GitHub Actions".
   publish-gallery:
     name: Publish galleries to GitHub Pages
-    needs: [translations, javascript-platform]
+    needs: translations
     if: github.repository == 'finos/legend-pure-next' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment:
