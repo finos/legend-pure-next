@@ -16,12 +16,13 @@
 #                                                                (also runs the Pure runTests / PCT
 #                                                                suites that live as Java tests)
 # `test` is one Maven launch end to end: `test-java` covers Java + Pure-via-surefire, then
-# `test-pure-compiler` adds the compiled-graph spec suite via the bootstrap CLI.
+# `test-pure-compiler` adds the compiled-graph spec suite and `test-pure-pdb` the PDB writer
+# tests (compiler-tests.pdb) via the bootstrap CLI.
 #
 # Public steps (`stage`, `build-compiler-pdb`) have no Maven dep of their own;
 # the entry-point recipe (`build` or `test`) lists Maven + stage + build-compiler-pdb in order.
 #
-# `test-pure-runtime-testFunctions`, `test-pure-runtime-PCTs`, `test-pure-compiler` are zero-dep
+# `test-pure-runtime-testFunctions`, `test-pure-runtime-PCTs`, `test-pure-compiler`, `test-pure-pdb` are zero-dep
 # "expert mode" recipes — they assume `just build` (or `just test`) has already produced the
 # artifacts. Run them standalone for fast Pure-side iteration without re-invoking Maven.
 # `test-pure-runtime` runs both runtime suites in one call.
@@ -189,8 +190,8 @@ build-parser-mappings-pdb:
         --source {{mappings_src}} \
         --output-dir {{shared_out}} {{err_filter}}
 
-# Build + run Java unit tests (surefire) + run Pure compiler-graph spec tests.
-test: test-java stage build-compiler-pdb test-pure-compiler
+# Build + run Java unit tests (surefire) + run Pure compiler-graph spec tests + PDB writer tests.
+test: test-java stage build-compiler-pdb test-pure-compiler test-pure-pdb
 
 # `test` plus Pure-on-Java self-host, standalone runtime suites, and both printer-corpus checks (compiled + protocol).
 test-all: test test-pure-self-host test-pure-runtime
@@ -288,6 +289,20 @@ test-pure-compiler:
         --pdb {{shared_out}}/compiler-tests.pdb \
         --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler/tests" {{err_filter}}
+
+# Pure runTests over meta::pure::compiler::pdb (PDB writer/reader tests in compiler-tests.pdb) via the bootstrap CLI.
+# TestPureExecution only scans core-tests.pdb (compiler-tests.pdb doesn't exist during the Maven build), so this
+# is the only bootstrap coverage for these tests (assumes `just build` was run). Run as part of `just test`.
+test-pure-pdb:
+    @{{header}} 'test-pure-pdb'
+    @{{substep}} 'runTests over meta::pure::compiler::pdb'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::pure::compiler::pdb" {{err_filter}}
 
 # Self-host: compile compiler-pure on Pure-on-Java, run compiler tests, then diff PDBs vs Java direct (and Truffle if present; assumes `just build` was run).
 test-pure-self-host: generate-writer

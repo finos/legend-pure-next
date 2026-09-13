@@ -96,11 +96,15 @@ permissions:
   pages: write
   id-token: write
 
-# Serialise Pages deploys so rapid main pushes don't race. `cancel-in-progress:
-# false` lets an in-flight deploy finish rather than dropping it half-published.
+# One run per workflow + ref: a new push to a branch cancels that branch's
+# in-flight run, while branches (and push vs pull_request refs) never queue
+# behind each other. main is never cancelled, so every main commit gets a full
+# run. The Pages lock lives on `publish-gallery` only — a workflow-wide lock
+# serialised every run on every branch, and a cancelled run's `if: always()`
+# aggregator waiting for a runner would hold it for everyone.
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # Single gate for the whole pipeline. Every top-level job depends on this
@@ -443,19 +447,6 @@ jobs:
         with:
           just-version: ${{ env.JUST_VERSION }}
 
-      # Node + pnpm for the JS translation runtime (esbuild bundle of the antlr
-      # natives + runtime helpers). The extension jar bundles plain-JS resources
-      # (runtime-lib.js, antlr-bundle.js) — no TypeScript compiler.
-      - name: Set up Node
-        uses: actions/setup-node@v4.3.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
       - name: Download bootstrap artifacts
         uses: actions/download-artifact@v8
         with:
@@ -466,17 +457,6 @@ jobs:
           tar -xf bootstrap-artifacts.tar
           mkdir -p ~/.m2/repository
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
-
-      # Parser half of the antlr bundle, BEFORE the reactor build: the
-      # extension-javascript pom bakes js/build/antlr-bundle.js into the jar at
-      # process-resources, and a missing file there is a silent skip that only
-      # surfaces much later as "antlr-bundle.js not found on classpath" in the
-      # language-javascript job. `antlr-bundle` depends solely on pnpm + the
-      # antlr4 jar + the .g4 grammars, so it can run here; the mappings half
-      # (parser-mappings-bundle) needs javascript.pdb, produced downstream, and
-      # is intentionally not built — the extension stubs Pure's `parse` without it.
-      - name: Build antlr parser bundle
-        run: just modules::translation_javascript::antlr-bundle
 
       # `truffle::test` runs the truffle reactor with surefire (Java unit
       # tests) and then the Pure compiler-graph spec suite on Truffle.
@@ -490,9 +470,9 @@ jobs:
       - name: Truffle self-host
         run: just truffle::test-pure-self-host
 
-      # Pack the truffle CLI fat jar + extension jars (JavaCompileNatives,
-      # JavaScriptCompileNatives + GraalJS runtime). Downstream language-java
-      # and language-javascript jobs need these to run pure-truffle.
+      # Pack the truffle CLI fat jar + the Java extension jar
+      # (JavaCompileNatives). Downstream language-java and language-javascript
+      # jobs need these to run pure-truffle.
       - name: Tar truffle artifacts
         run: tar -cf truffle-artifacts.tar platforms/truffle/build/
 
@@ -586,12 +566,14 @@ jobs:
   # Prereqs that the `translations` matrix consumes — built in parallel as one
   # matrix box so the visualizer doesn't draw long arrows around standalone
   # nodes. Three targets:
-  #   - language-java       : pure-bootstrap builds shared/java.pdb, then
+  #   - language-java       : pure-bootstrap builds pure/modules/language/java/build/java.pdb, then
   #                            pure-truffle runs `runTests meta::external::language::java`
   #                            (the Java extension's JavaCompileNatives registers
   #                            `compileAndExecute`, which bootstrap doesn't have).
-  #   - language-javascript : symmetric; the TS extension's GraalJS-backed
-  #                            `compileAndExecute`.
+  #   - language-javascript : the 133 serialization tests; these need no host
+  #                            natives (the JS execution natives moved to the
+  #                            standalone JS platform), so this one could run on
+  #                            bootstrap — it uses pure-truffle only for speed.
   #   - translation-shared  : Pure-AST -> Pure-AST canonicalisation shared by
   #                            the two translators; `just test-all` both builds
   #                            translation-shared{,-tests}.pdb and runs the
@@ -610,17 +592,20 @@ jobs:
           - target: language-java
             working_dir: pure/modules/language/java
             build_cmd: just build
-            pdb_files: shared/java.pdb
+            pdb_files: pure/modules/language/java/build/java.pdb
             artifact: language-java-pdb
           - target: language-javascript
             working_dir: pure/modules/language/javascript
             build_cmd: just build
-            pdb_files: shared/javascript.pdb
+            # -tests too: test-all's split build leaves a LEAN javascript.pdb whose
+            # refs point into javascript-tests.pdb, and the JS platform's emit
+            # loads both.
+            pdb_files: pure/modules/language/javascript/build/javascript.pdb pure/modules/language/javascript/build/javascript-tests.pdb
             artifact: language-javascript-pdb
           - target: translation-shared
             working_dir: pure/modules/translation/shared
             build_cmd: ''
-            pdb_files: shared/translation-shared.pdb shared/translation-shared-tests.pdb
+            pdb_files: pure/modules/translation/shared/build/translation-shared.pdb pure/modules/translation/shared/build/translation-shared-tests.pdb
             artifact: translation-shared-pdb
     steps:
       - name: Checkout repo
@@ -689,21 +674,32 @@ jobs:
           path: ${{ matrix.artifact }}.tar
           retention-days: 1
 
-  # Pure -> <target> gallery. Matrix entries:
-  #   - java / javascript : translators — `just build && just test-all && just gallery`
-  #                          (translator self-tests + runtime suites + render HTML).
-  #                          Each downloads its own language pdb.
+  # Pure -> <target> translation modules. Matrix entries:
+  #   - java              : translator — `just build test-all gallery`
+  #                          (translator self-tests + runtime suites + render HTML),
+  #                          executed by pure-truffle. Downloads its own language pdb.
+  #                          One `just` invocation, not an `&&` chain: just runs a
+  #                          shared dependency (build-tests, _host-generate) once
+  #                          per invocation, so a chain would rebuild it per recipe.
+  #   - javascript        : translator — the same recipes, executed by the Node
+  #                          host (platforms/javascript/bin/pure-js); `antlr-all`
+  #                          first, because that host loads the parser bundles.
+  #                          Also runs the Node platform suites (`platform_suite`:
+  #                          grammar, compiler conformance, in-process PCT) —
+  #                          that platform's code is generated by this module's
+  #                          translator, so it is tested alongside it. Needs
+  #                          Node + pnpm (the steps guarded on this target).
   #   - truffle           : backend introspection — `just gallery` only (gallery
   #                          recipe is self-building; no test-all suite exists).
   #                          No language pdb to download.
   # `language_pdb_artifact` keys the optional per-target language-pdb download;
   # empty for entries (like truffle) that don't have one. `gallery_cmd` is the
   # entry's full just-recipe sequence — different per target so the truffle box
-  # doesn't pay for nonexistent test-all. All three wait for the full
+  # doesn't pay for nonexistent test-all. Both wait for the full
   # `translation-deps` matrix to finish — coarser than per-entry edges but
   # simpler to read.
   translations:
-    name: Translation ${{ matrix.target }} (gallery)
+    name: Translation ${{ matrix.target }}
     needs: translation-deps
     runs-on: ubuntu-24.04
     strategy:
@@ -711,17 +707,20 @@ jobs:
       matrix:
         include:
           - target: java
-            gallery_file: shared/java-translation-gallery.html
+            gallery_file: pure/modules/translation/java/build/java-translation-gallery.html
             language_pdb_artifact: language-java-pdb
-            gallery_cmd: just build && just test-all && just gallery
+            gallery_cmd: just build test-all gallery
+            platform_suite: ''
           - target: javascript
-            gallery_file: shared/javascript-translation-gallery.html
+            gallery_file: pure/modules/translation/javascript/build/javascript-translation-gallery.html
             language_pdb_artifact: language-javascript-pdb
-            gallery_cmd: just build && just test-all && just gallery
+            gallery_cmd: just build antlr-all test-all gallery
+            platform_suite: just javascript::test-all
           - target: truffle
-            gallery_file: shared/truffle-translation-gallery.html
+            gallery_file: pure/modules/translation/truffle/build/truffle-translation-gallery.html
             language_pdb_artifact: ''
             gallery_cmd: just gallery
+            platform_suite: ''
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -749,6 +748,19 @@ jobs:
         uses: extractions/setup-just@v4
         with:
           just-version: ${{ env.JUST_VERSION }}
+
+      # The javascript entry runs its suites and gallery on the Node host.
+      - name: Set up Node
+        if: matrix.target == 'javascript'
+        uses: actions/setup-node@v4.3.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up pnpm
+        if: matrix.target == 'javascript'
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Download bootstrap artifacts
         uses: actions/download-artifact@v8
@@ -782,9 +794,13 @@ jobs:
             tar -xf ${{ matrix.language_pdb_artifact }}.tar
           fi
 
-      - name: Translation ${{ matrix.target }} gallery
+      - name: Translation ${{ matrix.target }}
         working-directory: pure/modules/translation/${{ matrix.target }}
         run: ${{ matrix.gallery_cmd }}
+
+      - name: Platform suites (${{ matrix.target }})
+        if: matrix.platform_suite != ''
+        run: ${{ matrix.platform_suite }}
 
       - name: Upload translation gallery
         uses: actions/upload-artifact@v7
@@ -804,6 +820,11 @@ jobs:
     needs: translations
     if: github.repository == 'finos/legend-pure-next' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
+    # Serialise Pages deploys so rapid main pushes don't race. `cancel-in-progress:
+    # false` lets an in-flight deploy finish rather than dropping it half-published.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

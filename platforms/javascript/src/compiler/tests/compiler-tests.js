@@ -16,7 +16,7 @@
 // the translated compiler (no JVM) and compares against its committed oracle:
 //   - `###CompiledGraph` tests: printCompiledGraph(result) must match (success).
 //   - `###Error` tests: the compile errors must match (error-flow).
-// Metadata reflection is served by the PDB reader (src/pdb), so this runs fully
+// Metadata reflection is served by the PDB reader (src/modules), so this runs fully
 // standalone.
 //
 // The `###Pure` section is placed at its original line in the file (error
@@ -30,7 +30,7 @@
 // re-printed; the round-tripped print must be byte-identical to the direct one.
 //
 // Pass --golden to check the PDB WRITER against Java: every passing ###CompiledGraph
-// test is serialized to .pdb and structurally diffed (src/pdb/tests/struct-diff) against
+// test is serialized to .pdb and structurally diffed (src/modules/tests/struct-diff) against
 // the Java-produced golden in pure/specification/compiler/tests-pdb-serialization (regenerate with the Java
 // PdbGoldenGeneratorTest). This is the authoritative "writes exactly what Java writes"
 // check; --roundtrip only proves JS reader/writer self-consistency.
@@ -41,9 +41,9 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, relative } from "node:path";
 import { loadCompiler } from "../host.js";
-import { roundTripElements, withModule } from "../../pdb/tests/roundtrip.js";
-import { openZip } from "../../pdb/zip/zip.js";
-import { diffArchives } from "../../pdb/tests/struct-diff.js";
+import { roundTripElements, withModule } from "../../modules/tests/roundtrip.js";
+import { openZip } from "../../modules/pdb/zip/zip.js";
+import { diffArchives } from "../../modules/tests/struct-diff.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url)); // .../src/compiler/tests
 const REPO = join(HERE, "../../../../.."); // -> repo root

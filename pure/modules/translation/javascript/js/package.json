@@ -2,7 +2,7 @@
   "name": "@finos/legend-pure-next-translation-runtime",
   "version": "0.0.1",
   "private": true,
-  "description": "Browser-runnable runtime for translated Pure code: vendored antlr4 + generated Top/M3 lexer-parser + the 17 ANTLR bridge natives that parser-mappings.js calls. Bundled into a single no-imports IIFE so it runs unchanged in GraalJS and in the browser.",
+  "description": "Browser-runnable runtime for translated Pure code: vendored antlr4 + generated Top/M3 lexer-parser + the 17 ANTLR bridge natives that parser-mappings.js calls. Bundled into a single no-imports IIFE so it runs unchanged on Node and in the browser.",
   "license": "Apache-2.0",
   "dependencies": {
     "antlr4": "^4.13.2"

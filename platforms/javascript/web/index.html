@@ -5,7 +5,7 @@
   Loads the same self-contained parser bundle translation/javascript builds
   (runtime-lib.js + antlr-bundle.js + parser-mappings-bundle.js) as plain <script>s, then main.js (an ES
   module) fetches the metamodel (m3.fbs + .pdb files), backs the metadata
-  bridge with the in-browser PDB reader (src/pdb), imports the generated
+  globals with the in-browser PDB reader (src/modules), imports the generated
   compiler + translator JS, and wires Run (button or F9):
     parse -> compile -> translate each element to JS in-process (the
     translated translator doing the translating) -> eval -> call

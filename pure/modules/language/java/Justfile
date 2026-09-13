@@ -9,7 +9,7 @@
 #   conventions-standard/  — core_external_language_java_conventions_standard
 #
 # Inputs:  shared/core.pdb (produced by `bootstrap::build`).
-# Output:  shared/java.pdb
+# Output:  build/java.pdb
 #
 # Uses the bootstrap **native** Java compiler (`pure-bootstrap compile`), not
 # the Pure-on-Java compile-via-pure path. Native compile takes a single
@@ -28,6 +28,8 @@ set shell := ["bash", "-c"]
 java_root      := source_directory()
 repo_root      := java_root / ".." / ".." / ".." / ".."
 shared_out     := repo_root / "shared"
+# Module build outputs: each module writes its own pdbs (and gallery) into its build/.
+language_java_out          := repo_root / "pure" / "modules" / "language" / "java" / "build"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
 
@@ -42,15 +44,16 @@ default: build
 
 # Requires shared/core.pdb (run `just bootstrap::build` from repo root first).
 
-# Compile pure/ + conventions-essential/ + conventions-standard/ into shared/java.pdb.
+# Compile pure/ + conventions-essential/ + conventions-standard/ into build/java.pdb.
 build:
     @{{header}} 'build'
-    @{{substep}} 'compile pure/language/java -> shared/java.pdb'
+    @{{substep}} 'compile pure/language/java -> build/java.pdb'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    mkdir -p {{language_java_out}}
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --source {{java_root}} \
-        --output-dir {{shared_out}} {{err_filter}}
+        --output-dir {{language_java_out}} {{err_filter}}
 
 # No sibling-module deps — alias of `build` for symmetry with translation/* modules.
 build-all: build
@@ -60,28 +63,30 @@ build-all: build
 # pure/specification/compiler/compiler-pure since it picks changes up
 # automatically (compile-via-pure also does, but native compile does NOT).
 
-# Compile pure/language/java -> shared/java.pdb via the Pure compiler on Truffle.
+# Compile pure/language/java -> build/java.pdb via the Pure compiler on Truffle.
 build-truffle:
     @{{header}} 'build-truffle'
-    @{{substep}} 'compile pure/language/java -> shared/java.pdb (Truffle)'
+    @{{substep}} 'compile pure/language/java -> build/java.pdb (Truffle)'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -f {{shared_out}}/compiler.pdb || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
+    mkdir -p {{language_java_out}}
     {{pure_truffle}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/compiler.pdb \
         --source {{java_root}} \
-        --output-dir {{shared_out}} {{err_filter}}
+        --output-dir {{language_java_out}} {{err_filter}}
 
-# Compile with tests split into shared/java-tests.pdb (needed by `test-all`).
+# Compile with tests split into build/java-tests.pdb (needed by `test-all`).
 build-tests:
     @{{header}} 'build-tests'
-    @{{substep}} 'compile pure/language/java -> shared/java.pdb + java-tests.pdb'
+    @{{substep}} 'compile pure/language/java -> build/java.pdb + java-tests.pdb'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    mkdir -p {{language_java_out}}
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --source {{java_root}} \
-        --output-dir {{shared_out}} \
+        --output-dir {{language_java_out}} \
         --tests split {{err_filter}}
 
 # The `compileAndExecute` native is implemented in the Truffle Java extension
@@ -97,8 +102,8 @@ test-all: build-tests _depCheck_runtime-pdbs
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
-        --pdb {{shared_out}}/java.pdb \
-        --pdb {{shared_out}}/java-tests.pdb \
+        --pdb {{language_java_out}}/java.pdb \
+        --pdb {{language_java_out}}/java-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1_" \
         --args "meta::external::language::java" {{err_filter}}
 
@@ -114,8 +119,8 @@ _depCheck_runtime-pdbs:
         exit 1
     fi
 
-# Remove shared/java.pdb (and the tests PDB).
+# Remove build/java.pdb (and the tests PDB).
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove shared/java.pdb + shared/java-tests.pdb'
-    rm -f {{shared_out}}/java.pdb {{shared_out}}/java-tests.pdb
+    @{{substep}} 'remove build/java.pdb + build/java-tests.pdb'
+    rm -f {{language_java_out}}/java.pdb {{language_java_out}}/java-tests.pdb

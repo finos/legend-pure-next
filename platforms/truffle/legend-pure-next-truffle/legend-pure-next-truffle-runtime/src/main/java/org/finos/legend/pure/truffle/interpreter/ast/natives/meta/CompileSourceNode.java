@@ -69,9 +69,7 @@ public final class CompileSourceNode extends PureNode
     }
 
     @CompilerDirectives.TruffleBoundary
-    // Public: the GraalJS extension's __hostCompileSource bridge routes here
-    // (same contract, same messages) after marshaling JS values across.
-    public static Object doCompile(PureContext ctx, Object file, Object dependencies)
+    private static Object doCompile(PureContext ctx, Object file, Object dependencies)
     {
         for (Object dep : asList(dependencies))
         {

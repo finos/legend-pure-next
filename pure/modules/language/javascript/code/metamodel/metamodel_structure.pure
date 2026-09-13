@@ -155,6 +155,9 @@ Class meta::external::language::javascript::metamodel::FunctionDeclaration exten
    modifiers      : ModifierFlag[*];
    parameters     : ParameterDeclaration[*];
    body           : Block[0..1];
+   // The Pure function this declaration was translated from, as a stack frame
+   // names it (`pkg::functionName`, no signature). Set with sourceInformation.
+   pureName       : String[0..1];
 }
 
 // =============================================================================

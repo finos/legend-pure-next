@@ -21,7 +21,7 @@
     <modules>
         <module>legend-pure-next-truffle-runtime</module>
         <module>legend-pure-next-truffle-ide</module>
-        <module>legend-pure-next-truffle-extension</module>
+        <module>legend-pure-next-truffle-extension-java</module>
     </modules>
 
     <!--

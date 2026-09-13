@@ -4,7 +4,7 @@
 # Direct invocation: just <recipe>   (from pure/modules/translation/shared/)
 #
 # Inputs:  shared/core.pdb
-# Output:  shared/translation-shared.pdb
+# Output:  build/translation-shared.pdb
 #
 # Target-language-agnostic. Provides:
 #   - makeCanonical: a Pure-AST simplification pipeline (open-variable inlining,
@@ -20,6 +20,8 @@ set shell := ["bash", "-c"]
 shared_root    := source_directory()
 repo_root      := shared_root / ".." / ".." / ".." / ".."
 shared_out     := repo_root / "shared"
+# Module build outputs: each module writes its own pdbs (and gallery) into its build/.
+translation_shared_out     := repo_root / "pure" / "modules" / "translation" / "shared" / "build"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
 
@@ -32,34 +34,36 @@ substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\
 # Default: build translation-shared.pdb.
 default: build
 
-# Compile pure/modules/translation/shared -> shared/translation-shared.pdb.
+# Compile pure/modules/translation/shared -> build/translation-shared.pdb.
 build:
     @{{header}} 'build'
-    @{{substep}} 'compile pure/modules/translation/shared -> shared/translation-shared.pdb'
+    @{{substep}} 'compile pure/modules/translation/shared -> build/translation-shared.pdb'
     test -f {{shared_out}}/core.pdb     || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -f {{shared_out}}/compiler.pdb || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    mkdir -p {{translation_shared_out}}
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/compiler.pdb \
         --source {{shared_root}} \
-        --output-dir {{shared_out}} {{err_filter}}
+        --output-dir {{translation_shared_out}} {{err_filter}}
 
 # No sibling-module deps (only bootstrap PDBs, file-checked above) — alias of `build` for symmetry.
 build-all: build
 
-# Compile with tests split into shared/translation-shared-tests.pdb (needed by `test-all`).
+# Compile with tests split into build/translation-shared-tests.pdb (needed by `test-all`).
 build-tests:
     @{{header}} 'build-tests'
     @{{substep}} 'compile pure/modules/translation/shared -> translation-shared.pdb + translation-shared-tests.pdb'
     test -f {{shared_out}}/core.pdb       || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -f {{shared_out}}/core-tests.pdb || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -f {{shared_out}}/compiler.pdb   || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    mkdir -p {{translation_shared_out}}
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
         --base-pdb {{shared_out}}/compiler.pdb \
         --source {{shared_root}} \
-        --output-dir {{shared_out}} \
+        --output-dir {{translation_shared_out}} \
         --tests split {{err_filter}}
 
 # These tests exercise the decompile + makeCanonical pipeline; bootstrap
@@ -78,13 +82,13 @@ test-all: build-tests
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
         --pdb {{shared_out}}/parser-mappings.pdb \
-        --pdb {{shared_out}}/translation-shared.pdb \
-        --pdb {{shared_out}}/translation-shared-tests.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_shared_out}}/translation-shared-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1_" \
         --args "meta::pure::translation::shared::tests" {{err_filter}}
 
-# Remove shared/translation-shared.pdb (and the tests PDB).
+# Remove build/translation-shared.pdb (and the tests PDB).
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove shared/translation-shared.pdb + translation-shared-tests.pdb'
-    rm -f {{shared_out}}/translation-shared.pdb {{shared_out}}/translation-shared-tests.pdb
+    @{{substep}} 'remove build/translation-shared.pdb + translation-shared-tests.pdb'
+    rm -f {{translation_shared_out}}/translation-shared.pdb {{translation_shared_out}}/translation-shared-tests.pdb

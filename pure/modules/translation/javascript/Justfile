@@ -3,11 +3,11 @@
 #
 # Direct invocation: just <recipe>     (from pure/modules/translation/javascript/)
 #
-# Inputs:  shared/core.pdb, shared/javascript.pdb, shared/translation-shared.pdb.
-# Output:  shared/javascript-translation.pdb
+# Inputs:  shared/core.pdb, pure/modules/language/javascript/build/javascript.pdb, pure/modules/translation/shared/build/translation-shared.pdb.
+# Output:  build/javascript-translation.pdb
 #
 # The translator consumes the language/javascript metamodel + factories + serializer
-# (shared/javascript.pdb) and the Pure metamodel (shared/core.pdb), and emits a
+# (pure/modules/language/javascript/build/javascript.pdb) and the Pure metamodel (shared/core.pdb), and emits a
 # JavaScript AST that serializes back to source.
 
 set quiet := true
@@ -22,12 +22,26 @@ mod _mod_translation_shared  "../shared/Justfile"
 trn_root       := source_directory()
 repo_root      := trn_root / ".." / ".." / ".." / ".."
 shared_out     := repo_root / "shared"
+# Module build outputs: each module writes its own pdbs (and gallery) into its build/.
+language_javascript_out    := repo_root / "pure" / "modules" / "language" / "javascript" / "build"
+translation_shared_out     := repo_root / "pure" / "modules" / "translation" / "shared" / "build"
+translation_javascript_out := repo_root / "pure" / "modules" / "translation" / "javascript" / "build"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+pure_js        := repo_root / "platforms" / "javascript" / "bin" / "pure-js"
+
+# Which Pure runtime runs the TRANSLATOR for the emit recipes. Bootstrap is the
+# default so this module needs nothing from platforms/truffle — the standalone
+# JS platform consumes parser-mappings-bundle.js and must not drag a GraalVM
+# build in behind it. Output is byte-identical either way; truffle is faster:
+#     just pure_rt=truffle parser-mappings-bundle   (overrides precede the recipe)
+pure_rt := "bootstrap"
+emit_rt := if pure_rt == "truffle" { pure_truffle } else { pure_bootstrap }
 grammar_dir    := repo_root / "pure" / "specification" / "grammar" / "antlr"
 
-# `--source` sees only `pure/`; npm tooling runs out of `js/`.
-pure_dir       := trn_root / "pure"
+# `--source` sees only `code/` (not the module root, as other modules pass):
+# the compiler walks every file under it, and `js/` holds npm tooling.
+code_dir       := trn_root / "code"
 js_dir         := trn_root / "js"
 gen_dir        := js_dir / "generated"
 bundle_out     := js_dir / "build" / "antlr-bundle.js"
@@ -42,20 +56,21 @@ substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\
 # Default: build javascript-translation.pdb.
 default: build
 
-# Compile pure/ -> shared/javascript-translation.pdb.
+# Compile pure/ -> build/javascript-translation.pdb.
 build:
     @{{header}} 'build'
-    @{{substep}} 'compile pure/modules/translation/javascript -> shared/javascript-translation.pdb'
+    @{{substep}} 'compile pure/modules/translation/javascript -> build/javascript-translation.pdb'
     test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
-    test -f {{shared_out}}/javascript.pdb         || (echo "ERROR: missing {{shared_out}}/javascript.pdb (run \`just language::javascript::build\` first)" && exit 1)
-    test -f {{shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
+    test -f {{language_javascript_out}}/javascript.pdb         || (echo "ERROR: missing {{language_javascript_out}}/javascript.pdb (run \`just language::javascript::build\` first)" && exit 1)
+    test -f {{translation_shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{translation_shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
+    mkdir -p {{translation_javascript_out}}
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
-        --base-pdb {{shared_out}}/javascript.pdb \
-        --base-pdb {{shared_out}}/translation-shared.pdb \
-        --source {{pure_dir}} \
-        --output-dir {{shared_out}} {{err_filter}}
+        --base-pdb {{language_javascript_out}}/javascript.pdb \
+        --base-pdb {{translation_shared_out}}/translation-shared.pdb \
+        --source {{code_dir}} \
+        --output-dir {{translation_javascript_out}} {{err_filter}}
 
 # Build sibling-module deps (language_javascript, translation_shared) first, then this module.
 build-all: _mod_language_javascript::build _mod_translation_shared::build build
@@ -63,89 +78,130 @@ build-all: _mod_language_javascript::build _mod_translation_shared::build build
 # Compile via the Pure compiler running on Truffle.
 build-truffle:
     @{{header}} 'build-truffle'
-    @{{substep}} 'compile pure/modules/translation/javascript -> shared/javascript-translation.pdb (Truffle)'
+    @{{substep}} 'compile pure/modules/translation/javascript -> build/javascript-translation.pdb (Truffle)'
     test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
-    test -f {{shared_out}}/javascript.pdb         || (echo "ERROR: missing {{shared_out}}/javascript.pdb (run \`just language::javascript::build\` first)" && exit 1)
+    test -f {{language_javascript_out}}/javascript.pdb         || (echo "ERROR: missing {{language_javascript_out}}/javascript.pdb (run \`just language::javascript::build\` first)" && exit 1)
     test -f {{shared_out}}/compiler.pdb           || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
-    test -f {{shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
+    test -f {{translation_shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{translation_shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
     test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
+    mkdir -p {{translation_javascript_out}}
     {{pure_truffle}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
-        --base-pdb {{shared_out}}/javascript.pdb \
+        --base-pdb {{language_javascript_out}}/javascript.pdb \
         --base-pdb {{shared_out}}/compiler.pdb \
-        --base-pdb {{shared_out}}/translation-shared.pdb \
-        --source {{pure_dir}} \
-        --output-dir {{shared_out}} {{err_filter}}
+        --base-pdb {{translation_shared_out}}/translation-shared.pdb \
+        --source {{code_dir}} \
+        --output-dir {{translation_javascript_out}} {{err_filter}}
 
 # Compile with `--tests split` -> javascript-translation-tests.pdb.
 build-tests:
     @{{header}} 'build-tests'
-    @{{substep}} 'compile pure/modules/translation/javascript -> shared/javascript-translation.pdb + javascript-translation-tests.pdb'
+    @{{substep}} 'compile pure/modules/translation/javascript -> build/javascript-translation.pdb + javascript-translation-tests.pdb'
     test -f {{shared_out}}/core.pdb               || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
-    test -f {{shared_out}}/javascript.pdb         || (echo "ERROR: missing {{shared_out}}/javascript.pdb (run \`just language::javascript::build\` first)" && exit 1)
-    test -f {{shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
+    test -f {{language_javascript_out}}/javascript.pdb         || (echo "ERROR: missing {{language_javascript_out}}/javascript.pdb (run \`just language::javascript::build\` first)" && exit 1)
+    test -f {{translation_shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{translation_shared_out}}/translation-shared.pdb (run \`just translation::shared::build\` first)" && exit 1)
+    mkdir -p {{translation_javascript_out}}
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/core-tests.pdb \
-        --base-pdb {{shared_out}}/javascript.pdb \
-        --base-pdb {{shared_out}}/translation-shared.pdb \
-        --source {{pure_dir}} \
-        --output-dir {{shared_out}} \
+        --base-pdb {{language_javascript_out}}/javascript.pdb \
+        --base-pdb {{translation_shared_out}}/translation-shared.pdb \
+        --source {{code_dir}} \
+        --output-dir {{translation_javascript_out}} \
         --tests split {{err_filter}}
 
-# Default umbrella: translator's <<test.Test>> suite. PCTs are stabilising — invoke test-pure-runtime-PCTs directly.
-test-all: test-pure-runtime-translation
+# Default umbrella: translator test suite + runtime suites — the same recipes as
+# translation/java, run on the JavaScript host (bin/pure-js) where Java's run on
+# Truffle (bin/pure-truffle). The `compileModule` / `execute` natives these tests
+# reach exist only on that host.
+test-all: test-translation test-pure-runtime
 
-# Run translator's <<test.Test>> suite (Truffle — needs compileAndExecute native).
-test-pure-runtime-translation: build-tests _depCheck_runtime-pdbs
-    @{{header}} 'test-pure-runtime-translation'
-    @{{substep}} 'runTests meta::external::language::javascript::translation (Truffle)'
-    {{pure_truffle}} execute \
+# Run the translator's own <<test.Test>> suite (meta::external::language::javascript::translation).
+test-translation: build-tests _host-generate _depCheck_runtime-pdbs
+    @{{header}} 'test-translation'
+    @{{substep}} 'runTests meta::external::language::javascript::translation (JavaScript host)'
+    {{pure_js}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
-        --pdb {{shared_out}}/javascript.pdb \
-        --pdb {{shared_out}}/translation-shared.pdb \
-        --pdb {{shared_out}}/javascript-translation.pdb \
-        --pdb {{shared_out}}/javascript-translation-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1_" \
-        --args "meta::external::language::javascript::translation" {{err_filter}}
+        --args "meta::external::language::javascript::translation"
 
-# Run PCT tests over meta::pure::functions via the translator adapter (lambdas -> TS -> GraalJS -> invoke).
-test-pure-runtime-PCTs: build-tests _depCheck_runtime-pdbs
+# Run the standard Pure runtime suites over meta::pure::functions on the JavaScript host.
+# NB: PCTs (`test-pure-runtime-PCTs`) are intentionally excluded for now, as in
+# translation/java — invoke that recipe directly to run them.
+test-pure-runtime: test-pure-runtime-testFunctions
+
+# Run runTests over meta::pure::functions on the JavaScript host.
+test-pure-runtime-testFunctions: build-tests _host-generate _depCheck_runtime-pdbs
+    @{{header}} 'test-pure-runtime-testFunctions'
+    @{{substep}} 'runTests meta::pure::functions (JavaScript host)'
+    {{pure_js}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::pure::functions"
+
+# Run PCT tests over meta::pure::functions via the translator adapter (lambdas -> JavaScript -> compileModule -> execute).
+test-pure-runtime-PCTs: build-tests _host-generate _depCheck_runtime-pdbs
     @{{header}} 'test-pure-runtime-PCTs'
-    @{{substep}} 'runPCTTests meta::pure::functions (Truffle, translator adapter)'
-    {{pure_truffle}} execute \
+    @{{substep}} 'runPCTTests meta::pure::functions (JavaScript host, translator adapter)'
+    {{pure_js}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
-        --pdb {{shared_out}}/javascript.pdb \
-        --pdb {{shared_out}}/translation-shared.pdb \
-        --pdb {{shared_out}}/javascript-translation.pdb \
-        --pdb {{shared_out}}/javascript-translation-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
         --function "meta::external::language::javascript::translation::runPCTTestsViaTranslator_String_1__String_1_" \
-        --args "meta::pure::functions" {{err_filter}}
+        --args "meta::pure::functions"
 
-# Render Pure -> JavaScript translation gallery as a self-contained HTML page.
-gallery: build-tests _depCheck_runtime-pdbs
+# Build the Pure -> JavaScript translation gallery as a self-contained HTML page.
+# pure-js prints the returned String to stdout, so a plain redirect is enough.
+gallery: build-tests _host-generate _depCheck_runtime-pdbs
     @{{header}} 'gallery'
-    @{{substep}} 'render Pure -> JavaScript gallery -> shared/javascript-translation-gallery.html'
-    {{pure_truffle}} execute \
+    @{{substep}} 'render Pure -> JavaScript gallery -> build/javascript-translation-gallery.html'
+    {{pure_js}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
-        --pdb {{shared_out}}/javascript.pdb \
-        --pdb {{shared_out}}/translation-shared.pdb \
-        --pdb {{shared_out}}/javascript-translation.pdb \
-        --pdb {{shared_out}}/javascript-translation-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
         --function "meta::external::language::javascript::translation::gallery::renderGallery_String_1__String_1_" \
         --args "meta::pure::functions" \
-        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
-        | grep -v '^\[graal-tripwire\]' \
-        | awk '/<!DOCTYPE/{p=1} p' \
-        > {{shared_out}}/javascript-translation-gallery.html
-    @echo "wrote {{shared_out}}/javascript-translation-gallery.html ($(wc -c < {{shared_out}}/javascript-translation-gallery.html) bytes)"
+        > {{translation_javascript_out}}/javascript-translation-gallery.html
+    @echo "wrote {{translation_javascript_out}}/javascript-translation-gallery.html ($(wc -c < {{translation_javascript_out}}/javascript-translation-gallery.html) bytes)"
+
+# Internal: the one step translation/java has no counterpart for. Truffle
+# interprets PDBs directly; the JavaScript host runs code TRANSLATED from them,
+# so regenerate it from the pdbs build-tests just wrote or the suites run stale code.
+_host-generate:
+    just --justfile {{repo_root}}/platforms/javascript/Justfile generate-all
+
+# Internal: fail loudly if the PDBs the runtime recipes need aren't staged.
+_depCheck_runtime-pdbs:
+    #!/usr/bin/env bash
+    if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
+        echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2
+        exit 1
+    fi
+    if [[ ! -x "{{pure_js}}" ]]; then
+        echo "ERROR: missing {{pure_js}}" >&2
+        exit 1
+    fi
 
 _npm-install:
     #!/usr/bin/env bash
@@ -171,19 +227,19 @@ antlr-generate-parsers: _npm-install
     @echo "  generated $(ls {{gen_dir}}/*.js | wc -l | tr -d ' ') JS files"
 
 # Translate parser-mappings.pdb -> js/build/parser-mappings.js (re-exported by antlr bundle).
-antlr-generate-ts-parserMapping: build-tests _depCheck_runtime-pdbs
+antlr-generate-ts-parserMapping: build-tests _depCheck_emit-pdbs
     @{{header}} 'antlr-generate-ts-parserMapping'
     @{{substep}} 'translate meta::pure::parser::mappings -> js/build/parser-mappings.js'
     mkdir -p "$(dirname "{{bundle_out}}")"
-    {{pure_truffle}} execute \
+    {{emit_rt}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
-        --pdb {{shared_out}}/javascript.pdb \
-        --pdb {{shared_out}}/translation-shared.pdb \
-        --pdb {{shared_out}}/javascript-translation.pdb \
-        --pdb {{shared_out}}/javascript-translation-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
         --function "meta::external::language::javascript::translation::pdb::translatePackageToJs_String_1__String_1_" \
         --args "meta::pure::parser::mappings" \
         2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
@@ -193,10 +249,10 @@ antlr-generate-ts-parserMapping: build-tests _depCheck_runtime-pdbs
 
 # Bundle antlr4 + generated parsers + native impls -> js/build/antlr-bundle.js (no-imports IIFE).
 # `--conditions=browser` selects antlr4's browser build (no node `fs`/`path`),
-# which is what the GraalJS host (and the browser) needs.
+# which is what the browser (and any non-Node host) needs.
 #
 # PARSER HALF. Depends only on antlr-generate-parsers, so it needs nothing from
-# Pure: no pure-truffle, no PDBs. That is deliberate — the truffle extension jar
+# Pure: no pure-truffle, no PDBs. That is deliberate — the JS platform's parser
 # bakes this in at process-resources, and CI packages that jar in truffle-self-host,
 # which runs UPSTREAM of the jobs producing javascript.pdb. Keep it PDB-free or
 # that ordering breaks again.
@@ -230,20 +286,22 @@ parser-mappings-bundle: antlr-generate-ts-parserMapping
 # Both halves — the full local setup (browser demo + Pure `parse` support).
 antlr-all: antlr-bundle parser-mappings-bundle
 
-# Internal: fail loudly if the PDBs the runtime recipes need aren't staged.
-_depCheck_runtime-pdbs:
+# Internal: fail loudly if the emit recipes' deps aren't staged — the base
+# pdbs plus whichever Pure runtime `pure_rt` selected (bootstrap by default,
+# so no GraalVM build is required).
+_depCheck_emit-pdbs:
     #!/usr/bin/env bash
     if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
         echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2
         exit 1
     fi
-    if [[ ! -x "{{pure_truffle}}" ]]; then
-        echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" >&2
+    if [[ ! -x "{{emit_rt}}" ]]; then
+        echo "ERROR: missing {{emit_rt}} (run \`just bootstrap::build\`, or \`just truffle::build\` when pure_rt=truffle)" >&2
         exit 1
     fi
 
-# Remove shared/javascript-translation.pdb (and the tests PDB).
+# Remove build/javascript-translation.pdb (and the tests PDB).
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove shared/javascript-translation.pdb + javascript-translation-tests.pdb'
-    rm -f {{shared_out}}/javascript-translation.pdb {{shared_out}}/javascript-translation-tests.pdb
+    @{{substep}} 'remove build/javascript-translation.pdb + javascript-translation-tests.pdb'
+    rm -f {{translation_javascript_out}}/javascript-translation.pdb {{translation_javascript_out}}/javascript-translation-tests.pdb

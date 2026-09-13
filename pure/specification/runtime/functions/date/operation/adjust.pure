@@ -194,3 +194,20 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMillisecon
     assertEquals(%2016-07-20T21:21:18.912, $f->eval(|%2016-02-29T00:00:00.000->adjust(12345678912, DurationUnit.MILLISECONDS)));
     assertEquals(%2015-10-09T02:38:41.088, $f->eval(|%2016-02-29T00:00:00.000->adjust(-12345678912, DurationUnit.MILLISECONDS)));
 }
+
+// An adjusted date is a first-class date, not only something equality can
+// compare: it renders and computes exactly like the equivalent literal.
+function <<PCT.test>> meta::pure::functions::date::tests::testAdjustedDateToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('2016', $f->eval(|%2015->adjust(1, DurationUnit.YEARS)->toString()));
+    assertEquals('2014-02-02', $f->eval(|%2014-02-01->adjust(1, DurationUnit.DAYS)->toString()));
+    assertEquals('2015-04-15T13:11:14.939', $f->eval(|%2015-04-15T13:11:11.338->adjust(3601, DurationUnit.MILLISECONDS)->toString()));
+    assertEquals('2001-09-09T01:46:40.000', $f->eval(|%1970-01-01T00:00:00.000->adjust(1000000000000, DurationUnit.MILLISECONDS)->toString()));
+}
+
+function <<PCT.test>> meta::pure::functions::date::tests::testAdjustedDateDateDiff<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(3, $f->eval(|%2014-02-01->dateDiff(%2014-02-01->adjust(3, DurationUnit.DAYS), DurationUnit.DAYS)));
+    assertEquals(20000, $f->eval(|%1970-01-01->dateDiff(%1970-01-01->adjust(20000, DurationUnit.DAYS), DurationUnit.DAYS)));
+    assertEquals(2, $f->eval(|%2015-04-15T13:00:00.000->adjust(1, DurationUnit.HOURS)->dateDiff(%2015-04-15T13:00:00.000->adjust(3, DurationUnit.HOURS), DurationUnit.HOURS)));
+}

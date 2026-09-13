@@ -4,7 +4,7 @@
 # Direct invocation: just <recipe>     (from pure/modules/language/javascript/)
 #
 # Inputs:  shared/core.pdb (produced by `bootstrap::build`).
-# Output:  shared/javascript.pdb
+# Output:  build/javascript.pdb
 
 set quiet := true
 set shell := ["bash", "-c"]
@@ -12,6 +12,8 @@ set shell := ["bash", "-c"]
 ts_root        := source_directory()
 repo_root      := ts_root / ".." / ".." / ".." / ".."
 shared_out     := repo_root / "shared"
+# Module build outputs: each module writes its own pdbs (and gallery) into its build/.
+language_javascript_out    := repo_root / "pure" / "modules" / "language" / "javascript" / "build"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
 
@@ -26,46 +28,49 @@ default: build
 
 # Requires shared/core.pdb (run `just bootstrap::build` from repo root first).
 
-# Compile pure/modules/language/javascript into shared/javascript.pdb.
+# Compile pure/modules/language/javascript into build/javascript.pdb.
 build:
     @{{header}} 'build'
-    @{{substep}} 'compile pure/modules/language/javascript -> shared/javascript.pdb'
+    @{{substep}} 'compile pure/modules/language/javascript -> build/javascript.pdb'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    mkdir -p {{language_javascript_out}}
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --source {{ts_root}} \
-        --output-dir {{shared_out}} {{err_filter}}
+        --output-dir {{language_javascript_out}} {{err_filter}}
 
 # No sibling-module deps — alias of `build` for symmetry with translation/* modules.
 build-all: build
 
-# Compile -> shared/javascript.pdb via the Pure compiler on Truffle (picks up compiler-pure changes automatically).
+# Compile -> build/javascript.pdb via the Pure compiler on Truffle (picks up compiler-pure changes automatically).
 build-truffle:
     @{{header}} 'build-truffle'
-    @{{substep}} 'compile pure/modules/language/javascript -> shared/javascript.pdb (Truffle)'
+    @{{substep}} 'compile pure/modules/language/javascript -> build/javascript.pdb (Truffle)'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -f {{shared_out}}/compiler.pdb || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
+    mkdir -p {{language_javascript_out}}
     {{pure_truffle}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --base-pdb {{shared_out}}/compiler.pdb \
         --source {{ts_root}} \
-        --output-dir {{shared_out}} {{err_filter}}
+        --output-dir {{language_javascript_out}} {{err_filter}}
 
-# Compile with tests split into shared/javascript-tests.pdb (needed by `test-all`).
+# Compile with tests split into build/javascript-tests.pdb (needed by `test-all`).
 build-tests:
     @{{header}} 'build-tests'
-    @{{substep}} 'compile pure/modules/language/javascript -> shared/javascript.pdb + javascript-tests.pdb'
+    @{{substep}} 'compile pure/modules/language/javascript -> build/javascript.pdb + javascript-tests.pdb'
     test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    mkdir -p {{language_javascript_out}}
     {{pure_bootstrap}} compile \
         --base-pdb {{shared_out}}/core.pdb \
         --source {{ts_root}} \
-        --output-dir {{shared_out}} \
+        --output-dir {{language_javascript_out}} \
         --tests split {{err_filter}}
 
 # The `compileAndExecute` native is implemented in the Truffle JavaScript
-# extension (legend-pure-next-truffle-extension-javascript's
-# JavaScriptCompileNatives) — the bootstrap CLI does NOT register it, so
+# natives are HOST-implemented on the standalone JS platform (js-natives.js);
+# no JVM backend registers them, so
 # testCompileAndExecute* tests fail there with "No native implementation
 # for: compileAndExecute".
 
@@ -76,8 +81,8 @@ test-all: build-tests _depCheck_runtime-pdbs
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
-        --pdb {{shared_out}}/javascript.pdb \
-        --pdb {{shared_out}}/javascript-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{language_javascript_out}}/javascript-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1_" \
         --args "meta::external::language::javascript" {{err_filter}}
 
@@ -93,8 +98,8 @@ _depCheck_runtime-pdbs:
         exit 1
     fi
 
-# Remove shared/javascript.pdb (and the tests PDB).
+# Remove build/javascript.pdb (and the tests PDB).
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove shared/javascript.pdb + shared/javascript-tests.pdb'
-    rm -f {{shared_out}}/javascript.pdb {{shared_out}}/javascript-tests.pdb
+    @{{substep}} 'remove build/javascript.pdb + build/javascript-tests.pdb'
+    rm -f {{language_javascript_out}}/javascript.pdb {{language_javascript_out}}/javascript-tests.pdb

@@ -44,10 +44,11 @@ public interface TruffleTypeCache
     /**
      * Resolver-aware variant of {@link #ancestors(Object)}. The no-arg form
      * pulls the resolver from {@code PureLanguage.get(null)}, which is null on
-     * threads/contexts outside an active Pure execution (e.g. the GraalJS
-     * JavaScript bridge invoking {@code __metadataSubtypeOf}). Pass the
-     * caller's resolver so a first-time {@code compute} for an uncached type
-     * doesn't NPE there. Default delegates to the no-arg form.
+     * threads/contexts outside an active Pure execution. Pass the caller's
+     * resolver so a first-time {@code compute} for an uncached type doesn't NPE
+     * there; it is also what dereferences {@code TempCompilerPointer} subtypes
+     * during linearization, so this variant is needed independently of who
+     * calls it. Default delegates to the no-arg form.
      */
     default Set<?> ancestors(Object type, TruffleMetadataAccess resolver)
     {

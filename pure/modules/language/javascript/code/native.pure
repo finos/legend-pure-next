@@ -19,15 +19,18 @@ import meta::pure::metamodel::type::generics::*;
 import meta::pure::metamodel::multiplicity::*;
 
 // ----------------------------------------------------------------------------
-// Truffle-only GraalJS runtime bridge. Implementation lives in
-// `legend-pure-next-truffle-extension-javascript`'s
-// `JavaScriptCompileNatives`. Two natives, split by phase:
+// JavaScript execution natives, implemented by the HOST. The standalone JS
+// platform provides them in platforms/javascript/src/execution/js-natives.js
+// (eval pipe + function lookup + a drain buffer); runtime-lib routes there via
+// __jsCompile / __jsExecute / __jsDrainCompiledSources. There is no JVM-side
+// implementation: the GraalJS Truffle extension that used to back these was
+// removed once Node covered the same ground. Three natives, split by phase:
 //
 //   compile(source)                                           → ctx
 //   execute(ctx, fnName, args, pureReturnType, pureMultiplicity) → Any[*]
 //
 // `compile` evaluates the (plain JavaScript) source as a CommonJS module in a
-// long-lived GraalJS context — the translator emits type-free JS, so there is
+// long-lived host JS context — the translator emits type-free JS, so there is
 // no transpile step. The returned `ctx` is opaque — a JVM-side handle wrapping
 // the evaluated module's `exports`. Pass it from `compile` straight into
 // `execute` without inspecting.
@@ -48,12 +51,17 @@ import meta::pure::metamodel::multiplicity::*;
 //
 // Metadata access (lambda PDOs, type lookups, etc.) is embedded in the
 // emitted JavaScript by the translator — calls to a globally-scoped
-// `__pureResolve(path)` helper that the native sets up once on the GraalJS
+// `__pureResolve(path)` helper the host sets up once on its JS
 // context. The translator owns the strategy; the native is just an
-// eval pipe plus a resolver bridge.
+// eval pipe — the host installs `__pureResolve` separately.
 // ----------------------------------------------------------------------------
 
-native function meta::external::language::javascript::compile(
+// Named `compileModule` rather than `compile`: the JavaScript translator's
+// coder table dispatches on the LAST ::-segment, so a native called `compile`
+// would also capture meta::pure::compiler::compile — and compiler.js is itself
+// produced by translating meta::pure::compiler, so every internal call would be
+// rewritten into the JS eval pipe.
+native function meta::external::language::javascript::compileModule(
    source: String[1]
 ): Any[1];
 
@@ -80,141 +88,12 @@ native function meta::external::language::javascript::execute(
 ): Any[*];
 
 // ----------------------------------------------------------------------------
-// Tests — exercise the native pair directly with hand-written TS strings,
-// so failures point at the bridge rather than at any code-generator on top.
-//
-// Truffle-only: these will fail when run on the bootstrap backend (the
-// natives are not registered there).
+// No tests here. These natives were previously pinned by nine hand-written-JS
+// tests (testCompileAndExecute*, testLambdaPdoFilter, testSelfDescribing*),
+// which only ran on the GraalJS Truffle extension. That extension is gone, and
+// the natives are now exercised far more broadly by the standalone JS platform:
+// the PCT adapter (testAdapterForTranslatedJavaScript) drives compileModule +
+// execute once per PCT test, and the translation gallery does the same per card
+// — 804 of each, covering Integer/Float/String/Boolean returns, lambdas, PDOs
+// and collection lifting. Run them with `just javascript::test-execution`.
 // ----------------------------------------------------------------------------
-
-function <<test.Test>> meta::external::language::javascript::tests::testCompileAndExecuteIntegerAdd(): Boolean[1]
-{
-   let source = '''
-                export function execute(a, b)
-                {
-                    return a + b;
-                }''';
-   assertEquals(7, $source->compile()->execute('execute', [3, 4], [], [], []));
-}
-
-function <<test.Test>> meta::external::language::javascript::tests::testCompileAndExecuteDoubleDivide(): Boolean[1]
-{
-   let source = '''
-                export function execute(a, b)
-                {
-                    return a / b;
-                }''';
-   assertEquals(2.5, $source->compile()->execute('execute', [10.0, 4.0], [], [], []));
-}
-
-function <<test.Test>> meta::external::language::javascript::tests::testCompileAndExecuteBooleanReturn(): Boolean[1]
-{
-   let source = '''
-                export function execute(n)
-                {
-                    return n > 0;
-                }''';
-   let ctx = $source->compile();
-   assertEquals(true,  $ctx->execute('execute', [5], [], [], []));
-   assertEquals(false, $ctx->execute('execute', [-3], [], [], []));
-}
-
-function <<test.Test>> meta::external::language::javascript::tests::testCompileAndExecuteStringReturn(): Boolean[1]
-{
-   let source = '''
-                export function execute(name)
-                {
-                    return 'hello, ' + name;
-                }''';
-   assertEquals('hello, world', $source->compile()->execute('execute', ['world'], [], [], []));
-}
-
-function <<test.Test>> meta::external::language::javascript::tests::testCompileAndExecuteZeroArgs(): Boolean[1]
-{
-   let source = '''
-                export function execute()
-                {
-                    return 42;
-                }''';
-   assertEquals(42, $source->compile()->execute('execute', [], [], [], []));
-}
-
-// Smoke-test: __lambda + __pdo wired through a real filter in JS.
-// Mirrors what the translator emits for a Pure `.filter(p | $p.name == 'a')`
-// without any of the translator's complexity.
-function <<test.Test>> meta::external::language::javascript::tests::testLambdaPdoFilter(): Boolean[1]
-{
-   let source = '''
-                export function execute() {
-                    return [{name: 'a'}, {name: 'b'}].filter(
-                        __lambda((p) => __pdo(p).name === 'a', '__local::root$lambda/0')
-                    );
-                }''';
-   let result = $source->compile()->execute('execute', [], [], [], []);
-   assertEquals(1, $result->size());
-}
-
-// Smoke-test: self-describing JS object with classifierGenericType pointing at
-// a Pure class via __pureResolve. Java toPureValue should detect the self-tag
-// and lift to a PDO of CC_Person rather than returning a raw Java Map.
-function <<test.Test>> meta::external::language::javascript::tests::testSelfDescribingLift(): Boolean[1]
-{
-   let source = '''
-                export function execute() {
-                    return {
-                        firstName: 'Pierre',
-                        lastName: 'Doe',
-                        classifierGenericType: {
-                            type: __pureResolve('meta::pure::functions::collection::tests::model::CO_Person')
-                        }
-                    };
-                }''';
-   let result = $source->compile()->execute('execute', [], [], [], []);
-   // If the lift worked, the result is a CO_Person PDO and we can read
-   // firstName as a String. If not, it's a Map and reading the property
-   // through Pure's typed slot will fail.
-   assertEquals('Pierre', $result->cast(@meta::pure::functions::collection::tests::model::CO_Person).firstName);
-}
-
-// Same self-describing pattern but returned as an ARRAY from JS, mirroring
-// what `.filter(...)` produces. Tests that lift-per-element works after
-// the JS array is marshaled element-by-element.
-function <<test.Test>> meta::external::language::javascript::tests::testSelfDescribingArrayLift(): Boolean[1]
-{
-   let source = '''
-                export function execute() {
-                    return [{
-                        firstName: 'A',
-                        lastName: 'X',
-                        classifierGenericType: {
-                            type: __pureResolve('meta::pure::functions::collection::tests::model::CO_Person')
-                        }
-                    }, {
-                        firstName: 'B',
-                        lastName: 'Y',
-                        classifierGenericType: {
-                            type: __pureResolve('meta::pure::functions::collection::tests::model::CO_Person')
-                        }
-                    }];
-                }''';
-   let result = $source->compile()->execute('execute', [], [], [], []);
-   let persons = $result->cast(@meta::pure::functions::collection::tests::model::CO_Person);
-   assertEquals(2, $persons->size());
-   assertEquals('A', $persons->at(0).firstName);
-   assertEquals('B', $persons->at(1).firstName);
-}
-
-// Compile failure — source has a deliberate JS parse error. The native eval's
-// the source directly (no transpile), so a syntactic break surfaces as a
-// GraalJS SyntaxError at compile() time rather than a later runtime error.
-function <<test.Test>> meta::external::language::javascript::tests::testCompileAndExecuteCompileErrorThrows(): Boolean[1]
-{
-   let badSource = '''
-                   export function execute( {
-                       return 1;
-                   }''';
-   assertError(
-      | $badSource->compile()->execute('execute', [], [], [], []),
-      'SyntaxError'
-   );
-}

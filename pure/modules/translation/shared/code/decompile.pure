@@ -405,10 +405,16 @@ function meta::pure::translation::shared::enumValueToProtocol(
 
 function meta::pure::translation::shared::isPrimitiveValue(v: Any[1]): Boolean[1]
 {
+   // Dates and Decimals are primitives too: a captured one must become a
+   // literal AtomicValue, not a class-instance constructor (a captured
+   // `%2014-02-01` otherwise recompiled into a malformed canonical on the
+   // JavaScript host).
    $v->instanceOf(Integer)
       || $v->instanceOf(Float)
+      || $v->instanceOf(Decimal)
       || $v->instanceOf(Boolean)
-      || $v->instanceOf(String);
+      || $v->instanceOf(String)
+      || $v->instanceOf(Date);
 }
 
 // Resolve a Pure primitive runtime value to its canonical Type path. Used to
@@ -417,10 +423,14 @@ function meta::pure::translation::shared::primitiveTypePath(v: Any[1]): String[1
 {
    if ($v->instanceOf(Integer), | 'meta::pure::metamodel::type::primitives::Integer',
    |if ($v->instanceOf(Float),   | 'meta::pure::metamodel::type::primitives::Float',
+   |if ($v->instanceOf(Decimal), | 'meta::pure::metamodel::type::primitives::Decimal',
    |if ($v->instanceOf(Boolean), | 'meta::pure::metamodel::type::primitives::Boolean',
    |if ($v->instanceOf(String),  | 'meta::pure::metamodel::type::primitives::String',
+   // A date keeps its own type (StrictDate / DateTime) where the host
+   // distinguishes them; the JavaScript host reports Date.
+   |if ($v->instanceOf(Date),    | $v->genericType()->rawType()->toOne()->elementToPath(),
    | fail('primitiveTypePath: not a primitive value'); 'meta::pure::metamodel::type::Any';
-   ))));
+   ))))));
 }
 
 // Class-instance PDO → protocol AtomicValue holding the PDO directly. The

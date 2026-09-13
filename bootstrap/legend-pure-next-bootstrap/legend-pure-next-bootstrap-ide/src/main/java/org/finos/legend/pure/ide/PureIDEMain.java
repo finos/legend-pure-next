@@ -118,7 +118,7 @@ public class PureIDEMain
         MutableList<PDBModule> pdbModules = Lists.mutable.empty();
         for (String depName : depClosure)
         {
-            Path pdbPath = parsed.pdbDir.resolve(depName + ".pdb");
+            Path pdbPath = resolveModulePdb(parsed.pdbDir, depName);
             System.out.println("Loading PDB: " + depName + " (" + pdbPath + ")");
             PDBModule mod = new PDBModule(pdbPath, PDBModule.Mode.COMPILATION);
             pdbModules.add(mod);
@@ -222,11 +222,12 @@ public class PureIDEMain
         }
         try
         {
-            Path pdbPath = pdbDir.resolve(depName + ".pdb");
+            Path pdbPath = resolveModulePdb(pdbDir, depName);
             if (!Files.isRegularFile(pdbPath))
             {
                 throw new IllegalStateException("Cannot resolve module dependency '" + depName
-                        + "': expected " + pdbPath + ". Build it first (e.g. `just bootstrap::build`).");
+                        + "': not in " + pdbDir + " or any pure/modules/*/*/build/. Build it first"
+                        + " (e.g. `just bootstrap::build` or `just modules::build`).");
             }
             // Peek at the dep's own manifest to recurse — load and discard.
             // The actual PDB load happens later in dep order.
@@ -285,6 +286,46 @@ public class PureIDEMain
             }
             return new ParsedArgs(modules, pdbDir, welcome);
         }
+    }
+
+    /**
+     * Locate {@code <name>.pdb}. Bootstrap outputs (core, compiler, ...) live in
+     * the shared {@code pdbDir}; every pure/modules module writes its own pdbs
+     * into its {@code build/} dir, so those are searched next. Returns the
+     * shared-dir candidate when nothing matches, so callers report a clear path.
+     */
+    private static Path resolveModulePdb(Path pdbDir, String name)
+    {
+        Path shared = pdbDir.resolve(name + ".pdb");
+        if (Files.isRegularFile(shared))
+        {
+            return shared;
+        }
+        Path modules = pdbDir.toAbsolutePath().normalize().getParent().resolve("pure").resolve("modules");
+        for (String group : new String[]{"language", "translation"})
+        {
+            Path groupDir = modules.resolve(group);
+            if (!Files.isDirectory(groupDir))
+            {
+                continue;
+            }
+            try (java.nio.file.DirectoryStream<Path> dirs = Files.newDirectoryStream(groupDir))
+            {
+                for (Path module : dirs)
+                {
+                    Path candidate = module.resolve("build").resolve(name + ".pdb");
+                    if (Files.isRegularFile(candidate))
+                    {
+                        return candidate;
+                    }
+                }
+            }
+            catch (java.io.IOException e)
+            {
+                throw new java.io.UncheckedIOException(e);
+            }
+        }
+        return shared;
     }
 
     private static Path resolvePdbDir()

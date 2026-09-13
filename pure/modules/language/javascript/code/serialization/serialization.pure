@@ -45,6 +45,30 @@ function meta::external::language::javascript::serialization::indentStep(): Stri
 }
 
 // =============================================================================
+// Position markers
+// =============================================================================
+// Comments left in the generated code for nodes that carry sourceInformation —
+// the contract between the translator and the runtime's Pure stack traces
+// (runtime-lib __pureStackFrames). Being comments, they cost nothing at run time:
+//   /*@L:C*/              a Pure call site; immediately precedes the emitted code
+//   /*@fn sid:L:C name*/  a Pure function; immediately precedes `function`
+//   /*@lambda sid:L:C*/   a Pure lambda; immediately precedes the arrow
+// V8 reports a frame's enclosing-function start at exactly the token a
+// definition marker precedes, and a call site at the callee a call marker
+// precedes, so the runtime maps frames without parsing JavaScript.
+function meta::external::language::javascript::serialization::callSiteMarker(n: Node[1]): String[1]
+{
+   $n.sourceInformation->map(si | '/*@' + $si.startLine->toString() + ':' + $si.startColumn->toString() + '*/')->joinStrings('');
+}
+
+function meta::external::language::javascript::serialization::definitionMarker(n: Node[1], kind: String[1], name: String[0..1]): String[1]
+{
+   $n.sourceInformation->map(si |
+      '/*@' + $kind + ' ' + $si.sourceId->joinStrings('') + ':' + $si.startLine->toString() + ':' + $si.startColumn->toString()
+         + $name->map(x | ' ' + $x)->joinStrings('') + '*/')->joinStrings('');
+}
+
+// =============================================================================
 // Entry point
 // =============================================================================
 
@@ -243,7 +267,7 @@ function meta::external::language::javascript::serialization::serializeFunction(
    let modsStr   = $f.modifiers->serializeModifiers();
    let paramsStr = $f.parameters->map(p | $p->serializeParameter())->joinStrings(', ');
    let bodyStr   = if($f.body->isEmpty(), | ';', | ' ' + $f.body->toOne()->serializeBlock($indent));
-   $indent + $modsStr + 'function ' + $f.name + '(' + $paramsStr + ')' + $bodyStr;
+   $indent + $modsStr + $f->definitionMarker('fn', $f.pureName) + 'function ' + $f.name + '(' + $paramsStr + ')' + $bodyStr;
 }
 
 // =============================================================================
@@ -303,6 +327,12 @@ function meta::external::language::javascript::serialization::serializeVarDecl(d
 
 function meta::external::language::javascript::serialization::serializeExpression(e: Expression[1]): String[1]
 {
+   // Arrows carry a lambda marker instead (serializeArrow).
+   if($e->instanceOf(ArrowFunction), | '', | $e->callSiteMarker()) + $e->serializeExpressionBody();
+}
+
+function meta::external::language::javascript::serialization::serializeExpressionBody(e: Expression[1]): String[1]
+{
    $e->match([
       i:    Identifier[1]                | $i.text,
       t:    ThisExpression[1]            | 'this',
@@ -341,7 +371,7 @@ function meta::external::language::javascript::serialization::serializeArrow(af:
                           ol: ObjectLiteralExpression[1] | '(' + $ol->serializeExpression() + ')',
                           other: Expression[1]           | $other->serializeExpression()
                        ]));
-   $asyncStr + '(' + $psStr + ')' + ' => ' + $bodyStr;
+   $af->definitionMarker('lambda', []->cast(@String)) + $asyncStr + '(' + $psStr + ')' + ' => ' + $bodyStr;
 }
 
 function meta::external::language::javascript::serialization::serializePropAssign(pa: PropertyAssignment[1]): String[1]

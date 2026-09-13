@@ -503,6 +503,134 @@ function __assert(c, m) {
   }
   return true;
 }
+// assertEquals / assertSize — the VALUE IS A PARAMETER here, so each argument
+// expression is evaluated exactly once and the failure message is built only on
+// failure. The coders used to place the translated `actual` AST into the output
+// twice (once for the comparison, once interpolated into an eagerly-built
+// message), which silently RE-RAN it. Harmless for `1 + 2`; for a PCT adapter
+// lambda it meant a second canonicalize + translate + compile + eval on every
+// PASSING assertion — 2x the work, and 2x the sources the gallery displayed.
+function __unwrapAtomicValue(v) {
+  while (v !== null && typeof v === "object" && !Array.isArray(v) && Object.prototype.hasOwnProperty.call(v, "value")) {
+    const cgt = v.classifierGenericType;
+    const singleton = cgt && cgt.__purePath;
+    const t = cgt && cgt.type;
+    const isAtomic = typeof singleton === "string"
+      ? singleton.endsWith("GenericType_meta_pure_metamodel_valuespecification_AtomicValue")
+      : (t && t.__purePath) === "meta::pure::metamodel::valuespecification::AtomicValue";
+    if (!isAtomic || v.value === undefined || v.value === null) break;
+    v = v.value;
+  }
+  return v;
+}
+// ---------------------------------------------------------------------------
+// Pure stack traces. The serializer leaves position markers in generated code
+// (serialization.pure): `/*@L:C*/` before a call site, `/*@fn sid:L:C name*/`
+// before a function, `/*@lambda sid:L:C*/` before a lambda's arrow. When an
+// error reaches Pure (assertError, tryEval) its V8 call sites are mapped back
+// through them: a frame whose enclosing function literal is immediately
+// preceded by a function or lambda marker is a Pure frame, located at the
+// nearest call marker before the frame's position. Every other frame
+// (runtime-lib, host code, coder IIFEs) is skipped. The format matches
+// Truffle's PureStackFormatter: `<name> (<sourceId>:<line>c<column>)`.
+// Needs V8 call sites and a host that returns a frame's source text
+// (__hostSourceText); elsewhere the trace is empty.
+// ---------------------------------------------------------------------------
+if (typeof Error.captureStackTrace === "function" && !globalThis.__pureCallSitesInstalled) {
+  globalThis.__pureCallSitesInstalled = true;
+  const previous = Error.prepareStackTrace;
+  Error.prepareStackTrace = function (error, sites) {
+    if (error !== null && typeof error === "object") {
+      try {
+        Object.defineProperty(error, "__callSites", { value: sites, configurable: true, enumerable: false });
+      } catch {
+      }
+    }
+    if (typeof previous === "function") return previous(error, sites);
+    let head;
+    try {
+      head = String(error);
+    } catch {
+      head = "Error";
+    }
+    return head + sites.map((site) => "\n    at " + site).join("");
+  };
+  // Pure call chains run deeper than V8's default 10 frames.
+  if (Error.stackTraceLimit < 100) Error.stackTraceLimit = 100;
+}
+const __markerIndexCache = new Map();
+function __markerIndex(fileName) {
+  const text = typeof globalThis.__hostSourceText === "function" ? globalThis.__hostSourceText(fileName) : void 0;
+  // Keyed by file name but checked against the text: a host may re-evaluate
+  // different code under the same name.
+  const cached = __markerIndexCache.get(fileName);
+  if (cached !== void 0 && cached.text === text) return cached.index;
+  let index = null;
+  if (typeof text === "string" && text.indexOf("/*@") >= 0) {
+    const lineStarts = [0];
+    for (let i = text.indexOf("\n"); i >= 0; i = text.indexOf("\n", i + 1)) lineStarts.push(i + 1);
+    const calls = [];
+    const definitions = new Map();
+    const marker = /\/\*@(?:(fn|lambda) (.+?):(\d+):(\d+)(?: (\S+))?|(\d+):(\d+))\*\//g;
+    for (let m; (m = marker.exec(text)) !== null;) {
+      const end = m.index + m[0].length;
+      if (m[1] !== void 0) definitions.set(end, { kind: m[1], sourceId: m[2], line: m[3], column: m[4], name: m[5] });
+      else calls.push([end, m[6], m[7]]);
+    }
+    index = { lineStarts, calls, definitions };
+  }
+  __markerIndexCache.set(fileName, { text, index });
+  return index;
+}
+function __pureStackFrames(error) {
+  if (error === null || typeof error !== "object") return [];
+  try {
+    void error.stack;
+  } catch {
+    return [];
+  }
+  const sites = error.__callSites;
+  if (!Array.isArray(sites)) return [];
+  const frames = [];
+  for (const site of sites) {
+    if (typeof site.getEnclosingLineNumber !== "function") break;
+    const file = site.getFileName();
+    const index = file ? __markerIndex(file) : null;
+    if (index === null) continue;
+    const offset = (line, column) => index.lineStarts[line - 1] + column - 1;
+    const enclosing = offset(site.getEnclosingLineNumber(), site.getEnclosingColumnNumber());
+    const definition = index.definitions.get(enclosing);
+    if (definition === void 0) continue;
+    const position = offset(site.getLineNumber(), site.getColumnNumber());
+    let lo = 0, hi = index.calls.length - 1, best = -1;
+    while (lo <= hi) {
+      const mid = lo + hi >> 1;
+      if (index.calls[mid][0] <= position) {
+        best = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    const call = best >= 0 && index.calls[best][0] >= enclosing ? index.calls[best] : void 0;
+    const name = definition.kind === "fn" ? definition.name : "lambda";
+    frames.push(name + " (" + definition.sourceId + ":" + (call ? call[1] : definition.line) + "c" + (call ? call[2] : definition.column) + ")");
+  }
+  return frames;
+}
+function __pureStackTrace(error) {
+  const frames = __pureStackFrames(error);
+  return frames.length === 0 ? "" : "\nPure stack trace:" + frames.map((frame) => "\n    at " + frame).join("");
+}
+function __assertEq(expected, actual) {
+  if (__eq(expected, actual)) return true;
+  throw new Error("expected " + __json(expected) + ", got " + __json(actual));
+}
+function __assertSize(coll, n) {
+  const len = Array.isArray(coll) ? coll.length : 1;
+  if (__eq(len, n)) return true;
+  throw new Error("assertSize failed");
+}
 function __compare(a, b) {
   const rank = (x) => {
     if (x === null || x === void 0) return 0;
@@ -619,6 +747,12 @@ function __avgColl(c) {
   return a.reduce((x, y) => Number(x) + Number(y), 0) / a.length;
 }
 function __eq(a, b) {
+  if (a === b) return true;
+  // An AtomicValue compares as the value it wraps (Truffle EqualNode's
+  // normalizeForEquals): a ValueSpecification lifted out of an
+  // expressionSequence equals the literal it holds.
+  a = __unwrapAtomicValue(a);
+  b = __unwrapAtomicValue(b);
   if (a === b) return true;
   const aEmpty = a === void 0 || a === null || Array.isArray(a) && a.length === 0;
   const bEmpty = b === void 0 || b === null || Array.isArray(b) && b.length === 0;
@@ -837,7 +971,10 @@ function __assertError(thunk, expected) {
   try {
     thunk();
   } catch (e) {
-    const msg = String(e && e.message ? e.message : e);
+    let msg = String(e && e.message ? e.message : e);
+    // Truffle and bootstrap match against the message WITH its Pure stack
+    // trace, so cross-engine tests can pin frames; append it the same way.
+    if (msg.indexOf("\nPure stack trace:") < 0) msg += __pureStackTrace(e);
     if (msg.includes(String(expected))) return true;
     throw new Error("assertError: expected " + String(expected) + " in " + msg);
   }
@@ -871,8 +1008,8 @@ function __floatToLeBytes(value) {
   return Array.from(bytes, (b) => BigInt(b));
 }
 // UTF-8 codecs: TextEncoder/TextDecoder when the host provides them (Node,
-// browsers), else a hand-rolled fallback — GraalJS implements ECMAScript only,
-// and TextEncoder/TextDecoder are WHATWG web APIs it doesn't ship. The
+// browsers), else a hand-rolled fallback — a bare ECMAScript host ships neither,
+// since TextEncoder/TextDecoder are WHATWG web APIs, not ECMAScript ones. The
 // fallback assumes well-formed input (Pure strings encode; the JVM writer
 // produces valid UTF-8 to decode), which is all the runtime ever feeds it.
 function __utf8Encode(s) {
@@ -926,7 +1063,7 @@ function __leBytesToFloat(bytes) {
 // registered companion carries `__purePath` so element-flavored operations
 // (`__eq` identity, `__elementToPath`, metadata instanceOf) treat it as the
 // class element; unregistered paths fall back to the `__pureResolve` proxy,
-// whose property reads route through the metadata bridge (PDB-backed hosts).
+// whose property reads route through the metadata globals (PDB-backed hosts).
 const __classRegistry = new Map();
 function __registerClass(path, decl) {
   decl.__purePath = path;
@@ -938,8 +1075,36 @@ function __classRef(path) {
   const d = __classRegistry.get(path);
   return d !== undefined ? d : __pureResolve(path);
 }
+// Qualified-property call dispatched on the receiver's RUNTIME class: walk from
+// its class up the generalizations (breadth-first) to the first registered
+// class declaring `name` at this arity — the eval arrow's `.length` counts the
+// receiver plus supplied args — and fall back to the static owner.
+function __qp(ownerPath, name, recv, ...rest) {
+  const arity = rest.length + 1;
+  const declared = (qps) => __asArr(qps).find((q) => __eq(q.name, name) && q.eval.length === arity);
+  const pathOf = (t) => t && (t.__purePath !== void 0 ? t.__purePath : t.path);
+  const cgt = recv !== null && typeof recv === "object" ? __pdo(recv).classifierGenericType : undefined;
+  const queue = [pathOf(cgt && cgt.type)].filter((p) => typeof p === "string");
+  const seen = new Set();
+  while (queue.length) {
+    const path = queue.shift();
+    if (seen.has(path)) continue;
+    seen.add(path);
+    const decl = __classRegistry.get(path);
+    const q = decl && declared(decl.qualifiedProperties);
+    if (q) return q.eval(recv, ...rest);
+    if (path === ownerPath || path === "meta::pure::metamodel::type::Any") continue;
+    for (const g of __asArr(__pureResolve(path).generalizations)) {
+      const p = pathOf(g && g.general && g.general.type);
+      if (typeof p === "string") queue.push(p);
+    }
+  }
+  const fallback = ownerPath ? declared(__classRef(ownerPath).qualifiedProperties) : void 0;
+  if (!fallback) throw new Error("qualified property " + name + "/" + (arity - 1) + " not found on " + ownerPath);
+  return fallback.eval(recv, ...rest);
+}
 // Reconstruct a GenericTypeAndMultiplicityHolder constant (`@X` literal)
-// against the metadata bridge: classifier info uses __pureResolve POINTER
+// against the metadata globals: classifier info uses __pureResolve POINTER
 // IDENTITIES (the holder class element, the UserDefinedGenericType classifier
 // singleton), and the cyclic self-reference (holder.genericType -> its own
 // classifierGenericType) is closed imperatively — an object-literal expression
@@ -951,13 +1116,32 @@ function __classRef(path) {
 // __hostCompileSource (execution host); environments without one throw.
 function __compileSource(file, dependencies) {
   if (typeof globalThis.__hostCompileSource === "function") {
-    // Bridge hosts (GraalJS) return a {__purePath} STUB addressing the
-    // result graph — rewrap it into a live __pureResolve proxy so property
-    // reads route through the metadata bridge. In-process hosts (standalone
-    // JS) return rich objects (>2 keys), which rewrap passes through.
+    // In-process hosts return rich objects (>2 keys), which __rewrapStubs
+    // passes through. The stub-rewrap path remains for any host that returns a
+    // bare {__purePath} addressing the result graph instead.
     return __rewrapStubs(globalThis.__hostCompileSource(file, dependencies));
   }
   throw new Error("compileSource: no host implementation in this environment");
+}
+// meta::external::language::javascript::{compile,execute,drainCompiledSources}
+// — evaluating JavaScript is a HOST capability, so runtime-lib only routes. The
+// standalone JS platform installs these from src/execution/js-natives.js; an
+// environment without them throws rather than silently degrading.
+function __jsCompile(source) {
+  if (typeof globalThis.__hostJsCompile === "function") return globalThis.__hostJsCompile(source);
+  throw new Error("javascript::compile: no host implementation in this environment");
+}
+function __jsExecute(ctx, fnName, args, pureReturnType, pureMultiplicity, graph) {
+  if (typeof globalThis.__hostJsExecute === "function") {
+    return __rewrapStubs(globalThis.__hostJsExecute(ctx, fnName, args, pureReturnType, pureMultiplicity, graph));
+  }
+  throw new Error("javascript::execute: no host implementation in this environment");
+}
+function __jsDrainCompiledSources() {
+  if (typeof globalThis.__hostJsDrainCompiledSources === "function") {
+    return globalThis.__hostJsDrainCompiledSources();
+  }
+  throw new Error("javascript::drainCompiledSources: no host implementation in this environment");
 }
 function __gtmHolder(clsPath, typeArgTypes) {
   const udgCgt = __pureResolve("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType");
@@ -1007,8 +1191,10 @@ function __tryEval(thunk) {
     };
   } catch (e) {
     const msg = e && e.message !== void 0 ? String(e.message) : String(e);
-    let frames = [];
-    const rawStack = e && typeof e.stack === "string" ? e.stack : void 0;
+    // Pure frames when the generated code carries position markers (Truffle's
+    // PureStackFormatter.frames); otherwise the host's JavaScript frames.
+    let frames = __pureStackFrames(e);
+    const rawStack = frames.length === 0 && e && typeof e.stack === "string" ? e.stack : void 0;
     if (rawStack) {
       const lines = rawStack.split("\n").map((s) => s.trim()).filter((s) => s.length > 0);
       frames = lines.filter((s) => s.startsWith("at ") || s.includes("@"));
@@ -1129,6 +1315,10 @@ function __matchType(v, typePath, lower, upper) {
         // it would fall through to the permissive `return true` below and match
         // e.g. LambdaFunction (a `3.14d` literal compiled as a Lambda).
         if (e instanceof Big) return false;
+        // Same for a Date: a primitive, matched only by the date cases above.
+        // Without this a captured `%2014-02-01` matched the compiler's protocol
+        // LambdaFunction arm and recompiled as an empty lambda.
+        if (e instanceof Date) return false;
         if (typeof e !== "object" && typeof e !== "function") return false;
         // Path-addressed values ask the metadata registry; dynamically
         // compiled elements carry a __purePath the (boot-immutable) registry
@@ -1180,6 +1370,16 @@ function __mapPut(m, k, v) {
 function __mapRemoveAll(m, keys) {
   const ks = __asArr(keys);
   return { __mapEntries: __mapEntriesOf(m).filter((x) => !ks.some((k) => k === x[0])) };
+}
+// meta::pure::functions::collection::removeAll(set, other): `set` minus every
+// element __eq to one in `other` (so <<equality.Key>> classes compare by key).
+// A map receiver keeps map semantics.
+function __removeAll(set, other) {
+  if (set !== null && typeof set === "object" && !Array.isArray(set) && set.__mapEntries !== undefined) {
+    return __mapRemoveAll(set, other);
+  }
+  const os = __asArr(other);
+  return __asArr(set).filter((x) => !os.some((o) => __eq(x, o)));
 }
 function __mapKeyValues(m) {
   return __mapEntriesOf(m).map(([k, v]) => ({ first: k, second: v }));
@@ -1298,7 +1498,11 @@ function __filter(coll, fn) {
   return __asArr(coll).filter(fn);
 }
 function __map(coll, fn) {
-  return __asArr(coll).flatMap((x) => __asArr(fn(x)));
+  // `fn` is usually a translated arrow, but Pure also maps with a function
+  // VALUE — a Property (`$people->map($lastNameProperty)`) or a metadata
+  // function proxy — which __eval knows how to apply.
+  const f = typeof fn === "function" ? fn : (x) => __eval(fn, x);
+  return __asArr(coll).flatMap((x) => __asArr(f(x)));
 }
 function __at(coll, i) {
   const arr = __asArr(coll);
@@ -1437,8 +1641,14 @@ function __sort(coll, key, comp) {
 function __orElse(v, def) {
   return __isEmpty(v) ? def : v;
 }
-function __toOne(v) {
-  return __asArr(v)[0];
+function __toOne(v, message) {
+  const arr = __asArr(v);
+  // Message pinned by Truffle's ToOneNode and bootstrap's CollectionNatives;
+  // toOne(values, message) substitutes the caller's message.
+  if (arr.length !== 1) {
+    throw new Error(message !== undefined ? String(message) : "toOne expected exactly 1 element, got " + arr.length);
+  }
+  return arr[0];
 }
 function __eval(fn, ...args) {
   if (typeof fn === "function") return fn(...args);
@@ -1455,6 +1665,13 @@ function __eval(fn, ...args) {
     }
     if (typeof fn.__purePath === "string") {
       return __rewrapStubs(__metadataInvoke(fn.__purePath, args));
+    }
+    // A function definition built at run time from an AST (`^LambdaFunction(
+    // expressionSequence = ...)`) has no translated body to call. Running it
+    // means translating it now — a HOST capability (it needs the translator),
+    // so runtime-lib only routes; hosts without one fall through to the throw.
+    if (fn.expressionSequence !== undefined && typeof globalThis.__hostEvaluateFunctionDefinition === "function") {
+      return globalThis.__hostEvaluateFunctionDefinition(fn, args);
     }
   }
   throw new TypeError("__eval: not callable: " + (fn === null ? "null" : typeof fn));
@@ -1682,11 +1899,11 @@ function __adjust(d, n, units) {
       break;
   }
   f.gran = __maxGranularity(f.gran, min.gran);
-  const lit = __renderLit(f, f.gran);
-  const out = /* @__PURE__ */ new Date(NaN);
-  out.__lit = lit;
-  out.__fmt = lit;
-  return out;
+  // A real Date whenever the result fits JS Date's range, so getters and date
+  // arithmetic (dateDiff) read its value. __pdate keeps the literal (__lit /
+  // __fmt) and falls back to an invalid-Date carrier only for years beyond
+  // ±275760, which only the literal can represent.
+  return __pdate(__renderLit(f, f.gran));
 }
 function __dateDiff(a, b, units) {
   const ms = b.getTime() - a.getTime();
@@ -1838,7 +2055,9 @@ function __instanceOf(v, t) {
   const tPath = t && typeof t === "object" && t.path || void 0;
   if (tPath === "meta::pure::metamodel::type::Any") return v !== void 0 && v !== null;
   if (v === void 0 || v === null) return false;
-  if (typeof v === "object" && v.__purePath && tPath) {
+  // Translated closures carry their Pure address too (`__lambda(arrow, path)`,
+  // e.g. a captured lambda value); their classifier comes from that address.
+  if ((typeof v === "object" || typeof v === "function") && v.__purePath && tPath) {
     // Registry miss falls through to the value's own classifier — dynamically
     // compiled elements carry a __purePath the boot-immutable registry
     // doesn't know; they are self-describing (see __matchType).
@@ -1940,34 +2159,67 @@ function __toCanonicalCgt(gt) {
   if ((Array.isArray(tas) && tas.length > 0) || (Array.isArray(mas) && mas.length > 0)) return gt;
   return __pureResolve("meta::pure::metamodel::type::generics::optimization::GenericType_" + tp.split("::").join("_"));
 }
-function __elementToPath(v) {
-  if (typeof v === "string") return v === "::" ? "" : v;
+// elementToPath(element[, separator]) — Truffle ElementToPathNode parity: the
+// root's path is '', and a separator other than '::' replaces every '::'.
+function __elementToPath(v, separator) {
+  const path = __pathOf(v);
+  if (typeof path !== "string") return path;
+  if (path === "" || path === "::") return "";
+  return separator === undefined || separator === "::" ? path : path.split("::").join(String(separator));
+}
+// elementPath(element) — Truffle ElementPathNode parity: the ancestry chain,
+// outermost first. The canonical root ('::' / '') is omitted; an ephemeral
+// parentless package (`^Package(name='Other')`) is a real entry and is kept.
+function __elementPath(v) {
+  const out = [];
+  for (let pe = v; pe !== undefined && pe !== null && typeof pe === "object"; pe = __pdo(pe).package) {
+    const name = __pdo(pe).name;
+    const path = __pathOf(pe);
+    if (typeof name === "string" && name !== "" && path !== "" && path !== "::") out.push(pe);
+  }
+  return out.reverse();
+}
+// __purePath is the element's path only for canonical (registered) elements.
+// Address-scheme stubs — dynamic compileSource results (`__dyn::<n>$elements/0`),
+// injected graphs (`__local::…`), and sub-element addresses (`…$properties/0`) —
+// carry an ADDRESS there instead.
+function __canonicalPurePath(v) {
+  const p = v.__purePath;
+  return typeof p === "string" && p.indexOf("$") < 0 && !p.startsWith("__dyn::") && !p.startsWith("__local::")
+    ? p : undefined;
+}
+// The raw path of an element ('::' for the canonical root), before
+// elementToPath's normalization.
+function __pathOf(v) {
+  if (typeof v === "string") return v;
   if (v && typeof v === "object") {
-    // The Root package's canonical address is '::'; as a PATH it is the empty
-    // prefix (children are top-level, e.g. 'cs', not '::::cs').
-    if (typeof v.path === "string") return v.path === "::" ? "" : v.path;
-    // __purePath is the element's path only for canonical (registered)
-    // elements. Address-scheme stubs — dynamic compileSource results
-    // (`__dyn::<n>$elements/0`), injected graphs (`__local::…`), and
-    // sub-element addresses (`…$properties/0`) — carry an ADDRESS there;
-    // fall through and derive the real path from package::name instead.
-    if (typeof v.__purePath === "string"
-        && v.__purePath.indexOf("$") < 0
-        && !v.__purePath.startsWith("__dyn::")
-        && !v.__purePath.startsWith("__local::")) return v.__purePath === "::" ? "" : v.__purePath;
+    // Pointers carry their canonical path in `path`; registered elements in
+    // __purePath.
+    if (typeof v.path === "string") return v.path;
+    const canonical = __canonicalPurePath(v);
+    if (canonical !== undefined) return canonical;
     // Self-describing source element (parsed/constructed, no stored path):
     // derive the path from package::name. `name` is already the path's last
-    // segment (the signature-mangled name for functions), and the root package
-    // ('Root') contributes nothing.
+    // segment (the signature-mangled name for functions).
     if (typeof v.name === "string") {
-      // Root package: named 'Root' in the M3 graph, '::' on synthetic roots
-      // (compiler-built package chains, the metadata bridge's synthRoot).
-      if (v.name === "Root" || v.name === "::") return "";
-      const pkg = (v.package === undefined || v.package === null) ? "" : __elementToPath(v.package);
-      return pkg ? pkg + "::" + v.name : v.name;
+      if (v.name === "::") return "::";
+      const parent = v.package;
+      if (parent === undefined || parent === null) return v.name;
+      // A parentless package is a root: it names itself but adds nothing to
+      // its children's paths — `^Profile(name='X', package=^Package(name='p',
+      // package=^Package(name='Other')))` is 'p::X' whatever the root is called.
+      const parentPath = __isRootPackage(parent) ? "" : __pathOf(parent);
+      return parentPath && parentPath !== "::" ? parentPath + "::" + v.name : v.name;
     }
   }
   return v;
+}
+function __isRootPackage(p) {
+  if (p === null || typeof p !== "object") return false;
+  if (typeof p.path === "string") return p.path === "" || p.path === "::";
+  const canonical = __canonicalPurePath(p);
+  if (canonical !== undefined) return canonical === "" || canonical === "::";
+  return p.package === undefined || p.package === null;
 }
 // Coerce a value into a to-many (array) representation. Pure auto-wraps a [1]
 // value assigned to a [*] field; the translator emits __toMany around to-many
@@ -2164,10 +2416,42 @@ function __ctorScope(build) {
   try {
     const v = build();
     __tagEpoch(v, __currentEpoch);
-    return v;
+    return __guardPointer(v);
   } finally {
     __epochDepth--;
   }
+}
+// Pointer instances (`^ClassPointer(path = ...)`) are opaque until resolved:
+// only the pointer-native slots are readable. Reading any property the pointer
+// inherits from its element class throws, exactly as Truffle's PureDynamicObject
+// (isPointerNativeSlot) and bootstrap's PointerAccessGuard do. Only declared
+// Pure property names are guarded, so runtime-internal reads pass through.
+const __POINTER_NATIVE_SLOTS = new Set(["path", "element", "classifierGenericType", "generalizations"]);
+const __POINTER_GENERIC_TYPE = "GenericType_meta_pure_metamodel_pointer_";
+function __pointerClassOf(v) {
+  if (v === null || typeof v !== "object" || Array.isArray(v)) return undefined;
+  const cgt = v.classifierGenericType;
+  if (cgt === undefined || cgt === null) return undefined;
+  if (typeof cgt.__purePath === "string") {
+    const i = cgt.__purePath.indexOf(__POINTER_GENERIC_TYPE);
+    return i < 0 ? undefined : "meta::pure::metamodel::pointer::" + cgt.__purePath.slice(i + __POINTER_GENERIC_TYPE.length);
+  }
+  const tp = cgt.type && cgt.type.__purePath;
+  return typeof tp === "string" && tp.startsWith("meta::pure::metamodel::pointer::") ? tp : undefined;
+}
+function __guardPointer(v) {
+  const cls = __pointerClassOf(v);
+  if (cls === undefined) return v;
+  const guarded = __classPropertyNames(cls);
+  return new Proxy(v, {
+    get(target, key, receiver) {
+      if (typeof key === "string" && guarded.has(key) && !__POINTER_NATIVE_SLOTS.has(key)) {
+        throw new Error("Unresolved pointer access: " + cls + "." + key
+          + " — pointer reached a non-pointer-native slot read. compile() should resolve every pointer via resolveAndReturnGraph before returning; check whether a producer skipped the boundary");
+      }
+      return Reflect.get(target, key, receiver);
+    },
+  });
 }
 function __tagEpoch(obj, epoch) {
   if (obj === null || typeof obj !== "object" || Array.isArray(obj)) return;
@@ -2232,7 +2516,7 @@ function __pureResolve(address) {
                 && !address.startsWith("__local::")) ? address : void 0;
       }
       // JS-internal markers (__mapEntries, __isDec, __equalityKeys, …) are never
-      // Pure properties; never route them through the metadata bridge.
+      // Pure properties; never route them through the metadata globals.
       if (prop.startsWith("__")) return void 0;
       if (__reservedProxyProps.has(prop)) return void 0;
       try {
@@ -2298,7 +2582,54 @@ function __spreadEager(src) {
   for (const k of Object.keys(out)) {
     if (Array.isArray(out[k])) out[k] = out[k].slice();
   }
+  if ("__purePath" in src) __carryClassProperties(src, out);
   return out;
+}
+// A metadata-backed element exposes its properties through reads, not own keys,
+// so a spread keeps only {__purePath, path}: `^$fn()` lost name, package,
+// expressionSequence, ... Carry every property the element's class declares
+// (Pure copy semantics) as a LAZY getter — copying a package must not eagerly
+// read its whole subtree. The first read (or a write, e.g. a copy override)
+// replaces the getter with a plain data property.
+function __carryClassProperties(src, out) {
+  const cgt = out.classifierGenericType;
+  const t = cgt && cgt.type;
+  const classPath = t && (t.__purePath !== void 0 ? t.__purePath : t.path);
+  if (typeof classPath !== "string") return;
+  const settle = (name, v) => Object.defineProperty(out, name, { value: v, writable: true, enumerable: true, configurable: true });
+  for (const name of __classPropertyNames(classPath)) {
+    if (name in out) continue;
+    Object.defineProperty(out, name, {
+      enumerable: true, configurable: true,
+      get() { const v = src[name]; settle(name, Array.isArray(v) ? v.slice() : v); return out[name]; },
+      set(v) { settle(name, v); },
+    });
+  }
+}
+// Every property name declared on `classPath` or inherited through its
+// generalizations (including association-contributed ones), memoized per class.
+const __classPropertyNamesCache = new Map();
+function __classPropertyNames(classPath) {
+  const cached = __classPropertyNamesCache.get(classPath);
+  if (cached !== undefined) return cached;
+  const names = new Set();
+  const seen = new Set();
+  const queue = [classPath];
+  while (queue.length) {
+    const path = queue.shift();
+    if (typeof path !== "string" || seen.has(path)) continue;
+    seen.add(path);
+    const cls = __pureResolve(path);
+    for (const p of [...__asArr(cls.properties), ...__asArr(cls.propertiesFromAssociations)]) {
+      if (p && typeof p.name === "string") names.add(p.name);
+    }
+    for (const g of __asArr(cls.generalizations)) {
+      const gt = g && g.general && g.general.type;
+      queue.push(gt && (gt.__purePath !== void 0 ? gt.__purePath : gt.path));
+    }
+  }
+  __classPropertyNamesCache.set(classPath, names);
+  return names;
 }
 function __checkCopyAssocImmutability(base, className, propName) {
   if (__epochDepth !== 1) return;
@@ -2354,7 +2685,7 @@ function __genericType(v) {
   // elements' types (`[1,2,3]->type()` -> Integer; mixed Integer/String ->
   // Any; CO_Address+CO_Location -> their shared CO_GeographicEntity).
   // Candidate starts at the first element's type and climbs one
-  // generalization step (through the metadata bridge) until every element's
+  // generalization step (through the metadata globals) until every element's
   // type is a subtype of it.
   if (Array.isArray(v)) {
     if (v.length === 0) return { type: __pureResolve("meta::pure::metamodel::type::Nil") };
@@ -2438,6 +2769,9 @@ function __formatPureDate(d) {
     if (s.endsWith(".000")) s = s.slice(0, -4);
     return s;
   }
+  // An invalid-Date CARRIER (__adjust's result) holds its value only in the
+  // literal, rendered canonical and in UTC; its getters are all NaN.
+  if (Number.isNaN(d.getTime())) return lit.replace(/([zZ]|[+-]\d{2}:?\d{2})$/, "");
   const Y = String(d.getUTCFullYear()).padStart(4, "0");
   const Mo = p2(d.getUTCMonth() + 1), Da = p2(d.getUTCDate());
   const tIdx = lit.indexOf("T");
@@ -2822,13 +3156,23 @@ function __pureFormat(v, depth) {
   }
   return String(v);
 }
+// meta::pure::functions::io::withSilencedPrint — suppress the WRITE only. The
+// native's contract is that `println(x)` still RETURNS 'x\n'; just nothing
+// reaches stdout. Nesting is counted so an inner silence cannot un-silence an
+// outer one, and the counter is restored on throw.
+let __printSilenceDepth = 0;
+function __withSilencedPrint(body) {
+  __printSilenceDepth++;
+  try { return typeof body === "function" ? body() : body; }
+  finally { __printSilenceDepth--; }
+}
 function __print(v) {
   const s = __pureFormat(v, 0);
-  console.log(s);
+  if (__printSilenceDepth === 0) console.log(s);
   return s;
 }
 function __println(v) {
   const s = __pureFormat(v, 0) + "\n";
-  console.log(s);
+  if (__printSilenceDepth === 0) console.log(s);
   return s;
 }

@@ -15,7 +15,7 @@
 // JavaScript runtime for Legend Pure Next — runs Pure with no JVM / GraalVM.
 //
 // Organized by concern:
-//   - pdb/      : the FlatBuffer PDB reader + metadata bridge — the shared
+//   - pdb/      : the FlatBuffer PDB reader + metadata globals — the shared
 //                 metadata facility both hosts below read the type/function
 //                 graph through (backs __metadataRead / __metadataSubtypeOf / …).
 //   - grammar/  : the parser. `loadParser()` (grammar/parser.js) loads the
@@ -23,7 +23,7 @@
 //                 parses Pure source; its cast checks resolve via the PDB
 //                 (core.pdb). Corpus runner: grammar/tests/.
 //   - compiler/ : the compiler. `loadCompiler()` (compiler/host.js) installs the
-//                 metadata bridge over the wider PDB set and the generated
+//                 metadata globals over the wider PDB set and the generated
 //                 compiler JS, so compilation runs standalone too. Corpus
 //                 runner: compiler/tests/.
 //

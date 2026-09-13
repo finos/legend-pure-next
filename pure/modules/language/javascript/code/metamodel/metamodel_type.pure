@@ -50,4 +50,8 @@ import meta::external::language::javascript::metamodel::*;
 
 Class meta::external::language::javascript::metamodel::Node
 {
+   // The Pure source position this node was translated from, when known. The
+   // serializer turns it into a position marker comment (see serialization.pure)
+   // from which the runtime renders Pure stack traces.
+   sourceInformation : meta::pure::metamodel::SourceInformation[0..1];
 }

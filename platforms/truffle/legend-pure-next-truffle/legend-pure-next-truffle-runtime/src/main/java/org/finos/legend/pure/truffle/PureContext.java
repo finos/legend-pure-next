@@ -172,18 +172,6 @@ public final class PureContext
         this.env = env;
     }
 
-    /**
-     * The Truffle context this PureContext lives in, for host code that must
-     * re-enter it before running Pure (e.g. the GraalJS extension's callback
-     * thread, where the innermost entered context is the JS one and the
-     * static {@code PureLanguage.get(...)} lookups return null). Null when
-     * constructed without an Env (legacy test harnesses).
-     */
-    public com.oracle.truffle.api.TruffleContext truffleContext()
-    {
-        return env == null ? null : env.getContext();
-    }
-
     void initialize(TruffleMetadataAccess resolver, NativeNodeRegistry registry,
                     java.util.Map<String, org.finos.legend.pure.next.parser.GrammarExtension> grammars)
     {

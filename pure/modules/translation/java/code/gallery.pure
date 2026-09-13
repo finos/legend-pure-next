@@ -47,7 +47,7 @@ import meta::pure::translation::shared::gallery::*;
 // per-test cards with the data attributes the chrome consumes.
 //
 // Entry point: `renderGallery(rootPackagePath)`. The `gallery` Justfile
-// recipe pipes stdout to `shared/java-translation-gallery.html`.
+// recipe pipes stdout to `pure/modules/translation/java/build/java-translation-gallery.html`.
 // ============================================================================
 
 function <<test.TestDependency>> meta::external::language::java::translation::gallery::renderGallery(rootPackagePath: String[1]): String[1]

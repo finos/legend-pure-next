@@ -15,13 +15,13 @@
 // The compileSource native's host implementation, shared by every JS host
 // (Node execution host, browser page). Host-agnostic: it only touches
 // globalThis (the translated compiler/translator globals and the metadata
-// bridge) plus the two injected capabilities — the registry (for dependency
+// globals) plus the two injected capabilities — the registry (for dependency
 // validation) and the host's evalJs (Node uses vm.runInThisContext, the
 // browser indirect eval).
 //
 // runtime-lib's __compileSource routes here: parse happens at the call site
 // (the native takes an already-parsed PureFile), we compile with the
-// TRANSLATED compiler (metadata reads flow through the bridge to the
+// TRANSLATED compiler (metadata reads flow through those globals to the
 // boot-registered modules), translate each compiled function in-process,
 // eval it, and return the compile result's elements as SELF-CONTAINED
 // VALUES — nothing is registered; the module registry stays immutable after
@@ -43,13 +43,49 @@ const TRANSLATE_ELEMENT = "meta$external$language$javascript$translation$pdb$tra
  *
  * Returns the emitted `{path, source}` pairs — hosts that want to SHOW the
  * generated JavaScript (the browser page) read them from here.
+ *
+ * ── TWO COMPILE MODES ────────────────────────────────────────────────────────
+ * Compiling happens in two places and they differ in ONE respect: whether the
+ * compiled elements join the graph.
+ *
+ *   RUNTIME (this function) — `compileSource` called FROM Pure code. Isolated:
+ *     translate and eval so the code is invocable, but leave the graph alone.
+ *     PCT pins it:
+ *     meta::pure::functions::meta::tests::compileSource::testCompileSourceDoesNotMutatePlatformGraph
+ *     asserts pathToElement on a compiled path still fails afterwards.
+ *
+ *   PLATFORM (translateProgramElements below) — a host compiling the program
+ *     it is about to run, e.g. the editor page. Here the compiled elements ARE
+ *     the graph, so they are indexed into the registry's in-memory module and
+ *     reflection over them resolves (`x::Test.properties.name`).
+ *
+ * Keep them as two named entry points: the difference is a contract, not a flag
+ * a caller should have to remember to pass.
  */
 export function translateCompiledElements(elements, evalJs, sourceId = "dynamic") {
+    return translateElements(elements, evalJs, sourceId, null);
+}
+
+/**
+ * PLATFORM mode: translate, eval, AND index each element into `memModule` (the
+ * registry's in-memory module) so just-compiled elements are addressable by
+ * reflection, not merely invocable as functions. Paths are already computed
+ * here for __purePath, so indexing costs a Map.set per element.
+ *
+ * Only for a host whose compile IS the program. Never from the compileSource
+ * native — see the contract note above.
+ */
+export function translateProgramElements(elements, evalJs, sourceId = "program", memModule = null) {
+    return translateElements(elements, evalJs, sourceId, memModule);
+}
+
+function translateElements(elements, evalJs, sourceId, memModule) {
     const emitted = [];
     for (const el of elements) {
         if (!el || typeof el !== "object") continue;
         const src = globalThis[TRANSLATE_ELEMENT](el);
         el.__purePath = globalThis.__elementToPath(el);
+        memModule?.addElement?.(el.__purePath, el);
         if (typeof src === "string" && src.trim() && !/^\/\/ .* failed/.test(src.trim())) {
             evalJs(src, `compileSource:${sourceId}.js`);
             emitted.push({ path: el.__purePath, source: src });
@@ -91,6 +127,7 @@ export function installHostCompileSource(registry, evalJs) {
         const errors = asList(result.errors).map(String);
         if (errors.length) return mkResult([], errors);
         const elements = asList(result.elements);
+        // RUNTIME mode — isolated by contract (see translateCompiledElements).
         translateCompiledElements(elements, evalJs, (file && file.sourceId) || "dynamic");
         return mkResult(elements, []);
     };
