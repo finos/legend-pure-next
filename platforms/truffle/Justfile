@@ -13,7 +13,7 @@
 #   `build` → `(_mvn "skip-tests")` (mvn install -DskipTests) — fast, no Java tests
 #   `test-java` → `(_mvn "with-tests")` (mvn install)         — surefire runs unit tests inline
 # Maven runs once on the truffle parent pom; the reactor walks
-# parent → platform → runtime → ide → extension → extension-java
+# parent → runtime → ide → extension-java
 # in a single launch.
 
 set quiet := true
@@ -31,8 +31,7 @@ truffle_root      := source_directory()
 repo_root         := truffle_root / ".." / ".."
 truffle           := truffle_root / "legend-pure-next-truffle"
 truffle_runtime   := truffle / "legend-pure-next-truffle-runtime"
-truffle_extension := truffle / "legend-pure-next-truffle-extension"
-truffle_ext_java  := truffle_extension / "legend-pure-next-truffle-extension-java"
+truffle_ext_java  := truffle / "legend-pure-next-truffle-extension-java"
 spec              := repo_root / "pure" / "specification"
 compiler_src      := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 truffle_out       := truffle_root / "build"
@@ -212,8 +211,7 @@ clean:
 #   parent (legend-pure-next-truffle)
 #         → runtime
 #     → ide
-#     → extension (legend-pure-next-truffle-extension)
-#         → extension-java
+#     → extension-java (legend-pure-next-truffle-extension-java)
 # Maven derives the build order from compile deps (extension-java depends
 # on runtime).
 _mvn mode: _depCheck_pdbs _depCheck_graalvm

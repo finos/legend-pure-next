@@ -20,7 +20,7 @@
 
     <parent>
         <groupId>org.finos.legend.pure</groupId>
-        <artifactId>legend-pure-next-truffle-extension</artifactId>
+        <artifactId>legend-pure-next-truffle</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 

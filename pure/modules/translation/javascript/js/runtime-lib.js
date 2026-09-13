@@ -1899,11 +1899,11 @@ function __adjust(d, n, units) {
       break;
   }
   f.gran = __maxGranularity(f.gran, min.gran);
-  const lit = __renderLit(f, f.gran);
-  const out = /* @__PURE__ */ new Date(NaN);
-  out.__lit = lit;
-  out.__fmt = lit;
-  return out;
+  // A real Date whenever the result fits JS Date's range, so getters and date
+  // arithmetic (dateDiff) read its value. __pdate keeps the literal (__lit /
+  // __fmt) and falls back to an invalid-Date carrier only for years beyond
+  // ±275760, which only the literal can represent.
+  return __pdate(__renderLit(f, f.gran));
 }
 function __dateDiff(a, b, units) {
   const ms = b.getTime() - a.getTime();
@@ -2769,6 +2769,9 @@ function __formatPureDate(d) {
     if (s.endsWith(".000")) s = s.slice(0, -4);
     return s;
   }
+  // An invalid-Date CARRIER (__adjust's result) holds its value only in the
+  // literal, rendered canonical and in UTC; its getters are all NaN.
+  if (Number.isNaN(d.getTime())) return lit.replace(/([zZ]|[+-]\d{2}:?\d{2})$/, "");
   const Y = String(d.getUTCFullYear()).padStart(4, "0");
   const Mo = p2(d.getUTCMonth() + 1), Da = p2(d.getUTCDate());
   const tIdx = lit.indexOf("T");
