@@ -59,6 +59,7 @@ function meta::pure::translation::shared::gallery::renderGalleryShell(
     '<body>' +
         '<aside id="sidebar">' +
             '<h1>' + $title + '</h1>' +
+            '<div class="generated">Generated <time datetime="' + $generatedAt + '">' + $generatedAt + '</time> UTC</div>' +
             '<div id="summary" class="summary">Loading...</div>' +
             '<input id="search" type="text" placeholder="Filter tests..." autocomplete="off">' +
             '<div id="tree" class="tree"></div>' +
@@ -67,7 +68,7 @@ function meta::pure::translation::shared::gallery::renderGalleryShell(
             '<header>' +
                 '<div class="crumb" id="crumb">All tests</div>' +
                 '<p class="subtitle">' + $total->toString() + ' &lt;&lt;PCT.test&gt;&gt; tests from <code>' + $rootPath +
-                    '</code>. Auto-generated from <code>' + $galleryFilePath + '</code> on <time datetime="' + $generatedAt + '">' + $generatedAt + '</time> (UTC).</p>' +
+                    '</code>. Auto-generated from <code>' + $galleryFilePath + '</code>.</p>' +
             '</header>' +
             '<div id="cards">' + $sectionsHtml + '</div>' +
             '<div id="empty" class="empty" hidden>No tests match.</div>' +
@@ -92,6 +93,7 @@ function meta::pure::translation::shared::gallery::renderGalleryShellCss(accentC
         // --- sidebar -----------------------------------------------------
         '#sidebar{width:340px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--bd);overflow-y:auto;padding:16px 12px;}',
         '#sidebar h1{background:linear-gradient(135deg,var(--p),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:16px;margin:0 0 12px 0;letter-spacing:0.3px;}',
+        '.generated{color:var(--fg2);font-size:11px;margin:-6px 0 6px 0;font-family:var(--mono);}',
         '.summary{color:var(--fg2);font-size:12px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--bd);font-family:var(--mono);}',
         '.summary .pass{color:var(--pass);}.summary .fail{color:var(--fail);}',
         '#search{width:100%;padding:6px 8px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;color:var(--fg);font-size:12px;margin-bottom:12px;font-family:inherit;}',

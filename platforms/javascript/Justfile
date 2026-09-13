@@ -122,11 +122,31 @@ test-execution: generate-all
     @{{substep}} 'PCT via in-process translator (pnpm run test:execution)'
     cd {{js_root}} && pnpm run test:execution
 
-# Every platform suite: grammar parsing, compiler conformance, and the PCT corpus.
+# The self-hosted PDB stack's <<test.Test>> suite (meta::pure::compiler::pdb:
+# schema, reader, writer, archive), translated: byte-exact wire format against the
+# JVM reference writer, archives, read-back round trips. Run through bin/pure-js
+# like every other Pure suite; the tests live in compiler-tests.pdb.
+test-pdb: generate-all
+    @{{header}} 'test-pdb'
+    @{{substep}} 'runTests meta::pure::compiler::pdb (JavaScript host)'
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::pure::compiler::pdb"
+
+# Every platform suite: grammar parsing, compiler conformance, the PCT corpus, and
+# the translated PDB stack.
 # The translation module's own suites and gallery run from
 # pure/modules/translation/javascript through bin/pure-js, the same way
 # translation/java runs its through bin/pure-truffle.
-test-all: test test-compiler test-execution
+test-all: test test-compiler test-execution test-pdb
 
 # Serve the browser demo. Served from the repo root so web/index.html's
 # relative paths to the parser bundle resolve; open the printed URL.

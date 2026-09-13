@@ -96,11 +96,15 @@ permissions:
   pages: write
   id-token: write
 
-# Serialise Pages deploys so rapid main pushes don't race. `cancel-in-progress:
-# false` lets an in-flight deploy finish rather than dropping it half-published.
+# One run per workflow + ref: a new push to a branch cancels that branch's
+# in-flight run, while branches (and push vs pull_request refs) never queue
+# behind each other. main is never cancelled, so every main commit gets a full
+# run. The Pages lock lives on `publish-gallery` only — a workflow-wide lock
+# serialised every run on every branch, and a cancelled run's `if: always()`
+# aggregator waiting for a runner would hold it for everyone.
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # Single gate for the whole pipeline. Every top-level job depends on this
@@ -813,6 +817,11 @@ jobs:
     needs: translations
     if: github.repository == 'finos/legend-pure-next' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
+    # Serialise Pages deploys so rapid main pushes don't race. `cancel-in-progress:
+    # false` lets an in-flight deploy finish rather than dropping it half-published.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

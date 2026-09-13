@@ -29,6 +29,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createStore } from "../modules/node-store.js";
 import { installMetadataGlobals } from "../modules/pdb/marshal.js";
+import { createInMemoryModule } from "../modules/memory/module.js";
 import { loadBundle } from "../grammar/parser.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));   // .../platforms/javascript/src/compiler
@@ -57,15 +58,23 @@ let store = null; // the PDB-backed metadata store (also handed to callers)
  *   - printGraph(elements, ctx)-> the ###CompiledGraph string
  *   - store                    -> the metadata store (for e.g. the round-trip harness)
  */
+// The registry's in-memory module, as in the execution host (execution.js) and
+// the browser page: translated globals are its function store, so a function
+// resolved at run time (pathToElement + eval, e.g. the PDB archive writer's
+// generated-dispatch lookup) is invoked through it by __metadataInvoke.
+const runtimeModule = createInMemoryModule("runtime");
+
 export async function loadCompiler() {
     if (!loaded) {
         store = createStore(
             join(SHARED, "specification/m3.fbs"),
             PDBS.map((f) => join(SHARED, f)),
         );
+        store.register(runtimeModule);
         installMetadataGlobals(store);
         loadBundle();
         for (const m of GEN_MODULES) Object.assign(globalThis, await import(join(GEN, m)));
+        runtimeModule.invalidate();
         loaded = true;
     }
     return {

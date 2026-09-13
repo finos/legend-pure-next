@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "build": "echo 'no build \u2014 plain JavaScript' && exit 0",
+    "build": "echo 'no build — plain JavaScript' && exit 0",
     "test": "node src/grammar/tests/grammar-tests.js",
     "test:grammar": "node src/grammar/tests/grammar-tests.js",
     "test:compiler": "node --stack-size=4000 src/compiler/tests/compiler-tests.js",
