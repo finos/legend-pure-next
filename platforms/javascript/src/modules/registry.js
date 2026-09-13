@@ -73,16 +73,21 @@ export function createRegistry(schemaSrc, modules = []) {
     function invalidatePath(path) {
         nodeCache.delete(path);
         supersMemo.delete(path); classifierMemo.delete(path);
-        typesCache = null; fnEntries = null;
+        // typesCache and fnEntries stay: both are PDB-derived. functionIndexEntries
+        // reads only PDB modules' functionIndex, and allTypes admits only elements
+        // with a FlatBuffer classifier (classifierPath of a live node is never a
+        // Type). Resetting them here made every compile inside an adapter call
+        // (the gallery recompiles each captured lambda) re-decode the whole
+        // function index — profiled as 45 s of a 189 s gallery render.
         // subMemo is keyed "sub<:sup"; only entries naming this path can change.
         for (const k of [...subMemo.keys()]) if (k.includes(path)) subMemo.delete(k);
-        for (const l of invalidationListeners) l();
+        for (const l of invalidationListeners) l(path);
     }
 
     function invalidate() {
         nodeCache.clear(); supersMemo.clear(); classifierMemo.clear(); subMemo.clear();
         typesCache = null; fnEntries = null;
-        for (const l of invalidationListeners) l();
+        for (const l of invalidationListeners) l(undefined);
     }
 
     function register(module, opts = {}) {
@@ -269,6 +274,7 @@ export function createRegistry(schemaSrc, modules = []) {
         get schema() { return schema(); },
         get modules() { return [...mods]; },
         register, unregister,
+        /** `l(path)` after one path changed; `l(undefined)` after everything did. */
         addInvalidationListener: (l) => invalidationListeners.push(l),
         has, resolve, resolveAll,
         subtypeOf, instanceOf, classifierPath, directSupers,

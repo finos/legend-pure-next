@@ -675,9 +675,12 @@ jobs:
           retention-days: 1
 
   # Pure -> <target> translation modules. Matrix entries:
-  #   - java              : translator — `just build && just test-all && just gallery`
+  #   - java              : translator — `just build test-all gallery`
   #                          (translator self-tests + runtime suites + render HTML),
   #                          executed by pure-truffle. Downloads its own language pdb.
+  #                          One `just` invocation, not an `&&` chain: just runs a
+  #                          shared dependency (build-tests, _host-generate) once
+  #                          per invocation, so a chain would rebuild it per recipe.
   #   - javascript        : translator — the same recipes, executed by the Node
   #                          host (platforms/javascript/bin/pure-js); `antlr-all`
   #                          first, because that host loads the parser bundles.
@@ -706,12 +709,12 @@ jobs:
           - target: java
             gallery_file: pure/modules/translation/java/build/java-translation-gallery.html
             language_pdb_artifact: language-java-pdb
-            gallery_cmd: just build && just test-all && just gallery
+            gallery_cmd: just build test-all gallery
             platform_suite: ''
           - target: javascript
             gallery_file: pure/modules/translation/javascript/build/javascript-translation-gallery.html
             language_pdb_artifact: language-javascript-pdb
-            gallery_cmd: just build && just antlr-all && just test-all && just gallery
+            gallery_cmd: just build antlr-all test-all gallery
             platform_suite: just javascript::test-all
           - target: truffle
             gallery_file: pure/modules/translation/truffle/build/truffle-translation-gallery.html

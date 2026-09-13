@@ -31,6 +31,11 @@ emit_rt := if pure_rt == "truffle" { pure_truffle } else { pure_bootstrap }
 # Pure package -> standalone JS, emitted into generated/ (gitignored).
 translate_fn := "meta::external::language::javascript::translation::pdb::translatePackageToJs_String_1__String_1_"
 
+# Everything an emission reads: the pdbs the translator runs against and the jars
+# of the runtime running it (bin/pure-truffle puts every build/*.jar on its classpath).
+emit_pdbs := shared / "core.pdb" + " " + shared / "core-tests.pdb" + " " + shared / "compiler.pdb" + " " + shared / "compiler-tests.pdb" + " " + language_javascript_out / "javascript.pdb" + " " + language_javascript_out / "javascript-tests.pdb" + " " + translation_shared_out / "translation-shared.pdb" + " " + translation_shared_out / "translation-shared-tests.pdb" + " " + translation_javascript_out / "javascript-translation.pdb" + " " + translation_javascript_out / "javascript-translation-tests.pdb"
+emit_rt_jars := if pure_rt == "truffle" { repo_root / "platforms" / "truffle" / "build" / "*.jar" } else { repo_root / "bootstrap" / "build" / "pure-bootstrap.jar" }
+
 header := "h(){ s=\"[javascript::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
 substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
 
@@ -58,17 +63,30 @@ _emit PKG OUT:
     test -f {{translation_javascript_out}}/javascript-translation-tests.pdb || (echo "ERROR: missing {{translation_javascript_out}}/javascript-translation-tests.pdb (run \`just modules::build\` first — translatePackageToJs is <<test.TestDependency>> and lives in the -tests pdb)" && exit 1)
     test -f {{language_javascript_out}}/javascript-tests.pdb || (echo "ERROR: missing {{language_javascript_out}}/javascript-tests.pdb (run \`just modules::build\` first — split-built lean pdbs carry refs into their -tests companion)" && exit 1)
     test -f {{translation_shared_out}}/translation-shared-tests.pdb || (echo "ERROR: missing {{translation_shared_out}}/translation-shared-tests.pdb (run \`just modules::build\` first — split-built lean pdbs carry refs into their -tests companion)" && exit 1)
-    mkdir -p {{js_root}}/generated
+    mkdir -p {{js_root}}/generated/.stamps
+    # Skip when the inputs hash to the key of the last successful emission: each
+    # `just` process re-runs its dependencies, and a CI job reaches generate-all
+    # from several of them. The key is written only after the translator succeeds
+    # (pipefail), so a failed or interrupted emission always reruns.
+    # Inputs are zips (pdbs, jars) whose entries carry the build time, so a rebuild
+    # with identical content still changes the file bytes: key each input by its
+    # central-directory listing (length, method, size, CRC-32, name) minus the
+    # date/time columns — content-sensitive, timestamp-blind, and read without
+    # decompressing anything.
+    set -o pipefail; \
+    out={{js_root}}/generated/{{OUT}}; stamp={{js_root}}/generated/.stamps/{{OUT}}.sha256; \
+    key=$({ echo "{{PKG}} {{translate_fn}} {{pure_rt}}"; for f in {{emit_pdbs}} {{emit_rt_jars}}; do echo "$f"; unzip -v "$f" | awk 'NR > 3 && $1 ~ /^[0-9]+$/ && $8 != "" { print $1, $2, $3, $7, $8 }'; done; } | shasum -a 256 | cut -d' ' -f1); \
+    if [ -s "$out" ] && [ "$(cat "$stamp" 2>/dev/null)" = "$key" ]; then \
+        echo "  generated/{{OUT}} up to date (inputs unchanged)"; exit 0; \
+    fi; \
+    rm -f "$stamp"; \
     cd {{repo_root}} && {{emit_rt}} execute \
-        --pdb {{shared}}/core.pdb --pdb {{shared}}/core-tests.pdb \
-        --pdb {{shared}}/compiler.pdb --pdb {{shared}}/compiler-tests.pdb \
-        --pdb {{language_javascript_out}}/javascript.pdb --pdb {{language_javascript_out}}/javascript-tests.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb --pdb {{translation_shared_out}}/translation-shared-tests.pdb \
-        --pdb {{translation_javascript_out}}/javascript-translation.pdb --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        $(printf -- '--pdb %s ' {{emit_pdbs}}) \
         --function "{{translate_fn}}" --args "{{PKG}}" \
         2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
-        | grep -v '^\[graal-tripwire\]' > {{js_root}}/generated/{{OUT}}
-    @echo "  wrote generated/{{OUT}} ($(wc -c < {{js_root}}/generated/{{OUT}} | tr -d ' ') bytes)"
+        | grep -v '^\[graal-tripwire\]' > "$out" \
+    && echo "$key" > "$stamp" \
+    && echo "  wrote generated/{{OUT}} ($(wc -c < "$out" | tr -d ' ') bytes)"
 
 # Generate the compiler.
 generate: (_emit "meta::pure::compiler" "compiler.js")

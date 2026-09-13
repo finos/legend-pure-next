@@ -365,18 +365,43 @@ export function installMetadataGlobals(store, opts = {}) {
     // Read a property off a stored element; throws "unknown element" for
     // non-stored addresses (drives the optimization-GenericType synthesis).
     // Metadata is immutable while the module list is stable, so cache
-    // (address, prop) -> marshalled value — the same read recurs heavily
+    // address -> (prop -> marshalled value) — the same read recurs heavily
     // (e.g. Any.generalizations). Registering/unregistering a module (e.g.
-    // layering a freshly written archive for a round-trip) flushes it.
+    // layering a freshly written archive for a round-trip) flushes it all; one
+    // live element coming or going (javascript::execute's call-scoped graph)
+    // evicts only the reads that depend on it: its own address and its
+    // `<path>$lambda/<n>` sub-addresses, which resolve through that element.
     const readCache = new Map();
-    if (store.addInvalidationListener) store.addInvalidationListener(() => readCache.clear());
+    const lambdaAddresses = new Map(); // element path -> its cached `$lambda/` addresses
+    const elementOf = (address) => {
+        const i = address.indexOf(LAMBDA_SEP);
+        return i < 0 ? address : address.slice(0, i);
+    };
+    const evictReads = (path) => {
+        if (path === undefined) { readCache.clear(); lambdaAddresses.clear(); return; }
+        readCache.delete(path);
+        for (const a of lambdaAddresses.get(path) ?? []) readCache.delete(a);
+        lambdaAddresses.delete(path);
+    };
+    if (store.addInvalidationListener) store.addInvalidationListener(evictReads);
     globalThis.__metadataRead = (address, prop) => {
-        const key = address + " " + prop;
-        const hit = readCache.get(key);
-        if (hit !== undefined || readCache.has(key)) return hit;
+        let props = readCache.get(address);
+        if (props !== undefined) {
+            const hit = props.get(prop);
+            if (hit !== undefined || props.has(prop)) return hit;
+        }
         rec({ fn: "read", address, prop });
         const v = readProp(store, address, prop);
-        readCache.set(key, v);
+        if (props === undefined) {
+            readCache.set(address, props = new Map());
+            const element = elementOf(address);
+            if (element !== address) {
+                let set = lambdaAddresses.get(element);
+                if (set === undefined) lambdaAddresses.set(element, set = new Set());
+                set.add(address);
+            }
+        }
+        props.set(prop, v);
         return v;
     };
 
