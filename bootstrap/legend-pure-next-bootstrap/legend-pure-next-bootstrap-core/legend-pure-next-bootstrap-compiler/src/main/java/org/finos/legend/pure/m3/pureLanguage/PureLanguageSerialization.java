@@ -48,6 +48,14 @@ import java.util.List;
 
 public class PureLanguageSerialization
 {
+    // Must run before the first FlatBuffer table is built here: Table captures
+    // Utf8.getDefault() per instance. See PdbUtf8 for why we don't use
+    // FlatBuffers' own decoder.
+    static
+    {
+        org.finos.legend.pure.m3.module.pdbModule.PdbUtf8.install();
+    }
+
     // ========================================================================
     // PDBExtension — element deserialization
     // ========================================================================
