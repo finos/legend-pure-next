@@ -189,9 +189,12 @@ just              # build + run the default test suite (alias for `just test`)
 just build        # build, no tests
 just test         # run each subproject's core test suite (mvn surefire + spec)
 just test-all     # everything in `test` plus self-host parity + runtime suites
+just dashboard    # render test-results/ into test-results/dashboard.html
 just ide          # launch the Web IDE
 just clean        # delete build artifacts
 ```
+
+Every suite writes a JSON report under `test-results/`, and `just dashboard` renders them all into one self-contained page you can open from disk. CI publishes the same page for `main`: [Test dashboard ↗](https://finos.github.io/legend-pure-next/dashboard.html), alongside the [translation galleries](https://finos.github.io/legend-pure-next/).
 
 Per-platform recipes are addressable as `just bootstrap::<recipe>`, `just truffle::<recipe>`, `just javascript::<recipe>`. Run `just --list bootstrap` (etc.) to see what each offers.
 

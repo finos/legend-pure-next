@@ -29,6 +29,15 @@ import java.util.List;
 
 public class PureLanguageExtension implements LanguageExtension
 {
+    // Must run before the first FlatBuffer table is built: Table and
+    // StringVector capture Utf8.getDefault() per instance. Every entry point
+    // (CLI, binary builders, IDE, tests) constructs this extension before any
+    // PDB is read. See PdbUtf8 for why we don't use FlatBuffers' own decoder.
+    static
+    {
+        org.finos.legend.pure.m3.module.pdbModule.PdbUtf8.install();
+    }
+
     PureLanguageCompilerExtension pureLanguageCompilerExtension = new PureLanguageCompilerExtension();
     PureLanguageParser parser = new PureLanguageParser();
     PureLanguageSerialization serialization = new PureLanguageSerialization();

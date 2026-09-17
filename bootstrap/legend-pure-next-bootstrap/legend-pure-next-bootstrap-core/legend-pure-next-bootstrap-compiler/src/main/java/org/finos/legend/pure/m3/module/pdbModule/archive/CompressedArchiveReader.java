@@ -39,6 +39,17 @@ import java.util.zip.ZipFile;
  */
 public class CompressedArchiveReader
 {
+    // Every PDB read opens one of these before any FlatBuffer table is built
+    // from its sections, and Table/StringVector capture Utf8.getDefault() per
+    // instance — so this is the choke point that guarantees the decoder is in
+    // place first, including for callers that never touch PureLanguageExtension
+    // (the LSP server's elementIndex read, PdbDeepDiffer, PdbDiffer).
+    // See PdbUtf8 for why we don't use FlatBuffers' own decoder.
+    static
+    {
+        org.finos.legend.pure.m3.module.pdbModule.PdbUtf8.install();
+    }
+
     private final Path archivePath;
     // path -> entry name in the zip (for elements)
     private final Map<String, String> entryIndex;
