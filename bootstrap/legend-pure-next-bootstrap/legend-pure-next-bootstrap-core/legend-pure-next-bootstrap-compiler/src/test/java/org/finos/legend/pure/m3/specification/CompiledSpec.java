@@ -16,7 +16,7 @@ package org.finos.legend.pure.m3.specification;
 
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.protocol.PureFile;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraph;
 import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStats;
 import org.finos.legend.pure.m3.extensions.error.Error;
@@ -37,12 +37,12 @@ import java.util.List;
 public record CompiledSpec(
         PureFile primary,
         List<PureFile> allParsedFiles,
-        PureModel model,
+        JavaCompiler model,
         CompilationResult result)
 {
     public Module testModule()
     {
-        return model.getModule("test");
+        return model.registry().module("test");
     }
 
     /**

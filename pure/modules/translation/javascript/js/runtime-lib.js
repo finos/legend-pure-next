@@ -560,7 +560,7 @@ if (typeof Error.captureStackTrace === "function" && !globalThis.__pureCallSites
 }
 const __markerIndexCache = new Map();
 function __markerIndex(fileName) {
-  const text = typeof globalThis.__hostSourceText === "function" ? globalThis.__hostSourceText(fileName) : void 0;
+  const text = typeof globalThis.__pureHost?.hostSourceText === "function" ? globalThis.__pureHost?.hostSourceText(fileName) : void 0;
   // Keyed by file name but checked against the text: a host may re-evaluate
   // different code under the same name.
   const cached = __markerIndexCache.get(fileName);
@@ -1110,36 +1110,90 @@ function __qp(ownerPath, name, recv, ...rest) {
 // classifierGenericType) is closed imperatively — an object-literal expression
 // cannot express the cycle, which is why translatePureValueToTs routes holder
 // values here rather than serializing them structurally.
+// Host services. The PureRuntime installs ONE global, `globalThis.__pureHost`, holding what the
+// host provides (metadata access, native implementations, parsing, source text). These functions
+// give translated code and runtime-lib stable names for them; each looks the service up when called.
+function __hostService(name) {
+  const service = globalThis.__pureHost?.[name];
+  if (typeof service !== "function") throw new Error(`${name}: no PureRuntime provides it in this environment`);
+  return service;
+}
+function __metadataSubtypeOf(sub, sup) { return __hostService("metadataSubtypeOf")(sub, sup); }
+function __metadataInstanceOf(valuePath, typePath) { return __hostService("metadataInstanceOf")(valuePath, typePath); }
+function __metadataPathToElement(path, sep) { return __hostService("metadataPathToElement")(path, sep); }
+function __metadataRead(address, prop) { return __hostService("metadataRead")(address, prop); }
+function __metadataInvoke(path, args) { return __hostService("metadataInvoke")(path, args); }
+function __findAllTypes() { return __hostService("findAllTypes")(); }
+function __findFunctionsByNameAndArity(name, arity) { return __hostService("findFunctionsByNameAndArity")(name, arity); }
+function __pureParseTop(sourceId, content) { return __hostService("pureParseTop")(sourceId, content); }
+// meta::pure::functions::meta::antlr natives (the host's AntlrExtension implements them).
+function __parseAntlr(...args) { return __hostService("parseAntlr")(...args); }
+function __getText(...args) { return __hostService("getText")(...args); }
+function __grammarRuleName(...args) { return __hostService("grammarRuleName")(...args); }
+function __getChild(...args) { return __hostService("getChild")(...args); }
+function __getChildren(...args) { return __hostService("getChildren")(...args); }
+function __getTopLevelChildren(...args) { return __hostService("getTopLevelChildren")(...args); }
+function __getChildTextAt(...args) { return __hostService("getChildTextAt")(...args); }
+function __getTokenText(...args) { return __hostService("getTokenText")(...args); }
+function __getTokenTexts(...args) { return __hostService("getTokenTexts")(...args); }
+function __hasChild(...args) { return __hostService("hasChild")(...args); }
+function __hasToken(...args) { return __hostService("hasToken")(...args); }
+function __getStartLine(...args) { return __hostService("getStartLine")(...args); }
+function __getStartColumn(...args) { return __hostService("getStartColumn")(...args); }
+function __getStopLine(...args) { return __hostService("getStopLine")(...args); }
+function __getStopColumn(...args) { return __hostService("getStopColumn")(...args); }
+function __stripTripleQuotesDedented(...args) { return __hostService("stripTripleQuotesDedented")(...args); }
+function __computeFirstNonNewlineLine(...args) { return __hostService("computeFirstNonNewlineLine")(...args); }
 // compileSource(sourceId, content, dependencies) — dynamic compilation is a
 // HOST capability (it needs a compiler and a way to make the result
 // invokable), so runtime-lib only routes: the standalone JS platform installs
 // __hostCompileSource (execution host); environments without one throw.
 function __compileSource(file, dependencies) {
-  if (typeof globalThis.__hostCompileSource === "function") {
+  if (typeof globalThis.__pureHost?.hostCompileSource === "function") {
     // In-process hosts return rich objects (>2 keys), which __rewrapStubs
     // passes through. The stub-rewrap path remains for any host that returns a
     // bare {__purePath} addressing the result graph instead.
-    return __rewrapStubs(globalThis.__hostCompileSource(file, dependencies));
+    return __rewrapStubs(globalThis.__pureHost?.hostCompileSource(file, dependencies));
   }
   throw new Error("compileSource: no host implementation in this environment");
+}
+// readFile(path) / directoryTree(root) — reading files is a HOST capability as well.
+function __readFile(path) {
+  if (typeof globalThis.__pureHost?.hostReadFile === "function") return globalThis.__pureHost?.hostReadFile(path);
+  throw new Error("readFile: no file system in this environment");
+}
+function __readFileBytes(path) {
+  if (typeof globalThis.__pureHost?.hostReadFileBytes === "function") return globalThis.__pureHost?.hostReadFileBytes(path);
+  throw new Error("readFileBytes: no file system in this environment");
+}
+function __directoryTree(root) {
+  if (typeof globalThis.__pureHost?.hostDirectoryTree === "function") return globalThis.__pureHost?.hostDirectoryTree(root);
+  throw new Error("directoryTree: no file system in this environment");
+}
+// writeFile(path, content) — writing files is a HOST capability: the Node host
+// installs __hostWriteFile (FileSystemExtension); environments without a file
+// system throw rather than pretend the file was written.
+function __writeFile(path, content) {
+  if (typeof globalThis.__pureHost?.hostWriteFile === "function") return globalThis.__pureHost?.hostWriteFile(path, content);
+  throw new Error("writeFile: no file system in this environment");
 }
 // meta::external::language::javascript::{compile,execute,drainCompiledSources}
 // — evaluating JavaScript is a HOST capability, so runtime-lib only routes. The
 // standalone JS platform installs these from src/execution/js-natives.js; an
 // environment without them throws rather than silently degrading.
 function __jsCompile(source) {
-  if (typeof globalThis.__hostJsCompile === "function") return globalThis.__hostJsCompile(source);
+  if (typeof globalThis.__pureHost?.hostJsCompile === "function") return globalThis.__pureHost?.hostJsCompile(source);
   throw new Error("javascript::compile: no host implementation in this environment");
 }
 function __jsExecute(ctx, fnName, args, pureReturnType, pureMultiplicity, graph) {
-  if (typeof globalThis.__hostJsExecute === "function") {
-    return __rewrapStubs(globalThis.__hostJsExecute(ctx, fnName, args, pureReturnType, pureMultiplicity, graph));
+  if (typeof globalThis.__pureHost?.hostJsExecute === "function") {
+    return __rewrapStubs(globalThis.__pureHost?.hostJsExecute(ctx, fnName, args, pureReturnType, pureMultiplicity, graph));
   }
   throw new Error("javascript::execute: no host implementation in this environment");
 }
 function __jsDrainCompiledSources() {
-  if (typeof globalThis.__hostJsDrainCompiledSources === "function") {
-    return globalThis.__hostJsDrainCompiledSources();
+  if (typeof globalThis.__pureHost?.hostJsDrainCompiledSources === "function") {
+    return globalThis.__pureHost?.hostJsDrainCompiledSources();
   }
   throw new Error("javascript::drainCompiledSources: no host implementation in this environment");
 }
@@ -1670,8 +1724,8 @@ function __eval(fn, ...args) {
     // expressionSequence = ...)`) has no translated body to call. Running it
     // means translating it now — a HOST capability (it needs the translator),
     // so runtime-lib only routes; hosts without one fall through to the throw.
-    if (fn.expressionSequence !== undefined && typeof globalThis.__hostEvaluateFunctionDefinition === "function") {
-      return globalThis.__hostEvaluateFunctionDefinition(fn, args);
+    if (fn.expressionSequence !== undefined && typeof globalThis.__pureHost?.hostEvaluateFunctionDefinition === "function") {
+      return globalThis.__pureHost?.hostEvaluateFunctionDefinition(fn, args);
     }
   }
   throw new TypeError("__eval: not callable: " + (fn === null ? "null" : typeof fn));

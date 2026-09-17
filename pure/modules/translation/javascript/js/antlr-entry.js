@@ -13,9 +13,10 @@
 // limitations under the License.
 
 // esbuild --bundle entry: pulls in antlr4's runtime + the generated JS
-// lexer/parsers + the 17 ANTLR-bridge native impls, and exposes them on
-// globalThis as `__parseAntlr`, `__getText`, … — the same names the
-// translator emits for calls to `meta::pure::functions::meta::antlr::*`.
+// lexer/parsers + the 17 ANTLR-bridge native impls, and exports them — built with
+// --global-name=PureAntlr, the bundle exposes them as `globalThis.PureAntlr`. The
+// JavaScript PureRuntime installs them as the `__parseAntlr`, `__getText`, … hooks the
+// translator emits for `meta::pure::functions::meta::antlr::*` (AntlrExtension).
 //
 // The bundle output (build/antlr-bundle.js) is a single no-imports IIFE so
 // it runs unchanged in any host without module resolution AND in the
@@ -50,23 +51,22 @@ import {
 } from "./antlr-natives.js";
 
 
-const g = globalThis;
-g.__parseAntlr = __parseAntlr;
-g.__getText = __getText;
-g.__grammarRuleName = __grammarRuleName;
-g.__getChild = __getChild;
-g.__getChildren = __getChildren;
-g.__getTopLevelChildren = __getTopLevelChildren;
-g.__getChildTextAt = __getChildTextAt;
-g.__getTokenText = __getTokenText;
-g.__getTokenTexts = __getTokenTexts;
-g.__hasChild = __hasChild;
-g.__hasToken = __hasToken;
-g.__getStartLine = __getStartLine;
-g.__getStartColumn = __getStartColumn;
-g.__getStopLine = __getStopLine;
-g.__getStopColumn = __getStopColumn;
-g.__stripTripleQuotesDedented = __stripTripleQuotesDedented;
-g.__computeFirstNonNewlineLine = __computeFirstNonNewlineLine;
-
-
+export {
+    __parseAntlr as parseAntlr,
+    __getText as getText,
+    __grammarRuleName as grammarRuleName,
+    __getChild as getChild,
+    __getChildren as getChildren,
+    __getTopLevelChildren as getTopLevelChildren,
+    __getChildTextAt as getChildTextAt,
+    __getTokenText as getTokenText,
+    __getTokenTexts as getTokenTexts,
+    __hasChild as hasChild,
+    __hasToken as hasToken,
+    __getStartLine as getStartLine,
+    __getStartColumn as getStartColumn,
+    __getStopLine as getStopLine,
+    __getStopColumn as getStopColumn,
+    __stripTripleQuotesDedented as stripTripleQuotesDedented,
+    __computeFirstNonNewlineLine as computeFirstNonNewlineLine,
+};

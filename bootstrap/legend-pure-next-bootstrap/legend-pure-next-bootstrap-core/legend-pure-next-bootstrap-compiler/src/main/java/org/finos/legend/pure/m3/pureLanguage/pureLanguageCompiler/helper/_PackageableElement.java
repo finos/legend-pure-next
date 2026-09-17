@@ -21,8 +21,8 @@ import meta.pure.metamodel.pointer.TempCompilerPointer;
 import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
 import org.jspecify.annotations.Nullable;
 
 /**

@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.m3.module;
 
+import meta.pure.metamodel.PackageableElement;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +34,7 @@ import java.util.Set;
  * metamodel.</p>
  */
 public record CompilationResult(
+        List<PackageableElement> elements,
         List<CompilationError> errors,
         CompilationStatistics statistics,
         Map<String, Set<String>> referencedBy)

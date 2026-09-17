@@ -3,12 +3,12 @@ package org.finos.legend.pure.m3.helper;
 import meta.pure.metamodel.function.Function;
 import meta.pure.metamodel.type.FunctionType;
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
+import org.finos.legend.pure.m3.module.sourceModule.PureContent;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class _FunctionTest
 {
-    private static PureModel model;
+    private static JavaCompiler model;
 
     @BeforeAll
     public static void setUp()
@@ -32,9 +32,9 @@ public class _FunctionTest
             "function test::testFn():Any[*] { {a:String[1]| $a}; }\n" +
             "function test::testFn2():Boolean[1] { true; }\n";
 
-        model = PureModel.withModules(
+        model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent(source, "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
@@ -45,9 +45,9 @@ public class _FunctionTest
     @Test
     public void testResolveFunctionType()
     {
-        Function func = (Function) model.getModule("test").getElement("test::testFn__Any_MANY_");
+        Function func = (Function) model.registry().module("test").getElement("test::testFn__Any_MANY_");
         
-        FunctionType ft = _Function.getFunctionType(func, new ScopedMetadataAccess(model.getModule("test"), model));
+        FunctionType ft = _Function.getFunctionType(func, new ScopedMetadataAccess(model.registry().module("test"), model.registry()));
         
         assertNotNull(ft);
         assertTrue(ft._parameters().isEmpty());
@@ -57,9 +57,9 @@ public class _FunctionTest
     @Test
     public void testGetFunctionType()
     {
-        Function func = (Function) model.getModule("test").getElement("test::testFn2__Boolean_1_");
+        Function func = (Function) model.registry().module("test").getElement("test::testFn2__Boolean_1_");
         
-        FunctionType ft = _Function.getFunctionType(func, new ScopedMetadataAccess(model.getModule("test"), model));
+        FunctionType ft = _Function.getFunctionType(func, new ScopedMetadataAccess(model.registry().module("test"), model.registry()));
         
         assertNotNull(ft);
         assertEquals("Boolean", ((meta.pure.metamodel.PackageableElement) _GenericType.type(ft._returnType()))._name());

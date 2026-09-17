@@ -15,10 +15,10 @@
 package org.finos.legend.pure.execution.natives.lang;
 
 import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.NativeRepository;
-import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
-import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
-import org.finos.legend.pure.execution.NativeRepository.PureAssertionError;
+import org.finos.legend.pure.execution.natives.NativeRegistry;
+import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
+import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
+import org.finos.legend.pure.execution.natives.NativeRegistry.PureAssertionError;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
@@ -82,9 +82,9 @@ public class AssertNatives
         {
             ValueSpecification expected = args.get(0);
             ValueSpecification actual = args.get(1);
-            if (!NativeRepository.pureEquals(expected, actual, resolver))
+            if (!NativeRegistry.pureEquals(expected, actual, resolver))
             {
-                throw new PureAssertionError("assertEqual failed:\nexpected: " + NativeRepository.pureToString(expected) + "\nactual:   " + NativeRepository.pureToString(actual));
+                throw new PureAssertionError("assertEqual failed:\nexpected: " + NativeRegistry.pureToString(expected) + "\nactual:   " + NativeRegistry.pureToString(actual));
             }
             return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
         });

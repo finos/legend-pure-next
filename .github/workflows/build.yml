@@ -21,19 +21,24 @@
 #       │                                   either directly or transitively via bootstrap.)
 #       │
 #       └── bootstrap                       (Temurin 25 — `just bootstrap::test`: mvn install with surefire +
-#               │                            Pure compiler-graph spec tests; produces shared/*.pdb,
+#               │                            Pure compiler-graph spec tests, then runtime functions + PCT
+#               │                            on the bootstrap CLI; produces shared/*.pdb,
 #               │                            bootstrap CLI jar, and the bootstrap mvn artifacts)
 #               │
-#               ├── bootstrap-self-host     (Temurin 25 — `just bootstrap::test-pure-self-host`: compile
+#               ├── bootstrap-self-host     (Temurin 25 — `just bootstrap::spec-compiler-selfhost`: compile
 #               │                            compiler-pure via Pure-on-Java and PDB-diff against Java direct)
-#               ├── printer-compiled        (Temurin 25 — `just bootstrap::test-pure-printer-compiled`:
+#               ├── printer-compiled        (Temurin 25 — `just bootstrap::spec-printer-compiled`:
 #               │                            parse+compile+print each compiler/tests/ file, compare to source)
-#               ├── printer-protocol        (Temurin 25 — `just bootstrap::test-pure-printer-protocol`:
+#               ├── printer-protocol        (Temurin 25 — `just bootstrap::spec-printer-protocol`:
 #               │                            parse+print each grammar/tests/ file, compare to source)
 #               ├── truffle-self-host       (GraalVM 25 — `just truffle::test` (mvn surefire + Truffle
-#               │      │                     compiler-graph spec) followed by `just truffle::test-pure-self-host`
+#               │      │                     compiler-graph spec) followed by `just truffle::spec-compiler-selfhost`
 #               │      │                     — compiles compiler-pure on Truffle JVM (JIT) and PDB-diffs.
 #               │      │                     Uploads platforms/truffle/build/ for downstream language jobs.)
+#               │      │
+#               │      ├── truffle-specifications (GraalVM 25 — every other Truffle JIT specification run
+#               │      │                     for the test dashboard: functions, PCT, grammar, PDB,
+#               │      │                     printers, in-memory sources; reuses the uploaded truffle jar)
 #               │      │
 #               │      ├── language-java     (GraalVM 25 — `just language::java::test-all`: runs
 #               │      │                     meta::external::language::java tests via pure-truffle.
@@ -42,14 +47,15 @@
 #               │      │
 #               │      └── language-javascript (GraalVM 25 — same shape for the JavaScript module.)
 #               │
-#               └── truffle-native-self-host (GraalVM 25 — `just truffle::native::test-pure-self-host`:
-#                                            builds native-image binary, compiles compiler-pure via the
-#                                            AOT binary and PDB-diffs against Java direct)
+#               └── truffle-native-self-host (GraalVM 25 — matrix of two parallel entries, each building
+#                                            the native-image binary: `self-host` compiles compiler-pure
+#                                            via the AOT binary and PDB-diffs against Java direct;
+#                                            `specifications` runs every specification on it)
 #
 # bootstrap-self-host, printer-compiled, printer-protocol, truffle-self-host,
 # and truffle-native-self-host all run in parallel after bootstrap finishes;
-# language-java and language-javascript run in parallel after truffle-self-host
-# (they need its uploaded truffle CLI jar + extension jars to invoke pure-truffle).
+# language-java, language-javascript and truffle-specifications run in parallel after
+# truffle-self-host (they need its uploaded truffle CLI jar + extension jars to invoke pure-truffle).
 # All consume upstream outputs via actions/upload-artifact + actions/download-artifact.
 #
 # Finally, `all-green` aggregates every real job. Branch protection on main
@@ -78,7 +84,7 @@ env:
   JDK_VERSION: '25.0.1'
   GRAALVM_VERSION: '25.0.2'
   MAVEN_VERSION: '3.9.11'
-  JUST_VERSION: '1.49.0'
+  JUST_VERSION: '1.58.0'
   FLATC_VERSION: '25.2.10'
   #   NODE_VERSION      ↔ node on PATH locally; the JS translation runtime needs
   #                       node + pnpm to esbuild-bundle the antlr natives
@@ -191,6 +197,11 @@ jobs:
       - name: Bootstrap test
         run: just bootstrap::test
 
+      # Runtime functions and PCT on the bootstrap CLI, for the test dashboard (a PCT failure
+      # is reported without failing the build). A few seconds on the CLI and PDBs just built.
+      - name: Bootstrap runtime functions and PCT
+        run: just bootstrap::spec-functions bootstrap::spec-pct
+
       - name: Sonar (main only)
         if: (github.repository == 'finos/legend-pure-next') && (github.ref == 'refs/heads/main')
         run: |
@@ -243,6 +254,39 @@ jobs:
           name: event-file
           path: ${{ github.event_path }}
 
+      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
+      # publish-gallery, which renders one dashboard from every job's reports.
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results build-steps
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
+          if [[ -f test-results/builds.json ]]; then
+            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
+          fi
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-bootstrap
+          path: |
+            test-results/
+            !test-results/*.json
+            !test-results/*.html
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload build steps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
+          path: build-steps/
+          if-no-files-found: ignore
+          retention-days: 1
+
   bootstrap-self-host:
     name: Bootstrap self-host (compile-via-pure-on-Java vs Java direct)
     needs: bootstrap
@@ -287,7 +331,40 @@ jobs:
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
 
       - name: Bootstrap self-host
-        run: just bootstrap::test-pure-self-host
+        run: just bootstrap::spec-compiler-selfhost
+
+      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
+      # publish-gallery, which renders one dashboard from every job's reports.
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results build-steps
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
+          if [[ -f test-results/builds.json ]]; then
+            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
+          fi
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-bootstrap-self-host
+          path: |
+            test-results/
+            !test-results/*.json
+            !test-results/*.html
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload build steps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
+          path: build-steps/
+          if-no-files-found: ignore
+          retention-days: 1
 
   printer-compiled:
     name: Printer corpus — compiled
@@ -338,7 +415,40 @@ jobs:
       # printer-protocol since both only depend on the bootstrap CLI jar +
       # shared PDBs and don't touch each other's artifacts.
       - name: Compiled printer corpus
-        run: just bootstrap::test-pure-printer-compiled
+        run: just bootstrap::spec-printer-compiled
+
+      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
+      # publish-gallery, which renders one dashboard from every job's reports.
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results build-steps
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
+          if [[ -f test-results/builds.json ]]; then
+            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
+          fi
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-printer-compiled
+          path: |
+            test-results/
+            !test-results/*.json
+            !test-results/*.html
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload build steps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
+          path: build-steps/
+          if-no-files-found: ignore
+          retention-days: 1
 
   printer-protocol:
     name: Printer corpus — protocol
@@ -388,7 +498,40 @@ jobs:
       # No compile step on this side — protocol printer works directly on
       # parsed PureFile.
       - name: Protocol printer corpus
-        run: just bootstrap::test-pure-printer-protocol
+        run: just bootstrap::spec-printer-protocol
+
+      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
+      # publish-gallery, which renders one dashboard from every job's reports.
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results build-steps
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
+          if [[ -f test-results/builds.json ]]; then
+            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
+          fi
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-printer-protocol
+          path: |
+            test-results/
+            !test-results/*.json
+            !test-results/*.html
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload build steps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
+          path: build-steps/
+          if-no-files-found: ignore
+          retention-days: 1
 
   truffle-self-host:
     name: Truffle build + self-host (compile-via-pure-on-Truffle vs Java direct)
@@ -460,15 +603,15 @@ jobs:
 
       # `truffle::test` runs the truffle reactor with surefire (Java unit
       # tests) and then the Pure compiler-graph spec suite on Truffle.
-      # `truffle::test-pure-self-host` then compiles compiler-pure on
+      # `truffle::spec-compiler-selfhost` then compiles compiler-pure on
       # Truffle and diffs the output against shared/compiler.pdb (Java direct).
-      # `test-pure-self-host` has no Maven dep — it reuses the fat jar
+      # `spec-compiler-selfhost` has no Maven dep — it reuses the fat jar
       # produced by `truffle::test`'s `_mvn "with-tests"` invocation.
       - name: Truffle test
         run: just truffle::test
 
       - name: Truffle self-host
-        run: just truffle::test-pure-self-host
+        run: just truffle::spec-compiler-selfhost
 
       # Pack the truffle CLI fat jar + the Java extension jar
       # (JavaCompileNatives). Downstream language-java and language-javascript
@@ -491,10 +634,55 @@ jobs:
           path: |
             ${{ github.workspace }}/platforms/truffle/**/target/surefire-reports/*.xml
 
+      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
+      # publish-gallery, which renders one dashboard from every job's reports.
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results build-steps
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
+          if [[ -f test-results/builds.json ]]; then
+            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
+          fi
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-truffle-self-host
+          path: |
+            test-results/
+            !test-results/*.json
+            !test-results/*.html
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload build steps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
+          path: build-steps/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # Two parallel entries, each building the native image once:
+  #   - self-host      : compile-via-pure on the AOT binary vs Java direct (below).
+  #   - specifications : every specification run on the native image (compiler,
+  #                      functions, PCT, grammar, PDB, printers) for the test dashboard.
   truffle-native-self-host:
-    name: Truffle native build + self-host (compile-via-pure on AOT binary vs Java direct)
+    name: Truffle native (${{ matrix.suite }})
     needs: bootstrap
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false  # let the two entries report independently
+      matrix:
+        include:
+          - suite: self-host
+            command: just truffle::native::spec-compiler-selfhost
+          - suite: specifications
+            command: just truffle::native::spec
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -553,15 +741,129 @@ jobs:
           mkdir -p ~/.m2/repository
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
 
-      # `truffle::native::test-pure-self-host` first builds the native-image
+      # `truffle::native::spec-compiler-selfhost` first builds the native-image
       # binary (~5–10 min, dominated by AOT analysis + compile), then uses it
       # to compile compiler-pure into compiler_truffle_native.pdb and PDB-diffs
       # against shared/compiler.pdb (Java direct). The Graal tripwire reports
       # `0/0` here since AOT does no runtime JIT — the value is in catching
       # AOT-specific divergence (eliminated paths, native-image substitutions)
       # that the JIT path can't surface.
-      - name: Truffle native self-host
-        run: just truffle::native::test-pure-self-host
+      - name: Truffle native ${{ matrix.suite }}
+        run: ${{ matrix.command }}
+
+      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
+      # publish-gallery, which renders one dashboard from every job's reports.
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results build-steps
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
+          if [[ -f test-results/builds.json ]]; then
+            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
+          fi
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-truffle-native-${{ matrix.suite }}
+          path: |
+            test-results/
+            !test-results/*.json
+            !test-results/*.html
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload build steps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
+          path: build-steps/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # Every Truffle JIT specification run not already done by truffle-self-host (which runs the
+  # compiler corpus and the self-hosted compiler): runtime functions, PCT, grammar, PDB format,
+  # the PDB golden archives, both printers, and functions + PCT from in-memory sources. They
+  # only need pure-truffle (the uploaded truffle jar) and the shared PDBs — no Maven — and run
+  # in parallel with translation-deps. Their reports feed the test dashboard.
+  truffle-specifications:
+    name: Truffle specifications (JIT)
+    needs: truffle-self-host
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      # GraalVM (not Temurin): pure-truffle requires JVMCI for real Graal JIT.
+      - name: Set up GraalVM JDK
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: 'graalvm-community'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+
+      - name: Download bootstrap artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bootstrap-artifacts
+
+      - name: Download truffle artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: truffle-artifacts
+
+      - name: Restore artifacts
+        run: |
+          tar -xf bootstrap-artifacts.tar
+          tar -xf truffle-artifacts.tar
+
+      - name: Truffle specifications
+        run: >-
+          just truffle::spec-functions truffle::spec-pct truffle::spec-grammar
+          truffle::spec-pdb truffle::spec-pdb-golden
+          truffle::spec-printer-compiled truffle::spec-printer-protocol
+          truffle::spec-functions-inmemory truffle::spec-pct-inmemory
+
+      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
+      # publish-gallery, which renders one dashboard from every job's reports.
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results build-steps
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
+          if [[ -f test-results/builds.json ]]; then
+            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
+          fi
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-truffle-specifications
+          path: |
+            test-results/
+            !test-results/*.json
+            !test-results/*.html
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload build steps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
+          path: build-steps/
+          if-no-files-found: ignore
+          retention-days: 1
 
   # Prereqs that the `translations` matrix consumes — built in parallel as one
   # matrix box so the visualizer doesn't draw long arrows around standalone
@@ -672,6 +974,39 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}.tar
+          retention-days: 1
+
+      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
+      # publish-gallery, which renders one dashboard from every job's reports.
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results build-steps
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
+          if [[ -f test-results/builds.json ]]; then
+            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
+          fi
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-translation-deps-${{ matrix.target }}
+          path: |
+            test-results/
+            !test-results/*.json
+            !test-results/*.html
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload build steps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
+          path: build-steps/
+          if-no-files-found: ignore
           retention-days: 1
 
   # Pure -> <target> translation modules. Matrix entries:
@@ -809,16 +1144,60 @@ jobs:
           path: ${{ matrix.gallery_file }}
           retention-days: 1
 
-  # Publishes the galleries to GitHub Pages. The HTMLs are produced upstream by
-  # the `translations` matrix (java/javascript/truffle) and shipped as
-  # gallery-<target> artifacts. All files are self-contained (inline CSS/JS/data)
-  # so the deploy is just "drop into _site/". Runs only on push to main on the
-  # canonical repo so PRs and forks don't try to publish.
+      # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
+      # publish-gallery, which renders one dashboard from every job's reports.
+      - name: Collect dashboard reports
+        if: always()
+        run: |
+          mkdir -p test-results build-steps
+          node tools/test-dashboard/build.mjs --out "$RUNNER_TEMP/dashboard.html"
+          # The heavy build steps this job ran (build-step.mjs), under a name unique to the job.
+          if [[ -f test-results/builds.json ]]; then
+            cp test-results/builds.json "build-steps/${{ github.job }}-${{ strategy.job-index }}.json"
+          fi
+
+      - name: Upload dashboard reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-reports-translations-${{ matrix.target }}
+          path: |
+            test-results/
+            !test-results/*.json
+            !test-results/*.html
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload build steps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-builds-${{ github.job }}-${{ strategy.job-index }}
+          path: build-steps/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # Publishes the galleries and the test dashboard to GitHub Pages. The gallery HTMLs come
+  # from the `translations` matrix (gallery-<target> artifacts); the dashboard is rendered
+  # here from every test job's dashboard-reports-* artifact (tools/test-dashboard). All
+  # files are self-contained (inline CSS/JS/data), so the deploy is "drop into _site/".
+  # Runs only on push to main on the canonical repo so PRs and forks don't try to publish.
+  # `!cancelled()`: it also runs when a suite failed, so the dashboard shows the failures;
+  # a gallery whose job failed is left out of the site (with a warning).
   # One-time setup: repo Settings → Pages → Source = "GitHub Actions".
   publish-gallery:
-    name: Publish galleries to GitHub Pages
-    needs: translations
-    if: github.repository == 'finos/legend-pure-next' && github.ref == 'refs/heads/main'
+    name: Publish galleries and test dashboard to GitHub Pages
+    needs:
+      - bootstrap
+      - bootstrap-self-host
+      - printer-compiled
+      - printer-protocol
+      - truffle-self-host
+      - truffle-native-self-host
+      - truffle-specifications
+      - translation-deps
+      - translations
+    if: ${{ !cancelled() && github.repository == 'finos/legend-pure-next' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     # Serialise Pages deploys so rapid main pushes don't race. `cancel-in-progress:
     # false` lets an in-flight deploy finish rather than dropping it half-published.
@@ -829,40 +1208,90 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # The dashboard tool (tools/test-dashboard) and the commit it reports on.
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
       - name: Download java gallery
+        continue-on-error: true
         uses: actions/download-artifact@v8
         with:
           name: gallery-java
           path: gallery-java
 
       - name: Download javascript gallery
+        continue-on-error: true
         uses: actions/download-artifact@v8
         with:
           name: gallery-javascript
           path: gallery-javascript
 
       - name: Download truffle gallery
+        continue-on-error: true
         uses: actions/download-artifact@v8
         with:
           name: gallery-truffle
           path: gallery-truffle
 
+      - name: Download dashboard reports
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          pattern: dashboard-reports-*
+          path: test-results
+          merge-multiple: true
+
+      - name: Download build steps
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          pattern: dashboard-builds-*
+          path: build-steps
+          merge-multiple: true
+
+      # The published site's address, where the previous history.json and builds.json live.
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
       - name: Stage site
+        env:
+          PAGES_BASE_URL: ${{ steps.pages.outputs.base_url }}
         run: |
           set -euo pipefail
-          mkdir -p _site
-          cp gallery-java/java-translation-gallery.html             _site/java.html
-          cp gallery-javascript/javascript-translation-gallery.html _site/javascript.html
-          cp gallery-truffle/truffle-translation-gallery.html       _site/truffle.html
-          cat > _site/index.html <<'EOF'
+          shopt -s nullglob
+          mkdir -p _site test-results
+          # History carries over from the published site: build.mjs appends this run's snapshot to
+          # history.json, and each job's build steps are merged into builds.json. A 404 (first deploy)
+          # starts them fresh.
+          curl -fsSL "$PAGES_BASE_URL/history.json" -o test-results/history.json || rm -f test-results/history.json
+          curl -fsSL "$PAGES_BASE_URL/builds.json" -o "$RUNNER_TEMP/published-builds.json" || rm -f "$RUNNER_TEMP/published-builds.json"
+          node tools/test-dashboard/merge-builds.mjs test-results/builds.json "$RUNNER_TEMP/published-builds.json" build-steps/*.json
+          links='    <li><a href="dashboard.html">Pure conformance dashboard</a></li>'
+          publish() {
+            if [[ -f "$1" ]]; then
+              cp "$1" "_site/$2"
+              links+=$'\n'"    <li><a href=\"$2\">$3</a></li>"
+            else
+              echo "::warning::$1 is missing (did its job fail?), so $2 is not published"
+            fi
+          }
+          publish gallery-java/java-translation-gallery.html             java.html       'Pure &rarr; Java translation gallery'
+          publish gallery-javascript/javascript-translation-gallery.html javascript.html 'Pure &rarr; JavaScript translation gallery'
+          publish gallery-truffle/truffle-translation-gallery.html       truffle.html    'Pure &rarr; Truffle AST gallery'
+          # After the galleries: --published links the PCT runs to the galleries copied next to the page.
+          node tools/test-dashboard/build.mjs --no-surefire --published --out _site/dashboard.html
+          # Published next to the page, for the next deploy to continue from.
+          for kept in history.json builds.json; do
+            if [[ -f "test-results/$kept" ]]; then cp "test-results/$kept" "_site/$kept"; fi
+          done
+          cat > _site/index.html <<EOF
           <!doctype html>
           <meta charset="utf-8">
-          <title>legend-pure-next galleries</title>
-          <h1>legend-pure-next galleries</h1>
+          <title>legend-pure-next galleries and test dashboard</title>
+          <h1>legend-pure-next galleries and test dashboard</h1>
           <ul>
-            <li><a href="java.html">Pure &rarr; Java translation gallery</a></li>
-            <li><a href="javascript.html">Pure &rarr; JavaScript translation gallery</a></li>
-            <li><a href="truffle.html">Pure &rarr; Truffle AST gallery</a></li>
+          $links
           </ul>
           EOF
 
@@ -890,6 +1319,7 @@ jobs:
       - printer-protocol
       - truffle-self-host
       - truffle-native-self-host
+      - truffle-specifications
       - translation-deps
       - translations
       - publish-gallery

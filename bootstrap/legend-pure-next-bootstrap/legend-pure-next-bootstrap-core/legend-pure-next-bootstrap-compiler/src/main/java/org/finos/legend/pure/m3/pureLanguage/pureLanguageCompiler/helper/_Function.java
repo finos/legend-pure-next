@@ -22,8 +22,8 @@ import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 
@@ -46,7 +46,7 @@ public class _Function
      * {@code Function<FunctionType{Person[1]->String[*]}>}.
      *
      * @param genericType the source generic type to resolve
-     * @param model       the compiled PureModel (used to look up the Function type)
+     * @param model       the compiled JavaCompiler (used to look up the Function type)
      * @return the resolved GenericType for Function, or {@code null} if Function
      *         is not in the source's hierarchy
      */

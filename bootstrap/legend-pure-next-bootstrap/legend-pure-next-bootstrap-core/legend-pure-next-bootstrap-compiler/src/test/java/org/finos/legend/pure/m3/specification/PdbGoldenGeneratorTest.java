@@ -124,7 +124,7 @@ public class PdbGoldenGeneratorTest
             additionalSections.add(riSection);
         }
         new CompressedArchiveWriter().write(allModuleElements, pdbExtensions, testModule,
-                new ModuleManifest(testModule.getName(), testModule.getPackagePattern(), testModule.getDependencies()),
+                new ModuleManifest(testModule.name(), testModule.packagePattern(), testModule.dependencies()),
                 additionalSections, out);
     }
 }

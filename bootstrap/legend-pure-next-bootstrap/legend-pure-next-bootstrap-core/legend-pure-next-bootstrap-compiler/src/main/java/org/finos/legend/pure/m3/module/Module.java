@@ -14,7 +14,8 @@
 
 package org.finos.legend.pure.m3.module;
 
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
+import org.finos.legend.pure.m3.LanguageExtension;
 
 import java.util.List;
 import java.util.Set;
@@ -33,17 +34,18 @@ import java.util.Set;
 public interface Module extends ModuleDefinition, MetadataAccess
 {
     /**
-     * Set the owning PureModel, enabling cross-module resolution.
+     * Attach this module to a registry: cross-module resolution goes through the registry, and
+     * the language extensions contribute metadata (e.g. the function index) and PDB section decoding.
      */
-    void setPureModel(PureModel model);
+    void attach(ModuleRegistry registry, List<LanguageExtension> extensions);
 
     /**
      * Compile this module. Returns a result with any compilation errors.
      * By default returns an empty (successful) result.
      */
-    default CompilationResult compile()
+    default CompilationResult compile(JavaCompiler compiler)
     {
-        return new CompilationResult(List.of(), CompilationStatistics.EMPTY, java.util.Map.of());
+        return new CompilationResult(List.of(), List.of(), CompilationStatistics.EMPTY, java.util.Map.of());
     }
 
     /**

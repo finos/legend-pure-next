@@ -1,0 +1,270 @@
+// Copyright 2024 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::test::*;
+import meta::pure::functions::date::*;
+import meta::pure::functions::io::*;
+import meta::pure::functions::string::*;
+import meta::pure::ui::progress::*;
+
+// ---------------------------------------------------------------------------
+// PDB wire contract: the Pure compiler and PDB writer against the Java reference.
+//
+//   pure-<platform> execute ... \
+//       --function "meta::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_" \
+//       --args pure/specification/compiler/tests \
+//              pure/specification/compiler/tests-pdb-serialization \
+//              shared/specification/m3.fbs \
+//              <report.json>
+//
+// Each golden <name>.pdb was written by the Java reference writer from the fixture
+// <name>.pure. The fixture is compiled with the Pure compiler, written with the Pure
+// writer, and both archives are decoded with the Pure reader (inflate.pure opens the
+// golden's deflated entries) and compared, following the rules of the JavaScript
+// platform's struct-diff.js:
+//   - element entries: same type, then every schema field, recursively;
+//     PointerRefs by kind and path, AncestorRefs by depth, set-like vectors
+//     (children, resolved type and multiplicity parameters) as multisets;
+//   - a Package entry only in the golden is skipped (the Java compiler registers
+//     file-anchor packages that the Pure compile result doesn't include);
+//   - other sections (manifest, functionIndex, reverseReferenceIndex) byte for byte,
+//     and elementIndex too when both archives hold the same element entries.
+// ---------------------------------------------------------------------------
+
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::runPdbGoldenTests(testDir:String[1], goldenDir:String[1], schemaPath:String[1], reportPath:String[1]):String[1]
+{
+    let schema = meta::pure::compiler::pdb::schema::parseFbs(readFile($schemaPath));
+    let goldens = directoryTree($goldenDir)->filter(f | $f->endsWith('.pdb'));
+    let total = $goldens->size();
+    startProgress('Comparing ' + $total->toString() + ' PDB archives with the Java goldens in ' + $goldenDir + '...');
+    let start = currentTimeMillis();
+    let results = range(0, $total)->map(i | meta::pure::compiler::test::pdb::goldenCase($testDir, $goldenDir, $schema, $goldens->at($i), $i, $total));
+    let elapsedMs = currentTimeMillis() - $start;
+    finishProgress();
+
+    let failures = $results->filter(r | $r.error->isNotEmpty());
+    $failures->map(r |
+        println('  FAIL: ' + $r.name);
+        println('    ' + $r.error->toOne().message);
+    );
+    let failed = $failures->size();
+    let summary = if($failed > 0,
+        | 'FAIL: ' + ($total - $failed)->toString() + ' / ' + $total->toString() + ' archives match their Java golden (' + $failed->toString() + ' differ) in ' + $elapsedMs->toString() + ' ms',
+        | 'OK: ' + $total->toString() + ' / ' + $total->toString() + ' archives match their Java golden in ' + $elapsedMs->toString() + ' ms');
+    meta::pure::test::report::writeSuiteReport($reportPath, 'pdbGolden', $elapsedMs,
+        $results->map(r | ^meta::pure::test::report::TestCaseReport(id = $r.name, durationMs = $r.durationMs, error = $r.error)));
+    assert($failed == 0, $summary);
+    $summary;
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::goldenCase(testDir:String[1], goldenDir:String[1], schema:meta::pure::compiler::pdb::schema::FbsSchema[1], goldenPath:String[1], i:Integer[1], total:Integer[1]):meta::pure::compiler::test::CompiledGraphTestResult[1]
+{
+    let name = $goldenPath->substring($goldenDir->length() + 1, $goldenPath->length() - 4);
+    tickProgress($i + 1, $total, $name);
+    let caseStart = currentTimeMillis();
+    let result = tryEval(| meta::pure::compiler::test::pdb::assertMatchesGolden(readFile($testDir + '/' + $name + '.pure'), $name, readFileBytes($goldenPath), $schema));
+    ^meta::pure::compiler::test::CompiledGraphTestResult(name = $name, error = $result.failure, durationMs = currentTimeMillis() - $caseStart);
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::assertMatchesGolden(content:String[1], sourceId:String[1], golden:Integer[*], schema:meta::pure::compiler::pdb::schema::FbsSchema[1]):Boolean[1]
+{
+    let result = meta::pure::compiler::test::pdb::compileFixture($content, $sourceId);
+    assert($result.errors->isEmpty(), | 'the fixture does not compile: ' + $result.errors->joinStrings('; '));
+    let written = if($result.context->isEmpty(),
+        | meta::pure::compiler::pdb::archive::writeArchive($result.elements, 'test', '*', ['core']),
+        | meta::pure::compiler::pdb::archive::writeArchive($result.elements, 'test', '*', ['core'], $result.context->toOne().referencedBy));
+    let findings = meta::pure::compiler::test::pdb::diffArchives($schema, $written, $golden);
+    assert($findings->isEmpty(), | $findings->size()->toString() + ' difference(s) from the Java golden, first: ' + $findings->at(0));
+}
+
+// Compiles a fixture as assertCompiledGraph does: lines before ###Pure are blanked so
+// positions stay aligned, and each ###Pure / ###File chunk becomes its own file.
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::compileFixture(content:String[1], sourceId:String[1]):meta::pure::compiler::CompilationResult[1]
+{
+    let pureStart = $content->indexOf('###' + 'Pure');
+    let prepared = if($pureStart > 0,
+        | $content->substring(0, $pureStart)->split('\n')->map(l | '')->joinStrings('\n') + $content->substring($pureStart),
+        | $content);
+    meta::pure::compiler::compile(manageFileSections(meta::pure::functions::meta::parse($sourceId, $prepared)), false, true);
+}
+
+// --- archive diff ----------------------------------------------------------
+
+// Every difference between the Pure-written archive and the golden, as readable lines.
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::diffArchives(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], pure:Integer[*], golden:Integer[*]):String[*]
+{
+    let pureEntries   = meta::pure::compiler::pdb::reader::readZipEntries($pure);
+    let goldenEntries = meta::pure::compiler::pdb::reader::readZipEntries($golden);
+    let pureElements   = $pureEntries->filter(e | meta::pure::compiler::pdb::schema::startsWith($e.name, 'elements/'));
+    let goldenElements = $goldenEntries->filter(e | meta::pure::compiler::pdb::schema::startsWith($e.name, 'elements/'));
+    let goldenPaths = $goldenElements->map(e | meta::pure::compiler::test::pdb::entryPath($e.name));
+    let sameElements = ($pureElements->size() == $goldenElements->size()) && $pureElements.name->forAll(n | $goldenElements.name->contains($n));
+    let elementFindings = $goldenElements->map(g | meta::pure::compiler::test::pdb::elementFinding($schema, $pure, $pureElements, $golden, $g));
+    let extraFindings = $pureElements
+        ->filter(e | !$goldenPaths->contains(meta::pure::compiler::test::pdb::entryPath($e.name)))
+        ->map(e | 'only in the Pure archive: ' + meta::pure::compiler::test::pdb::entryPath($e.name));
+    let sectionNames = $pureEntries.name->concatenate($goldenEntries.name)
+        ->filter(n | !meta::pure::compiler::pdb::schema::startsWith($n, 'elements/'))
+        ->removeDuplicates()
+        ->filter(n | $sameElements || ($n != 'elementIndex'));
+    let sectionFindings = $sectionNames->map(n | meta::pure::compiler::test::pdb::sectionFinding($pure, $pureEntries, $golden, $goldenEntries, $n));
+    $elementFindings->concatenate($extraFindings)->concatenate($sectionFindings);
+}
+
+// "elements/a/b/C.Class" -> "a::b::C"
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::entryPath(name:String[1]):String[1]
+{
+    let rest = $name->substring(9);
+    $rest->substring(0, $rest->lastIndexOf('.'))->split('/')->joinStrings('::');
+}
+
+// "elements/a/b/C.Class" -> "Class"
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::entryType(name:String[1]):String[1]
+{
+    $name->substring($name->lastIndexOf('.') + 1);
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::elementFinding(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], pure:Integer[*], pureElements:meta::pure::compiler::pdb::reader::ZipEntryInfo[*], golden:Integer[*], goldenEntry:meta::pure::compiler::pdb::reader::ZipEntryInfo[1]):String[*]
+{
+    let path = meta::pure::compiler::test::pdb::entryPath($goldenEntry.name);
+    let type = meta::pure::compiler::test::pdb::entryType($goldenEntry.name);
+    let match = $pureElements->filter(e | meta::pure::compiler::test::pdb::entryPath($e.name) == $path);
+    if([pair(| $match->isEmpty() && ($type == 'Package'), | []->cast(@String)),
+        pair(| $match->isEmpty(), | ['missing from the Pure archive: ' + $path]),
+        pair(| meta::pure::compiler::test::pdb::entryType($match->at(0).name) != $type,
+             | [$path + ' is a ' + meta::pure::compiler::test::pdb::entryType($match->at(0).name) + ' in the Pure archive, a ' + $type + ' in the golden'])],
+       | meta::pure::compiler::test::pdb::compareNode($schema,
+            meta::pure::compiler::pdb::reader::elementNode(meta::pure::compiler::pdb::reader::zipEntryData($pure, $match->at(0)), $type),
+            meta::pure::compiler::pdb::reader::elementNode(meta::pure::compiler::pdb::reader::zipEntryData($golden, $goldenEntry), $type),
+            $path)->take(1));
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::sectionFinding(pure:Integer[*], pureEntries:meta::pure::compiler::pdb::reader::ZipEntryInfo[*], golden:Integer[*], goldenEntries:meta::pure::compiler::pdb::reader::ZipEntryInfo[*], name:String[1]):String[*]
+{
+    let pureEntry   = $pureEntries->filter(e | $e.name == $name);
+    let goldenEntry = $goldenEntries->filter(e | $e.name == $name);
+    if([pair(| $pureEntry->isEmpty(),   | ['section missing from the Pure archive: ' + $name]),
+        pair(| $goldenEntry->isEmpty(), | ['section only in the Pure archive: ' + $name]),
+        pair(| !meta::pure::compiler::test::pdb::sameBytes(
+                    meta::pure::compiler::pdb::reader::zipEntryData($pure, $pureEntry->at(0)),
+                    meta::pure::compiler::pdb::reader::zipEntryData($golden, $goldenEntry->at(0))),
+             | ['section bytes differ: ' + $name])],
+       | []->cast(@String));
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::sameBytes(a:Integer[*], b:Integer[*]):Boolean[1]
+{
+    if($a->size() != $b->size(), | false, | range(0, $a->size())->forAll(i | $a->at($i) == $b->at($i)));
+}
+
+// --- node comparison ----------------------------------------------------------
+
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::compareNode(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], a:meta::pure::compiler::pdb::reader::FbsNode[1], b:meta::pure::compiler::pdb::reader::FbsNode[1], path:String[1]):String[*]
+{
+    if($a.type != $b.type,
+        | [$path + ': a ' + $a.type + ' in the Pure archive, a ' + $b.type + ' in the golden'],
+        | meta::pure::compiler::pdb::schema::table($schema, $a.type)->toOne().fields
+            ->map(f | meta::pure::compiler::test::pdb::compareField($schema, $a, $b, $f, $path + '.' + $f.name)));
+}
+
+// Vectors are compared for presence first (absent differs from present-but-empty);
+// scalars compare present-or-default, as the writers elide default scalars.
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::compareField(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], a:meta::pure::compiler::pdb::reader::FbsNode[1], b:meta::pure::compiler::pdb::reader::FbsNode[1], field:meta::pure::compiler::pdb::schema::FbsField[1], path:String[1]):String[*]
+{
+    let inPure   = meta::pure::compiler::pdb::reader::fieldPos($a, $field.id) != -1;
+    let inGolden = meta::pure::compiler::pdb::reader::fieldPos($b, $field.id) != -1;
+    if([pair(| !$field.vector,
+             | meta::pure::compiler::test::pdb::compareValue($schema,
+                  meta::pure::compiler::pdb::reader::readField($schema, $a, $field.name)->head(),
+                  meta::pure::compiler::pdb::reader::readField($schema, $b, $field.name)->head(), $path)),
+        pair(| $inPure != $inGolden,
+             | [$path + ': ' + if($inPure, | 'present', | 'absent') + ' in the Pure archive, ' + if($inGolden, | 'present', | 'absent') + ' in the golden']),
+        pair(| !$inPure, | []->cast(@String))],
+       | meta::pure::compiler::test::pdb::compareVector($schema,
+            meta::pure::compiler::pdb::reader::readField($schema, $a, $field.name),
+            meta::pure::compiler::pdb::reader::readField($schema, $b, $field.name), $field.name, $path));
+}
+
+// children and the resolved type/multiplicity parameters are sets: their stored order
+// differs between writers and carries no meaning, so they are compared sorted.
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::compareVector(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], a:Any[*], b:Any[*], fieldName:String[1], path:String[1]):String[*]
+{
+    let isSet = ['children', 'resolved_type_parameters', 'resolved_multiplicity_parameters']->contains($fieldName);
+    let left  = if($isSet, | meta::pure::compiler::test::pdb::sortedForSet($schema, $a), | $a);
+    let right = if($isSet, | meta::pure::compiler::test::pdb::sortedForSet($schema, $b), | $b);
+    if($left->size() != $right->size(),
+        | [$path + '.length: ' + $left->size()->toString() + ' in the Pure archive, ' + $right->size()->toString() + ' in the golden'],
+        | range(0, $left->size())->map(i | meta::pure::compiler::test::pdb::compareValue($schema,
+              $left->at($i), $right->at($i), $path + '[' + $i->toString() + ']')));
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::compareValue(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], a:Any[0..1], b:Any[0..1], path:String[1]):String[*]
+{
+    let differs = [$path + ': ' + meta::pure::compiler::test::pdb::describe($a) + ' in the Pure archive, ' + meta::pure::compiler::test::pdb::describe($b) + ' in the golden'];
+    if([pair(| $a->isEmpty() && $b->isEmpty(), | []->cast(@String)),
+        pair(| $a->isEmpty() || $b->isEmpty(), | $differs),
+        pair(| $a->toOne()->instanceOf(meta::pure::compiler::pdb::reader::ReadPointerRef) || $b->toOne()->instanceOf(meta::pure::compiler::pdb::reader::ReadPointerRef),
+             | if(meta::pure::compiler::test::pdb::sameValueKey($schema, $a->toOne(), $b->toOne()), | []->cast(@String), | $differs)),
+        pair(| $a->toOne()->instanceOf(meta::pure::compiler::pdb::reader::ReadAncestorRef) || $b->toOne()->instanceOf(meta::pure::compiler::pdb::reader::ReadAncestorRef),
+             | if(meta::pure::compiler::test::pdb::sameValueKey($schema, $a->toOne(), $b->toOne()), | []->cast(@String), | $differs)),
+        pair(| $a->toOne()->instanceOf(meta::pure::compiler::pdb::reader::FbsNode) && $b->toOne()->instanceOf(meta::pure::compiler::pdb::reader::FbsNode),
+             | meta::pure::compiler::test::pdb::compareNode($schema, $a->toOne()->cast(@meta::pure::compiler::pdb::reader::FbsNode), $b->toOne()->cast(@meta::pure::compiler::pdb::reader::FbsNode), $path)),
+        pair(| $a->toOne()->instanceOf(meta::pure::compiler::pdb::reader::FbsNode) || $b->toOne()->instanceOf(meta::pure::compiler::pdb::reader::FbsNode), | $differs),
+        pair(| $a->toOne() == $b->toOne(), | []->cast(@String))],
+       | $differs);
+}
+
+// References compare by what they point at: kind and path, or ancestor depth.
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::sameValueKey(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], a:Any[1], b:Any[1]):Boolean[1]
+{
+    meta::pure::compiler::test::pdb::valueKey($schema, $a) == meta::pure::compiler::test::pdb::valueKey($schema, $b);
+}
+
+// A key identifying a value: used to compare references and to order set members
+// (a named node by its name, a reference by its target).
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::valueKey(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], v:Any[1]):String[1]
+{
+    if([pair(| $v->instanceOf(meta::pure::compiler::pdb::reader::ReadPointerRef),
+             | let ref = $v->cast(@meta::pure::compiler::pdb::reader::ReadPointerRef);
+               'P' + $ref.kind->toString() + ':' + $ref.segs->joinStrings('::');),
+        pair(| $v->instanceOf(meta::pure::compiler::pdb::reader::ReadAncestorRef),
+             | 'A:' + $v->cast(@meta::pure::compiler::pdb::reader::ReadAncestorRef).depth->toString()),
+        pair(| $v->instanceOf(meta::pure::compiler::pdb::reader::FbsNode),
+             | meta::pure::compiler::test::pdb::nodeKey($schema, $v->cast(@meta::pure::compiler::pdb::reader::FbsNode)))],
+       | 'S:' + $v->toString());
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::nodeKey(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], node:meta::pure::compiler::pdb::reader::FbsNode[1]):String[1]
+{
+    let hasName = meta::pure::compiler::pdb::schema::table($schema, $node.type)->toOne().fields->exists(f | $f.name == 'name');
+    let name = if($hasName, | meta::pure::compiler::pdb::reader::readField($schema, $node, 'name')->take(1), | []);
+    if($name->isNotEmpty() && $name->toOne()->instanceOf(String),
+        | 'M:' + $name->toOne()->cast(@String),
+        | 'N:' + $node.type);
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::sortedForSet(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], values:Any[*]):Any[*]
+{
+    $values->sort({x, y | meta::pure::compiler::test::pdb::valueKey($schema, $x)->compare(meta::pure::compiler::test::pdb::valueKey($schema, $y))});
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::describe(v:Any[0..1]):String[1]
+{
+    if([pair(| $v->isEmpty(), | '<absent>'),
+        pair(| $v->toOne()->instanceOf(String), | '\'' + $v->toOne()->cast(@String) + '\''),
+        pair(| $v->toOne()->instanceOf(meta::pure::compiler::pdb::reader::FbsNode), | '<' + $v->toOne()->cast(@meta::pure::compiler::pdb::reader::FbsNode).type + '>'),
+        pair(| $v->toOne()->instanceOf(meta::pure::compiler::pdb::reader::ReadPointerRef), | '<reference ' + $v->toOne()->cast(@meta::pure::compiler::pdb::reader::ReadPointerRef).segs->joinStrings('::') + '>'),
+        pair(| $v->toOne()->instanceOf(meta::pure::compiler::pdb::reader::ReadAncestorRef), | '<ancestor ' + $v->toOne()->cast(@meta::pure::compiler::pdb::reader::ReadAncestorRef).depth->toString() + '>')],
+       | $v->toOne()->toString());
+}

@@ -30,8 +30,8 @@ import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.api.stack.MutableStack;
 import org.eclipse.collections.impl.factory.Stacks;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerContextExtension;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilerContextExtension;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
 

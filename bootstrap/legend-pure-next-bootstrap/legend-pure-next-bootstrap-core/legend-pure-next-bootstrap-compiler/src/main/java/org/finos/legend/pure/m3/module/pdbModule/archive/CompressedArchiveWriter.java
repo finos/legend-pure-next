@@ -146,7 +146,7 @@ public class CompressedArchiveWriter
             }
 
             // Write caller-provided additional sections (e.g. functionIndex
-            // built from elements directly when there's no LocalModule).
+            // built from elements directly when there's no SourceModule).
             for (PDBArchiveSection section : additionalSections)
             {
                 writeSection(zos, section);

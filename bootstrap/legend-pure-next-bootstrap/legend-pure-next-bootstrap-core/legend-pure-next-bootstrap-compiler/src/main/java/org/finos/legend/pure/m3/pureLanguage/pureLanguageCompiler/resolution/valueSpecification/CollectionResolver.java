@@ -4,7 +4,7 @@ import meta.pure.metamodel.valuespecification.Collection;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 public class CollectionResolver

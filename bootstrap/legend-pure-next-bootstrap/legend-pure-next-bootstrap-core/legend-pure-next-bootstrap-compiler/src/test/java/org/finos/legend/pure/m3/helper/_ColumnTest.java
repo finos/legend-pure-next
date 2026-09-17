@@ -5,11 +5,11 @@ import meta.pure.metamodel.relation.Column;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Column;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
@@ -23,14 +23,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class _ColumnTest
 {
-    private static PureModel model;
+    private static JavaCompiler model;
 
     @BeforeAll
     public static void setUp()
     {
-        model = PureModel.withModules(
+        model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"), Lists.mutable.empty()))
+                        new SourceModule("test", "*", Lists.mutable.with("m3"), Lists.mutable.empty()))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
@@ -40,7 +40,7 @@ public class _ColumnTest
     @Test
     public void testBuildColumn()
     {
-        ScopedMetadataAccess metadataAccess = new ScopedMetadataAccess(model.getModule("test"), model);
+        ScopedMetadataAccess metadataAccess = new ScopedMetadataAccess(model.registry().module("test"), model.registry());
         
         GenericType ownerGT = _GenericType.buildUserDefinedGenericType((Type) metadataAccess.getElement("String"), metadataAccess);
         GenericType valueGT = _GenericType.buildUserDefinedGenericType((Type) metadataAccess.getElement("Integer"), metadataAccess);

@@ -14,12 +14,12 @@
 
 package org.finos.legend.pure.m3.module.pdbModule;
 
+import org.finos.legend.pure.m3.LanguageExtension;
+import org.finos.legend.pure.m3.module.ModuleRegistry;
 import meta.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
-import org.finos.legend.pure.m3.module.ModelMetadataAccess;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
@@ -48,7 +48,7 @@ import java.util.Set;
  * immediately, so this module does not require explicit lifecycle
  * management.</p>
  */
-public class PDBModule implements Module
+public class PdbModule implements Module
 {
     public enum Mode
     {
@@ -73,7 +73,19 @@ public class PDBModule implements Module
      * @param mode    the operating mode
      * @throws IOException if the archive has no manifest section
      */
-    public PDBModule(Path pdbPath, Mode mode) throws IOException
+    /** Open a .pdb archive for execution; its identity comes from the archive's manifest. */
+    public static PdbModule open(Path pdbPath) throws IOException
+    {
+        return new PdbModule(pdbPath, Mode.EXECUTION);
+    }
+
+    /** Open a .pdb archive in the given mode; its identity comes from the archive's manifest. */
+    public static PdbModule open(Path pdbPath, Mode mode) throws IOException
+    {
+        return new PdbModule(pdbPath, mode);
+    }
+
+    public PdbModule(Path pdbPath, Mode mode) throws IOException
     {
         this.archive = new CompressedArchiveReader(pdbPath);
         this.loader = new PdbLoader(pdbPath);
@@ -95,7 +107,7 @@ public class PDBModule implements Module
      * module names ("a", "b") for two archives being compared without
      * adopting the production identity baked into the manifest.
      */
-    public PDBModule(Path pdbPath, Mode mode, String name, String packagePattern, List<String> dependencies) throws IOException
+    public PdbModule(Path pdbPath, Mode mode, String name, String packagePattern, List<String> dependencies) throws IOException
     {
         this.archive = new CompressedArchiveReader(pdbPath);
         this.loader = new PdbLoader(pdbPath);
@@ -106,7 +118,7 @@ public class PDBModule implements Module
     }
 
     @Override
-    public void setPureModel(PureModel model)
+    public void attach(ModuleRegistry registry, List<LanguageExtension> extensions)
     {
         // EXECUTION mode loads PDBs for runtime queries against the full
         // graph (e.g. `Package.children` walks for test discovery). The
@@ -122,12 +134,13 @@ public class PDBModule implements Module
         // declared dependencies, mirroring how the source code is compiled
         // in isolation).
         MetadataAccess access = mode == Mode.EXECUTION
-                ? new ModelMetadataAccess(model)
-                : new ScopedMetadataAccess(this, model);
+                ? registry
+                : new ScopedMetadataAccess(this, registry);
+        MutableList<LanguageExtension> languageExtensions = org.eclipse.collections.api.factory.Lists.mutable.withAll(extensions);
         this.loader.setResolver(access);
-        this.loader.setExtensions(model.extensions());
+        this.loader.setExtensions(languageExtensions);
         this.resolver = access;
-        this.metadataAccessExtensions = model.extensions().collect(e -> e.buildMetadataExtensionForModule(this)).select(Objects::nonNull);
+        this.metadataAccessExtensions = languageExtensions.collect(e -> e.buildMetadataExtensionForModule(this)).select(Objects::nonNull);
     }
 
     /**
@@ -140,7 +153,7 @@ public class PDBModule implements Module
     }
 
     /**
-     * Return the metadata resolver set during {@link #setPureModel}.
+     * Return the metadata resolver set during {@link #attach}.
      * Extensions can use this to resolve FlatBuffer types into
      * real metamodel types.
      */
@@ -156,19 +169,19 @@ public class PDBModule implements Module
     }
 
     @Override
-    public String getName()
+    public String name()
     {
         return name;
     }
 
     @Override
-    public List<String> getDependencies()
+    public List<String> dependencies()
     {
         return dependencies;
     }
 
     @Override
-    public String getPackagePattern()
+    public String packagePattern()
     {
         return packagePattern;
     }

@@ -7,7 +7,7 @@ and its Java codegen have been retired.
 Two consumers today:
 - **Bootstrap (`PureLanguageProtocolBuilder.java`)** — a hand-maintained
   reference parser kept in lockstep with `mappings.pure`. Validated by
-  `MappingsInterpreterValidatorTest` on every test run. Will become a
+  `PureParserMatchesJavaParserTest` on every test run. Will become a
   generated artifact once the Java platform's Pure→Java codegen lands.
 - **Truffle (`TrufflePureParser`)** — interprets `mappings.pure` directly at
   runtime via `parser-mappings.pdb`. Graal JITs the hot paths.
@@ -57,22 +57,23 @@ Compiles to `shared/parser-mappings.pdb` (~120 elements, ~400 KB).
 
 ## Validation
 
-The downstream `legend-pure-next-bootstrap-parser-validation` module runs
-the existing `.dsl`-derived production parser AND the Pure interpreter
-consuming `shared/parser-mappings.pdb` against the
-`pure/specification/grammar/tests/*` corpus, and asserts the protocol
-shapes match via `ProtocolPrinter` (a unified deep-printer that handles
-both typed protocol POJOs and `DynamicInstance`).
+The downstream `legend-pure-next-bootstrap-grammar-validation` module's
+`PureParserMatchesJavaParserTest` parses every `.pure` fixture of `pure/specification/grammar/tests`
+and `pure/specification/compiler/tests` as a whole document (sections, imports,
+elements) with the Java reference parser (`TopLevelParser` + `PureLanguageParser`)
+AND with the Pure parser from `shared/parser-mappings.pdb` interpreted on the
+bootstrap runtime, and asserts the `PureFile` protocols match via `ProtocolPrinter`
+(a unified deep-printer that handles both typed protocol POJOs and `DynamicInstance`).
 
 Run the validator:
 
 ```
-mvn -pl bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-parser-validation \
-    test -Dtest=MappingsInterpreterValidatorTest \
+mvn -pl bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/legend-pure-next-bootstrap-grammar/legend-pure-next-bootstrap-grammar-validation \
+    test -Dtest=PureParserMatchesJavaParserTest \
     -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
-**59 of 59 fixtures green (100%)** across the entire `pure/specification/grammar/tests/*` corpus.
+**316 of 316 fixtures green** (58 grammar + 258 compiler).
 
 ## Open items (informational, not blocking)
 
@@ -101,9 +102,9 @@ mvn -pl bootstrap/legend-pure-next-bootstrap/legend-pure-next-bootstrap-core/leg
 ## Native bridge
 
 The ANTLR-side bridge lives in
-`bootstrap/.../legend-pure-next-bootstrap-parser-validation/src/main/java/.../AntlrContextNativesExtension.java`.
-It implements `NativeExtension` and registers ~13 natives (`getText`,
+`bootstrap/.../legend-pure-next-bootstrap-grammar-validation/src/main/java/.../AntlrContextNativesExtension.java`.
+It implements `NativesExtension` and registers ~13 natives (`getText`,
 `grammarRuleName`, `getTopLevelChildren`, `getChild[ren]`, `getTokenText[s]`,
 `hasChild`, `hasToken`, `getStart/StopLine/Column`, `getChildTextAt`) that
 reflectively invoke ANTLR context accessors. Passed explicitly to
-`PureExecution.builder().withNativeExtensions(...)` — no SPI/META-INF.
+`PureRuntime.builder().withNativeExtensions(...)` — no SPI/META-INF.

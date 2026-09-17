@@ -19,9 +19,9 @@ import meta.pure.metamodel.multiplicity.MultiplicityValueImpl;
 import meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl;
 import meta.pure.protocol.grammar.multiplicity.Multiplicity_Pointer;
 import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 
 /**
@@ -30,7 +30,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCo
  * <p>
  * Well-known multiplicities ({@code [1]}, {@code [0..1]}, {@code [*]}, {@code [1..*]}) are resolved
  * to their canonical {@link meta.pure.metamodel.multiplicity.PackageableMultiplicity}
- * instances bootstrapped in the {@link PureModel}.
+ * instances bootstrapped in the {@link JavaCompiler}.
  * Non-standard multiplicities are represented as {@link UserDefinedAdHocMultiplicityImpl}.
  */
 public final class MultiplicityCompiler
@@ -92,7 +92,7 @@ public final class MultiplicityCompiler
      * Otherwise a fresh {@code UserDefinedAdHocMultiplicity} is created.
      *
      * @param grammarMultiplicity the grammar-level multiplicity to compile
-     * @param model               the PureModel containing bootstrapped multiplicities
+     * @param model               the JavaCompiler containing bootstrapped multiplicities
      * @param context             the compilation context for scope lookup (may be null)
      * @return the resolved metamodel Multiplicity
      */

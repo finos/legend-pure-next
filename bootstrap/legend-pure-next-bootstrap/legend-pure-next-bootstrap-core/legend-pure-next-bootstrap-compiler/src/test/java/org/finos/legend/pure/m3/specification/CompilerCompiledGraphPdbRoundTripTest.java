@@ -14,10 +14,10 @@
 
 package org.finos.legend.pure.m3.specification;
 
+import org.finos.legend.pure.m3.module.ModuleRegistry;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.protocol.PureFile;
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraph;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension;
 import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
@@ -26,9 +26,9 @@ import org.finos.legend.pure.m3.module.CompilationError;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
-import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
+import org.finos.legend.pure.m3.module.sourceModule.PureContent;
+import org.finos.legend.pure.m3.module.pdbModule.PdbModule;
 import org.finos.legend.pure.m3.printer.CompiledGraphPrinter;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.next.parser.PureParser;
@@ -153,7 +153,7 @@ public class CompilerCompiledGraphPdbRoundTripTest
             {
                 new CompressedArchiveWriter().write(allModuleElements, pdbExtensions, testModule,
                         new org.finos.legend.pure.m3.module.ModuleManifest(
-                                testModule.getName(), testModule.getPackagePattern(), testModule.getDependencies()),
+                                testModule.name(), testModule.packagePattern(), testModule.dependencies()),
                         List.of(), tempPdb);
             }
             catch (IllegalArgumentException e)
@@ -163,11 +163,9 @@ public class CompilerCompiledGraphPdbRoundTripTest
             }
 
             // --- Step 3: Read back from PDB ---
-            PDBModule roundTripModule = new PDBModule(tempPdb, PDBModule.Mode.EXECUTION);
-            PureModel model2 = PureModel.withModules(Lists.mutable.with(roundTripModule, RUNTIME.coreModule()))
-                    .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
-                    .build();
-            model2.compile();
+            PdbModule roundTripModule = new PdbModule(tempPdb, PdbModule.Mode.EXECUTION);
+            new ModuleRegistry(java.util.List.of(roundTripModule, RUNTIME.coreModule()))
+                    .attach(java.util.List.of(new PureLanguageExtension()));
 
             // --- Step 4: Print compiled graph from PDB-loaded elements ---
             List<PackageableElement> pdbElements = new ArrayList<>();

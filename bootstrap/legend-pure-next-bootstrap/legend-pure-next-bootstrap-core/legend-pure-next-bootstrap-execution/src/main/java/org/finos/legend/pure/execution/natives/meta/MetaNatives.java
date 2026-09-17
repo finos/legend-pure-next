@@ -22,8 +22,8 @@ import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.DynamicInstance;
-import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
-import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
+import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
+import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
 import org.finos.legend.pure.execution.ValueSpecificationEvaluator;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -1069,7 +1069,7 @@ public class MetaNatives
                 if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV)
                 {
                     var argType = argV._type();
-                    if (argType == original || org.finos.legend.pure.execution.NativeRepository.pureEquals(argType, original, resolver))
+                    if (argType == original || org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(argType, original, resolver))
                     {
                         hasSelfRef = true;
                         break;
@@ -1083,7 +1083,7 @@ public class MetaNatives
                         typeArgs.collect(arg ->
                         {
                             if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
-                                    && (argV._type() == original || org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original, resolver)))
+                                    && (argV._type() == original || org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(argV._type(), original, resolver)))
                             {
                                 meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef =
                                         _GenericType.buildUserDefinedGenericType(copyType, resolver);

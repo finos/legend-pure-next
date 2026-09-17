@@ -15,11 +15,18 @@
 
 package org.finos.legend.pure.execution.natives.meta;
 
+import java.util.function.Supplier;
+import org.finos.legend.pure.m3.module.CompilationResult;
+import org.finos.legend.pure.m3.module.CompilationError;
+import org.finos.legend.pure.m3.compilation.CompilationUnavailableException;
+import org.finos.legend.pure.m3.compilation.Compilation;
+import org.finos.legend.pure.execution.natives.NativeRegistry;
+
 import meta.pure.protocol.PureFile;
 import org.finos.legend.pure.execution.DynamicInstance;
-import org.finos.legend.pure.execution.NativeExtension;
-import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
-import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
+import org.finos.legend.pure.execution.natives.NativesExtension;
+import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
+import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
 import org.finos.legend.pure.execution.ProtocolToDynamicInstance;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -34,25 +41,26 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class CompilerNatives implements NativeExtension
+public class CompilerNatives implements NativesExtension
 {
     private final List<ParserExtension> extraExtensions;
+    private final Supplier<Compilation> compilation;
 
     public CompilerNatives()
     {
-        this(List.of());
+        this(List.of(), null);
     }
 
-    public CompilerNatives(List<? extends ParserExtension> extraExtensions)
+    public CompilerNatives(List<? extends ParserExtension> extraExtensions, Supplier<Compilation> compilation)
     {
         this.extraExtensions = List.copyOf(extraExtensions);
+        this.compilation = compilation;
     }
 
     @Override
-    public void register(Map<String, NativeImpl> natives,
-                         Map<String, LazyNativeImpl> lazyNatives,
-                         MetadataAccess resolver)
+    public void registerAll(NativeRegistry registry)
     {
+        MetadataAccess resolver = registry.resolver();
         // meta::pure::functions::meta::parse(sourceId:String[1], content:String[1]):PureFile[1]
         List<ParserExtension> extensions = new ArrayList<>();
         extensions.add(new PureLanguageParser());
@@ -61,7 +69,7 @@ public class CompilerNatives implements NativeExtension
                 .withExtensions(extensions)
                 .build();
 
-        natives.put("parse_String_1__String_1__PureFile_1_", (args, eval, genericType, multiplicity) ->
+        registry.register("parse_String_1__String_1__PureFile_1_", (args, eval, genericType, multiplicity) ->
         {
             String sourceId = (String) _E_ValueSpecification.unwrap(args.get(0));
             String content = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -86,14 +94,14 @@ public class CompilerNatives implements NativeExtension
         });
 
         // meta::pure::functions::meta::compileSource(file:PureFile[1], dependencies:String[*]):CompileSourceResult[1]
-        // THE dynamic-evaluation primitive: dispatches into the INTERPRETED
-        // Pure compiler (compiler.pdb must be loaded) and returns the compiled
+        // THE dynamic-evaluation primitive: compiles through the RUNTIME's
+        // compilation strategy (by default the Pure compiler, compiler.pdb) and returns the compiled
         // elements as SELF-CONTAINED VALUES — mutates no global state (the
         // module registry is immutable after boot); compile diagnostics are
         // DATA on the result, not exceptions. `dependencies` names loaded
         // modules; an unknown name is a caller bug and throws (message pinned
         // by the PCT contract tests).
-        natives.put("compileSource_PureFile_1__String_MANY__CompileSourceResult_1_", (args, eval, genericType, multiplicity) ->
+        registry.register("compileSource_PureFile_1__String_MANY__CompileSourceResult_1_", (args, eval, genericType, multiplicity) ->
         {
             for (meta.pure.metamodel.valuespecification.ValueSpecification depVS
                     : _E_ValueSpecification.toCollection(args.get(1), resolver)._values())
@@ -104,25 +112,23 @@ public class CompilerNatives implements NativeExtension
                     throw new RuntimeException("compileSource: dependency module '" + dep + "' is not loaded");
                 }
             }
-            Object compileFn = resolver.getElement("meta::pure::compiler::compile_PureFile_MANY__CompilationResult_1_");
-            if (compileFn == null)
+            if (this.compilation == null)
             {
-                throw new RuntimeException("compileSource: the compiler module is not loaded");
+                throw new RuntimeException("compileSource: no compilation strategy — run through a PureRuntime");
             }
+            Object file = _E_ValueSpecification.unwrap(args.get(0));
 
             DynamicInstance out = new DynamicInstance("meta::pure::functions::meta::CompileSourceResult");
             try
             {
-                Object resultVS = eval.executeFunction(
-                        _E_ValueSpecification.wrap(compileFn, null, null, resolver),
-                        List.of(args.get(0)));
-                Object result = _E_ValueSpecification.unwrap(
-                        (meta.pure.metamodel.valuespecification.ValueSpecification) resultVS);
-                DynamicInstance compResult = (DynamicInstance) result;
-                Object errorsObj = compResult.get("errors");
-                boolean failed = errorsObj instanceof List<?> errs && !errs.isEmpty();
-                out.put("elements", failed ? List.of() : compResult.get("elements"));
-                out.put("errors", errorsObj == null ? List.of() : errorsObj);
+                CompilationResult result = this.compilation.get().compileParsed(List.of(file));
+                boolean failed = !result.errors().isEmpty();
+                out.put("elements", failed ? new ArrayList<>() : new ArrayList<Object>(result.elements()));
+                out.put("errors", new ArrayList<Object>(result.errors().stream().map(CompilationError::message).toList()));
+            }
+            catch (CompilationUnavailableException e)
+            {
+                throw new RuntimeException("compileSource: " + e.getMessage(), e);
             }
             catch (RuntimeException e)
             {
@@ -133,7 +139,7 @@ public class CompilerNatives implements NativeExtension
         });
 
         // meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
-        natives.put("findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_", (args, eval, genericType, multiplicity) ->
+        registry.register("findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_", (args, eval, genericType, multiplicity) ->
         {
             String name = (String) _E_ValueSpecification.unwrap(args.get(0));
             long arity = (Long) _E_ValueSpecification.unwrap(args.get(1));
@@ -152,7 +158,7 @@ public class CompilerNatives implements NativeExtension
         // Enumerates every Type-typed PackageableElement across all loaded
         // modules. Used by buildLinearizationCache to seed the cache without
         // relying on package-tree traversal (which is split per module).
-        natives.put("findAllTypes__Type_MANY_", (args, eval, genericType, multiplicity) ->
+        registry.register("findAllTypes__Type_MANY_", (args, eval, genericType, multiplicity) ->
         {
             List<meta.pure.metamodel.valuespecification.ValueSpecification> wrapped = new ArrayList<>();
             for (String path : resolver.elementPaths())
@@ -168,7 +174,7 @@ public class CompilerNatives implements NativeExtension
 
         // meta::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString(dateStr:String[1]):String[1]
         // Normalizes date literals: zero-pads components and converts timezone offsets to UTC.
-        natives.put("normalizeDateString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        registry.register("normalizeDateString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             String dateStr = (String) _E_ValueSpecification.unwrap(args.get(0));
             String result = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(dateStr);
@@ -185,7 +191,7 @@ public class CompilerNatives implements NativeExtension
         // (shallow), and rewritten slot values are written onto the copy via
         // fluent setters. Identity-based cycle tracking keeps the metamodel's
         // back-edges (e.g. PE.package → Package.children → same PE) finite.
-        natives.put("resolveAndReturnGraph_Map_1__PackageableElement_MANY_", (args, eval, genericType, multiplicity) ->
+        registry.register("resolveAndReturnGraph_Map_1__PackageableElement_MANY_", (args, eval, genericType, multiplicity) ->
         {
             org.finos.legend.pure.execution.PureMap pureMap =
                     (org.finos.legend.pure.execution.PureMap) _E_ValueSpecification.unwrap(args.get(0));

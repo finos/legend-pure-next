@@ -38,7 +38,7 @@
         <!-- Parser (protocol-grammar model) -->
         <dependency>
             <groupId>org.finos.legend.pure</groupId>
-            <artifactId>legend-pure-next-bootstrap-parser</artifactId>
+            <artifactId>legend-pure-next-bootstrap-grammar-parser</artifactId>
             <version>${project.version}</version>
         </dependency>
 

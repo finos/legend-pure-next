@@ -12,8 +12,8 @@ import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
 import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
 import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
 import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
@@ -36,7 +36,7 @@ import meta.pure.metamodel.function.LambdaFunctionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 
-import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
+import static org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext.lazy;
 import static org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific.LetResolver.registerLetVariable;
 
 /**

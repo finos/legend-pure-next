@@ -4,11 +4,11 @@ import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.function.property.Property;
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
+import org.finos.legend.pure.m3.module.sourceModule.PureContent;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
@@ -31,17 +31,17 @@ public class _ClassTest
             "   prop2 : meta::pure::metamodel::relation::Column<test::Wrapper<String>, Integer|1..*>[1];\n" +
             "}\n";
 
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent(source, "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
         assertTrue(result.errors().isEmpty(), "Compilation errors should be empty: " + result.errors());
 
-        Class ownerClass = (Class) model.getModule("m3").getElement("meta::pure::metamodel::relation::Column");
-        Class targetClass = (Class) model.getModule("test").getElement("test::Target");
+        Class ownerClass = (Class) model.registry().module("m3").getElement("meta::pure::metamodel::relation::Column");
+        Class targetClass = (Class) model.registry().module("test").getElement("test::Target");
         
         Property prop2 = targetClass._properties().getFirst();
         GenericType receiverType = prop2._genericType();
@@ -68,16 +68,16 @@ public class _ClassTest
             "   assocProp : test::SuperClass[1];\n" +
             "}\n";
 
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent(source, "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
         assertTrue(result.errors().isEmpty(), "Compilation errors should be empty: " + result.errors());
 
-        Class subClass = (Class) model.getModule("test").getElement("test::SubClass");
+        Class subClass = (Class) model.registry().module("test").getElement("test::SubClass");
 
         // Direct
         Property subProp = _Class.findProperty(subClass, "subProp");
@@ -114,16 +114,16 @@ public class _ClassTest
             "   overloadedQual(a:String[1], b:String[1]) { $a } : String[1];\n" +
             "}\n";
 
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent(source, "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
         assertTrue(result.errors().isEmpty(), "Compilation errors should be empty: " + result.errors());
 
-        Class subClass = (Class) model.getModule("test").getElement("test::SubClass");
+        Class subClass = (Class) model.registry().module("test").getElement("test::SubClass");
 
         assertEquals(1, _Class.findQualifiedProperties(subClass, "subQual").size());
         assertEquals(1, _Class.findQualifiedProperties(subClass, "superQual").size());

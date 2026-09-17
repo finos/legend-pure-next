@@ -72,6 +72,27 @@ function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:S
 // itself only knows how to hand the adapter to each PCT closure.
 function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1], adapter:Function<Any>[1]):String[1]
 {
+    meta::pure::test::runPCTTestsWithReport($rootPackagePath, $adapter, []);
+}
+
+// Same runs, and write a JSON report (see testReport.pure) to $reportPath — before the
+// final assert, so failing runs are reported too.
+function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1], reportPath:String[1]):String[1]
+{
+    meta::pure::test::runPCTTestsWithReport(
+        $rootPackagePath,
+        meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_,
+        $reportPath
+    );
+}
+
+function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1], adapter:Function<Any>[1], reportPath:String[1]):String[1]
+{
+    meta::pure::test::runPCTTestsWithReport($rootPackagePath, $adapter, $reportPath);
+}
+
+function <<test.TestDependency>> meta::pure::test::runPCTTestsWithReport(rootPackagePath:String[1], adapter:Function<Any>[1], reportPath:String[0..1]):String[1]
+{
     let root = pathToElement($rootPackagePath)->cast(@Package);
     let tests = meta::pure::test::collectPCTTests($root);
     let total = $tests->size();
@@ -95,8 +116,9 @@ function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:S
         let fn = $tests->at($i);
         let name = $fn->elementToPath();
         tickProgress($i + 1, $total, $name);
+        let testStart = currentTimeMillis();
         let result = tryEval(| withSilencedPrint(| meta::pure::functions::lang::evaluate($fn, meta::pure::functions::collection::list($adapter))));
-        ^meta::pure::test::TestResult(name = $name, error = $result.failure);
+        ^meta::pure::test::TestResult(name = $name, error = $result.failure, durationMs = currentTimeMillis() - $testStart);
     );
 
     let elapsedMs = currentTimeMillis() - $start;
@@ -119,6 +141,7 @@ function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:S
     // Throw on any failure so the CLI's exit code reflects test status —
     // returning the summary string lets the bootstrap CLI swallow failures
     // (it just prints the result), so callers never see a non-zero exit.
+    $reportPath->map(path | meta::pure::test::report::writeTestResults($path, 'pct', $elapsedMs, $results));
     assert($failed == 0, $summary);
     $summary;
 }

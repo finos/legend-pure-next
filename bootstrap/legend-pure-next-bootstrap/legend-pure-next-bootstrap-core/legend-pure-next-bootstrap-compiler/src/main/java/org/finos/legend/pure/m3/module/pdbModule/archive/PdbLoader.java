@@ -33,9 +33,9 @@ import java.util.Set;
  * subsequent calls return the cached wrapper.</p>
  *
  * <p>Cross-references within wrappers are resolved through a
- * {@link MetadataAccess} (typically {@code PureModel}), which is set
+ * {@link MetadataAccess} (typically {@code JavaCompiler}), which is set
  * via {@link #setResolver(MetadataAccess)} before any element access.
- * This ensures wrappers navigate the full graph via PureModel's
+ * This ensures wrappers navigate the full graph via JavaCompiler's
  * multi-module resolution.</p>
  *
  * <p>All element type handling is delegated to {@link PDBExtension}
@@ -61,10 +61,10 @@ public class PdbLoader
 
     /**
      * Set the MetadataAccess used by FlatBuffer wrappers for cross-reference
-     * resolution. This should be the {@code PureModel} instance, which
+     * resolution. This should be the {@code JavaCompiler} instance, which
      * provides multi-module resolution across all modules.
      *
-     * @param resolver the metadata access (typically PureModel)
+     * @param resolver the metadata access (typically JavaCompiler)
      */
     public void setResolver(MetadataAccess resolver)
     {
@@ -126,7 +126,7 @@ public class PdbLoader
 
     /**
      * Load all elements eagerly into the cache and return them.
-     * Useful for bulk-loading into PureModel's index.
+     * Useful for bulk-loading into JavaCompiler's index.
      */
     public Map<String, PackageableElement> loadAll()
     {

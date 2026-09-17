@@ -19,7 +19,7 @@ import meta::external::language::java::*;
 // `javax.tools.JavaCompiler`), load the resulting class through a throw-away
 // `ClassLoader`, and invoke a named static method on it. Truffle-only —
 // the bootstrap backend does not register this native. Implementation lives
-// in `legend-pure-next-truffle-extension-java`'s `JavaCompileNatives`.
+// in `legend-pure-next-truffle-core`'s `JavaCompileNatives` (interpreter/ast/natives/javacompile).
 //
 // `args` are passed positionally to the static method. Auto-boxing maps
 // Pure Long → Java long/Long, Pure Double → double/Double, etc.

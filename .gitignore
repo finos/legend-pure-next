@@ -28,6 +28,7 @@ website/yarn-error.log*
 **/build/
 **/node_modules/
 **/generated/
+/test-results/
 /shared/
 
 

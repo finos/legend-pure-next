@@ -18,9 +18,9 @@ import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
-import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
+import org.finos.legend.pure.m3.module.sourceModule.PureContent;
+import org.finos.legend.pure.m3.module.pdbModule.PdbModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +30,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests demonstrating PureModel usage: building, compiling,
+ * Tests demonstrating JavaCompiler usage: building, compiling,
  * module-scoped element resolution, and error handling.
  */
 class TestPureModel
@@ -42,23 +42,23 @@ class TestPureModel
     @Test
     void emptyModelCompilesSuccessfully()
     {
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"), Lists.mutable.with()))
+                        new SourceModule("test", "*", Lists.mutable.with("m3"), Lists.mutable.with()))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
 
         assertTrue(result.errors().isEmpty(), "Empty model should compile without errors");
-        assertNotNull(model._root(), "Root package should exist");
+        assertNotNull(model.root(), "Root package should exist");
     }
 
     @Test
     void compileClassAndResolveFromModule()
     {
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent("Class meta::pure::MyClass { name : String[1]; }", "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
@@ -67,7 +67,7 @@ class TestPureModel
                 "Compilation errors: " + result.errors());
 
         // Resolve the compiled class from the test module
-        Module testModule = model.getModule("test");
+        Module testModule = model.registry().module("test");
         assertNotNull(testModule, "test module should exist");
         assertNotNull(testModule.getElement("meta::pure::MyClass"),
                 "MyClass should be resolvable from the test module");
@@ -77,9 +77,9 @@ class TestPureModel
     @Test
     void compileEnumerationAndResolve()
     {
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent("Enum meta::pure::MyColor { RED, GREEN, BLUE }", "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
@@ -87,7 +87,7 @@ class TestPureModel
         assertTrue(result.errors().isEmpty(),
                 "Compilation errors: " + result.errors());
 
-        Module testModule = model.getModule("test");
+        Module testModule = model.registry().module("test");
         assertNotNull(testModule.getElement("meta::pure::MyColor"));
         assertInstanceOf(meta.pure.metamodel.type.Enumeration.class,
                 testModule.getElement("meta::pure::MyColor"));
@@ -100,14 +100,14 @@ class TestPureModel
     @Test
     void bootstrapTypesVisibleThroughDependency()
     {
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"), Lists.mutable.with()))
+                        new SourceModule("test", "*", Lists.mutable.with("m3"), Lists.mutable.with()))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
         model.compile();
 
         // The bootstrap module provides core types
-        Module bootstrap = model.getModule("m3");
+        Module bootstrap = model.registry().module("m3");
         assertNotNull(bootstrap);
         assertFalse(bootstrap.elementPaths().isEmpty(),
                 "Bootstrap should contain elements");
@@ -139,14 +139,14 @@ class TestPureModel
     @Test
     void moduleCanAccessItsOwnElements()
     {
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent("Class meta::pure::A { name : String[1]; }", "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
         model.compile();
 
-        Module testModule = model.getModule("test");
+        Module testModule = model.registry().module("test");
         assertTrue(testModule.hasElement("meta::pure::A"));
         assertTrue(testModule.elementPaths().contains("meta::pure::A"));
     }
@@ -154,17 +154,17 @@ class TestPureModel
     @Test
     void moduleCannotSeeElementsFromNonDependency()
     {
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("moduleA", "*", Lists.mutable.with("m3"),
+                        new SourceModule("moduleA", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent("Class meta::pure::A {}", "a.pure"))),
-                        new LocalModule("moduleB", "*", Lists.mutable.with("m3"),
+                        new SourceModule("moduleB", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent("Class meta::pure::B {}", "b.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
         model.compile();
 
-        Module modA = model.getModule("moduleA");
-        Module modB = model.getModule("moduleB");
+        Module modA = model.registry().module("moduleA");
+        Module modB = model.registry().module("moduleB");
 
         // Each module sees its own elements
         assertTrue(modA.hasElement("meta::pure::A"));
@@ -183,9 +183,9 @@ class TestPureModel
     @Test
     void compilationErrorForUnknownType()
     {
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent("Class meta::pure::Bad { value : UnknownType[1]; }", "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
@@ -197,9 +197,9 @@ class TestPureModel
     @Test
     void packagePatternValidation()
     {
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "(meta::pure)(::.*)?", Lists.mutable.with("m3"),
+                        new SourceModule("test", "(meta::pure)(::.*)?", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent("Class wrong::path::MyClass {}", "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
@@ -217,11 +217,11 @@ class TestPureModel
     void modulesCompiledInDependencyOrder()
     {
         // moduleB depends on moduleA
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("moduleA", "*", Lists.mutable.with("m3"),
+                        new SourceModule("moduleA", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent("Class meta::pure::Base {}", "a.pure"))),
-                        new LocalModule("moduleB", "*", Lists.mutable.with("m3", "moduleA"),
+                        new SourceModule("moduleB", "*", Lists.mutable.with("m3", "moduleA"),
                                 Lists.mutable.with(new PureContent("Class meta::pure::Child extends meta::pure::Base {}", "b.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
@@ -230,7 +230,7 @@ class TestPureModel
                 "Cross-module class inheritance should compile: " + result.errors());
 
         // moduleB can see Base from moduleA
-        Module modB = model.getModule("moduleB");
+        Module modB = model.registry().module("moduleB");
         assertNotNull(modB);
     }
 
@@ -241,9 +241,9 @@ class TestPureModel
     @Test
     void compileAgainstPdbModule() throws IOException
     {
-        PDBModule specModule = new PDBModule(
+        PdbModule specModule = new PdbModule(
                 BootstrapModule.locateCorePdb(),
-                PDBModule.Mode.COMPILATION);
+                PdbModule.Mode.COMPILATION);
 
         // A local module that depends on the PDB-backed specification
         // and compiles a function calling filter (provided by the spec)
@@ -252,10 +252,10 @@ class TestPureModel
                 + "  $numbers->filter(n | $n > 0);\n"
                 + "}\n";
 
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(
-                        new LocalModule("test", "*",
-                                Lists.mutable.with(specModule.getName()),
+                        new SourceModule("test", "*",
+                                Lists.mutable.with(specModule.name()),
                                 Lists.mutable.with(new PureContent(source, "test.pure"))),
                         specModule))
                 .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
@@ -270,7 +270,7 @@ class TestPureModel
                 "PDB module should contain elements");
 
         // The locally compiled function should be resolvable from the test module
-        Module testModule = model.getModule("test");
+        Module testModule = model.registry().module("test");
         assertNotNull(testModule);
         assertTrue(testModule.hasElement("meta::pure::test::keepPositive_Integer_MANY__Integer_MANY_"),
                 "Compiled function should be resolvable from the test module");

@@ -20,7 +20,7 @@ import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 
 /**
  * Compiles a grammar-level {@link meta.pure.protocol.grammar.relationship.Generalization}
@@ -40,7 +40,7 @@ public final class GeneralizationCompiler
      * @param grammarGeneralization the grammar-level generalization to compile
      * @param specific              the owning type (subtype side of the generalization)
      * @param imports               import package paths from the enclosing section
-     * @param model                 the compiled PureModel used for element lookup
+     * @param model                 the compiled JavaCompiler used for element lookup
      * @param context               the compilation context for error collection
      * @return a fully resolved metamodel Generalization, or null if the type is unresolvable
      */

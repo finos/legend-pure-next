@@ -124,7 +124,7 @@ function <<test.TestDependency>> meta::external::language::truffle::gallery::ren
 }
 
 // Run the test through the in-memory adapter (i.e. just eval the test on the
-// current Truffle context — same path `just truffle::test-pure-runtime-PCTs`
+// current Truffle context — same path `just truffle::spec-pct`
 // takes). `tryEval` swallows any exception thrown during eval + assertion
 // check, so we treat "no failure" as a pass.
 function <<test.TestDependency>> meta::external::language::truffle::gallery::runTestViaAdapter(

@@ -6,12 +6,12 @@ import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.function.FunctionDefinition;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Sets;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
+import org.finos.legend.pure.m3.module.sourceModule.PureContent;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
@@ -31,14 +31,14 @@ public class _FunctionExpressionTest
             "   test::f2('hi');\n" +
             "}\n";
 
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent(source, "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
         model.compile();
 
-        FunctionDefinition fd = (FunctionDefinition) model.getModule("test").getElement("test::f__Any_MANY_");
+        FunctionDefinition fd = (FunctionDefinition) model.registry().module("test").getElement("test::f__Any_MANY_");
         FunctionExpression expr = (FunctionExpression) fd._expressionSequence().getFirst();
 
         ParametersBinding bindings = _FunctionExpression.extractResolvedParametersBinding(expr);
@@ -59,28 +59,28 @@ public class _FunctionExpressionTest
             "   test::f2('hi');\n" +
             "}\n";
 
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent(source, "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
         assertTrue(result.errors().isEmpty(), "Compilation errors should be empty: " + result.errors());
 
-        Class targetClass = (Class) model.getModule("test").getElement("test::Target");
-        FunctionDefinition fd = (FunctionDefinition) model.getModule("test").getElement("test::f__Any_MANY_");
+        Class targetClass = (Class) model.registry().module("test").getElement("test::Target");
+        FunctionDefinition fd = (FunctionDefinition) model.registry().module("test").getElement("test::f__Any_MANY_");
         FunctionExpression expr = (FunctionExpression) fd._expressionSequence().getFirst();
         
         GenericType targetGT = targetClass._classifierGenericType();
-        meta.pure.metamodel.multiplicity.Multiplicity mul = (meta.pure.metamodel.multiplicity.Multiplicity) model.getModule("m3").getElement("meta::pure::metamodel::multiplicity::PureOne");
+        meta.pure.metamodel.multiplicity.Multiplicity mul = (meta.pure.metamodel.multiplicity.Multiplicity) model.registry().module("m3").getElement("meta::pure::metamodel::multiplicity::PureOne");
 
         ParametersBinding bindings = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
         bindings.typeBindings().put("T", Lists.mutable.with(targetGT));
         bindings.typeBindings().put("Z", Lists.mutable.with(targetGT)); // Will be written but not extracted as own if we filtered later
         bindings.multiplicityBindings().put("m", Lists.mutable.with(mul));
 
-        _FunctionExpression.populateResolvedParameters(expr, bindings, new ScopedMetadataAccess(model.getModule("test"), model));
+        _FunctionExpression.populateResolvedParameters(expr, bindings, new ScopedMetadataAccess(model.registry().module("test"), model.registry()));
 
         assertNotNull(expr._resolvedTypeParameters());
         assertEquals(2, expr._resolvedTypeParameters().size());
@@ -112,20 +112,20 @@ public class _FunctionExpressionTest
             "   test::f2('hi');\n" +
             "}\n";
 
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent(source, "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         model.compile();
 
-        Class targetClass = (Class) model.getModule("test").getElement("test::Target");
-        FunctionDefinition fd = (FunctionDefinition) model.getModule("test").getElement("test::f__Any_MANY_");
+        Class targetClass = (Class) model.registry().module("test").getElement("test::Target");
+        FunctionDefinition fd = (FunctionDefinition) model.registry().module("test").getElement("test::f__Any_MANY_");
         FunctionExpression expr = (FunctionExpression) fd._expressionSequence().getFirst();
         
         GenericType targetGT = targetClass._classifierGenericType();
-        meta.pure.metamodel.multiplicity.Multiplicity mul = (meta.pure.metamodel.multiplicity.Multiplicity) model.getModule("m3").getElement("meta::pure::metamodel::multiplicity::PureOne");
+        meta.pure.metamodel.multiplicity.Multiplicity mul = (meta.pure.metamodel.multiplicity.Multiplicity) model.registry().module("m3").getElement("meta::pure::metamodel::multiplicity::PureOne");
 
         ParametersBinding bindings = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
         bindings.typeBindings().put("T", Lists.mutable.with(targetGT));
@@ -133,7 +133,7 @@ public class _FunctionExpressionTest
         bindings.multiplicityBindings().put("m", Lists.mutable.with(mul));
         bindings.multiplicityBindings().put("n", Lists.mutable.with(mul)); // Should be filtered out
 
-        _FunctionExpression.populateResolvedParameters(expr, bindings, Sets.mutable.with("T"), Sets.mutable.with("m"), new ScopedMetadataAccess(model.getModule("test"), model));
+        _FunctionExpression.populateResolvedParameters(expr, bindings, Sets.mutable.with("T"), Sets.mutable.with("m"), new ScopedMetadataAccess(model.registry().module("test"), model.registry()));
 
         assertEquals(1, expr._resolvedTypeParameters().size());
         assertEquals("T", expr._resolvedTypeParameters().getFirst()._name());

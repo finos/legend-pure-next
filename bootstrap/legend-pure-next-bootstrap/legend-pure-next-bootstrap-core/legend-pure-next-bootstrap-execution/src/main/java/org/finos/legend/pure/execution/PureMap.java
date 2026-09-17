@@ -14,6 +14,8 @@
 
 package org.finos.legend.pure.execution;
 
+import org.finos.legend.pure.execution.natives.NativeRegistry;
+
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 
 import java.util.LinkedHashMap;
@@ -22,7 +24,7 @@ import java.util.LinkedHashMap;
  * Runtime representation of a Pure {@code Map<K,V>} value.
  *
  * <p>Pure maps use structural equality for key lookup (via
- * {@link NativeRepository#pureEquals}), so we can't use a plain
+ * {@link NativeRegistry#pureEquals}), so we can't use a plain
  * Java {@link java.util.HashMap}. Instead, we back the map with a
  * {@link LinkedHashMap} and do equality-based key lookup manually
  * in the native handlers.</p>
@@ -68,8 +70,8 @@ public class PureMap
             boolean found = false;
             for (var otherEntry : other.map.entrySet())
             {
-                if (NativeRepository.pureEquals(entry.getKey(), otherEntry.getKey())
-                        && NativeRepository.pureEquals(entry.getValue(), otherEntry.getValue()))
+                if (NativeRegistry.pureEquals(entry.getKey(), otherEntry.getKey())
+                        && NativeRegistry.pureEquals(entry.getValue(), otherEntry.getValue()))
                 {
                     found = true;
                     break;

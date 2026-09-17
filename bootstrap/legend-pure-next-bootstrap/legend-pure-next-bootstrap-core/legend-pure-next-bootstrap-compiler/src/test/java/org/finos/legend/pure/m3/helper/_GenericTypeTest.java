@@ -6,12 +6,12 @@ import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.UndefinedGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Sets;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
+import org.finos.legend.pure.m3.module.sourceModule.PureContent;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.junit.jupiter.api.Assertions;
@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class _GenericTypeTest
 {
-    private static PureModel model;
+    private static JavaCompiler model;
     private static Module m3;
     private static Class testClass;
     private static Class myClass;
@@ -45,18 +45,18 @@ public class _GenericTypeTest
             "    classTpProp: Class<test::MyClass<String>>[1];\n" +
             "}\n";
 
-        model = PureModel.withModules(
+        model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent(source, "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
         assertTrue(result.errors().isEmpty(), "Compilation errors should be empty: " + result.errors());
 
-        m3 = model.getModule("m3");
-        testClass = (Class) model.getModule("test").getElement("test::TestClass");
-        myClass = (Class) model.getModule("test").getElement("test::MyClass");
+        m3 = model.registry().module("m3");
+        testClass = (Class) model.registry().module("test").getElement("test::TestClass");
+        myClass = (Class) model.registry().module("test").getElement("test::MyClass");
     }
 
     private GenericType getPropGT(String name)
@@ -89,7 +89,7 @@ public class _GenericTypeTest
     @Test
     public void testPrintGenericTypeUndefined()
     {
-        GenericType ugt = new UndefinedGenericTypeImpl(model.getModule("test"));
+        GenericType ugt = new UndefinedGenericTypeImpl(model.registry().module("test"));
         assertEquals("?", _GenericType.print(ugt, false));
     }
 
@@ -124,7 +124,7 @@ public class _GenericTypeTest
         GenericType tpGT = getMyClassTpGT();
         assertFalse(_GenericType.isConcrete(tpGT));
 
-        GenericType ugt = new UndefinedGenericTypeImpl(model.getModule("test"));
+        GenericType ugt = new UndefinedGenericTypeImpl(model.registry().module("test"));
         assertTrue(_GenericType.isConcrete(ugt));
     }
 
@@ -159,7 +159,7 @@ public class _GenericTypeTest
         assertEquals(1, _GenericType.collectReferencedTypeParameterNames(tpClassGT).size());
         assertTrue(_GenericType.collectReferencedTypeParameterNames(tpClassGT).contains("T"));
 
-        GenericType ugt = new UndefinedGenericTypeImpl(model.getModule("test"));
+        GenericType ugt = new UndefinedGenericTypeImpl(model.registry().module("test"));
         assertEquals(0, _GenericType.collectReferencedTypeParameterNames(ugt).size());
     }
 
@@ -169,7 +169,7 @@ public class _GenericTypeTest
         GenericType intGT = getPropGT("intProp");
         assertEquals(0, _GenericType.collectReferencedMultiplicityParameterNames(intGT).size());
 
-        GenericType ugt = new UndefinedGenericTypeImpl(model.getModule("test"));
+        GenericType ugt = new UndefinedGenericTypeImpl(model.registry().module("test"));
         assertEquals(0, _GenericType.collectReferencedMultiplicityParameterNames(ugt).size());
     }
 

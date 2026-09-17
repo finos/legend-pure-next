@@ -29,6 +29,7 @@ translation_javascript_out := repo_root / "pure" / "modules" / "translation" / "
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
 pure_js        := repo_root / "platforms" / "javascript" / "bin" / "pure-js"
+test_results   := repo_root / "test-results"
 
 # Which Pure runtime runs the TRANSLATOR for the emit recipes. Bootstrap is the
 # default so this module needs nothing from platforms/truffle — the standalone
@@ -129,13 +130,12 @@ test-translation: build-tests _host-generate _depCheck_runtime-pdbs
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1_" \
-        --args "meta::external::language::javascript::translation"
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::external::language::javascript::translation" "{{test_results}}/pure/translation-javascript/pure@cli-javascript.json"
 
-# Run the standard Pure runtime suites over meta::pure::functions on the JavaScript host.
-# NB: PCTs (`test-pure-runtime-PCTs`) are intentionally excluded for now, as in
-# translation/java — invoke that recipe directly to run them.
-test-pure-runtime: test-pure-runtime-testFunctions
+# Run the standard Pure runtime suites over meta::pure::functions on the JavaScript host, plus the
+# PCT tests through the translator adapter (their failures are reported without failing the build).
+test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
 
 # Run runTests over meta::pure::functions on the JavaScript host.
 test-pure-runtime-testFunctions: build-tests _host-generate _depCheck_runtime-pdbs
@@ -149,8 +149,8 @@ test-pure-runtime-testFunctions: build-tests _host-generate _depCheck_runtime-pd
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1_" \
-        --args "meta::pure::functions"
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::pure::functions" "{{test_results}}/spec/functions/pure@cli-javascript.json"
 
 # Run PCT tests over meta::pure::functions via the translator adapter (lambdas -> JavaScript -> compileModule -> execute).
 test-pure-runtime-PCTs: build-tests _host-generate _depCheck_runtime-pdbs
@@ -164,8 +164,8 @@ test-pure-runtime-PCTs: build-tests _host-generate _depCheck_runtime-pdbs
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::external::language::javascript::translation::runPCTTestsViaTranslator_String_1__String_1_" \
-        --args "meta::pure::functions"
+        --function "meta::external::language::javascript::translation::runPCTTestsViaTranslator_String_1__String_1__String_1_" \
+        --args "meta::pure::functions" "{{test_results}}/spec/pct/javascript-translation@cli-javascript.json" || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
 
 # Build the Pure -> JavaScript translation gallery as a self-contained HTML page.
 # pure-js prints the returned String to stdout, so a plain redirect is enough.
@@ -247,7 +247,7 @@ antlr-generate-ts-parserMapping: build-tests _depCheck_emit-pdbs
         > "{{js_dir}}/build/parser-mappings.js"
     @echo "  wrote {{js_dir}}/build/parser-mappings.js ($(wc -c < {{js_dir}}/build/parser-mappings.js | tr -d ' ') bytes)"
 
-# Bundle antlr4 + generated parsers + native impls -> js/build/antlr-bundle.js (no-imports IIFE).
+# Bundle antlr4 + generated parsers + native impls -> js/build/antlr-bundle.js (no-imports IIFE exposing `PureAntlr`).
 # `--conditions=browser` selects antlr4's browser build (no node `fs`/`path`),
 # which is what the browser (and any non-Node host) needs.
 #
@@ -261,7 +261,7 @@ antlr-bundle: antlr-generate-parsers
     @{{substep}} 'esbuild --bundle js/antlr-entry.js -> js/build/antlr-bundle.js'
     mkdir -p "$(dirname "{{bundle_out}}")"
     cd "{{js_dir}}" && pnpm exec esbuild antlr-entry.js \
-        --bundle --format=iife --platform=neutral --conditions=browser --target=es2020 \
+        --bundle --format=iife --global-name=PureAntlr --platform=neutral --conditions=browser --target=es2020 \
         --outfile="{{bundle_out}}" \
         --log-level=warning
     @echo "  wrote {{bundle_out}} ($(wc -c < {{bundle_out}} | tr -d ' ') bytes)"

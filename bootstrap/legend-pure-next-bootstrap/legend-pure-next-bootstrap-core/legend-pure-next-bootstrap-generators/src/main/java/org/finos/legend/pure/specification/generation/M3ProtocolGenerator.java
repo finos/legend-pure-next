@@ -699,7 +699,7 @@ public class M3ProtocolGenerator
 
         // Profiles defined in m3.ttl are already in the BootstrapModule; the
         // protocol generator must not re-emit them or the compile-time
-        // LocalModule will declare a duplicate of the m3 element. Listed names
+        // SourceModule will declare a duplicate of the m3 element. Listed names
         // are matched against the RDF resource's local name.
         java.util.Set<String> skipProfiles = java.util.Set.of(
                 "meta_pure_profiles_typemodifiers",

@@ -848,7 +848,7 @@ function <<test.Test>> meta::pure::translation::shared::tests::testCanonical_dea
 // is a PureDynamicObject and `classInstanceToProtocol` (or one of the
 // dispatch helpers in decompile.pure) doesn't recognise it as a class
 // instance — the printer falls through to `Any -> toString()`, producing
-// `org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject@<hash>`
+// `org.finos.legend.pure.truffle.execution.PureDynamicObject@<hash>`
 // instead of `^TS_Person(firstName='Fabrice', lastName='Smith')`. The hash
 // is also non-deterministic so we can't even pin the broken form.
 //

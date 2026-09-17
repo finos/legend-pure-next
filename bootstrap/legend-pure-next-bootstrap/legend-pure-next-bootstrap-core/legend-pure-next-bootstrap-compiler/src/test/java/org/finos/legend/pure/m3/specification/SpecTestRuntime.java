@@ -17,16 +17,16 @@ package org.finos.legend.pure.m3.specification;
 import meta.pure.protocol.PureFile;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.LanguageExtension;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension;
 import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
 import org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension;
 import org.finos.legend.pure.m3.extensions.reverseindex.ReverseIndexLanguageExtension;
 import org.finos.legend.pure.m3.extensions.testfile.TestFileLanguageExtension;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
-import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
+import org.finos.legend.pure.m3.module.sourceModule.PureContent;
+import org.finos.legend.pure.m3.module.pdbModule.PdbModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.next.parser.PureParser;
 
@@ -47,7 +47,7 @@ public final class SpecTestRuntime
 {
     private final List<LanguageExtension> extensions;
     private final PureParser parser;
-    private final PDBModule coreModule;
+    private final PdbModule coreModule;
 
     public SpecTestRuntime()
     {
@@ -61,7 +61,7 @@ public final class SpecTestRuntime
         this.parser = PureParser.builder().withExtensions(Lists.mutable.withAll(this.extensions)).build();
         try
         {
-            this.coreModule = new PDBModule(BootstrapModule.locateCorePdb(), PDBModule.Mode.COMPILATION);
+            this.coreModule = new PdbModule(BootstrapModule.locateCorePdb(), PdbModule.Mode.COMPILATION);
         }
         catch (java.io.IOException e)
         {
@@ -80,10 +80,10 @@ public final class SpecTestRuntime
         List<PureContent> sources = primaryFile._sections().anySatisfy(s -> "File".equals(s._parserName()))
                 ? TestFileLanguageExtension.splitTestFiles(content, testName, primaryFile)
                 : List.of(new PureContent(content, testName));
-        PureModel model = PureModel.withModules(
+        JavaCompiler model = JavaCompiler.withModules(
                         Lists.mutable.with(
-                                new LocalModule("test", "*",
-                                        Lists.mutable.with(coreModule.getName()),
+                                new SourceModule("test", "*",
+                                        Lists.mutable.with(coreModule.name()),
                                         Lists.mutable.withAll(sources)),
                                 coreModule))
                 .withExtensions(Lists.mutable.withAll(extensions))
@@ -99,6 +99,6 @@ public final class SpecTestRuntime
     }
 
     public PureParser parser() { return parser; }
-    public PDBModule coreModule() { return coreModule; }
+    public PdbModule coreModule() { return coreModule; }
     public List<LanguageExtension> extensions() { return extensions; }
 }

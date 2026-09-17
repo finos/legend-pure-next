@@ -281,7 +281,7 @@ function meta::pure::compiler::newCompilerContext(debugMode:Boolean[1]):Compiler
 // ============================================================================
 // Per-element pass dispatch — used by compile() to run pass 1 across all
 // files, then pass 2 across all files, then pass 3 across all files (matching
-// Java's LocalModule orchestration).
+// Java's SourceModule orchestration).
 // ============================================================================
 
 function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::PackageableElement[1], ctx:CompilerContext[1]):CompilerContext[1]
@@ -522,7 +522,7 @@ function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], 
 }
 
 // Three-pass compile across a list of pre-parsed files. Mirrors Java's
-// LocalModule.compile orchestration: pass 1 (skeletons), pass 2 (bodies),
+// SourceModule.compile orchestration: pass 1 (skeletons), pass 2 (bodies),
 // pass 3 (resolution), with the linearization cache + local-function index
 // rebuilt between passes. Each file's grammar elements are processed under
 // that file's sourceId + imports so forward references between files
@@ -642,7 +642,7 @@ function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*], 
 
     // Pull all resolved elements from the final elementMap. Includes Packages
     // (which aren't in any file's compiledElements list) so the output PDB
-    // has the full graph — matches Java's LocalModule.compile. Order is
+    // has the full graph — matches Java's SourceModule.compile. Order is
     // elementMap iteration; the test printer sorts by sourceInfo for a
     // deterministic textual diff. The PDB write path doesn't care about list
     // order (diff-pdb compares path-set + per-element hash).

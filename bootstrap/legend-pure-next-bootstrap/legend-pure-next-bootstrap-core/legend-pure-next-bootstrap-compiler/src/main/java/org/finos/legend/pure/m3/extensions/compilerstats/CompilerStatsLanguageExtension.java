@@ -12,9 +12,9 @@ import meta.pure.metamodel.PackageableElement;
 import meta.pure.protocol.grammar.Package_PointerImpl;
 import org.finos.legend.pure.m3.LanguageExtension;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerContextExtension;
-import org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilerContextExtension;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.IndexEntry;
 
 import java.util.List;
 
@@ -62,7 +62,7 @@ public final class CompilerStatsLanguageExtension implements LanguageExtension
     }
 
     @Override
-    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
+    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         if (grammar instanceof CompilerStats cs)
         {

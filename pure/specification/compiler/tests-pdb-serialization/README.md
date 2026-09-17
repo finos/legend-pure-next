@@ -19,6 +19,13 @@ flatc-backed reference mints them, even if it retires from production
 writing paths.
 
 Consumers:
+- `pure/specification/compiler/compiler-pure/test/pdbGoldenRunner.pure`
+  (`runPdbGoldenTests`: compiles each fixture with the Pure compiler, writes it with
+  the Pure writer and compares the archive with its golden, entirely in Pure — the
+  golden's deflated entries are opened by `pdb/reader/inflate.pure`. Run by the
+  `spec-pdb-golden` recipes on cli-truffle, cli-truffle-native and cli-javascript —
+  not on bootstrap, whose interpreter takes minutes per large archive; reported as
+  the dashboard's PDB row)
 - `platforms/javascript/src/compiler/tests/compiler-tests.js --golden`
   (structural diff of JS-written archives vs these; `PDB_GOLDENS_DIR` overrides)
 - `platforms/javascript/src/pdb/tests/pure-reader-parity.mjs`

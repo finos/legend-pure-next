@@ -18,7 +18,7 @@ import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.FunctionTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 
 /**

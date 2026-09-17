@@ -21,7 +21,7 @@ import meta.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
@@ -42,7 +42,7 @@ public final class PropertyCompiler
      * @param grammarProperty the grammar-level property to compile
      * @param owner           the GenericType of the owning class/association
      * @param imports         import package paths from the enclosing section
-     * @param model           the compiled PureModel used for element lookup
+     * @param model           the compiled JavaCompiler used for element lookup
      * @param context         the compilation context for error collection
      * @return a fully resolved metamodel Property, or null if the type is unresolvable
      */

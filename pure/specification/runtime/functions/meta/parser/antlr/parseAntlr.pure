@@ -17,7 +17,7 @@ import meta::pure::test::pct::*;
 
 // Parse `source` with the ANTLR grammar registered under `grammarName` and
 // return the root context. The host-side {@code GrammarExtension} registry
-// (set via {@code PureExecution.Builder.withGrammarExtensions} / its Truffle
+// (set via {@code PureRuntime.Builder.withGrammarExtensions} / its Truffle
 // equivalent) provides the lexer/parser; built-in defaults include
 // {@code 'M3Parser'} and {@code 'TopParser'}. Errors fold {@code sourceId} +
 // (line + lineOffset) into the message so file-relative coordinates show

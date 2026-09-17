@@ -28,15 +28,15 @@ public interface ModuleDefinition
     /**
      * Get the name of this module.
      */
-    String getName();
+    String name();
 
     /**
      * Get the names of modules this module depends on.
      */
-    List<String> getDependencies();
+    List<String> dependencies();
 
     /**
      * Get the package pattern for this module (e.g. "meta::pure::*").
      */
-    String getPackagePattern();
+    String packagePattern();
 }

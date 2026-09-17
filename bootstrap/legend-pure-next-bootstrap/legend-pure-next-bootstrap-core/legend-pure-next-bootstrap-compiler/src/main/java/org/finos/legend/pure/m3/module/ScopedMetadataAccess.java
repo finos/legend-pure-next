@@ -18,7 +18,6 @@ package org.finos.legend.pure.m3.module;
 import meta.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.PureModel;
 
 import meta.pure.metamodel.type.Type;
 
@@ -51,13 +50,13 @@ public final class ScopedMetadataAccess implements MetadataAccess
     private final java.util.concurrent.ConcurrentHashMap<String, PackageableElement> elementCache =
             new java.util.concurrent.ConcurrentHashMap<>();
 
-    public ScopedMetadataAccess(Module self, PureModel model)
+    public ScopedMetadataAccess(Module self, ModuleRegistry registry)
     {
         this.self = self;
         MutableList<Module> deps = Lists.mutable.empty();
-        for (String depName : self.getDependencies())
+        for (String depName : self.dependencies())
         {
-            Module dep = model.getModule(depName);
+            Module dep = registry.module(depName);
             if (dep != null)
             {
                 deps.add(dep);
@@ -76,8 +75,8 @@ public final class ScopedMetadataAccess implements MetadataAccess
     public java.util.Set<String> moduleNames()
     {
         java.util.Set<String> names = new java.util.HashSet<>();
-        names.add(this.self.getName());
-        this.dependencies.forEach(m -> names.add(m.getName()));
+        names.add(this.self.name());
+        this.dependencies.forEach(m -> names.add(m.name()));
         return names;
     }
 

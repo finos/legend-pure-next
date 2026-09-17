@@ -19,10 +19,10 @@ import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Column;
@@ -37,14 +37,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class _GenericTypeOperationTest
 {
-    private static PureModel model;
+    private static JavaCompiler model;
 
     @BeforeAll
     public static void setUp()
     {
-        model = PureModel.withModules(
+        model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.empty()))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
@@ -55,7 +55,7 @@ public class _GenericTypeOperationTest
     @Test
     public void testEvaluateRelationTypeOperation()
     {
-        ScopedMetadataAccess metadataAccess = new ScopedMetadataAccess(model.getModule("test"), model);
+        ScopedMetadataAccess metadataAccess = new ScopedMetadataAccess(model.registry().module("test"), model.registry());
         
         RelationType rt1 = new RelationTypeImpl();
         GenericType gt1 = _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) metadataAccess.getElement("meta::pure::metamodel::relation::RelationType"), metadataAccess);

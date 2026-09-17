@@ -19,7 +19,7 @@ import meta.pure.metamodel.function.NativeFunction;
 import meta.pure.metamodel.function.NativeFunctionImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.AnnotationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.PackageableFunctionCompiler;
 
@@ -34,7 +34,7 @@ public final class NativeFunctionHandler
     {
     }
 
-    public static NativeFunction firstPass(meta.pure.protocol.grammar.function.NativeFunction grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
+    public static NativeFunction firstPass(meta.pure.protocol.grammar.function.NativeFunction grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         return new NativeFunctionImpl()
                 ._name(grammar._name())

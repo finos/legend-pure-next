@@ -21,7 +21,7 @@ import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
@@ -42,7 +42,7 @@ public final class UserDefinedFunctionHandler
     {
     }
 
-    public static UserDefinedFunction firstPass(meta.pure.protocol.grammar.function.UserDefinedFunction grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
+    public static UserDefinedFunction firstPass(meta.pure.protocol.grammar.function.UserDefinedFunction grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         return new UserDefinedFunctionImpl()
                 ._name(grammar._name())

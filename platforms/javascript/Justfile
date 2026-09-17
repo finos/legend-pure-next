@@ -12,7 +12,11 @@ set shell := ["bash", "-c"]
 
 js_root   := source_directory()
 repo_root := js_root / ".." / ".."
+# Records heavy build steps for the dashboard build time trend.
+build_step     := "node " + repo_root / "tools" / "test-dashboard" / "build-step.mjs"
 shared    := repo_root / "shared"
+test_results := repo_root / "test-results"
+spec      := repo_root / "pure" / "specification"
 # Module build outputs: each module writes its own pdbs (and gallery) into its build/.
 language_javascript_out    := repo_root / "pure" / "modules" / "language" / "javascript" / "build"
 translation_shared_out     := repo_root / "pure" / "modules" / "translation" / "shared" / "build"
@@ -99,20 +103,21 @@ generate-core: (_emit "meta::pure::metamodel" "core-metamodel.js") (_emit "meta:
     @{{header}} 'generate-core'
 
 # Generate just the PDB reader/schema package (a small subset of compiler.js).
-# The parser-only host (grammar/parser.js) loads this to back its metadata
+# The parser-only host (grammar/load-parser.js) loads this to back its metadata
 # globals with the translated Pure reader without pulling in the whole compiler.
 generate-pdb-reader: (_emit "meta::pure::compiler::pdb" "pdb-reader.js")
     @{{header}} 'generate-pdb-reader'
 
 # Generate the in-process translator stack for the execution host
-# (src/execution): the Pure→JS translator itself translated to JS, its shared
+# (src/core/execution): the Pure→JS translator itself translated to JS, its shared
 # canonicalization pipeline, the JS-language metamodel/factories it builds on,
 # and the meta::pure::test helpers (resolveChild & co.) its package walker calls.
 generate-translator: (_emit "meta::pure::test" "test-utils.js") (_emit "meta::pure::translation::shared" "translation-shared.js") (_emit "meta::external::language::javascript" "js-lang.js") (_emit "meta::external::language::javascript::translation" "translator.js")
     @{{header}} 'generate-translator'
 
 # Generate everything the standalone compiler + execution hosts need.
-generate-all: generate-core generate generate-pdb-reader generate-translator
+generate-all: (_step-start "javascript/generate") generate-core generate generate-pdb-reader generate-translator
+    {{build_step}} end "javascript/generate"
 
 # Run the grammar-corpus suite (standalone JS parser vs committed protocol.json).
 # Needs the parser bundle (build/antlr-bundle.js) plus generated/pdb-reader.js
@@ -120,7 +125,7 @@ generate-all: generate-core generate generate-pdb-reader generate-translator
 test: build generate-pdb-reader
     @{{header}} 'test'
     @{{substep}} 'grammar corpus (pnpm run test:grammar)'
-    cd {{js_root}} && pnpm run test:grammar
+    cd {{js_root}} && pnpm run test:grammar --report {{test_results}}/javascript/core/grammar-tests.json
 
 # Run the compiler-conformance suite (standalone JS compiler vs committed
 # ###CompiledGraph). Requires the generated/ compiler JS, so depends on
@@ -128,9 +133,9 @@ test: build generate-pdb-reader
 test-compiler: generate-all
     @{{header}} 'test-compiler'
     @{{substep}} 'compiler conformance (pnpm run test:compiler)'
-    cd {{js_root}} && pnpm run test:compiler
+    cd {{js_root}} && pnpm run test:compiler --report {{test_results}}/javascript/core/compiler-tests.json
 
-# Run the PCT suite through the execution host (src/execution): translate
+# Run the PCT suite through the execution host (src/core/execution): translate
 # meta::pure::functions IN-PROCESS with the translated translator, eval the
 # emitted JS, and run every <<PCT.test>> against it. PCTs are stabilising
 # (translated-runtime gaps remain) — invoke directly, not part of test-all
@@ -138,7 +143,55 @@ test-compiler: generate-all
 test-execution: generate-all
     @{{header}} 'test-execution'
     @{{substep}} 'PCT via in-process translator (pnpm run test:execution)'
-    cd {{js_root}} && pnpm run test:execution
+    cd {{js_root}} && pnpm run test:execution --report {{test_results}}/javascript/core/pct-tests.json || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+
+# Grammar corpus specification: parse each grammar.pure and compare with its protocol.json, through bin/pure-js.
+spec-grammar: generate-all
+    @{{header}} 'spec-grammar'
+    @{{substep}} 'runGrammarCorpus over pure/specification/grammar/tests (JavaScript host)'
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        --function "meta::pure::test::grammar::runGrammarCorpus_String_1__String_1__String_1_" \
+        --args "{{spec}}/grammar/tests" "{{test_results}}/spec/grammar/pure@cli-javascript.json"
+
+# Compiler corpus specification: compile each fixture and compare with its ###CompiledGraph, through bin/pure-js.
+spec-compiler: generate-all
+    @{{header}} 'spec-compiler'
+    @{{substep}} 'runCompiledGraphTests over pure/specification/compiler/tests (JavaScript host)'
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" "{{test_results}}/spec/compiler/pure@cli-javascript.json"
+
+# PCT specification over meta::pure::functions, through bin/pure-js.
+spec-pct: generate-all
+    @{{header}} 'spec-pct'
+    @{{substep}} 'runPCTTests over meta::pure::functions (JavaScript host)'
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        --function "meta::pure::test::runPCTTests_String_1__String_1__String_1_" \
+        --args "meta::pure::functions" "{{test_results}}/spec/pct/pure@cli-javascript.json" || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
 
 # The self-hosted PDB stack's <<test.Test>> suite (meta::pure::compiler::pdb:
 # schema, reader, writer, archive), translated: byte-exact wire format against the
@@ -156,22 +209,85 @@ test-pdb: generate-all
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1_" \
-        --args "meta::pure::compiler::pdb"
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::pure::compiler::pdb" "{{test_results}}/spec/pdb-format/pure@cli-javascript.json"
+
+# PDB wire contract: compile each compiler fixture, write it with the Pure writer and compare the archive
+# with the Java golden in pure/specification/compiler/tests-pdb-serialization (compiler-pure test/pdbGoldenRunner.pure).
+spec-pdb-golden: generate-all
+    @{{header}} 'spec-pdb-golden'
+    @{{substep}} 'runPdbGoldenTests: the Pure compiler and writer against the Java golden archives'
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        --function "meta::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" "{{spec}}/compiler/tests-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{test_results}}/spec/pdb/pure@cli-javascript.json"
+
+# Compiled-printer corpus: compile each compiler-corpus file, print the compiled elements, compare with the source. Run through bin/pure-js like test-pdb.
+test-printer-compiled: generate-all
+    @{{header}} 'test-printer-compiled'
+    @{{substep}} 'runCompiledPrinterCorpus over pure/specification/compiler/tests (JavaScript host)'
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        --function "meta::pure::compiler::test::printer::runCompiledPrinterCorpus_String_1__String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" "{{test_results}}/pure/printer-compiled/pure@cli-javascript.json"
+
+# Protocol-printer corpus: parse each grammar-corpus file, print the protocol, compare with the source. Run through bin/pure-js like test-pdb.
+test-printer-protocol: generate-all
+    @{{header}} 'test-printer-protocol'
+    @{{substep}} 'runProtocolPrinterCorpus over pure/specification/grammar/tests (JavaScript host)'
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        --function "meta::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus_String_1__String_1__String_1_" \
+        --args "{{spec}}/grammar/tests" "{{test_results}}/pure/printer-protocol/pure@cli-javascript.json"
+
+# Host platform API conformance: module, registry, natives and runtime shapes
+# (docs/superpowers/specs/2026-09-13-unified-host-api-design.md).
+test-host-api: generate-all
+    @{{header}} 'test-host-api'
+    @{{substep}} 'host platform API (pnpm run test:host-api)'
+    cd {{js_root}} && pnpm run test:host-api --report {{test_results}}/javascript/core/host-api-tests.json
+
+# The host API end to end, as bootstrap's TestPureRuntime: set Pure source into an in-memory module,
+# compile through the PureRuntime, execute a function it defines, modify and recompile.
+test-pure-runtime: generate-all
+    @{{header}} 'test-pure-runtime'
+    @{{substep}} 'PureRuntime setSource / compile / execute (pnpm run test:pure-runtime)'
+    cd {{js_root}} && pnpm run test:pure-runtime --report {{test_results}}/javascript/core/pure-runtime-tests.json
 
 # Every platform suite: grammar parsing, compiler conformance, the PCT corpus, and
 # the translated PDB stack.
 # The translation module's own suites and gallery run from
 # pure/modules/translation/javascript through bin/pure-js, the same way
 # translation/java runs its through bin/pure-truffle.
-test-all: test test-compiler test-execution test-pdb
+test-all: test test-compiler test-execution spec-grammar spec-compiler spec-pct test-pdb spec-pdb-golden test-printer-compiled test-printer-protocol test-host-api test-pure-runtime
 
-# Serve the browser demo. Served from the repo root so web/index.html's
+# Serve the browser demo. Served from the repo root so src/interfaces/web/index.html's
 # relative paths to the parser bundle resolve; open the printed URL.
 serve:
     @{{header}} 'serve'
     @{{substep}} 'static server at repo root'
-    @echo "  open  http://localhost:8000/platforms/javascript/web/index.html"
+    @echo "  open  http://localhost:8000/platforms/javascript/src/interfaces/web/index.html"
     cd {{js_root}}/../.. && python3 -m http.server 8000
 
 # Remove node_modules/ (no dist — plain JS).
@@ -179,3 +295,7 @@ clean:
     @{{header}} 'clean'
     @{{substep}} 'remove node_modules/'
     rm -rf {{js_root}}/node_modules
+
+# Build time trend (tools/test-dashboard/build-step.mjs): the first dependency of a heavy recipe, whose last line runs `{{build_step}} end`.
+_step-start STEP:
+    {{build_step}} start "{{STEP}}"

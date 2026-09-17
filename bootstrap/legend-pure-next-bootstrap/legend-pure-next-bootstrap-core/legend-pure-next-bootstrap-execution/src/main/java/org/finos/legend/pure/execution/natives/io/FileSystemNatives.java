@@ -17,8 +17,8 @@ package org.finos.legend.pure.execution.natives.io;
 
 import meta.pure.metamodel.valuespecification.CollectionImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
-import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
+import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
+import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 /**
- * Filesystem natives for Pure — directoryTree and readFile.
+ * Filesystem natives for Pure — directoryTree, readFile, readFileBytes and writeFile.
  *
  * <p>These enable Pure-native workflows that need to walk the filesystem and
  * read files, such as the in-Pure test runner. In the browser, equivalent
@@ -89,6 +89,52 @@ public class FileSystemNatives
             catch (IOException e)
             {
                 throw new RuntimeException("Failed to read file: " + path, e);
+            }
+        });
+
+        // readFileBytes(String[1]) : Integer[*] — the file's raw bytes (each 0..255).
+        natives.put("readFileBytes_String_1__Integer_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            String path = (String) _E_ValueSpecification.unwrap(args.get(0));
+            try
+            {
+                byte[] content = Files.readAllBytes(Path.of(path));
+                List<ValueSpecification> bytes = new ArrayList<>(content.length);
+                for (byte b : content)
+                {
+                    bytes.add(_E_ValueSpecification.wrap((long) (b & 0xFF), null, null, resolver));
+                }
+                meta.pure.metamodel.type.generics.GenericType gt = bytes.isEmpty() ? null : bytes.get(0)._genericType();
+                return new CollectionImpl(resolver)
+                        ._values(org.eclipse.collections.api.factory.Lists.mutable.withAll(bytes))
+                        ._genericType(gt)
+                        ._multiplicity(_Multiplicity.concreteMultiplicity(bytes.size(), bytes.size(), resolver));
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException("Failed to read file: " + path, e);
+            }
+        });
+
+        // writeFile(String[1], String[1]) : String[1]
+        // Writes content to the file, creating parent directories and replacing any existing file; returns the path.
+        natives.put("writeFile_String_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        {
+            String path = (String) _E_ValueSpecification.unwrap(args.get(0));
+            String content = (String) _E_ValueSpecification.unwrap(args.get(1));
+            try
+            {
+                Path parent = Path.of(path).toAbsolutePath().getParent();
+                if (parent != null)
+                {
+                    Files.createDirectories(parent);
+                }
+                Files.writeString(Path.of(path), content);
+                return _E_ValueSpecification.wrap(path, genericType, multiplicity, resolver);
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException("Failed to write file: " + path, e);
             }
         });
     }

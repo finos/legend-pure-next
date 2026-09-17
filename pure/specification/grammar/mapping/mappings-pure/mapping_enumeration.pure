@@ -36,7 +36,7 @@ function meta::pure::parser::mappings::enumDefinition(): Rule[1]
 // with their meaningful enum-value defaults (the enclosing Enumeration type,
 // cardinality 1, aggregation None). Reference Java parser does the same in
 // `PureLanguageProtocolBuilder.buildEnumValue` — kept in sync so the
-// MappingsInterpreterValidator can compare every slot strictly without skips.
+// PureParserMatchesJavaParserTest can compare every slot strictly without skips.
 function meta::pure::parser::mappings::buildEnumValue(ctx: AntlrContext[1], enumPath: String[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::function::property::Property[1]
 {
    ^meta::pure::protocol::grammar::function::property::Property(

@@ -1,0 +1,282 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+
+// DEFLATE decoding (RFC 1951) in Pure, so the self-hosted reader opens zip entries
+// compressed with method 8 — the Java reference writer's archives, such as the
+// goldens in pure/specification/compiler/tests-pdb-serialization — without host natives.
+//
+// It follows zlib's reference decoder, puff.c: a canonical Huffman table is kept as the
+// number of codes of each length plus the symbols in code order, and a symbol is decoded
+// one bit at a time. Pure has no bitwise operators, so the input is first expanded into a
+// list of bits (least significant first, the order DEFLATE packs them in) and multi-bit
+// values are summed from those bits.
+//
+// Decoding is a fold whose every step handles one block header, one stored block or one
+// Huffman symbol. Output grows through InflateOutput: bytes are appended to a short tail
+// that is moved into the committed list once it reaches 1024 bytes, so a large entry
+// doesn't copy its whole output for every decoded byte.
+
+// A canonical Huffman table: counts->at(len) codes have length len (index 0 unused), and
+// symbols lists the symbols in code order (by length, then symbol value).
+Class meta::pure::compiler::pdb::reader::inflate::Huffman
+{
+   counts  : Integer[*];
+   symbols : Integer[*];
+}
+
+Class meta::pure::compiler::pdb::reader::inflate::InflateOutput
+{
+   committed : Integer[*];
+   tail      : Integer[*];
+}
+
+Class meta::pure::compiler::pdb::reader::inflate::InflateState
+{
+   pos       : Integer[1];
+   out       : meta::pure::compiler::pdb::reader::inflate::InflateOutput[1];
+   inBlock   : Boolean[1];
+   lastBlock : Boolean[1];
+   done      : Boolean[1];
+   lit       : meta::pure::compiler::pdb::reader::inflate::Huffman[0..1];
+   dist      : meta::pure::compiler::pdb::reader::inflate::Huffman[0..1];
+}
+
+// A decoded symbol and the bit position after its code.
+Class meta::pure::compiler::pdb::reader::inflate::Decoded
+{
+   symbol : Integer[1];
+   pos    : Integer[1];
+}
+
+// puff.c's decode loop state; symbol stays -1 until a code matches.
+Class meta::pure::compiler::pdb::reader::inflate::DecodeAcc
+{
+   code   : Integer[1];
+   first  : Integer[1];
+   index  : Integer[1];
+   symbol : Integer[1];
+   len    : Integer[1];
+}
+
+Class meta::pure::compiler::pdb::reader::inflate::CodeLengths
+{
+   lengths : Integer[*];
+   pos     : Integer[1];
+}
+
+// --- entry point -----------------------------------------------------------------
+
+// The `size` bytes a raw DEFLATE stream decodes to (a zip entry's uncompressed size).
+function meta::pure::compiler::pdb::reader::inflate::inflate(bytes:Integer[*], size:Integer[1]):Integer[*]
+{
+   let bits  = meta::pure::compiler::pdb::reader::inflate::toBits($bytes);
+   let start = ^meta::pure::compiler::pdb::reader::inflate::InflateState(
+                  pos = 0,
+                  out = ^meta::pure::compiler::pdb::reader::inflate::InflateOutput(committed = [], tail = []),
+                  inBlock = false, lastBlock = false, done = false);
+   // Every symbol but end-of-block emits at least one byte, and every block takes at least
+   // one compressed byte, so size + input length bounds the steps.
+   let steps = $size + $bytes->size() + 8;
+   let end   = range(0, $steps)->fold({i, s | meta::pure::compiler::pdb::reader::inflate::step($bytes, $bits, $s)}, $start);
+   assert($end.done, 'inflate: the stream did not end');
+   let out = $end.out.committed->concatenate($end.out.tail);
+   assert($out->size() == $size, 'inflate: decoded ' + $out->size()->toString() + ' bytes, expected ' + $size->toString());
+   $out;
+}
+
+function meta::pure::compiler::pdb::reader::inflate::step(bytes:Integer[*], bits:Integer[*], s:meta::pure::compiler::pdb::reader::inflate::InflateState[1]):meta::pure::compiler::pdb::reader::inflate::InflateState[1]
+{
+   if([pair(| $s.done,    | $s),
+       pair(| $s.inBlock, | meta::pure::compiler::pdb::reader::inflate::symbolStep($bits, $s))],
+      | meta::pure::compiler::pdb::reader::inflate::blockStep($bytes, $bits, $s));
+}
+
+// --- bits ----------------------------------------------------------------------------
+
+function meta::pure::compiler::pdb::reader::inflate::toBits(bytes:Integer[*]):Integer[*]
+{
+   $bytes->map(b | [1, 2, 4, 8, 16, 32, 64, 128]->map(p | floor(divide($b, $p))->mod(2)));
+}
+
+// Past the end of the input reads as 0: a decode step may look one code length ahead.
+function meta::pure::compiler::pdb::reader::inflate::bitAt(bits:Integer[*], pos:Integer[1]):Integer[1]
+{
+   if($pos < $bits->size(), | $bits->at($pos), | 0);
+}
+
+// The n-bit value at pos, least significant bit first.
+function meta::pure::compiler::pdb::reader::inflate::readBits(bits:Integer[*], pos:Integer[1], n:Integer[1]):Integer[1]
+{
+   range(0, $n)->reverse()->fold({k, v | ($v * 2) + meta::pure::compiler::pdb::reader::inflate::bitAt($bits, $pos + $k)}, 0);
+}
+
+// --- blocks --------------------------------------------------------------------------
+
+function meta::pure::compiler::pdb::reader::inflate::blockStep(bytes:Integer[*], bits:Integer[*], s:meta::pure::compiler::pdb::reader::inflate::InflateState[1]):meta::pure::compiler::pdb::reader::inflate::InflateState[1]
+{
+   let lastBlock = $bits->at($s.pos) == 1;
+   let type      = meta::pure::compiler::pdb::reader::inflate::readBits($bits, $s.pos + 1, 2);
+   let pos       = $s.pos + 3;
+   if([pair(| $type == 0, | meta::pure::compiler::pdb::reader::inflate::storedBlock($bytes, $pos, $lastBlock, $s)),
+       pair(| $type == 1, | ^$s(pos = $pos, lastBlock = $lastBlock, inBlock = true,
+                                lit = meta::pure::compiler::pdb::reader::inflate::fixedLiteralLengths()->meta::pure::compiler::pdb::reader::inflate::huffman(),
+                                dist = meta::pure::compiler::pdb::reader::inflate::huffman(range(0, 30)->map(i | 5)))),
+       pair(| $type == 2, | meta::pure::compiler::pdb::reader::inflate::dynamicBlock($bits, $pos, $lastBlock, $s))],
+      | fail('inflate: invalid block type 3'); $s;);
+}
+
+// A stored block: skip to the next byte boundary, read LEN (NLEN follows), copy LEN bytes.
+function meta::pure::compiler::pdb::reader::inflate::storedBlock(bytes:Integer[*], pos:Integer[1], lastBlock:Boolean[1], s:meta::pure::compiler::pdb::reader::inflate::InflateState[1]):meta::pure::compiler::pdb::reader::inflate::InflateState[1]
+{
+   let byte = floor(divide($pos + 7, 8));
+   let len  = $bytes->at($byte) + ($bytes->at($byte + 1) * 256);
+   let data = $bytes->slice($byte + 4, $byte + 4 + $len);
+   ^$s(pos = ($byte + 4 + $len) * 8, lastBlock = $lastBlock, done = $lastBlock,
+       out = meta::pure::compiler::pdb::reader::inflate::append($s.out, $data));
+}
+
+// A dynamic block header: the code-length code, then the literal/length and distance code lengths.
+function meta::pure::compiler::pdb::reader::inflate::dynamicBlock(bits:Integer[*], pos:Integer[1], lastBlock:Boolean[1], s:meta::pure::compiler::pdb::reader::inflate::InflateState[1]):meta::pure::compiler::pdb::reader::inflate::InflateState[1]
+{
+   let nlen  = meta::pure::compiler::pdb::reader::inflate::readBits($bits, $pos, 5) + 257;
+   let ndist = meta::pure::compiler::pdb::reader::inflate::readBits($bits, $pos + 5, 5) + 1;
+   let ncode = meta::pure::compiler::pdb::reader::inflate::readBits($bits, $pos + 10, 4) + 4;
+   let order = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+   let codeLengthLengths = range(0, 19)->map(sym |
+      let slot = $order->indexOf($sym);
+      if($slot < $ncode, | meta::pure::compiler::pdb::reader::inflate::readBits($bits, $pos + 14 + (3 * $slot), 3), | 0););
+   let lengths = meta::pure::compiler::pdb::reader::inflate::readCodeLengths($bits, $pos + 14 + (3 * $ncode), $nlen + $ndist,
+                    meta::pure::compiler::pdb::reader::inflate::huffman($codeLengthLengths));
+   ^$s(pos = $lengths.pos, lastBlock = $lastBlock, inBlock = true,
+       lit = meta::pure::compiler::pdb::reader::inflate::huffman($lengths.lengths->slice(0, $nlen)),
+       dist = meta::pure::compiler::pdb::reader::inflate::huffman($lengths.lengths->slice($nlen, $nlen + $ndist)));
+}
+
+function meta::pure::compiler::pdb::reader::inflate::readCodeLengths(bits:Integer[*], pos:Integer[1], count:Integer[1], h:meta::pure::compiler::pdb::reader::inflate::Huffman[1]):meta::pure::compiler::pdb::reader::inflate::CodeLengths[1]
+{
+   // A repeat code adds several lengths, so some of the count steps find the list already full.
+   let read = range(0, $count)->fold({i, acc | meta::pure::compiler::pdb::reader::inflate::codeLengthStep($bits, $h, $count, $acc)},
+                 ^meta::pure::compiler::pdb::reader::inflate::CodeLengths(lengths = [], pos = $pos));
+   assert($read.lengths->size() == $count, 'inflate: code lengths overrun the header counts');
+   $read;
+}
+
+function meta::pure::compiler::pdb::reader::inflate::codeLengthStep(bits:Integer[*], h:meta::pure::compiler::pdb::reader::inflate::Huffman[1], count:Integer[1], acc:meta::pure::compiler::pdb::reader::inflate::CodeLengths[1]):meta::pure::compiler::pdb::reader::inflate::CodeLengths[1]
+{
+   if($acc.lengths->size() >= $count,
+      | $acc,
+      | meta::pure::compiler::pdb::reader::inflate::applyCodeLength($bits, meta::pure::compiler::pdb::reader::inflate::decode($bits, $acc.pos, $h), $acc));
+}
+
+// 0-15: a length; 16: repeat the previous length 3-6 times; 17: 3-10 zeros; 18: 11-138 zeros.
+function meta::pure::compiler::pdb::reader::inflate::applyCodeLength(bits:Integer[*], d:meta::pure::compiler::pdb::reader::inflate::Decoded[1], acc:meta::pure::compiler::pdb::reader::inflate::CodeLengths[1]):meta::pure::compiler::pdb::reader::inflate::CodeLengths[1]
+{
+   let previous = if($acc.lengths->isEmpty(), | 0, | $acc.lengths->at($acc.lengths->size() - 1));
+   if([pair(| $d.symbol < 16,  | ^$acc(lengths = $acc.lengths->concatenate($d.symbol), pos = $d.pos)),
+       pair(| $d.symbol == 16, | meta::pure::compiler::pdb::reader::inflate::repeatLength($acc, $previous, 3 + meta::pure::compiler::pdb::reader::inflate::readBits($bits, $d.pos, 2), $d.pos + 2)),
+       pair(| $d.symbol == 17, | meta::pure::compiler::pdb::reader::inflate::repeatLength($acc, 0, 3 + meta::pure::compiler::pdb::reader::inflate::readBits($bits, $d.pos, 3), $d.pos + 3))],
+      | meta::pure::compiler::pdb::reader::inflate::repeatLength($acc, 0, 11 + meta::pure::compiler::pdb::reader::inflate::readBits($bits, $d.pos, 7), $d.pos + 7));
+}
+
+function meta::pure::compiler::pdb::reader::inflate::repeatLength(acc:meta::pure::compiler::pdb::reader::inflate::CodeLengths[1], value:Integer[1], times:Integer[1], pos:Integer[1]):meta::pure::compiler::pdb::reader::inflate::CodeLengths[1]
+{
+   ^$acc(lengths = $acc.lengths->concatenate(range(0, $times)->map(i | $value)), pos = $pos);
+}
+
+// --- symbols -------------------------------------------------------------------------
+
+// A literal byte, the end of the block, or a length/distance pair copied from earlier output.
+function meta::pure::compiler::pdb::reader::inflate::symbolStep(bits:Integer[*], s:meta::pure::compiler::pdb::reader::inflate::InflateState[1]):meta::pure::compiler::pdb::reader::inflate::InflateState[1]
+{
+   let lit = meta::pure::compiler::pdb::reader::inflate::decode($bits, $s.pos, $s.lit->toOne());
+   if([pair(| $lit.symbol < 256,  | ^$s(pos = $lit.pos, out = meta::pure::compiler::pdb::reader::inflate::append($s.out, $lit.symbol))),
+       pair(| $lit.symbol == 256, | ^$s(pos = $lit.pos, inBlock = false, done = $s.lastBlock))],
+      | meta::pure::compiler::pdb::reader::inflate::matchStep($bits, $lit, $s));
+}
+
+function meta::pure::compiler::pdb::reader::inflate::matchStep(bits:Integer[*], lit:meta::pure::compiler::pdb::reader::inflate::Decoded[1], s:meta::pure::compiler::pdb::reader::inflate::InflateState[1]):meta::pure::compiler::pdb::reader::inflate::InflateState[1]
+{
+   let lengthIndex = $lit.symbol - 257;
+   let lengthExtra = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0]->at($lengthIndex);
+   let length      = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258]->at($lengthIndex)
+                     + meta::pure::compiler::pdb::reader::inflate::readBits($bits, $lit.pos, $lengthExtra);
+   let d           = meta::pure::compiler::pdb::reader::inflate::decode($bits, $lit.pos + $lengthExtra, $s.dist->toOne());
+   let distExtra   = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13]->at($d.symbol);
+   let distance    = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577]->at($d.symbol)
+                     + meta::pure::compiler::pdb::reader::inflate::readBits($bits, $d.pos, $distExtra);
+   ^$s(pos = $d.pos + $distExtra, out = meta::pure::compiler::pdb::reader::inflate::copyMatch($s.out, $distance, $length));
+}
+
+// --- Huffman tables ------------------------------------------------------------------
+
+// The fixed literal/length code: 0-143 have 8 bits, 144-255 9, 256-279 7, 280-287 8.
+function meta::pure::compiler::pdb::reader::inflate::fixedLiteralLengths():Integer[*]
+{
+   range(0, 288)->map(i | if([pair(| $i < 144, | 8), pair(| $i < 256, | 9), pair(| $i < 280, | 7)], | 8));
+}
+
+function meta::pure::compiler::pdb::reader::inflate::huffman(lengths:Integer[*]):meta::pure::compiler::pdb::reader::inflate::Huffman[1]
+{
+   let n = $lengths->size();
+   ^meta::pure::compiler::pdb::reader::inflate::Huffman(
+      counts  = range(0, 16)->map(len | $lengths->filter(l | $l == $len)->size()),
+      symbols = range(1, 16)->map(len | range(0, $n)->filter(sym | $lengths->at($sym) == $len)));
+}
+
+// puff.c's decode: extend the code one bit at a time until it falls inside a length's range.
+function meta::pure::compiler::pdb::reader::inflate::decode(bits:Integer[*], pos:Integer[1], h:meta::pure::compiler::pdb::reader::inflate::Huffman[1]):meta::pure::compiler::pdb::reader::inflate::Decoded[1]
+{
+   let found = range(1, 16)->fold({len, acc | meta::pure::compiler::pdb::reader::inflate::decodeStep($bits, $pos, $h, $len, $acc)},
+                  ^meta::pure::compiler::pdb::reader::inflate::DecodeAcc(code = 0, first = 0, index = 0, symbol = -1, len = 0));
+   assert($found.symbol >= 0, 'inflate: invalid Huffman code at bit ' + $pos->toString());
+   ^meta::pure::compiler::pdb::reader::inflate::Decoded(symbol = $found.symbol, pos = $pos + $found.len);
+}
+
+function meta::pure::compiler::pdb::reader::inflate::decodeStep(bits:Integer[*], pos:Integer[1], h:meta::pure::compiler::pdb::reader::inflate::Huffman[1], len:Integer[1], acc:meta::pure::compiler::pdb::reader::inflate::DecodeAcc[1]):meta::pure::compiler::pdb::reader::inflate::DecodeAcc[1]
+{
+   let code  = $acc.code + meta::pure::compiler::pdb::reader::inflate::bitAt($bits, $pos + $len - 1);
+   let count = $h.counts->at($len);
+   if([pair(| $acc.symbol >= 0,               | $acc),
+       pair(| ($code - $count) < $acc.first,  | ^$acc(symbol = $h.symbols->at($acc.index + ($code - $acc.first)), len = $len))],
+      | ^$acc(code = $code * 2, first = ($acc.first + $count) * 2, index = $acc.index + $count));
+}
+
+// --- output --------------------------------------------------------------------------
+
+function meta::pure::compiler::pdb::reader::inflate::append(out:meta::pure::compiler::pdb::reader::inflate::InflateOutput[1], bytes:Integer[*]):meta::pure::compiler::pdb::reader::inflate::InflateOutput[1]
+{
+   let tail = $out.tail->concatenate($bytes);
+   if($tail->size() >= 1024,
+      | ^meta::pure::compiler::pdb::reader::inflate::InflateOutput(committed = $out.committed->concatenate($tail), tail = []),
+      | ^meta::pure::compiler::pdb::reader::inflate::InflateOutput(committed = $out.committed, tail = $tail));
+}
+
+// Output bytes [from, to).
+function meta::pure::compiler::pdb::reader::inflate::outputSlice(out:meta::pure::compiler::pdb::reader::inflate::InflateOutput[1], from:Integer[1], to:Integer[1]):Integer[*]
+{
+   let c = $out.committed->size();
+   if([pair(| $from >= $c, | $out.tail->slice($from - $c, $to - $c)),
+       pair(| $to <= $c,   | $out.committed->slice($from, $to))],
+      | $out.committed->slice($from, $c)->concatenate($out.tail->slice(0, $to - $c)));
+}
+
+// Copy `length` bytes starting `distance` back (not named `copy`: the JavaScript translator
+// resolves coders by short name, and `copy` is the ^$x(...) copy expression). When the match overlaps its own output
+// (distance < length) the window repeats.
+function meta::pure::compiler::pdb::reader::inflate::copyMatch(out:meta::pure::compiler::pdb::reader::inflate::InflateOutput[1], distance:Integer[1], length:Integer[1]):meta::pure::compiler::pdb::reader::inflate::InflateOutput[1]
+{
+   let size = $out.committed->size() + $out.tail->size();
+   assert($distance <= $size, 'inflate: distance ' + $distance->toString() + ' reaches before the start of the output');
+   let start  = $size - $distance;
+   let window = meta::pure::compiler::pdb::reader::inflate::outputSlice($out, $start, $start + if($distance < $length, | $distance, | $length));
+   let bytes  = if($distance < $length, | range(0, $length)->map(i | $window->at(mod($i, $distance))), | $window);
+   meta::pure::compiler::pdb::reader::inflate::append($out, $bytes);
+}

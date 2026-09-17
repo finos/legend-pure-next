@@ -359,7 +359,7 @@ Class meta::pure::compiler::CompilerListResult<T>
 native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):PackageableFunction<Any>[*];
 
 // Enumerates every Type-typed PackageableElement across all loaded modules.
-// Backed by a native that walks {@code TruffleMetadataAccess.elementPaths()},
+// Backed by a native that walks {@code MetadataAccess.elementPaths()},
 // the union of every module's path index. Used by {@link buildLinearizationCache}
 // to populate the universe-side of the cache without relying on package-tree
 // traversal (which is split per module — walking {@code Package.children}
@@ -465,7 +465,7 @@ function meta::pure::compiler::buildLocalFunctionIndex(context:CompilerContext[1
 function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:CompilerContext[1], name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
 {
     // Union: native index (base PDB functions, indexed by short name in
-    //   {@code TruffleModuleRegistry.pathsByFunctionName}) + locally-defined
+    //   {@code ModuleRegistry.pathsByFunctionName}) + locally-defined
     //   functions from {@code localFunctionIndex} (built between pass 1 and
     //   pass 2 by {@link buildLocalFunctionIndex}). Both are O(1) lookups
     //   keyed by short name; no scan of {@code elementMap} or

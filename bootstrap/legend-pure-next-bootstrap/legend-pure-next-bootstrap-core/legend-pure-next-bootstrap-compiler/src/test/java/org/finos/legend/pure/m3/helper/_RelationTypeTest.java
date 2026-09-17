@@ -6,11 +6,11 @@ import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.relation.RelationType;
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
+import org.finos.legend.pure.m3.module.sourceModule.PureContent;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._RelationType;
@@ -23,7 +23,7 @@ import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 
 public class _RelationTypeTest
 {
-    private static PureModel model;
+    private static JavaCompiler model;
     private static Class testClass;
 
     @BeforeAll
@@ -40,16 +40,16 @@ public class _RelationTypeTest
             "    otherRt2: meta::pure::metamodel::relation::Relation<(col3:Float)>[1];\n" +
             "}\n";
 
-        model = PureModel.withModules(
+        model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent(source, "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
         assertTrue(result.errors().isEmpty(), "Compilation errors should be empty: " + result.errors());
 
-        testClass = (Class) model.getModule("test").getElement("test::RelClass");
+        testClass = (Class) model.registry().module("test").getElement("test::RelClass");
     }
 
     private RelationType getPropRT(String name)
@@ -99,7 +99,7 @@ public class _RelationTypeTest
         RelationType subRt = getPropRT("subRt");
         RelationType otherRt = getPropRT("otherRt");
 
-        ScopedMetadataAccess scopedModel = new ScopedMetadataAccess(model.getModule("test"), model);
+        ScopedMetadataAccess scopedModel = new ScopedMetadataAccess(model.registry().module("test"), model.registry());
 
         // exact match
         assertTrue(_RelationType.isCompatible(simpleRt, simpleRt, false, scopedModel));
@@ -120,7 +120,7 @@ public class _RelationTypeTest
         RelationType simpleRt = getPropRT("simpleRt"); // col1:String, col2:Integer
         RelationType otherRt = getPropRT("otherRt");   // col2:Integer, col4:Boolean
 
-        ScopedMetadataAccess scopedModel = new ScopedMetadataAccess(model.getModule("test"), model);
+        ScopedMetadataAccess scopedModel = new ScopedMetadataAccess(model.registry().module("test"), model.registry());
 
         meta.pure.metamodel.type.Type commonType = _RelationType.findCommonRelationType(Lists.mutable.with(simpleRt, otherRt), scopedModel);
         
