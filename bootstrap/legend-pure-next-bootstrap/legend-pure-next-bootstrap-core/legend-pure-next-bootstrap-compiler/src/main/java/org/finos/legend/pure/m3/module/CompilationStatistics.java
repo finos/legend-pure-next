@@ -49,10 +49,51 @@ public record CompilationStatistics(
         MutableMap<String, Integer> rollbackSites)
 {
     /**
-     * An empty statistics instance for modules that don't collect stats (e.g. PDBModule).
+     * An empty statistics instance for modules that don't collect stats (e.g. PdbModule).
      */
     public static final CompilationStatistics EMPTY = new CompilationStatistics(
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Maps.mutable.empty(), Maps.mutable.empty());
+
+    /**
+     * Sum several compilations' statistics (e.g. one per module): durations, counts and
+     * rollback sites add up; per-element statistics are merged by element path.
+     */
+    public static CompilationStatistics combine(Iterable<CompilationStatistics> statistics)
+    {
+        long total = 0, parsing = 0, firstPass = 0, secondPass = 0, thirdPass = 0, memoryDelta = 0;
+        int elements = 0, sourceFiles = 0, rollbacks = 0, candidates = 0;
+        MutableMap<String, ElementStatistics> elementStatistics = Maps.mutable.empty();
+        MutableMap<String, Integer> rollbackSites = Maps.mutable.empty();
+        for (CompilationStatistics s : statistics)
+        {
+            if (s == null)
+            {
+                continue;
+            }
+            total += s.totalDurationNanos();
+            parsing += s.parsingDurationNanos();
+            firstPass += s.firstPassDurationNanos();
+            secondPass += s.secondPassDurationNanos();
+            thirdPass += s.thirdPassDurationNanos();
+            elements += s.elementCount();
+            sourceFiles += s.sourceFileCount();
+            memoryDelta += s.memoryDeltaBytes();
+            rollbacks += s.inferenceRollbackCount();
+            candidates += s.candidateEvaluationCount();
+            elementStatistics.putAll(s.elementStatistics());
+            s.rollbackSites().forEachKeyValue((site, count) -> rollbackSites.merge(site, count, Integer::sum));
+        }
+        return new CompilationStatistics(total, parsing, firstPass, secondPass, thirdPass, elements, sourceFiles,
+                memoryDelta, rollbacks, candidates, elementStatistics, rollbackSites);
+    }
+
+    /** The same statistics with a different total (e.g. wall-clock time around several compilations). */
+    public CompilationStatistics withTotalDurationNanos(long nanos)
+    {
+        return new CompilationStatistics(nanos, parsingDurationNanos, firstPassDurationNanos, secondPassDurationNanos,
+                thirdPassDurationNanos, elementCount, sourceFileCount, memoryDeltaBytes, inferenceRollbackCount,
+                candidateEvaluationCount, elementStatistics, rollbackSites);
+    }
 
     /**
      * Return a human-readable summary of the compilation statistics.

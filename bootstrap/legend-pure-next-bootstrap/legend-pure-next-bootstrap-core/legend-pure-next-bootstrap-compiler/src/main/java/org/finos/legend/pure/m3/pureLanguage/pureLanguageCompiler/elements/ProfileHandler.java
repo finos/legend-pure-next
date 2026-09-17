@@ -21,7 +21,7 @@ import meta.pure.metamodel.extension.StereotypeImpl;
 import meta.pure.metamodel.extension.TagImpl;
 import meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 
@@ -34,7 +34,7 @@ public final class ProfileHandler
     {
     }
 
-    public static Profile firstPass(meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
+    public static Profile firstPass(meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         ProfileImpl result = new ProfileImpl(model)
                                 ._name(grammar._name());

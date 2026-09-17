@@ -25,10 +25,10 @@ import meta.pure.protocol.grammar.relation.GenericTypeOperation;
 import meta.pure.protocol.grammar.type.Type_Pointer;
 import meta.pure.protocol.grammar.type.generics.GenericTypeValue;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
@@ -37,7 +37,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Packag
 /**
  * Compiles a grammar-level {@link meta.pure.protocol.grammar.type.generics.GenericType}
  * into a metamodel-level {@link GenericType}, resolving pointer references
- * via a {@link PureModel} and a list of imports.
+ * via a {@link JavaCompiler} and a list of imports.
  */
 public final class GenericTypeCompiler
 {
@@ -57,7 +57,7 @@ public final class GenericTypeCompiler
      *
      * @param grammarGenericType the grammar-level generic type to compile
      * @param imports            import package paths from the enclosing section
-     * @param model              the compiled PureModel used for element lookup
+     * @param model              the compiled JavaCompiler used for element lookup
      * @param context            the compilation context for error collection
      * @return a fully resolved metamodel GenericType, or null if the type can't be resolved
      */

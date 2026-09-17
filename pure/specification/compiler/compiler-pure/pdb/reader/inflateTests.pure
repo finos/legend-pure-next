@@ -1,0 +1,168 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+
+// Tests for the Pure DEFLATE decoder (pdb/reader/inflate.pure). Each stream was produced by
+// zlib (deflateRawSync) or taken from a Java-written golden archive, and must decode to the
+// exact original bytes.
+
+import meta::pure::functions::binary::*;
+
+// Block type 0: raw bytes after a byte-aligned LEN/NLEN header.
+function <<test.Test>> meta::pure::compiler::pdb::reader::inflate::tests::testStoredBlock():Boolean[1]
+{
+   let deflated = [
+      1, 16, 0, 239, 255, 80, 68, 66, 32, 115, 116, 111, 114, 101, 100, 32, 98, 108, 111, 99, 107
+   ];
+   assertEquals('PDB stored block', utf8BytesToString(meta::pure::compiler::pdb::reader::inflate::inflate($deflated, 16)));
+}
+
+// Block type 1: the fixed code, with back-references.
+function <<test.Test>> meta::pure::compiler::pdb::reader::inflate::tests::testFixedHuffman():Boolean[1]
+{
+   let deflated = [
+      75, 76, 74, 78, 68, 66, 10, 25, 169, 57, 57, 249, 16, 18, 0
+   ];
+   assertEquals('abcabcabcabcabc hello hello', utf8BytesToString(meta::pure::compiler::pdb::reader::inflate::inflate($deflated, 27)));
+}
+
+// Block type 2: code-length code, repeat codes and dynamic literal/distance tables.
+function <<test.Test>> meta::pure::compiler::pdb::reader::inflate::tests::testDynamicHuffman():Boolean[1]
+{
+   let deflated = [
+      237, 144, 177, 10, 132, 48, 12, 134, 95, 197, 231, 200, 42, 14, 55, 136, 130, 219, 109, 229, 46, 72, 160, 73,
+      75, 76, 135, 190, 253, 21, 78, 193, 161, 10, 206, 186, 133, 36, 255, 247, 193, 207, 104, 14, 32, 38, 69, 0,
+      46, 51, 135, 47, 122, 0, 203, 177, 44, 38, 83, 146, 185, 79, 222, 40, 122, 250, 144, 229, 214, 187, 101, 105,
+      222, 168, 161, 119, 146, 71, 13, 17, 213, 50, 159, 65, 94, 98, 56, 163, 142, 229, 58, 8, 118, 146, 24, 213,
+      25, 5, 105, 14, 240, 107, 224, 146, 228, 143, 170, 56, 54, 202, 145, 101, 141, 92, 144, 236, 73, 53, 211, 134,
+      170, 88, 118, 239, 252, 244, 126, 139, 222, 127
+   ];
+   assertEquals('meta::pure::metamodel::type::StringMultiplicityClass ZeroManyPropertymeta::pure::metamodel::type::IntegerPureOneEnumeration StringMultiplicityClassIntegerZeroManyPropertymeta::pure::metamodel::type::StringPureOneEnumeration ZeroManyMultiplicityClassIntegerPureOnePropertymeta::pure::metamodel::type::StringMultiplicityEnumeration ZeroManyPropertyClassIntegerPureOneEnumerationmeta::pure::metamodel::type::StringMultiplicityClass ZeroManyPropertymeta::pure::metamodel::type::IntegerPureOneEnumeration StringMultiplicityClassIntegerZeroManyPropertymeta::pure::metamodel::type::StringPureOneEnumeration ZeroManyMultiplicityClassIntegerPureOnePropertymeta::pure::metamodel::type::StringMultiplicityEnumeration ZeroManyPropertyClassIntegerPureOneEnumerationmeta::pure::metamodel::type::StringMultiplicityClass ZeroManyPropertymeta::pure::metamodel::type::IntegerPureOne', utf8BytesToString(meta::pure::compiler::pdb::reader::inflate::inflate($deflated, 864)));
+}
+
+// Two blocks separated by a sync flush (an empty stored block in between).
+function <<test.Test>> meta::pure::compiler::pdb::reader::inflate::tests::testTwoBlocks():Boolean[1]
+{
+   let deflated = [
+      74, 203, 44, 42, 46, 81, 72, 202, 201, 79, 206, 86, 200, 79, 83, 40, 73, 173, 40, 209, 81, 72, 195, 20,
+      4, 0, 0, 0, 255, 255, 83, 40, 201, 72, 205, 3, 17, 10, 197, 169, 201, 249, 121, 41, 16, 89, 29, 20,
+      30, 0
+   ];
+   assertEquals('first block of text, first block of text then the second block, second block', utf8BytesToString(meta::pure::compiler::pdb::reader::inflate::inflate($deflated, 76)));
+}
+
+// Matches whose distance is shorter than their length (runs and short periods).
+function <<test.Test>> meta::pure::compiler::pdb::reader::inflate::tests::testOverlappingCopies():Boolean[1]
+{
+   let deflated = [
+      171, 72, 36, 22, 36, 37, 147, 141, 0
+   ];
+   assertEquals('xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc', utf8BytesToString(meta::pure::compiler::pdb::reader::inflate::inflate($deflated, 101)));
+}
+
+// An empty input: one final fixed block holding only end-of-block.
+function <<test.Test>> meta::pure::compiler::pdb::reader::inflate::tests::testEmptyStream():Boolean[1]
+{
+   assertEmpty(meta::pure::compiler::pdb::reader::inflate::inflate([3, 0], 0));
+}
+
+// A golden archive manifest entry (fixed code), as the Java reference writer compressed it.
+function <<test.Test>> meta::pure::compiler::pdb::reader::inflate::tests::testGoldenManifestEntry():Boolean[1]
+{
+   let deflated = [
+      171, 230, 82, 80, 80, 202, 75, 204, 77, 85, 178, 82, 80, 42, 73, 45, 46, 81, 210, 1, 137, 20, 36, 38,
+      103, 39, 166, 167, 6, 36, 150, 148, 164, 22, 229, 129, 228, 180, 32, 18, 41, 169, 5, 169, 121, 41, 169, 121,
+      201, 153, 169, 197, 64, 225, 104, 165, 228, 252, 162, 84, 165, 88, 174, 90, 46, 0
+   ];
+   assertEquals('{\n  "name": "test",\n  "packagePattern": "*",\n  "dependencies": ["core"]\n}\n', utf8BytesToString(meta::pure::compiler::pdb::reader::inflate::inflate($deflated, 74)));
+}
+
+// The smallest dynamic-code golden entry: valueSpecification/genericTypeAndMultiplicityHolder/relation/simpleColumn.pdb!reverseReferenceIndex
+function <<test.Test>> meta::pure::compiler::pdb::reader::inflate::tests::testGoldenDynamicEntry():Boolean[1]
+{
+   let deflated = [
+      21, 140, 45, 14, 128, 48, 12, 70, 61, 167, 216, 21, 176, 159, 67, 129, 193, 16, 124, 179, 140, 66, 154, 148,
+      178, 140, 78, 236, 246, 12, 253, 126, 110, 246, 8, 228, 90, 24, 56, 171, 37, 151, 199, 94, 64, 163, 93, 64,
+      138, 175, 211, 100, 141, 110, 162, 153, 141, 139, 164, 189, 101, 158, 236, 88, 171, 186, 100, 149, 36, 222, 150, 71,
+      15, 46, 52, 18, 237, 93, 196, 16, 130, 115, 239, 104, 99, 141, 255, 174, 147, 225, 3
+   ];
+   assertEquals('meta::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:\n  test__Relation_1_\n', utf8BytesToString(meta::pure::compiler::pdb::reader::inflate::inflate($deflated, 103)));
+}
+
+// A whole Java-written golden archive: every entry is DEFLATE-compressed, and zipEntryData inflates
+// them to their central-directory sizes; the manifest reads back as text and an element entry decodes.
+function <<test.Test>> meta::pure::compiler::pdb::reader::inflate::tests::testGoldenArchive():Boolean[1]
+{
+   let bytes   = meta::pure::compiler::pdb::reader::inflate::tests::primitiveSimpleArchive();
+   let entries = meta::pure::compiler::pdb::reader::readZipEntries($bytes);
+   assertEquals(['elements/protocol.Package', 'elements/protocol/Varchar.PrimitiveType', 'elementIndex', 'manifest'], $entries.name);
+   assertEquals([8, 8, 8, 8], $entries.method);
+   assertEquals([260, 816, 136, 74], $entries->map(e | meta::pure::compiler::pdb::reader::zipEntryData($bytes, $e)->size()));
+   assertEquals('{\n  "name": "test",\n  "packagePattern": "*",\n  "dependencies": ["core"]\n}\n', utf8BytesToString(meta::pure::compiler::pdb::reader::zipEntryData($bytes, $entries->at(3))));
+   let node = meta::pure::compiler::pdb::reader::elementNode(meta::pure::compiler::pdb::reader::zipEntryData($bytes, $entries->at(0)), 'Package');
+   assertEquals('protocol', meta::pure::compiler::pdb::reader::readField(meta::pure::compiler::pdb::reader::tests::testSchema(), $node, 'name'));
+}
+
+// pure/specification/compiler/tests-pdb-serialization/primitive/simple.pdb, byte for byte.
+function <<test.TestDependency>> meta::pure::compiler::pdb::reader::inflate::tests::primitiveSimpleArchive():Integer[*]
+{
+   [
+      80, 75, 3, 4, 20, 0, 8, 8, 8, 0, 138, 113, 229, 92, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 25, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 47, 112, 114, 111, 116, 111, 99, 111, 108, 46,
+      80, 97, 99, 107, 97, 103, 101, 93, 142, 191, 14, 194, 32, 16, 135, 175, 166, 3, 131, 131, 38, 38, 246, 89,
+      110, 114, 115, 113, 232, 96, 156, 76, 8, 65, 210, 18, 109, 33, 136, 131, 62, 149, 143, 229, 91, 224, 29, 88,
+      77, 36, 249, 248, 243, 221, 253, 128, 6, 0, 86, 208, 192, 26, 22, 80, 134, 128, 57, 212, 228, 32, 179, 33,
+      118, 68, 95, 138, 85, 69, 83, 77, 60, 83, 74, 188, 78, 231, 37, 225, 131, 139, 78, 187, 11, 226, 65, 5,
+      221, 171, 144, 111, 251, 121, 190, 224, 245, 151, 155, 17, 136, 220, 39, 178, 17, 31, 63, 213, 143, 196, 96, 162,
+      66, 244, 183, 96, 16, 121, 63, 184, 147, 161, 71, 226, 221, 147, 232, 204, 104, 130, 213, 87, 68, 231, 163, 29,
+      236, 67, 69, 235, 70, 196, 109, 241, 123, 106, 146, 28, 146, 156, 151, 223, 184, 108, 149, 62, 171, 206, 240, 159,
+      222, 80, 75, 7, 8, 242, 47, 240, 156, 162, 0, 0, 0, 4, 1, 0, 0, 80, 75, 3, 4, 20, 0, 8,
+      8, 8, 0, 138, 113, 229, 92, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 0, 0, 0, 101,
+      108, 101, 109, 101, 110, 116, 115, 47, 112, 114, 111, 116, 111, 99, 111, 108, 47, 86, 97, 114, 99, 104, 97, 114,
+      46, 80, 114, 105, 109, 105, 116, 105, 118, 101, 84, 121, 112, 101, 181, 82, 77, 75, 195, 64, 16, 125, 41, 1,
+      11, 246, 80, 107, 17, 65, 15, 61, 120, 18, 193, 131, 30, 100, 255, 128, 120, 19, 42, 189, 46, 33, 110, 211,
+      197, 36, 187, 108, 182, 130, 226, 193, 67, 127, 144, 7, 127, 132, 63, 199, 63, 160, 117, 54, 78, 250, 117, 207,
+      194, 203, 76, 102, 222, 203, 108, 222, 238, 8, 205, 58, 194, 41, 78, 48, 68, 159, 223, 187, 232, 33, 166, 42,
+      112, 76, 120, 139, 128, 5, 225, 147, 240, 222, 169, 9, 81, 196, 61, 96, 192, 90, 224, 144, 84, 251, 164, 27,
+      172, 122, 136, 110, 56, 126, 112, 252, 250, 89, 46, 227, 144, 16, 66, 60, 32, 88, 103, 188, 73, 77, 46, 196,
+      36, 113, 233, 44, 113, 84, 251, 222, 225, 61, 17, 10, 229, 19, 33, 236, 220, 41, 33, 66, 94, 152, 71, 69,
+      34, 255, 98, 169, 144, 169, 82, 57, 157, 86, 66, 24, 235, 117, 161, 95, 19, 175, 77, 41, 196, 237, 127, 253,
+      129, 72, 50, 136, 100, 208, 203, 149, 92, 6, 181, 180, 142, 20, 94, 63, 171, 74, 142, 189, 211, 101, 6, 251,
+      187, 61, 223, 182, 53, 223, 169, 188, 102, 86, 51, 109, 101, 77, 78, 114, 22, 7, 195, 246, 8, 141, 43, 241,
+      114, 123, 79, 221, 13, 239, 2, 119, 136, 107, 92, 225, 130, 178, 51, 202, 123, 24, 17, 43, 156, 75, 135, 79,
+      245, 156, 99, 132, 245, 218, 236, 143, 184, 221, 175, 191, 203, 142, 92, 86, 186, 176, 185, 10, 141, 197, 206, 252,
+      105, 91, 158, 140, 205, 220, 165, 234, 174, 156, 26, 87, 176, 19, 221, 250, 111, 99, 126, 174, 247, 144, 181, 122,
+      47, 238, 27, 23, 2, 13, 127, 80, 75, 7, 8, 3, 60, 161, 70, 49, 1, 0, 0, 48, 3, 0, 0, 80,
+      75, 3, 4, 20, 0, 8, 8, 8, 0, 138, 113, 229, 92, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 12, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 73, 110, 100, 101, 120, 227, 97, 0, 1, 54, 6, 14,
+      6, 22, 32, 201, 0, 36, 25, 24, 152, 128, 216, 3, 202, 62, 241, 255, 255, 127, 25, 40, 155, 23, 136, 3,
+      138, 50, 115, 51, 75, 50, 203, 82, 67, 42, 11, 82, 129, 124, 65, 32, 46, 40, 202, 47, 201, 79, 206, 207,
+      177, 178, 10, 75, 44, 74, 206, 72, 44, 2, 138, 113, 48, 240, 0, 245, 112, 0, 33, 3, 131, 8, 84, 63,
+      59, 72, 127, 98, 114, 118, 98, 122, 42, 88, 28, 166, 15, 228, 2, 0, 80, 75, 7, 8, 145, 219, 103, 30,
+      95, 0, 0, 0, 136, 0, 0, 0, 80, 75, 3, 4, 20, 0, 8, 8, 8, 0, 138, 113, 229, 92, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 109, 97, 110, 105, 102, 101, 115, 116, 171, 230,
+      82, 80, 80, 202, 75, 204, 77, 85, 178, 82, 80, 42, 73, 45, 46, 81, 210, 1, 137, 20, 36, 38, 103, 39,
+      166, 167, 6, 36, 150, 148, 164, 22, 229, 129, 228, 180, 32, 18, 41, 169, 5, 169, 121, 41, 169, 121, 201, 153,
+      169, 197, 64, 225, 104, 165, 228, 252, 162, 84, 165, 88, 174, 90, 46, 0, 80, 75, 7, 8, 236, 249, 55, 130,
+      66, 0, 0, 0, 74, 0, 0, 0, 80, 75, 1, 2, 20, 0, 20, 0, 8, 8, 8, 0, 138, 113, 229, 92,
+      242, 47, 240, 156, 162, 0, 0, 0, 4, 1, 0, 0, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 47, 112, 114, 111, 116, 111, 99, 111, 108, 46,
+      80, 97, 99, 107, 97, 103, 101, 80, 75, 1, 2, 20, 0, 20, 0, 8, 8, 8, 0, 138, 113, 229, 92, 3,
+      60, 161, 70, 49, 1, 0, 0, 48, 3, 0, 0, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 233, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 47, 112, 114, 111, 116, 111, 99, 111, 108, 47, 86,
+      97, 114, 99, 104, 97, 114, 46, 80, 114, 105, 109, 105, 116, 105, 118, 101, 84, 121, 112, 101, 80, 75, 1, 2,
+      20, 0, 20, 0, 8, 8, 8, 0, 138, 113, 229, 92, 145, 219, 103, 30, 95, 0, 0, 0, 136, 0, 0, 0,
+      12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 111, 2, 0, 0, 101, 108, 101, 109, 101, 110,
+      116, 73, 110, 100, 101, 120, 80, 75, 1, 2, 20, 0, 20, 0, 8, 8, 8, 0, 138, 113, 229, 92, 236, 249,
+      55, 130, 66, 0, 0, 0, 74, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      8, 3, 0, 0, 109, 97, 110, 105, 102, 101, 115, 116, 80, 75, 5, 6, 0, 0, 0, 0, 4, 0, 4, 0,
+      12, 1, 0, 0, 128, 3, 0, 0, 0, 0
+   ];
+}

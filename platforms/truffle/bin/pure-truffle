@@ -5,8 +5,8 @@
 # Phase F will replace this with a native-image binary of the same name.
 #
 # Classpath: the runtime fat jar plus every extension jar in build/. Extensions
-# (e.g. legend-pure-next-truffle-extension-java) contribute specialized native
-# nodes via the TruffleNativesExtension SPI; ServiceLoader picks them up at
+# contribute specialized native
+# nodes via the NativesExtension SPI; ServiceLoader picks them up at
 # startup as long as their jars are on the classpath.
 #
 # JVMCI flags: the polyglot engine falls back to a fallback runtime (and prints
@@ -44,4 +44,4 @@ exec java \
     -XX:+EnableJVMCI \
     -XX:+UseJVMCICompiler \
     -cp "${CLASSPATH}" \
-    org.finos.legend.pure.truffle.cli.PureCompileMain "$@"
+    org.finos.legend.pure.truffle.interfaces.cli.PureCompileMain "$@"

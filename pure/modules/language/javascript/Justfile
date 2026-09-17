@@ -12,6 +12,7 @@ set shell := ["bash", "-c"]
 ts_root        := source_directory()
 repo_root      := ts_root / ".." / ".." / ".." / ".."
 shared_out     := repo_root / "shared"
+test_results   := repo_root / "test-results"
 # Module build outputs: each module writes its own pdbs (and gallery) into its build/.
 language_javascript_out    := repo_root / "pure" / "modules" / "language" / "javascript" / "build"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
@@ -83,8 +84,8 @@ test-all: build-tests _depCheck_runtime-pdbs
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{language_javascript_out}}/javascript.pdb \
         --pdb {{language_javascript_out}}/javascript-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1_" \
-        --args "meta::external::language::javascript" {{err_filter}}
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::external::language::javascript" "{{test_results}}/pure/language-javascript/pure@cli-truffle.json" {{err_filter}}
 
 # Internal: fail loudly if PDBs / pure-truffle aren't staged.
 _depCheck_runtime-pdbs:

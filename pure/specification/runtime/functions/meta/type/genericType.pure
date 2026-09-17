@@ -136,7 +136,7 @@ function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGener
 // code (match dispatch, instanceOf checks, generic introspection) works the
 // same way it does for class instances. Without this, match expressions on
 // a lambda fall through to the catch-all and error with "No match branch
-// accepts value of Pure type org.finos.legend.pure.truffle.runtime.dynobj.
+// accepts value of Pure type org.finos.legend.pure.truffle.execution.
 // PureDynamicObject@..." — the bare JVM identity instead of a Pure type.
 function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeOnLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {

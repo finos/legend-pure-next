@@ -37,34 +37,55 @@ import meta::pure::ui::progress::*;
 
 function <<test.TestDependency>> meta::pure::compiler::test::printer::runCompiledPrinterCorpus(testDir:String[1]):String[1]
 {
+    meta::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport($testDir, []);
+}
+
+// Same, also writing the run's test report to `reportPath` (read by tools/test-dashboard).
+function <<test.TestDependency>> meta::pure::compiler::test::printer::runCompiledPrinterCorpus(testDir:String[1], reportPath:String[1]):String[1]
+{
+    meta::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport($testDir, $reportPath);
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport(testDir:String[1], reportPath:String[0..1]):String[1]
+{
+    let start = meta::pure::functions::date::currentTimeMillis();
     let files = directoryTree($testDir)->filter(f | $f->endsWith('.pure') && !$f->contains('_E_') && !$f->contains('_noRoundtrip') && !readFile($f)->contains('###' + 'Error'));
     let total = $files->size();
     startProgress('Running ' + $total->toString() + ' compiled printer corpus checks from ' + $testDir + '...');
-    // Wrap each check in withSilencedPrint so any stray output from compile()
-    // (already silenced via the 3-arg overload but defence in depth) doesn't
-    // tear the progress bar's ANSI cursor invariants.
     // Strip the testDir prefix from the status-line label. Absolute paths
-    // wrap past the terminal width (≈80 cols), and `[A` only walks up
+    // wrap past the terminal width (≈80 cols), and `[A` only walks up
     // one VISUAL line — so a wrapped path leaves the cursor on the wrong
     // line and the bar leaks downward for every subsequent tick.
     let prefixLen = $testDir->length() + 1;
-    let results = range(0, $total)->map(i |
-        let f = $files->at($i);
-        let rel = if ($f->length() > $prefixLen, | $f->substring($prefixLen, $f->length()), | $f);
-        tickProgress($i + 1, $total, $rel);
-        withSilencedPrint(| meta::pure::compiler::test::printer::checkCompiledPrinterFile($f));
-    );
+    let cases = range(0, $total)->map(i | meta::pure::compiler::test::printer::compiledPrinterCase($files->at($i), $prefixLen, $i + 1, $total));
     finishProgress();
-    let mismatches = $results->filter(r | $r.failure->isNotEmpty());
+    let mismatches = $cases->filter(c | $c.error->isNotEmpty());
 
-    $mismatches->map(r | println('  MISMATCH: ' + $r.path + ' — ' + $r.failure->toOne()));
+    $mismatches->map(c | println('  MISMATCH: ' + $c.id + ' — ' + $c.error->toOne().message));
 
     let passed = $total - $mismatches->size();
     let summary = 'Compiled printer corpus: ' + $passed->toString() + ' / ' + $total->toString() + ' byte-equal to source';
+    if ($reportPath->isEmpty(), | [], | meta::pure::test::report::writeSuiteReport($reportPath->toOne(), 'compiledPrinter', meta::pure::functions::date::currentTimeMillis() - $start, $cases));
     // Throw on any mismatch so the CLI's exit code reflects corpus status —
     // returning just the summary lets the bootstrap CLI swallow failures.
     assert($mismatches->isEmpty(), $summary);
     $summary;
+}
+
+// One corpus file's check as a report case: the id is the corpus path without `.pure`. Each check is
+// wrapped in withSilencedPrint so any stray output from compile() (already silenced via the 3-arg
+// overload but defence in depth) doesn't tear the progress bar's ANSI cursor invariants.
+function <<test.TestDependency>> meta::pure::compiler::test::printer::compiledPrinterCase(file:String[1], prefixLen:Integer[1], index:Integer[1], total:Integer[1]):meta::pure::test::report::TestCaseReport[1]
+{
+    let rel = if ($file->length() > $prefixLen, | $file->substring($prefixLen, $file->length()), | $file);
+    tickProgress($index, $total, $rel);
+    let started = meta::pure::functions::date::currentTimeMillis();
+    let result = withSilencedPrint(| meta::pure::compiler::test::printer::checkCompiledPrinterFile($file));
+    ^meta::pure::test::report::TestCaseReport(
+        id = if ($rel->endsWith('.pure'), | $rel->substring(0, $rel->length() - 5), | $rel),
+        durationMs = meta::pure::functions::date::currentTimeMillis() - $started,
+        error = if ($result.failure->isEmpty(), | [], | ^meta::pure::functions::lang::Error(message = $result.failure->toOne(), stack = []))
+    );
 }
 
 Class <<test.TestDependency>> meta::pure::compiler::test::printer::CompiledPrinterCheckResult

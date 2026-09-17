@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- tools/test-dashboard/index.html: the test dashboard page. build.mjs inlines every report under
+     test-results/ into the data block below and writes test-results/dashboard.html. -->
+<title>Pure Conformance Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=Atkinson+Hyperlegible+Next:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --ground: #F2F2F7;
+  --surface: #FFFFFF;
+  --raised: #F7F7FB;
+  --ink: #1B1C28;
+  --muted: #61647A;
+  --faint: #8E90A3;
+  --rule: #DCDCE6;
+  --accent: #6D45D9;
+  --accent-soft: #ECE6FB;
+  --pass: #1E8A4C;
+  --pass-soft: #DDF1E4;
+  --fail: #CF4A2E;
+  --step-1: #6D45D9; --step-2: #A48AF0; --step-3: #4B2E9E; --step-4: #1F8A7A; --step-5: #5CC1AE; --step-6: #0F5E53; --step-7: #C98A1B; --step-8: #C2577A;
+  --fail-soft: #FBE3DC;
+  --skip: #8C90A6;
+  --skip-soft: #E9E9F0;
+  --hatch: rgba(97, 100, 122, 0.18);
+  --focus: #6D45D9;
+  --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #14151C; --surface: #1B1C26; --raised: #22232F; --ink: #E6E6EF; --muted: #9A9CB2; --faint: #6F7188;
+    --rule: #2D2F3E; --accent: #A98BFF; --accent-soft: #2A2445; --pass: #3FB950; --pass-soft: #17301F;
+    --fail: #F48771; --fail-soft: #3A211C; --skip: #7B7E95; --skip-soft: #262734; --hatch: rgba(154, 156, 178, 0.16); --focus: #A98BFF;
+    --step-1: #A98BFF; --step-2: #CDB9FF; --step-3: #7F63D9; --step-4: #3FC1A9; --step-5: #86E0CF; --step-6: #2A9C87; --step-7: #E3A73C; --step-8: #E57FA0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #14151C; --surface: #1B1C26; --raised: #22232F; --ink: #E6E6EF; --muted: #9A9CB2; --faint: #6F7188;
+  --rule: #2D2F3E; --accent: #A98BFF; --accent-soft: #2A2445; --pass: #3FB950; --pass-soft: #17301F;
+  --fail: #F48771; --fail-soft: #3A211C; --skip: #7B7E95; --skip-soft: #262734; --hatch: rgba(154, 156, 178, 0.16); --focus: #A98BFF;
+  --step-1: #A98BFF; --step-2: #CDB9FF; --step-3: #7F63D9; --step-4: #3FC1A9; --step-5: #86E0CF; --step-6: #2A9C87; --step-7: #E3A73C; --step-8: #E57FA0;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 15px/1.5 var(--body); margin: 0; padding-inline: clamp(16px, 3vw, 40px); padding-block: 0 48px; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mono { font-family: var(--mono); }
+.num { font-variant-numeric: tabular-nums; }
+
+.strip { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 32px; align-items: end; padding-block: 28px 20px; border-bottom: 1px solid var(--rule); }
+.strip h1 { font: 700 30px/1.05 var(--display); font-stretch: 85%; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.strip h1 em { font-style: normal; color: var(--accent); }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 13px; margin-top: 8px; align-items: center; }
+.meta b { color: var(--ink); font-weight: 600; }
+.verdict { text-align: right; }
+.verdict .big { font: 800 44px/1 var(--display); font-stretch: 80%; font-variant-numeric: tabular-nums; }
+.verdict .big.bad { color: var(--fail); }
+.verdict .big.good { color: var(--pass); }
+.verdict .label { font-size: 13px; color: var(--muted); }
+
+
+nav.tabs { display: flex; flex-wrap: wrap; gap: 4px; padding-block: 12px; position: sticky; top: 0; z-index: 3; background: var(--ground); align-items: center; }
+nav.tabs button { border: 0; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer; font: 600 14px/1.2 var(--display); font-stretch: 92%; color: var(--muted); }
+nav.tabs button:hover { color: var(--ink); background: var(--raised); }
+nav.tabs button[aria-selected="true"] { color: var(--accent); background: var(--accent-soft); }
+nav.tabs .spacer { flex: 1; }
+nav.tabs input[type="search"] { min-width: 0; width: min(280px, 100%); padding: 6px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+
+h3.section { font: 700 12px/1 var(--display); font-stretch: 90%; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+.board { display: grid; grid-template-columns: minmax(0, 1fr); gap: 64px; }
+/* Each board section is centered: its title, its grid (margin auto still scrolls when wider than the page) and its legend. */
+.board > section > h3.section { text-align: center; font-size: 19px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+.board table.grid { margin-inline: auto; }
+.board .legend { justify-content: center; text-align: center; }
+.scroll { overflow-x: auto; }
+
+.run { display: inline-flex; flex-wrap: wrap; gap: 3px; align-items: center; font: 600 12px/1 var(--display); font-stretch: 88%; }
+.run .impl { color: var(--ink); }
+.run .at { color: var(--faint); }
+.run .host { color: var(--accent); }
+.run .src { color: var(--muted); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 4px; font-weight: 500; }
+
+table.grid { border-collapse: separate; border-spacing: 4px; }
+table.grid th { font-weight: 600; text-align: left; vertical-align: bottom; padding: 0 2px 6px; }
+table.grid thead th.col { vertical-align: bottom; }
+.colhead { writing-mode: vertical-rl; transform: rotate(180deg); display: inline-flex; flex-direction: column; gap: 3px; align-items: flex-start; white-space: nowrap; }
+/* A small, fixed gap between a technology title and its rotated column headers. */
+table.grid .colhead, table.matrix .colhead { margin-top: 12px; }
+.colhead .short { font: 700 13px/1 var(--display); font-stretch: 88%; color: var(--ink); }
+.colhead .run { flex-wrap: nowrap; font-size: 11px; font-weight: 500; }
+.colhead .run .impl { color: var(--muted); }
+th.gap, td.gap { width: 14px; padding: 0; }
+th.tech { text-align: left; vertical-align: bottom; padding: 0 2px 8px; border-bottom: 2px solid var(--ink); }
+.techname { display: block; font: 800 15px/1 var(--display); font-stretch: 85%; letter-spacing: 0.02em; }
+.technote { display: block; font: 400 12px/1.3 var(--body); color: var(--muted); margin-top: 3px; white-space: nowrap; }
+table.grid tbody th { font: 700 14px/1.2 var(--display); font-stretch: 90%; white-space: nowrap; padding-right: 10px; vertical-align: middle; }
+table.grid tbody th small { display: block; font: 400 12px/1.3 var(--body); color: var(--muted); }
+.cell { width: 76px; height: 64px; border-radius: 6px; border: 1px solid var(--rule); background: var(--surface); position: relative; overflow: hidden; display: grid; place-items: center; cursor: pointer; padding: 0; }
+/* A run's cell: a transparent button covers it (click-through to the matrix, tooltip, focus); the text lets clicks
+   through, except the gallery link, which sits above the button. */
+.cell.run:hover, .cell.run:focus-within { border-color: var(--accent); }
+.cell .hit { position: absolute; inset: 0; border: 0; padding: 0; background: none; cursor: pointer; border-radius: inherit; }
+.cell .hit:focus-visible { outline-offset: -3px; }
+.cell.run .n, .cell .ratio { pointer-events: none; position: relative; }
+.cell .ratio { position: absolute; }
+.cell .ratio { position: absolute; inset: auto 0 0 0; height: 4px; background: var(--pass); }
+.cell.fail { background: var(--fail-soft); border-color: var(--fail); }
+.cell.fail .ratio { background: linear-gradient(90deg, var(--pass) var(--r), var(--fail) var(--r)); }
+.cell .n { font: 700 13px/1 var(--display); font-stretch: 85%; font-variant-numeric: tabular-nums; }
+.cell.fail .n { color: var(--fail); }
+.cell .n small { display: block; font: 500 10px/1.2 var(--display); color: var(--muted); margin-top: 3px; text-align: center; }
+.cell .n small.dur { margin-top: 1px; }
+/* Centre a run's text above the 4px result bar; a failing cell (failures, counts, duration, maybe a link) packs tighter. */
+.cell.run .n { margin-bottom: 4px; }
+.cell.fail .n small { margin-top: 1px; }
+.cell.fail .gallery-link { margin-top: 1px; }
+.gallery-link { display: block; margin-top: 3px; text-align: center; font: 600 10px/1.1 var(--display); font-stretch: 90%; color: var(--accent); text-decoration: none; pointer-events: auto; }
+.gallery-link:hover, .gallery-link:focus-visible { text-decoration: underline; }
+.cell.none { cursor: default; background: repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 8px); border-style: dashed; }
+.cell.none .n { color: var(--faint); font-weight: 500; font-size: 11px; }
+.cell.na { cursor: default; background: none; border-style: dotted; }
+.cell.na .n { color: var(--faint); font-weight: 500; font-size: 11px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); margin-top: 14px; }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.legend i { width: 14px; height: 10px; border-radius: 3px; border: 1px solid var(--rule); display: inline-block; }
+
+.allgood { background: var(--pass-soft); color: var(--pass); border-radius: 6px; padding: 14px; font-weight: 600; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 12px; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 7px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: transparent; padding: 5px 11px; cursor: pointer; font: 600 13px/1.2 var(--display); font-stretch: 90%; color: var(--muted); border-right: 1px solid var(--rule); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+.toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+table.matrix { border-collapse: collapse; background: var(--surface); border: 1px solid var(--rule); font-size: 13px; }
+table.matrix th, table.matrix td { border-bottom: 1px solid var(--rule); padding: 5px 8px; }
+table.matrix thead th { background: var(--raised); text-align: center; vertical-align: bottom; }
+table.matrix thead th:first-child { text-align: left; }
+table.matrix th.tech { border-bottom: 2px solid var(--ink); background: var(--raised); padding: 8px; }
+table.matrix .gl { border-left: 2px solid var(--rule); }
+table.matrix td.idc { font-family: var(--mono); font-size: 12px; max-width: 540px; overflow-wrap: anywhere; }
+.id .sigx, .id .pkg { color: var(--faint); }
+tr.group td { background: var(--raised); cursor: pointer; }
+tr.group td.idc { font-family: var(--display); font-weight: 700; font-size: 13px; font-stretch: 92%; }
+tr.group .caret { display: inline-block; width: 14px; color: var(--muted); transition: transform 0.15s; }
+tr.group.open .caret { transform: rotate(90deg); }
+td.st { text-align: center; min-width: 40px; }
+.dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; }
+.dot.passed { background: var(--pass); }
+.dot.failed { background: var(--fail); }
+.dot.skipped { background: var(--skip); }
+.dot.missing { background: repeating-linear-gradient(135deg, var(--hatch) 0 2px, transparent 2px 4px); border: 1px dashed var(--faint); }
+.agg { font: 600 12px/1 var(--display); font-stretch: 85%; font-variant-numeric: tabular-nums; color: var(--muted); }
+.agg.bad { color: var(--fail); }
+.agg.none { color: var(--faint); }
+tr.leaf.diff td.idc { box-shadow: inset 3px 0 0 var(--fail); }
+.more { color: var(--muted); font-size: 12px; padding: 8px; }
+
+.suites { display: grid; gap: 24px; }
+table.list { border-collapse: collapse; width: 100%; background: var(--surface); border: 1px solid var(--rule); font-size: 14px; }
+table.list th, table.list td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+table.list thead th { font: 700 11px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--raised); }
+table.list td.r, table.list th.r { text-align: right; }
+.bar { display: inline-block; height: 8px; border-radius: 4px; background: var(--accent); opacity: 0.55; vertical-align: middle; }
+.pill { display: inline-block; font: 700 11px/1 var(--display); letter-spacing: 0.04em; padding: 3px 7px; border-radius: 999px; }
+.pill.ok { background: var(--pass-soft); color: var(--pass); }
+.pill.bad { background: var(--fail-soft); color: var(--fail); }
+.via { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+.fgroups { display: grid; gap: 14px; }
+details.fg { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--fail); border-radius: 8px; padding: 12px 16px; }
+details.fg summary { cursor: pointer; display: grid; gap: 6px; list-style: none; }
+details.fg summary::-webkit-details-marker { display: none; }
+details.fg summary .t { font: 700 16px/1.25 var(--display); font-stretch: 90%; }
+details.fg summary .runs { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 12px; color: var(--muted); }
+details.fg summary .runs b { color: var(--fail); }
+details.fg .body { display: grid; gap: 10px; margin-top: 12px; }
+details.fg pre { margin: 0; background: var(--raised); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; font: 12px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+details.fg ul { margin: 0; padding-left: 18px; font-family: var(--mono); font-size: 12px; display: grid; gap: 2px; }
+
+.trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.trend { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; display: grid; gap: 8px; }
+.trend header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.trend h4 { margin: 0; font: 700 13px/1 var(--display); letter-spacing: 0.06em; text-transform: uppercase; font-stretch: 90%; }
+.trend .now { font: 700 13px/1 var(--display); color: var(--muted); font-variant-numeric: tabular-nums; }
+.trend svg { width: 100%; height: auto; display: block; }
+.trend svg text { fill: var(--muted); font: 10px var(--display); }
+.trend .caption { font-size: 12px; color: var(--muted); }
+.slow { margin-top: 24px; }
+.builds { display: grid; gap: 12px; margin-bottom: 28px; }
+.builds h3.section { margin-bottom: 0; }
+.builds .caption { font-size: 12px; color: var(--muted); }
+.builds .chart { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; display: grid; gap: 10px; }
+.builds svg { width: 100%; height: auto; display: block; }
+.builds svg text { fill: var(--muted); font: 11px var(--display); }
+.swatches { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+.swatches i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.timing { margin-top: 24px; display: grid; gap: 18px; }
+.timing h3.section { margin-bottom: 0; }
+.timing .caption { font-size: 12px; color: var(--muted); }
+.timing h4 { margin: 0 0 8px; font: 700 13px/1 var(--display); letter-spacing: 0.06em; text-transform: uppercase; font-stretch: 90%; }
+table.list tr.sub th { background: var(--raised); font: 600 12px/1 var(--display); font-stretch: 90%; color: var(--muted); padding-block: 6px; }
+table.list td.spark-cell { width: 132px; }
+.spark { width: 120px; height: 26px; display: block; }
+.delta { font: 600 12px/1 var(--display); font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.delta.slower { color: var(--fail); }
+.delta.faster { color: var(--pass); }
+
+@media (max-width: 640px) {
+  .strip { grid-template-columns: minmax(0, 1fr); }
+  .verdict { text-align: left; }
+  .strip h1 { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="strip">
+  <div>
+    <h1>Pure <em>Conformance</em> Board</h1>
+    <div class="meta">
+      <span id="source"></span>
+      <span id="generated"></span>
+      <span id="runcount"></span>
+    </div>
+  </div>
+  <div class="verdict" id="verdict"></div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Views">
+  <button role="tab" data-view="board" aria-selected="true">Board</button>
+  <button role="tab" data-view="spec" aria-selected="false">Specification matrix</button>
+  <button role="tab" data-view="suites" aria-selected="false">Suites</button>
+  <button role="tab" data-view="failures" aria-selected="false">Failures</button>
+  <button role="tab" data-view="trends" aria-selected="false">Trends</button>
+  <span class="spacer"></span>
+  <label for="q" class="toggle">Filter <input id="q" type="search" placeholder="test id, e.g. variant::convert"></label>
+</nav>
+<main id="view"></main>
+
+<script type="application/json" id="dashboard-data">__DASHBOARD_DATA__</script>
+<script>
+// Reports inlined by build.mjs: { meta, reports: [{ path, suite, durationMs, cases }], history: [snapshot], builds: [build step] }.
+const DATA = (() => {
+  const text = document.getElementById("dashboard-data").textContent.trim();
+  return text.startsWith("__") ? { meta: { unbuilt: true }, reports: [], history: [] } : JSON.parse(text);
+})();
+const DOT = "\u00B7", CARET = "\u25B8", CHECK = "\u2713", CROSS = "\u2715", DASH = "\u2013";
+
+// A failure's cause: the first line of its message with what varies per test (element paths, resource
+// locations, quoted values, numbers) blanked, so one bug reads as one cause across tests and runs.
+function causeOf(message) {
+  const line = message.split("\n").find(l => l.trim()) ?? "";
+  return line.trim()
+    .replace(/\(resource:[^)]*\)/g, "(\u2026)")
+    .replace(/'[^']*'|"[^"]*"/g, "\u2026")
+    .replace(/[A-Za-z_$][\w$]*(::[A-Za-z_$][\w$]*)+/g, "\u2026")
+    .replace(/-?\b\d+(\.\d+)?[DdFf]?\b/g, "#")
+    .slice(0, 200);
+}
+
+// <kind>/<group>/<run>: the last segment names the run, the ones between it and the kind the group.
+function toRun(report) {
+  const parts = report.path.split("/");
+  const run = parts[parts.length - 1];
+  const cases = report.cases.map(c => {
+    const status = c.status === "passed" || c.status === "skipped" ? c.status : "failed";
+    const message = c.error?.message || "Failed without a message";
+    return { id: String(c.id), status, ms: c.durationMs ?? 0, error: status === "failed" ? { cause: causeOf(message), message, stack: c.error?.stack ?? [] } : undefined };
+  });
+  const passed = cases.filter(c => c.status === "passed").length;
+  const failed = cases.filter(c => c.status === "failed").length;
+  return { kind: parts[0], group: parts.slice(1, -1).join("/") || run, run, suite: report.suite, file: `${report.path}.json`, cases, passed, failed, skipped: cases.length - passed - failed, durationMs: report.durationMs, recordedAt: report.recordedAt };
+}
+const ALL = DATA.reports.map(toRun);
+// A run recorded well before the newest report (say, a Maven module that wasn't rebuilt) is flagged as older.
+const NEWEST = Math.max(0, ...ALL.map(r => Date.parse(r.recordedAt) || 0));
+const isOlder = r => NEWEST - (Date.parse(r.recordedAt) || NEWEST) > 12 * 3600 * 1000;
+const fmtAt = at => at ? `${at.slice(0, 16).replace("T", " ")} UTC` : "";
+
+const state = { view: "board", kind: "spec", spec: "pct", onlyDiff: false, highlight: null, focusSig: null, open: new Set(), closed: new Set() };
+const $ = sel => document.querySelector(sel);
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else if (k === "style") el.style.cssText = v; else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  return el;
+}
+const fmtMs = ms => ms >= 60000 ? `${(ms / 60000).toFixed(1)} min` : ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${ms} ms`;
+const fmtN = n => n.toLocaleString("en-US");
+function runParts(run) {
+  const [impl, rest] = run.split("@");
+  const [host, source] = (rest || "").split("+");
+  return { impl: h("span", { class: "impl" }, impl), host: rest ? [h("span", { class: "host" }, host), source ? h("span", { class: "src" }, source) : null] : null };
+}
+function runLabel(run) {
+  const { impl, host } = runParts(run);
+  return h("span", { class: "run" }, impl, host ? [h("span", { class: "at" }, "@"), host] : null);
+}
+function idLabel(id) {
+  const m = id.match(/^(.*::)?([^:]+?)(_Function_1__Boolean_1_|__Boolean_1_)?$/);
+  if (!m) return h("span", { class: "id" }, id);
+  return h("span", { class: "id" }, m[1] ? h("span", { class: "pkg" }, m[1]) : null, m[2], m[3] ? h("span", { class: "sigx" }, m[3]) : null);
+}
+const query = () => $("#q").value.trim().toLowerCase();
+
+function groupFailures() {
+  const out = new Map();
+  for (const run of ALL) for (const c of run.cases) if (c.error) {
+    if (!out.has(c.error.cause)) {
+      const [first, ...more] = c.error.message.split("\n");
+      out.set(c.error.cause, { sig: c.error.cause, title: first.length > 160 ? first.slice(0, 159) + "\u2026" : first, detail: more.join("\n").trim().slice(0, 400), tests: [], runs: [] });
+    }
+    const g = out.get(c.error.cause);
+    g.tests.push({ ...c, runRef: run });
+    if (!g.runs.includes(run)) g.runs.push(run);
+  }
+  return [...out.values()].sort((a, b) => b.tests.length - a.tests.length);
+}
+
+const KINDS = [["spec", "Specifications"], ["pure", "Pure code"], ["java", "Java tests"], ["javascript", "JavaScript tests"]];
+for (const k of new Set(ALL.map(r => r.kind))) if (!KINDS.some(([known]) => known === k)) KINDS.push([k, k]);
+
+function header() {
+  const failed = ALL.reduce((a, r) => a + r.failed, 0);
+  const total = ALL.reduce((a, r) => a + r.cases.length, 0);
+  const failingRuns = ALL.filter(r => r.failed).length;
+  const meta = DATA.meta ?? {};
+  if (meta.commit) $("#source").append("Branch ", h("b", {}, meta.branch ?? "detached"), " @ ", h("b", { class: "mono" }, meta.commit), meta.dirty ? " + working tree" : "");
+  else $("#source").hidden = true;
+  if (meta.generatedAt) $("#generated").append("Built ", h("b", { class: "num" }, `${meta.generatedAt.slice(0, 16).replace("T", " ")} UTC`));
+  else $("#generated").hidden = true;
+  $("#runcount").append(h("b", { class: "num" }, fmtN(ALL.length)), ` ${ALL.length === 1 ? "report" : "reports"} ${DOT} `, h("b", { class: "num" }, fmtN(total)), " tests");
+  const empty = meta.unbuilt ? "This is the template: run just dashboard and open test-results/dashboard.html" : "Run a test recipe such as just bootstrap::spec, then just dashboard";
+  $("#verdict").append(
+    h("div", { class: "big " + (failed ? "bad" : ALL.length ? "good" : "") }, failed ? `${fmtN(failed)} failing` : ALL.length ? "All green" : "No reports"),
+    h("div", { class: "label" }, failed ? `in ${failingRuns} of ${ALL.length} runs ${DOT} ${groupFailures().length} distinct causes` : ALL.length ? `all ${ALL.length} runs pass` : empty));
+}
+
+const SELF_HOST = [["compiler"], "self-hosting rebuilds the compiler; only the compiler corpus runs against it"];
+const PCT_ADAPTER = [["pct"], "a translation adapter runs PCT tests"];
+// columns: [run, label, applies, why]. `applies` lists the specifications a column can run (every one when absent);
+// the grid shows the others as not applicable, with `why` on hover.
+const TECHS = [
+  { id: "bootstrap", label: "Bootstrap", note: "Java interpreter", columns: [
+    ["java", "Java reference", ["grammar", "compiler", "pdb"], "the Java reference implements the parser, compiler and PDB writer; Pure tests and printers are Pure code"],
+    ["pure@cli-bootstrap", "Java reference"],
+    ["pure@cli-bootstrap+selfhost", "self-hosted compiler", ...SELF_HOST]
+  ] },
+  { id: "java", label: "Java", note: "Java translation", columns: [
+    ["java-translation@cli-truffle", "PCT adapter", ...PCT_ADAPTER]
+  ] },
+  { id: "truffle", label: "Truffle", note: "GraalVM", columns: [
+    ["pure@cli-truffle", "JIT"],
+    ["pure@cli-truffle+inMemory", "JIT, in-memory sources", ["functions", "pct"], "compiles the runtime test sources into an in-memory module; covers runtime functions and PCT"],
+    ["pure@cli-truffle+selfhost", "JIT, self-hosted compiler", ...SELF_HOST],
+    ["pure@cli-truffle-native", "native image"],
+    ["pure@cli-truffle-native+selfhost", "native, self-hosted compiler", ...SELF_HOST]
+  ] },
+  { id: "javascript", label: "JavaScript", note: "JavaScript translation", columns: [
+    ["pure@cli-javascript", "platform"],
+    ["javascript-translation@cli-javascript", "PCT adapter", ...PCT_ADAPTER]
+  ] }
+];
+const TECH = Object.fromEntries(TECHS.map(t => [t.id, t]));
+const techOf = run => TECHS.find(t => t.columns.some(c => c[0] === run));
+// The technology that runs the code. A translation run is named after the CLI that drives it
+// (java-translation@cli-truffle, @cli-bootstrap) but belongs to its target language; JUnit classes go by Maven module.
+function techOfRun(r) {
+  const listed = techOf(r.run);
+  if (listed) return listed;
+  const [impl, rest = ""] = r.run.split("@");
+  const host = rest.split("+")[0];
+  if (r.kind === "javascript" || impl.startsWith("javascript") || host.replace(/^cli-/, "") === "javascript" || host === "node") return TECH.javascript;
+  if (impl.startsWith("java-translation")) return TECH.java;
+  if (host.replace(/^cli-/, "").startsWith("truffle") || (r.kind === "java" && r.group.includes("truffle"))) return TECH.truffle;
+  return TECH.bootstrap;
+}
+// A specification run the table above doesn't list still gets a column, under its technology.
+for (const r of ALL) if ((r.kind === "spec" || r.kind === "pure") && !techOf(r.run)) techOfRun(r).columns.push([r.run, r.run.split("@")[0]]);
+const COLUMNS = TECHS.flatMap(t => t.columns.map(c => c[0]));
+const SCOPE = new Map(TECHS.flatMap(t => t.columns.map(([run, , applies, why]) => [run, { applies, why }])));
+const applies = (run, spec) => !SCOPE.get(run)?.applies || SCOPE.get(run).applies.includes(spec);
+const shortOf = run => { for (const t of TECHS) for (const [r, l] of t.columns) if (r === run) return l; return run; };
+// Three lines: label, implementation, host (+source).
+function colHead(run) {
+  const { impl, host } = runParts(run);
+  return h("span", { class: "colhead" }, h("span", { class: "short" }, shortOf(run)), h("span", { class: "run" }, impl), host ? h("span", { class: "run" }, host) : null);
+}
+const SPECS = [
+  ["grammar", "Grammar", "grammar corpus, protocol.json"],
+  ["compiler", "Compiler", "compiled graph fixtures"],
+  ["functions", "Runtime functions", "<<test.Test>>"],
+  ["pct", "PCT", "<<PCT.test>>"],
+  ["pdb", "PDB", "archives against the Java goldens"],
+  ["pdb-format", "PDB format", "<<test.Test>> schema, reader, writer, inflate"]
+];
+for (const r of ALL) if (r.kind === "spec" && !SPECS.some(([g]) => g === r.group)) SPECS.push([r.group, r.group, ""]);
+// Pure code checked on each host: ordinary Pure libraries (and module suites), not platform specifications.
+const PURE_CODE = [
+  ["printer-compiled", "Compiled printer", "compiler corpus"],
+  ["printer-protocol", "Protocol printer", "grammar corpus"]
+];
+// Each module's <<test.Test>> suite, reported as Pure code (kind "pure") and shown in its own board section.
+const MODULES = [
+  ["language-java", "Java language module", "<<test.Test>> suite"],
+  ["language-javascript", "JavaScript language module", "<<test.Test>> suite"],
+  ["translation-shared", "Translation shared module", "<<test.Test>> suite"],
+  ["translation-java", "Java translation module", "translator <<test.Test>> suite"],
+  ["translation-java-functions", "Java translation extension", "runtime functions, extension loaded"],
+  ["translation-javascript", "JavaScript translation module", "translator <<test.Test>> suite"]
+];
+for (const r of ALL) if (r.kind === "pure" && ![...PURE_CODE, ...MODULES].some(([g]) => g === r.group)) PURE_CODE.push([r.group, r.group, ""]);
+// Pure code runs on the plain Pure hosts and through the Java translation; the other columns are specification variants
+// or reference implementations.
+const PURE_HOST_ONLY = "Pure code runs on the plain Pure hosts and through the Java translation; this column is a specification variant";
+const appliesTo = (kind, run, group) => kind === "spec" ? applies(run, group) : /^pure@[^+]+$/.test(run) || run.startsWith("java-translation@");
+const whyNot = (kind, run) => kind === "spec" ? SCOPE.get(run).why : PURE_HOST_ONLY;
+state.spec = (SPECS.find(([g]) => ALL.some(r => r.kind === "spec" && r.group === g)) ?? SPECS[0])[0];
+
+function board() {
+  const headTech = techs => h("tr", {}, h("th", {}, ""), techs.flatMap((t, i) => [i ? h("th", { class: "gap", "aria-hidden": "true" }) : null, h("th", { class: "tech", colspan: t.columns.length, scope: "colgroup" }, h("span", { class: "techname" }, t.label), h("span", { class: "technote" }, t.note))]));
+  const headCols = techs => h("tr", {}, h("th", {}, ""), techs.flatMap((t, i) => [i ? h("th", { class: "gap", "aria-hidden": "true" }) : null, ...t.columns.map(([c]) => h("th", { scope: "col", class: "col", title: c }, colHead(c)))]));
+  const cellFor = (kind, g, label, c) => {
+    const run = ALL.find(r => r.kind === kind && r.group === g && r.run === c);
+    if (!run && !appliesTo(kind, c, g)) return h("td", {}, h("div", { class: "cell na", title: `${label} doesn't apply to ${c}: ${whyNot(kind, c)}` }, h("span", { class: "n" }, "n/a")));
+    if (!run) return h("td", {}, h("div", { class: "cell none", title: `No ${label} report for ${c}` }, h("span", { class: "n" }, "no report")));
+    const ran = run.cases.length - run.skipped;
+    const ratio = ran ? run.passed / ran : 1;
+    // A PCT run with a translation gallery links to it from inside its cell.
+    const gallery = kind === "spec" && g === "pct" ? DATA.galleries?.[c] : null;
+    const title = `${label} on ${c}: ${run.passed} passed, ${run.failed} failed, ${run.skipped} skipped ${DOT} ${run.file} ${DOT} recorded ${fmtAt(run.recordedAt)}${isOlder(run) ? ", older than the newest report" : ""}`;
+    const counts = `${fmtN(run.passed)}/${fmtN(ran)}`;
+    return h("td", {}, h("div", { class: `cell run${run.failed ? " fail" : ""}`, style: `--r:${(ratio * 100).toFixed(1)}%` },
+      h("button", { class: "hit", title, "aria-label": title,
+        onclick: () => { state.view = "spec"; state.kind = kind; state.spec = g; state.highlight = c; state.onlyDiff = run.failed > 0; state.open.clear(); state.closed.clear(); render(); } }),
+      // The green bar says a run passes, so a passing cell leads with its counts; a failing one with its failures.
+      h("span", { class: "n" },
+        run.failed ? [`${fmtN(run.failed)} fail`, h("small", {}, counts)] : counts,
+        h("small", { class: "dur" }, fmtMs(run.durationMs)),
+        gallery ? h("a", { class: "gallery-link", href: gallery, title: `The ${c} gallery: each PCT test and what it becomes` }, "gallery \u2197") : null),
+      h("span", { class: "ratio" })));
+  };
+  // The conformance grid keeps every column (n/a shows what a variant doesn't cover); the Pure code grid only has the
+  // columns Pure code runs on, plus any column that has a report anyway.
+  const gridTechs = kind => kind === "spec" ? TECHS : TECHS
+    .map(t => ({ ...t, columns: t.columns.filter(([c]) => appliesTo(kind, c) || ALL.some(r => r.kind === kind && r.run === c)) }))
+    .filter(t => t.columns.length);
+  // The hosts modules are tested on, plus the Java translation, where they should be tested too
+  // (its cells show "no report" until modules run there).
+  const moduleTechs = TECHS
+    .map(t => ({ ...t, columns: t.columns.filter(([c]) => c.startsWith("java-translation@") || ALL.some(r => r.kind === "pure" && r.run === c && MODULES.some(([g]) => g === r.group))) }))
+    .filter(t => t.columns.length);
+  const grid = (kind, rows, techs = gridTechs(kind)) => h("table", { class: "grid" },
+    h("thead", {}, headTech(techs), headCols(techs)),
+    h("tbody", {}, rows.map(([g, label, note]) => h("tr", {},
+      h("th", { scope: "row" }, label, h("small", {}, note)),
+      techs.flatMap((t, i) => [i ? h("td", { class: "gap" }) : null, ...t.columns.map(([c]) => cellFor(kind, g, label, c))])))));
+  const legend = h("div", { class: "legend" },
+    h("span", {}, h("i", { style: "background:var(--surface);box-shadow:inset 0 -3px 0 var(--pass)" }), "all passing"),
+    h("span", {}, h("i", { style: "background:var(--fail-soft);border-color:var(--fail)" }), "failing, bar shows the pass share"),
+    h("span", {}, h("i", { style: "background:repeating-linear-gradient(135deg,var(--hatch) 0 2px,transparent 2px 4px);border-style:dashed" }), "no report"),
+    h("span", {}, h("i", { style: "background:none;border-style:dotted" }), "not applicable"));
+  return [h("div", { class: "board" },
+    h("section", {}, h("h3", { class: "section" }, "Conformance by technology"), h("div", { class: "scroll" }, grid("spec", SPECS)), legend),
+    h("section", {}, h("h3", { class: "section" }, "Pure code on each host"), h("div", { class: "scroll" }, grid("pure", PURE_CODE))),
+    h("section", {}, h("h3", { class: "section" }, "Modules on each host"), h("div", { class: "scroll" }, grid("pure", MODULES, moduleTechs))))];
+}
+
+function specMatrix() {
+  const runs = ALL.filter(r => r.kind === state.kind && r.group === state.spec).sort((a, b) => COLUMNS.indexOf(a.run) - COLUMNS.indexOf(b.run));
+  const byId = new Map();
+  for (const run of runs) for (const c of run.cases) { if (!byId.has(c.id)) byId.set(c.id, {}); byId.get(c.id)[run.run] = c; }
+  const q = query();
+  const differs = st => new Set(runs.map(r => st[r.run]?.status ?? "missing").filter(s => s !== "skipped")).size > 1;
+  const ids = [...byId.keys()].filter(id => (!q || id.toLowerCase().includes(q)) && (!state.onlyDiff || differs(byId.get(id)))).sort();
+  const groupOf = id => id.includes("::") ? id.split("::").slice(0, -1).join("::").replace(/^meta::pure::functions::/, "") : (id.includes("/") ? id.split("/").slice(0, -1).join("/") : "(root)");
+  const groups = new Map();
+  for (const id of ids) { const g = groupOf(id); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(id); }
+  const fixture = ["compiler", "grammar", "printer-compiled", "printer-protocol"].includes(state.spec);
+  const controls = h("div", { class: "controls" },
+    h("div", { class: "seg", role: "group", "aria-label": "Specification" }, [["spec", SPECS], ["pure", [...PURE_CODE, ...MODULES]]].flatMap(([kind, rows]) => rows.map(([g, label]) => h("button", { "aria-pressed": String(state.kind === kind && state.spec === g), onclick: () => { state.kind = kind; state.spec = g; state.highlight = null; state.open.clear(); state.closed.clear(); render(); } }, label)))),
+    h("label", { class: "toggle", for: "onlydiff" }, h("input", { id: "onlydiff", type: "checkbox", checked: state.onlyDiff || null, onchange: e => { state.onlyDiff = e.target.checked; render(); } }), "Only where implementations disagree"),
+    h("span", { class: "toggle num" }, `${fmtN(ids.length)} ${fixture ? "fixtures" : "tests"} in ${fmtN(groups.size)} groups`));
+  if (!runs.length) return [controls, h("div", { class: "allgood" }, "No reports for this specification yet.")];
+  const techGroups = TECHS.map(t => ({ t, runs: runs.filter(r => techOf(r.run) === t) })).filter(g => g.runs.length);
+  const firstOfGroup = new Set(techGroups.map(g => g.runs[0].run));
+  const head = h("thead", {},
+    h("tr", {}, h("th", { rowspan: 2, style: "vertical-align:bottom" }, fixture ? "Fixture" : "Test"), techGroups.map(g => h("th", { class: "tech gl", colspan: g.runs.length, scope: "colgroup" }, h("span", { class: "techname" }, g.t.label)))),
+    h("tr", {}, runs.map(r => h("th", { scope: "col", class: firstOfGroup.has(r.run) ? "gl" : null, title: r.run, style: state.highlight === r.run ? "box-shadow: inset 0 -3px 0 var(--accent)" : null }, colHead(r.run)))));
+  const body = h("tbody");
+  let rows = 0;
+  for (const [g, gids] of groups) {
+    const failing = runs.map(r => gids.filter(id => byId.get(id)[r.run]?.status === "failed").length);
+    const auto = failing.some(n => n > 0) || !!q || groups.size === 1;
+    const open = state.open.has(g) || (auto && !state.closed.has(g));
+    body.append(h("tr", { class: "group" + (open ? " open" : ""), onclick: () => { if (open) { state.open.delete(g); state.closed.add(g); } else { state.closed.delete(g); state.open.add(g); } render(); } },
+      h("td", { class: "idc" }, h("span", { class: "caret", "aria-hidden": "true" }, CARET), g, " ", h("span", { class: "agg" }, `(${gids.length})`)),
+      runs.map((r, i) => {
+        const present = gids.some(id => byId.get(id)[r.run]);
+        return h("td", { class: "st" + (firstOfGroup.has(r.run) ? " gl" : "") }, h("span", { class: "agg" + (failing[i] ? " bad" : present ? "" : " none") }, failing[i] ? `${failing[i]} ${CROSS}` : present ? CHECK : DASH));
+      })));
+    if (!open) continue;
+    for (const id of gids) {
+      if (rows++ >= 1500) break;
+      const st = byId.get(id);
+      body.append(h("tr", { class: "leaf" + (differs(st) ? " diff" : "") },
+        h("td", { class: "idc" }, idLabel(id)),
+        runs.map(r => { const c = st[r.run]; const s = c ? c.status : "missing"; return h("td", { class: "st" + (firstOfGroup.has(r.run) ? " gl" : ""), title: `${r.run}: ${s}${c && c.error ? " \u2014 " + c.error.message : ""}` }, h("span", { class: "dot " + s, role: "img", "aria-label": s })); })));
+    }
+  }
+  return [controls, h("div", { class: "scroll" }, h("table", { class: "matrix" }, head, body)), rows >= 1500 ? h("div", { class: "more" }, "Showing the first 1,500 rows. Narrow with the filter.") : null];
+}
+
+function suites() {
+  const sections = [["spec", "Specification runs"], ["pure", `Pure code ${DOT} Pure libraries and modules on each host`], ["java", `Java tests ${DOT} JUnit per class`], ["javascript", `JavaScript tests ${DOT} Node scripts`]];
+  const max = Math.max(1, ...ALL.map(r => r.durationMs));
+  return [h("div", { class: "suites" }, sections.map(([k, label]) => {
+    const runs = ALL.filter(r => r.kind === k).sort((a, b) => TECHS.indexOf(techOfRun(a)) - TECHS.indexOf(techOfRun(b)) || a.group.localeCompare(b.group));
+    return h("section", {}, h("h3", { class: "section" }, label), h("div", { class: "scroll" }, h("table", { class: "list" },
+      h("thead", {}, h("tr", {}, h("th", {}, "Technology"), h("th", {}, k === "spec" ? "Specification" : k === "pure" ? "Pure code" : "Module"), h("th", {}, "Run"), h("th", {}, "Status"), h("th", { class: "r" }, "Passed"), h("th", { class: "r" }, "Failed"), h("th", { class: "r" }, "Skipped"), h("th", {}, "Duration"), h("th", {}, "Report"))),
+      h("tbody", {}, runs.length ? null : h("tr", {}, h("td", { colspan: 9, class: "via" }, "No reports yet.")), runs.map(r => h("tr", {},
+        h("td", {}, h("span", { class: "techname", style: "font-size:13px" }, techOfRun(r).label)), h("td", {}, r.group), h("td", {}, runLabel(r.run)),
+        h("td", {}, h("span", { class: "pill " + (r.failed ? "bad" : "ok") }, r.failed ? "failing" : "passing"), isOlder(r) ? [" ", h("span", { class: "pill", title: `Recorded ${fmtAt(r.recordedAt)}` }, "older run")] : null),
+        h("td", { class: "r num" }, fmtN(r.passed)), h("td", { class: "r num" }, r.failed ? fmtN(r.failed) : DASH), h("td", { class: "r num" }, r.skipped ? fmtN(r.skipped) : DASH),
+        h("td", { class: "num" }, h("span", { class: "bar", style: `width:${Math.max(2, 90 * Math.sqrt(r.durationMs / max)).toFixed(0)}px` }), " ", fmtMs(r.durationMs)),
+        h("td", { class: "via" }, h("span", { class: "mono" }, r.file), r.suite ? ` ${DOT} ${r.suite}` : "", r.recordedAt ? ` ${DOT} ${fmtAt(r.recordedAt)}` : "")))))));
+  }))];
+}
+
+function failures() {
+  const q = query();
+  const groups = groupFailures();
+  if (!groups.length) return [h("div", { class: "allgood" }, "No failures.")];
+  return [h("div", { class: "fgroups" }, groups.map(g => {
+    const tests = g.tests.filter(t => !q || t.id.toLowerCase().includes(q));
+    const first = tests[0] ?? g.tests[0];
+    return h("details", { class: "fg", open: state.focusSig ? state.focusSig === g.sig : true },
+      h("summary", {}, h("span", { class: "t" }, g.title),
+        h("span", { class: "runs" }, h("b", {}, `${fmtN(g.tests.length)} ${g.tests.length === 1 ? "test" : "tests"}`), "on", ...g.runs.map(r => runLabel(r.run)))),
+      h("div", { class: "body" },
+        h("pre", {}, [first.error.message, ...first.error.stack.map(f => "  at " + f)].join("\n")),
+        h("ul", {}, tests.slice(0, 12).map(t => h("li", {}, idLabel(t.id), h("span", { style: "color:var(--faint)" }, `  ${t.runRef.run}`))),
+          tests.length > 12 ? h("li", { style: "list-style:none;color:var(--muted)" }, `and ${tests.length - 12} more`) : null)));
+  }))];
+}
+
+// A duration sparkline: the run's execution time across builds, newest point marked.
+function sparkline(values) {
+  const W = 120, H = 26, P = 4;
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("class", "spark"); svg.setAttribute("aria-hidden", "true");
+  const add = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const [a, v] of Object.entries(attrs)) e.setAttribute(a, v); svg.append(e); };
+  const max = Math.max(...values), min = Math.min(...values);
+  const x = i => values.length === 1 ? W - P : P + i * (W - 2 * P) / (values.length - 1);
+  const y = v => H - P - ((v - min) / (max - min || 1)) * (H - 2 * P);
+  add("line", { x1: P, y1: H - P, x2: W - P, y2: H - P, stroke: "var(--rule)" });
+  if (values.length > 1) add("polyline", { points: values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" "), fill: "none", stroke: "var(--accent)", "stroke-width": 1.5 });
+  add("circle", { cx: x(values.length - 1).toFixed(1), cy: y(values.at(-1)).toFixed(1), r: 2.5, fill: "var(--accent)" });
+  return svg;
+}
+
+// A duration change against the previous value, coloured once it is over 10% and over 200 ms.
+function change(now, prev, first = "first build") {
+  if (prev == null) return h("span", { class: "delta" }, first);
+  const diff = now - prev, pct = prev ? diff / prev : 0;
+  const cls = Math.abs(diff) > 200 && pct > 0.1 ? "slower" : Math.abs(diff) > 200 && pct < -0.1 ? "faster" : null;
+  const text = Math.abs(pct) < 0.005 ? "=" : `${diff > 0 ? "+" : "\u2212"}${Math.abs(pct * 100).toFixed(0)}%`;
+  return h("span", { class: cls ? `delta ${cls}` : "delta", title: `previous: ${fmtMs(prev)}` }, text);
+}
+
+// Heavy build steps, recorded by build-step.mjs from the Justfiles (see README.md), in platform order.
+const STEPS = [
+  ["bootstrap/maven-skip-tests", "Bootstrap Maven"],
+  ["bootstrap/maven-with-tests", "Bootstrap Maven + unit tests"],
+  ["bootstrap/compiler-pdb", "Bootstrap compiler PDB"],
+  ["truffle/maven-skip-tests", "Truffle Maven"],
+  ["truffle/maven-with-tests", "Truffle Maven + unit tests"],
+  ["truffle/native-image", "Truffle native image"],
+  ["modules/pdbs", "Pure module PDBs"],
+  ["javascript/generate", "JavaScript generation"]
+];
+const stepOrder = step => { const i = STEPS.findIndex(([s]) => s === step); return i < 0 ? STEPS.length : i; };
+const stepLabel = step => STEPS[stepOrder(step)]?.[1] ?? step;
+const stepColor = step => stepOrder(step) < STEPS.length ? `var(--step-${stepOrder(step) + 1})` : "var(--skip)";
+
+// Build time: one stacked bar per `just` command that ran heavy steps, then each step's trend.
+function buildTime(records = []) {
+  const head = h("h3", { class: "section" }, "Build time");
+  if (!records.length) return h("section", { class: "builds" }, head,
+    h("div", { class: "caption" }, "No build steps recorded yet. They appear after the next command that runs Maven, native-image, the module PDBs or JavaScript generation."));
+  const byCommand = new Map();
+  for (const r of records) {
+    const id = r.invocation?.id ?? r.at;
+    if (!byCommand.has(id)) byCommand.set(id, { command: r.invocation?.command ?? "just", at: r.at, steps: [] });
+    byCommand.get(id).steps.push(r);
+  }
+  const commands = [...byCommand.values()].sort((a, b) => a.at.localeCompare(b.at)).slice(-30);
+  const total = c => c.steps.reduce((a, s) => a + s.durationMs, 0);
+  const W = 1200, H = 220, L = 56, B = 24, T = 12, R = 8, n = commands.length;
+  const max = Math.max(1, ...commands.map(total));
+  const slot = (W - L - R) / n, bw = Math.min(40, slot * 0.7);
+  const y = v => H - B - (v / max) * (H - B - T);
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", `Build time of the last ${n} commands, stacked by step`);
+  const add = (parent, tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const [a, v] of Object.entries(attrs)) e.setAttribute(a, v); if (text != null) e.textContent = text; parent.append(e); return e; };
+  add(svg, "line", { x1: L, y1: H - B, x2: W - R, y2: H - B, stroke: "var(--rule)" });
+  add(svg, "line", { x1: L, y1: T, x2: W - R, y2: T, stroke: "var(--rule)", "stroke-dasharray": "2 3" });
+  add(svg, "text", { x: L - 6, y: T + 3, "text-anchor": "end" }, fmtMs(max));
+  add(svg, "text", { x: L - 6, y: H - B + 3, "text-anchor": "end" }, "0");
+  commands.forEach((c, i) => {
+    const x = L + slot * i + (slot - bw) / 2;
+    let acc = 0;
+    for (const st of [...c.steps].sort((a, b) => stepOrder(a.step) - stepOrder(b.step))) {
+      const top = y(acc + st.durationMs), height = y(acc) - top;
+      const rect = add(svg, "rect", { x: x.toFixed(1), y: top.toFixed(1), width: bw.toFixed(1), height: Math.max(0.5, height).toFixed(1), fill: stepColor(st.step), opacity: i === n - 1 ? 1 : 0.75 });
+      add(rect, "title", {}, `${c.command} ${DOT} ${c.at.slice(0, 16).replace("T", " ")} UTC\n${stepLabel(st.step)}: ${fmtMs(st.durationMs)}`);
+      acc += st.durationMs;
+    }
+  });
+  if (n > 1) add(svg, "text", { x: L, y: H - 6 }, `${n - 1} ${n === 2 ? "command" : "commands"} ago`);
+  add(svg, "text", { x: W - R, y: H - 6, "text-anchor": "end" }, "latest");
+  const seen = [...new Set(records.map(r => r.step))].sort((a, b) => stepOrder(a) - stepOrder(b));
+  const legend = h("div", { class: "swatches" }, seen.map(step => h("span", {}, h("i", { style: `background:${stepColor(step)}` }), stepLabel(step))));
+  const median = v => { const o = [...v].sort((a, b) => a - b); return o[Math.floor((o.length - 1) / 2)]; };
+  // Against the median of earlier runs, not the previous one: a step that skipped its work (cached) would make every comparison swing.
+  const rows = seen.map(step => {
+    const series = records.filter(r => r.step === step).map(r => r.durationMs).slice(-30);
+    return h("tr", {},
+      h("td", {}, h("i", { style: `display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;background:${stepColor(step)}` }), stepLabel(step)),
+      h("td", { class: "spark-cell", title: series.map(fmtMs).join(" \u2192 ") }, sparkline(series)),
+      h("td", { class: "r num" }, fmtMs(series.at(-1))),
+      h("td", { class: "r num" }, fmtMs(median(series))),
+      h("td", {}, change(series.at(-1), series.length > 1 ? median(series.slice(0, -1)) : null, "first run")),
+      h("td", { class: "r num" }, fmtN(series.length)));
+  });
+  return h("section", { class: "builds" }, head,
+    h("div", { class: "caption" }, `Heavy build steps of the last ${n} ${n === 1 ? "command" : "commands"} that ran them, stacked per command ${DOT} hover a segment for the command and step`),
+    h("div", { class: "chart" }, svg, legend),
+    h("div", { class: "scroll" }, h("table", { class: "list" },
+      h("thead", {}, h("tr", {}, h("th", {}, "Step"), h("th", {}, "Trend"), h("th", { class: "r" }, "Latest"), h("th", { class: "r" }, "Median"), h("th", {}, "vs median"), h("th", { class: "r" }, "Runs"))),
+      h("tbody", {}, rows))));
+}
+
+// Execution time per run: each history snapshot records every report's duration under its path.
+// A change counts once it is over 10% and over 200 ms, so short runs' jitter stays grey.
+function timing(history) {
+  const GROUP_LABEL = Object.fromEntries([...SPECS, ...PURE_CODE, ...MODULES].map(([id, label]) => [id, label]));
+  const ORDER = Object.fromEntries([...SPECS, ...PURE_CODE, ...MODULES].map(([id], i) => [id, i]));
+  const row = r => {
+    const path = r.file.replace(/\.json$/, "");
+    const series = history.map(s => s.runs?.[path]?.durationMs).filter(v => v != null);
+    if (series.at(-1) !== r.durationMs) series.push(r.durationMs);
+    return h("tr", {},
+      h("td", {}, runLabel(r.run)),
+      h("td", { class: "spark-cell", title: series.map(fmtMs).join(" \u2192 ") }, sparkline(series)),
+      h("td", { class: "r num" }, fmtMs(r.durationMs)),
+      h("td", {}, change(r.durationMs, series.length > 1 ? series.at(-2) : null)),
+      h("td", { class: "r num" }, fmtN(r.cases.length)));
+  };
+  const tables = KINDS.map(([k, label]) => {
+    const runs = ALL.filter(r => r.kind === k);
+    if (!runs.length) return null;
+    const groups = [...new Set(runs.map(r => r.group))].sort((a, b) => (ORDER[a] ?? 99) - (ORDER[b] ?? 99) || a.localeCompare(b));
+    const column = run => { const i = COLUMNS.indexOf(run); return i < 0 ? COLUMNS.length : i; };
+    const body = groups.flatMap(g => [
+      h("tr", { class: "sub" }, h("th", { colspan: 5 }, GROUP_LABEL[g] ?? g)),
+      runs.filter(r => r.group === g).sort((a, b) => column(a.run) - column(b.run) || b.durationMs - a.durationMs).map(row)]);
+    return h("div", {}, h("h4", {}, label),
+      h("div", { class: "scroll" }, h("table", { class: "list" },
+        h("thead", {}, h("tr", {}, h("th", {}, "Run"), h("th", {}, "Trend"), h("th", { class: "r" }, "Duration"), h("th", {}, "Change"), h("th", { class: "r" }, "Tests"))),
+        h("tbody", {}, body))));
+  });
+  const tracked = history.filter(s => s.runs).length;
+  return h("section", { class: "timing" },
+    h("h3", { class: "section" }, "Test execution time"),
+    h("div", { class: "caption" }, tracked < 2
+      ? "Per-run timing starts with this build; trends fill in as later builds record different results."
+      : `Each run's duration over the last ${tracked} builds whose results changed ${DOT} change against the previous build, coloured beyond 10%`),
+    tables);
+}
+
+function trends() {
+  const history = (DATA.history ?? []).slice(-30);
+  const n = history.length;
+  const cards = KINDS.map(([k, label]) => {
+    const runs = ALL.filter(r => r.kind === k);
+    const nowFail = runs.reduce((a, r) => a + r.failed, 0);
+    const nowDur = runs.reduce((a, r) => a + r.durationMs, 0);
+    const head = h("header", {}, h("h4", {}, label), h("span", { class: "now" }, `${fmtN(nowFail)} failing ${DOT} ${fmtMs(nowDur)}`));
+    if (n < 2) return h("div", { class: "trend" }, head, h("div", { class: "caption" }, "History starts with this build. The chart appears once a later build has different results."));
+    const series = history.map(s => s.kinds?.[k] ?? { failed: 0, durationMs: 0 });
+    const fails = series.map(s => s.failed), durs = series.map(s => s.durationMs);
+    const W = 300, H = 120, L = 34, B = 24, T = 12, R = 10;
+    const maxF = Math.max(1, ...fails), maxD = Math.max(...durs), minD = Math.min(...durs) * 0.95;
+    const step = (W - L - R) / (n - 1), bw = Math.min(10, step * 0.7);
+    const x = i => L + i * step;
+    const yF = v => H - B - (v / maxF) * (H - B - T);
+    const yD = v => H - B - ((v - minD) / (maxD - minD || 1)) * (H - B - T);
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", `${label}: failing tests and duration over the last ${n} builds`);
+    const add = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const [a, v] of Object.entries(attrs)) e.setAttribute(a, v); if (text != null) e.textContent = text; svg.append(e); };
+    add("line", { x1: L, y1: H - B, x2: W - R, y2: H - B, stroke: "var(--rule)" });
+    add("line", { x1: L, y1: T, x2: W - R, y2: T, stroke: "var(--rule)", "stroke-dasharray": "2 3" });
+    add("text", { x: L - 6, y: T + 3, "text-anchor": "end" }, String(maxF));
+    add("text", { x: L - 6, y: H - B + 3, "text-anchor": "end" }, "0");
+    fails.forEach((v, i) => add("rect", { x: (x(i) - bw / 2).toFixed(1), y: yF(v).toFixed(1), width: bw.toFixed(1), height: Math.max(0, H - B - yF(v)).toFixed(1), rx: 2, fill: "var(--fail)", opacity: i === n - 1 ? 1 : 0.4 }));
+    add("polyline", { points: durs.map((v, i) => `${x(i).toFixed(1)},${yD(v).toFixed(1)}`).join(" "), fill: "none", stroke: "var(--accent)", "stroke-width": 1.8 });
+    add("circle", { cx: x(n - 1), cy: yD(durs[n - 1]).toFixed(1), r: 3.5, fill: "var(--accent)" });
+    add("text", { x: L, y: H - 6 }, `${n - 1} ${n === 2 ? "build" : "builds"} ago`);
+    add("text", { x: W - R, y: H - 6, "text-anchor": "end" }, "this build");
+    return h("div", { class: "trend" }, head, svg,
+      h("div", { class: "caption" }, `Bars: failing tests (scale 0 to ${maxF}) ${DOT} line: total duration ${DOT} builds whose results changed`));
+  });
+  const slowest = ALL.flatMap(r => r.cases.map(c => ({ ...c, runRef: r }))).sort((a, b) => b.ms - a.ms).slice(0, 10);
+  const maxMs = slowest.length ? Math.max(1, slowest[0].ms) : 1;
+  const slow = h("section", { class: "slow" }, h("h3", { class: "section" }, "Slowest tests"),
+    h("div", { class: "scroll" }, h("table", { class: "list" }, h("thead", {}, h("tr", {}, h("th", {}, "Test"), h("th", {}, "Run"), h("th", {}, "Duration"))),
+      h("tbody", {}, slowest.map(c => h("tr", {}, h("td", { class: "mono", style: "font-size:12px" }, idLabel(c.id)), h("td", {}, runLabel(c.runRef.run), " ", h("span", { class: "agg" }, c.runRef.group)),
+        h("td", { class: "num" }, h("span", { class: "bar", style: `width:${(110 * c.ms / maxMs).toFixed(0)}px` }), " ", fmtMs(c.ms))))))));
+  return [buildTime(DATA.builds), h("div", { class: "trends" }, cards), timing(history), slow];
+}
+
+function render() {
+  const views = { board, spec: specMatrix, suites, failures, trends };
+  for (const b of document.querySelectorAll("nav.tabs button")) b.setAttribute("aria-selected", String(b.dataset.view === state.view));
+  $("#view").replaceChildren(...views[state.view]());
+}
+for (const b of document.querySelectorAll("nav.tabs button")) b.addEventListener("click", () => { state.view = b.dataset.view; state.highlight = null; state.focusSig = null; render(); });
+$("#q").addEventListener("input", () => { if (state.view === "board") state.view = "spec"; render(); });
+header();
+render();
+</script>
+</body>
+</html>

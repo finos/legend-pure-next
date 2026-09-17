@@ -43,9 +43,22 @@ Class <<test.TestDependency>> meta::pure::compiler::test::CompiledGraphTestResul
 {
     name : String[1];
     error : meta::pure::functions::lang::Error[0..1];
+    durationMs : Integer[1];
 }
 
 function <<test.TestDependency>> meta::pure::compiler::test::runCompiledGraphTests(testDir:String[1]):String[1]
+{
+    meta::pure::compiler::test::runCompiledGraphTestsWithReport($testDir, []);
+}
+
+// Same run, and writes a JSON report (see testReport.pure) to $reportPath — before the
+// final assert, so failing runs are reported too.
+function <<test.TestDependency>> meta::pure::compiler::test::runCompiledGraphTests(testDir:String[1], reportPath:String[1]):String[1]
+{
+    meta::pure::compiler::test::runCompiledGraphTestsWithReport($testDir, $reportPath);
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::runCompiledGraphTestsWithReport(testDir:String[1], reportPath:String[0..1]):String[1]
 {
     let files = directoryTree($testDir)
         ->filter(f | $f->endsWith('.pure'));
@@ -65,8 +78,9 @@ function <<test.TestDependency>> meta::pure::compiler::test::runCompiledGraphTes
         let f = $files->at($i);
         let name = substring($f, $prefixLen, $f->length() - 5);
         tickProgress($i + 1, $total, $name);
+        let testStart = currentTimeMillis();
         let result = tryEval(| meta::pure::compiler::test::assertCompiledGraph(readFile($f), $name));
-        ^meta::pure::compiler::test::CompiledGraphTestResult(name = $name, error = $result.failure);
+        ^meta::pure::compiler::test::CompiledGraphTestResult(name = $name, error = $result.failure, durationMs = currentTimeMillis() - $testStart);
     );
 
     let elapsedMs = currentTimeMillis() - $start;
@@ -90,6 +104,8 @@ function <<test.TestDependency>> meta::pure::compiler::test::runCompiledGraphTes
     // returning the summary string lets the bootstrap CLI swallow failures
     // (it just prints the result), so callers like `just self-host-java`
     // never see a non-zero exit.
+    $reportPath->map(path | meta::pure::test::report::writeSuiteReport($path, 'compiledGraph', $elapsedMs,
+        $results->map(r | ^meta::pure::test::report::TestCaseReport(id = $r.name, durationMs = $r.durationMs, error = $r.error))));
     assert($failed == 0, $summary);
     $summary;
 }

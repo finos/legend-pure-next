@@ -16,7 +16,7 @@ package org.finos.legend.pure.m3;
 
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
 import org.finos.legend.pure.m3.module.Module;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerExtension;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilerExtension;
 import org.finos.legend.pure.m3.module.pdbModule.archive.PDBExtension;
 import org.finos.legend.pure.next.parser.ParserExtension;
 

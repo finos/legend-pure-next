@@ -13,7 +13,7 @@
 #   `build` → `(_mvn "skip-tests")` (mvn install -DskipTests) — fast, no Java tests
 #   `test-java` → `(_mvn "with-tests")` (mvn install)         — surefire runs unit tests inline
 # Maven runs once on the truffle parent pom; the reactor walks
-# parent → runtime → ide → extension-java
+# parent → runtime → ide
 # in a single launch.
 
 set quiet := true
@@ -29,13 +29,15 @@ mod _mod_bootstrap "../../bootstrap/Justfile"
 
 truffle_root      := source_directory()
 repo_root         := truffle_root / ".." / ".."
+# Records heavy build steps for the dashboard build time trend.
+build_step     := "node " + repo_root / "tools" / "test-dashboard" / "build-step.mjs"
 truffle           := truffle_root / "legend-pure-next-truffle"
-truffle_runtime   := truffle / "legend-pure-next-truffle-runtime"
-truffle_ext_java  := truffle / "legend-pure-next-truffle-extension-java"
+truffle_cli_module := truffle / "legend-pure-next-truffle-interfaces" / "legend-pure-next-truffle-cli"
 spec              := repo_root / "pure" / "specification"
 compiler_src      := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 truffle_out       := truffle_root / "build"
 shared_out        := repo_root / "shared"
+test_results := repo_root / "test-results"
 truffle_cli       := truffle_out / "pure-truffle.jar"
 pure_truffle      := truffle_root / "bin" / "pure-truffle"
 pure_bootstrap    := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
@@ -56,25 +58,23 @@ build: (_mvn "skip-tests")
 # Build bootstrap (produces shared/core.pdb + compiler.pdb) first, then this module.
 build-all: _mod_bootstrap::build build
 
-# Build + run Java unit tests (surefire) + run Pure compiler-graph spec tests.
-test: test-java test-pure-compiler
+# Build + run the Java tests (surefire — including TrufflePurePCTAndFuncFromPDBTest: runTests + PCT with
+# the Graal tripwire) + the compiler corpus specification run on Truffle.
+test: test-java spec-compiler
 
-# `test` plus Pure-on-Truffle self-host + standalone runtime test suites + native (AOT) suite.
-test-all: test test-pure-self-host test-pure-runtime native::test-all
+# `test` plus every other specification run (self-hosted compiler, in-memory sources) + the native (AOT) suite.
+test-all: test spec-compiler-selfhost spec native::test-all
 
-# NB: surefire runs the full JUnit suite, which includes TrufflePureTestRunner —
-# a dynamic-test factory that wraps both Pure runTests and PCT tests on the
-# Truffle context. So `test-java` already covers everything `test-pure-runtime-testFunctions`
-# and `test-pure-runtime-PCTs` run standalone. The `test-pure-compiler` recipe is run separately
-# as part of `test`. `test-pure-runtime` runs both runtime suites in one call.
+# Each `spec-*` recipe runs one specification on the Truffle host and writes
+# test-results/spec/<spec>/pure@cli-truffle[+<source>].json.
 #
-# `test-pure-*` and `test-pure-self-host` are zero-Maven-dep "expert mode" recipes — they assume
+# `spec-*` recipes are zero-Maven-dep "expert mode" recipes — they assume
 # `just build` (or `just test`) has produced the fat jar in `truffle/build/`. Run them
 # standalone for fast Pure-side iteration. In CI, `test-all` runs `test` first
 # (which depends on `_mvn "with-tests"`), so the jar is already in place by the time
 # the standalone recipes execute — no redundant Maven invocation.
 
-# Build with surefire-driven Java unit tests (covers Pure runTests / PCT too).
+# Build with surefire-driven Java tests (unit tests, plus TrufflePurePCTAndFuncFromPDBTest over the PDBs).
 test-java: (_mvn "with-tests")
 
 # Print silencing for tests is per-test-body now: the Pure test runner
@@ -82,27 +82,27 @@ test-java: (_mvn "with-tests")
 # thread-local around the body. Runner-side prints (tickProgress, etc.)
 # remain visible.
 
-# Run both runtime test suites (runTests + PCT) over meta::pure::functions.
-test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs test-pure-runtime-inMemory-testFunctions test-pure-runtime-inMemory-PCTs
+# Every specification run of the Truffle host (self-host excluded: see `spec-compiler-selfhost`).
+spec: spec-compiler spec-functions spec-pct spec-grammar spec-pdb spec-pdb-golden spec-printer-compiled spec-printer-protocol spec-functions-inmemory spec-pct-inmemory
 
 # Needs core-tests.pdb (runTests itself is <<test.TestDependency>> and is classified into the
 # tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
-# Standalone Pure runTests over meta::pure::functions (also covered by `test-java` via TrufflePureTestRunner; assumes `just build` was run).
-test-pure-runtime-testFunctions:
-    @{{header}} 'test-pure-runtime-testFunctions'
+# Standalone Pure runTests over meta::pure::functions (assumes `just build` was run).
+spec-functions:
+    @{{header}} 'spec-functions'
     @{{substep}} 'runTests'
-    {{pure_truffle}} execute \
+    {{pure_truffle}} execute --strict-jit \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1_" \
-        --args "meta::pure::functions" {{err_filter}}
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::pure::functions" "{{test_results}}/spec/functions/pure@cli-truffle.json" {{err_filter}}
 
 # Standalone Pure compiler-graph spec tests over pure/specification/compiler/tests (assumes `just build` was run).
-test-pure-compiler:
-    @{{header}} 'test-pure-compiler'
+spec-compiler:
+    @{{header}} 'spec-compiler'
     @{{substep}} 'runCompiledGraphTests over pure/specification/compiler/tests'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
@@ -110,34 +110,100 @@ test-pure-compiler:
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
-        --args "{{spec}}/compiler/tests" {{err_filter}}
+        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" "{{test_results}}/spec/compiler/pure@cli-truffle.json" {{err_filter}}
 
-# Needs core-tests.pdb and compiler-tests.pdb for the same reason as test-pure-runtime-testFunctions.
-# Standalone Pure PCT tests over meta::pure::functions (also covered by `test-java` via TrufflePureTestRunner; assumes `just build` was run).
-test-pure-runtime-PCTs:
-    @{{header}} 'test-pure-runtime-PCTs'
+# Needs core-tests.pdb and compiler-tests.pdb for the same reason as spec-functions.
+# Standalone Pure PCT tests over meta::pure::functions (assumes `just build` was run).
+spec-pct:
+    @{{header}} 'spec-pct'
     @{{substep}} 'runPCTTests'
-    {{pure_truffle}} execute \
+    {{pure_truffle}} execute --strict-jit \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::test::runPCTTests_String_1__String_1_" \
-        --args "meta::pure::functions" {{err_filter}}
+        --function "meta::pure::test::runPCTTests_String_1__String_1__String_1_" \
+        --args "meta::pure::functions" "{{test_results}}/spec/pct/pure@cli-truffle.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
 
 # Compiles pure/specification/runtime/ from sources via Pure-on-Truffle, filters
 # to test-tagged elements + Package PDOs, registers them as an inmem module on
 # top of core.pdb/compiler.pdb, then drives the standard runners. Exercises the
 # from-source path end-to-end without staging a -tests.pdb on disk — counterpart
-# to test-pure-runtime-testFunctions / test-pure-runtime-PCTs which load test
+# to spec-functions / spec-pct which load test
 # elements from core-tests.pdb. The inMemory variants compile every recipe run,
 # so they're slower (compile takes a few seconds on top of the runner time).
+# Grammar corpus: parse each grammar.pure and compare the parse result with its protocol.json.
+spec-grammar:
+    @{{header}} 'spec-grammar'
+    @{{substep}} 'runGrammarCorpus over pure/specification/grammar/tests'
+    {{pure_truffle}} execute --strict-jit \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "meta::pure::test::grammar::runGrammarCorpus_String_1__String_1__String_1_" \
+        --args "{{spec}}/grammar/tests" "{{test_results}}/spec/grammar/pure@cli-truffle.json" {{err_filter}}
+
+# PDB writer/reader unit tests (meta::pure::compiler::pdb), the same Pure suite the native and bootstrap CLIs run.
+spec-pdb:
+    @{{header}} 'spec-pdb'
+    @{{substep}} 'runTests over meta::pure::compiler::pdb'
+    {{pure_truffle}} execute --strict-jit \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::pure::compiler::pdb" "{{test_results}}/spec/pdb-format/pure@cli-truffle.json" {{err_filter}}
+
+# PDB wire contract: compile each compiler fixture, write it with the Pure writer and compare the archive
+# with the Java golden in pure/specification/compiler/tests-pdb-serialization (compiler-pure test/pdbGoldenRunner.pure).
+spec-pdb-golden:
+    @{{header}} 'spec-pdb-golden'
+    @{{substep}} 'runPdbGoldenTests: the Pure compiler and writer against the Java golden archives'
+    {{pure_truffle}} execute --strict-jit \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "meta::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" "{{spec}}/compiler/tests-pdb-serialization" "{{shared_out}}/specification/m3.fbs" "{{test_results}}/spec/pdb/pure@cli-truffle.json" {{err_filter}}
+
+# Compiled-printer corpus: compile each compiler-corpus file, print the compiled elements, compare with the source.
+spec-printer-compiled:
+    @{{header}} 'spec-printer-compiled'
+    @{{substep}} 'runCompiledPrinterCorpus over pure/specification/compiler/tests'
+    {{pure_truffle}} execute --strict-jit \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "meta::pure::compiler::test::printer::runCompiledPrinterCorpus_String_1__String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" "{{test_results}}/pure/printer-compiled/pure@cli-truffle.json" {{err_filter}}
+
+# Protocol-printer corpus: parse each grammar-corpus file, print the protocol, compare with the source.
+spec-printer-protocol:
+    @{{header}} 'spec-printer-protocol'
+    @{{substep}} 'runProtocolPrinterCorpus over pure/specification/grammar/tests'
+    {{pure_truffle}} execute --strict-jit \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --function "meta::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus_String_1__String_1__String_1_" \
+        --args "{{spec}}/grammar/tests" "{{test_results}}/pure/printer-protocol/pure@cli-truffle.json" {{err_filter}}
+
 
 # Standalone Pure runTests over meta::pure::functions, against freshly-compiled test sources (in-memory module on top of core.pdb).
-test-pure-runtime-inMemory-testFunctions:
-    @{{header}} 'test-pure-runtime-inMemory-testFunctions'
+spec-functions-inmemory:
+    @{{header}} 'spec-functions-inmemory'
     @{{substep}} 'compile pure/specification/runtime + runTests (in-memory)'
     {{pure_truffle}} execute-from-memory \
         --pdb {{shared_out}}/core.pdb \
@@ -147,12 +213,12 @@ test-pure-runtime-inMemory-testFunctions:
         --source-dir {{spec}}/runtime/featureTests \
         --source-dir {{spec}}/runtime/ui \
         --source-dir {{spec}}/runtime/test \
-        --function "meta::pure::test::runTests_String_1__String_1_" \
-        --args "meta::pure::functions" {{err_filter}}
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::pure::functions" "{{test_results}}/spec/functions/pure@cli-truffle+inMemory.json" {{err_filter}}
 
 # Standalone Pure PCT tests over meta::pure::functions, against freshly-compiled test sources (in-memory module on top of core.pdb).
-test-pure-runtime-inMemory-PCTs:
-    @{{header}} 'test-pure-runtime-inMemory-PCTs'
+spec-pct-inmemory:
+    @{{header}} 'spec-pct-inmemory'
     @{{substep}} 'compile pure/specification/runtime + runPCTTests (in-memory)'
     {{pure_truffle}} execute-from-memory \
         --pdb {{shared_out}}/core.pdb \
@@ -162,14 +228,14 @@ test-pure-runtime-inMemory-PCTs:
         --source-dir {{spec}}/runtime/featureTests \
         --source-dir {{spec}}/runtime/ui \
         --source-dir {{spec}}/runtime/test \
-        --function "meta::pure::test::runPCTTests_String_1__String_1_" \
-        --args "meta::pure::functions" {{err_filter}}
+        --function "meta::pure::test::runPCTTests_String_1__String_1__String_1_" \
+        --args "meta::pure::functions" "{{test_results}}/spec/pct/pure@cli-truffle+inMemory.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
 
 # Truffle-compiled compiler.pdb goes to {{truffle_out}}/ to keep it separate from the
 # Java-compiled shared/compiler.pdb (filename is derived from module manifest).
 # Self-host: compile compiler-pure on Truffle, run compiler tests, then diff PDB vs Java direct (assumes `just build` was run).
-test-pure-self-host: _depCheck_pdbs
-    @{{header}} 'test-pure-self-host'
+spec-compiler-selfhost: _depCheck_pdbs
+    @{{header}} 'spec-compiler-selfhost'
     @{{substep}} 'compiler-pure → {{truffle_out}}/compiler.pdb (truffle), then run compiler tests'
     {{pure_truffle}} compile \
         --base-pdb {{shared_out}}/core.pdb \
@@ -185,8 +251,8 @@ test-pure-self-host: _depCheck_pdbs
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{truffle_out}}/compiler.pdb \
         --pdb {{truffle_out}}/compiler-tests.pdb \
-        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1_" \
-        --args "{{spec}}/compiler/tests" {{err_filter}}
+        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
+        --args "{{spec}}/compiler/tests" "{{test_results}}/spec/compiler/pure@cli-truffle+selfhost.json" {{err_filter}}
     @{{substep}} 'diff shared/compiler.pdb (Java compiler) ↔ {{truffle_out}}/compiler.pdb (Truffle compiler)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
         {{shared_out}}/compiler.pdb \
@@ -209,12 +275,10 @@ clean:
 # `mode` is "skip-tests" (fast, no Java tests) or "with-tests" (surefire runs unit tests).
 # Walks the unified truffle reactor in one launch:
 #   parent (legend-pure-next-truffle)
-#         → runtime
-#     → ide
-#     → extension-java (legend-pure-next-truffle-extension-java)
-# Maven derives the build order from compile deps (extension-java depends
-# on runtime).
-_mvn mode: _depCheck_pdbs _depCheck_graalvm
+#     → core
+#     → interfaces/cli, interfaces/ide
+# Maven derives the build order from compile deps (cli and ide depend on core).
+_mvn mode: (_step-start "truffle/maven-" + mode) _depCheck_pdbs _depCheck_graalvm
     @{{header}} '_mvn'
     @{{substep}} '{{ if mode == "skip-tests" { "mvn install -DskipTests (truffle reactor)" } else { "mvn install (truffle reactor + unit tests)" } }}'
     # `--fail-at-end` so all surefire suites run even when one module's tests
@@ -223,11 +287,8 @@ _mvn mode: _depCheck_pdbs _depCheck_graalvm
     # time.
     cd {{truffle}} && mvn --fail-at-end clean install {{ if mode == "skip-tests" { "-DskipTests" } else { "" } }} {{mvnq}} {{err_filter}}
     mkdir -p {{truffle_out}}
-    cp {{truffle_runtime}}/target/pure-truffle-*-fat.jar {{truffle_cli}}
-    # Extensions ship as separate jars next to the fat runtime jar; the
-    # launcher (bin/pure-truffle) globs build/*.jar onto the classpath so
-    # ServiceLoader finds them via META-INF/services.
-    cp {{truffle_ext_java}}/target/legend-pure-next-truffle-extension-java-*.jar {{truffle_out}}/
+    cp {{truffle_cli_module}}/target/pure-truffle-*-fat.jar {{truffle_cli}}
+    {{build_step}} end "truffle/maven-{{mode}}"
 
 # Internal: fail loudly if shared/core.pdb or shared/compiler.pdb is missing.
 _depCheck_pdbs:
@@ -281,3 +342,7 @@ _depCheck_graalvm:
         echo "  export PATH=\"\$JAVA_HOME/bin:\$PATH\"" >&2
         exit 1
     fi
+
+# Build time trend (tools/test-dashboard/build-step.mjs): the first dependency of a heavy recipe, whose last line runs `{{build_step}} end`.
+_step-start STEP:
+    {{build_step}} start "{{STEP}}"

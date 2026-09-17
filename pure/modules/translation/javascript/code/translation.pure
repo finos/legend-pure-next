@@ -302,7 +302,9 @@ function meta::external::language::javascript::translation::mapDateAndOtherCoder
       pair('drainCompiledSources', jsDrainCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('parse',             parseCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('readFile',          readFileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('readFileBytes',     readFileBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('directoryTree',     directoryTreeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('writeFile',         writeFileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('intToLeBytes',      intToLeBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('floatToLeBytes',    floatToLeBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('stringToUtf8Bytes', stringToUtf8BytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
@@ -3198,10 +3200,17 @@ function meta::external::language::javascript::translation::resolveAndReturnGrap
    jsCall(jsId('__resolveAndReturnGraph'), [$args->at(0)->translateExpression($conv)]);
 }
 
-// readFile(path) -> '' (no FS access in JS sandbox).
+// readFile(path) -> content. Reading files is a host capability: emits `__readFile(path)`; runtime-lib
+// routes to the host's __hostReadFile (the Node host's FileSystemExtension) and throws where there is no file system.
 function meta::external::language::javascript::translation::readFileCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   jsStrLit('');
+   jsCall(jsId('__readFile'), $args->map(a | $a->translateExpression($conv)));
+}
+
+// readFileBytes(path) -> bytes. Emits `__readFileBytes(path)`, routed to the host like readFile.
+function meta::external::language::javascript::translation::readFileBytesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__readFileBytes'), $args->map(a | $a->translateExpression($conv)));
 }
 
 // meta::pure::functions::binary byte-level primitives (self-hosted PDB writer):
@@ -3231,10 +3240,19 @@ function meta::external::language::javascript::translation::leBytesToFloatCoder(
    jsCall(jsId('__leBytesToFloat'), $args->map(a | $a->translateExpression($conv)));
 }
 
-// directoryTree(path) -> [] (no FS access in JS sandbox).
+// writeFile(path, content) -> path. Writing files is a host capability: emits
+// `__writeFile(path, content)`; runtime-lib routes to the host's __hostWriteFile
+// (the Node host's FileSystemExtension) and throws where there is no file system.
+function meta::external::language::javascript::translation::writeFileCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__writeFile'), $args->map(a | $a->translateExpression($conv)));
+}
+
+// directoryTree(root) -> every file under root, sorted. A host capability: emits `__directoryTree(root)`;
+// runtime-lib routes to the host's __hostDirectoryTree and throws where there is no file system.
 function meta::external::language::javascript::translation::directoryTreeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   jsArrayLit([]);
+   jsCall(jsId('__directoryTree'), $args->map(a | $a->translateExpression($conv)));
 }
 
 

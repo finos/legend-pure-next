@@ -90,3 +90,14 @@ function <<test.TestDependency>>
       testAdapterForTranslatedJavaScript_Function_1__X_o_
    );
 }
+
+// Same, also writing the run's test report to `reportPath` (read by tools/test-dashboard).
+function <<test.TestDependency>>
+   meta::external::language::javascript::translation::runPCTTestsViaTranslator(rootPackagePath:String[1], reportPath:String[1]):String[1]
+{
+   meta::pure::test::runPCTTests(
+      $rootPackagePath,
+      testAdapterForTranslatedJavaScript_Function_1__X_o_,
+      $reportPath
+   );
+}

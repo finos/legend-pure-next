@@ -3,7 +3,7 @@
 # Quickstart:
 #   just                    # build + test everything
 #   just build              # build everything (no tests)
-#   just test               # run all tests
+#   just test               # run all tests, then render test-results/dashboard.html
 #   just ide                # launch the IDE
 #   just clean              # delete shared/ and per-subproject build artifacts
 #
@@ -38,9 +38,17 @@ build: bootstrap::build truffle::build modules::build javascript::build
 # Top-level `build` already chains every subproject's `build` in dep order — alias for symmetry with sub-Justfiles' `build-all`.
 build-all: build
 
-# Run all tests across subprojects. modules::build stages the translator pdbs
+# Run all tests across subprojects, then render the dashboard (see `test-all`).
+test:
+    #!/usr/bin/env bash
+    status=0
+    just --justfile "{{justfile()}}" _test || status=$?
+    just --justfile "{{justfile()}}" dashboard
+    exit $status
+
+# The suites `test` runs. modules::build stages the translator pdbs
 # javascript::test's generate step needs (see `build` ordering note).
-test: bootstrap::test truffle::test modules::build javascript::test
+_test: bootstrap::test truffle::test modules::build javascript::test
 
 # Delete every generated/ directory so the suites below cannot pass against
 # stale output. These are all gitignored build artifacts, each with a recipe
@@ -70,10 +78,26 @@ clean-generated:
 # this recipe exists to prevent. The other two generated/ trees are rebuilt by
 # the subproject test-alls themselves (bootstrap::generate-writer via
 # build-compiler-pdb; javascript::generate-all via test-compiler).
-test-all: clean-generated modules::translation_javascript::antlr-bundle bootstrap::test-all truffle::test-all javascript::test-all modules::test-all
+#
+# The dashboard is rendered at the end even when a suite fails, so the failures show
+# up there; the recipe still exits with the suites' status.
+test-all:
+    #!/usr/bin/env bash
+    status=0
+    just --justfile "{{justfile()}}" _test-all || status=$?
+    just --justfile "{{justfile()}}" dashboard
+    exit $status
+
+_test-all: clean-generated modules::translation_javascript::antlr-bundle bootstrap::test-all truffle::test-all javascript::test-all modules::test-all
 
 # Render every translator gallery (java + javascript + truffle).
 gallery: modules::gallery
+
+# Render every test report under test-results/ into test-results/dashboard.html (tools/test-dashboard).
+dashboard:
+    @{{header}} 'dashboard'
+    @{{substep}} 'render test-results/ -> test-results/dashboard.html'
+    node {{root}}/tools/test-dashboard/build.mjs
 
 # Remove shared/ and per-subproject build artifacts.
 clean: bootstrap::clean truffle::clean javascript::clean modules::clean

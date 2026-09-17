@@ -23,7 +23,7 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.Module;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
 import org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection;
 import org.finos.legend.pure.m3.module.pdbModule.archive.PDBExtension;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.AssociationDef;
@@ -179,7 +179,7 @@ public class PureLanguageSerialization
      */
     public List<PDBArchiveSection> archiveSections(Module module, java.util.Set<String> keepPaths)
     {
-        if (module instanceof LocalModule localModule)
+        if (module instanceof SourceModule localModule)
         {
             MutableList<PureLanguageMetadata> metas = localModule.getMetadataAccessExtension(PureLanguageMetadata.class);
             if (metas.notEmpty())
@@ -216,7 +216,7 @@ public class PureLanguageSerialization
 
     /**
      * Build archive sections directly from a function-index entry list.
-     * Used by writers that don't have a {@link LocalModule} to lean on
+     * Used by writers that don't have a {@link SourceModule} to lean on
      * (e.g. the compile-via-pure path).
      */
     public List<PDBArchiveSection> archiveSections(List<FunctionIndexEntry> entries)

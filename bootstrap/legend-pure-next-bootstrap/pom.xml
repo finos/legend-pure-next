@@ -64,8 +64,7 @@
 
     <modules>
         <module>legend-pure-next-bootstrap-core</module>
-        <module>legend-pure-next-bootstrap-ide</module>
-        <module>legend-pure-next-bootstrap-cli</module>
+        <module>legend-pure-next-bootstrap-interfaces</module>
     </modules>
 
     <build>
@@ -139,6 +138,14 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <trimStackTrace>false</trimStackTrace>
+                    <!--
+                      Record each test's display name in target/surefire-reports/TEST-*.xml instead of
+                      "method(String, String)[n]": the corpus path or Pure element path the tests are
+                      named after, which tools/test-dashboard lines up with the Pure runners' reports.
+                    -->
+                    <statelessTestsetReporter implementation="org.apache.maven.plugin.surefire.extensions.junit5.JUnit5Xml30StatelessReporter">
+                        <usePhrasedTestCaseMethodName>true</usePhrasedTestCaseMethodName>
+                    </statelessTestsetReporter>
                     <!--
                       Inherited by every child module. Broader than surefire's
                       defaults (Test*, *Test, *Tests, *TestCase) so a class

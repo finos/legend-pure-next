@@ -34,8 +34,8 @@ import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.FunctionCallParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
@@ -46,7 +46,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Relati
 
 import java.util.Objects;
 
-import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
+import static org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext.lazy;
 
 /**
  * Handles relation-column-specific enrichment for "magical" column spec

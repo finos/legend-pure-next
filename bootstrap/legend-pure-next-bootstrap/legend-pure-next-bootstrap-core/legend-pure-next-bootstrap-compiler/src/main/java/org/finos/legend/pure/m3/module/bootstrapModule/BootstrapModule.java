@@ -14,6 +14,8 @@
 
 package org.finos.legend.pure.m3.module.bootstrapModule;
 
+import org.finos.legend.pure.m3.LanguageExtension;
+import org.finos.legend.pure.m3.module.ModuleRegistry;
 import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageImpl;
 import meta.pure.metamodel.PackageableElement;
@@ -21,7 +23,6 @@ import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
-import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
 import org.finos.legend.pure.m3.module.Module;
 
@@ -102,9 +103,9 @@ public class BootstrapModule implements Module
 
     /**
      * Load parser-mappings.pdb from the classpath. Produced by the
-     * bootstrap-parser-validation module's exec-maven-plugin execution into
+     * bootstrap-grammar-validation module's exec-maven-plugin execution into
      * its own target/classes — any test module that depends on
-     * bootstrap-parser-validation gets it on the classpath.
+     * bootstrap-grammar-validation gets it on the classpath.
      */
     public static Path locateParserMappingsPdb()
     {
@@ -200,7 +201,7 @@ public class BootstrapModule implements Module
     }
 
     @Override
-    public void setPureModel(PureModel model)
+    public void attach(ModuleRegistry registry, List<LanguageExtension> extensions)
     {
     }
 
@@ -211,19 +212,19 @@ public class BootstrapModule implements Module
     }
 
     @Override
-    public String getName()
+    public String name()
     {
         return "m3";
     }
 
     @Override
-    public List<String> getDependencies()
+    public List<String> dependencies()
     {
         return List.of();
     }
 
     @Override
-    public String getPackagePattern()
+    public String packagePattern()
     {
         return "meta::*";
     }

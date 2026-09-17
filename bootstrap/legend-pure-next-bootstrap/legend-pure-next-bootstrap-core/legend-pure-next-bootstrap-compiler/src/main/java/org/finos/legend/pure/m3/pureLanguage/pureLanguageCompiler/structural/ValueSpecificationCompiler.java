@@ -12,7 +12,7 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
 import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
 import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
@@ -268,7 +268,7 @@ public final class ValueSpecificationCompiler
     }
 
     private static VariableExpressionImpl compileVariableExpression(
-            meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl var, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
+            meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl var, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         VariableExpressionImpl result = _VariableExpression.newVariableExpression(model)
                 ._name(var._name() != null ? var._name() : "")

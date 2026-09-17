@@ -28,6 +28,7 @@ translation_shared_out     := repo_root / "pure" / "modules" / "translation" / "
 translation_java_out       := repo_root / "pure" / "modules" / "translation" / "java" / "build"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+test_results   := repo_root / "test-results"
 
 verbose := ""
 err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
@@ -120,17 +121,16 @@ test-translation: build-tests _depCheck_runtime-pdbs
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1_" \
-        --args "meta::external::language::java::translation" {{err_filter}}
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::external::language::java::translation" "{{test_results}}/pure/translation-java/pure@cli-truffle.json" {{err_filter}}
 
 # Mirrors the truffle Justfile recipe — same args, same backend — verifying
 # that loading the translator extension doesn't break Truffle's interpretation
 # of any stdlib spec test. meta::pure::functions lives in core-tests.
 
-# Run the standard Pure runtime suites over meta::pure::functions via Truffle.
-# NB: PCTs (`test-pure-runtime-PCTs`) are intentionally excluded for now —
-# they're still stabilising. Invoke that recipe directly to run them.
-test-pure-runtime: test-pure-runtime-testFunctions
+# Run the standard Pure runtime suites over meta::pure::functions via Truffle, plus the PCT
+# tests through the translator adapter (their failures are reported without failing the build).
+test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
 
 # Run runTests over meta::pure::functions via Truffle, with the java-translation extension loaded.
 test-pure-runtime-testFunctions: build-tests _depCheck_runtime-pdbs
@@ -144,8 +144,8 @@ test-pure-runtime-testFunctions: build-tests _depCheck_runtime-pdbs
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1_" \
-        --args "meta::pure::functions" {{err_filter}}
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::pure::functions" "{{test_results}}/pure/translation-java-functions/pure@cli-truffle.json" {{err_filter}}
 
 # Run PCT tests over meta::pure::functions via the translator adapter (lambdas -> Java -> javac -> invoke).
 test-pure-runtime-PCTs: build-tests _depCheck_runtime-pdbs
@@ -166,8 +166,8 @@ test-pure-runtime-PCTs: build-tests _depCheck_runtime-pdbs
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "meta::external::language::java::translation::runPCTTestsViaTranslator_String_1__String_1_" \
-        --args "meta::pure::functions" {{err_filter}}
+        --function "meta::external::language::java::translation::runPCTTestsViaTranslator_String_1__String_1__String_1_" \
+        --args "meta::pure::functions" "{{test_results}}/spec/pct/java-translation@cli-truffle.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
 
 # Each `sample_*` UDF in code/gallery.pure is rendered as a side-by-side card
 # (literal Pure snippet on the left, translateFunction + classToString Java

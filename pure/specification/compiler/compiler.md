@@ -145,9 +145,9 @@ which runs on both compilers.
 
 ## Implementation pointers
 
-- `org.finos.legend.pure.m3.module.localModule.topLevel.TopLevelCompiler` —
+- `org.finos.legend.pure.m3.module.sourceModule.topLevel.TopLevelCompiler` —
   driver that runs the three passes per local module.
-- `org.finos.legend.pure.m3.module.localModule.LocalModule.compile` —
+- `org.finos.legend.pure.m3.module.sourceModule.SourceModule.compile` —
   wires the validator into the post-pass-3 hook so violations surface in
   `CompilationResult.errors()`.
 - `org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.*Handler` —

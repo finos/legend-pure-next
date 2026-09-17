@@ -22,7 +22,7 @@ import meta::pure::test::pct::*;
 // with pointer slots rewritten to live targets.
 //
 // Parallel to PointerGraphResolver.resolveAll (the Java-side, in-place
-// equivalent invoked at TruffleInMemoryModule construction). This function
+// equivalent invoked at InMemoryModule construction). This function
 // gives compile-pure a way to materialize a resolved graph without mutating
 // the compilation result.
 native function meta::pure::functions::meta::resolveAndReturnGraph(elements:Map<String, meta::pure::metamodel::PackageableElement>[1]):meta::pure::metamodel::PackageableElement[*];
@@ -69,4 +69,25 @@ function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphRewr
     // Rewriting succeeded if the entry's `.name` is 'String' — the pointer
     // itself has no name, the live target does.
     assertEquals('String', $result->at(0).name);
+}
+
+// Enum values reachable from the graph keep their identity: the resolved copy's
+// enum-valued slots hold the same values, so they still carry their enumeration
+// type and compare equal to the literal. (A host that types enum singletons by
+// identity loses both if it copies the value instead.)
+function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphPreservesEnumValues<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let aggregation = $f->eval(|
+        let property = ^meta::pure::metamodel::function::property::Property<Nil,Any|*>(
+            name = 'p',
+            aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+            genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = String),
+            multiplicity = meta::pure::metamodel::multiplicity::PureOne
+        );
+        let cls = ^meta::pure::metamodel::type::Class<Any>(name = 'B', properties = $property);
+        let resolved = meta::pure::functions::meta::resolveAndReturnGraph(newMap([pair('B', $cls->cast(@meta::pure::metamodel::PackageableElement))]));
+        $resolved->at(0)->cast(@meta::pure::metamodel::type::Class<Any>).properties->toOne().aggregation->toOne();
+    );
+    assertEquals(meta::pure::metamodel::function::property::AggregationKind, $aggregation->genericType().type);
+    assert($aggregation == meta::pure::metamodel::function::property::AggregationKind.None);
 }

@@ -19,3 +19,9 @@ native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnl
 
 // Reads a file's contents as a string.
 native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::io::readFile(path:String[1]):String[1];
+
+// Reads a file's raw bytes (each 0..255), for binary files such as PDB archives.
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::io::readFileBytes(path:String[1]):Integer[*];
+
+// Writes content to a file, creating parent directories and replacing any existing file. Returns the path.
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::io::writeFile(path:String[1], content:String[1]):String[1];

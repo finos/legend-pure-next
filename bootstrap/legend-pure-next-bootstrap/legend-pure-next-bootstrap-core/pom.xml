@@ -30,8 +30,8 @@
     <modules>
         <module>legend-pure-next-bootstrap-generators</module>
         <module>legend-pure-next-bootstrap-compiler</module>
-        <module>legend-pure-next-bootstrap-parser</module>
+        <module>legend-pure-next-bootstrap-grammar</module>
         <module>legend-pure-next-bootstrap-execution</module>
-        <module>legend-pure-next-bootstrap-parser-validation</module>
+        <module>legend-pure-next-bootstrap-runtime</module>
     </modules>
 </project>

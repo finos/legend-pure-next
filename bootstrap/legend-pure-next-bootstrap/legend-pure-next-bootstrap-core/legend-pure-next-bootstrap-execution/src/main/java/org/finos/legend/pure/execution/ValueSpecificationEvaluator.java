@@ -14,6 +14,8 @@
 
 package org.finos.legend.pure.execution;
 
+import org.finos.legend.pure.execution.natives.NativeRegistry;
+
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.function.FunctionDefinition;
 import meta.pure.metamodel.function.LambdaFunction;
@@ -49,7 +51,7 @@ import java.util.Map;
  */
 public class ValueSpecificationEvaluator
 {
-    private final NativeRepository natives;
+    private final NativeRegistry natives;
     private final Deque<FunctionExpression> callStack = new ArrayDeque<>();
     // Function whose body is currently being executed (the "executing function"
     // at each frame). Mirrors callStack: when an FE is pushed onto callStack,
@@ -108,7 +110,7 @@ public class ValueSpecificationEvaluator
     private final java.util.IdentityHashMap<VariableExpression, Integer> localSlotCache =
             new java.util.IdentityHashMap<>();
 
-    public ValueSpecificationEvaluator(NativeRepository natives)
+    public ValueSpecificationEvaluator(NativeRegistry natives)
     {
         this.natives = natives;
         varStack.push(new Scope());
@@ -118,7 +120,7 @@ public class ValueSpecificationEvaluator
      * Exposes the native registry for callers that need to dispatch natives
      * (e.g. the Truffle {@code NativeCallNode}).
      */
-    public NativeRepository natives()
+    public NativeRegistry natives()
     {
         return natives;
     }

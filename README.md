@@ -167,7 +167,7 @@ platforms/
     └─ Gallery: <a href="https://finos.github.io/legend-pure-next/java.html">Live ↗</a>
 </pre>
 
-**Truffle** ([`truffle/`](platforms/truffle/)) — partial-evaluating execution + native-image build for fast one-shot runs. Internally: `legend-pure-next-truffle-runtime/` (interpreter, PDB loading, natives), `legend-pure-next-truffle-ide/`, `legend-pure-next-truffle-extension-java/` (the Pure→Java translator's `compileAndExecute` native).
+**Truffle** ([`truffle/`](platforms/truffle/)) — partial-evaluating execution + native-image build for fast one-shot runs. Internally: `legend-pure-next-truffle-core/` (interpreter, PDB loading, natives) and `legend-pure-next-truffle-interfaces/` (`-cli`: the `pure-truffle` fat jar and native image; `-ide`).
 
 **JavaScript** ([`javascript/`](platforms/javascript/)) — Pure models + queries run in the browser or Node. Paired with [`pure/modules/translation/javascript/`](pure/modules/translation/javascript/).
 

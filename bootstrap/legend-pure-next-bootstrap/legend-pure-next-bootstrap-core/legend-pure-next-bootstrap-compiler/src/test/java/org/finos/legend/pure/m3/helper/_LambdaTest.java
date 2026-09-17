@@ -6,12 +6,12 @@ import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
+import org.finos.legend.pure.m3.module.sourceModule.PureContent;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Lambda;
@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class _LambdaTest
 {
-    private static PureModel model;
+    private static JavaCompiler model;
     
     @BeforeAll
     public static void setUp()
@@ -34,9 +34,9 @@ public class _LambdaTest
         String source = 
             "function test::testFn():Any[*] { {a:String[1]| $a}; }";
 
-        model = PureModel.withModules(
+        model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new LocalModule("test", "*", Lists.mutable.with("m3"),
+                        new SourceModule("test", "*", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent(source, "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
@@ -46,7 +46,7 @@ public class _LambdaTest
 
     private LambdaFunction getLambda()
     {
-        FunctionDefinition fd = (FunctionDefinition) model.getModule("test").getElement("test::testFn__Any_MANY_");
+        FunctionDefinition fd = (FunctionDefinition) model.registry().module("test").getElement("test::testFn__Any_MANY_");
         meta.pure.metamodel.valuespecification.AtomicValue letExpr = (meta.pure.metamodel.valuespecification.AtomicValue) fd._expressionSequence().getFirst();
         return (LambdaFunction) letExpr._value();
     }
@@ -55,7 +55,7 @@ public class _LambdaTest
     public void testBuildFunctionType()
     {
         LambdaFunction lambda = getLambda();
-        FunctionType ft = _Lambda.buildFunctionType(lambda, new ScopedMetadataAccess(model.getModule("test"), model));
+        FunctionType ft = _Lambda.buildFunctionType(lambda, new ScopedMetadataAccess(model.registry().module("test"), model.registry()));
         
         assertNotNull(ft);
         assertEquals(1, ft._parameters().size());
@@ -71,7 +71,7 @@ public class _LambdaTest
     public void testGetLambdaClassifierGenericType()
     {
         LambdaFunction lambda = getLambda();
-        GenericType gto = _Lambda.getLambdaClassifierGenericType(new ScopedMetadataAccess(model.getModule("test"), model), lambda);
+        GenericType gto = _Lambda.getLambdaClassifierGenericType(new ScopedMetadataAccess(model.registry().module("test"), model.registry()), lambda);
         
         assertEquals("LambdaFunction", ((meta.pure.metamodel.PackageableElement) _GenericType.type(gto))._name());
         assertEquals(1, _GenericType.typeArguments(gto).size());

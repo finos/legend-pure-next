@@ -42,7 +42,7 @@ public final class _Column
      * @param genericType  the column's value type (V)
      * @param multiplicity the column's value multiplicity (m), or null for PureOne
      * @param nameWildCard true if this column name is a wildcard pattern
-     * @param model        the compiled PureModel
+     * @param model        the compiled JavaCompiler
      */
     public static Column build(String name, GenericType owner, GenericType genericType, Multiplicity multiplicity, boolean nameWildCard, MetadataAccess model)
     {

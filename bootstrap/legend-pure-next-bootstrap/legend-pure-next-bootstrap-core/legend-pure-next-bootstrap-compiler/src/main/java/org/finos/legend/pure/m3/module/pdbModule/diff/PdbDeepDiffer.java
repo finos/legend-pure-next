@@ -8,13 +8,13 @@
 
 package org.finos.legend.pure.m3.module.pdbModule.diff;
 
+import org.finos.legend.pure.m3.module.ModuleRegistry;
 import meta.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.LanguageExtension;
 import org.finos.legend.pure.m3.module.Module;
-import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
+import org.finos.legend.pure.m3.module.pdbModule.PdbModule;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndex;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndex;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
@@ -38,7 +38,7 @@ import java.util.TreeSet;
 /**
  * Structural diff for two PDB archives.
  *
- * <p>Loads both PDBs into {@link PDBModule}s (which lazily deserializes
+ * <p>Loads both PDBs into {@link PdbModule}s (which lazily deserializes
  * each element on access), walks every shared element via reflection on
  * the generated {@code _xxxx()} accessors, and reports per-property
  * differences. Unlike {@link PdbDiffer}'s byte-level mode, this ignores
@@ -96,14 +96,14 @@ public final class PdbDeepDiffer
 
     public static Result diff(Path a, Path b, Path corePdb, PrintStream out) throws Exception
     {
-        // Construct each side as a PureModel so loader.extensions/resolver
-        // wire via setPureModel. With corePdb passed in, both sides bundle
+        // Attach each side to a ModuleRegistry so loader.extensions/resolver
+        // are wired. With corePdb passed in, both sides bundle
         // it as a dependency so PointerRefs into core (e.g. canonical UDPGT
         // anchors) actually resolve — without it, FBW returns null for any
         // cross-module reference, masking real diffs as "A: null".
         List<String> deps = corePdb != null ? List.of("core") : List.of();
-        PDBModule modA = new PDBModule(a, PDBModule.Mode.EXECUTION, "a", "*", deps);
-        PDBModule modB = new PDBModule(b, PDBModule.Mode.EXECUTION, "b", "*", deps);
+        PdbModule modA = new PdbModule(a, PdbModule.Mode.EXECUTION, "a", "*", deps);
+        PdbModule modB = new PdbModule(b, PdbModule.Mode.EXECUTION, "b", "*", deps);
         if (corePdb != null)
         {
             wireWithCore(modA, corePdb);
@@ -117,22 +117,22 @@ public final class PdbDeepDiffer
         return doDiff(modA, modB, a, b, out);
     }
 
-    private static void wireModule(PDBModule module)
+    private static void wireModule(PdbModule module)
     {
         MutableList<Module> modules = Lists.mutable.with(module);
         MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());
-        PureModel.withModules(modules).withExtensions(extensions).build().compile();
+        new ModuleRegistry(modules).attach(extensions);
     }
 
-    private static void wireWithCore(PDBModule diffModule, Path corePdb) throws java.io.IOException
+    private static void wireWithCore(PdbModule diffModule, Path corePdb) throws java.io.IOException
     {
-        PDBModule core = new PDBModule(corePdb, PDBModule.Mode.EXECUTION, "core", "*", List.of());
+        PdbModule core = new PdbModule(corePdb, PdbModule.Mode.EXECUTION, "core", "*", List.of());
         MutableList<Module> modules = Lists.mutable.with(core, diffModule);
         MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());
-        PureModel.withModules(modules).withExtensions(extensions).build().compile();
+        new ModuleRegistry(modules).attach(extensions);
     }
 
-    private static Result doDiff(PDBModule modA, PDBModule modB,
+    private static Result doDiff(PdbModule modA, PdbModule modB,
                                  Path pathA, Path pathB,
                                  PrintStream out)
     {

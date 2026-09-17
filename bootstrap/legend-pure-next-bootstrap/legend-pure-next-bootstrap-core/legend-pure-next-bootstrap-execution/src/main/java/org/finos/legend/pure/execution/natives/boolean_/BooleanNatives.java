@@ -15,9 +15,9 @@
 package org.finos.legend.pure.execution.natives.boolean_;
 
 import org.finos.legend.pure.execution.DynamicInstance;
-import org.finos.legend.pure.execution.NativeRepository;
-import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
-import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
+import org.finos.legend.pure.execution.natives.NativeRegistry;
+import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
+import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
@@ -33,7 +33,7 @@ public class BooleanNatives
         {
             Object a = _E_ValueSpecification.unwrap(args.get(0));
             Object b = _E_ValueSpecification.unwrap(args.get(1));
-            return _E_ValueSpecification.wrap(NativeRepository.pureEquals(a, b, resolver), genericType, multiplicity, resolver);
+            return _E_ValueSpecification.wrap(NativeRegistry.pureEquals(a, b, resolver), genericType, multiplicity, resolver);
         });
 
         natives.put("not_Boolean_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
@@ -74,7 +74,7 @@ public class BooleanNatives
             }
             else if (a instanceof Number && b instanceof Number || a instanceof String && b instanceof String || a instanceof Boolean && b instanceof Boolean || a instanceof meta.pure.metamodel.type.Enum && b instanceof meta.pure.metamodel.type.Enum)
             {
-                result = NativeRepository.pureEquals(a, b, resolver);
+                result = NativeRegistry.pureEquals(a, b, resolver);
             }
             else
             {

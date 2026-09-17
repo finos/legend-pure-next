@@ -7,7 +7,7 @@ import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
@@ -29,7 +29,7 @@ public final class PrimitiveTypeHandler
     {
     }
 
-    public static PrimitiveType firstPass(meta.pure.protocol.grammar.type.PrimitiveType grammar, MetadataAccess model, org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext context)
+    public static PrimitiveType firstPass(meta.pure.protocol.grammar.type.PrimitiveType grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         PrimitiveTypeImpl result = new PrimitiveTypeImpl(model)._name(grammar._name());
         if (grammar._p_sourceInformation() != null)

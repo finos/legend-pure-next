@@ -1,0 +1,90 @@
+// Copyright 2024 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::collection::*;
+import meta::pure::functions::io::*;
+import meta::pure::functions::string::*;
+import meta::pure::functions::variant::convert::*;
+import meta::pure::metamodel::variant::*;
+
+// ---------------------------------------------------------------------------
+// Test reports: one JSON file per suite run, read by the test dashboard (tools/test-dashboard).
+//
+//   { "schema": 1, "suite": "pct", "durationMs": 7123,
+//     "cases": [ { "id": "meta::…::testMap_Function_1__Boolean_1_", "status": "passed" | "failed",
+//                  "durationMs": 3, "error": { "message": "…", "stack": ["…"] } } ] }
+//
+// Host, module and suite are the report path: test-results/<host>/<module>/<suite>.json.
+// {@code id} is the test's element path (or corpus-relative file), shared by every host and
+// adapter that runs it. Built from String-keyed variant maps: toVariant does not convert
+// class instances.
+// ---------------------------------------------------------------------------
+
+// One test's outcome in a report. {@code error} is empty when the test passed.
+Class meta::pure::test::report::TestCaseReport
+{
+    id : String[1];
+    durationMs : Integer[1];
+    error : meta::pure::functions::lang::Error[0..1];
+}
+
+// A JSON array for any number of values (toVariant turns [] into null and [x] into x).
+function meta::pure::test::report::jsonArray(values:Variant[*]):Variant[1]
+{
+    fromJson('[' + $values->map(v | $v->toJson())->joinStrings(',') + ']');
+}
+
+function meta::pure::test::report::caseVariant(case:meta::pure::test::report::TestCaseReport[1]):Variant[1]
+{
+    let fields = [
+        pair('id', $case.id->toVariant()),
+        pair('status', if($case.error->isEmpty(), | 'passed', | 'failed')->toVariant()),
+        pair('durationMs', $case.durationMs->toVariant())
+    ];
+    let withError = if($case.error->isEmpty(),
+        | $fields,
+        | $fields->concatenate(pair('error', meta::pure::test::report::errorVariant($case.error->toOne())))
+    );
+    newMap($withError)->toVariant();
+}
+
+function meta::pure::test::report::errorVariant(error:meta::pure::functions::lang::Error[1]):Variant[1]
+{
+    newMap([
+        pair('message', $error.message->toVariant()),
+        pair('stack', meta::pure::test::report::jsonArray($error.stack->map(frame | $frame->toVariant())))
+    ])->toVariant();
+}
+
+function meta::pure::test::report::suiteJson(suite:String[1], durationMs:Integer[1], cases:meta::pure::test::report::TestCaseReport[*]):String[1]
+{
+    newMap([
+        pair('schema', 1->toVariant()),
+        pair('suite', $suite->toVariant()),
+        pair('durationMs', $durationMs->toVariant()),
+        pair('cases', meta::pure::test::report::jsonArray($cases->map(c | $c->meta::pure::test::report::caseVariant())))
+    ])->toVariant()->toJson();
+}
+
+// Writes the suite's report to $path (parent directories are created). Returns the path.
+function meta::pure::test::report::writeSuiteReport(path:String[1], suite:String[1], durationMs:Integer[1], cases:meta::pure::test::report::TestCaseReport[*]):String[1]
+{
+    writeFile($path, meta::pure::test::report::suiteJson($suite, $durationMs, $cases));
+}
+
+function meta::pure::test::report::writeTestResults(path:String[1], suite:String[1], durationMs:Integer[1], results:meta::pure::test::TestResult[*]):String[1]
+{
+    meta::pure::test::report::writeSuiteReport($path, $suite, $durationMs,
+        $results->map(r | ^meta::pure::test::report::TestCaseReport(id = $r.name, durationMs = $r.durationMs, error = $r.error)));
+}

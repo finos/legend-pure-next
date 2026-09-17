@@ -15,7 +15,7 @@
 // The self-hosted PDB READER — format tools only. Stateless decoders over
 // (bytes, position) node handles: FlatBuffer table/vtable/field/string/vector/
 // union access, PointerRef/AncestorRef descriptions, *ValueDef unwrapping and
-// STORED-zip directory parsing. Deliberately NOT here: element identity,
+// zip directory parsing (STORED entries, and DEFLATE ones through inflate.pure). Deliberately NOT here: element identity,
 // caching, PointerRef resolution against a registry, and AncestorRef cycle
 // closure — those live in each platform's wiring (the JVM's generated
 // *FlatBufferWrapper keeps per-property caches, resolves pointers through
@@ -273,12 +273,14 @@ function meta::pure::compiler::pdb::reader::unwrapValueDef(node:meta::pure::comp
 
 // --- STORED-zip directory --------------------------------------------------------
 
+// size is the stored (compressed) byte count; uncompressedSize what the entry inflates to.
 Class meta::pure::compiler::pdb::reader::ZipEntryInfo
 {
-   name    : String[1];
-   method  : Integer[1];
-   size    : Integer[1];
-   dataPos : Integer[1];
+   name             : String[1];
+   method           : Integer[1];
+   size             : Integer[1];
+   uncompressedSize : Integer[1];
+   dataPos          : Integer[1];
 }
 
 Class meta::pure::compiler::pdb::reader::ZipDirAcc
@@ -317,6 +319,7 @@ function meta::pure::compiler::pdb::reader::readZipEntries(bytes:Integer[*]):met
          | fail('bad central directory entry at ' + $p->toString()));
       let method     = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 10, 2);
       let compSize   = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 20, 4);
+      let fullSize   = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 24, 4);
       let nameLen    = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 28, 2);
       let extraLen   = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 30, 2);
       let commentLen = meta::pure::compiler::pdb::reader::leUInt($bytes, $p + 32, 2);
@@ -333,17 +336,18 @@ function meta::pure::compiler::pdb::reader::readZipEntries(bytes:Integer[*]):met
                name    = $name,
                method  = $method,
                size    = $compSize,
+               uncompressedSize = $fullSize,
                dataPos = $lho + 30 + $lNameLen + $lExtraLen)));
    }, ^meta::pure::compiler::pdb::reader::ZipDirAcc(pos = $cdStart, entries = []));
    $dir.entries;
 }
 
-// The raw bytes of one entry. STORED (method 0) only: the self-hosted format
-// writes STORED, and legacy deflate archives are inflated by host wiring.
+// The bytes of one entry. The self-hosted writer stores entries (method 0); archives from the
+// Java reference writer deflate them (method 8), which inflate.pure decodes.
 function meta::pure::compiler::pdb::reader::zipEntryData(bytes:Integer[*], entry:meta::pure::compiler::pdb::reader::ZipEntryInfo[1]):Integer[*]
 {
-   if($entry.method != 0,
-      | fail('unsupported zip method ' + $entry.method->toString() + ' for entry ' + $entry.name + ' (only STORED is self-hosted; inflate legacy archives in the host)'),
-      | true);
-   $bytes->slice($entry.dataPos, $entry.dataPos + $entry.size);
+   let data = $bytes->slice($entry.dataPos, $entry.dataPos + $entry.size);
+   if([pair(| $entry.method == 0, | $data),
+       pair(| $entry.method == 8, | meta::pure::compiler::pdb::reader::inflate::inflate($data, $entry.uncompressedSize))],
+      | fail('unsupported zip method ' + $entry.method->toString() + ' for entry ' + $entry.name + ' (STORED and DEFLATE are supported)'); $data;);
 }

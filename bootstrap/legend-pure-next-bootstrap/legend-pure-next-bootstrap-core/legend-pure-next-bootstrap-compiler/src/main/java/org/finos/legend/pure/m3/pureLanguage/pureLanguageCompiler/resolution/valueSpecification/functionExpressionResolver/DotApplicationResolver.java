@@ -18,12 +18,12 @@ import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
 import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
 import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
 import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
@@ -32,7 +32,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Proper
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.ValueSpecificationResolver;
 
-import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
+import static org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext.lazy;
 
 
 /**

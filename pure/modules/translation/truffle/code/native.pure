@@ -20,8 +20,8 @@ import meta::pure::metamodel::function::*;
 // Pure -> Truffle AST gallery.
 //
 // Implementation lives in the Truffle runtime
-// (org.finos.legend.pure.truffle.ast.natives.meta.TruffleAstForNode) and is
-// registered on the default NativeNodeRegistry — no extension jar required.
+// (org.finos.legend.pure.truffle.execution.natives.meta.TruffleAstForNode) and is
+// registered on the default NativeRegistry — no extension jar required.
 // Bootstrap (java-direct) has no implementation; calling this from anywhere
 // other than `--backend truffle` will fall through to the bridged-native
 // path and throw "no implementation".

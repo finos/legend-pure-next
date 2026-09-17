@@ -14,6 +14,9 @@
 set quiet := true
 set shell := ["bash", "-c"]
 
+# Records heavy build steps for the dashboard build time trend.
+build_step := "node " + source_directory() / ".." / ".." / "tools" / "test-dashboard" / "build-step.mjs"
+
 mod language_java          "language/java/Justfile"
 mod language_javascript    "language/javascript/Justfile"
 mod translation_shared     "translation/shared/Justfile"
@@ -50,7 +53,8 @@ build-layer0: language_java::build language_javascript::build-tests translation_
 # translation_javascript builds WITH --tests split: the javascript platform's
 # generate recipes run translatePackageToJs, which is <<test.TestDependency>>
 # and therefore lives in javascript-translation-TESTS.pdb.
-build: build-layer0 translation_java::build translation_javascript::build-tests translation_truffle::build
+build: (_step-start "modules/pdbs") build-layer0 translation_java::build translation_javascript::build-tests translation_truffle::build
+    {{build_step}} end "modules/pdbs"
 
 # Orchestrator's `build` already covers all sub-module deps — alias of `build` for symmetry with sub-Justfiles' `build-all`.
 build-all: build
@@ -66,3 +70,7 @@ gallery: translation_java::gallery translation_javascript::gallery translation_t
 
 # Remove every module's PDB outputs.
 clean: language_java::clean language_javascript::clean translation_shared::clean translation_java::clean translation_javascript::clean translation_truffle::clean
+
+# Build time trend (tools/test-dashboard/build-step.mjs): the first dependency of a heavy recipe, whose last line runs `{{build_step}} end`.
+_step-start STEP:
+    {{build_step}} start "{{STEP}}"

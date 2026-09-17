@@ -22,7 +22,7 @@ import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.TestElementFilter;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveWriter;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 
@@ -118,15 +118,15 @@ public class SpecificationBinaryBuilder
         // It is NOT a runtime dependency — its elements get folded into the
         // resulting core.pdb during serialization. So the manifest declares
         // no m3 dep (consumers don't need to load m3.ttl), but the build-time
-        // LocalModule sees m3 so element resolution finds those types.
+        // SourceModule sees m3 so element resolution finds those types.
         BootstrapModule m3 = new BootstrapModule(m3TtlPath);
         List<String> buildDeps = new ArrayList<>(manifest.dependencies());
-        buildDeps.add(m3.getName());
-        LocalModule localModule = new LocalModule(
+        buildDeps.add(m3.name());
+        SourceModule sourceModule = new SourceModule(
                 manifest.name(), manifest.packagePattern(), sourceDirs, buildDeps);
-        MutableList<Module> modules = Lists.mutable.with(m3, localModule);
+        MutableList<Module> modules = Lists.mutable.with(m3, sourceModule);
         MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());
-        PureModel model = PureModel.withModules(modules).withExtensions(extensions).build();
+        JavaCompiler model = JavaCompiler.withModules(modules).withExtensions(extensions).build();
         CompilationResult result = model.compile();
 
         if (!result.errors().isEmpty())
@@ -158,7 +158,7 @@ public class SpecificationBinaryBuilder
         System.out.println("  Compiled " + elements.size() + " elements");
 
         // --- Partition by test-stereotype + serialize per mode ---
-        writeFiltered(elements, extensions, localModule, manifest, outputFile, mode, result.referencedBy());
+        writeFiltered(elements, extensions, sourceModule, manifest, outputFile, mode, result.referencedBy());
     }
 
     /**
@@ -170,7 +170,7 @@ public class SpecificationBinaryBuilder
     private static void writeFiltered(
             List<PackageableElement> elements,
             MutableList<LanguageExtension> extensions,
-            LocalModule localModule,
+            SourceModule sourceModule,
             ModuleManifest manifest,
             Path outputFile,
             TestElementFilter.Mode mode,
@@ -183,7 +183,7 @@ public class SpecificationBinaryBuilder
             case WITH ->
             {
                 Path target = TestElementFilter.withTestsPath(outputFile);
-                writePdb("full", elements, extensions, localModule, manifest, target, referencedBy);
+                writePdb("full", elements, extensions, sourceModule, manifest, target, referencedBy);
             }
             case NONE ->
             {
@@ -192,7 +192,7 @@ public class SpecificationBinaryBuilder
                         .toList();
                 Set<String> leanPaths = pathSet(lean);
                 writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
-                        lean, extensions, localModule, manifest, outputFile,
+                        lean, extensions, sourceModule, manifest, outputFile,
                         org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains));
             }
             case ONLY ->
@@ -203,7 +203,7 @@ public class SpecificationBinaryBuilder
                 Set<String> testPaths = pathSet(tests);
                 Path target = TestElementFilter.testsOnlyPath(outputFile);
                 writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
-                        tests, extensions, localModule, TestElementFilter.testsManifest(manifest), target,
+                        tests, extensions, sourceModule, TestElementFilter.testsManifest(manifest), target,
                         org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains));
             }
             case SPLIT ->
@@ -226,10 +226,10 @@ public class SpecificationBinaryBuilder
                 List<PackageableElement> testsWithShadows =
                         org.finos.legend.pure.m3.module.PackageSplitFilter.withShadowPackages(tests, lean, testPaths);
                 writePdb("lean (" + leanFiltered.size() + "/" + elements.size() + ")",
-                        leanFiltered, extensions, localModule, manifest, outputFile,
+                        leanFiltered, extensions, sourceModule, manifest, outputFile,
                         org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains));
                 writePdb("tests-only (" + testsWithShadows.size() + "/" + elements.size() + ")",
-                        testsWithShadows, extensions, localModule, TestElementFilter.testsManifest(manifest),
+                        testsWithShadows, extensions, sourceModule, TestElementFilter.testsManifest(manifest),
                         TestElementFilter.testsOnlyPath(outputFile),
                         org.finos.legend.pure.m3.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains));
             }
@@ -252,7 +252,7 @@ public class SpecificationBinaryBuilder
             String label,
             List<PackageableElement> elements,
             MutableList<LanguageExtension> extensions,
-            LocalModule localModule,
+            SourceModule sourceModule,
             ModuleManifest manifest,
             Path target,
             Map<String, Set<String>> referencedBy) throws IOException
@@ -264,7 +264,7 @@ public class SpecificationBinaryBuilder
         {
             sections.add(riSection);
         }
-        new CompressedArchiveWriter().write(elements, extensions, localModule, manifest, sections, target);
+        new CompressedArchiveWriter().write(elements, extensions, sourceModule, manifest, sections, target);
         System.out.println("    Written: " + target + " [" + label + ", " + Files.size(target) + " bytes, "
                 + (referencedBy == null ? 0 : referencedBy.size()) + " ref targets]");
     }

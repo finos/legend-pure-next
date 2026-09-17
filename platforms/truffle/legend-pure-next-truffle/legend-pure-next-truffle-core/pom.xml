@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-truffle</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-truffle-core</artifactId>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Truffle - Core</name>
+    <description>GraalVM Truffle interpreter for Pure — JIT-compiled, native-image-ready.</description>
+
+    <properties>
+        <spec.dir>${project.basedir}/../../../../pure/specification</spec.dir>
+    </properties>
+
+    <dependencies>
+        <!-- Bootstrap compiler (for CompressedArchiveReader, FBS Defs) -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-bootstrap-compiler</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <exclusions>
+                <!-- Jena (~13MB), Caffeine (~2MB), JSON-LD/Jakarta JSON,
+                     commons-compress, protobuf, thrift — all build-time-only
+                     dependencies of the bootstrap RDF→FB pipeline
+                     ({@code M3BootstrapReader}, {@code SpecificationBinaryBuilder}).
+                     The Truffle runtime only consumes pre-built PDBs via
+                     {@code PdbModule}, never the RDF-bootstrap path, so these
+                     can be stripped from the runtime classpath and the
+                     resulting native-image binary. -->
+                <exclusion>
+                    <groupId>org.apache.jena</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.github.ben-manes.caffeine</groupId>
+                    <artifactId>caffeine</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.apicatalog</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>jakarta.json</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.protobuf</groupId>
+                    <artifactId>protobuf-java</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.thrift</groupId>
+                    <artifactId>libthrift</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.code.gson</groupId>
+                    <artifactId>gson</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jcl-over-slf4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>commons-codec</groupId>
+                    <artifactId>commons-codec</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-bootstrap-execution</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-bootstrap-cli</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+
+        <!-- Truffle -->
+        <dependency>
+            <groupId>org.graalvm.truffle</groupId>
+            <artifactId>truffle-api</artifactId>
+            <version>${truffle.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.graalvm.truffle</groupId>
+            <artifactId>truffle-dsl-processor</artifactId>
+            <version>${truffle.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.graalvm.sdk</groupId>
+            <artifactId>nativeimage</artifactId>
+            <version>${truffle.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>polyglot</artifactId>
+            <version>${truffle.version}</version>
+        </dependency>
+        <!-- Truffle Runtime — enables Graal JIT compilation of guest language ASTs -->
+        <dependency>
+            <groupId>org.graalvm.truffle</groupId>
+            <artifactId>truffle-runtime</artifactId>
+            <version>${truffle.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Polyglot CPU sampler. Adds the `cpusampler` engine options.
+             Loaded via ServiceLoader at runtime; opt-in via the CLI flag. -->
+        <dependency>
+            <groupId>org.graalvm.tools</groupId>
+            <artifactId>profiler-tool</artifactId>
+            <version>${truffle.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Eclipse Collections -->
+        <dependency>
+            <groupId>org.eclipse.collections</groupId>
+            <artifactId>eclipse-collections-api</artifactId>
+            <version>${eclipsecollections.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.collections</groupId>
+            <artifactId>eclipse-collections</artifactId>
+            <version>${eclipsecollections.version}</version>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit-jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>1.37</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>1.37</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- m3.fbs on the classpath for GenericFbDecoder: the checked-in
+                 wire schema, exposed as generated-specification/m3.fbs. -->
+            <resource>
+                <directory>${project.basedir}/../../../../shared/specification</directory>
+                <includes>
+                    <include>m3.fbs</include>
+                </includes>
+                <targetPath>generated-specification</targetPath>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.15.0</version>
+                <configuration>
+                    <release>25</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.graalvm.truffle</groupId>
+                            <artifactId>truffle-dsl-processor</artifactId>
+                            <version>${truffle.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.openjdk.jmh</groupId>
+                            <artifactId>jmh-generator-annprocess</artifactId>
+                            <version>1.37</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <!-- Generated PDB classes come from codegen JAR dependency -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <trimStackTrace>false</trimStackTrace>
+                    <argLine>
+                        --add-opens=java.base/sun.misc=ALL-UNNAMED
+                        --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+                        -XX:+UnlockExperimentalVMOptions
+                        -XX:+EnableJVMCI
+                        -XX:+UseJVMCICompiler
+                        -Dpure.truffle.compileImmediately=true
+                        -XX:StartFlightRecording=filename=/tmp/jfr-bench.jfr,settings=profile,dumponexit=true,delay=8s
+                        -Xlog:jfr*=off
+                    </argLine>
+                    <!-- <includes> inherited from platforms/truffle/pom.xml -->
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!--
+            native-lib: builds a shared library libpure-truffle.dylib / .so / .dll
+            with core.pdb and compiler.pdb baked in as classpath resources. The
+            @CEntryPoint-annotated methods in {@link PureNativeLib} become C-callable
+            functions so host processes (JVM via JNI/FFM, native CLIs, Python via
+            ctypes, etc.) can embed Pure compile + execute without spawning a
+            subprocess. Activate with `mvn -Pnative-lib package -DskipTests`.
+
+            Prerequisites:
+              - shared/core.pdb and shared/compiler.pdb must exist (run
+                `just bootstrap::build` from the repo root first).
+              - GraalVM 25 with native-image on PATH.
+        -->
+        <profile>
+            <id>native-lib</id>
+            <build>
+                <resources>
+                    <resource>
+                        <directory>${project.basedir}/src/main/resources</directory>
+                    </resource>
+                    <!-- Pull shared/core.pdb + shared/compiler.pdb into the JAR
+                         under /embedded/*.pdb so PureNativeLib.extractResource
+                         can stream them at first call. -->
+                    <resource>
+                        <directory>${project.basedir}/../../../../shared</directory>
+                        <targetPath>embedded</targetPath>
+                        <includes>
+                            <include>core.pdb</include>
+                            <include>compiler.pdb</include>
+                        </includes>
+                    </resource>
+                </resources>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <version>0.10.6</version>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <id>build-native-lib</id>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                                <phase>package</phase>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <imageName>libpure-truffle</imageName>
+                            <buildArgs>
+                                <buildArg>--shared</buildArg>
+                                <buildArg>--no-fallback</buildArg>
+                                <buildArg>--features=org.finos.legend.pure.truffle.runtime.nativeimage.PureFeature</buildArg>
+                                <buildArg>--initialize-at-build-time=org.finos.legend.pure.truffle.execution.PureLanguageProvider</buildArg>
+                                <buildArg>--initialize-at-build-time=org.finos.legend.pure.truffle.execution.profiler.PureProfilerProvider</buildArg>
+                                <!-- Include the embedded PDB resources in the image.
+                                     native-image strips unreferenced resources by default. -->
+                                <buildArg>-H:IncludeResources=embedded/.*\.pdb</buildArg>
+                                <!-- m3.fbs: GenericFbDecoder loads the wire schema as a
+                                     classpath resource at runtime; without this the AOT
+                                     image fails on first deserialize ("Schema resource
+                                     not on classpath"). -->
+                                <buildArg>-H:IncludeResources=generated-specification/m3\.fbs</buildArg>
+                            </buildArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

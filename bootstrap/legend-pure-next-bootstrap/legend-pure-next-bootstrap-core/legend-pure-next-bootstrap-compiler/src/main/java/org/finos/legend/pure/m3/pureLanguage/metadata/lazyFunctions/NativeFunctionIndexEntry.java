@@ -22,7 +22,7 @@ import org.finos.legend.pure.m3.module.MetadataAccess;
  * A function index entry for native (built-in) functions.
  * <p>
  * Native functions are dispatched by their mangled signature through
- * the {@code NativeRepository}; they have no expression sequence.
+ * the {@code NativeRegistry}; they have no expression sequence.
  * </p>
  */
 public class NativeFunctionIndexEntry extends FunctionIndexEntry implements NativeFunction

@@ -18,10 +18,10 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
-import org.finos.legend.pure.execution.NativeRepository;
+import org.finos.legend.pure.execution.natives.NativeRegistry;
 import org.finos.legend.pure.next.parser.GrammarExtension;
-import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
-import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
+import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
+import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
@@ -36,12 +36,12 @@ import java.util.function.Function;
 /**
  * Bridge between the Pure-side ANTLR primitives (declared in
  * {@code meta::pure::functions::meta::antlr}) and the host-side ANTLR
- * runtime. Registered by {@link NativeRepository}'s {@code registerDefaults}
+ * runtime. Registered by {@link NativeRegistry}'s {@code registerDefaults}
  * — these are core natives, not opt-in extensions.
  *
  * <p>{@code parseAntlr} dispatches via the per-runtime
  * {@link GrammarExtension} registry (see
- * {@code PureExecution.Builder.withGrammarExtensions}); every other native
+ * {@code PureRuntime.Builder.withGrammarExtensions}); every other native
  * here is grammar-agnostic — it only knows how to navigate a
  * {@link ParserRuleContext}.</p>
  */
@@ -61,7 +61,7 @@ public final class AntlrNatives
     public static void register(Map<String, NativeImpl> natives,
                                 Map<String, LazyNativeImpl> lazyNatives,
                                 MetadataAccess resolver,
-                                NativeRepository repository)
+                                NativeRegistry repository)
     {
         put(natives, resolver,
             "getText_AntlrContext_1__String_1_",
@@ -180,7 +180,7 @@ public final class AntlrNatives
                 if (ext == null)
                 {
                     throw new RuntimeException("Unknown grammar: " + grammar
-                            + " (no GrammarExtension registered; pass it via PureExecution.Builder.withGrammarExtensions)");
+                            + " (no GrammarExtension registered; pass it via PureRuntime.Builder.withGrammarExtensions)");
                 }
                 return ext.parse(source, sourceId, lineOffset);
             });

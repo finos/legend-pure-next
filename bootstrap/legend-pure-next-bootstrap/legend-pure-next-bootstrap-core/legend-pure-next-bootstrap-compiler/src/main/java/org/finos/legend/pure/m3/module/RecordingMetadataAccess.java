@@ -17,7 +17,7 @@ package org.finos.legend.pure.m3.module;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.type.Type;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 
 import java.util.Map;
 import java.util.Set;

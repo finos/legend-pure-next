@@ -1,5 +1,6 @@
 package org.finos.legend.pure.m3.pureLanguage;
 
+import org.finos.legend.pure.m3.module.inMemoryModule.InMemoryModule;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.type.FunctionTypeFlatBufferWrapper;
 import org.eclipse.collections.api.factory.Lists;
@@ -10,11 +11,11 @@ import org.finos.legend.pure.m3.LanguageExtension;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
 import org.finos.legend.pure.m3.module.Module;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerContextExtension;
-import org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry;
-import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
+import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilerContextExtension;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.IndexEntry;
+import org.finos.legend.pure.m3.module.pdbModule.PdbModule;
 import org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndex;
 import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
@@ -39,20 +40,25 @@ public class PureLanguageExtension implements LanguageExtension
     @Override
     public MetadataAccessExtension buildMetadataExtensionForModule(Module module)
     {
-        if (module instanceof LocalModule)
+        if (module instanceof SourceModule)
         {
             return new PureLanguageMetadata();
         }
-        if (module instanceof PDBModule pdb)
+        if (module instanceof PdbModule pdb)
         {
             return buildFromPDB(pdb);
+        }
+        if (module instanceof InMemoryModule inMemory)
+        {
+            return new PureLanguageMetadata(new PureLanguageCompilerExtension()
+                    .buildFunctionIndex(Lists.mutable.withAll(inMemory.elements()), inMemory.resolver()));
         }
         return null;
     }
 
-    private PureLanguageMetadata buildFromPDB(PDBModule pdb)
+    private PureLanguageMetadata buildFromPDB(PdbModule pdb)
     {
-//        if (pdb.mode() != PDBModule.Mode.COMPILATION)
+//        if (pdb.mode() != PdbModule.Mode.COMPILATION)
 //        {
 //            return new PureLanguageMetadata();
 //        }
@@ -106,7 +112,7 @@ public class PureLanguageExtension implements LanguageExtension
     /**
      * Build archive sections (function index) directly from a list of
      * function-index entries. Used by builders that don't go through a
-     * {@link LocalModule} (e.g. the compile-via-pure path).
+     * {@link SourceModule} (e.g. the compile-via-pure path).
      */
     public List<PDBArchiveSection> archiveSections(List<FunctionIndexEntry> entries)
     {

@@ -33,4 +33,4 @@ if [[ ! -f "${JS_DIR}/generated/translator.js" ]]; then
     exit 1
 fi
 
-exec node --stack-size=4000 "${JS_DIR}/src/execution/cli.js" "$@"
+exec node --stack-size=4000 "${JS_DIR}/src/interfaces/cli/cli.js" "$@"

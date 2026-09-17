@@ -18,7 +18,7 @@ import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 
 /**
@@ -38,7 +38,7 @@ public final class VariableCompiler
      *
      * @param grammarParam the grammar-level variable expression to compile
      * @param imports      import package paths from the enclosing section
-     * @param model        the compiled PureModel used for element lookup
+     * @param model        the compiled JavaCompiler used for element lookup
      * @param context      the compilation context for error collection
      * @return a fully resolved metamodel VariableExpression, or null if the type is unresolvable
      */

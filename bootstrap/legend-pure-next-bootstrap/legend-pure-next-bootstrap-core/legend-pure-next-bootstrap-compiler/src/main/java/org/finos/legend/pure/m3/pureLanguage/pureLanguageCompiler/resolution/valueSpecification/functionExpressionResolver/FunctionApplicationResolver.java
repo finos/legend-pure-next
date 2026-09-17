@@ -24,9 +24,9 @@ import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
-import org.finos.legend.pure.m3.module.localModule.topLevel.RollbackSite;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.module.sourceModule.topLevel.RollbackSite;
 import org.finos.legend.pure.m3.pureLanguage.metadata.CompositePureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
@@ -42,7 +42,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.val
 
 import java.util.Comparator;
 
-import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
+import static org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext.lazy;
 
 public class FunctionApplicationResolver
 {

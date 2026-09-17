@@ -28,6 +28,7 @@ set shell := ["bash", "-c"]
 java_root      := source_directory()
 repo_root      := java_root / ".." / ".." / ".." / ".."
 shared_out     := repo_root / "shared"
+test_results   := repo_root / "test-results"
 # Module build outputs: each module writes its own pdbs (and gallery) into its build/.
 language_java_out          := repo_root / "pure" / "modules" / "language" / "java" / "build"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
@@ -90,7 +91,7 @@ build-tests:
         --tests split {{err_filter}}
 
 # The `compileAndExecute` native is implemented in the Truffle Java extension
-# (legend-pure-next-truffle-extension-java's JavaCompileNatives) — the
+# runtime (legend-pure-next-truffle-core's natives/javacompile JavaCompileNatives) — the
 # bootstrap CLI does NOT register it, so testCompileAndExecute* tests fail
 # there with "No native implementation for: compileAndExecute".
 # Needs core-tests.pdb because runTests is <<test.TestDependency>>.
@@ -104,8 +105,8 @@ test-all: build-tests _depCheck_runtime-pdbs
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{language_java_out}}/java.pdb \
         --pdb {{language_java_out}}/java-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1_" \
-        --args "meta::external::language::java" {{err_filter}}
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::external::language::java" "{{test_results}}/pure/language-java/pure@cli-truffle.json" {{err_filter}}
 
 # Internal: fail loudly if PDBs / pure-truffle aren't staged.
 _depCheck_runtime-pdbs:
