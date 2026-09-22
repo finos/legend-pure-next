@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -58,7 +59,12 @@ function <<access.private>> meta::external::language::java::serialization::doCod
       c:NewArray[1]                 | $sfer->doCodeNewArray($c),
       c:CodeMethod[1]               | $sfer->doModifiers($c.modifiers)->doType($c.type)->space()->addText($c.name)->doParameters($c.parameters)->newLine()->doCode($c.body),
       c:CastProxy[1]                | $sfer->doCode($c.proxy),
-      c:Cast[1]                     | $sfer->addText('(')->doType($c.type)->addText(')')->space()->maybeParentheses($c.expression, $c),
+      // `(Object) -1L` parses as a subtraction, not a cast: a negative literal
+      // (or any unary +/-) after a cast has to be parenthesised.
+      c:Cast[1]                     | $sfer->addText('(')->doType($c.type)->addText(')')->space()
+                                          ->ifNotEmpty($c.expression, {s, e| if ($e->toOne()->startsWithSign(),
+                                                                                | $s->addText('(')->doCode($e->toOne())->addText(')'),
+                                                                                | $s->maybeParentheses($e->toOne(), $c))}),
       c:ThisConstructorCall[1]      | $sfer->addText('this')->doArguments($c.arguments)->semicolon(),
       c:SuperConstructorCall[1]     | $sfer->addText('super')->doArguments($c.arguments)->semicolon(),
       c:MethodCall[1]               | $sfer->maybeInstanceParentheses($c.instance)->foldable()->addText('.')->doTypeArguments($c.typeArguments)->addText($c.methodName)->doArguments($c.arguments),
@@ -115,6 +121,17 @@ function <<access.private>> meta::external::language::java::serialization::doTyp
 function <<access.private>> meta::external::language::java::serialization::doArguments(sfer:Stringifier[1], args:Code[*]): Stringifier[1]
 {
    $sfer->joiningFoldable($args, {s,a| $s->doCode($a)}, '(', ', ', ')');
+}
+
+// True when the code is written starting with `-` or `+` (a negative literal,
+// a unary minus): after a cast, Java would read that as an infix operator.
+function <<access.private>> meta::external::language::java::serialization::startsWithSign(code: Code[1]): Boolean[1]
+{
+   $code->resolveDeferred()->match([
+      l: meta::external::language::java::metamodel::Literal[1]          | $l.literal->startsWith('-') || $l.literal->startsWith('+'),
+      p: meta::external::language::java::metamodel::PrefixExpression[1] | $p.op == '-' || $p.op == '+',
+      other: Code[1]                                                    | false
+   ]);
 }
 
 function <<access.private>> meta::external::language::java::serialization::precedence(code: Code[1]):Integer[1]

@@ -113,7 +113,7 @@ test-all: test-translation test-pure-runtime
 test-translation: build-tests _depCheck_runtime-pdbs
     @{{header}} 'test-translation'
     @{{substep}} 'runTests meta::external::language::java::translation (Truffle)'
-    {{pure_truffle}} execute \
+    PURE_JAVA_PLATFORM_CLASSES={{repo_root}}/platforms/java/build/classes {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
@@ -136,7 +136,7 @@ test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
 test-pure-runtime-testFunctions: build-tests _depCheck_runtime-pdbs
     @{{header}} 'test-pure-runtime-testFunctions'
     @{{substep}} 'runTests meta::pure::functions (Truffle, extension loaded)'
-    {{pure_truffle}} execute \
+    PURE_JAVA_PLATFORM_CLASSES={{repo_root}}/platforms/java/build/classes {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
@@ -158,7 +158,9 @@ test-pure-runtime-PCTs: build-tests _depCheck_runtime-pdbs
     # the result fed back to the PCT test's assertion. Tests that exercise
     # natives we don't yet have coders for fail loudly — that's the desired
     # signal of "what's left to translate."
-    {{pure_truffle}} execute \
+    # Translated code builds on the Java platform's (JDK-only) classes: they are
+    # the harness class path when built (`just java::compile`).
+    PURE_JAVA_PLATFORM_CLASSES={{repo_root}}/platforms/java/build/classes {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
@@ -176,25 +178,6 @@ test-pure-runtime-PCTs: build-tests _depCheck_runtime-pdbs
 # pure-truffle prints the returned String to stdout verbatim (no `'...'`
 # quoting wrapper, no `\n` escaping), so a plain redirect is enough.
 
-# Build the Pure -> Java translation gallery as a self-contained HTML page.
-gallery: build-tests _depCheck_runtime-pdbs
-    @{{header}} 'gallery'
-    @{{substep}} 'render Pure -> Java gallery -> build/java-translation-gallery.html'
-    {{pure_truffle}} execute \
-        --pdb {{shared_out}}/core.pdb \
-        --pdb {{shared_out}}/core-tests.pdb \
-        --pdb {{shared_out}}/compiler.pdb \
-        --pdb {{language_java_out}}/java.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_java_out}}/java-translation.pdb \
-        --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "meta::external::language::java::translation::gallery::renderGallery_String_1__String_1_" \
-        --args "meta::pure::functions" \
-        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
-        | grep -v '^\[graal-tripwire\]' \
-        > {{translation_java_out}}/java-translation-gallery.html
-    @echo "wrote {{translation_java_out}}/java-translation-gallery.html ($(wc -c < {{translation_java_out}}/java-translation-gallery.html) bytes)"
-
 # Internal: fail loudly if the PDBs the runtime recipes need aren't staged.
 _depCheck_runtime-pdbs:
     #!/usr/bin/env bash
@@ -207,7 +190,14 @@ _depCheck_runtime-pdbs:
         exit 1
     fi
 
-# Remove build/java-translation.pdb (and the tests PDB).
+# Build the Pure -> Java translation gallery as a self-contained HTML page.
+# Rendered BY THE JAVA PLATFORM (platforms/java): the gallery shows the Java this
+# platform generates, compiles and runs, and has no Truffle dependency.
+gallery: build-tests
+    @{{header}} 'gallery'
+    @{{substep}} 'render Pure -> Java gallery on the Java platform -> build/java-translation-gallery.html'
+    cd {{repo_root}} && just java::gallery "meta::pure::functions" "{{translation_java_out}}/java-translation-gallery.html"
+
 clean:
     @{{header}} 'clean'
     @{{substep}} 'remove build/java-translation.pdb + java-translation-tests.pdb'

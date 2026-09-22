@@ -74,7 +74,7 @@ function <<test.TestDependency>> meta::external::language::java::translation::ga
 // Per-test card. Statically walks the test body collecting every
 // `$f->eval(|lambda)` call, translates each one to Java (for display), and
 // runs the whole test through the Java adapter (for runtime pass/fail).
-function meta::external::language::java::translation::gallery::renderTestCard(
+function <<test.TestDependency>> meta::external::language::java::translation::gallery::renderTestCard(
     test: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
     ctx: meta::pure::functions::printer::compiled::PrintContext[1]
 ): String[1]
@@ -115,18 +115,24 @@ function meta::external::language::java::translation::gallery::renderTestCard(
 }
 
 // Run the test through the Java translator adapter and capture pass/fail.
-// `tryEval` swallows any exception thrown during translate + javac + invoke
-// + assertion-check, so we treat "no failure" as a pass. We deliberately do
-// NOT inspect the returned Boolean — PCT tests use assertEquals/assertSize
-// which throw on mismatch, so a clean return is always a pass.
-function meta::external::language::java::translation::gallery::runTestViaAdapter(
+// `tryEval` swallows any exception thrown while the test runs, so we treat "no
+// failure" as a pass. We deliberately do NOT inspect the returned Boolean — PCT
+// tests use assertEquals/assertSize which throw on mismatch, so a clean return
+// is always a pass.
+//
+// The adapter is the stdlib in-memory one (`$f->eval()`): the gallery runs on
+// the Java platform, where the test and its lambdas are already translated Java,
+// so running one is calling it. The translator adapter
+// (testAdapterForTranslatedJava) re-translates each lambda at run time, which is
+// what a host without a Java runtime of its own has to do.
+function <<test.TestDependency>> meta::external::language::java::translation::gallery::runTestViaAdapter(
     test: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]
 ): meta::pure::functions::collection::Pair<Boolean, String>[1]
 {
     let attempt = tryEval(| meta::pure::functions::io::withSilencedPrint(|
         meta::pure::functions::lang::evaluate(
             $test,
-            meta::pure::functions::collection::list(testAdapterForTranslatedJava_Function_1__X_o_))));
+            meta::pure::functions::collection::list(meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_))));
     if ($attempt.failure->isNotEmpty(),
         | pair(false, $attempt.failure->toOne().message),
         | pair(true, ''));
@@ -153,14 +159,22 @@ function meta::external::language::java::translation::gallery::translateOneLambd
         | pair(true, $attempt.value));
 }
 
+// The Java a card shows is the Java THIS PLATFORM generates and runs: the same
+// conventions `just java::compile` uses. Without `metadataElements` every
+// metadata-backed native (genericType, parse, compileSource, the ANTLR ones)
+// reports "No coder", so a passing test would show a failed translation.
+// Canonicalization plays no part here either — the lambda is what runs.
 function meta::external::language::java::translation::gallery::translateLambdaToJavaSource(
     lambda: meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1]
 ): String[1]
 {
-    let conv      = defaultConventions('org.finos.demo');
-    let canonical = $lambda->makeCanonical();
-    let sig       = $conv->translateFunctionDef($canonical, 'GalleryRunner');
-    $sig->renderFullSource();
+    let base = defaultConventions(meta::external::language::java::translation::platform::platformRoot());
+    let conv = ^$base(metadataElements = true);
+    let sig  = $conv->translateFunctionDef($lambda, 'GalleryRunner');
+    // The platform types the program names are prebuilt classes of the platform,
+    // not part of this test's Java: show the program's own unit.
+    let helpers = $sig.extraClasses->map(h | $h->classToString()->stripPackageHeader());
+    $sig.class->classToString() + if ($helpers->isEmpty(), | '', | '\n\n' + $helpers->joinStrings('\n\n'));
 }
 
 // Recursively walk a tree of value specifications collecting the lambda
