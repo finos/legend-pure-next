@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,7 +64,8 @@ function <<access.private>> meta::external::language::java::serialization::doEnu
    $sfer
    ->doModifiers($j.modifiers)
    ->addWord('enum')
-   ->addText($j.simpleName);
+   ->addText($j.simpleName)->space()
+   ->ifNotEmpty($j.interfaces, {s, ifcs| $s->addWord('implements')->joining($ifcs, {s2, i| $s2->doType($i)}, ', ')->space()});
 }
 
 function <<access.private>> meta::external::language::java::serialization::doEnumEntry(sfer:Stringifier[1], e:meta::external::language::java::metamodel::EnumerationEntry[1]): Stringifier[1]

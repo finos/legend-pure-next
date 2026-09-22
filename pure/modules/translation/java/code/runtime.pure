@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -75,7 +76,12 @@ function meta::external::language::java::translation::renderFullSource(sig: Func
 {
    let mainSrc = $sig.class->classToString();
    let helpers = $sig.extraClasses->map(h | $h->classToString()->stripPackageHeader());
-   $mainSrc + '\n\n' + $helpers->joinStrings('\n\n');
+   let unit    = $mainSrc + '\n\n' + $helpers->joinStrings('\n\n');
+   // Platform types are public types in their own packages: separate
+   // `//// FILE` units, with the program's own unit first.
+   if ($sig.files->isEmpty(),
+      | $unit,
+      | '//// FILE ' + $sig.class->qualifiedClassName()->replace('.', '/') + '.java\n' + $unit + '\n' + $sig.files->joinStrings('\n'));
 }
 
 function meta::external::language::java::translation::stripPackageHeader(src: String[1]): String[1]

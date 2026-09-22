@@ -18,6 +18,7 @@ set shell := ["bash", "-c"]
 mod bootstrap
 mod truffle "platforms/truffle/Justfile"
 mod javascript "platforms/javascript/Justfile"
+mod java "platforms/java/Justfile"
 mod modules "pure/modules/Justfile"
 
 root := justfile_directory()

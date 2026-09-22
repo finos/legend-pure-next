@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -332,10 +333,18 @@ function meta::pure::translation::shared::captureToProtocol(
       | $vs->toOne()->singleValueToProtocol(),
       | // Multi-value capture — wrap in a Collection of single-value protocol
         // expressions. The compiler re-resolves each.
+        // The multiplicity must be a concrete [n], exactly as the grammar builds
+        // a collection literal: left as CompilerNotSetMultiplicity the
+        // recompile never resolves it, so a captured `set = ['a', 'b']` came
+        // back as a scalar-multiplicity let and typed back ends declared it as
+        // a single String.
         ^meta::pure::protocol::grammar::valuespecification::Collection(
            values = $vs->map(v | $v->singleValueToProtocol()),
            genericType = ^meta::pure::protocol::grammar::type::generics::CompilerNotSetGenericType(),
-           multiplicity = ^meta::pure::protocol::grammar::multiplicity::CompilerNotSetMultiplicity()
+           multiplicity = ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+              lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $vs->size()),
+              upperBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $vs->size())
+           )
         )
    );
 }

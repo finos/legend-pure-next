@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -135,5 +136,26 @@ function <<test.Test>> meta::external::language::java::tests::testCompileAndExec
    assertError(
       | compileAndExecute($badSource, 'org.finos.test.Broken', 'execute', []),
       'Java compilation failed'
+   );
+}
+
+// Only the JDK is visible: a class on the host JVM's class path (here the
+// runtime's own Variant) doesn't compile. Code emitted by the translators must
+// stand alone, so the harness must not let such a reference through.
+function <<test.Test>> meta::external::language::java::tests::testCompileAndExecuteSeesOnlyTheJdk(): Boolean[1]
+{
+   let source = '''
+                package org.finos.test;
+
+                public class HostClass
+                {
+                    public static String execute()
+                    {
+                        return org.finos.legend.pure.execution.PureVariant.TYPE_PATH;
+                    }
+                }''';
+   assertError(
+      | compileAndExecute($source, 'org.finos.test.HostClass', 'execute', []),
+      'package org.finos.legend.pure.execution does not exist'
    );
 }

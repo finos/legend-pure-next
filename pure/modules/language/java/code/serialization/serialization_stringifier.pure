@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -351,7 +352,10 @@ function <<access.private>> meta::external::language::java::serialization::apply
          );
       },
       |
-   if($s->contains('|FOLD'),
+   // Only up to the level markers are written at (see foldable): text that
+   // contains '|FOLD' without being a marker — generated code that writes
+   // markers itself — would otherwise recurse forever.
+   if($s->contains('|FOLD') && $level <= 99,
       | $s->applyFolds($level+1, $maxLength),
       | $s
    )));

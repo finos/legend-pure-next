@@ -1,0 +1,131 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
+import meta::external::language::java::factory::*;
+import meta::external::language::java::serialization::*;
+import meta::external::language::java::translation::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::type::*;
+
+// ============================================================================
+// Package → Java. Translates every function, class and enumeration under the
+// given packages (and every function they reach) into JDK-only Java for the
+// Java platform, through the same machinery as a translated program: each
+// function becomes a class named by its signature in the Java package mirroring
+// its Pure package, with a `public static execute`, and each class and
+// enumeration a platform type (except those the platform prebuilds). Output is
+// `//// FILE <path>` blocks. Elements are found at run time by path, so this
+// module has no static dependency on what it translates — the Java counterpart
+// of translatePackageToJs.
+//
+// A function that doesn't translate becomes a stub whose `execute` throws
+// "not translated: <path>: <reason>", so its callers still compile and the gap
+// shows where it is reached.
+//
+// `tests` sub-packages are skipped: their elements live in -tests PDBs a
+// platform build doesn't load. <<test.TestDependency>> like translatePackageToJs,
+// since the package walk uses meta::pure::test::resolveChild.
+// ============================================================================
+
+// Entry point for the CLI, which passes each argument as one String:
+// `rootPackagePaths` is comma-separated.
+function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJava(rootPackagePaths: String[1]): String[1]
+{
+   meta::external::language::java::translation::translatePackagesToJava($rootPackagePaths->split(','));
+}
+
+function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJava(rootPackagePaths: String[*]): String[1]
+{
+   let base     = defaultConventions(meta::external::language::java::translation::platform::platformRoot());
+   let conv     = ^$base(metadataElements = true);
+   let elements = $rootPackagePaths->map(p | $p->pathToElement()->cast(@meta::pure::metamodel::Package)->translatableElements());
+   let seeds    = $elements->filter(e | $e->instanceOf(UserDefinedFunction))->cast(@UserDefinedFunction<Any>);
+   let udfs     = $conv->collectReferencedUdfs($seeds->map(u | $u.expressionSequence), $seeds);
+   let types    = $elements->filter(e | $e->instanceOf(Class) || $e->instanceOf(Enumeration))->cast(@Type);
+   let support  = $conv->supportClasses(
+                     $udfs->map(u | $u.expressionSequence),
+                     $udfs->map(u | $u.parameters->map(p | $p.genericType)->concatenate($u.returnGenericType)),
+                     [],
+                     $types);
+   $udfs->map(u | $conv->udfFileOrStub($u))->concatenate($support.files)->joinStrings('\n');
+}
+
+// One function and everything it needs, as `//// FILE` blocks: the function's
+// class, every function it reaches, and the platform types they name. The Java
+// platform translates a function this way when it has no class for it yet
+// (a PCT test, which lives in a `tests` package the platform doesn't prebuild).
+function <<test.TestDependency>> meta::external::language::java::translation::translateFunctionProgram(functionPath: String[1]): String[1]
+{
+   $functionPath->pathToElement()->cast(@UserDefinedFunction<Any>)->translateFunctionValueProgram();
+}
+
+// The same, for a function the metadata does NOT hold: one just built by
+// `compileSource` has no path to look up, only the value itself.
+function <<test.TestDependency>> meta::external::language::java::translation::translateFunctionValueProgram(seed: UserDefinedFunction<Any>[1]): String[1]
+{
+   let base     = defaultConventions(meta::external::language::java::translation::platform::platformRoot());
+   let conv     = ^$base(metadataElements = true);
+   let udfs     = $conv->collectReferencedUdfs($seed.expressionSequence, $seed);
+   let support  = $conv->supportClasses(
+                     $udfs->map(u | $u.expressionSequence),
+                     $udfs->map(u | $u.parameters->map(p | $p.genericType)->concatenate($u.returnGenericType)),
+                     [],
+                     []);
+   $udfs->map(u | $conv->udfFileOrStub($u))->concatenate($support.files)->joinStrings('\n');
+}
+
+// One function's Java class, without the stub fallback: the failure of a
+// translation, with its stack, rather than a stub.
+function <<test.TestDependency>> meta::external::language::java::translation::translateFunctionToJava(functionPath: String[1]): String[1]
+{
+   let base = defaultConventions(meta::external::language::java::translation::platform::platformRoot());
+   let conv = ^$base(metadataElements = true);
+   let udf  = $functionPath->pathToElement()->cast(@UserDefinedFunction<Any>);
+   $conv->translateUdf($udf)->classToString();
+}
+
+// The `//// FILE` block of a function's class, or of its stub when it doesn't translate.
+function <<test.TestDependency>> meta::external::language::java::translation::udfFileOrStub(conv: Conventions[1], udf: UserDefinedFunction<Any>[1]): String[1]
+{
+   let className = $conv->udfClassName($udf);
+   let attempt   = tryEval(| $conv->translateUdf($udf)->classToString());
+   let source    = if ($attempt.failure->isEmpty(),
+                      | $attempt.value->toOne(),
+                      | $className->untranslatedStub($udf->elementToPath() + ': ' + $attempt.failure->toOne().message));
+   '//// FILE ' + $className->replace('.', '/') + '.java\n' + $source;
+}
+
+// A class `className` whose `execute` accepts any arguments and throws "not translated: <reason>".
+function <<test.TestDependency>> meta::external::language::java::translation::untranslatedStub(className: String[1], reason: String[1]): String[1]
+{
+   let simpleName  = $className->split('.')->last()->toOne();
+   let packageName = $className->substring(0, $className->length() - $simpleName->length() - 1);
+   let message     = 'not translated: ' + $reason->split('\n')->at(0);
+   'package ' + $packageName + ';\n\n'
+      + 'public class ' + $simpleName + '\n{\n'
+      + '    public static Object execute(Object... args)\n    {\n'
+      + '        throw new UnsupportedOperationException(' + $message->escapedString() + ');\n'
+      + '    }\n}\n';
+}
+
+// Functions, classes and enumerations under `pkg`, sub-packages included,
+// `tests` sub-packages excluded.
+function <<test.TestDependency>> meta::external::language::java::translation::translatableElements(pkg: meta::pure::metamodel::Package[1]): meta::pure::metamodel::PackageableElement[*]
+{
+   let children = $pkg.children->filter(c | $c.name != ['tests'])->map(c | meta::pure::test::resolveChild($c));
+   $children->filter(e | $e->instanceOf(UserDefinedFunction) || $e->instanceOf(Class) || $e->instanceOf(Enumeration))
+      ->concatenate($children->filter(e | $e->instanceOf(meta::pure::metamodel::Package))->cast(@meta::pure::metamodel::Package)->map(p | $p->translatableElements()));
+}

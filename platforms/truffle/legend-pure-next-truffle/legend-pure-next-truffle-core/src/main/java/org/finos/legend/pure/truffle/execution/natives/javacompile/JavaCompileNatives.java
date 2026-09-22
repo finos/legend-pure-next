@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +23,11 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -37,6 +41,23 @@ import java.util.Map;
  * loads the resulting class via a throw-away class loader, and invokes a named
  * static method on it. Used by {@link CompileAndExecuteNode} to actually run
  * the Java emitted by the Pure→Java translator's PCT / round-trip tests.
+ *
+ * <p>The source may use the JDK only: javac sees an empty class path and the
+ * loaded classes see only the platform class loader. The translator's output
+ * must stand alone, and inheriting this JVM's class path would let a reference
+ * to a Truffle or Pure class compile and run here unnoticed.</p>
+ *
+ * <p>The one exception is the Java platform (platforms/java): when the
+ * {@code PURE_JAVA_PLATFORM_CLASSES} environment variable names its compiled
+ * classes, they — themselves JDK-only generated and runtime code — are the whole
+ * class path, and are loaded once by a loader over the platform class loader.
+ * This is scaffolding: it lets translated code use the platform's classes while
+ * the PCT suite still runs through Truffle, until it runs on the platform
+ * itself.</p>
+ *
+ * <p>A source may hold several compilation units, each introduced by a
+ * {@code //// FILE <path>} line (generated platform types are public classes in
+ * their own packages).</p>
  */
 public class JavaCompileNatives
 {
@@ -48,12 +69,21 @@ public class JavaCompileNatives
             throw new RuntimeException("No system Java compiler available — the runtime needs to be a JDK, not a JRE");
         }
 
-        InMemoryJavaSource srcFile = new InMemoryJavaSource(className, source);
+        List<InMemoryJavaSource> sources = compilationUnits(className, source);
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        InMemoryFileManager fm = new InMemoryFileManager(
-                compiler.getStandardFileManager(diagnostics, null, null));
+        StandardJavaFileManager standard = compiler.getStandardFileManager(diagnostics, null, null);
+        java.io.File platformClasses = platformClasses();
+        try
+        {
+            standard.setLocation(StandardLocation.CLASS_PATH, platformClasses == null ? List.of() : List.of(platformClasses));
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException("Cannot clear the class path for in-process javac", e);
+        }
+        InMemoryFileManager fm = new InMemoryFileManager(standard);
 
-        boolean ok = compiler.getTask(null, fm, diagnostics, null, null, List.of(srcFile)).call();
+        boolean ok = compiler.getTask(null, fm, diagnostics, null, null, sources).call();
         if (!ok)
         {
             StringBuilder sb = new StringBuilder("Java compilation failed:\n");
@@ -68,7 +98,7 @@ public class JavaCompileNatives
         Class<?> cls;
         try
         {
-            cls = new InMemoryClassLoader(fm.bytecode).loadClass(className);
+            cls = new InMemoryClassLoader(fm.bytecode, parentLoader(platformClasses)).loadClass(className);
         }
         catch (ClassNotFoundException e)
         {
@@ -89,6 +119,55 @@ public class JavaCompileNatives
         {
             throw new RuntimeException("Cannot access " + className + "." + methodName + " (must be public static)", e);
         }
+    }
+
+    private static final Map<java.io.File, ClassLoader> PLATFORM_LOADERS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** The Java platform's compiled classes, when PURE_JAVA_PLATFORM_CLASSES names a directory. */
+    private static java.io.File platformClasses()
+    {
+        String dir = System.getenv("PURE_JAVA_PLATFORM_CLASSES");
+        return dir == null || dir.isEmpty() || !new java.io.File(dir).isDirectory() ? null : new java.io.File(dir);
+    }
+
+    private static ClassLoader parentLoader(java.io.File platformClasses)
+    {
+        if (platformClasses == null)
+        {
+            return ClassLoader.getPlatformClassLoader();
+        }
+        return PLATFORM_LOADERS.computeIfAbsent(platformClasses, dir ->
+        {
+            try
+            {
+                return new java.net.URLClassLoader(new java.net.URL[]{dir.toURI().toURL()}, ClassLoader.getPlatformClassLoader());
+            }
+            catch (java.net.MalformedURLException e)
+            {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /** The compilation units of `source`: one per `//// FILE <path>` block, or the whole source as `className`. */
+    private static List<InMemoryJavaSource> compilationUnits(String className, String source)
+    {
+        if (!source.startsWith("//// FILE ") && !source.contains("\n//// FILE "))
+        {
+            return List.of(new InMemoryJavaSource(className, source));
+        }
+        List<InMemoryJavaSource> units = new java.util.ArrayList<>();
+        for (String block : source.split("(?m)^//// FILE "))
+        {
+            if (block.isBlank())
+            {
+                continue;
+            }
+            int newline = block.indexOf('\n');
+            String path = block.substring(0, newline).trim();
+            units.add(new InMemoryJavaSource(path.replaceAll("\\.java$", "").replace('/', '.'), block.substring(newline + 1)));
+        }
+        return units;
     }
 
     private static Method findMethod(Class<?> cls, String name, int arity)
@@ -170,9 +249,9 @@ public class JavaCompileNatives
     {
         private final Map<String, InMemoryClassFile> bytecode;
 
-        InMemoryClassLoader(Map<String, InMemoryClassFile> bytecode)
+        InMemoryClassLoader(Map<String, InMemoryClassFile> bytecode, ClassLoader parent)
         {
-            super(InMemoryClassLoader.class.getClassLoader());
+            super(parent);
             this.bytecode = bytecode;
         }
 
