@@ -199,10 +199,9 @@ public final class CastNode extends PureNode
         if (!targetTypeUndefined
                 && inputResult != null
                 && !(inputResult instanceof org.finos.legend.pure.truffle.execution.types.PureSequence)
-                && !org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(inputResult,
-                        "meta::pure::metamodel::type::generics::TypeParameter")
-                && !org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(inputResult,
-                        "meta::pure::metamodel::multiplicity::MultiplicityParameter")
+                // A value that IS a type symbol is checked like any other: the
+                // exemption that used to sit here made the same cast throw on the
+                // compiled hosts and pass here. See helper::type::typeName.
                 && targetType != null)
         {
             String targetPath = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(targetType, resolver);

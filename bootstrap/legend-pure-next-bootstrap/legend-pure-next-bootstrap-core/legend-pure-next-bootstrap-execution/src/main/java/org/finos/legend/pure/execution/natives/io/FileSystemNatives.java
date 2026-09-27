@@ -77,38 +77,16 @@ public class FileSystemNatives
                     ._multiplicity(_Multiplicity.concreteMultiplicity(paths.size(), paths.size(), resolver));
         });
 
-        // readFile(String[1]) : String[1]
-        natives.put("readFile_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        // readFileBytes(String[1]) : Binary[1] — the file's raw bytes, as a host
+        // byte array. No per-byte boxing: a multi-megabyte .pdb used to become
+        // millions of boxed values crossing this boundary.
+        natives.put("readFileBytes_String_1__Binary_1_", (args, eval, genericType, multiplicity) ->
         {
             String path = (String) _E_ValueSpecification.unwrap(args.get(0));
             try
             {
-                String content = Files.readString(Path.of(path));
-                return _E_ValueSpecification.wrap(content, genericType, multiplicity, resolver);
-            }
-            catch (IOException e)
-            {
-                throw new RuntimeException("Failed to read file: " + path, e);
-            }
-        });
-
-        // readFileBytes(String[1]) : Integer[*] — the file's raw bytes (each 0..255).
-        natives.put("readFileBytes_String_1__Integer_MANY_", (args, eval, genericType, multiplicity) ->
-        {
-            String path = (String) _E_ValueSpecification.unwrap(args.get(0));
-            try
-            {
-                byte[] content = Files.readAllBytes(Path.of(path));
-                List<ValueSpecification> bytes = new ArrayList<>(content.length);
-                for (byte b : content)
-                {
-                    bytes.add(_E_ValueSpecification.wrap((long) (b & 0xFF), null, null, resolver));
-                }
-                meta.pure.metamodel.type.generics.GenericType gt = bytes.isEmpty() ? null : bytes.get(0)._genericType();
-                return new CollectionImpl(resolver)
-                        ._values(org.eclipse.collections.api.factory.Lists.mutable.withAll(bytes))
-                        ._genericType(gt)
-                        ._multiplicity(_Multiplicity.concreteMultiplicity(bytes.size(), bytes.size(), resolver));
+                return _E_ValueSpecification.wrap(
+                        Files.readAllBytes(Path.of(path)), genericType, multiplicity, resolver);
             }
             catch (IOException e)
             {

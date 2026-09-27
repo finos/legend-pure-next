@@ -221,3 +221,4 @@ function meta::external::language::java::translation::gallery::extractLambdaArg(
         | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
     );
 }
+

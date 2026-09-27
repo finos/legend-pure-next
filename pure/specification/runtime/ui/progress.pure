@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -112,11 +113,20 @@ function meta::pure::ui::progress::tickProgress(done:Integer[1], total:Integer[1
     );
 }
 
-// Clear the bar + status lines and drop the cursor onto a fresh line below.
-// After this call the caller can println a summary normally.
+// LEAVE the finished bar on screen, clear the status line under it, and drop the
+// cursor onto a fresh line for the caller's summary.
+//
+// The bar line is deliberately not cleared. tickProgress always emits when
+// `done == total` (see its throttle), so by the time we get here the bar reads
+// 100% — clearing it threw that away, and a fast suite looked like it had never
+// finished. The status line IS cleared: it holds the last item's name, which is
+// noise once the run is over.
+//   [B\r[K  — down to the status line, col 0, clear it
+//   [B\r    — down to a fresh line, col 0 (same two downs as before, so the
+//               cursor invariant startProgress set up is preserved)
 function meta::pure::ui::progress::finishProgress():Boolean[1]
 {
-    print('\r[K[B\r[K[B\r');
+    print('[B\r[K[B\r');
     true;
 }
 

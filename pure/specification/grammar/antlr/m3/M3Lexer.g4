@@ -40,6 +40,10 @@ FALSE: False;
 INTEGER: Integer;
 FLOAT: Float;
 DECIMAL: Decimal;
+// Before VALID_STRING: `0x1F8B` also matches ValidString (which allows a
+// leading digit) and is the same length, so ANTLR would pick whichever rule
+// comes first. Longest-match already settles it against INTEGER (`0`).
+BINARY: Binary;
 DATE: Date;
 STRICTTIME: StrictTime;
 LATEST_DATE: '%latest';
@@ -111,6 +115,10 @@ fragment Float: (Digit)* '.' (Digit)+ ( ('e' | 'E') ('+' | '-')? (Digit)+)? ('f'
 fragment Decimal: ((Digit)* '.' (Digit)+ | (Digit)+) ( ('e' | 'E') ('+' | '-')? (Digit)+)? ('d' | 'D')
 ;
 fragment Date: '%' ('-')? (Digit)+ ('-'(Digit)+ ('-'(Digit)+ ('T' DateTime TimeZone?)?)?)?
+;
+// One byte per hex PAIR, so `0x1F8` is a lex error rather than a silently
+// truncated byte. `0x` alone is the empty Binary.
+fragment Binary: '0x' (HexDigit HexDigit)*
 ;
 fragment StrictTime: '%' DateTime
 ;

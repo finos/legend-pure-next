@@ -17,9 +17,9 @@ package org.finos.legend.pure.truffle.execution.natives.pdb;
 import org.finos.legend.pure.truffle.execution.natives.NativeRegistry;
 
 /**
- * Registers specialized Truffle nodes for the meta::pure::functions::binary
- * byte-level primitives backing binary serialization (the self-hosted PDB
- * writer): intToLeBytes, floatToLeBytes, and stringToUtf8Bytes.
+ * Registers the specialized Truffle nodes for
+ * {@code meta::pure::functions::binary} — the Binary primitive and the
+ * byte-level operations backing the self-hosted PDB reader and writer.
  */
 public final class BinaryNodeFactories
 {
@@ -29,19 +29,49 @@ public final class BinaryNodeFactories
 
     public static void registerAll(NativeRegistry registry)
     {
-        registry.register("intToLeBytes_Integer_1__Integer_1__Integer_MANY_",
-                (args, gt, mul, fe) -> new IntToLeBytesNode(args[0], args[1]));
+        registry.register("binarySize_Binary_1__Integer_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.Size(args[0]));
 
-        registry.register("floatToLeBytes_Float_1__Integer_MANY_",
-                (args, gt, mul, fe) -> new FloatToLeBytesNode(args[0]));
+        registry.register("binaryAt_Binary_1__Integer_1__Byte_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.At(args[0], args[1]));
 
-        registry.register("stringToUtf8Bytes_String_1__Integer_MANY_",
-                (args, gt, mul, fe) -> new StringToUtf8BytesNode(args[0]));
+        registry.register("binaryLeUInt_Binary_1__Integer_1__Integer_1__Integer_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.LeInt(args[0], args[1], args[2], false));
 
-        registry.register("utf8BytesToString_Integer_MANY__String_1_",
-                (args, gt, mul, fe) -> new Utf8BytesToStringNode(args[0]));
+        registry.register("binaryLeInt_Binary_1__Integer_1__Integer_1__Integer_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.LeInt(args[0], args[1], args[2], true));
 
-        registry.register("leBytesToFloat_Integer_MANY__Float_1_",
-                (args, gt, mul, fe) -> new LeBytesToFloatNode(args[0]));
+        registry.register("binaryUtf8_Binary_1__Integer_1__Integer_1__String_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.Utf8Range(args[0], args[1], args[2]));
+
+        registry.register("binarySlice_Binary_1__Integer_1__Integer_1__Binary_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.Slice(args[0], args[1], args[2]));
+
+        registry.register("binaryConcat_Binary_MANY__Binary_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.Concat(args[0]));
+
+        registry.register("binaryZeros_Integer_1__Binary_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.Zeros(args[0]));
+
+        registry.register("binaryEquals_Binary_1__Binary_1__Boolean_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.Equals(args[0], args[1]));
+
+        registry.register("binaryToHex_Binary_1__String_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.ToHex(args[0]));
+
+        registry.register("intToLeBytes_Integer_1__Integer_1__Binary_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.IntToLe(args[0], args[1]));
+
+        registry.register("floatToLeBytes_Float_1__Binary_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.FloatToLe(args[0]));
+
+        registry.register("stringToUtf8Bytes_String_1__Binary_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.StringToUtf8(args[0]));
+
+        registry.register("utf8BytesToString_Binary_1__String_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.Utf8ToString(args[0]));
+
+        registry.register("leBytesToFloat_Binary_1__Float_1_",
+                (args, gt, mul, fe) -> new BinaryNodes.LeBytesToFloat(args[0]));
     }
 }

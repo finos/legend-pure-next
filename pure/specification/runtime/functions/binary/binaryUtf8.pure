@@ -1,0 +1,36 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+import meta::pure::functions::binary::*;
+
+// Decode `length` UTF-8 bytes starting at `pos` as a String.
+//
+// The range form matters: decoding a substring of a buffer otherwise means
+// slicing a copy first, and the PDB reader reads a string for almost every
+// element name, path and pointer segment.
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::binaryUtf8(b:Binary[1], pos:Integer[1], length:Integer[1]):String[1];
+
+function <<PCT.test>> meta::pure::functions::binary::tests::binaryUtf8::testRange<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('a::b', $f->eval(|0x613A3A62->binaryUtf8(0, 4)));
+    assertEquals('::', $f->eval(|0x613A3A62->binaryUtf8(1, 2)));
+    assertEquals('', $f->eval(|0x613A3A62->binaryUtf8(2, 0)));
+}
+
+function <<PCT.test>> meta::pure::functions::binary::tests::binaryUtf8::testMultiByte<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    // U+20AC EURO SIGN, offset past a leading ASCII byte
+    assertEquals('€', $f->eval(|0x61E282AC->binaryUtf8(1, 3)));
+}

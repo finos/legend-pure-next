@@ -17,26 +17,22 @@
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { DIRECTORY_TREE, READ_FILE, READ_FILE_BYTES, WRITE_FILE } from "./native-signatures.js";
+import { DIRECTORY_TREE, READ_FILE_BYTES, WRITE_FILE } from "./native-signatures.js";
 
 /** Host natives for meta::pure::functions::io that need a file system. */
 export const fileSystemExtension = {
     registerAll(natives) {
-        natives.register(READ_FILE, () => readFile);
         natives.register(READ_FILE_BYTES, () => readFileBytes);
         natives.register(DIRECTORY_TREE, () => directoryTree);
         natives.register(WRITE_FILE, () => writeFile);
     },
 };
 
-// readFile(path): the file's content (UTF-8).
-function readFile(path) {
-    return readFileSync(String(path), "utf8");
-}
-
-// readFileBytes(path): the file's raw bytes, as the BigInt list a Pure Integer[*] is on this host.
+// readFileBytes(path): a Binary — the bytes themselves. readFileSync returns a Buffer, which IS a
+// Uint8Array; the copy keeps the runtime's `instanceof Uint8Array` checks exact
+// and detaches the result from Node's pooled allocator.
 function readFileBytes(path) {
-    return Array.from(readFileSync(String(path)), (b) => BigInt(b));
+    return new Uint8Array(readFileSync(String(path)));
 }
 
 // directoryTree(root): every regular file under root, recursively, sorted — as the JVM hosts return it.

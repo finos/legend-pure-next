@@ -1,0 +1,35 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+import meta::pure::functions::binary::*;
+
+// Number of bytes in a Binary. O(1) — this is the write cursor of the
+// FlatBuffers builder, so it is called once per prepended scalar.
+//
+// Named `binarySize` rather than `size`: the Java and JavaScript translators
+// match coders by SHORT name, so a `size` overload would collide with the
+// collection `size` (see the `copy` collision recorded in the JS translator).
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::binarySize(b:Binary[1]):Integer[1];
+
+function <<PCT.test>> meta::pure::functions::binary::tests::binarySize::testLiteral<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(3, $f->eval(|0x1F8B08->binarySize()));
+    assertEquals(1, $f->eval(|0xFF->binarySize()));
+}
+
+function <<PCT.test>> meta::pure::functions::binary::tests::binarySize::testEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(0, $f->eval(|0x->binarySize()));
+}

@@ -82,6 +82,15 @@ public final class EqualNode extends PureNode
         {
             return ba.booleanValue() == bb.booleanValue();
         }
+        // A Binary is a host byte[], whose natural equals() is identity. Pure
+        // equality on a primitive is by VALUE, so compare contents.
+        if (org.finos.legend.pure.truffle.execution.types.PureBinary.isBinary(a)
+                && org.finos.legend.pure.truffle.execution.types.PureBinary.isBinary(b))
+        {
+            return java.util.Arrays.equals(
+                    org.finos.legend.pure.truffle.execution.types.PureBinary.asBytes(a),
+                    org.finos.legend.pure.truffle.execution.types.PureBinary.asBytes(b));
+        }
         if (a instanceof String sa && b instanceof String sb)
         {
             return sa.equals(sb);
@@ -120,6 +129,13 @@ public final class EqualNode extends PureNode
         if (a == b) return true;
         if (a instanceof Long la && b instanceof Long lb) return la.longValue() == lb.longValue();
         if (a instanceof Boolean ba && b instanceof Boolean bb) return ba.booleanValue() == bb.booleanValue();
+        if (org.finos.legend.pure.truffle.execution.types.PureBinary.isBinary(a)
+                && org.finos.legend.pure.truffle.execution.types.PureBinary.isBinary(b))
+        {
+            return java.util.Arrays.equals(
+                    org.finos.legend.pure.truffle.execution.types.PureBinary.asBytes(a),
+                    org.finos.legend.pure.truffle.execution.types.PureBinary.asBytes(b));
+        }
         if (a instanceof String sa && b instanceof String sb) return sa.equals(sb);
         return slowEqualsStatic(a, b, resolver);
     }
@@ -319,27 +335,66 @@ public final class EqualNode extends PureNode
             // distinguish Pure types. Use pureTypeOf for the same-type check.
             if (ptA.equals(ptB) || samePureType(a, b, resolver))
             {
-                // Guard against circular property references (e.g. Property→owner→Property)
-                int depth = EQUALS_DEPTH.get();
-                if (depth > 10)
+                // Guard against circular property references
+                // (e.g. Property→owner→Property) by remembering the pairs already
+                // being compared further up the stack: meeting the same pair again
+                // IS the cycle, and assuming it equal is the reading that
+                // terminates — everything reachable has already been checked.
+                //
+                // This replaced a depth cap of 10, which could not tell a cycle
+                // from a legitimately deep acyclic structure and fell back to
+                // `a == b` beyond it. A Java package chain 11 segments deep
+                // (org.finos.legend.pure.m3.meta.pure.protocol.grammar.function.property)
+                // compares by <<equality.Key>> all the way down, so two equal
+                // types silently came out unequal here while bootstrap said equal
+                // — which made the Java translator emit a doubled cast when it ran
+                // on Truffle. See factory::tests::classEqualityIsStructuralAtDepth.
+                EqualsPair pair = new EqualsPair(a, b);
+                java.util.Set<EqualsPair> inProgress = EQUALS_IN_PROGRESS.get();
+                if (!inProgress.add(pair))
                 {
-                    return a == b;
+                    return true;
                 }
-                EQUALS_DEPTH.set(depth + 1);
                 try
                 {
                     return equalByProperties(a, b, resolver);
                 }
                 finally
                 {
-                    EQUALS_DEPTH.set(depth);
+                    inProgress.remove(pair);
                 }
             }
         }
         return Objects.equals(a, b);
     }
 
-    private static final ThreadLocal<Integer> EQUALS_DEPTH = ThreadLocal.withInitial(() -> 0);
+    /** A pair of objects currently being compared, by IDENTITY of both sides. */
+    private static final class EqualsPair
+    {
+        private final Object a;
+        private final Object b;
+
+        EqualsPair(Object a, Object b)
+        {
+            this.a = a;
+            this.b = b;
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            return o instanceof EqualsPair other && other.a == this.a && other.b == this.b;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return System.identityHashCode(this.a) * 31 + System.identityHashCode(this.b);
+        }
+    }
+
+    private static final ThreadLocal<java.util.Set<EqualsPair>> EQUALS_IN_PROGRESS =
+            ThreadLocal.withInitial(java.util.HashSet::new);
 
     /**
      * Check if two Any instances represent the same Pure type.

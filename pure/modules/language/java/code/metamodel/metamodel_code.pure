@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +20,13 @@ Class meta::external::language::java::metamodel::Code
 {
    <<equality.Key>> type : meta::external::language::java::metamodel::Type[1];
    requires              : CodeDependency[*];
+   // The Pure source position this code was translated from, when known. The
+   // serializer turns it into a position marker the class renderer collects into
+   // a generated-line to Pure-position table, from which PureStack renders
+   // positioned stack frames. NOT an equality key: two pieces of code that
+   // differ only in where they came from are still the same code, and Code
+   // equality is relied on elsewhere.
+   sourceInformation     : meta::pure::metamodel::SourceInformation[0..1];
 }
 
 Class meta::external::language::java::metamodel::SimpleCode extends Code

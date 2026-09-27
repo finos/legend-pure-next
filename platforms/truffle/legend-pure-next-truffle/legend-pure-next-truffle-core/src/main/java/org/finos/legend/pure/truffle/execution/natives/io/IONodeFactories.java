@@ -45,14 +45,17 @@ public final class IONodeFactories
         registry.register("withSilencedPrint_Function_1__T_m_",
                 (args, gt, mul, fe) -> new WithSilencedPrintNode(args[0]));
 
-        registry.register("readFile_String_1__String_1_",
-                (args, gt, mul, fe) -> new ReadFileNode(args[0]));
-
-        registry.register("readFileBytes_String_1__Integer_MANY_",
+        registry.register("readFileBytes_String_1__Binary_1_",
                 (args, gt, mul, fe) -> new ReadFileBytesNode(args[0]));
 
         registry.register("writeFile_String_1__String_1__String_1_",
                 (args, gt, mul, fe) -> new WriteFileNode(args[0], args[1]));
+
+        registry.register("entryNames_Binary_1__String_MANY_",
+                (args, gt, mul, fe) -> new EntryNamesNode(args[0]));
+
+        registry.register("entryBytes_Binary_1__String_1__Binary_1_",
+                (args, gt, mul, fe) -> new EntryBytesNode(args[0], args[1]));
 
         registry.register("directoryTree_String_1__String_MANY_",
                 (args, gt, mul, fe) -> new DirectoryTreeNode(args[0]));

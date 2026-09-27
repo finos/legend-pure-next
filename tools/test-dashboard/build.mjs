@@ -36,9 +36,16 @@ const resultsDir = option("--results", join(repoRoot, "test-results"));
 const outFile = option("--out", join(resultsDir, "dashboard.html"));
 const historyFile = join(resultsDir, "history.json");
 // The translation galleries a PCT run links to: [run, gallery built in the repository, its name on the published site].
+//
+// A gallery belongs to the PLATFORM RUN of whichever host renders it, so all
+// three hang off their backend's own platform column rather than off a variant
+// beside it. Each is rendered by that platform's runtime: `just java::gallery`
+// by the Java platform, the javascript translation module's `gallery` by
+// `pure-js`, the truffle one by `pure-truffle` — the recipe's Justfile says
+// which module owns it, not which host runs it.
 const GALLERIES = [
-  ["java-translation@cli-truffle", "pure/modules/translation/java/build/java-translation-gallery.html", "java.html"],
-  ["javascript-translation@cli-javascript", "pure/modules/translation/javascript/build/javascript-translation-gallery.html", "javascript.html"],
+  ["java@platform", "pure/modules/translation/java/build/java-translation-gallery.html", "java.html"],
+  ["pure@cli-javascript", "pure/modules/translation/javascript/build/javascript-translation-gallery.html", "javascript.html"],
   ["pure@cli-truffle", "pure/modules/translation/truffle/build/truffle-translation-gallery.html", "truffle.html"]
 ];
 // Heavy build steps recorded by build-step.mjs.

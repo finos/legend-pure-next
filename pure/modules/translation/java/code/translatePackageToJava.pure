@@ -49,7 +49,26 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
 
 function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJava(rootPackagePaths: String[*]): String[1]
 {
-   let base     = defaultConventions(meta::external::language::java::translation::platform::platformRoot());
+   meta::external::language::java::translation::translatePackagesToJavaFor($rootPackagePaths,
+      meta::external::language::java::translation::platform::platformRoot(),
+      meta::external::language::java::translation::defaultPlatformPackage());
+}
+
+// Comma-separated form, for the CLI — mirrors the single-argument
+// translatePackagesToJava above.
+function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJavaFor(rootPackagePaths: String[1], basePackage: String[1], platformPackage: String[1]): String[1]
+{
+   meta::external::language::java::translation::translatePackagesToJavaFor($rootPackagePaths->split(','), $basePackage, $platformPackage);
+}
+
+// The same translation, emitted for a NAMED host: `basePackage` roots the
+// generated element classes and `platformPackage` roots the support classes
+// they call into. Truffle generates its own copy of the PDB reader this way, so
+// nothing it compiles reaches into the Java platform's packages — the two hosts
+// share `reader.pure`, not a jar.
+function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJavaFor(rootPackagePaths: String[*], basePackage: String[1], platformPackage: String[1]): String[1]
+{
+   let base     = meta::external::language::java::translation::conventionsFor($basePackage, $platformPackage);
    let conv     = ^$base(metadataElements = true);
    let elements = $rootPackagePaths->map(p | $p->pathToElement()->cast(@meta::pure::metamodel::Package)->translatableElements());
    let seeds    = $elements->filter(e | $e->instanceOf(UserDefinedFunction))->cast(@UserDefinedFunction<Any>);
@@ -60,7 +79,41 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
                      $udfs->map(u | $u.parameters->map(p | $p.genericType)->concatenate($u.returnGenericType)),
                      [],
                      $types);
-   $udfs->map(u | $conv->udfFileOrStub($u))->concatenate($support.files)->joinStrings('\n');
+   $udfs->map(u | $conv->udfFileOrStub($u))->concatenate($support.files)->joinStrings('\n')
+      ->meta::external::language::java::translation::withPositionTable();
+}
+
+// Every element under `pkg`, INCLUDING its `tests` packages.
+//
+// translatableElements skips `tests` deliberately: a platform does not ship its
+// test wrappers. But the Java platform RUNS the PCT corpus, and any function it
+// has no class for is translated and javac'd at run time — a profile of
+// `java::pct` put 52% of samples inside javac. Pre-generating the test wrappers
+// is the same fix that took spec-pdb from hours to seconds.
+function <<test.TestDependency>> meta::external::language::java::translation::translatableElementsWithTests(pkg: meta::pure::metamodel::Package[1]): meta::pure::metamodel::PackageableElement[*]
+{
+   let children = $pkg.children->map(c | meta::pure::test::resolveChild($c));
+   $children->filter(e | $e->instanceOf(UserDefinedFunction) || $e->instanceOf(Class) || $e->instanceOf(Enumeration))
+      ->concatenate($children->filter(e | $e->instanceOf(meta::pure::metamodel::Package))->cast(@meta::pure::metamodel::Package)
+                             ->map(p | meta::external::language::java::translation::translatableElementsWithTests($p)));
+}
+
+// The package walk of translatePackagesToJava, but keeping `tests` — what the
+// Java platform prebuilds so the PCT corpus does not translate at run time.
+function <<test.TestDependency>> meta::external::language::java::translation::translateTestPackagesToJava(rootPackagePaths: String[1]): String[1]
+{
+   let conv     = ^(meta::external::language::java::translation::defaultConventions(meta::external::language::java::translation::platform::platformRoot()))(metadataElements = true);
+   let elements = $rootPackagePaths->split(',')->map(p | $p->pathToElement()->cast(@meta::pure::metamodel::Package)->translatableElementsWithTests());
+   let seeds    = $elements->filter(e | $e->instanceOf(UserDefinedFunction))->cast(@UserDefinedFunction<Any>);
+   let udfs     = $conv->collectReferencedUdfs($seeds->map(u | $u.expressionSequence), $seeds);
+   let types    = $elements->filter(e | $e->instanceOf(Class) || $e->instanceOf(Enumeration))->cast(@Type);
+   let support  = $conv->supportClasses(
+                     $udfs->map(u | $u.expressionSequence),
+                     $udfs->map(u | $u.parameters->map(p | $p.genericType)->concatenate($u.returnGenericType)),
+                     [],
+                     $types);
+   $udfs->map(u | $conv->udfFileOrStub($u))->concatenate($support.files)->joinStrings('\n')
+      ->meta::external::language::java::translation::withPositionTable();
 }
 
 // One function and everything it needs, as `//// FILE` blocks: the function's
@@ -74,17 +127,57 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
 
 // The same, for a function the metadata does NOT hold: one just built by
 // `compileSource` has no path to look up, only the value itself.
+// A function VALUE the metadata does not hold, translated on the fly.
+//
+// A NAMED one (compileSource just built it) is emitted as its own UDF class plus
+// every UDF it calls. An ANONYMOUS one — `^LambdaFunction(expressionSequence =
+// ...)` assembled at run time, which no generated class can ever cover — has no
+// package, so there is no UDF class to name it: it becomes a single program
+// class, the way the PCT adapter emits a lambda.
+//
+// Either way the emitted source is compiled against the platform's own classes
+// (JavaSource leaves javac's class path alone), so anything already generated is
+// referenced rather than re-translated.
 function <<test.TestDependency>> meta::external::language::java::translation::translateFunctionValueProgram(seed: UserDefinedFunction<Any>[1]): String[1]
 {
-   let base     = defaultConventions(meta::external::language::java::translation::platform::platformRoot());
-   let conv     = ^$base(metadataElements = true);
+   let base = defaultConventions(meta::external::language::java::translation::platform::platformRoot());
+   let conv = ^$base(metadataElements = true);
+   if ($seed->instanceOf(meta::pure::metamodel::function::PackageableFunction),
+      | $conv->meta::external::language::java::translation::namedValueProgram($seed),
+      | $conv->meta::external::language::java::translation::lambdaValueProgram($seed));
+}
+
+// The simple name a pathless lambda value is emitted under. Must agree with
+// Metadata.LAMBDA_VALUE_CLASS, which is what invokeTranslated looks up when the
+// value has no path of its own.
+function meta::external::language::java::translation::lambdaValueClassName(): String[1]
+{
+   'PureLambdaValue'
+}
+
+function <<test.TestDependency>> meta::external::language::java::translation::lambdaValueProgram(conv: Conventions[1], seed: UserDefinedFunction<Any>[1]): String[1]
+{
+   let canonical = $seed->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+                        ->meta::pure::translation::shared::makeCanonical(
+                             [meta::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]);
+   let sig = $conv->translateFunctionDef($canonical, meta::external::language::java::translation::lambdaValueClassName());
+   $sig->renderFullSource();
+}
+
+function <<test.TestDependency>> meta::external::language::java::translation::namedValueProgram(conv: Conventions[1], seed: UserDefinedFunction<Any>[1]): String[1]
+{
    let udfs     = $conv->collectReferencedUdfs($seed.expressionSequence, $seed);
    let support  = $conv->supportClasses(
                      $udfs->map(u | $u.expressionSequence),
                      $udfs->map(u | $u.parameters->map(p | $p.genericType)->concatenate($u.returnGenericType)),
                      [],
                      []);
-   $udfs->map(u | $conv->udfFileOrStub($u))->concatenate($support.files)->joinStrings('\n');
+   // Markers stripped but NO table: this source goes straight to
+   // JavaSource.compileAndExecute, which reads every `//// FILE` block as a
+   // compilation unit, so a .tsv section would be handed to javac. A function
+   // translated at run time has no position table — its frames are unpositioned.
+   $udfs->map(u | $conv->udfFileOrStub($u))->concatenate($support.files)->joinStrings('\n')
+      ->meta::external::language::java::serialization::withoutMarkers();
 }
 
 // One function's Java class, without the stub fallback: the failure of a
@@ -101,11 +194,71 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
 function <<test.TestDependency>> meta::external::language::java::translation::udfFileOrStub(conv: Conventions[1], udf: UserDefinedFunction<Any>[1]): String[1]
 {
    let className = $conv->udfClassName($udf);
-   let attempt   = tryEval(| $conv->translateUdf($udf)->classToString());
+   let attempt   = tryEval(| $conv->translateUdf($udf)->meta::external::language::java::serialization::classToStringWithPositions());
    let source    = if ($attempt.failure->isEmpty(),
                       | $attempt.value->toOne(),
                       | $className->untranslatedStub($udf->elementToPath() + ': ' + $attempt.failure->toOne().message));
    '//// FILE ' + $className->replace('.', '/') + '.java\n' + $source;
+}
+
+// ----------------------------------------------------------------------------
+// Position tables
+// ----------------------------------------------------------------------------
+// Generated code carries Pure source positions as marker comments (the
+// serializer's positionMarker). A marker rides inside the text, so it survives
+// line folding and lands on the physical line of the code it belongs to — which
+// a line counter could not do, because one logical line folds into several.
+// Here the markers are collected and stripped, so each .java is emitted exactly
+// as it would be with positions turned off. PureStack reads a table to put
+// `(file.pure:61c7)` on a stack frame.
+//
+// ONE TABLE PER JAVA FILE, `Foo.java` -> `Foo.java.pos`, each row
+// `<javaLine>\t<sourceId>:<line>:<column>`. Not one shared table: a shared file
+// is written by every recipe that emits classes, so the last one to run
+// truncates the others' rows. Per file, a table is written by whichever recipe
+// writes its class, with the same overwrite semantics as the class itself, so
+// the two can never disagree — and the runtime reads one small resource for a
+// frame instead of parsing every class's rows to use one.
+//
+// Only the FIRST marker on a physical line is kept: a frame reports one
+// position, and the leftmost marker is the outermost call on that line.
+function meta::external::language::java::translation::positionFileSuffix(): String[1]
+{
+   '.pos'
+}
+
+function <<test.TestDependency>> meta::external::language::java::translation::withPositionTable(files: String[1]): String[1]
+{
+   // Split on a NEWLINE followed by the marker, exactly as the emitter's awk
+   // anchors it to the start of a line. Plain '//// FILE ' would also match the
+   // string literal inside the translated source of the emitters themselves —
+   // this module generates Java for code that writes `//// FILE` lines — and
+   // would cut a class in half there.
+   let sections = ('\n' + $files)->split('\n//// FILE ')->filter(s | $s->contains('.java\n'));
+   let stripped = $sections->map(s | '//// FILE ' + $s->meta::external::language::java::serialization::withoutMarkers())->joinStrings('\n');
+   let tables   = $sections->map(s | $s->meta::external::language::java::translation::positionBlockOf())->filter(b | $b != '');
+   // The leading newline matters: the emitter anchors `//// FILE` to the start of
+   // a line, and the last class's text has no trailing newline, so without it the
+   // marker glues onto that class's closing brace and the table is appended INTO
+   // that .java file.
+   if ($tables->isEmpty(), | $stripped, | $stripped + '\n' + $tables->joinStrings('\n'));
+}
+
+// One class's table as a `//// FILE` block, or '' when it has no positions.
+function <<access.private>> meta::external::language::java::translation::positionBlockOf(section: String[1]): String[1]
+{
+   let lines   = $section->split('\n');
+   let content = $lines->tail();
+   let open    = meta::external::language::java::serialization::markerOpen();
+   // The `//// FILE` line is consumed by the emitter, so the first content line
+   // is Java line 1 — the same numbering a StackTraceElement reports.
+   let rows = range($content->size())
+      ->filter(i | $content->at($i)->contains($open))
+      ->map(i | ($i + 1)->toString() + '\t' + $content->at($i)->split($open)->at(1)->split('*/')->at(0) + '\n')
+      ->joinStrings('');
+   if ($rows == '',
+      | '',
+      | '//// FILE ' + $lines->at(0)->trim() + meta::external::language::java::translation::positionFileSuffix() + '\n' + $rows);
 }
 
 // A class `className` whose `execute` accepts any arguments and throws "not translated: <reason>".

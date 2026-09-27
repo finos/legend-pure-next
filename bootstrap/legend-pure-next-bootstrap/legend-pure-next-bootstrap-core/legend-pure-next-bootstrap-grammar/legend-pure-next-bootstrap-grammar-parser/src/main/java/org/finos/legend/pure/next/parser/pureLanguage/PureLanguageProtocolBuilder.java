@@ -151,6 +151,12 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
         {
             return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value((ctx.STRICTTIME().getText().startsWith("%") ? ctx.STRICTTIME().getText().substring(1) : ctx.STRICTTIME().getText()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("StrictTime")));
         }
+        if (ctx.BINARY() != null)
+        {
+            // `0x1F8B` -> the hex text with `0x` dropped. The protocol carries a
+            // Binary as its encoded text; the compiler decodes it to bytes.
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(ctx.BINARY().getText().substring(2))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("Binary")));
+        }
         throw new RuntimeException("Unsupported literal token" + ": " + ctx.getText());
     }
 

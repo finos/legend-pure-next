@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -793,9 +794,13 @@ public class MetaNatives
             if (!targetTypeUndefined
                     && value != null
                     && !(inputVs instanceof meta.pure.metamodel.valuespecification.Collection)
-                    && targetType instanceof PackageableElement targetPe
-                    && !(value instanceof meta.pure.metamodel.type.generics.TypeParameter)
-                    && !(value instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter))
+                    && targetType instanceof PackageableElement targetPe)
+                    // A value that IS a type symbol used to be exempt from the check
+                    // here and on Truffle; the compiled hosts (JavaScript, the Java
+                    // platform) never were, so the same cast threw on some hosts and
+                    // passed on others. The one place that relied on it — reading a
+                    // name off a property's type, which can be a TypeParameter — now
+                    // asks for the name by shape (helper::type::typeName).
             {
                 String targetPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(targetPe);
                 if (!"meta::pure::metamodel::type::Any".equals(targetPath))

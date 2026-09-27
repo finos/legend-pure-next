@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,7 +78,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::pdb::goldenCase(tes
     ^meta::pure::compiler::test::CompiledGraphTestResult(name = $name, error = $result.failure, durationMs = currentTimeMillis() - $caseStart);
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::pdb::assertMatchesGolden(content:String[1], sourceId:String[1], golden:Integer[*], schema:meta::pure::compiler::pdb::schema::FbsSchema[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::assertMatchesGolden(content:String[1], sourceId:String[1], golden:Binary[1], schema:meta::pure::compiler::pdb::schema::FbsSchema[1]):Boolean[1]
 {
     let result = meta::pure::compiler::test::pdb::compileFixture($content, $sourceId);
     assert($result.errors->isEmpty(), | 'the fixture does not compile: ' + $result.errors->joinStrings('; '));
@@ -102,19 +103,19 @@ function <<test.TestDependency>> meta::pure::compiler::test::pdb::compileFixture
 // --- archive diff ----------------------------------------------------------
 
 // Every difference between the Pure-written archive and the golden, as readable lines.
-function <<test.TestDependency>> meta::pure::compiler::test::pdb::diffArchives(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], pure:Integer[*], golden:Integer[*]):String[*]
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::diffArchives(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], pure:Binary[1], golden:Binary[1]):String[*]
 {
-    let pureEntries   = meta::pure::compiler::pdb::reader::readZipEntries($pure);
-    let goldenEntries = meta::pure::compiler::pdb::reader::readZipEntries($golden);
-    let pureElements   = $pureEntries->filter(e | meta::pure::compiler::pdb::schema::startsWith($e.name, 'elements/'));
-    let goldenElements = $goldenEntries->filter(e | meta::pure::compiler::pdb::schema::startsWith($e.name, 'elements/'));
-    let goldenPaths = $goldenElements->map(e | meta::pure::compiler::test::pdb::entryPath($e.name));
-    let sameElements = ($pureElements->size() == $goldenElements->size()) && $pureElements.name->forAll(n | $goldenElements.name->contains($n));
+    let pureEntries   = meta::pure::compiler::pdb::archive::entryNames($pure);
+    let goldenEntries = meta::pure::compiler::pdb::archive::entryNames($golden);
+    let pureElements   = $pureEntries->filter(n | meta::pure::compiler::pdb::schema::startsWith($n, 'elements/'));
+    let goldenElements = $goldenEntries->filter(n | meta::pure::compiler::pdb::schema::startsWith($n, 'elements/'));
+    let goldenPaths = $goldenElements->map(n | meta::pure::compiler::test::pdb::entryPath($n));
+    let sameElements = ($pureElements->size() == $goldenElements->size()) && $pureElements->forAll(n | $goldenElements->contains($n));
     let elementFindings = $goldenElements->map(g | meta::pure::compiler::test::pdb::elementFinding($schema, $pure, $pureElements, $golden, $g));
     let extraFindings = $pureElements
-        ->filter(e | !$goldenPaths->contains(meta::pure::compiler::test::pdb::entryPath($e.name)))
-        ->map(e | 'only in the Pure archive: ' + meta::pure::compiler::test::pdb::entryPath($e.name));
-    let sectionNames = $pureEntries.name->concatenate($goldenEntries.name)
+        ->filter(n | !$goldenPaths->contains(meta::pure::compiler::test::pdb::entryPath($n)))
+        ->map(n | 'only in the Pure archive: ' + meta::pure::compiler::test::pdb::entryPath($n));
+    let sectionNames = $pureEntries->concatenate($goldenEntries)
         ->filter(n | !meta::pure::compiler::pdb::schema::startsWith($n, 'elements/'))
         ->removeDuplicates()
         ->filter(n | $sameElements || ($n != 'elementIndex'));
@@ -135,37 +136,39 @@ function <<test.TestDependency>> meta::pure::compiler::test::pdb::entryType(name
     $name->substring($name->lastIndexOf('.') + 1);
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::pdb::elementFinding(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], pure:Integer[*], pureElements:meta::pure::compiler::pdb::reader::ZipEntryInfo[*], golden:Integer[*], goldenEntry:meta::pure::compiler::pdb::reader::ZipEntryInfo[1]):String[*]
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::elementFinding(schema:meta::pure::compiler::pdb::schema::FbsSchema[1], pure:Binary[1], pureElements:String[*], golden:Binary[1], goldenEntry:String[1]):String[*]
 {
-    let path = meta::pure::compiler::test::pdb::entryPath($goldenEntry.name);
-    let type = meta::pure::compiler::test::pdb::entryType($goldenEntry.name);
-    let match = $pureElements->filter(e | meta::pure::compiler::test::pdb::entryPath($e.name) == $path);
+    let path = meta::pure::compiler::test::pdb::entryPath($goldenEntry);
+    let type = meta::pure::compiler::test::pdb::entryType($goldenEntry);
+    let match = $pureElements->filter(n | meta::pure::compiler::test::pdb::entryPath($n) == $path);
     if([pair(| $match->isEmpty() && ($type == 'Package'), | []->cast(@String)),
         pair(| $match->isEmpty(), | ['missing from the Pure archive: ' + $path]),
-        pair(| meta::pure::compiler::test::pdb::entryType($match->at(0).name) != $type,
-             | [$path + ' is a ' + meta::pure::compiler::test::pdb::entryType($match->at(0).name) + ' in the Pure archive, a ' + $type + ' in the golden'])],
+        pair(| meta::pure::compiler::test::pdb::entryType($match->at(0)) != $type,
+             | [$path + ' is a ' + meta::pure::compiler::test::pdb::entryType($match->at(0)) + ' in the Pure archive, a ' + $type + ' in the golden'])],
        | meta::pure::compiler::test::pdb::compareNode($schema,
-            meta::pure::compiler::pdb::reader::elementNode(meta::pure::compiler::pdb::reader::zipEntryData($pure, $match->at(0)), $type),
-            meta::pure::compiler::pdb::reader::elementNode(meta::pure::compiler::pdb::reader::zipEntryData($golden, $goldenEntry), $type),
+            meta::pure::compiler::pdb::reader::elementNode(meta::pure::compiler::pdb::archive::entryBytes($pure, $match->at(0)), $type),
+            meta::pure::compiler::pdb::reader::elementNode(meta::pure::compiler::pdb::archive::entryBytes($golden, $goldenEntry), $type),
             $path)->take(1));
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::pdb::sectionFinding(pure:Integer[*], pureEntries:meta::pure::compiler::pdb::reader::ZipEntryInfo[*], golden:Integer[*], goldenEntries:meta::pure::compiler::pdb::reader::ZipEntryInfo[*], name:String[1]):String[*]
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::sectionFinding(pure:Binary[1], pureEntries:String[*], golden:Binary[1], goldenEntries:String[*], name:String[1]):String[*]
 {
-    let pureEntry   = $pureEntries->filter(e | $e.name == $name);
-    let goldenEntry = $goldenEntries->filter(e | $e.name == $name);
-    if([pair(| $pureEntry->isEmpty(),   | ['section missing from the Pure archive: ' + $name]),
-        pair(| $goldenEntry->isEmpty(), | ['section only in the Pure archive: ' + $name]),
+    let inPure   = $pureEntries->contains($name);
+    let inGolden = $goldenEntries->contains($name);
+    if([pair(| !$inPure,   | ['section missing from the Pure archive: ' + $name]),
+        pair(| !$inGolden, | ['section only in the Pure archive: ' + $name]),
         pair(| !meta::pure::compiler::test::pdb::sameBytes(
-                    meta::pure::compiler::pdb::reader::zipEntryData($pure, $pureEntry->at(0)),
-                    meta::pure::compiler::pdb::reader::zipEntryData($golden, $goldenEntry->at(0))),
+                    meta::pure::compiler::pdb::archive::entryBytes($pure, $name),
+                    meta::pure::compiler::pdb::archive::entryBytes($golden, $name)),
              | ['section bytes differ: ' + $name])],
        | []->cast(@String));
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::pdb::sameBytes(a:Integer[*], b:Integer[*]):Boolean[1]
+// Whole-buffer comparison, now one native call rather than an index-by-index
+// walk over two boxed lists.
+function <<test.TestDependency>> meta::pure::compiler::test::pdb::sameBytes(a:Binary[1], b:Binary[1]):Boolean[1]
 {
-    if($a->size() != $b->size(), | false, | range(0, $a->size())->forAll(i | $a->at($i) == $b->at($i)));
+    $a->meta::pure::functions::binary::binaryEquals($b);
 }
 
 // --- node comparison ----------------------------------------------------------

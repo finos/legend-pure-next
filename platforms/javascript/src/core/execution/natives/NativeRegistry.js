@@ -21,11 +21,11 @@
 // module-level state.
 
 import { antlrExtension } from "./AntlrExtension.js";
+import { archiveExtension } from "./ArchiveExtension.js";
 import { compileSourceExtension } from "./CompileSourceExtension.js";
 import { javascriptLanguageExtension } from "./JavaScriptLanguageExtension.js";
 import {
-    ANTLR_NATIVES, COMPILE_SOURCE, DIRECTORY_TREE, EVALUATE, JS_COMPILE_MODULE, JS_DRAIN_COMPILED_SOURCES, JS_EXECUTE, READ_FILE, READ_FILE_BYTES, WRITE_FILE,
-} from "./native-signatures.js";
+    ANTLR_NATIVES, COMPILE_SOURCE, DIRECTORY_TREE, EVALUATE, JS_COMPILE_MODULE, JS_DRAIN_COMPILED_SOURCES, JS_EXECUTE, READ_FILE_BYTES, WRITE_FILE, ENTRY_NAMES, ENTRY_BYTES} from "./native-signatures.js";
 
 // The key each host native is installed under on the runtime's host object (globalThis.__pureHost).
 const HOST_HOOKS = new Map([
@@ -34,10 +34,11 @@ const HOST_HOOKS = new Map([
     [JS_COMPILE_MODULE, "hostJsCompile"],
     [JS_EXECUTE, "hostJsExecute"],
     [JS_DRAIN_COMPILED_SOURCES, "hostJsDrainCompiledSources"],
-    [READ_FILE, "hostReadFile"],
     [READ_FILE_BYTES, "hostReadFileBytes"],
     [DIRECTORY_TREE, "hostDirectoryTree"],
     [WRITE_FILE, "hostWriteFile"],
+    [ENTRY_NAMES, "hostEntryNames"],
+    [ENTRY_BYTES, "hostEntryBytes"],
     ...ANTLR_NATIVES.map(([name, signature]) => [signature, name]),
 ]);
 
@@ -50,7 +51,7 @@ export function hostHookFor(signature) {
 
 // Built-ins every JavaScript host can run. Node-only extensions (FileSystemExtension) are added by
 // the Node host (runtime/load-runtime.js), so browser pages can import this module.
-export const DEFAULT_NATIVES_EXTENSIONS = [compileSourceExtension, javascriptLanguageExtension, antlrExtension];
+export const DEFAULT_NATIVES_EXTENSIONS = [compileSourceExtension, javascriptLanguageExtension, antlrExtension, archiveExtension];
 
 export class NativeRegistry {
     #natives = new Map();

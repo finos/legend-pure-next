@@ -328,6 +328,33 @@ function meta::external::language::java::serialization::getResult(sfer:Stringifi
    $sfer->finishLine().completeLines->joinStrings('');
 }
 
+// A position marker's text, removed. Markers are comments carrying a Pure
+// source position (see positionMarker); they are collected into the position
+// table and stripped from the emitted code, so they must not influence how the
+// code is laid out — otherwise stripping them would leave lines folded and
+// indented as though they were still there, and the generated output would
+// differ from a build with positions turned off.
+// The marker's opening delimiter, built by concatenation ON PURPOSE: this
+// function and positionMarker are themselves translated to Java by this very
+// translator, and a literal '/*@' in their source would appear as a string
+// literal in the generated code, which the stripper below would then mistake for
+// a real marker and strip from — corrupting its own translation. The existing
+// note on '|FOLD' in applyFolds records the same hazard.
+function meta::external::language::java::serialization::markerOpen(): String[1]
+{
+   '/*' + '@'
+}
+
+function meta::external::language::java::serialization::withoutMarkers(s:String[1]): String[1]
+{
+   if (!$s->contains(meta::external::language::java::serialization::markerOpen()),
+      | $s,
+      | $s->split(meta::external::language::java::serialization::markerOpen())->fold({part, acc |
+           let rest = if ($acc->isEmpty(), | $part, | $part->split('*/')->tail()->joinStrings('*/'));
+           $acc->concatenate($rest);
+        }, []->cast(@String))->joinStrings(''));
+}
+
 function <<access.private>> meta::external::language::java::serialization::applyFolds(s:String[1], level:Integer[1], maxLength:Integer[1]): String[1]
 {
    let levelSplit = format('|FOLD%02d|', $level); //TODO: Skip when not on pretty mode
@@ -339,13 +366,16 @@ function <<access.private>> meta::external::language::java::serialization::apply
       {|
          // Using replace->split as split is unreliable on these Strings
          let parts          = $s->replace($levelSplit, '\n')->split('\n')->map(p| $p->applyFolds($level+1, 60));
-         let unfoldedLength = $parts->map(p| $p->replace('\n', '')->length())->sum();
+         // Measured without markers: see withoutMarkers.
+         let unfoldedLength = $parts->map(p| $p->replace('\n', '')->withoutMarkers()->length())->sum();
          if($unfoldedLength <= $maxLength,
             | $parts->map(p| $p->replace('\n', ''))->joinStrings(''),
             {|
                let allParts  = $parts->map(p| $p->split('\n'));
                let prefold   = $allParts->at(0);
-               let padding   = $prefold->chunk(1)->map(ch| ' ')->joinStrings('');
+               // Aligned to the marker-free width, so the indentation still lines
+               // up once the markers are stripped.
+               let padding   = $prefold->withoutMarkers()->chunk(1)->map(ch| ' ')->joinStrings('');
                let remaining = $allParts->tail();
                $prefold + $remaining->head()->concatenate($remaining->tail()->map(p| $padding + $p))->map(p| $p->trimTrailing())->joinStrings('\n');
             }

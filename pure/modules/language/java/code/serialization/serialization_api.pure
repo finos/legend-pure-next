@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,7 +34,18 @@ function meta::external::language::java::serialization::ofEnum(sfer:Stringifier[
    $newSfer->ofEnumInternal($j)->getResult();
 }
 
+// A class as Java source. Position markers are an internal scaffold for building
+// the position tables, not part of the source, so they are stripped here: this
+// is what tests compare against and what in-memory compilation is handed. Only
+// the file emitters, which pass their output through withPositionTable, ask for
+// the marked form below.
 function meta::external::language::java::serialization::classToString(j:meta::external::language::java::metamodel::Class[1]):String[1]
+{
+   $j->meta::external::language::java::serialization::classToStringWithPositions()
+      ->meta::external::language::java::serialization::withoutMarkers();
+}
+
+function meta::external::language::java::serialization::classToStringWithPositions(j:meta::external::language::java::metamodel::Class[1]):String[1]
 {
    newStringifier()->ofClass($j);
 }

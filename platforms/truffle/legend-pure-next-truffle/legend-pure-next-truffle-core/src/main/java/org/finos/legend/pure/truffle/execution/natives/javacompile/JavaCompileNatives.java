@@ -47,14 +47,6 @@ import java.util.Map;
  * must stand alone, and inheriting this JVM's class path would let a reference
  * to a Truffle or Pure class compile and run here unnoticed.</p>
  *
- * <p>The one exception is the Java platform (platforms/java): when the
- * {@code PURE_JAVA_PLATFORM_CLASSES} environment variable names its compiled
- * classes, they — themselves JDK-only generated and runtime code — are the whole
- * class path, and are loaded once by a loader over the platform class loader.
- * This is scaffolding: it lets translated code use the platform's classes while
- * the PCT suite still runs through Truffle, until it runs on the platform
- * itself.</p>
- *
  * <p>A source may hold several compilation units, each introduced by a
  * {@code //// FILE <path>} line (generated platform types are public classes in
  * their own packages).</p>
@@ -72,10 +64,9 @@ public class JavaCompileNatives
         List<InMemoryJavaSource> sources = compilationUnits(className, source);
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
         StandardJavaFileManager standard = compiler.getStandardFileManager(diagnostics, null, null);
-        java.io.File platformClasses = platformClasses();
         try
         {
-            standard.setLocation(StandardLocation.CLASS_PATH, platformClasses == null ? List.of() : List.of(platformClasses));
+            standard.setLocation(StandardLocation.CLASS_PATH, List.of());
         }
         catch (IOException e)
         {
@@ -98,7 +89,7 @@ public class JavaCompileNatives
         Class<?> cls;
         try
         {
-            cls = new InMemoryClassLoader(fm.bytecode, parentLoader(platformClasses)).loadClass(className);
+            cls = new InMemoryClassLoader(fm.bytecode, ClassLoader.getPlatformClassLoader()).loadClass(className);
         }
         catch (ClassNotFoundException e)
         {
@@ -119,34 +110,6 @@ public class JavaCompileNatives
         {
             throw new RuntimeException("Cannot access " + className + "." + methodName + " (must be public static)", e);
         }
-    }
-
-    private static final Map<java.io.File, ClassLoader> PLATFORM_LOADERS = new java.util.concurrent.ConcurrentHashMap<>();
-
-    /** The Java platform's compiled classes, when PURE_JAVA_PLATFORM_CLASSES names a directory. */
-    private static java.io.File platformClasses()
-    {
-        String dir = System.getenv("PURE_JAVA_PLATFORM_CLASSES");
-        return dir == null || dir.isEmpty() || !new java.io.File(dir).isDirectory() ? null : new java.io.File(dir);
-    }
-
-    private static ClassLoader parentLoader(java.io.File platformClasses)
-    {
-        if (platformClasses == null)
-        {
-            return ClassLoader.getPlatformClassLoader();
-        }
-        return PLATFORM_LOADERS.computeIfAbsent(platformClasses, dir ->
-        {
-            try
-            {
-                return new java.net.URLClassLoader(new java.net.URL[]{dir.toURI().toURL()}, ClassLoader.getPlatformClassLoader());
-            }
-            catch (java.net.MalformedURLException e)
-            {
-                throw new RuntimeException(e);
-            }
-        });
     }
 
     /** The compilation units of `source`: one per `//// FILE <path>` block, or the whole source as `className`. */

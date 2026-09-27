@@ -173,7 +173,7 @@ public final class PureContext
     }
 
     void initialize(MetadataAccess resolver, NativeRegistry registry,
-                    java.util.Map<String, org.finos.legend.pure.next.parser.GrammarExtension> grammars)
+                    java.util.Map<String, org.finos.legend.pure.truffle.parser.GrammarExtension> grammars)
     {
         this.resolver = resolver;
         // If the resolver is a ModuleRegistry (the standard case after
@@ -192,7 +192,7 @@ public final class PureContext
      * native. Frozen at {@link #initialize}; rebuild requires a fresh
      * {@link PureContext}.
      */
-    private java.util.Map<String, org.finos.legend.pure.next.parser.GrammarExtension> grammars = java.util.Map.of();
+    private java.util.Map<String, org.finos.legend.pure.truffle.parser.GrammarExtension> grammars = java.util.Map.of();
 
     // ---------------------------------------------------------------
     // Accessors
@@ -200,7 +200,7 @@ public final class PureContext
 
     public MetadataAccess resolver() { return resolver; }
 
-    public java.util.Map<String, org.finos.legend.pure.next.parser.GrammarExtension> grammars() { return grammars; }
+    public java.util.Map<String, org.finos.legend.pure.truffle.parser.GrammarExtension> grammars() { return grammars; }
 
     /**
      * The module registry, if the resolver was a {@link

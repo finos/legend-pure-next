@@ -24,7 +24,26 @@ function <<access.private>> meta::external::language::java::serialization::doCod
    $sfer->ifNotEmpty($code, {s, c| $s->doCode($c->toOne())});
 }
 
+// A Pure call's source position, as a comment immediately before the code it
+// belongs to. A comment costs nothing at run time and — unlike a line counter —
+// survives `applyFolds`, which turns one logical line into several physical
+// ones, so the position stays attached to the physical line it lands on.
+// classToString collects these into the class's position table and strips them.
+function <<access.private>> meta::external::language::java::serialization::positionMarker(sfer:Stringifier[1], code: Code[1]): Stringifier[1]
+{
+   $code.sourceInformation->fold({si, s |
+      $s->addText(meta::external::language::java::serialization::markerOpen() + $si.sourceId->joinStrings('') + ':' + $si.startLine->toString() + ':' + $si.startColumn->toString() + '*/')},
+      $sfer);
+}
+
 function <<access.private>> meta::external::language::java::serialization::doCode(sfer:Stringifier[1], code: Code[1]) :Stringifier[1]
+{
+   let resolved = $code->resolveDeferred();
+   $sfer->meta::external::language::java::serialization::positionMarker($resolved)
+        ->meta::external::language::java::serialization::doCodeNode($resolved);
+}
+
+function <<access.private>> meta::external::language::java::serialization::doCodeNode(sfer:Stringifier[1], code: Code[1]) :Stringifier[1]
 {
    $code->map(c| $c->resolveDeferred())->match([
       c:SimpleCode[1]               | $sfer->forEach($c.code->replace('\n\n','\nBLANKLINE\n')->split('\n')->map(l| if($l->trim() == '', |'BLANKLINE', |$l)), {s, l| if($l == 'BLANKLINE', |$s->blankLine(), |$s->addText($l)->newLine())}),

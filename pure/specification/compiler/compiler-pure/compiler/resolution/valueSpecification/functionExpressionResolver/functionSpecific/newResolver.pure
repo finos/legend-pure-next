@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -277,8 +278,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                                     let propType = $resolvedPropGT->rawType()->derefTypeIfPointer($context);
                                                     let valType = $keyValueVS.genericType->toOne()->rawType()->derefTypeIfPointer($context);
                                                     if($propType->isNotEmpty() && $valType->isNotEmpty(),
-                                                        | let pName = $propType->toOne()->cast(@PackageableElement).name->toOne();
-                                                          let vName = $valType->toOne()->cast(@PackageableElement).name->toOne();
+                                                        | // A property's type can be the enclosing function's type
+                                                          // PARAMETER, which is not a PackageableElement: read the
+                                                          // name off whichever shape the type has.
+                                                          let pName = $propType->toOne()->meta::pure::compiler::helper::type::typeName()->toOne();
+                                                          let vName = $valType->toOne()->meta::pure::compiler::helper::type::typeName()->toOne();
                                                           let skip = $pName == 'Any' || $vName == 'Any' || $vName == 'Nil'
                                                               || $pName == 'Unknown' || $vName == 'Unknown'
                                                               || $pName == $vName

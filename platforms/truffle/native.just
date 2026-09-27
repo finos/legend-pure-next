@@ -55,6 +55,20 @@ build: (_step-start "truffle/native-image") _depCheck_pdbs _depCheck_graalvm
     fi
     # No `clean`: the native profile packages on top of the Truffle install that ran before it, and a clean
     # would delete the surefire reports that install's JUnit run left for the test dashboard.
+    #
+    # What IS cleared is the annotation-processor output and the compiler plugin's
+    # incremental bookkeeping, because a second lifecycle over an existing target/
+    # fails on it either way:
+    #   - output still listed in maven-status/.../inputFiles.lst but deleted from
+    #     disk  -> javac "error reading <file>" (looks like corrupt generated code,
+    #     is simply absent)
+    #   - output still ON disk, and generated-sources is a source root  -> the
+    #     processor re-runs and javac reports "Attempt to recreate a file for type
+    #     PureLanguageProvider"
+    # Removing both makes the processor regenerate from scratch, which is cheap next
+    # to native-image, and leaves target/surefire-reports untouched.
+    find {{truffle}} -type d -path '*/target/generated-sources/annotations' -prune -exec rm -rf {} + 2>/dev/null || true
+    find {{truffle}} -type d -path '*/target/maven-status' -prune -exec rm -rf {} + 2>/dev/null || true
     cd {{truffle}} && mvn -Pnative package -DskipTests {{mvnq}}
     mkdir -p {{truffle_out}}
     cp {{truffle_cli_module}}/target/pure-truffle-native {{truffle_native}}

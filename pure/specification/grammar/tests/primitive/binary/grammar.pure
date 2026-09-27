@@ -1,0 +1,7 @@
+###Pure
+function protocol::binaryLiterals(): Any[*]
+{
+   let header = 0x1F8B08;
+   let one = 0xFF;
+   let empty = 0x;
+}

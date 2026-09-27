@@ -149,7 +149,10 @@ const { registry: host, runtime } = await loadRuntime();
 check("NativeRegistry.createDefault registers the host natives", () => {
     assert.deepEqual(
         NativeRegistry.createDefault().signatures.sort(),
-        [SIG.COMPILE_SOURCE, SIG.EVALUATE, SIG.JS_COMPILE_MODULE, SIG.JS_DRAIN_COMPILED_SOURCES, SIG.JS_EXECUTE, ...SIG.ANTLR_NATIVES.map(([, signature]) => signature)].sort());
+        [SIG.COMPILE_SOURCE, SIG.EVALUATE, SIG.JS_COMPILE_MODULE, SIG.JS_DRAIN_COMPILED_SOURCES, SIG.JS_EXECUTE,
+         // archiveExtension is a DEFAULT extension (a browser can read a .pdb).
+         SIG.ENTRY_NAMES, SIG.ENTRY_BYTES,
+         ...SIG.ANTLR_NATIVES.map(([, signature]) => signature)].sort());
 });
 
 check("NativeRegistry rejects a signature with no runtime-lib hook", () => {
@@ -163,10 +166,11 @@ check("every host native signature is a native declared in the loaded PDBs", () 
         [SIG.JS_COMPILE_MODULE]: "meta::external::language::javascript",
         [SIG.JS_EXECUTE]: "meta::external::language::javascript",
         [SIG.JS_DRAIN_COMPILED_SOURCES]: "meta::external::language::javascript",
-        [SIG.READ_FILE]: "meta::pure::functions::io",
         [SIG.READ_FILE_BYTES]: "meta::pure::functions::io",
         [SIG.DIRECTORY_TREE]: "meta::pure::functions::io",
         [SIG.WRITE_FILE]: "meta::pure::functions::io",
+        [SIG.ENTRY_NAMES]: "meta::pure::compiler::pdb::archive",
+        [SIG.ENTRY_BYTES]: "meta::pure::compiler::pdb::archive",
         ...Object.fromEntries(SIG.ANTLR_NATIVES.map(([, signature]) => [signature, "meta::pure::functions::meta::antlr"])),
     };
     for (const [signature, pkg] of Object.entries(declaredIn)) {
@@ -176,7 +180,7 @@ check("every host native signature is a native declared in the loaded PDBs", () 
 
 check("PureRuntime installs each native on its host object", () => {
     assert.equal(globalThis.__pureHost, runtime.host);
-    for (const key of ["hostCompileSource", "hostJsCompile", "hostJsExecute", "hostJsDrainCompiledSources", "hostEvaluateFunctionDefinition", "hostReadFile", "hostReadFileBytes", "hostDirectoryTree", "hostWriteFile", "hostSourceText", "pureParseTop", "metadataRead", "metadataInvoke", "findAllTypes", ...SIG.ANTLR_NATIVES.map(([name]) => name)]) {
+    for (const key of ["hostCompileSource", "hostJsCompile", "hostJsExecute", "hostJsDrainCompiledSources", "hostEvaluateFunctionDefinition", "hostReadFileBytes", "hostDirectoryTree", "hostWriteFile", "hostSourceText", "pureParseTop", "metadataRead", "metadataInvoke", "findAllTypes", ...SIG.ANTLR_NATIVES.map(([name]) => name)]) {
         assert.equal(typeof runtime.host[key], "function", key);
     }
 });

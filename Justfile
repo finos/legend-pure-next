@@ -49,7 +49,7 @@ test:
 
 # The suites `test` runs. modules::build stages the translator pdbs
 # javascript::test's generate step needs (see `build` ordering note).
-_test: bootstrap::test truffle::test modules::build javascript::test
+_test: bootstrap::test truffle::test modules::build javascript::test java::test-all
 
 # Delete every generated/ directory so the suites below cannot pass against
 # stale output. These are all gitignored build artifacts, each with a recipe

@@ -79,9 +79,13 @@ function meta::external::language::java::translation::renderFullSource(sig: Func
    let unit    = $mainSrc + '\n\n' + $helpers->joinStrings('\n\n');
    // Platform types are public types in their own packages: separate
    // `//// FILE` units, with the program's own unit first.
+   // Markers stripped: this source is compiled in memory, so there is nowhere to
+   // put a position table and nothing to read it — a function translated at run
+   // time has unpositioned frames.
    if ($sig.files->isEmpty(),
-      | $unit,
-      | '//// FILE ' + $sig.class->qualifiedClassName()->replace('.', '/') + '.java\n' + $unit + '\n' + $sig.files->joinStrings('\n'));
+      | $unit->meta::external::language::java::serialization::withoutMarkers(),
+      | ('//// FILE ' + $sig.class->qualifiedClassName()->replace('.', '/') + '.java\n' + $unit + '\n' + $sig.files->joinStrings('\n'))
+           ->meta::external::language::java::serialization::withoutMarkers());
 }
 
 function meta::external::language::java::translation::stripPackageHeader(src: String[1]): String[1]
@@ -96,28 +100,3 @@ function meta::external::language::java::translation::stripPackageHeader(src: St
    );
 }
 
-// Convenience: run every `<<PCT.test>>` under `rootPackagePath` through the
-// translator adapter — each PCT lambda gets compiled to Java, javac'd
-// in-process, reflectively invoked, and the result fed back to the PCT
-// test's assertion. Delegates to the core `runPCTTests(pkg, adapter)`
-// overload with our adapter baked in. Marked `<<test.TestDependency>>`
-// because the core runner has that stereotype (PCT runners go in -tests.pdb).
-function <<test.TestDependency>>
-   meta::external::language::java::translation::runPCTTestsViaTranslator(rootPackagePath:String[1]):String[1]
-{
-   meta::pure::test::runPCTTests(
-      $rootPackagePath,
-      testAdapterForTranslatedJava_Function_1__X_o_
-   );
-}
-
-// Same, also writing the run's test report to `reportPath` (read by tools/test-dashboard).
-function <<test.TestDependency>>
-   meta::external::language::java::translation::runPCTTestsViaTranslator(rootPackagePath:String[1], reportPath:String[1]):String[1]
-{
-   meta::pure::test::runPCTTests(
-      $rootPackagePath,
-      testAdapterForTranslatedJava_Function_1__X_o_,
-      $reportPath
-   );
-}

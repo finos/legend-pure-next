@@ -30,6 +30,7 @@ import meta::pure::metamodel::pointer::*;
 import meta::pure::metamodel::extension::*;
 import meta::pure::metamodel::function::property::*;
 import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::functions::binary::*;
 
 // --- shared encode helpers (called by the emitted writer) ----------------------
 
@@ -174,11 +175,18 @@ function meta::pure::compiler::pdb::writerHelper::createOffsetVector(b:meta::pur
    $b2->meta::pure::compiler::pdb::fbb::endVector($offsets->size());
 }
 
-// Byte vector (union type vectors): startVector(1, n, 1), bytes reversed.
+// Byte vector (union type vectors): startVector(1, n, 1), then the whole run.
+//
+// ONE prepend, not one addScalar per byte. Every prepend copies the buffer
+// accumulated so far, so folding per byte made a byte vector quadratic in its
+// own length. The elements are 1-aligned, so addScalar's prep(1, 0) could
+// never insert padding between them and a single prepend of the run in
+// front-to-back order produces byte-identical output.
 function meta::pure::compiler::pdb::writerHelper::createByteVector(b:meta::pure::compiler::pdb::fbb::Builder[1], bytes:Integer[*]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
    let b1 = $b->meta::pure::compiler::pdb::fbb::startVector(1, $bytes->size(), 1);
-   let b2 = $bytes->reverse()->fold({v, acc | $acc->meta::pure::compiler::pdb::fbb::addScalar($v, 1)}, $b1);
+   let run = $bytes->map(v | meta::pure::functions::binary::intToLeBytes($v, 1))->meta::pure::functions::binary::binaryConcat();
+   let b2 = $b1->meta::pure::compiler::pdb::fbb::prepend($run);
    $b2->meta::pure::compiler::pdb::fbb::endVector($bytes->size());
 }
 
@@ -343,8 +351,8 @@ function <<test.Test>> meta::pure::compiler::pdb::writerHelper::tests::testEncod
                ->meta::pure::compiler::pdb::writerHelper::encodePointerRef(['a::b','c'], meta::pure::compiler::pdb::writerHelper::pointerKind('Property'));
    let fin = $res.builder->meta::pure::compiler::pdb::fbb::finish($res.offset);
    assertEquals(
-      [12,0,0,0, 8,0,12,0, 11,0,4,0, 8,0,0,0, 8,0,0,0, 0,0,0,1, 2,0,0,0, 16,0,0,0, 4,0,0,0, 1,0,0,0, 99,0,0,0, 4,0,0,0, 97,58,58,98, 0,0,0,0],
-      $fin->meta::pure::compiler::pdb::fbb::result());
+      '0C00000008000C000B000400080000000800000000000001020000001000000004000000010000006300000004000000613A3A6200000000',
+      $fin->meta::pure::compiler::pdb::fbb::result()->meta::pure::functions::binary::binaryToHex());
 }
 
 function <<test.Test>> meta::pure::compiler::pdb::writerHelper::tests::testPointerKindAndSegs():Boolean[1]
@@ -375,18 +383,18 @@ function <<test.Test>> meta::pure::compiler::pdb::writerHelper::tests::testShare
                ->meta::pure::compiler::pdb::writerHelper::encodePointerRef(['a::b','a::b'], meta::pure::compiler::pdb::writerHelper::pointerKind('Property'));
    let fin = $res.builder->meta::pure::compiler::pdb::fbb::finish($res.offset);
    assertEquals(
-      [12,0,0,0, 8,0,12,0, 11,0,4,0, 8,0,0,0, 8,0,0,0, 0,0,0,1, 2,0,0,0, 8,0,0,0, 4,0,0,0, 4,0,0,0, 97,58,58,98, 0,0,0,0],
-      $fin->meta::pure::compiler::pdb::fbb::result());
+      '0C00000008000C000B00040008000000080000000000000102000000080000000400000004000000613A3A6200000000',
+      $fin->meta::pure::compiler::pdb::fbb::result()->meta::pure::functions::binary::binaryToHex());
 }
 
 function <<test.Test>> meta::pure::compiler::pdb::writerHelper::tests::testEncodeAncestorRefWireFormat():Boolean[1]
 {
    // depth=0 is the scalar default -> elided (empty vtable, minimal table).
    let r0 = meta::pure::compiler::pdb::fbb::newBuilder()->meta::pure::compiler::pdb::writerHelper::encodeAncestorRef(0);
-   assertEquals([8,0,0,0, 4,0,4,0, 4,0,0,0],
-      $r0.builder->meta::pure::compiler::pdb::fbb::finish($r0.offset)->meta::pure::compiler::pdb::fbb::result());
+   assertEquals('080000000400040004000000',
+      $r0.builder->meta::pure::compiler::pdb::fbb::finish($r0.offset)->meta::pure::compiler::pdb::fbb::result()->meta::pure::functions::binary::binaryToHex());
    // depth=2 is written (int32 field at id 0).
    let r2 = meta::pure::compiler::pdb::fbb::newBuilder()->meta::pure::compiler::pdb::writerHelper::encodeAncestorRef(2);
-   assertEquals([12,0,0,0, 0,0, 6,0,8,0,4,0, 6,0,0,0, 2,0,0,0],
-      $r2.builder->meta::pure::compiler::pdb::fbb::finish($r2.offset)->meta::pure::compiler::pdb::fbb::result());
+   assertEquals('0C00000000000600080004000600000002000000',
+      $r2.builder->meta::pure::compiler::pdb::fbb::finish($r2.offset)->meta::pure::compiler::pdb::fbb::result()->meta::pure::functions::binary::binaryToHex());
 }

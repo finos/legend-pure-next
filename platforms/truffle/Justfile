@@ -52,6 +52,43 @@ substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\
 # Default: build + run all tests.
 default: test
 
+# Translate the PDB reader (meta::pure::compiler::pdb::reader + ::schema) from
+# Pure into legend-pure-next-truffle-core/generated.
+#
+# This is what frees Truffle from flatc, and so from the bootstrap-compiler jar:
+# the reader is shared with the other platforms AS PURE SOURCE, never as a
+# dependency. The support classes it calls into (LazyObject, Metadata,
+# PureLambda, PureValues) are Truffle's own, under truffle.pdbgen — the
+# `platformPackage` argument is what points the generated code at them instead
+# of the Java platform's.
+#
+# Runs on bootstrap: reading compiler.pdb to translate the reader is exactly the
+# circularity the generated reader exists to break, so Truffle cannot do it
+# itself. A BUILD-TIME tool dependency, not a shipped one.
+generate-pdb-reader:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'generate-pdb-reader'
+    cd "{{repo_root}}"
+    out="{{truffle_root}}/legend-pure-next-truffle/legend-pure-next-truffle-core/generated"
+    pkgs="meta::pure::compiler::pdb::reader,meta::pure::compiler::pdb::schema"
+    host="org.finos.legend.pure.truffle.pdbgen"
+    pdbs=(--pdb {{shared_out}}/core.pdb --pdb {{shared_out}}/core-tests.pdb --pdb {{shared_out}}/compiler.pdb
+          --pdb {{shared_out}}/parser-mappings.pdb
+          --pdb {{repo_root}}/pure/modules/language/java/build/java.pdb
+          --pdb {{repo_root}}/pure/modules/translation/shared/build/translation-shared.pdb
+          --pdb {{repo_root}}/pure/modules/translation/java/build/java-translation.pdb
+          --pdb {{repo_root}}/pure/modules/translation/java/build/java-translation-tests.pdb)
+    rm -rf "$out"; mkdir -p "$out"
+    emit() {
+        {{pure_bootstrap}} execute "${pdbs[@]}" --function "$1" --args "$pkgs" "$2" "$host" \
+          | awk -v root="$out" '/^\/\/\/\/ FILE /{ f = root "/" $3; d = f; sub(/\/[^\/]*$/, "", d); system("mkdir -p \"" d "\""); next } f != "" { print > f }'
+    }
+    {{substep}} 'types + functions -> generated/'
+    emit "meta::external::language::java::translation::platform::generatePlatformTypesFor_String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
+    emit "meta::external::language::java::translation::translatePackagesToJavaFor_String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
+    echo "  $(find "$out" -name '*.java' | wc -l | tr -d ' ') files"
+
 # Build the Truffle interpreter (mvn install -DskipTests, fat jar into truffle/build/).
 build: (_mvn "skip-tests")
 
@@ -278,7 +315,14 @@ clean:
 #     → core
 #     → interfaces/cli, interfaces/ide
 # Maven derives the build order from compile deps (cli and ide depend on core).
-_mvn mode: (_step-start "truffle/maven-" + mode) _depCheck_pdbs _depCheck_graalvm
+# generate-pdb-reader is a dependency of the MAVEN step, not just of `build`:
+# `generated/` holds the translated PDB reader, which is a build INPUT, and the
+# root `clean-generated` deletes every generated/ directory in the repo. So any
+# path that cleans and then runs Maven without regenerating (test-java, bench,
+# or a plain `mvn`) fails with 60 "package ...pdb.reader does not exist" errors
+# that look like a cross-platform dependency regression rather than a missing
+# build step. Hanging it here means every Maven invocation is self-healing.
+_mvn mode: (_step-start "truffle/maven-" + mode) _depCheck_pdbs _depCheck_graalvm generate-pdb-reader
     @{{header}} '_mvn'
     @{{substep}} '{{ if mode == "skip-tests" { "mvn install -DskipTests (truffle reactor)" } else { "mvn install (truffle reactor + unit tests)" } }}'
     # `--fail-at-end` so all surefire suites run even when one module's tests

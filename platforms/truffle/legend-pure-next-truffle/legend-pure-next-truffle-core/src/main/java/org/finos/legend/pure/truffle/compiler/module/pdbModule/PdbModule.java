@@ -17,8 +17,8 @@ package org.finos.legend.pure.truffle.compiler.module.pdbModule;
 import org.finos.legend.pure.truffle.compiler.module.MetadataAccess;
 import org.finos.legend.pure.truffle.compiler.module.Module;
 
-import org.finos.legend.pure.m3.module.ModuleManifest;
-import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveReader;
+import org.finos.legend.pure.truffle.module.ModuleManifest;
+import org.finos.legend.pure.truffle.module.CompressedArchiveReader;
 import org.finos.legend.pure.truffle.compiler.module.TruffleTypeCache;
 import org.finos.legend.pure.truffle.compiler.module.TypeCache;
 
@@ -228,18 +228,18 @@ public final class PdbModule implements Module
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object deserialize(String typeName, byte[] data)
     {
-        ByteBuffer bb = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
-        String defClassName = "org.finos.legend.pure.m3.module.pdbModule.fbs." + typeName + "Def";
-        String purePath = GenericFbDecoder
-                .purePathForDef(typeName + "Def", resolver);
+        String purePath = GenericFbDecoder.purePathForDef(typeName + "Def", resolver);
         try
         {
-            Class<?> defClass = Class.forName(defClassName);
-            var getRootMethod = defClass.getMethod("getRootAs" + typeName + "Def", ByteBuffer.class);
-            Object def = getRootMethod.invoke(null, bb);
+            // The TRANSLATED reader (meta::pure::compiler::pdb::reader) roots the
+            // buffer; no flatc class, so no bootstrap-compiler jar. The node is a
+            // position in the bytes, so this stays lazy: the PDO decodes one
+            // property at a time, exactly as the flatc wrapper did.
+            Object node = org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader
+                    .elementNode_Binary_1__String_1__FbsNode_1_.execute(data, typeName);
             return new org.finos.legend.pure.truffle.execution.PureDynamicObject(
                     org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.classInfoFor(purePath, resolver),
-                    def, resolver, null);
+                    node, resolver, null);
         }
         catch (Exception e)
         {

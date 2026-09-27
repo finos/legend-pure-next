@@ -301,13 +301,24 @@ function meta::external::language::javascript::translation::mapDateAndOtherCoder
       pair('execute',           jsExecuteCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('drainCompiledSources', jsDrainCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('parse',             parseCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
-      pair('readFile',          readFileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('readFileBytes',     readFileBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('entryNames',        entryNamesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('entryBytes',        entryBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('directoryTree',     directoryTreeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('writeFile',         writeFileCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('intToLeBytes',      intToLeBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('floatToLeBytes',    floatToLeBytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('stringToUtf8Bytes', stringToUtf8BytesCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('binarySize',        binarySizeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('binaryAt',          binaryAtCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('binaryLeUInt',      binaryLeUIntCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('binaryLeInt',       binaryLeIntCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('binaryUtf8',        binaryUtf8Coder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('binarySlice',       binarySliceCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('binaryConcat',      binaryConcatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('binaryZeros',       binaryZerosCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('binaryEquals',      binaryEqualsCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
+      pair('binaryToHex',       binaryToHexCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('utf8BytesToString', utf8BytesToStringCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('leBytesToFloat',    leBytesToFloatCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
       pair('range',             rangeCoder_ValueSpecification_MANY__Convention_1__Expression_1_),
@@ -3200,11 +3211,16 @@ function meta::external::language::javascript::translation::resolveAndReturnGrap
    jsCall(jsId('__resolveAndReturnGraph'), [$args->at(0)->translateExpression($conv)]);
 }
 
-// readFile(path) -> content. Reading files is a host capability: emits `__readFile(path)`; runtime-lib
-// routes to the host's __hostReadFile (the Node host's FileSystemExtension) and throws where there is no file system.
-function meta::external::language::javascript::translation::readFileCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+// entryNames(archive) / entryBytes(archive, name) -> the ZIP container a .pdb is,
+// routed to the host's own zip reader (archiveRead.pure).
+function meta::external::language::javascript::translation::entryNamesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
-   jsCall(jsId('__readFile'), $args->map(a | $a->translateExpression($conv)));
+   jsCall(jsId('__entryNames'), $args->map(a | $a->translateExpression($conv)));
+}
+
+function meta::external::language::javascript::translation::entryBytesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__entryBytes'), $args->map(a | $a->translateExpression($conv)));
 }
 
 // readFileBytes(path) -> bytes. Emits `__readFileBytes(path)`, routed to the host like readFile.
@@ -3223,6 +3239,61 @@ function meta::external::language::javascript::translation::intToLeBytesCoder(ar
 function meta::external::language::javascript::translation::floatToLeBytesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    jsCall(jsId('__floatToLeBytes'), $args->map(a | $a->translateExpression($conv)));
+}
+
+// The remaining Binary operations. Each is a direct call: a Binary is a
+// Uint8Array, so slicing and concatenation are buffer operations.
+function meta::external::language::javascript::translation::binaryLeUIntCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__binaryLeUInt'), $args->map(a | $a->translateExpression($conv)));
+}
+
+function meta::external::language::javascript::translation::binaryLeIntCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__binaryLeInt'), $args->map(a | $a->translateExpression($conv)));
+}
+
+function meta::external::language::javascript::translation::binaryUtf8Coder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__binaryUtf8'), $args->map(a | $a->translateExpression($conv)));
+}
+
+function meta::external::language::javascript::translation::binarySliceCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__binarySlice'), $args->map(a | $a->translateExpression($conv)));
+}
+
+function meta::external::language::javascript::translation::binaryConcatCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__binaryConcat'), $args->map(a | $a->translateExpression($conv)));
+}
+
+function meta::external::language::javascript::translation::binaryZerosCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__binaryZeros'), $args->map(a | $a->translateExpression($conv)));
+}
+
+function meta::external::language::javascript::translation::binaryEqualsCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__binaryEquals'), $args->map(a | $a->translateExpression($conv)));
+}
+
+function meta::external::language::javascript::translation::binaryToHexCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__binaryToHex'), $args->map(a | $a->translateExpression($conv)));
+}
+
+// `binaryAt(b, i)` — the byte at a zero-based index, O(1). A Byte IS an
+// Integer, so the result is an ordinary Pure Integer (bigint).
+function meta::external::language::javascript::translation::binaryAtCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__binaryAt'), $args->map(a | $a->translateExpression($conv)));
+}
+
+// `binarySize(b)` — the number of bytes in a Binary, O(1).
+function meta::external::language::javascript::translation::binarySizeCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
+{
+   jsCall(jsId('__binarySize'), $args->map(a | $a->translateExpression($conv)));
 }
 
 function meta::external::language::javascript::translation::stringToUtf8BytesCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
@@ -3312,16 +3383,20 @@ function meta::external::language::javascript::translation::translateAtomicValue
                 || $path == 'meta::pure::metamodel::type::primitives::StrictDate'
                 || $path == 'meta::pure::metamodel::type::primitives::DateTime'
                 || $path == 'meta::pure::metamodel::type::primitives::StrictTime';
-   if ($isDate && $a.value->toOne()->instanceOf(String),
-      | let raw = $a.value->toOne()->cast(@String);
-        let iso = if ($raw->startsWith('%'), | $raw->substring(1), | $raw);
-        // __pdate keeps a real JS Date (so arithmetic / getters work) but
-        // attaches the original literal so toString/toRepresentation can
-        // reproduce Pure's granularity (sub-second digit count, date-only vs
-        // datetime) and timezone-to-UTC conversion.
-        jsCall(jsId('__pdate'), [jsStrLit($iso)]);,
-      | $a.value->translatePureValueToTs($conv)
-   );
+   // A binary literal carries its hex text; a Binary is a Uint8Array at run
+   // time, so decode it here, once, rather than at every use.
+   let isBinary = $path == 'meta::pure::metamodel::type::primitives::Binary';
+   if([pair(| $isDate && $a.value->toOne()->instanceOf(String),
+            | let raw = $a.value->toOne()->cast(@String);
+              let iso = if ($raw->startsWith('%'), | $raw->substring(1), | $raw);
+              // __pdate keeps a real JS Date (so arithmetic / getters work) but
+              // attaches the original literal so toString/toRepresentation can
+              // reproduce Pure's granularity (sub-second digit count, date-only
+              // vs datetime) and timezone-to-UTC conversion.
+              jsCall(jsId('__pdate'), [jsStrLit($iso)]);),
+       pair(| $isBinary && $a.value->toOne()->instanceOf(String),
+            | jsCall(jsId('__pbinary'), [jsStrLit($a.value->toOne()->cast(@String))]))],
+      | $a.value->translatePureValueToTs($conv));
 }
 
 // Translate a runtime Pure value into a TS Expression. Scalars become literals

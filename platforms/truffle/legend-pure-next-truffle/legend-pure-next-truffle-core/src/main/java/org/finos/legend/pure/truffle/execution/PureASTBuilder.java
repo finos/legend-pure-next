@@ -1263,6 +1263,14 @@ public final class PureASTBuilder
             {
                 return new AtomicValueNode(PureDate.of(s, typeName));
             }
+            // A binary literal carries its hex text on the AtomicValue so it
+            // round-trips through a .pdb unchanged. Decode here, once, when the
+            // AST is built: at run time a Binary is always a byte[].
+            if ("Binary".equals(typeName))
+            {
+                return new AtomicValueNode(
+                        org.finos.legend.pure.truffle.execution.types.PureBinary.decodeHex(s));
+            }
         }
         return new AtomicValueNode(value);
     }

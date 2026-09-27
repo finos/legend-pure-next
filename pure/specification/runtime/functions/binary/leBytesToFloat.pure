@@ -15,20 +15,20 @@
 import meta::pure::test::pct::*;
 import meta::pure::functions::binary::*;
 
-// Decode 8 little-endian bytes (each 0..255) as an IEEE-754 double — the
-// inverse of floatToLeBytes. Byte-level primitive backing binary
-// deserialization (the self-hosted PDB reader).
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::leBytesToFloat(bytes:Integer[*]):Float[1];
+// Decode 8 little-endian bytes as an IEEE-754 double — the inverse of
+// floatToLeBytes. Byte-level primitive backing binary deserialization (the
+// self-hosted PDB reader).
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::leBytesToFloat(bytes:Binary[1]):Float[1];
 
 function <<PCT.test>> meta::pure::functions::binary::tests::leBytesToFloat::testPi<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // IEEE-754 double 3.14, little-endian (the floatToLeBytes pin reversed)
-    assertEquals(3.14, $f->eval(|[31, 133, 235, 81, 184, 30, 9, 64]->leBytesToFloat()));
+    assertEquals(3.14, $f->eval(|0x1F85EB51B81E0940->leBytesToFloat()));
 }
 
 function <<PCT.test>> meta::pure::functions::binary::tests::leBytesToFloat::testZero<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(0.0, $f->eval(|[0, 0, 0, 0, 0, 0, 0, 0]->leBytesToFloat()));
+    assertEquals(0.0, $f->eval(|0x0000000000000000->leBytesToFloat()));
 }
 
 function <<PCT.test>> meta::pure::functions::binary::tests::leBytesToFloat::testNegative<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
