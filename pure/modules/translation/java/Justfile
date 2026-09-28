@@ -129,3 +129,7 @@ clean:
     @{{header}} 'clean'
     @{{substep}} 'remove build/java-translation.pdb + java-translation-tests.pdb'
     rm -f {{translation_java_out}}/java-translation.pdb {{translation_java_out}}/java-translation-tests.pdb
+    # The gallery too: it is this module's output, and nothing else removes it —
+    # which is how a gallery built against an older test corpus survived weeks of
+    # rebuilds and kept showing stale counts on the dashboard.
+    rm -f {{translation_java_out}}/java-translation-gallery.html

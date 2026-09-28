@@ -601,6 +601,19 @@ jobs:
           mkdir -p ~/.m2/repository
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
 
+      # generate-pdb-reader translates meta::pure::compiler::pdb::{reader,schema}
+      # into legend-pure-next-truffle-core/generated with the JAVA translator,
+      # running on the bootstrap CLI — so it needs those modules' PDBs. They are
+      # NOT in bootstrap-artifacts, and the jobs that publish them (translation-deps
+      # / translations) run after this one, so this job builds them itself. Takes
+      # ~9s with the bootstrap CLI it already restored. Without it the truffle
+      # reactor cannot compile at all: GenericFbDecoder imports the generated
+      # reader, and the failure reads as "package ...pdb.reader does not exist".
+      - name: Build the module PDBs the Truffle PDB reader is generated from
+        run: |
+          just modules::translation_java::build-all
+          just modules::translation_java::build-tests
+
       # `truffle::test` runs the truffle reactor with surefire (Java unit
       # tests) and then the Pure compiler-graph spec suite on Truffle.
       # `truffle::spec-compiler-selfhost` then compiles compiler-pure on
@@ -740,6 +753,19 @@ jobs:
           tar -xf bootstrap-artifacts.tar
           mkdir -p ~/.m2/repository
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
+
+      # generate-pdb-reader translates meta::pure::compiler::pdb::{reader,schema}
+      # into legend-pure-next-truffle-core/generated with the JAVA translator,
+      # running on the bootstrap CLI — so it needs those modules' PDBs. They are
+      # NOT in bootstrap-artifacts, and the jobs that publish them (translation-deps
+      # / translations) run after this one, so this job builds them itself. Takes
+      # ~9s with the bootstrap CLI it already restored. Without it the truffle
+      # reactor cannot compile at all: GenericFbDecoder imports the generated
+      # reader, and the failure reads as "package ...pdb.reader does not exist".
+      - name: Build the module PDBs the Truffle PDB reader is generated from
+        run: |
+          just modules::translation_java::build-all
+          just modules::translation_java::build-tests
 
       # `truffle::native::spec-compiler-selfhost` first builds the native-image
       # binary (~5–10 min, dominated by AOT analysis + compile), then uses it

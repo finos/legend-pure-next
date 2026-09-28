@@ -234,6 +234,16 @@ generate-tests:
         | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
     @echo "  $(find {{generated}} -path '*tests*' -name '*.java' | wc -l | tr -d ' ') test classes"
 
+# Remove everything this platform builds: the translator's output AND Maven's
+# target/. `clean-generated` alone leaves target/classes behind, so a compiled
+# class could outlive both its Pure source and the generated Java it came from.
+#
+# Remove everything this platform builds (generated/ + target/).
+clean: clean-generated
+    @{{header}} 'clean'
+    @{{substep}} 'remove generated/ and mvn target/'
+    cd {{module}} && mvn -q clean
+
 # Remove everything generated, so no stale class outlives its Pure source.
 clean-generated:
     rm -rf {{generated}}

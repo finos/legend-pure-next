@@ -305,3 +305,4 @@ clean:
     @{{header}} 'clean'
     @{{substep}} 'remove build/javascript-translation.pdb + javascript-translation-tests.pdb'
     rm -f {{translation_javascript_out}}/javascript-translation.pdb {{translation_javascript_out}}/javascript-translation-tests.pdb
+    rm -f {{translation_javascript_out}}/javascript-translation-gallery.html

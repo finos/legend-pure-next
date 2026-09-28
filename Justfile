@@ -89,7 +89,13 @@ test-all:
     just --justfile "{{justfile()}}" dashboard
     exit $status
 
-_test-all: clean-generated modules::translation_javascript::antlr-bundle bootstrap::test-all truffle::test-all javascript::test-all modules::test-all
+# `clean`, not `clean-generated`: a full run starts from nothing, so every
+# artifact under test is built by this run. clean-generated only removed the
+# generated/ trees, leaving each module's target/ and the staged shared/ PDBs
+# from whatever built them last — and it deletes generated/ directories that are
+# build INPUTS (Truffle's translated PDB reader, compiler-pure's generated
+# writer), so it took things away without putting the rest back.
+_test-all: clean modules::translation_javascript::antlr-bundle bootstrap::test-all truffle::test-all javascript::test-all modules::test-all
 
 # Render every translator gallery (java + javascript + truffle).
 gallery: modules::gallery
@@ -101,7 +107,7 @@ dashboard:
     node {{root}}/tools/test-dashboard/build.mjs
 
 # Remove shared/ and per-subproject build artifacts.
-clean: bootstrap::clean truffle::clean javascript::clean modules::clean
+clean: bootstrap::clean truffle::clean javascript::clean java::clean modules::clean
     @{{header}} 'clean'
     @{{substep}} 'remove shared/'
     rm -rf {{out}}

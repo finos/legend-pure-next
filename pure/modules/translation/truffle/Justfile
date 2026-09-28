@@ -121,3 +121,4 @@ clean:
     @{{header}} 'clean'
     @{{substep}} 'remove build/truffle-translation-gallery.pdb + -tests.pdb'
     rm -f {{translation_truffle_out}}/truffle-translation-gallery.pdb {{translation_truffle_out}}/truffle-translation-gallery-tests.pdb
+    rm -f {{translation_truffle_out}}/truffle-translation-gallery.html
