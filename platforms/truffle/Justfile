@@ -239,6 +239,11 @@ spec-printer-protocol:
 
 
 # Standalone Pure runTests over meta::pure::functions, against freshly-compiled test sources (in-memory module on top of core.pdb).
+# runtime/printer is in the source list because printProtocolTest.pure declares its
+# tests under meta::pure::functions::printer::protocol::tests — so
+# `runTests meta::pure::functions` picks them up on every other host, which load the
+# suite from a PDB where package and directory need not agree. Only this run compiles
+# by DIRECTORY, so without it the column silently reported 60 tests to the others' 61.
 spec-functions-inmemory:
     @{{header}} 'spec-functions-inmemory'
     @{{substep}} 'compile pure/specification/runtime + runTests (in-memory)'
@@ -250,6 +255,7 @@ spec-functions-inmemory:
         --source-dir {{spec}}/runtime/featureTests \
         --source-dir {{spec}}/runtime/ui \
         --source-dir {{spec}}/runtime/test \
+        --source-dir {{spec}}/runtime/printer \
         --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
         --args "meta::pure::functions" "{{test_results}}/spec/functions/pure@cli-truffle+inMemory.json" {{err_filter}}
 
