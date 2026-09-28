@@ -95,7 +95,18 @@ test-all:
 # from whatever built them last — and it deletes generated/ directories that are
 # build INPUTS (Truffle's translated PDB reader, compiler-pure's generated
 # writer), so it took things away without putting the rest back.
-_test-all: clean modules::translation_javascript::antlr-bundle bootstrap::test-all truffle::test-all javascript::test-all modules::test-all
+# Order is load-bearing, and `clean` is what makes it so. The platforms' builds
+# consume the modules' PDBs: truffle::generate-pdb-reader translates its PDB
+# reader with the JAVA translator, so java.pdb, translation-shared.pdb and
+# java-translation{,-tests}.pdb must exist before truffle::test-all — and
+# modules::test-all runs LAST. While this recipe only ran clean-generated those
+# PDBs survived from an earlier build and the ordering never showed; a real clean
+# deletes them, and truffle then fails with NoSuchFileException: java.pdb.
+#
+# modules::build alone is not enough: it builds translation_java::build, not
+# build-tests, and the reader generation needs the tests PDB as well (its entry
+# points are <<test.TestDependency>>).
+_test-all: clean modules::translation_javascript::antlr-bundle bootstrap::test-all modules::build modules::translation_java::build-tests truffle::test-all javascript::test-all modules::test-all
 
 # Render every translator gallery (java + javascript + truffle).
 gallery: modules::gallery
