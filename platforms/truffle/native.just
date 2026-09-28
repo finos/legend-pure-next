@@ -56,6 +56,13 @@ build: (_step-start "truffle/native-image") _depCheck_pdbs _depCheck_graalvm
     # No `clean`: the native profile packages on top of the Truffle install that ran before it, and a clean
     # would delete the surefire reports that install's JUnit run left for the test dashboard.
     #
+    # native::build runs Maven DIRECTLY, not through the parent's `_mvn`, so the
+    # generated PDB reader is not produced for it by anything else — and
+    # GenericFbDecoder imports it. On a fresh checkout (CI) that fails with
+    # "package org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader does not
+    # exist"; locally it only passed because an earlier `truffle::build` had left
+    # generated/ behind. Generate it here, the same way `_mvn` does for the JVM build.
+    just --justfile "{{truffle_root}}/Justfile" generate-pdb-reader
     # What IS cleared is the annotation-processor output and the compiler plugin's
     # incremental bookkeeping, because a second lifecycle over an existing target/
     # fails on it either way:
