@@ -49,7 +49,7 @@ test:
 
 # The suites `test` runs. modules::build stages the translator pdbs
 # javascript::test's generate step needs (see `build` ordering note).
-_test: bootstrap::test truffle::test modules::build javascript::test
+_test: bootstrap::test truffle::test modules::build javascript::test java::test-all
 
 # Delete every generated/ directory so the suites below cannot pass against
 # stale output. These are all gitignored build artifacts, each with a recipe
@@ -89,7 +89,24 @@ test-all:
     just --justfile "{{justfile()}}" dashboard
     exit $status
 
-_test-all: clean-generated modules::translation_javascript::antlr-bundle bootstrap::test-all truffle::test-all javascript::test-all modules::test-all
+# `clean`, not `clean-generated`: a full run starts from nothing, so every
+# artifact under test is built by this run. clean-generated only removed the
+# generated/ trees, leaving each module's target/ and the staged shared/ PDBs
+# from whatever built them last — and it deletes generated/ directories that are
+# build INPUTS (Truffle's translated PDB reader, compiler-pure's generated
+# writer), so it took things away without putting the rest back.
+# Order is load-bearing, and `clean` is what makes it so. The platforms' builds
+# consume the modules' PDBs: truffle::generate-pdb-reader translates its PDB
+# reader with the JAVA translator, so java.pdb, translation-shared.pdb and
+# java-translation{,-tests}.pdb must exist before truffle::test-all — and
+# modules::test-all runs LAST. While this recipe only ran clean-generated those
+# PDBs survived from an earlier build and the ordering never showed; a real clean
+# deletes them, and truffle then fails with NoSuchFileException: java.pdb.
+#
+# modules::build alone is not enough: it builds translation_java::build, not
+# build-tests, and the reader generation needs the tests PDB as well (its entry
+# points are <<test.TestDependency>>).
+_test-all: clean modules::translation_javascript::antlr-bundle bootstrap::test-all modules::build modules::translation_java::build-tests truffle::test-all javascript::test-all modules::test-all
 
 # Render every translator gallery (java + javascript + truffle).
 gallery: modules::gallery
@@ -101,7 +118,7 @@ dashboard:
     node {{root}}/tools/test-dashboard/build.mjs
 
 # Remove shared/ and per-subproject build artifacts.
-clean: bootstrap::clean truffle::clean javascript::clean modules::clean
+clean: bootstrap::clean truffle::clean javascript::clean java::clean modules::clean
     @{{header}} 'clean'
     @{{substep}} 'remove shared/'
     rm -rf {{out}}

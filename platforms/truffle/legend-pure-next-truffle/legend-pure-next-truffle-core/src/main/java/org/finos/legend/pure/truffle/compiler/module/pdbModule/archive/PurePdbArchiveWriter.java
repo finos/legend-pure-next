@@ -15,7 +15,7 @@
 package org.finos.legend.pure.truffle.compiler.module.pdbModule.archive;
 
 import org.finos.legend.pure.truffle.compiler.module.MetadataAccess;
-import org.finos.legend.pure.m3.module.ModuleManifest;
+import org.finos.legend.pure.truffle.module.ModuleManifest;
 import org.finos.legend.pure.truffle.runtime.PureRuntime;
 import org.finos.legend.pure.truffle.execution.types.ObjectSequence;
 import org.finos.legend.pure.truffle.execution.types.PureSequence;
@@ -41,7 +41,7 @@ import java.util.List;
 public final class PurePdbArchiveWriter
 {
     private static final String WRITE_ARCHIVE_FN_PATH =
-            "meta::pure::compiler::pdb::archive::writeArchive_Any_MANY__String_1__String_1__String_MANY__Map_1__Integer_MANY_";
+            "meta::pure::compiler::pdb::archive::writeArchive_Any_MANY__String_1__String_1__String_MANY__Map_1__Binary_1_";
     private static final String REFBY_FROM_LISTS_FN_PATH =
             "meta::pure::compiler::pdb::archive::referencedByFromLists_String_MANY__String_MANY__Map_1_";
 
@@ -96,9 +96,19 @@ public final class PurePdbArchiveWriter
         Files.write(target, pureBytes(bytesObj));
     }
 
-    /** Pure {@code Integer[*]} (0..255 values) → {@code byte[]}. */
+    /**
+     * The writer's result as bytes. `writeArchive` returns {@code Binary[1]},
+     * which every host represents as a {@code byte[]}, so that is the only path
+     * taken now. The Integer[*] branches below are what Binary replaced; they
+     * cost nothing and are kept because this same helper is reached from older
+     * callers in tests, and a silent wrong answer here writes a corrupt archive.
+     */
     private static byte[] pureBytes(Object o)
     {
+        if (org.finos.legend.pure.truffle.execution.types.PureBinary.isBinary(o))
+        {
+            return org.finos.legend.pure.truffle.execution.types.PureBinary.asBytes(o);
+        }
         if (o instanceof org.finos.legend.pure.truffle.execution.types.LongSequence ls)
         {
             byte[] out = new byte[ls.size()];

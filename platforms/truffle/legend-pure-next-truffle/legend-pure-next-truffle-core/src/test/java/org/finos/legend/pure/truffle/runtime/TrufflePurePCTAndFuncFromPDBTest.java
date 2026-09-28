@@ -118,8 +118,8 @@ class TrufflePurePCTAndFuncFromPDBTest
 
         PureLanguage.configure(resolver, NativeRegistry.createDefault(),
                 java.util.Map.of(
-                        "M3Parser", new org.finos.legend.pure.next.parser.M3GrammarExtension(),
-                        "TopParser", new org.finos.legend.pure.next.parser.TopGrammarExtension()));
+                        "M3Parser", new org.finos.legend.pure.truffle.parser.M3GrammarExtension(),
+                        "TopParser", new org.finos.legend.pure.truffle.parser.TopGrammarExtension()));
         // Build the Engine with err redirected to a buffer + TraceCompilation
         // enabled. The {@link #assertNoCompilationFailures()} hook below scans
         // the buffer for `opt failed` lines and fails the build if any are

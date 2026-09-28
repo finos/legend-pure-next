@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -81,27 +82,35 @@ function meta::pure::functions::printer::compiled::printCompiledVariableExpressi
 // the `%` prefix so re-parse picks the right primitive type.
 function meta::pure::functions::printer::compiled::printCompiledAtomicValue(a: AtomicValue[1], ctx: PrintContext[1]): String[1]
 {
-    if ($a.value->isEmpty(),
-        | '/* todo: empty AtomicValue */',
-        | let v = $a.value->toOne();
-          let typeName = atomicValueTypeName($a);
-          $v->match([
-              s: String[1]  | if (isDateLikeType($typeName), | '%' + $s, | '\'' + escapeStringLiteral($s) + '\''),
-              i: Integer[1] | $i->toString(),
-              f: Float[1]   | $f->toString(),
-              d: Decimal[1] | $d->toString() + 'd',
-              b: Boolean[1] | $b->toString(),
-              vs: ValueSpecification[1] | printCompiledValueSpec($vs, $ctx),
-              lf: LambdaFunction<Any>[1] | printCompiledLambdaFunction($lf, $ctx),
-              // Package / Class / etc. literals (graph-element references) emit
-              // as their (possibly-shortened) path so the parser re-resolves
-              // them on re-parse. The root package's path is empty / 'Root' —
-              // surface syntax is `::`.
-              pe: PackageableElement[1] | let path = $pe->elementToPath();
-                                          if ($path == '' || $path == 'Root', | '::', | ctxShortenIfPossible($path, $ctx));,
-              x: Any[1] | $x->toString()
-          ]);
-    );
+    let typeName = atomicValueTypeName($a);
+    // A binary literal's payload is its hex text; re-parse needs the `0x`
+    // sigil back. `0x` (no digits) is the empty Binary, an empty payload.
+    if([pair(| $typeName == 'meta::pure::metamodel::type::primitives::Binary',
+             | '0x' + $a.value->map(v | $v->toString())->joinStrings('')),
+        pair(| $a.value->isEmpty(),   | '/* todo: empty AtomicValue */')],
+       | printCompiledAtomicLiteral($a.value->toOne(), $typeName, $ctx));
+}
+
+// The literal payload of a non-empty AtomicValue, in its source-text form.
+// `typeName` disambiguates the String-carried literals (the date types).
+function meta::pure::functions::printer::compiled::printCompiledAtomicLiteral(v: Any[1], typeName: String[1], ctx: PrintContext[1]): String[1]
+{
+    $v->match([
+        s: String[1]  | if (isDateLikeType($typeName), | '%' + $s, | '\'' + escapeStringLiteral($s) + '\''),
+        i: Integer[1] | $i->toString(),
+        f: Float[1]   | $f->toString(),
+        d: Decimal[1] | $d->toString() + 'd',
+        b: Boolean[1] | $b->toString(),
+        vs: ValueSpecification[1] | printCompiledValueSpec($vs, $ctx),
+        lf: LambdaFunction<Any>[1] | printCompiledLambdaFunction($lf, $ctx),
+        // Package / Class / etc. literals (graph-element references) emit
+        // as their (possibly-shortened) path so the parser re-resolves
+        // them on re-parse. The root package's path is empty / 'Root' —
+        // surface syntax is `::`.
+        pe: PackageableElement[1] | let path = $pe->elementToPath();
+                                    if ($path == '' || $path == 'Root', | '::', | ctxShortenIfPossible($path, $ctx));,
+        x: Any[1] | $x->toString()
+    ]);
 }
 
 function meta::pure::functions::printer::compiled::atomicValueTypeName(a: AtomicValue[1]): String[1]

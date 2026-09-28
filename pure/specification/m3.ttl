@@ -299,13 +299,6 @@
     :package :meta_pure_metamodel_type_primitives ;
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_meta_pure_metamodel_relationship_Generalization ; :specific :StrictTime ; :general :GenericType_meta_pure_metamodel_type_Any ] .
 
-:Byte a :PrimitiveType ;
-
-    :name [ :classifierGenericType :GenericType_meta_pure_metamodel_type_primitives_String ; :data "Byte" ] ;
-    :classifierGenericType :GenericType_meta_pure_metamodel_type_PrimitiveType ;
-    :package :meta_pure_metamodel_type_primitives ;
-    :generalizations [ a :Generalization ; :classifierGenericType :GenericType_meta_pure_metamodel_relationship_Generalization ; :specific :Byte ; :general :GenericType_meta_pure_metamodel_type_Any ] .
-
 :Binary a :PrimitiveType ;
 
     :name [ :classifierGenericType :GenericType_meta_pure_metamodel_type_primitives_String ; :data "Binary" ] ;

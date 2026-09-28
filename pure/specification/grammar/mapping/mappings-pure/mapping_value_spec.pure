@@ -64,7 +64,13 @@ function meta::pure::parser::mappings::buildInstanceLiteralToken(ctx: AntlrConte
                dateTypeOf($ctx->getTokenText('DATE')->toOne()), $lineOffset),
    | if($ctx->hasToken('STRICTTIME'),
       | atomic($ctx, stripLeadingChar($ctx->getTokenText('STRICTTIME')->toOne()), 'StrictTime', $lineOffset),
-   | atomic($ctx, $ctx->getText(), 'String', $lineOffset)))))))));
+   | if($ctx->hasToken('BINARY'),
+      // `0x1F8B` -> the hex text with `0x` dropped. The PROTOCOL carries a
+      // Binary as its encoded text, which is what the committed primitive
+      // mapping already assumes ("base64 or hex encoded"); the compiler is
+      // what turns it into bytes.
+      | atomic($ctx, stripBinaryPrefix($ctx->getTokenText('BINARY')->toOne()), 'Binary', $lineOffset),
+   | atomic($ctx, $ctx->getText(), 'String', $lineOffset))))))))));
 }
 
 function meta::pure::parser::mappings::stripTrailingChar(text: String[1]): String[1]
@@ -75,6 +81,12 @@ function meta::pure::parser::mappings::stripTrailingChar(text: String[1]): Strin
 function meta::pure::parser::mappings::stripLeadingChar(text: String[1]): String[1]
 {
    $text->substring(1, $text->length())
+}
+
+// `0x1F8B` -> `1F8B`. Two characters, not one: the sigil is `0x`.
+function meta::pure::parser::mappings::stripBinaryPrefix(text: String[1]): String[1]
+{
+   $text->substring(2, $text->length())
 }
 
 function meta::pure::parser::mappings::dateTypeOf(rawDate: String[1]): String[1]

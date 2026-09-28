@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ©2026 JP Morgan Chase & Co. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.finos.legend.pure</groupId>
+    <artifactId>legend-pure-next-java</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Java Platform</name>
+
+    <!--
+      The Java platform: Pure translated to JDK-only Java.
+
+      src/main/java is the handwritten host; generated/ is the translator's
+      output. They are ONE compilation unit, not two: the host imports the
+      generated metamodel (PdbTypes, FbsNode, ...) and ~1250 generated classes
+      call back into the host (Metadata, runtime.*). build-helper adds the
+      generated tree as a second source root so javac sees both at once.
+
+      generated/ sits BESIDE target/, not inside it: `mvn clean` owns target/ and
+      would delete the translator's output, leaving a module that cannot compile
+      ("package org.finos.legend.pure.m3 does not exist").
+
+      Maven alone cannot build this module from a clean checkout — generated/ has
+      to be produced first. `just java::compile` runs the generate steps and then
+      this build; an IDE needs the same done once before it can resolve.
+
+      NO <dependencies>. That is the platform's defining constraint, not an
+      oversight: translated code must stand on the JDK alone, so that a reference
+      to a Truffle or Pure class cannot compile here unnoticed. The ANTLR
+      extension is the one part that needs more, and it is built separately
+      (`just java::build-antlr-ext`) and only put on the class path by programs
+      that parse.
+    -->
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <build-helper.maven.plugin.version>1.9.1</build-helper.maven.plugin.version>
+    </properties>
+
+    <build>
+        <!--
+          The translator's position tables (`Foo.java.pos`, one per generated
+          class, mapping a generated Java line to the Pure source position it came
+          from). They are data, not source, so they are copied as resources and
+          read back by PureStack to put positions on Pure stack frames. There is
+          no src/main/resources in this module, so this replaces nothing.
+        -->
+        <resources>
+            <resource>
+                <directory>${project.basedir}/generated</directory>
+                <includes>
+                    <include>**/*.pos</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper.maven.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>add-translated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/generated</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <!-- The translated tree is large; -nowarn keeps the build readable. -->
+                    <compilerArgs>
+                        <arg>-nowarn</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

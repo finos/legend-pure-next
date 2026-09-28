@@ -29,8 +29,8 @@
 
 const FNS = {
     parseFbs: "meta$pure$compiler$pdb$schema$parseFbs_String_1__FbsSchema_1_",
-    elementNode: "meta$pure$compiler$pdb$reader$elementNode_Integer_MANY__String_1__FbsNode_1_",
-    rootNode: "meta$pure$compiler$pdb$reader$rootNode_Integer_MANY__String_1__FbsNode_1_",
+    elementNode: "meta$pure$compiler$pdb$reader$elementNode_Binary_1__String_1__FbsNode_1_",
+    rootNode: "meta$pure$compiler$pdb$reader$rootNode_Binary_1__String_1__FbsNode_1_",
     readField: "meta$pure$compiler$pdb$reader$readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_",
     fieldPos: "meta$pure$compiler$pdb$reader$fieldPos_FbsNode_1__Integer_1__Integer_1_",
     unwrapValueDef: "meta$pure$compiler$pdb$reader$unwrapValueDef_FbsNode_1__Any_1_",
@@ -47,8 +47,9 @@ function fn(name) {
 // A translated [*] result may surface as an array, a single value, or [].
 export const asList = (v) => (v === undefined || v === null ? [] : Array.isArray(v) ? v : [v]);
 
-// Pure Integer[*] is a list of BigInts; convert entry bytes once per entry.
-export const toPureBytes = (bytes) => Array.from(bytes, BigInt);
+// A Pure Binary IS a Uint8Array, so entry bytes cross as a handle. This used to
+// build one BigInt per byte, per entry.
+export const toPureBytes = (bytes) => (bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
 
 // m3.fbs PointerKind, in declaration order (ReadPointerRef.kind is the index).
 export const POINTER_KINDS = ["Element", "Property", "QualifiedProperty", "Stereotype", "Tag"];

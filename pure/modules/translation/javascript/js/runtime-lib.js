@@ -994,9 +994,9 @@ function __intToLeBytes(value, width) {
   // BigInt bitwise ops emulate two's complement, so negatives come out right.
   const w = Number(width);
   let v = BigInt(value);
-  const out = new Array(w);
+  const out = new Uint8Array(w);
   for (let i = 0; i < w; i++) {
-    out[i] = v & 0xFFn;
+    out[i] = Number(v & 0xFFn);
     v >>= 8n;
   }
   return out;
@@ -1004,8 +1004,7 @@ function __intToLeBytes(value, width) {
 function __floatToLeBytes(value) {
   const buf = new ArrayBuffer(8);
   new DataView(buf).setFloat64(0, Number(value), true);
-  const bytes = new Uint8Array(buf);
-  return Array.from(bytes, (b) => BigInt(b));
+  return new Uint8Array(buf);
 }
 // UTF-8 codecs: TextEncoder/TextDecoder when the host provides them (Node,
 // browsers), else a hand-rolled fallback — a bare ECMAScript host ships neither,
@@ -1036,23 +1035,105 @@ function __utf8Decode(u8) {
   }
   return out;
 }
+// The `Binary` primitive is a Uint8Array. A binary literal carries its hex
+// text on the AtomicValue (so it round-trips through a .pdb unchanged) and is
+// decoded here, once, when the translated code is emitted — at run time a
+// Binary is always a Uint8Array, never the hex text.
+function __pbinary(hex) {
+  const n = hex.length;
+  if (n & 1) throw new Error("Binary literal must have an even number of hex digits: 0x" + hex);
+  const out = new Uint8Array(n / 2);
+  for (let i = 0; i < out.length; i++) {
+    const b = parseInt(hex.substr(2 * i, 2), 16);
+    if (Number.isNaN(b)) throw new Error("Not a hex digit in a Binary literal: 0x" + hex);
+    out[i] = b;
+  }
+  return out;
+}
+function __binaryLeUInt(b, pos, width) {
+  const p = Number(pos), w = Number(width);
+  let acc = 0n;
+  for (let i = w - 1; i >= 0; i--) acc = acc * 256n + BigInt(b[p + i]);
+  return acc;
+}
+function __binaryLeInt(b, pos, width) {
+  const p = Number(pos), w = Number(width);
+  if (w === 0) return 0n;
+  const top = b[p + w - 1];
+  let acc = BigInt(top >= 128 ? top - 256 : top);
+  for (let i = w - 2; i >= 0; i--) acc = acc * 256n + BigInt(b[p + i]);
+  return acc;
+}
+function __binaryUtf8(b, pos, length) {
+  const p = Number(pos), n = Number(length);
+  const view = b.subarray(p, p + n);
+  return typeof TextDecoder !== "undefined" ? new TextDecoder().decode(view) : __utf8Decode(view);
+}
+function __binarySlice(b, from, to) {
+  if (!(b instanceof Uint8Array)) throw new Error("binarySlice expects a Binary (Uint8Array)");
+  const f = Number(from), t = Number(to);
+  if (f < 0 || t > b.length || f > t) {
+    throw new Error("binarySlice [" + f + ", " + t + ") out of bounds for a Binary of " + b.length + " byte(s)");
+  }
+  return b.slice(f, t);
+}
+function __binaryConcat(parts) {
+  const list = parts instanceof Uint8Array ? [parts] : __asArr(parts);
+  let total = 0;
+  for (const p of list) total += p.length;
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const p of list) { out.set(p, at); at += p.length; }
+  return out;
+}
+function __binaryZeros(n) {
+  const c = Number(n);
+  if (c < 0) throw new Error("binaryZeros expects a non-negative count, got " + c);
+  return new Uint8Array(c);
+}
+function __binaryEquals(a, b) {
+  if (!(a instanceof Uint8Array) || !(b instanceof Uint8Array)) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+const __HEX = "0123456789ABCDEF";
+function __binaryToHex(b) {
+  if (!(b instanceof Uint8Array)) throw new Error("binaryToHex expects a Binary (Uint8Array)");
+  let out = "";
+  for (let i = 0; i < b.length; i++) out += __HEX[b[i] >> 4] + __HEX[b[i] & 0xf];
+  return out;
+}
+function __binarySize(b) {
+  if (!(b instanceof Uint8Array)) {
+    throw new Error("binarySize expects a Binary (Uint8Array), got " + (b === null ? "null" : typeof b));
+  }
+  return BigInt(b.length);
+}
+// A Byte is a constrained extension of Integer, so it is an ordinary Pure
+// Integer (bigint) at run time and feeds arithmetic with no conversion.
+// UNSIGNED: 0x8B is 139n.
+function __binaryAt(b, i) {
+  if (!(b instanceof Uint8Array)) {
+    throw new Error("binaryAt expects a Binary (Uint8Array), got " + (b === null ? "null" : typeof b));
+  }
+  const idx = Number(i);
+  if (idx < 0 || idx >= b.length) {
+    throw new Error("binaryAt index " + idx + " out of bounds for a Binary of " + b.length + " byte(s)");
+  }
+  return BigInt(b[idx]);
+}
 function __stringToUtf8Bytes(s) {
-  const bytes = typeof TextEncoder !== "undefined" ? new TextEncoder().encode(s) : __utf8Encode(s);
-  return Array.from(bytes, (b) => BigInt(b));
+  return typeof TextEncoder !== "undefined" ? new TextEncoder().encode(s) : __utf8Encode(s);
 }
-function __utf8BytesToString(bytes) {
-  const arr = __asArr(bytes);
-  const u8 = new Uint8Array(arr.length);
-  for (let i = 0; i < arr.length; i++) u8[i] = Number(arr[i]) & 0xff;
-  return typeof TextDecoder !== "undefined" ? new TextDecoder().decode(u8) : __utf8Decode(u8);
+function __utf8BytesToString(b) {
+  if (!(b instanceof Uint8Array)) throw new Error("utf8BytesToString expects a Binary (Uint8Array)");
+  return typeof TextDecoder !== "undefined" ? new TextDecoder().decode(b) : __utf8Decode(b);
 }
-function __leBytesToFloat(bytes) {
-  const arr = __asArr(bytes);
-  if (arr.length !== 8) throw new Error("leBytesToFloat expects exactly 8 bytes, got " + arr.length);
-  const buf = new ArrayBuffer(8);
-  const dv = new DataView(buf);
-  for (let i = 0; i < 8; i++) dv.setUint8(i, Number(arr[i]) & 0xff);
-  return dv.getFloat64(0, true);
+function __leBytesToFloat(b) {
+  if (!(b instanceof Uint8Array)) throw new Error("leBytesToFloat expects a Binary (Uint8Array)");
+  if (b.length !== 8) throw new Error("leBytesToFloat expects exactly 8 bytes, got " + b.length);
+  return new DataView(b.buffer, b.byteOffset, 8).getFloat64(0, true);
 }
 // Path-keyed CLASS METADATA registry. `__registerClass` statements (emitted by
 // translateClassDecl) publish a class's static metadata — property and
@@ -1158,13 +1239,20 @@ function __compileSource(file, dependencies) {
   throw new Error("compileSource: no host implementation in this environment");
 }
 // readFile(path) / directoryTree(root) — reading files is a HOST capability as well.
-function __readFile(path) {
-  if (typeof globalThis.__pureHost?.hostReadFile === "function") return globalThis.__pureHost?.hostReadFile(path);
-  throw new Error("readFile: no file system in this environment");
-}
 function __readFileBytes(path) {
   if (typeof globalThis.__pureHost?.hostReadFileBytes === "function") return globalThis.__pureHost?.hostReadFileBytes(path);
   throw new Error("readFileBytes: no file system in this environment");
+}
+// entryNames(archive) / entryBytes(archive, name) — reading the ZIP container a
+// .pdb is (archiveRead.pure). A HOST capability: the format stays in Pure, the
+// container is whatever zip reader the environment already has.
+function __entryNames(archive) {
+  if (typeof globalThis.__pureHost?.hostEntryNames === "function") return globalThis.__pureHost?.hostEntryNames(archive);
+  throw new Error("entryNames: no archive reader in this environment");
+}
+function __entryBytes(archive, name) {
+  if (typeof globalThis.__pureHost?.hostEntryBytes === "function") return globalThis.__pureHost?.hostEntryBytes(archive, name);
+  throw new Error("entryBytes: no archive reader in this environment");
 }
 function __directoryTree(root) {
   if (typeof globalThis.__pureHost?.hostDirectoryTree === "function") return globalThis.__pureHost?.hostDirectoryTree(root);
@@ -3220,13 +3308,29 @@ function __withSilencedPrint(body) {
   try { return typeof body === "function" ? body() : body; }
   finally { __printSilenceDepth--; }
 }
+// The WRITE for print/println. process.stdout.write, not console.log: console.log
+// appends a newline of its own, which made `print` behave like `println` and
+// `println` emit TWO. That broke the ANSI progress display outright — it redraws
+// the bar in place with cursor-up/down, so a stray newline after every write
+// pushed the cursor off the bar line and each redraw landed on a fresh line,
+// leaving a stale bar frozen at its first value while the run advanced.
+// Return values are unchanged: println still RETURNS 'x\n'.
+function __writeOut(s) {
+  if (__printSilenceDepth !== 0) return;
+  if (typeof process !== "undefined" && process.stdout && process.stdout.write) {
+    process.stdout.write(s);
+  } else {
+    // No stdout (a browser, say): console.log is the only sink, newline and all.
+    console.log(s);
+  }
+}
 function __print(v) {
   const s = __pureFormat(v, 0);
-  if (__printSilenceDepth === 0) console.log(s);
+  __writeOut(s);
   return s;
 }
 function __println(v) {
   const s = __pureFormat(v, 0) + "\n";
-  if (__printSilenceDepth === 0) console.log(s);
+  __writeOut(s);
   return s;
 }

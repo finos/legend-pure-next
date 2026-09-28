@@ -105,10 +105,10 @@ function meta::pure::compiler::pdb::reader::tests::testSchema():meta::pure::comp
 
 function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testLeInts():Boolean[1]
 {
-   assertEquals(-64, meta::pure::compiler::pdb::reader::leInt([192, 255, 255, 255], 0, 4));
-   assertEquals(4294967232, meta::pure::compiler::pdb::reader::leUInt([192, 255, 255, 255], 0, 4));
-   assertEquals(513, meta::pure::compiler::pdb::reader::leUInt([1, 2], 0, 2));
-   assertEquals(3, meta::pure::compiler::pdb::reader::leInt([0, 3, 0, 0, 0, 0, 0, 0, 0], 1, 8));
+   assertEquals(-64, meta::pure::compiler::pdb::reader::leInt(0xC0FFFFFF, 0, 4));
+   assertEquals(4294967232, meta::pure::compiler::pdb::reader::leUInt(0xC0FFFFFF, 0, 4));
+   assertEquals(513, meta::pure::compiler::pdb::reader::leUInt(0x0102, 0, 2));
+   assertEquals(3, meta::pure::compiler::pdb::reader::leInt(0x000300000000000000, 1, 8));
 }
 
 // Decode the reference Package entry (probe bytes pinned in archiveTests):
@@ -229,26 +229,30 @@ function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadRefs():
                       ->cast(@meta::pure::compiler::pdb::reader::ReadAncestorRef).depth);
 }
 
-// Whole-archive round trip through the zip layer: writeArchive (STORED, CRC 0)
-// → readZipEntries/zipEntryData → per-entry bytes identical to the pinned
-// reference entries, and the Package entry decodes.
+// Whole-archive round trip: writeArchive → the host's archive reader
+// (entryNames/entryBytes) → per-entry bytes identical to the pinned reference
+// entries, and the Package entry decodes.
+//
+// The compression METHOD is no longer asserted: the natives address an entry by
+// name and hand back its bytes, deliberately exposing neither method nor offsets
+// (see archiveRead.pure). What the writer produces is still pinned, byte for
+// byte, by the reference entries below.
 function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadArchiveRoundTrip():Boolean[1]
 {
    let bytes   = meta::pure::compiler::pdb::archive::writeArchive(
                     meta::pure::compiler::pdb::archive::tests::testElements(), 'test', '*', 'core');
-   let entries = meta::pure::compiler::pdb::reader::readZipEntries($bytes);
-   assertEquals(['elements/myPkg.Package', 'elements/myProf.Profile', 'elementIndex', 'manifest'], $entries.name);
-   assertEquals([0, 0, 0, 0], $entries.method);
+   let entries = meta::pure::compiler::pdb::archive::entryNames($bytes);
+   assertEquals(['elements/myPkg.Package', 'elements/myProf.Profile', 'elementIndex', 'manifest'], $entries);
    assertEquals(meta::pure::compiler::pdb::archive::tests::refPackageBytes(),
-                meta::pure::compiler::pdb::reader::zipEntryData($bytes, $entries->at(0)));
+                meta::pure::compiler::pdb::archive::entryBytes($bytes, 'elements/myPkg.Package'));
    assertEquals(meta::pure::compiler::pdb::archive::tests::refProfileBytes(),
-                meta::pure::compiler::pdb::reader::zipEntryData($bytes, $entries->at(1)));
+                meta::pure::compiler::pdb::archive::entryBytes($bytes, 'elements/myProf.Profile'));
    assertEquals(meta::pure::compiler::pdb::archive::tests::refElementIndexBytes(),
-                meta::pure::compiler::pdb::reader::zipEntryData($bytes, $entries->at(2)));
+                meta::pure::compiler::pdb::archive::entryBytes($bytes, 'elementIndex'));
    assertEquals(meta::pure::compiler::pdb::archive::tests::refManifestBytes(),
-                meta::pure::compiler::pdb::reader::zipEntryData($bytes, $entries->at(3)));
+                meta::pure::compiler::pdb::archive::entryBytes($bytes, 'manifest'));
    let s    = meta::pure::compiler::pdb::reader::tests::testSchema();
    let node = meta::pure::compiler::pdb::reader::elementNode(
-                 meta::pure::compiler::pdb::reader::zipEntryData($bytes, $entries->at(0)), 'Package');
+                 meta::pure::compiler::pdb::archive::entryBytes($bytes, 'elements/myPkg.Package'), 'Package');
    assertEquals('myPkg', meta::pure::compiler::pdb::reader::readField($s, $node, 'name'));
 }

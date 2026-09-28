@@ -16,7 +16,6 @@
 package org.finos.legend.pure.truffle.runtime.nativeimage;
 
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.truffle.runtime.PureRuntime;
 import org.finos.legend.pure.truffle.compiler.module.pdbModule.PdbModule;
 import org.finos.legend.pure.truffle.compiler.module.ModuleRegistry;
@@ -101,7 +100,7 @@ public final class PureNativeLib
             // be written (filename derived from module manifest).
             org.finos.legend.pure.truffle.runtime.compilation.TruffleCompilerBinaryBuilder.compile(
                     basePdbs, Path.of(src), Path.of(out),
-                    org.finos.legend.pure.m3.module.TestElementFilter.Mode.NONE,
+                    org.finos.legend.pure.truffle.module.TestElementFilter.Mode.NONE,
                     b -> {});
             return 0;
         }
@@ -169,14 +168,6 @@ public final class PureNativeLib
     private static String executeWithPdbs(List<String> pdbPaths, String function, List<String> args)
             throws Exception
     {
-        // Each PDB carries its own identity in its embedded manifest.
-        List<org.finos.legend.pure.m3.module.pdbModule.PdbModule> modules = new ArrayList<>();
-        for (String p : pdbPaths)
-        {
-            modules.add(new org.finos.legend.pure.m3.module.pdbModule.PdbModule(Path.of(p), org.finos.legend.pure.m3.module.pdbModule.PdbModule.Mode.EXECUTION));
-        }
-        new org.finos.legend.pure.m3.module.ModuleRegistry(modules).attach(java.util.List.of(new PureLanguageExtension()));
-
         List<PdbModule> loaders = new ArrayList<>();
         ModuleRegistry resolver = new ModuleRegistry();
         for (String p : pdbPaths)
@@ -196,14 +187,6 @@ public final class PureNativeLib
         try
         {
             Object fd = resolver.getElement(function);
-            if (fd == null)
-            {
-                for (org.finos.legend.pure.m3.module.pdbModule.PdbModule mod : modules)
-                {
-                    fd = mod.getElement(function);
-                    if (fd != null) break;
-                }
-            }
             if (fd == null)
             {
                 throw new RuntimeException("Function not found: " + function);

@@ -18,6 +18,14 @@
     </properties>
 
     <dependencies>
+        <!-- The parser is generated here, so its runtime is a DIRECT dependency
+             now; it used to arrive transitively from bootstrap-grammar-parser. -->
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4-runtime</artifactId>
+            <version>4.13.2</version>
+        </dependency>
+
         <!-- Bootstrap compiler (for CompressedArchiveReader, FBS Defs) -->
         <dependency>
             <groupId>org.finos.legend.pure</groupId>
@@ -69,17 +77,20 @@
                     <artifactId>commons-codec</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
+            <scope>test</scope>
+            </dependency>
         <dependency>
             <groupId>org.finos.legend.pure</groupId>
             <artifactId>legend-pure-next-bootstrap-execution</artifactId>
             <version>0.0.1-SNAPSHOT</version>
-        </dependency>
+            <scope>test</scope>
+            </dependency>
         <dependency>
             <groupId>org.finos.legend.pure</groupId>
             <artifactId>legend-pure-next-bootstrap-cli</artifactId>
             <version>0.0.1-SNAPSHOT</version>
-        </dependency>
+            <scope>test</scope>
+            </dependency>
 
         <!-- Truffle -->
         <dependency>
@@ -153,21 +164,113 @@
     </dependencies>
 
     <build>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-            </resource>
-            <!-- m3.fbs on the classpath for GenericFbDecoder: the checked-in
-                 wire schema, exposed as generated-specification/m3.fbs. -->
-            <resource>
-                <directory>${project.basedir}/../../../../shared/specification</directory>
-                <includes>
-                    <include>m3.fbs</include>
-                </includes>
-                <targetPath>generated-specification</targetPath>
-            </resource>
-        </resources>
         <plugins>
+            <!--
+              The PDB reader is TRANSLATED FROM reader.pure, not written here:
+              `just truffle::generate-pdb-reader` emits it into generated/. That
+              is what lets Truffle read a .pdb without flatc, and so without the
+              bootstrap-compiler jar — the reader is shared with the other
+              platforms as Pure source, never as a dependency.
+
+              generated/ sits BESIDE target/ so `mvn clean` cannot delete it.
+              Maven alone cannot build this module from a clean checkout; run the
+              generate step first (`just truffle::build` does).
+            -->
+            <!--
+              The ANTLR parser is generated HERE from the shared grammars under
+              pure/specification/grammar/antlr, into Truffle's own package. The
+              grammar is shared as .g4 source; the parser is not shared as a jar
+              — that is what keeps Truffle off bootstrap-grammar-parser, the way
+              the JavaScript platform generates its own from the same files.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <!--
+                      m3.fbs used to reach the classpath inside the
+                      bootstrap-compiler jar. Truffle reads it to build the
+                      reader's schema, so now that it no longer depends on
+                      bootstrap it must ship the schema itself.
+                    -->
+                    <execution>
+                        <id>copy-fbs-schema</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/generated-specification</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../../../../shared/specification</directory>
+                                    <includes>
+                                        <include>m3.fbs</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-antlr-grammars</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/antlr4/org/finos/legend/pure/truffle/parser</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${spec.dir}/grammar/antlr</directory>
+                                    <includes>
+                                        <include>**/*.g4</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <version>4.13.2</version>
+                <executions>
+                    <execution>
+                        <id>antlr</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>${project.build.directory}/antlr4</sourceDirectory>
+                            <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
+                            <visitor>true</visitor>
+                            <listener>false</listener>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.9.1</version>
+                <executions>
+                    <execution>
+                        <id>add-generated-pdb-reader</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/generated</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

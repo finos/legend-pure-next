@@ -1,0 +1,27 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+import meta::pure::functions::binary::*;
+
+// `n` zero bytes — the padding the FlatBuffers builder aligns with. A native
+// so that padding is one allocation rather than a mapped collection.
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::binaryZeros(n:Integer[1]):Binary[1];
+
+function <<PCT.test>> meta::pure::functions::binary::tests::binaryZeros::testPadding<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('000000', $f->eval(|3->binaryZeros()->binaryToHex()));
+    assertEquals(4, $f->eval(|4->binaryZeros()->binarySize()));
+    assertEquals('', $f->eval(|0->binaryZeros()->binaryToHex()));
+}

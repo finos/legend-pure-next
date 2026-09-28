@@ -19,6 +19,17 @@
   --faint: #8E90A3;
   --rule: #DCDCE6;
   --accent: #6D45D9;
+  /* The platform-column bracket: the accent, pulled well back towards the
+     ordinary rule colour so it groups without shouting. Follows the theme,
+     because both colours it mixes are redefined per theme. */
+  --platform-rule: color-mix(in oklab, var(--accent) 38%, var(--rule));
+  /* The conformance grid's cell box. The platform bracket is sized from this, so
+     the two cannot drift apart. */
+  --cellw: 76px;
+  /* The box the horizontal "Platform" caption occupies under a platform column's rotated
+     header: its 5px margin plus its 12px line. A column with no caption reserves the same
+     box as padding, so every rotated header in the row sits on one baseline. */
+  --platform-cap: 17px;
   --accent-soft: #ECE6FB;
   --pass: #1E8A4C;
   --pass-soft: #DDF1E4;
@@ -92,7 +103,61 @@ h3.section { font: 700 12px/1 var(--display); font-stretch: 90%; letter-spacing:
 
 table.grid { border-collapse: separate; border-spacing: 4px; }
 table.grid th { font-weight: 600; text-align: left; vertical-align: bottom; padding: 0 2px 6px; }
-table.grid thead th.col { vertical-align: bottom; }
+/* The header cell is the width of the box below it, and its content is centred, so
+   the rotated block, the "Platform" label and the bracket all share one horizontal
+   axis. Without this the th inherits `text-align: left` from `table.grid th`, which
+   pinned the rotated text to the cell's left edge while the label and the bracket
+   were centred on the 76px box. */
+table.grid thead th.col { vertical-align: bottom; width: var(--cellw); text-align: center; }
+/* The platform columns, bracketed so the backends' own hosts read as a group,
+   apart from the variants beside them.
+   The bracket is sized to the CELL (--cellw), not to the table cell it sits in: a
+   column can be wider than its 76px box whenever a header needs the room, and a
+   bracket drawn on the td box then floats away from the boxes it is marking (the
+   Java group, being one column wide, showed this plainly).
+   The rules are pseudo-elements rather than borders because the grid sets
+   `border-spacing: 4px`, which cuts a per-cell border into dashes at every row;
+   each rule overhangs its cell by half the row gap so neighbours meet. */
+table.grid td.platform { position: relative; }
+table.grid td.platform::before, table.grid td.platform::after {
+  content: ""; position: absolute; top: -2px; bottom: -2px; width: 1px;
+  background: var(--platform-rule); pointer-events: none;
+}
+table.grid td.platform::before { left: 0; }
+table.grid td.platform::after  { left: calc(var(--cellw) - 1px); }
+/* The last row closes the bracket. Its ::before becomes an L — the left rule plus
+   the bottom edge, spanning exactly one cell width — because a td has only two
+   pseudo-elements and a `border-bottom` would span the whole (possibly wider) cell
+   box instead of the box being marked. */
+table.grid tbody tr:last-child td.platform::before {
+  left: 0; top: -2px; bottom: 0; width: var(--cellw); background: none;
+  border-left: 1px solid var(--platform-rule);
+  border-bottom: 1px solid var(--platform-rule);
+}
+table.grid tbody tr:last-child td.platform::after { bottom: 0; }
+/* "Platform", horizontal, under the rotated header and directly above the bracket,
+   held to the cell width so it cannot widen the column. */
+table.grid th.col.platform .platformlabel {
+  display: block; width: var(--cellw); margin: 5px 0 0; height: 12px;
+  font: 700 10px/1.15 var(--display); font-stretch: 85%; letter-spacing: 0.02em;
+  color: var(--platform-rule); text-align: center;
+}
+/* The cells are bottom-aligned, so a column WITHOUT that caption would hang its rotated
+   text a caption-height lower than its neighbours'. Reserving the same box as padding
+   lifts it onto the same baseline. 6px is the th's own padding-bottom. */
+table.grid thead th.col:not(.platform) { padding-bottom: calc(6px + var(--platform-cap)); }
+/* The bracket's top edge, closing it under the "Platform" label. It hangs off the
+   HEADER cell: a th and a td in the same column share a box origin, so `left: 0`
+   plus one cell width matches the side rules, and `bottom: -2px` lands on their top
+   (they start 2px above the first td, which border-spacing puts 4px below the th). */
+table.grid th.col.platform { position: relative; }
+table.grid th.col.platform::after {
+  content: ""; position: absolute; left: 0; width: var(--cellw); bottom: -2px; height: 1px;
+  background: var(--platform-rule); pointer-events: none;
+}
+/* The header text is deliberately outside the bracket: the rule marks the cells being
+   compared, and running it up beside the column title read as an enclosing box
+   around the heading. It starts at the first data row. */
 .colhead { writing-mode: vertical-rl; transform: rotate(180deg); display: inline-flex; flex-direction: column; gap: 3px; align-items: flex-start; white-space: nowrap; }
 /* A small, fixed gap between a technology title and its rotated column headers. */
 table.grid .colhead, table.matrix .colhead { margin-top: 12px; }
@@ -103,9 +168,15 @@ th.gap, td.gap { width: 14px; padding: 0; }
 th.tech { text-align: left; vertical-align: bottom; padding: 0 2px 8px; border-bottom: 2px solid var(--ink); }
 .techname { display: block; font: 800 15px/1 var(--display); font-stretch: 85%; letter-spacing: 0.02em; }
 .technote { display: block; font: 400 12px/1.3 var(--body); color: var(--muted); margin-top: 3px; white-space: nowrap; }
+/* A technology with ONE column must not be widened by its own note: the cells are a
+   fixed 76px and left-aligned, so a nowrap note stretches the column past them and
+   the platform bracket no longer hugs the boxes (Java, whose note is "Java
+   translation", was visibly wider than its cell). Multi-column groups have the room,
+   so they keep nowrap. */
+table.grid th.tech[colspan="1"] .technote { white-space: normal; }
 table.grid tbody th { font: 700 14px/1.2 var(--display); font-stretch: 90%; white-space: nowrap; padding-right: 10px; vertical-align: middle; }
 table.grid tbody th small { display: block; font: 400 12px/1.3 var(--body); color: var(--muted); }
-.cell { width: 76px; height: 64px; border-radius: 6px; border: 1px solid var(--rule); background: var(--surface); position: relative; overflow: hidden; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.cell { width: var(--cellw); height: 64px; border-radius: 6px; border: 1px solid var(--rule); background: var(--surface); position: relative; overflow: hidden; display: grid; place-items: center; cursor: pointer; padding: 0; }
 /* A run's cell: a transparent button covers it (click-through to the matrix, tooltip, focus); the text lets clicks
    through, except the gallery link, which sits above the button. */
 .cell.run:hover, .cell.run:focus-within { border-color: var(--accent); }
@@ -350,42 +421,66 @@ function header() {
     h("div", { class: "label" }, failed ? `in ${failingRuns} of ${ALL.length} runs ${DOT} ${groupFailures().length} distinct causes` : ALL.length ? `all ${ALL.length} runs pass` : empty));
 }
 
-const SELF_HOST = [["compiler"], "self-hosting rebuilds the compiler; only the compiler corpus runs against it"];
+const SELF_HOST = [["compiler"], "the compiler is recompiled by itself; only the compiler corpus runs against it"];
 const PCT_ADAPTER = [["pct"], "a translation adapter runs PCT tests"];
 // columns: [run, label, applies, why]. `applies` lists the specifications a column can run (every one when absent);
 // the grid shows the others as not applicable, with `why` on hover.
 const TECHS = [
-  { id: "bootstrap", label: "Bootstrap", note: "Java interpreter", columns: [
-    ["java", "Java reference", ["grammar", "compiler", "pdb"], "the Java reference implements the parser, compiler and PDB writer; Pure tests and printers are Pure code"],
-    ["pure@cli-bootstrap", "Java reference"],
-    ["pure@cli-bootstrap+selfhost", "self-hosted compiler", ...SELF_HOST]
+  { id: "bootstrap", label: "Bootstrap", note: "Java & Java Interpreter", columns: [
+    ["java", "Bootstrap", ["grammar", "compiler", "pdb"], "the Java reference implements the parser, compiler and PDB writer; Pure tests and printers are Pure code"],
+    ["pure@cli-bootstrap", "Bootstrap"],
+    ["pure@cli-bootstrap+selfhost", "self-compiled compiler", ...SELF_HOST]
   ] },
-  { id: "java", label: "Java", note: "Java translation", columns: [
-    ["java-translation@cli-truffle", "PCT adapter", ...PCT_ADAPTER]
+  { id: "java", label: "Java", note: "AOT", columns: [
+    ["java@platform", "Platform"]
   ] },
-  { id: "truffle", label: "Truffle", note: "GraalVM", columns: [
-    ["pure@cli-truffle", "JIT"],
+  { id: "truffle", label: "Truffle", note: "GraalVM JIT", columns: [
+    ["pure@cli-truffle", "Platform"],
     ["pure@cli-truffle+inMemory", "JIT, in-memory sources", ["functions", "pct"], "compiles the runtime test sources into an in-memory module; covers runtime functions and PCT"],
-    ["pure@cli-truffle+selfhost", "JIT, self-hosted compiler", ...SELF_HOST],
-    ["pure@cli-truffle-native", "native image"],
-    ["pure@cli-truffle-native+selfhost", "native, self-hosted compiler", ...SELF_HOST]
+    ["pure@cli-truffle+selfhost", "self-compiled compiler", ...SELF_HOST]
   ] },
-  { id: "javascript", label: "JavaScript", note: "JavaScript translation", columns: [
-    ["pure@cli-javascript", "platform"],
+  // The native image is its own technology group, not two columns under the JIT
+  // one: it is built by a separate toolchain (native-image, AOT) and diverges in
+  // ways the JIT path cannot surface — eliminated paths, substitutions, and the
+  // reflection registration it alone needs.
+  { id: "truffle-native", label: "Truffle native", note: "GraalVM AOT", columns: [
+    ["pure@cli-truffle-native", "Platform"],
+    ["pure@cli-truffle-native+selfhost", "self-compiled compiler", ...SELF_HOST]
+  ] },
+  { id: "javascript", label: "JavaScript", note: "AOT", columns: [
+    ["pure@cli-javascript", "Platform"],
     ["javascript-translation@cli-javascript", "PCT adapter", ...PCT_ADAPTER]
   ] }
 ];
 const TECH = Object.fromEntries(TECHS.map(t => [t.id, t]));
+// One column per backend IS that backend's platform: the host it ships as,
+// rather than a variant sitting beside it (self-compiled, in-memory sources,
+// native image, a translation PCT adapter) or the JUnit module. The grid
+// outlines these so the four can be compared at a glance without picking them
+// out of eleven columns. Edit this set to change which columns are outlined.
+const PLATFORM_RUNS = new Set([
+  "pure@cli-bootstrap",
+  "java@platform",
+  "pure@cli-truffle",
+  // The native image is a platform, not a variant: it is a separately shipped
+  // host (AOT binary, no JIT) that runs the specifications in its own right —
+  // unlike +selfhost / +inMemory, which re-run a suite on a host already listed.
+  "pure@cli-truffle-native",
+  "pure@cli-javascript"
+]);
 const techOf = run => TECHS.find(t => t.columns.some(c => c[0] === run));
 // The technology that runs the code. A translation run is named after the CLI that drives it
-// (java-translation@cli-truffle, @cli-bootstrap) but belongs to its target language; JUnit classes go by Maven module.
+// (javascript-translation@cli-javascript) but belongs to its target language; JUnit classes go by Maven module.
 function techOfRun(r) {
   const listed = techOf(r.run);
   if (listed) return listed;
   const [impl, rest = ""] = r.run.split("@");
   const host = rest.split("+")[0];
   if (r.kind === "javascript" || impl.startsWith("javascript") || host.replace(/^cli-/, "") === "javascript" || host === "node") return TECH.javascript;
-  if (impl.startsWith("java-translation")) return TECH.java;
+  if (impl.startsWith("java-translation") || (impl === "java" && host === "platform")) return TECH.java;
+  // Native before JIT: "truffle-native" also startsWith("truffle"), so testing the
+  // JIT prefix first would swallow every native run into the JIT group.
+  if (host.replace(/^cli-/, "").startsWith("truffle-native")) return TECH["truffle-native"];
   if (host.replace(/^cli-/, "").startsWith("truffle") || (r.kind === "java" && r.group.includes("truffle"))) return TECH.truffle;
   return TECH.bootstrap;
 }
@@ -394,11 +489,47 @@ for (const r of ALL) if ((r.kind === "spec" || r.kind === "pure") && !techOf(r.r
 const COLUMNS = TECHS.flatMap(t => t.columns.map(c => c[0]));
 const SCOPE = new Map(TECHS.flatMap(t => t.columns.map(([run, , applies, why]) => [run, { applies, why }])));
 const applies = (run, spec) => !SCOPE.get(run)?.applies || SCOPE.get(run).applies.includes(spec);
+// A host whose run-id token is too terse to read as a name of its own. Every column on such
+// a host shows the proper name, so `pure@cli-bootstrap` and `pure@cli-bootstrap+selfhost`
+// both name the interpreter they run on.
+const HOST_NAME = { bootstrap: "Java interpreter", platform: "Java AOT", truffle: "GraalVM JIT", "truffle-native": "GraalVM AOT", javascript: "JavaScript AOT" };
+// The same, for a CLI that reaches the second line: the translator adapter compiles each
+// test lambda as it runs, so it is the JIT counterpart of the platform's whole-package AOT.
+const CLI_NAME = { "javascript-translation": "JavaScript JIT" };
+// Which technology a column sits under, so a CLI that just repeats it can be dropped:
+// `java@platform` under the Java group says nothing with its `java`, while the same `java`
+// CLI under Bootstrap does (it is the reference's own JUnit suites, not the interpreter).
+const GROUP_OF = new Map(TECHS.flatMap(t => t.columns.map(([r]) => [r, t.id])));
 const shortOf = run => { for (const t of TECHS) for (const [r, l] of t.columns) if (r === run) return l; return run; };
-// Three lines: label, implementation, host (+source).
+// Exactly two lines: the variant label, then the one thing from the run id `<cli>@<host>`
+// that adds to it, in accent purple. `pure` is the default CLI and names nothing, so only
+// `java` and `javascript-translation` reach that line; otherwise it is the host, minus its
+// noise `cli-` prefix, and minus the case where it just repeats the label (`java@platform`
+// under the "platform" column). A run's `+source` variant never shows — the label already
+// says it ("self-compiled compiler", "in-memory sources"). The full run id stays on the
+// column's title attribute.
 function colHead(run) {
-  const { impl, host } = runParts(run);
-  return h("span", { class: "colhead" }, h("span", { class: "short" }, shortOf(run)), h("span", { class: "run" }, impl), host ? h("span", { class: "run" }, host) : null);
+  const [impl, rest] = run.split("@");
+  const short = shortOf(run);
+  const token = (rest || "").split("+")[0].replace(/^cli-/, "");
+  const host = HOST_NAME[token] || token;
+  // A segment that only repeats the label is dropped: `java` under the "Java" column,
+  // `platform` under the "platform" column. The label alone is then the whole header.
+  const says = seg => seg && seg.toLowerCase() !== short.toLowerCase() ? seg : null;
+  const cli = impl === "pure" || impl === GROUP_OF.get(run) ? null : says(CLI_NAME[impl] || impl);
+  const site = says(host);
+  // One line only, and the CLI wins it: `javascript-translation` is what distinguishes that
+  // column from the platform column beside it, which has the same `javascript` host.
+  const second = cli || site;
+  // The rotated stack is unchanged — every line stays vertical.
+  // A platform column additionally carries the word "Platform" horizontally BELOW
+  // that stack, just above the bracket that starts at the first data row.
+  const rotated = h("span", { class: "colhead" },
+    h("span", { class: "short" }, short),
+    second ? h("span", { class: "run" }, h("span", { class: "host" }, second)) : null);
+  return PLATFORM_RUNS.has(run)
+    ? [rotated, h("span", { class: "platformlabel" }, "Platform")]
+    : rotated;
 }
 const SPECS = [
   ["grammar", "Grammar", "grammar corpus, protocol.json"],
@@ -433,18 +564,19 @@ state.spec = (SPECS.find(([g]) => ALL.some(r => r.kind === "spec" && r.group ===
 
 function board() {
   const headTech = techs => h("tr", {}, h("th", {}, ""), techs.flatMap((t, i) => [i ? h("th", { class: "gap", "aria-hidden": "true" }) : null, h("th", { class: "tech", colspan: t.columns.length, scope: "colgroup" }, h("span", { class: "techname" }, t.label), h("span", { class: "technote" }, t.note))]));
-  const headCols = techs => h("tr", {}, h("th", {}, ""), techs.flatMap((t, i) => [i ? h("th", { class: "gap", "aria-hidden": "true" }) : null, ...t.columns.map(([c]) => h("th", { scope: "col", class: "col", title: c }, colHead(c)))]));
+  const headCols = techs => h("tr", {}, h("th", {}, ""), techs.flatMap((t, i) => [i ? h("th", { class: "gap", "aria-hidden": "true" }) : null, ...t.columns.map(([c]) => h("th", { scope: "col", class: PLATFORM_RUNS.has(c) ? "col platform" : "col", title: c }, colHead(c)))]));
   const cellFor = (kind, g, label, c) => {
     const run = ALL.find(r => r.kind === kind && r.group === g && r.run === c);
-    if (!run && !appliesTo(kind, c, g)) return h("td", {}, h("div", { class: "cell na", title: `${label} doesn't apply to ${c}: ${whyNot(kind, c)}` }, h("span", { class: "n" }, "n/a")));
-    if (!run) return h("td", {}, h("div", { class: "cell none", title: `No ${label} report for ${c}` }, h("span", { class: "n" }, "no report")));
+    const td = PLATFORM_RUNS.has(c) ? { class: "platform" } : {};
+    if (!run && !appliesTo(kind, c, g)) return h("td", td, h("div", { class: "cell na", title: `${label} doesn't apply to ${c}: ${whyNot(kind, c)}` }, h("span", { class: "n" }, "n/a")));
+    if (!run) return h("td", td, h("div", { class: "cell none", title: `No ${label} report for ${c}` }, h("span", { class: "n" }, "no report")));
     const ran = run.cases.length - run.skipped;
     const ratio = ran ? run.passed / ran : 1;
     // A PCT run with a translation gallery links to it from inside its cell.
     const gallery = kind === "spec" && g === "pct" ? DATA.galleries?.[c] : null;
     const title = `${label} on ${c}: ${run.passed} passed, ${run.failed} failed, ${run.skipped} skipped ${DOT} ${run.file} ${DOT} recorded ${fmtAt(run.recordedAt)}${isOlder(run) ? ", older than the newest report" : ""}`;
     const counts = `${fmtN(run.passed)}/${fmtN(ran)}`;
-    return h("td", {}, h("div", { class: `cell run${run.failed ? " fail" : ""}`, style: `--r:${(ratio * 100).toFixed(1)}%` },
+    return h("td", td, h("div", { class: `cell run${run.failed ? " fail" : ""}`, style: `--r:${(ratio * 100).toFixed(1)}%` },
       h("button", { class: "hit", title, "aria-label": title,
         onclick: () => { state.view = "spec"; state.kind = kind; state.spec = g; state.highlight = c; state.onlyDiff = run.failed > 0; state.open.clear(); state.closed.clear(); render(); } }),
       // The green bar says a run passes, so a passing cell leads with its counts; a failing one with its failures.

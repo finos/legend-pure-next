@@ -30,6 +30,8 @@
 // references where Pure uses ProfilePointers — both land in kind-0 single-
 // segment PointerRefs, byte-identical.
 
+import meta::pure::functions::binary::*;
+
 function meta::pure::compiler::pdb::archive::tests::testElements():Any[*]
 {
    // cgt anchors: name-only on the wire (PointerRef arm), but their `type`
@@ -54,27 +56,27 @@ function meta::pure::compiler::pdb::archive::tests::testElements():Any[*]
 }
 
 // The reference bytes of elements/myPkg.Package (probe, 2026-07-04).
-function meta::pure::compiler::pdb::archive::tests::refPackageBytes():Integer[*]
+function meta::pure::compiler::pdb::archive::tests::refPackageBytes():Binary[1]
 {
-   [24,0,0,0,20,0,20,0,19,0,12,0,0,0,0,0,0,0,8,0,0,0,4,0,20,0,0,0,16,0,0,0,48,0,0,0,64,0,0,0,0,0,0,1,1,0,0,0,4,0,0,0,216,255,255,255,4,0,0,0,1,0,0,0,4,0,0,0,6,0,0,0,109,121,80,114,111,102,0,0,5,0,0,0,109,121,80,107,103,0,0,0,8,0,8,0,0,0,4,0,8,0,0,0,4,0,0,0,1,0,0,0,4,0,0,0,12,0,0,0,116,101,115,116,65,110,99,104,111,114,71,84,0,0,0,0];
+   0x180000001400140013000C0000000000000008000000040014000000100000003000000040000000000000010100000004000000D8FFFFFF040000000100000004000000060000006D7950726F660000050000006D79506B670000000800080000000400080000000400000001000000040000000C00000074657374416E63686F72475400000000;
 }
 
 // The reference bytes of elements/myProf.Profile (probe, 2026-07-04).
-function meta::pure::compiler::pdb::archive::tests::refProfileBytes():Integer[*]
+function meta::pure::compiler::pdb::archive::tests::refProfileBytes():Binary[1]
 {
-   [28,0,0,0,0,0,22,0,24,0,23,0,16,0,0,0,0,0,0,0,8,0,12,0,0,0,4,0,22,0,0,0,20,0,0,0,100,0,0,0,108,0,0,0,140,0,0,0,0,0,0,1,1,0,0,0,20,0,0,0,0,0,14,0,20,0,19,0,12,0,0,0,4,0,8,0,14,0,0,0,16,0,0,0,20,0,0,0,32,0,0,0,0,0,0,1,3,0,0,0,115,116,49,0,184,255,255,255,4,0,0,0,1,0,0,0,20,0,0,0,200,255,255,255,4,0,0,0,1,0,0,0,68,0,0,0,6,0,0,0,109,121,80,114,111,102,0,0,228,255,255,255,4,0,0,0,1,0,0,0,4,0,0,0,5,0,0,0,109,121,80,107,103,0,0,0,8,0,8,0,0,0,4,0,8,0,0,0,4,0,0,0,1,0,0,0,4,0,0,0,12,0,0,0,116,101,115,116,65,110,99,104,111,114,71,84,0,0,0,0];
+   0x1C0000000000160018001700100000000000000008000C00000004001600000014000000640000006C0000008C00000000000001010000001400000000000E00140013000C000000040008000E000000100000001400000020000000000000010300000073743100B8FFFFFF040000000100000014000000C8FFFFFF040000000100000044000000060000006D7950726F660000E4FFFFFF040000000100000004000000050000006D79506B670000000800080000000400080000000400000001000000040000000C00000074657374416E63686F72475400000000;
 }
 
 // The reference bytes of the elementIndex section (probe, 2026-07-04).
-function meta::pure::compiler::pdb::archive::tests::refElementIndexBytes():Integer[*]
+function meta::pure::compiler::pdb::archive::tests::refElementIndexBytes():Binary[1]
 {
-   [12,0,0,0,0,0,6,0,8,0,4,0,6,0,0,0,4,0,0,0,2,0,0,0,52,0,0,0,4,0,0,0,220,255,255,255,20,0,0,0,4,0,0,0,7,0,0,0,80,114,111,102,105,108,101,0,6,0,0,0,109,121,80,114,111,102,0,0,8,0,12,0,4,0,8,0,8,0,0,0,20,0,0,0,4,0,0,0,7,0,0,0,80,97,99,107,97,103,101,0,5,0,0,0,109,121,80,107,103,0,0,0];
+   0x0C00000000000600080004000600000004000000020000003400000004000000DCFFFFFF14000000040000000700000050726F66696C6500060000006D7950726F66000008000C0004000800080000001400000004000000070000005061636B61676500050000006D79506B67000000;
 }
 
 // The reference bytes of the manifest section for ('test', '*', ['core']).
-function meta::pure::compiler::pdb::archive::tests::refManifestBytes():Integer[*]
+function meta::pure::compiler::pdb::archive::tests::refManifestBytes():Binary[1]
 {
-   [123,10,32,32,34,110,97,109,101,34,58,32,34,116,101,115,116,34,44,10,32,32,34,112,97,99,107,97,103,101,80,97,116,116,101,114,110,34,58,32,34,42,34,44,10,32,32,34,100,101,112,101,110,100,101,110,99,105,101,115,34,58,32,91,34,99,111,114,101,34,93,10,125,10];
+   0x7B0A2020226E616D65223A202274657374222C0A2020227061636B6167655061747465726E223A20222A222C0A202022646570656E64656E63696573223A205B22636F7265225D0A7D0A;
 }
 
 function <<test.Test>> meta::pure::compiler::pdb::archive::tests::testElementTypeNameAndEntryName():Boolean[1]
@@ -138,17 +140,17 @@ function <<test.Test>> meta::pure::compiler::pdb::archive::tests::testArchiveEnt
 function <<test.Test>> meta::pure::compiler::pdb::archive::tests::testZipStoredLayout():Boolean[1]
 {
    let zip = meta::pure::compiler::pdb::archive::zipStored(
-                ^meta::pure::compiler::pdb::archive::ArchiveEntry(name = 'a', data = [1, 2, 3]));
-   assertEquals([
+                ^meta::pure::compiler::pdb::archive::ArchiveEntry(name = 'a', data = 0x010203));
+   assertEquals(
       // local file header (30) + name 'a'
-      80,75,3,4, 20,0, 0,0, 0,0, 0,0, 33,0, 0,0,0,0, 3,0,0,0, 3,0,0,0, 1,0, 0,0, 97,
+      '504B0304' + '1400' + '0000' + '0000' + '0000' + '2100' + '00000000' + '03000000' + '03000000' + '0100' + '0000' + '61'
       // data
-      1,2,3,
+      + '010203'
       // central directory header (46) + name 'a'
-      80,75,1,2, 20,0, 20,0, 0,0, 0,0, 0,0, 33,0, 0,0,0,0, 3,0,0,0, 3,0,0,0, 1,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,0, 0,0,0,0, 97,
+      + '504B0102' + '1400' + '1400' + '0000' + '0000' + '0000' + '2100' + '00000000' + '03000000' + '03000000' + '0100' + '0000' + '0000' + '0000' + '0000' + '00000000' + '00000000' + '61'
       // end of central directory (22): 1 entry, cd size 47, cd offset 34
-      80,75,5,6, 0,0, 0,0, 1,0, 1,0, 47,0,0,0, 34,0,0,0, 0,0],
-      $zip);
+      + '504B0506' + '0000' + '0000' + '0100' + '0100' + '2F000000' + '22000000' + '0000',
+      $zip->binaryToHex());
 }
 
 // Whole archive: zip of the pinned entries. Sizes compose from the pinned
@@ -158,13 +160,13 @@ function <<test.Test>> meta::pure::compiler::pdb::archive::tests::testWriteArchi
    let bytes = meta::pure::compiler::pdb::archive::writeArchive(
                   meta::pure::compiler::pdb::archive::tests::testElements(), 'test', '*', 'core');
    // local headers: 4 sigs; central: 4; EOCD: 1
-   assertEquals([80, 75, 3, 4], $bytes->slice(0, 4));
-   assertEquals([80, 75, 5, 6], $bytes->slice($bytes->size() - 22, $bytes->size() - 18));
+   assertEquals('504B0304', $bytes->binarySlice(0, 4)->binaryToHex());
+   assertEquals('504B0506', $bytes->binarySlice($bytes->binarySize() - 22, $bytes->binarySize() - 18)->binaryToHex());
    let names = ['elements/myPkg.Package', 'elements/myProf.Profile', 'elementIndex', 'manifest'];
-   let dataSizes = meta::pure::compiler::pdb::archive::tests::refPackageBytes()->size()
-                 + meta::pure::compiler::pdb::archive::tests::refProfileBytes()->size()
-                 + meta::pure::compiler::pdb::archive::tests::refElementIndexBytes()->size()
-                 + meta::pure::compiler::pdb::archive::tests::refManifestBytes()->size();
+   let dataSizes = meta::pure::compiler::pdb::archive::tests::refPackageBytes()->binarySize()
+                 + meta::pure::compiler::pdb::archive::tests::refProfileBytes()->binarySize()
+                 + meta::pure::compiler::pdb::archive::tests::refElementIndexBytes()->binarySize()
+                 + meta::pure::compiler::pdb::archive::tests::refManifestBytes()->binarySize();
    let nameSizes = $names->map(n | $n->length())->fold({x, a | $x + $a}, 0);
-   assertEquals($dataSizes + (2 * $nameSizes) + (4 * 30) + (4 * 46) + 22, $bytes->size());
+   assertEquals($dataSizes + (2 * $nameSizes) + (4 * 30) + (4 * 46) + 22, $bytes->binarySize());
 }

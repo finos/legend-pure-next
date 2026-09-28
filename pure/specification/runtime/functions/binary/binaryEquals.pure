@@ -1,0 +1,35 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+import meta::pure::functions::binary::*;
+
+// Whole-sequence equality. A Binary is a host byte array, whose natural `==`
+// is identity on every platform here, so content comparison is explicit.
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::binaryEquals(a:Binary[1], b:Binary[1]):Boolean[1];
+
+function <<PCT.test>> meta::pure::functions::binary::tests::binaryEquals::testEqualContent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(true, $f->eval(|0x1F8B08->binaryEquals(0x1F8B08)));
+    assertEquals(true, $f->eval(|0x->binaryEquals(0x)));
+    // Built a different way, so not the same array.
+    assertEquals(true, $f->eval(|[0x1F, 0x8B]->binaryConcat()->binaryEquals(0x1F8B)));
+}
+
+function <<PCT.test>> meta::pure::functions::binary::tests::binaryEquals::testDifferentContent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(false, $f->eval(|0x1F8B->binaryEquals(0x1F8B08)));
+    assertEquals(false, $f->eval(|0x1F8B->binaryEquals(0x1F8C)));
+    assertEquals(false, $f->eval(|0x->binaryEquals(0xFF)));
+}

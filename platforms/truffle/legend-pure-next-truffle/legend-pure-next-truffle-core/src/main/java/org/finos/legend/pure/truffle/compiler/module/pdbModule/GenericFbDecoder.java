@@ -14,6 +14,22 @@
 
 package org.finos.legend.pure.truffle.compiler.module.pdbModule;
 
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.decodeNode_FbsNode_1__Any_1_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readBoolField_FbsNode_1__Integer_1__Boolean_1__Boolean_1_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readFloatField_FbsNode_1__Integer_1__Float_1_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readIntField_FbsNode_1__Integer_1__Integer_1__Boolean_1__Integer_1__Integer_1_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readStringField_FbsNode_1__Integer_1__String_$0_1$_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readStringVector_FbsNode_1__Integer_1__String_MANY_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readTableField_FbsNode_1__Integer_1__String_1__FbsNode_$0_1$_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readTableVector_FbsNode_1__Integer_1__String_1__FbsNode_MANY_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readUnionField_FbsSchema_1__FbsNode_1__Integer_1__String_1__FbsNode_$0_1$_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readUnionVector_FbsSchema_1__FbsNode_1__Integer_1__String_1__FbsNode_MANY_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.scalarWidth_String_1__Integer_1_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.table_FbsSchema_1__String_1__FbsTable_$0_1$_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.FbsNode;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.ReadPointerRef;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_;
+import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.unwrapValueDef_FbsNode_1__Any_1_;
 import org.finos.legend.pure.truffle.execution.PureDynamicObject;
 import org.finos.legend.pure.truffle.compiler.module.PureClassRegistry;
 import org.finos.legend.pure.truffle.compiler.module.EnumValueSingletons;
@@ -74,7 +90,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class GenericFbDecoder
 {
-    private static final String FBS_PKG = "org.finos.legend.pure.m3.module.pdbModule.fbs";
     private static final String SCHEMA_RESOURCE = "generated-specification/m3.fbs";
     private static final String ENUMERATION_PATH = "meta::pure::metamodel::type::Enumeration";
     private static final String ATOMIC_VALUE_CONTENT_UNION = "AtomicValueContentUnion";
@@ -97,7 +112,7 @@ public final class GenericFbDecoder
         {
             return null;
         }
-        FieldPlan plan = planFor(fb.getClass()).fields.get(name);
+        FieldPlan plan = planFor(((FbsNode) fb).type()).fields.get(name);
         if (plan != null)
         {
             return plan.read(fb, resolver, parent);
@@ -288,17 +303,52 @@ public final class GenericFbDecoder
     // Per-Def-class decode plans
     // =========================================================================
 
-    private static final ConcurrentHashMap<Class<?>, TablePlan> PLANS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, TablePlan> PLANS = new ConcurrentHashMap<>();
 
-    private static TablePlan planFor(Class<?> defClass)
+    private static TablePlan planFor(String tableName)
     {
-        TablePlan plan = PLANS.get(defClass);
+        TablePlan plan = PLANS.get(tableName);
         if (plan == null)
         {
-            plan = buildPlan(defClass);
-            PLANS.putIfAbsent(defClass, plan);
+            plan = buildPlan(tableName);
+            PLANS.putIfAbsent(tableName, plan);
         }
         return plan;
+    }
+
+    /**
+     * The schema the TRANSLATED reader reads against — parsed from the same
+     * m3.fbs, by `meta::pure::compiler::pdb::schema::parseFbs`.
+     */
+    private static volatile org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsSchema pureSchema;
+
+    static org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsSchema pureSchema()
+    {
+        var s = pureSchema;
+        if (s == null)
+        {
+            synchronized (GenericFbDecoder.class)
+            {
+                s = pureSchema;
+                if (s == null)
+                {
+                    try (InputStream in = GenericFbDecoder.class.getClassLoader().getResourceAsStream(SCHEMA_RESOURCE))
+                    {
+                        if (in == null)
+                        {
+                            throw new IllegalStateException("Schema resource not on classpath: " + SCHEMA_RESOURCE);
+                        }
+                        pureSchema = s = org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.parseFbs_String_1__FbsSchema_1_
+                                .execute(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+                    }
+                    catch (java.io.IOException e)
+                    {
+                        throw new IllegalStateException("Cannot read " + SCHEMA_RESOURCE, e);
+                    }
+                }
+            }
+        }
+        return s;
     }
 
     private static final class TablePlan
@@ -312,10 +362,9 @@ public final class GenericFbDecoder
         STRING_VECTOR, PRIM_VECTOR, TABLE_VECTOR, POINTERREF_VECTOR, UNION_VECTOR
     }
 
-    private static TablePlan buildPlan(Class<?> defClass)
+    private static TablePlan buildPlan(String tableName)
     {
         TablePlan plan = new TablePlan();
-        String tableName = defClass.getSimpleName();
         List<FbsSchema.FbsField> fields = schema().getTableFields(tableName);
         if (fields == null)
         {
@@ -337,7 +386,7 @@ public final class GenericFbDecoder
             }
             try
             {
-                FieldPlan fieldPlan = new FieldPlan(tableName, camelKey, f, defClass);
+                FieldPlan fieldPlan = new FieldPlan(tableName, camelKey, f);
                 plan.fields.put(camelKey, fieldPlan);
                 plan.fields.put(f.name(), fieldPlan);
             }
@@ -355,48 +404,35 @@ public final class GenericFbDecoder
         final String pureProperty;
         final String rawFieldName; // fbs spelling — fallback Pure name (see buildPlan)
         final Shape shape;
-        final Method get;        // scalar getter / indexed vector getter / union value getter
-        final Method length;     // vectors only
-        final Method unionType;  // unions only: camelType() or camelType(int)
         final String unionName;  // unions only
-        final UnionMember[] members; // unions only, index = discriminator - 1
         final String tableDefName;   // table fields only
+        // Resolved ONCE from the Pure schema: readField would otherwise scan
+        // the whole schema for the table and then the field on EVERY property
+        // read, which is what a lazy PDO does constantly.
+        final int fbsId;
+        final String fbsType;
+        final int scalarWidth;
         private volatile StringTypeInfo stringInfo; // string fields, lazily resolved
 
-        FieldPlan(String tableName, String pureProperty, FbsSchema.FbsField f, Class<?> defClass)
+        FieldPlan(String tableName, String pureProperty, FbsSchema.FbsField f)
                 throws ReflectiveOperationException
         {
             this.tableName = tableName;
             this.pureProperty = pureProperty;
             this.rawFieldName = f.name();
-            String camel = FbsSchema.snakeToCamel(f.name());
-            Class<?> fbTable = com.google.flatbuffers.Table.class;
+            var pureField = pureFieldOf(tableName, f.name());
+            this.fbsId = pureField == null ? -1 : pureField.id().intValue();
+            this.fbsType = pureField == null ? f.type() : pureField.type();
+            this.scalarWidth = (int) scalarWidth_String_1__Integer_1_.execute(this.fbsType);
             if (f.isUnion())
             {
                 this.shape = f.isVector() ? Shape.UNION_VECTOR : Shape.UNION_SCALAR;
                 this.unionName = f.type();
-                this.get = f.isVector()
-                        ? defClass.getMethod(camel, fbTable, int.class)
-                        : defClass.getMethod(camel, fbTable);
-                this.unionType = unionTypeMethod(defClass, camel, f.isVector());
-                this.length = f.isVector() ? defClass.getMethod(camel + "Length") : null;
-                List<String> memberNames = schema().getUnionMembers(f.type());
-                if (memberNames == null)
-                {
-                    throw new IllegalStateException("Unknown union type: " + f.type());
-                }
-                this.members = new UnionMember[memberNames.size()];
-                for (int i = 0; i < memberNames.size(); i++)
-                {
-                    this.members[i] = new UnionMember(memberNames.get(i));
-                }
                 this.tableDefName = null;
             }
             else
             {
                 this.unionName = null;
-                this.unionType = null;
-                this.members = null;
                 boolean isTable = schema().hasTable(f.type()) || "PointerRef".equals(f.type()) || "AncestorRef".equals(f.type());
                 switch (f.type())
                 {
@@ -425,66 +461,60 @@ public final class GenericFbDecoder
                         this.tableDefName = f.type();
                         break;
                 }
-                this.get = f.isVector() ? defClass.getMethod(camel, int.class) : defClass.getMethod(camel);
-                this.length = f.isVector() ? defClass.getMethod(camel + "Length") : null;
             }
         }
+
 
         /**
-         * flatc names the union discriminator accessor {@code <camel>Type()}
-         * — except for keyword-escaped fields, where it comes out as e.g.
-         * {@code type_type()} (base {@code type_}); resolve empirically.
+         * Read this field off the node, through the TRANSLATED reader
+         * ({@code meta::pure::compiler::pdb::reader::readField}).
+         *
+         * <p>readField is schema-driven and already resolves unions and
+         * categorises by fbs type, so the shapes below only marshal its result
+         * into Truffle values. It stays LAZY: a nested table comes back as an
+         * {@link FbsNode}, never a decoded graph, so a PDO still decodes one
+         * property at a time.</p>
          */
-        private static Method unionTypeMethod(Class<?> defClass, String camel, boolean isVector)
-                throws NoSuchMethodException
-        {
-            Class<?>[] params = isVector ? new Class<?>[]{int.class} : new Class<?>[0];
-            try
-            {
-                return defClass.getMethod(camel + "Type", params);
-            }
-            catch (NoSuchMethodException e)
-            {
-                return defClass.getMethod(camel + "type", params);
-            }
-        }
-
         Object read(Object fb, MetadataAccess resolver, Object parent)
         {
             try
             {
+                FbsNode n = (FbsNode) fb;
+                Object raw = switch (shape)
+                {
+                    case STRING_SCALAR -> readStringField_FbsNode_1__Integer_1__String_$0_1$_.execute(n, (long) fbsId);
+                    case STRING_VECTOR -> readStringVector_FbsNode_1__Integer_1__String_MANY_.execute(n, (long) fbsId);
+                    case PRIM_SCALAR -> readPrimitive(n);
+                    case PRIM_VECTOR -> readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_
+                            .execute(pureSchema(), n, rawFieldName);
+                    case TABLE_SCALAR, POINTERREF_SCALAR -> decodeOpt(
+                            readTableField_FbsNode_1__Integer_1__String_1__FbsNode_$0_1$_.execute(n, (long) fbsId, fbsType));
+                    case TABLE_VECTOR, POINTERREF_VECTOR -> decodeAll(
+                            readTableVector_FbsNode_1__Integer_1__String_1__FbsNode_MANY_.execute(n, (long) fbsId, fbsType));
+                    case UNION_SCALAR -> decodeOpt(
+                            readUnionField_FbsSchema_1__FbsNode_1__Integer_1__String_1__FbsNode_$0_1$_
+                                    .execute(pureSchema(), n, (long) fbsId, unionName));
+                    case UNION_VECTOR -> decodeAll(
+                            readUnionVector_FbsSchema_1__FbsNode_1__Integer_1__String_1__FbsNode_MANY_
+                                    .execute(pureSchema(), n, (long) fbsId, unionName));
+                };
                 return switch (shape)
                 {
-                    case PRIM_SCALAR -> get.invoke(fb);
-                    case STRING_SCALAR -> decodeStringScalar((String) get.invoke(fb), fb, resolver);
-                    case POINTERREF_SCALAR ->
+                    case PRIM_SCALAR -> one(raw);
+                    case STRING_SCALAR -> decodeStringScalar((String) one(raw), fb, resolver);
+                    case POINTERREF_SCALAR -> pointer(one(raw), resolver);
+                    case TABLE_SCALAR, UNION_SCALAR ->
                     {
-                        var pr = (org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef) get.invoke(fb);
-                        yield (pr != null && pr.pathLength() > 0)
-                                ? FbsResolverHelper.resolvePointerRef(pr, resolver) : null;
+                        Object node = one(raw);
+                        yield node == null ? null : marshalNode(node, fb, resolver, parent);
                     }
-                    case TABLE_SCALAR ->
-                    {
-                        Object nested = get.invoke(fb);
-                        yield nested != null ? nestedPdo(tableDefName, nested, resolver, parent) : null;
-                    }
-                    case UNION_SCALAR ->
-                    {
-                        byte uType = (Byte) unionType.invoke(fb);
-                        yield uType == 0 ? null : decodeUnionMember(uType, fb, null, resolver, parent);
-                    }
-                    case PRIM_VECTOR, STRING_VECTOR, POINTERREF_VECTOR, TABLE_VECTOR -> decodeVector(fb, resolver, parent);
-                    case UNION_VECTOR ->
-                    {
-                        int len = (Integer) length.invoke(fb);
-                        Object[] arr = new Object[len];
-                        for (int i = 0; i < len; i++)
-                        {
-                            byte uType = (Byte) unionType.invoke(fb, i);
-                            arr[i] = uType == 0 ? null : decodeUnionMember(uType, fb, i, resolver, parent);
-                        }
-                        yield toSequence(arr);
-                    }
+                    case PRIM_VECTOR -> toSequence(list(raw).toArray());
+                    case STRING_VECTOR -> toSequence(list(raw).stream()
+                            .map(v -> decodeStringVectorItem((String) v, resolver)).toArray());
+                    case POINTERREF_VECTOR -> toSequence(list(raw).stream()
+                            .map(v -> pointer(v, resolver)).toArray());
+                    case TABLE_VECTOR, UNION_VECTOR -> toSequence(list(raw).stream()
+                            .map(v -> marshalNode(v, fb, resolver, parent)).toArray());
                 };
             }
             catch (RuntimeException e)
@@ -493,119 +523,95 @@ public final class GenericFbDecoder
             }
             catch (Exception e)
             {
-                Throwable cause = e instanceof java.lang.reflect.InvocationTargetException ite
-                        ? ite.getCause() : e;
-                if (cause instanceof RuntimeException re)
-                {
-                    throw re;
-                }
-                throw new IllegalStateException("Decode failed for " + tableName + "." + pureProperty, cause);
+                throw new IllegalStateException("Decode failed for " + tableName + "." + pureProperty, e);
             }
         }
 
-        private Object decodeVector(Object fb, MetadataAccess resolver, Object parent) throws Exception
+
+        /** The Pure schema's field metadata, for its fbs id and exact type. */
+        private static org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsField pureFieldOf(
+                String tableName, String fieldName)
         {
-            int len = (Integer) length.invoke(fb);
-            if (len == 0)
+            Object t = one(table_FbsSchema_1__String_1__FbsTable_$0_1$_.execute(pureSchema(), tableName));
+            if (!(t instanceof org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsTable tbl))
             {
-                return new ObjectSequence(new Object[0]);
+                return null;
             }
-            Object[] arr = new Object[len];
-            for (int i = 0; i < len; i++)
+            for (Object f : list(tbl.fields()))
             {
-                switch (shape)
+                var pf = (org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsField) f;
+                if (fieldName.equals(pf.name()))
                 {
-                    case PRIM_VECTOR -> arr[i] = get.invoke(fb, i);
-                    case STRING_VECTOR -> arr[i] = decodeStringVectorItem((String) get.invoke(fb, i), resolver);
-                    case POINTERREF_VECTOR ->
-                    {
-                        var ref = (org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef) get.invoke(fb, i);
-                        if (ref != null && ref.pathLength() > 0)
-                        {
-                            arr[i] = FbsResolverHelper.resolvePointerRef(ref, resolver);
-                        }
-                    }
-                    case TABLE_VECTOR ->
-                    {
-                        Object item = get.invoke(fb, i);
-                        if (item == null)
-                        {
-                            throw new RuntimeException("Null element in FBS array for "
-                                    + purePathForDef(tableDefName, resolver));
-                        }
-                        arr[i] = nestedPdo(tableDefName, item, resolver, parent);
-                    }
-                    default -> throw new IllegalStateException("Not a vector shape: " + shape);
+                    return pf;
                 }
             }
-            return toSequence(arr);
+            return null;
         }
 
-        private Object decodeUnionMember(byte uType, Object fb, Integer idx,
-                MetadataAccess resolver, Object parent) throws Exception
+        /** A scalar of the schema-declared width; bool and double are their own. */
+        private Object readPrimitive(FbsNode n)
         {
-            int memberIdx = (uType & 0xFF) - 1;
-            if (memberIdx < 0 || memberIdx >= members.length)
+            return switch (fbsType)
             {
-                return null;
-            }
-            UnionMember m = members[memberIdx];
-            Object member = idx == null
-                    ? get.invoke(fb, m.newInstance())
-                    : get.invoke(fb, m.newInstance(), idx);
-            if (member == null)
-            {
-                return null;
-            }
-            return switch (m.kind)
-            {
-                case POINTER ->
-                {
-                    var pr = (org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef) member;
-                    yield pr.pathLength() > 0 ? FbsResolverHelper.resolvePointerRef(pr, resolver) : null;
-                }
-                case ANCESTOR ->
-                {
-                    // Reference-reader semantics: hop `depth` table levels up
-                    // from the current table. The generic parent chain has one
-                    // PDO per table level, so the walk is a plain parent walk.
-                    var ar = (org.finos.legend.pure.m3.module.pdbModule.fbs.AncestorRef) member;
-                    Object t = parent;
-                    for (int d = 0; d < ar.depth(); d++)
-                    {
-                        if (!(t instanceof PureDynamicObject pdo))
-                        {
-                            break;
-                        }
-                        t = pdo.parent;
-                        if (t == null)
-                        {
-                            break;
-                        }
-                    }
-                    yield t;
-                }
-                case INT_VAL, FLOAT_VAL, BOOL_VAL -> m.val.invoke(member);
-                case STRING_VAL ->
-                {
-                    String raw = (String) m.val.invoke(member);
-                    if (ATOMIC_VALUE_CONTENT_UNION.equals(unionName))
-                    {
-                        // AtomicValue.value flattens enum instances into a
-                        // StringValueDef; rebuild the enum PDO from the sibling
-                        // genericType (a fresh load, as the generated helper did).
-                        yield AtomicValueEnumReconstructor.reconstruct(raw,
-                                decode("genericType", fb, resolver, parent), resolver);
-                    }
-                    yield raw;
-                }
-                case DECIMAL_VAL ->
-                {
-                    String raw = (String) m.val.invoke(member);
-                    yield raw != null ? new java.math.BigDecimal(raw) : null;
-                }
-                case TABLE -> nestedPdo(m.defName, member, resolver, parent);
+                case "bool" -> readBoolField_FbsNode_1__Integer_1__Boolean_1__Boolean_1_
+                        .execute(n, (long) fbsId, Boolean.FALSE);
+                case "double", "float" -> readFloatField_FbsNode_1__Integer_1__Float_1_.execute(n, (long) fbsId);
+                default -> readIntField_FbsNode_1__Integer_1__Integer_1__Boolean_1__Integer_1__Integer_1_
+                        .execute(n, (long) fbsId, (long) scalarWidth, Boolean.TRUE, 0L);
             };
+        }
+
+        /** decodeNode turns PointerRef/AncestorRef into descriptions. */
+        private static Object decodeOpt(Object node)
+        {
+            Object v = one(node);
+            return v == null ? null : decodeNode_FbsNode_1__Any_1_.execute((FbsNode) v);
+        }
+
+        private static java.util.List<Object> decodeAll(Object nodes)
+        {
+            java.util.List<Object> out = new java.util.ArrayList<>();
+            for (Object v : list(nodes))
+            {
+                out.add(decodeNode_FbsNode_1__Any_1_.execute((FbsNode) v));
+            }
+            return out;
+        }
+
+        /**
+         * A nested table. A scalar `*ValueDef` is a WRAPPER around a literal —
+         * the union arm the writer uses for an AtomicValue's payload — so it
+         * unwraps to the value itself rather than becoming a PDO; there is no
+         * Pure class called `StringValue`. Everything else is a real table.
+         */
+        private Object marshalNode(Object v, Object fbNode, MetadataAccess resolver, Object parent)
+        {
+            if (v instanceof FbsNode node)
+            {
+                String type = node.type();
+                if (SCALAR_VALUE_DEFS.contains(type))
+                {
+                    Object val = unwrapValueDef_FbsNode_1__Any_1_.execute(node);
+                    // Decimal travels as text so no binary rounding creeps in.
+                    if ("DecimalValueDef".equals(type))
+                    {
+                        return val == null ? null : new java.math.BigDecimal((String) val);
+                    }
+                    // AtomicValue.value flattens enum instances into a
+                    // StringValueDef; rebuild the enum PDO from the sibling
+                    // genericType, as the union decoder did.
+                    if ("StringValueDef".equals(type) && ATOMIC_VALUE_CONTENT_UNION.equals(unionName))
+                    {
+                        return AtomicValueEnumReconstructor.reconstruct((String) val,
+                                decode("genericType", fbNode, resolver, parent), resolver);
+                    }
+                    return val;
+                }
+                return nestedPdo(type, node, resolver, parent);
+            }
+            // decodeNode already turned PointerRef / AncestorRef into their
+            // own shapes; everything else is a value.
+            return pointer(v, resolver);
         }
 
         private Object decodeStringScalar(String raw, Object fb, MetadataAccess resolver)
@@ -711,52 +717,63 @@ public final class GenericFbDecoder
         return new ObjectSequence(Arrays.stream(arr).filter(Objects::nonNull).toArray());
     }
 
+
+    /**
+     * The union arms that WRAP a literal. Deliberately an explicit set: a name
+     * test on "ValueDef" also catches MultiplicityValueDef, which is a real
+     * table with its own Pure class.
+     */
+    private static final Set<String> SCALAR_VALUE_DEFS = Set.of(
+            "IntegerValueDef", "FloatValueDef", "BooleanValueDef", "StringValueDef", "DecimalValueDef");
+
     // =========================================================================
-    // Union members
+    // Marshalling the translated reader's output into Truffle values
     // =========================================================================
 
-    private enum MemberKind { POINTER, ANCESTOR, INT_VAL, FLOAT_VAL, BOOL_VAL, STRING_VAL, DECIMAL_VAL, TABLE }
-
-    private static final class UnionMember
+    /** readField returns [*]; a scalar field is its single value, or null. */
+    static Object one(Object raw)
     {
-        final String defName;
-        final MemberKind kind;
-        final java.lang.reflect.Constructor<?> ctor;
-        final Method val; // primitive value defs only
-
-        UnionMember(String defName)
+        if (raw instanceof java.util.List<?> l)
         {
-            this.defName = defName;
-            this.kind = switch (defName)
-            {
-                case "PointerRef" -> MemberKind.POINTER;
-                case "AncestorRef" -> MemberKind.ANCESTOR;
-                case "IntegerValueDef" -> MemberKind.INT_VAL;
-                case "FloatValueDef" -> MemberKind.FLOAT_VAL;
-                case "BooleanValueDef" -> MemberKind.BOOL_VAL;
-                case "StringValueDef" -> MemberKind.STRING_VAL;
-                case "DecimalValueDef" -> MemberKind.DECIMAL_VAL;
-                default -> MemberKind.TABLE;
-            };
-            try
-            {
-                Class<?> memberClass = Class.forName(FBS_PKG + "." + defName);
-                this.ctor = memberClass.getConstructor();
-                this.val = (kind == MemberKind.INT_VAL || kind == MemberKind.FLOAT_VAL
-                        || kind == MemberKind.BOOL_VAL || kind == MemberKind.STRING_VAL
-                        || kind == MemberKind.DECIMAL_VAL)
-                        ? memberClass.getMethod("val") : null;
-            }
-            catch (ReflectiveOperationException e)
-            {
-                throw new IllegalStateException("Cannot reflect union member " + defName, e);
-            }
+            return l.isEmpty() ? null : l.get(0);
         }
+        return raw;
+    }
 
-        com.google.flatbuffers.Table newInstance() throws ReflectiveOperationException
+    static java.util.List<?> list(Object raw)
+    {
+        if (raw == null)
         {
-            return (com.google.flatbuffers.Table) ctor.newInstance();
+            return java.util.Collections.emptyList();
         }
+        return raw instanceof java.util.List<?> l ? l : java.util.List.of(raw);
+    }
+
+    /**
+     * A value the reader already decoded: a pointer, an ancestor back-reference,
+     * a wrapped scalar `*ValueDef`, or a plain value.
+     */
+    static Object pointer(Object v, MetadataAccess resolver)
+    {
+        if (v == null)
+        {
+            return null;
+        }
+        if (v instanceof ReadPointerRef ref)
+        {
+            return FbsResolverHelper.resolvePointerRef(
+                    ref.kind() == null ? 0L : ref.kind(), segsOf(ref), resolver);
+        }
+        return v;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static java.util.List<String> segsOf(ReadPointerRef ref)
+    {
+        Object segs = ref.segs();
+        return segs instanceof java.util.List<?> l
+                ? (java.util.List<String>) l
+                : (segs == null ? java.util.List.of() : java.util.List.of((String) segs));
     }
 
     // =========================================================================

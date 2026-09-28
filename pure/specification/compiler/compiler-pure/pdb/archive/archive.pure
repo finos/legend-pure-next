@@ -33,7 +33,7 @@ import meta::pure::compiler::helper::packageableElement::*;
 Class meta::pure::compiler::pdb::archive::ArchiveEntry
 {
    name : String[1];
-   data : Integer[*];
+   data : Binary[1];
 }
 
 // Path + serialized type name for one written element (feeds the elementIndex).
@@ -59,11 +59,11 @@ function meta::pure::compiler::pdb::archive::elementTypeName(e:Any[1]):String[0.
          ->cast(@meta::pure::metamodel::function::Function<{Any[1]->String[0..1]}>), $e);
 }
 
-function meta::pure::compiler::pdb::archive::writeElementBlob(e:Any[1]):Integer[*]
+function meta::pure::compiler::pdb::archive::writeElementBlob(e:Any[1]):Binary[1]
 {
    meta::pure::functions::lang::eval(
-      meta::pure::compiler::pdb::writerHelper::genFn('writeElementBlob_Any_1__Integer_MANY_')
-         ->cast(@meta::pure::metamodel::function::Function<{Any[1]->Integer[*]}>), $e);
+      meta::pure::compiler::pdb::writerHelper::genFn('writeElementBlob_Any_1__Binary_1_')
+         ->cast(@meta::pure::metamodel::function::Function<{Any[1]->Binary[1]}>), $e);
 }
 
 // "elements/meta/pure/metamodel/type/Any.Class" — the reference entry naming.
@@ -98,7 +98,7 @@ function meta::pure::compiler::pdb::archive::elementEntryInfos(elements:Any[*]):
 // entry table adding element_type (slot 1) BEFORE element_path (slot 0) — the
 // flatc createElementIndexEntry add order — then the offset vector and the
 // single-field ElementIndex root.
-function meta::pure::compiler::pdb::archive::elementIndexBytes(infos:meta::pure::compiler::pdb::archive::ElementEntryInfo[*]):Integer[*]
+function meta::pure::compiler::pdb::archive::elementIndexBytes(infos:meta::pure::compiler::pdb::archive::ElementEntryInfo[*]):Binary[1]
 {
    let acc = $infos->fold({info, acc |
       let po = $acc.builder->meta::pure::compiler::pdb::fbb::createString($info.path);
@@ -126,7 +126,7 @@ function meta::pure::compiler::pdb::archive::elementIndexBytes(infos:meta::pure:
 // function_name (slot 1), full_path (slot 0), is_native (slot 3, bool default
 // false) — the flatc createFunctionIndexEntry add order — then the offset
 // vector and the single-field FunctionIndex root.
-function meta::pure::compiler::pdb::archive::functionIndexBytes(fnInfos:meta::pure::compiler::pdb::archive::ElementEntryInfo[*]):Integer[*]
+function meta::pure::compiler::pdb::archive::functionIndexBytes(fnInfos:meta::pure::compiler::pdb::archive::ElementEntryInfo[*]):Binary[1]
 {
    let acc = $fnInfos->fold(
       {info, acc | meta::pure::compiler::pdb::archive::functionIndexEntryStep($info, $acc)},
@@ -215,12 +215,12 @@ function meta::pure::compiler::pdb::archive::manifestJson(name:String[1], packag
 
 // --- STORED zip container --------------------------------------------------------
 
-function meta::pure::compiler::pdb::archive::u16(v:Integer[1]):Integer[*]
+function meta::pure::compiler::pdb::archive::u16(v:Integer[1]):Binary[1]
 {
    intToLeBytes($v, 2);
 }
 
-function meta::pure::compiler::pdb::archive::u32(v:Integer[1]):Integer[*]
+function meta::pure::compiler::pdb::archive::u32(v:Integer[1]):Binary[1]
 {
    intToLeBytes($v, 4);
 }
@@ -236,24 +236,24 @@ function meta::pure::compiler::pdb::archive::u32(v:Integer[1]):Integer[*]
 // assembles each region linearly. (An earlier fold that concatenated the
 // accumulated locals per entry re-copied the whole archive once per entry —
 // quadratic, minutes of copying on a full compiler.pdb write.)
-function meta::pure::compiler::pdb::archive::zipStored(entries:meta::pure::compiler::pdb::archive::ArchiveEntry[*]):Integer[*]
+function meta::pure::compiler::pdb::archive::zipStored(entries:meta::pure::compiler::pdb::archive::ArchiveEntry[*]):Binary[1]
 {
    // Per-entry total size of (local header + name + data): 30 fixed + name + data.
-   let sizes = $entries->map(e | 30 + stringToUtf8Bytes($e.name)->size() + $e.data->size());
+   let sizes = $entries->map(e | 30 + stringToUtf8Bytes($e.name)->binarySize() + $e.data->binarySize());
    // offsets->at(i) = local-header offset of entry i; last value = central-dir offset.
    let offsets = $sizes->fold({s, acc | $acc->concatenate($acc->at($acc->size() - 1) + $s)}, [0]);
    let locals = range(0, $entries->size())->map(i |
-      meta::pure::compiler::pdb::archive::zipLocalBytes($entries->at($i)));
+      meta::pure::compiler::pdb::archive::zipLocalBytes($entries->at($i)))->binaryConcat();
    let central = range(0, $entries->size())->map(i |
-      meta::pure::compiler::pdb::archive::zipCentralBytes($entries->at($i), $offsets->at($i)));
+      meta::pure::compiler::pdb::archive::zipCentralBytes($entries->at($i), $offsets->at($i)))->binaryConcat();
    let n = $entries->size();
    // disk number, central-dir start disk, entries on disk, entries total,
    // central dir size, central dir offset, comment length.
-   let eocd = [80, 75, 5, 6]->concatenate(
+   let eocd = [0x504B0506]->concatenate(
       [pair(0, 2), pair(0, 2), pair($n, 2), pair($n, 2),
-       pair($central->size(), 4), pair($offsets->at($n), 4), pair(0, 2)]
-         ->map(f | intToLeBytes($f.first, $f.second)));
-   $locals->concatenate($central)->concatenate($eocd);
+       pair($central->binarySize(), 4), pair($offsets->at($n), 4), pair(0, 2)]
+         ->map(f | intToLeBytes($f.first, $f.second)))->binaryConcat();
+   [$locals, $central, $eocd]->binaryConcat();
 }
 
 // One entry's local header + name + data. Header fields as (value, width)
@@ -263,32 +263,34 @@ function meta::pure::compiler::pdb::archive::zipStored(entries:meta::pure::compi
 // flat. Field order: version-needed, flags, method(stored), mod-time,
 // mod-date(1980-01-01), crc-32(0), compressed size, uncompressed size,
 // name len, extra len.
-function meta::pure::compiler::pdb::archive::zipLocalBytes(e:meta::pure::compiler::pdb::archive::ArchiveEntry[1]):Integer[*]
+function meta::pure::compiler::pdb::archive::zipLocalBytes(e:meta::pure::compiler::pdb::archive::ArchiveEntry[1]):Binary[1]
 {
    let nameBytes = stringToUtf8Bytes($e.name);
-   let dataLen   = $e.data->size();
-   [80, 75, 3, 4]->concatenate(
+   let dataLen   = $e.data->binarySize();
+   [0x504B0304]->concatenate(
       [pair(20, 2), pair(0, 2), pair(0, 2), pair(0, 2), pair(33, 2),
-       pair(0, 4), pair($dataLen, 4), pair($dataLen, 4), pair($nameBytes->size(), 2), pair(0, 2)]
+       pair(0, 4), pair($dataLen, 4), pair($dataLen, 4), pair($nameBytes->binarySize(), 2), pair(0, 2)]
          ->map(f | intToLeBytes($f.first, $f.second)))
       ->concatenate($nameBytes)
-      ->concatenate($e.data);
+      ->concatenate($e.data)
+      ->binaryConcat();
 }
 
 // One entry's central-directory record. Field order: version-made-by,
 // version-needed, flags, method, mod-time, mod-date, crc-32, compressed size,
 // uncompressed size, name len, extra len, comment len, disk start,
 // internal attrs, external attrs, local offset.
-function meta::pure::compiler::pdb::archive::zipCentralBytes(e:meta::pure::compiler::pdb::archive::ArchiveEntry[1], localOffset:Integer[1]):Integer[*]
+function meta::pure::compiler::pdb::archive::zipCentralBytes(e:meta::pure::compiler::pdb::archive::ArchiveEntry[1], localOffset:Integer[1]):Binary[1]
 {
    let nameBytes = stringToUtf8Bytes($e.name);
-   let dataLen   = $e.data->size();
-   [80, 75, 1, 2]->concatenate(
+   let dataLen   = $e.data->binarySize();
+   [0x504B0102]->concatenate(
       [pair(20, 2), pair(20, 2), pair(0, 2), pair(0, 2), pair(0, 2), pair(33, 2),
-       pair(0, 4), pair($dataLen, 4), pair($dataLen, 4), pair($nameBytes->size(), 2),
+       pair(0, 4), pair($dataLen, 4), pair($dataLen, 4), pair($nameBytes->binarySize(), 2),
        pair(0, 2), pair(0, 2), pair(0, 2), pair(0, 2), pair(0, 4), pair($localOffset, 4)]
          ->map(f | intToLeBytes($f.first, $f.second)))
-      ->concatenate($nameBytes);
+      ->concatenate($nameBytes)
+      ->binaryConcat();
 }
 
 // --- whole archive ----------------------------------------------------------------
@@ -337,14 +339,14 @@ function meta::pure::compiler::pdb::archive::archiveEntries(elements:Any[*], mod
 }
 
 // A whole .pdb archive as bytes.
-function meta::pure::compiler::pdb::archive::writeArchive(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*], referencedBy:Map<String, List<String>>[1]):Integer[*]
+function meta::pure::compiler::pdb::archive::writeArchive(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*], referencedBy:Map<String, List<String>>[1]):Binary[1]
 {
    meta::pure::compiler::pdb::archive::zipStored(
       meta::pure::compiler::pdb::archive::archiveEntries($elements, $moduleName, $packagePattern, $dependencies, $referencedBy));
 }
 
 // A whole .pdb archive as bytes, with no recorded references.
-function meta::pure::compiler::pdb::archive::writeArchive(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*]):Integer[*]
+function meta::pure::compiler::pdb::archive::writeArchive(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*]):Binary[1]
 {
    meta::pure::compiler::pdb::archive::writeArchive($elements, $moduleName, $packagePattern, $dependencies,
       newMap([]->cast(@Pair<String, List<String>>)));

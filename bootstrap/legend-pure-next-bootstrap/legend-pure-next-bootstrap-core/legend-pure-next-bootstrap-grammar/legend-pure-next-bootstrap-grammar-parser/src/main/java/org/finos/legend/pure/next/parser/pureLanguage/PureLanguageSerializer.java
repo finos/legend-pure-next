@@ -807,12 +807,19 @@ public class PureLanguageSerializer
                                        final AtomicValue av)
     {
         Object value = av._value();
+        String typeName = getTypeName(av);
+        if ("Binary".equals(typeName))
+        {
+            // `0x` alone is the empty Binary. The protocol drops an empty digit
+            // string, so a missing value here means zero bytes, not `[]`.
+            sb.append("0x").append(value == null ? "" : value);
+            return;
+        }
         if (value == null)
         {
             sb.append("[]");
             return;
         }
-        String typeName = getTypeName(av);
         serializeTypedValue(sb, value, typeName);
     }
 

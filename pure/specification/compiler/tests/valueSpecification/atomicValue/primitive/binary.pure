@@ -1,0 +1,15 @@
+###Pure
+function test::primitive::testBinary(): Any[*]
+{
+  0x1F8B08;
+  0xFF;
+  0x;
+}
+
+###CompiledGraph
+function test::primitive::testBinary__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  AtomicValue  '1F8B08' :Binary[1]  ~@AtomicValue@  @4:3-4:10
+  AtomicValue  'FF' :Binary[1]  ~@AtomicValue@  @5:3-5:6
+  AtomicValue  '' :Binary[1]  ~@AtomicValue@  @6:3-6:4
+
+###ReverseIndex

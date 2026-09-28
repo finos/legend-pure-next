@@ -28,11 +28,23 @@
 
 // ---------------------------------------------------------------------------
 
+import meta::pure::functions::binary::*;
+
 Class meta::pure::compiler::pdb::fbb::Builder
 {
    // Buffer, built back-to-front: index 0 is the FRONT (newest byte). The final
    // FlatBuffer is exactly `bytes` (root uoffset lands at index 0 after finish).
-   bytes       : Integer[*];
+   //
+   // `prepend` is the choke point every scalar, offset, pad byte, vtable and
+   // string goes through, so a host whose binaryConcat copies the whole buffer
+   // makes a write quadratic — that exhausted a 30GB heap on an 8.4MB
+   // compiler.pdb. The fix belongs in the host, not here: Truffle's concat
+   // returns a front-reserved buffer that claims reserve in place
+   // (PrependByteSequence), making each prepend O(added bytes).
+   bytes       : Binary[1];
+   // Bytes prepended so far, so the write cursor never has to measure the
+   // buffer. `offset` is read at least once per field written.
+   written     : Integer[1];
    minalign    : Integer[1];
    // Current in-progress object: vtable[i] = the byte-position (offset-from-front,
    // i.e. size at write time) where field id `i` was written, or 0 if absent.
@@ -41,11 +53,21 @@ Class meta::pure::compiler::pdb::fbb::Builder
    // Shared-string pool (the reference uses builder.createSharedString throughout,
    // so byte-identity requires the same exact-match dedup).
    strings     : meta::pure::compiler::pdb::fbb::SharedString[*];
-   // Positions (offset-from-front at write time) of every distinct vtable written
-   // so far — the reference FlatBufferBuilder DEDUPES identical vtables across the
-   // whole buffer (endTable searches these and reuses via a negative soffset), so
-   // byte-identity requires the same pool.
-   vtables     : Integer[*];
+   // Every distinct vtable written so far, WITH its bytes — the reference
+   // FlatBufferBuilder DEDUPES identical vtables across the whole buffer
+   // (endTable searches these and reuses via a negative soffset), so byte-identity
+   // requires the same pool. Holding the bytes is what lets the search compare
+   // them directly instead of re-reading the buffer at the vtable's position,
+   // which a chunked buffer cannot index cheaply.
+   vtables     : meta::pure::compiler::pdb::fbb::PooledVtable[*];
+}
+
+// A vtable already in the buffer: where it sits (offset-from-front at write
+// time) and the bytes written there, for the dedup search.
+Class meta::pure::compiler::pdb::fbb::PooledVtable
+{
+   off   : Integer[1];
+   bytes : Binary[1];
 }
 
 Class meta::pure::compiler::pdb::fbb::SharedString
@@ -63,25 +85,25 @@ Class meta::pure::compiler::pdb::fbb::BuilderAndOffset
 
 function meta::pure::compiler::pdb::fbb::newBuilder():meta::pure::compiler::pdb::fbb::Builder[1]
 {
-   ^meta::pure::compiler::pdb::fbb::Builder(bytes = [], minalign = 1, vtable = [], objectStart = 0, strings = [], vtables = []);
+   ^meta::pure::compiler::pdb::fbb::Builder(bytes = 0x, written = 0, minalign = 1, vtable = [], objectStart = 0, strings = [], vtables = []);
 }
 
 // Bytes written so far == the reference's `offset()`.
 function meta::pure::compiler::pdb::fbb::offset(b:meta::pure::compiler::pdb::fbb::Builder[1]):Integer[1]
 {
-   $b.bytes->size();
+   $b.written;
 }
 
 // Prepend raw bytes to the FRONT (== the mutable builder's decreasing `space`).
 // `newBytes` are given in final memory order (front-most first).
-function meta::pure::compiler::pdb::fbb::prepend(b:meta::pure::compiler::pdb::fbb::Builder[1], newBytes:Integer[*]):meta::pure::compiler::pdb::fbb::Builder[1]
+function meta::pure::compiler::pdb::fbb::prepend(b:meta::pure::compiler::pdb::fbb::Builder[1], newBytes:Binary[1]):meta::pure::compiler::pdb::fbb::Builder[1]
 {
-   ^$b(bytes = $newBytes->concatenate($b.bytes));
+   ^$b(bytes = [$newBytes, $b.bytes]->binaryConcat(), written = $b.written + $newBytes->binarySize());
 }
 
 function meta::pure::compiler::pdb::fbb::pad(b:meta::pure::compiler::pdb::fbb::Builder[1], n:Integer[1]):meta::pure::compiler::pdb::fbb::Builder[1]
 {
-   if($n <= 0, |$b, |$b->meta::pure::compiler::pdb::fbb::prepend(range(0, $n)->map(i | 0)));
+   if($n <= 0, |$b, |$b->meta::pure::compiler::pdb::fbb::prepend($n->binaryZeros()));
 }
 
 // Align so that after `additionalBytes` more are written, a `size`-aligned field
@@ -117,10 +139,12 @@ function meta::pure::compiler::pdb::fbb::createString(b:meta::pure::compiler::pd
 {
    let utf8 = meta::pure::functions::binary::stringToUtf8Bytes($s);
    let b1 = $b->meta::pure::compiler::pdb::fbb::addScalar(0, 1);                    // null terminator
-   let b2 = $b1->meta::pure::compiler::pdb::fbb::startVector(1, $utf8->size(), 1);
+   // binarySize, not size: `utf8` is one Binary, so ->size() would be 1.
+   let len = $utf8->meta::pure::functions::binary::binarySize();
+   let b2 = $b1->meta::pure::compiler::pdb::fbb::startVector(1, $len, 1);
    // the whole utf8 block is one front-most-first prepend
    let b3 = $b2->meta::pure::compiler::pdb::fbb::prepend($utf8);
-   $b3->meta::pure::compiler::pdb::fbb::endVector($utf8->size());
+   $b3->meta::pure::compiler::pdb::fbb::endVector($len);
 }
 
 // Shared string: exact-match dedup, as the reference's builder.createSharedString.
@@ -204,13 +228,6 @@ function meta::pure::compiler::pdb::fbb::addFieldOffset(b:meta::pure::compiler::
 // Does the previously-written vtable at buffer position `e` byte-match the
 // candidate byte list? An existing vtable's first short is its byte length —
 // compare that, then the full run.
-function meta::pure::compiler::pdb::fbb::vtableMatches(bytes:Integer[*], e:Integer[1], cand:Integer[*]):Boolean[1]
-{
-   let base = $bytes->size() - $e;
-   (($bytes->at($base) + (256 * $bytes->at($base + 1))) == $cand->size())
-      && range(0, $cand->size())->forAll(k | $bytes->at($base + $k) == $cand->at($k));
-}
-
 // Close the table: compute the trimmed vtable as a SMALL byte list, look it up
 // in the dedup pool, then write the soffset with its FINAL value followed (on
 // a pool miss) by the vtable bytes. PATCH-FREE: the vtable's position is fully
@@ -235,23 +252,25 @@ function meta::pure::compiler::pdb::fbb::endObject(b:meta::pure::compiler::pdb::
       ->concatenate(range(0, $trimmedSize)->map(i |
          let p = $b.vtable->at($i);
          if($p != 0, |$vtableloc - $p, |0);));
-   let cand = $candVals->map(v | meta::pure::functions::binary::intToLeBytes($v, 2));
-   let hit = $b.vtables->filter(e | meta::pure::compiler::pdb::fbb::vtableMatches($b.bytes, $e, $cand))->head();
+   let cand = $candVals->map(v | meta::pure::functions::binary::intToLeBytes($v, 2))->meta::pure::functions::binary::binaryConcat();
+   let candSize = $cand->meta::pure::functions::binary::binarySize();
+   let hit = $b.vtables->filter(v | $v.bytes->meta::pure::functions::binary::binaryEquals($cand))->head();
    if($hit->isEmpty(),
       | // no identical vtable yet: soffset points forward across the candidate
         // (value == candidate length), then the vtable itself goes in front.
-        let b1 = $b->meta::pure::compiler::pdb::fbb::addScalar($cand->size(), 4)
+        let b1 = $b->meta::pure::compiler::pdb::fbb::addScalar($candSize, 4)
                    ->meta::pure::compiler::pdb::fbb::prepend($cand);
         ^meta::pure::compiler::pdb::fbb::BuilderAndOffset(
-           builder = ^$b1(vtables = $b1.vtables->concatenate($vtableloc + $cand->size())),
+           builder = ^$b1(vtables = $b1.vtables->concatenate(
+              ^meta::pure::compiler::pdb::fbb::PooledVtable(off = $vtableloc + $candSize, bytes = $cand))),
            offset  = $vtableloc);,
       | // identical vtable exists: discard the candidate and point the soffset
         // back at it (negative value).
-        let b1 = $b->meta::pure::compiler::pdb::fbb::addScalar($hit->toOne() - $vtableloc, 4);
+        let b1 = $b->meta::pure::compiler::pdb::fbb::addScalar($hit->toOne().off - $vtableloc, 4);
         ^meta::pure::compiler::pdb::fbb::BuilderAndOffset(builder = $b1, offset = $vtableloc););
 }
 
-function meta::pure::compiler::pdb::fbb::result(b:meta::pure::compiler::pdb::fbb::Builder[1]):Integer[*]
+function meta::pure::compiler::pdb::fbb::result(b:meta::pure::compiler::pdb::fbb::Builder[1]):Binary[1]
 {
    $b.bytes;
 }

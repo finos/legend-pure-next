@@ -1,0 +1,30 @@
+// Copyright (c) 2020-present, Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Reading the ZIP CONTAINER a .pdb is, as a host service.
+//
+// The pdb FORMAT stays in Pure — what a table holds, how elements and sections
+// are laid out, what has to match a golden. The container does not: every host
+// already ships a zip reader (java.util.zip, node/browser zip.js), and doing it
+// in Pure instead meant each platform ran a translated bit-at-a-time DEFLATE.
+// On the Java platform that was most of a suite run.
+//
+// An entry is addressed by NAME. Nothing here exposes offsets, compression
+// methods or sizes: a caller only ever wants what is in the archive and the
+// bytes of one entry.
+
+native function meta::pure::compiler::pdb::archive::entryNames(archive:Binary[1]):String[*];
+
+native function meta::pure::compiler::pdb::archive::entryBytes(archive:Binary[1], name:String[1]):Binary[1];

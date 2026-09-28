@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -74,7 +75,9 @@ function <<PCT.test>> meta::pure::functions::meta::tests::pathToElement::testCon
 function <<PCT.test>> meta::pure::functions::meta::tests::pathToElement::testTopLevelPathToElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertIs(Boolean, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::Boolean')));
-    assertIs(Byte, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::Byte')));
+    // Byte is a constrained primitive extension in the binary functions
+    // package, not a bootstrap primitive, so it needs its full path here.
+    assertIs(meta::pure::functions::binary::Byte, $f->eval(|pathToElement('meta::pure::functions::binary::Byte')));
     assertIs(Date, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::Date')));
     assertIs(DateTime, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::DateTime')));
     assertIs(Decimal, $f->eval(|pathToElement('meta::pure::metamodel::type::primitives::Decimal')));

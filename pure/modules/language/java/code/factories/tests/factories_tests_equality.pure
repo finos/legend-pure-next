@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -380,4 +381,37 @@ function <<test.Test>> meta::external::language::java::factory::tests::j_conditi
 function <<test.Test>> meta::external::language::java::factory::tests::notInstanceOf():Boolean[1]
 {
    assertCode('!("Hello" instanceof String)', javaBoolean(), j_not(j_string('Hello')->j_instanceof(javaString())));
+}
+
+// A Type is equal to another by its <<equality.Key>> properties — `simpleName`
+// and `package` for a Class, and a Package by `name` and `parent`, so the
+// comparison recurses once per package segment. Every host must agree: the Java
+// translator asks `j_cast`/`fitToType` whether a value is ALREADY the type being
+// cast to, and a host that answers no emits a redundant cast, so the same
+// translator would produce different Java depending on where it ran.
+//
+// The depths matter. Truffle capped this recursion at 10 and fell back to
+// identity beyond it, so types nested deeper than ten packages — which every
+// generated platform type is, e.g.
+// org.finos.legend.pure.m3.meta.pure.protocol.grammar.function.property.Property
+// — compared unequal there and equal on bootstrap.
+function <<test.Test>> meta::external::language::java::factory::tests::classEqualityIsStructuralAtDepth():Boolean[1]
+{
+   assert(javaClass('B') == javaClass('B'), 'no package');
+   assert(javaClass('a.B') == javaClass('a.B'), '1 package deep');
+   assert(javaClass('java.lang.String') == javaClass('java.lang.String'), '2 packages deep');
+   assert(javaClass('a.b.c.d.e.f.g.h.I') == javaClass('a.b.c.d.e.f.g.h.I'), '8 packages deep');
+   assert(javaClass('a.b.c.d.e.f.g.h.i.j.K') == javaClass('a.b.c.d.e.f.g.h.i.j.K'), '10 packages deep');
+   assert(javaClass('a.b.c.d.e.f.g.h.i.j.k.L') == javaClass('a.b.c.d.e.f.g.h.i.j.k.L'), '11 packages deep');
+   assert(javaClass('a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.P') == javaClass('a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.P'), '15 packages deep');
+   // A real generated platform type, the shape that exposed this.
+   assert(javaClass('org.finos.legend.pure.m3.meta.pure.protocol.grammar.function.property.Property')
+          == javaClass('org.finos.legend.pure.m3.meta.pure.protocol.grammar.function.property.Property'), 'a generated platform type');
+   // Different types stay different at depth.
+   assertFalse(javaClass('a.b.c.d.e.f.g.h.i.j.k.L') == javaClass('a.b.c.d.e.f.g.h.i.j.k.M'), 'differing simple name');
+   assertFalse(javaClass('a.b.c.d.e.f.g.h.i.j.k.L') == javaClass('a.b.c.d.e.f.g.h.i.j.x.L'), 'differing package');
+   // And the translator's actual question: casting to the type it already is.
+   let deep = javaClass('a.b.c.d.e.f.g.h.i.j.k.L');
+   assertCode('x', $deep, j_variable(javaClass('a.b.c.d.e.f.g.h.i.j.k.L'), 'x')->j_cast($deep));
+   true;
 }

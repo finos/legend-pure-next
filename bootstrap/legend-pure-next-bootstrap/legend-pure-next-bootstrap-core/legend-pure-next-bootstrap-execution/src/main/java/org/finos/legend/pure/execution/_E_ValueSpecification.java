@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -93,7 +94,7 @@ public class _E_ValueSpecification
         }
         if (vs instanceof AtomicValue av)
         {
-            return av._value();
+            return materializeBinary(av, av._value());
         }
         // Collections — unwrap one level: each child unwrapped once
         if (vs instanceof Collection col)
@@ -103,7 +104,7 @@ public class _E_ValueSpecification
             {
                 if (v instanceof AtomicValue childAv)
                 {
-                    results.add(childAv._value());
+                    results.add(materializeBinary(childAv, childAv._value()));
                 }
                 else
                 {
@@ -113,6 +114,34 @@ public class _E_ValueSpecification
             return results;
         }
         return vs;
+    }
+
+    /**
+     * A binary literal carries its hex text on the AtomicValue (so it
+     * round-trips through a .pdb unchanged); the runtime value of a Binary is
+     * always a {@code byte[]}. Decode here, at the one funnel every AtomicValue
+     * passes through, so there is a single runtime representation.
+     *
+     * <p>Guarded on {@code value instanceof String} first: every other literal
+     * kind leaves without touching the generic type.</p>
+     */
+    private static Object materializeBinary(AtomicValue av, Object value)
+    {
+        if (!(value instanceof String hex))
+        {
+            return value;
+        }
+        GenericType gt = av._genericType();
+        if (gt == null)
+        {
+            return value;
+        }
+        meta.pure.metamodel.type.Type type = _GenericType.type(gt);
+        if (type instanceof meta.pure.metamodel.PackageableElement pe && "Binary".equals(pe._name()))
+        {
+            return org.finos.legend.pure.execution.natives.binary.BinaryNatives.decodeHex(hex);
+        }
+        return value;
     }
 
     /**

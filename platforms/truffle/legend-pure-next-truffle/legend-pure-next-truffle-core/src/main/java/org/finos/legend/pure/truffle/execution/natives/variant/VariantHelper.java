@@ -14,8 +14,8 @@
 
 package org.finos.legend.pure.truffle.execution.natives.variant;
 
-import org.finos.legend.pure.execution.JsonValue;
-import org.finos.legend.pure.execution.PureVariant;
+import org.finos.legend.pure.truffle.execution.types.JsonValue;
+import org.finos.legend.pure.truffle.execution.types.PureVariant;
 import org.finos.legend.pure.truffle.execution.TruffleInstanceFactory;
 import org.finos.legend.pure.truffle.compiler.module.MetadataAccess;
 import org.finos.legend.pure.truffle.compiler.helper._Any;

@@ -457,7 +457,7 @@ function meta::pure::compiler::pdb::generator::emitWriteElementBlob(schema:FbsSc
       '      v' + $c.name->toOne() + ' : ' + $c->elementToPath() + typeArgsSuffix($c)
          + '[1] | meta::pure::compiler::pdb::gen::write' + $c.name->toOne()
          + '(' + $fbb + '::newBuilder(), $v' + $c.name->toOne() + ', []),\n');
-   'function meta::pure::compiler::pdb::gen::writeElementBlob(e:Any[1]):Integer[*]\n'
+   'function meta::pure::compiler::pdb::gen::writeElementBlob(e:Any[1]):Binary[1]\n'
       + '{\n   let r = $e->match([\n'
       + $arms->joinStrings('')->substring(0, $arms->joinStrings('')->length() - 2) + '\n'
       + '   ]);\n'

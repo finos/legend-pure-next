@@ -58,20 +58,27 @@ import java.util.stream.Stream;
  */
 public final class PureFeature implements Feature
 {
+    // Package roots to register, as they exist on THIS image's class path. Every
+    // one is asserted non-empty in beforeAnalysis: when Truffle was decoupled from
+    // bootstrap the old roots ("meta/pure", "org/finos/legend/pure/next/parser",
+    // the flatbuffers "…/pdbModule/fbs") stopped matching anything, the scan
+    // quietly registered 7 classes instead of hundreds, and the image failed every
+    // reflective call at run time with "Failed to invoke section on DocumentContext".
     private static final String[] REFLECTIVE_PACKAGE_ROOTS = new String[]{
-            "meta/pure",  // covers metamodel, protocol, compiler, functions, etc.
-            // FlatBuffer Def classes: GenericFbDecoder reflects their field
-            // accessors (getMethod + invoke) and PdbModule their
-            // getRootAsXDef factories — methods MUST stay registered.
-            "org/finos/legend/pure/m3/module/pdbModule/fbs",
-            "org/finos/legend/pure/truffle/runtime",  // TruffleInstanceFactory targets
-            // ANTLR-generated TopParser + M3Parser context classes. The Pure-side
-            // mappings (parser-mappings.pdb) drive `parseDocument` reflectively
-            // via AntlrNodes#invokeNamed → ctx.<rule>() — TopParser$DocumentContext.section(),
-            // M3Parser$ClassDefinitionContext.qualifiedName(), and so on.
-            // Without registration, native-image strips those methods and the
-            // reflective lookup fails at runtime.
-            "org/finos/legend/pure/next/parser"
+            // ANTLR-generated parser contexts. The Pure-side mappings
+            // (parser-mappings.pdb) drive `parseDocument` reflectively via
+            // AntlrNodes#invokeNamed -> ctx.<rule>(), e.g.
+            // TopParser$DocumentContext.section(). Truffle's own copy since the
+            // decoupling — NOT org.finos.legend.pure.next.parser.
+            "org/finos/legend/pure/truffle/parser",
+            // The translated PDB reader and the metamodel it decodes into, emitted
+            // under the m3 base package by truffle::generate-pdb-reader.
+            "org/finos/legend/pure/m3",
+            // Support classes the generated reader calls into (LazyObject, Metadata,
+            // PureLambda, PureValues).
+            "org/finos/legend/pure/truffle/pdbgen",
+            // TruffleInstanceFactory targets.
+            "org/finos/legend/pure/truffle/runtime"
     };
 
     @Override
@@ -87,6 +94,7 @@ public final class PureFeature implements Feature
         Set<Class<?>> seen = new HashSet<>();
         for (String root : REFLECTIVE_PACKAGE_ROOTS)
         {
+            int fromRoot = 0;
             for (Class<?> cls : scanPackage(root, access))
             {
                 if (!seen.add(cls))
@@ -95,6 +103,20 @@ public final class PureFeature implements Feature
                 }
                 register(cls);
                 registered++;
+                fromRoot++;
+            }
+            System.out.println("[PureFeature] " + root + " -> " + fromRoot + " classes");
+            // A root that finds NOTHING is a misconfigured scan, and the image it
+            // produces is broken in a way only a full spec run reveals: every
+            // reflective lookup fails at run time with something as remote as
+            // "Failed to invoke section on DocumentContext". Fail the build here,
+            // where the cause is still legible.
+            if (fromRoot == 0)
+            {
+                throw new IllegalStateException("[PureFeature] package root '" + root
+                        + "' matched no classes — reflection metadata would be missing and the"
+                        + " native image would fail every reflective call at run time."
+                        + " Check the root against the application class path.");
             }
         }
         System.out.println("[PureFeature] Registered " + registered + " reflective classes from "
@@ -162,12 +184,15 @@ public final class PureFeature implements Feature
         Set<Class<?>> classes = new HashSet<>();
         try
         {
-            Enumeration<URL> resources = Thread.currentThread().getContextClassLoader()
-                    .getResources(packageRoot);
+            // The APPLICATION class loader, not the thread context one and not
+            // `java.class.path`: inside a native-image build the context loader does
+            // not carry the image class path, and java.class.path is the BUILDER's
+            // (one entry). Only access.getApplicationClassLoader() — an
+            // svm NativeImageClassLoader — resolves the image's own jars.
+            Enumeration<URL> resources = access.getApplicationClassLoader().getResources(packageRoot);
             while (resources.hasMoreElements())
             {
-                URL url = resources.nextElement();
-                scanUrl(url, packageRoot, classes, access);
+                scanUrl(resources.nextElement(), packageRoot, classes, access);
             }
         }
         catch (IOException e)
@@ -179,36 +204,32 @@ public final class PureFeature implements Feature
 
     private void scanUrl(URL url, String packageRoot, Set<Class<?>> classes, BeforeAnalysisAccess access) throws IOException
     {
-        String protocol = url.getProtocol();
-        if ("file".equals(protocol))
+        if ("file".equals(url.getProtocol()))
         {
-            Path dir = Path.of(url.getPath());
-            if (Files.isDirectory(dir))
-            {
-                scanDir(dir, packageRoot, classes, access);
-            }
+            scanDir(Path.of(url.getPath()), packageRoot, classes, access);
+            return;
         }
-        else if ("jar".equals(protocol))
+        if (!"jar".equals(url.getProtocol()))
         {
-            // jar:file:/path/to/foo.jar!/meta/pure/metamodel
-            String spec = url.toString();
-            String jarPart = spec.substring(spec.indexOf(':') + 1, spec.indexOf("!"));
-            String innerPath = spec.substring(spec.indexOf("!") + 1);
-            if (innerPath.startsWith("/"))
-            {
-                innerPath = innerPath.substring(1);
-            }
-            try (FileSystem fs = FileSystems.newFileSystem(
-                    java.net.URI.create(spec.substring(0, spec.indexOf("!") + 2)),
-                    Collections.emptyMap()))
-            {
-                Path root = fs.getPath(innerPath);
-                scanDir(root, packageRoot, classes, access);
-            }
-            catch (Exception e)
-            {
-                // Some jars may not expose a FileSystem — skip.
-            }
+            return;
+        }
+        // jar:file:/path/to/foo.jar!/org/finos/legend/pure/truffle/parser
+        String spec = url.toString();
+        int bang = spec.indexOf('!');
+        String innerPath = spec.substring(bang + 1);
+        if (innerPath.startsWith("/"))
+        {
+            innerPath = innerPath.substring(1);
+        }
+        try (FileSystem fs = FileSystems.newFileSystem(
+                java.net.URI.create(spec.substring(0, bang + 2)), Collections.emptyMap()))
+        {
+            scanDir(fs.getPath(innerPath), packageRoot, classes, access);
+        }
+        catch (Exception e)
+        {
+            // A jar that cannot be opened contributes nothing; the empty-root guard
+            // in beforeAnalysis catches the case where that leaves a root with none.
         }
     }
 
@@ -231,7 +252,7 @@ public final class PureFeature implements Feature
                     try
                     {
                         Class<?> cls = Class.forName(className, false,
-                                Thread.currentThread().getContextClassLoader());
+                                access.getApplicationClassLoader());
                         classes.add(cls);
                     }
                     catch (Throwable ignored)

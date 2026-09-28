@@ -53,6 +53,20 @@ function meta::pure::compiler::helper::type::directSupertypes(t:Type[1], context
     $t->derefTypeIfPointer($context)->toOne().generalizations->map(g | $g.general->rawType())
 }
 
+// The name of a Type, whichever shape it has. A PackageableElement (Class,
+// PrimitiveType, ...) carries one, and so does a TypeParameter — which is NOT a
+// PackageableElement (`Type extends Any`), so casting one is a type error. The
+// hosts used to differ here: Truffle exempted a TypeParameter VALUE from the
+// cast check while a compiled host checked it and threw.
+function meta::pure::compiler::helper::type::typeName(t:Type[1]):String[0..1]
+{
+    $t->match([
+        pe : meta::pure::metamodel::PackageableElement[1]        | $pe.name,
+        tp : meta::pure::metamodel::type::generics::TypeParameter[1] | $tp.name,
+        other : Type[1]                                          | []
+    ]);
+}
+
 // Cheap single-pointer-follow on a Type. If the Type is a TempCompilerPointer
 // (Class_Pointer / PrimitiveTypePointer / EnumerationPointer carrying only
 // `path`/`element`), resolves via the registry to the live target — one

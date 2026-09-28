@@ -22,8 +22,9 @@ export const EVALUATE = "evaluate_Function_1__List_MANY__Any_MANY_";
 export const JS_COMPILE_MODULE = "compileModule_String_1__Any_1_";
 export const JS_EXECUTE = "execute_Any_1__String_1__Any_MANY__GenericType_$0_1$__Multiplicity_$0_1$__Any_$0_1$__Any_MANY_";
 export const JS_DRAIN_COMPILED_SOURCES = "drainCompiledSources__String_MANY_";
-export const READ_FILE = "readFile_String_1__String_1_";
-export const READ_FILE_BYTES = "readFileBytes_String_1__Integer_MANY_";
+export const READ_FILE_BYTES = "readFileBytes_String_1__Binary_1_";
+export const ENTRY_NAMES = "entryNames_Binary_1__String_MANY_";
+export const ENTRY_BYTES = "entryBytes_Binary_1__String_1__Binary_1_";
 export const DIRECTORY_TREE = "directoryTree_String_1__String_MANY_";
 export const WRITE_FILE = "writeFile_String_1__String_1__String_1_";
 

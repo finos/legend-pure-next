@@ -58,21 +58,36 @@ function meta::pure::functions::printer::protocol::printVariableExpression(v: me
 // type so each kind renders in its source-text form.
 function meta::pure::functions::printer::protocol::printAtomicValue(a: meta::pure::protocol::grammar::valuespecification::AtomicValue[1]): String[1]
 {
-    if ($a.value->isEmpty(),
-        | '/* todo: empty AtomicValue */',
-        | let v = $a.value->toOne();
-          let typeName = atomicValueTypeName($a);
-          $v->match([
-              s: String[1]  | if (isDateTypeName($typeName), | '%' + $s, | printStringLiteral($s)),
-              i: Integer[1] | $i->toString(),
-              f: Float[1]   | $f->toString(),
-              d: Decimal[1] | $d->toString() + 'd',
-              b: Boolean[1] | $b->toString(),
-              pp: Package_Pointer[1] | $pp.value,
-              lf: meta::pure::protocol::grammar::function::LambdaFunction[1] | printLambdaFunction($lf),
-              x: Any[1] | $x->toString()
-          ]);
-    );
+    let typeName = atomicValueTypeName($a);
+    // `0x` alone is the empty Binary. The protocol drops an empty digit string,
+    // so a missing value on a Binary means zero bytes, not an absent literal.
+    if([pair(| isBinaryTypeName($typeName), | '0x' + $a.value->map(v | $v->toString())->joinStrings('')),
+        pair(| $a.value->isEmpty(),         | '/* todo: empty AtomicValue */')],
+       | printAtomicLiteral($a.value->toOne(), $typeName));
+}
+
+// The literal payload of a non-empty AtomicValue, rendered in its source-text
+// form. `typeName` disambiguates the String-carried literals (dates, times).
+function meta::pure::functions::printer::protocol::printAtomicLiteral(v: Any[1], typeName: String[0..1]): String[1]
+{
+    $v->match([
+        s: String[1]  | if (isDateTypeName($typeName), | '%' + $s, | printStringLiteral($s)),
+        i: Integer[1] | $i->toString(),
+        f: Float[1]   | $f->toString(),
+        d: Decimal[1] | $d->toString() + 'd',
+        b: Boolean[1] | $b->toString(),
+        pp: Package_Pointer[1] | $pp.value,
+        lf: meta::pure::protocol::grammar::function::LambdaFunction[1] | printLambdaFunction($lf),
+        x: Any[1] | $x->toString()
+    ]);
+}
+
+// Binary literals are carried as a String of hex digit pairs, tagged `Binary`.
+function meta::pure::functions::printer::protocol::isBinaryTypeName(name: String[0..1]): Boolean[1]
+{
+    if ($name->isEmpty(),
+        | false,
+        | $name->toOne() == 'Binary');
 }
 
 // Date / StrictDate / DateTime / StrictTime literals share the `%...` prefix.

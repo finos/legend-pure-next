@@ -186,9 +186,9 @@ public final class CompileAndExecuteNode extends PureNode
         String purePath = generatedPurePath(value);
         // The generated Variant class prints its compact JSON; parse it into
         // the runtime's Variant, as fromJson would.
-        if (org.finos.legend.pure.execution.PureVariant.TYPE_PATH.equals(purePath))
+        if (org.finos.legend.pure.truffle.execution.types.PureVariant.TYPE_PATH.equals(purePath))
         {
-            return new org.finos.legend.pure.execution.PureVariant(org.finos.legend.pure.execution.JsonValue.parse(value.toString()));
+            return new org.finos.legend.pure.truffle.execution.types.PureVariant(org.finos.legend.pure.truffle.execution.types.JsonValue.parse(value.toString()));
         }
         // The generated PureDate prints its Pure text and carries its kind
         // (StrictDate, DateTime, or Date for a partial date).

@@ -168,6 +168,7 @@ public final class PureTypeResolver
             case java.time.LocalDate ld       -> "StrictDate";
             case java.time.ZonedDateTime zdt  -> "DateTime";
             case java.time.LocalTime lt       -> "StrictTime";
+            case byte[] bs                    -> "Binary";
             case Byte b                       -> "Byte";
             case Number n                     -> "Number";
             default                           -> null;

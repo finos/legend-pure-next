@@ -1,0 +1,57 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+import meta::pure::functions::binary::*;
+
+// A byte: an Integer restricted to 0..255.
+//
+// Declared as a constrained primitive extension in the binary functions
+// package rather than a bootstrap primitive under
+// `meta::pure::metamodel::type::primitives::`, so that:
+//   - a Byte IS an Integer — `($acc * 256) + $b->binaryAt($i)` needs no
+//     conversion, which keeps the PDB reader's inner loop untouched;
+//   - `$i->cast(@Byte)` is the narrowing operation, and `cast` evaluates the
+//     constraint, so the range check comes for free rather than from a
+//     hand-written native. The package matters for this: the JavaScript
+//     translator skips constraints on types under `meta::pure::metamodel::`
+//     ("their constraints belong to the host runtime"), and the Java
+//     translator's isPrimitiveExtension skips `...::type::primitives::`.
+//
+// UNSIGNED 0..255, not the JVM's signed -128..127: every byte-level function
+// in this package documents its bytes that way, and the little-endian
+// assembly in the PDB reader is only correct for unsigned bytes.
+Primitive meta::pure::functions::binary::Byte extends Integer
+[
+   $this >= 0 && $this <= 255
+]
+
+function <<PCT.test>> meta::pure::functions::binary::tests::byte::testCastInRange<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(0, $f->eval(|0->cast(@Byte)));
+    assertEquals(139, $f->eval(|139->cast(@Byte)));
+    assertEquals(255, $f->eval(|255->cast(@Byte)));
+}
+
+// The narrowing check is the type's constraint, not a hand-written range test:
+// `cast` evaluates it, so an out-of-range Integer cannot become a Byte.
+function <<PCT.test>> meta::pure::functions::binary::tests::byte::testCastAboveRangeFails<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertError(| $f->eval(|256->cast(@Byte)), 'Constraint :[0] violated in the Class Byte');
+}
+
+function <<PCT.test>> meta::pure::functions::binary::tests::byte::testCastBelowRangeFails<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertError(| $f->eval(|(-1)->cast(@Byte)), 'Constraint :[0] violated in the Class Byte');
+}

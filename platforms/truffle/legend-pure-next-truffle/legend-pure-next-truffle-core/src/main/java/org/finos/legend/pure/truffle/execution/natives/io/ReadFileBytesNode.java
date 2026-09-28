@@ -19,19 +19,20 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.execution.ast.PureNode;
 import org.finos.legend.pure.truffle.execution.natives.string.StringHelper;
-import org.finos.legend.pure.truffle.execution.types.LongSequence;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * {@code readFileBytes(String[1]) : Integer[*]} — reads a file's raw bytes (each 0..255).
+ * {@code readFileBytes(String[1]) : Binary[1]} — a file's raw bytes, as a host
+ * byte array. No per-byte boxing: a multi-megabyte .pdb used to become millions
+ * of boxed values crossing this boundary.
  */
 @NodeInfo(shortName = "readFileBytes")
 public final class ReadFileBytesNode extends PureNode
 {
-    private static final String SIG = "readFileBytes_String_1__Integer_MANY_";
+    private static final String SIG = "readFileBytes_String_1__Binary_1_";
 
     @Child
     private PureNode pathArg;
@@ -53,14 +54,7 @@ public final class ReadFileBytesNode extends PureNode
     {
         try
         {
-            byte[] content = Files.readAllBytes(Path.of(path));
-            // LongSequence (unboxed), as the binary natives return byte lists.
-            long[] bytes = new long[content.length];
-            for (int i = 0; i < content.length; i++)
-            {
-                bytes[i] = content[i] & 0xFF;
-            }
-            return new LongSequence(bytes);
+            return Files.readAllBytes(Path.of(path));
         }
         catch (IOException e)
         {

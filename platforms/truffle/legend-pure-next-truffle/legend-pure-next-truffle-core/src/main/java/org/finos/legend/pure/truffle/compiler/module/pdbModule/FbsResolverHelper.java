@@ -17,37 +17,34 @@ public final class FbsResolverHelper
     /**
      * Resolve a typed PointerRef using its kind discriminator and path segments.
      */
-    public static Object resolvePointerRef(org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef ref, MetadataAccess resolver)
+    /**
+     * Resolve a pointer read by the TRANSLATED reader, which hands back a
+     * {@code ReadPointerRef} ({@code kind} + unsplit {@code segs}) rather than
+     * a flatc table. Same switch as above — PointerKind is the m3.fbs enum.
+     */
+    public static Object resolvePointerRef(long kind, java.util.List<String> segs, MetadataAccess resolver)
     {
-        if (ref == null || ref.pathLength() == 0)
+        if (segs == null || segs.isEmpty())
         {
             return null;
         }
-        return switch (ref.kind())
+        return switch ((int) kind)
         {
-            case 0 -> // Element
+            case 0 ->
             {
-                String p = ref.path(0);
+                String p = segs.get(0);
                 Object r = resolver.getElement(p);
                 if (r == null && p.contains("."))
                 {
-                    // Enum value references and nested members come through
-                    // here — `meta::pure::functions::date::DurationUnit.HOURS`
-                    // isn't stored as a top-level archive element; fall back
-                    // to navigating the owner type's properties/values.
                     r = resolveNestedElement(p, resolver);
                 }
                 if (r == null) System.err.println("[PTR-FAIL] Element kind=0 path=" + p);
                 yield r;
             }
-            case 1 -> // Property
-                    ref.pathLength() > 1 ? resolveProperty(ref.path(0), ref.path(1), resolver) : null;
-            case 2 -> // QualifiedProperty
-                    ref.pathLength() > 1 ? resolveQualifiedProperty(ref.path(0), ref.path(1), resolver) : null;
-            case 3 -> // Stereotype
-                    ref.pathLength() > 1 ? resolveStereotype(ref.path(0), ref.path(1), resolver) : null;
-            case 4 -> // Tag
-                    ref.pathLength() > 1 ? resolveTag(ref.path(0), ref.path(1), resolver) : null;
+            case 1 -> segs.size() > 1 ? resolveProperty(segs.get(0), segs.get(1), resolver) : null;
+            case 2 -> segs.size() > 1 ? resolveQualifiedProperty(segs.get(0), segs.get(1), resolver) : null;
+            case 3 -> segs.size() > 1 ? resolveStereotype(segs.get(0), segs.get(1), resolver) : null;
+            case 4 -> segs.size() > 1 ? resolveTag(segs.get(0), segs.get(1), resolver) : null;
             default -> null;
         };
     }

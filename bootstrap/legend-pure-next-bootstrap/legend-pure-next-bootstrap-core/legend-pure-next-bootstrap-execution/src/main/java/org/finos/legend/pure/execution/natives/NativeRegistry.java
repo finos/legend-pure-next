@@ -415,9 +415,10 @@ public class NativeRegistry
         ElementPathNatives.register(natives, lazyNatives, resolver);
         IONatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.io.FileSystemNatives.register(natives, lazyNatives, resolver);
+        org.finos.legend.pure.execution.natives.io.ArchiveNatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.date.DateNatives.register(natives, lazyNatives, resolver);
+        org.finos.legend.pure.execution.natives.binary.BinaryNatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.variant.VariantNatives.register(natives, lazyNatives, resolver);
-        org.finos.legend.pure.execution.natives.pdb.PdbBinaryNatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.meta.antlr.AntlrNatives.register(natives, lazyNatives, resolver, this);
         new CompilerNatives(parserExtensions, this.compilation).registerAll(this);
     }
@@ -460,6 +461,14 @@ public class NativeRegistry
         if (Objects.equals(a, b))
         {
             return true;
+        }
+        // A Binary is a host byte[], whose natural equals() is identity. Pure
+        // equality on a primitive is by VALUE, so compare contents — otherwise
+        // two Binaries holding the same bytes compare unequal, which is a trap
+        // for every caller including assertEquals.
+        if (a instanceof byte[] bytesA && b instanceof byte[] bytesB)
+        {
+            return java.util.Arrays.equals(bytesA, bytesB);
         }
         if (a == null && b instanceof List<?> listB && listB.isEmpty())
         {
