@@ -847,7 +847,16 @@ public final class Metadata
             return;
         }
         Object expected = lenientElement(instance._purePath());
-        if (expected == null || proposed == expected || isOrSpecializes(proposed, expected))
+        // By PATH, not only by identity: `resolveAndReturnGraph` exists to produce a fresh
+        // deep COPY of a graph, so the copied element carrying the same classifier is a
+        // different object than the live one the metadata hands back. Comparing objects
+        // alone rejects that with a message naming the same path twice ("from 'Class' to
+        // 'Class'"), which is what it looked like on CI. bootstrap and Truffle both compare
+        // paths here (samePackageableElement) and the JavaScript host compares path strings;
+        // this host was the only one that did not.
+        if (expected == null || proposed == expected
+                || java.util.Objects.equals(path(proposed, "::"), path(expected, "::"))
+                || isOrSpecializes(proposed, expected))
         {
             return;
         }
