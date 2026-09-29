@@ -58,7 +58,7 @@ default: test
 # This is what frees Truffle from flatc, and so from the bootstrap-compiler jar:
 # the reader is shared with the other platforms AS PURE SOURCE, never as a
 # dependency. The support classes it calls into (LazyObject, Metadata,
-# PureLambda, PureValues) are Truffle's own, under truffle.pdbgen — the
+# PureLambda, PureValues) are Truffle's own, under truffle.pdb / truffle.runtime — the
 # `platformPackage` argument is what points the generated code at them instead
 # of the Java platform's.
 #
@@ -72,7 +72,13 @@ generate-pdb-reader:
     cd "{{repo_root}}"
     out="{{truffle_root}}/legend-pure-next-truffle/legend-pure-next-truffle-core/generated"
     pkgs="meta::pure::compiler::pdb::reader,meta::pure::compiler::pdb::schema"
-    host="org.finos.legend.pure.truffle.pdbgen"
+    host="org.finos.legend.pure.truffle"
+    # The four support classes the generated reader calls (LazyObject, Metadata,
+    # PureLambda, PureValues) live in ONE package beside their only consumer,
+    # GenericFbDecoder — not under the `.pdb` / `.runtime` pair the Java platform
+    # uses, whose support surface is far larger. The four-argument entry points
+    # take this as `hooksPackage`.
+    hooks="org.finos.legend.pure.truffle.compiler.module.pdbModule.hooks"
     pdbs=(--pdb {{shared_out}}/core.pdb --pdb {{shared_out}}/core-tests.pdb --pdb {{shared_out}}/compiler.pdb
           --pdb {{shared_out}}/parser-mappings.pdb
           --pdb {{repo_root}}/pure/modules/language/java/build/java.pdb
@@ -81,12 +87,12 @@ generate-pdb-reader:
           --pdb {{repo_root}}/pure/modules/translation/java/build/java-translation-tests.pdb)
     rm -rf "$out"; mkdir -p "$out"
     emit() {
-        {{pure_bootstrap}} execute "${pdbs[@]}" --function "$1" --args "$pkgs" "$2" "$host" \
+        {{pure_bootstrap}} execute "${pdbs[@]}" --function "$1" --args "$pkgs" "$2" "$host" "$hooks" \
           | awk -v root="$out" '/^\/\/\/\/ FILE /{ f = root "/" $3; d = f; sub(/\/[^\/]*$/, "", d); system("mkdir -p \"" d "\""); next } f != "" { print > f }'
     }
     {{substep}} 'types + functions -> generated/'
-    emit "meta::external::language::java::translation::platform::generatePlatformTypesFor_String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
-    emit "meta::external::language::java::translation::translatePackagesToJavaFor_String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
+    emit "meta::external::language::java::translation::platform::generatePlatformTypesFor_String_1__String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
+    emit "meta::external::language::java::translation::translatePackagesToJavaFor_String_1__String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
     echo "  $(find "$out" -name '*.java' | wc -l | tr -d ' ') files"
 
 # Build the Truffle interpreter (mvn install -DskipTests, fat jar into truffle/build/).

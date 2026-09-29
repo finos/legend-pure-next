@@ -218,7 +218,7 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.build.directory}/antlr4/org/finos/legend/pure/truffle/parser</outputDirectory>
+                            <outputDirectory>${project.build.directory}/antlr4/org/finos/legend/pure/truffle/grammar</outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${spec.dir}/grammar/antlr</directory>

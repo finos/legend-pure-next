@@ -1071,7 +1071,13 @@ jobs:
             gallery_file: pure/modules/translation/java/build/java-translation-gallery.html
             language_pdb_artifact: language-java-pdb
             gallery_cmd: just build test-all gallery
-            platform_suite: ''
+            # The Java platform's own seven suites, so the dashboard's java@platform
+            # column is populated from CI rather than only from a local run. Everything
+            # they need is already in this job: pure-truffle.jar (the runtime that
+            # generates this platform's Java) from truffle-artifacts, the five shared
+            # PDBs from bootstrap-artifacts, java.pdb, translation-shared.pdb, and the
+            # two java-translation PDBs built by the step above.
+            platform_suite: just java::test-all
           - target: javascript
             gallery_file: pure/modules/translation/javascript/build/javascript-translation-gallery.html
             language_pdb_artifact: language-javascript-pdb

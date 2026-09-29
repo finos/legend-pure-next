@@ -201,8 +201,8 @@ public final class PureCompileMain
         List<String> basePdbPaths = new ArrayList<>();
         String source = null;
         String outputDir = null;
-        org.finos.legend.pure.truffle.module.TestElementFilter.Mode mode =
-                org.finos.legend.pure.truffle.module.TestElementFilter.Mode.NONE;
+        org.finos.legend.pure.truffle.compiler.module.TestElementFilter.Mode mode =
+                org.finos.legend.pure.truffle.compiler.module.TestElementFilter.Mode.NONE;
 
         for (int i = 0; i < args.length; i++)
         {
@@ -211,7 +211,7 @@ public final class PureCompileMain
                 case "--base-pdb" -> basePdbPaths.add(args[++i]);
                 case "--source" -> source = args[++i];
                 case "--output-dir" -> outputDir = args[++i];
-                case "--tests" -> mode = org.finos.legend.pure.truffle.module.TestElementFilter.Mode.parse(args[++i]);
+                case "--tests" -> mode = org.finos.legend.pure.truffle.compiler.module.TestElementFilter.Mode.parse(args[++i]);
                 default -> throw new IllegalArgumentException("Unknown option: " + args[i]);
             }
         }

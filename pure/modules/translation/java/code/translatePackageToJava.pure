@@ -61,6 +61,16 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
    meta::external::language::java::translation::translatePackagesToJavaFor($rootPackagePaths->split(','), $basePackage, $platformPackage);
 }
 
+// The same, for a host that keeps its support classes in ONE package instead of the
+// Java platform's `.pdb` / `.runtime` pair: `hooksPackage` is where the generated code
+// looks for BOTH groups. Truffle passes the package its PDB reader's only consumer
+// lives in, so the four hooks sit beside it rather than under two sub-packages of their
+// own (see truffle::generate-pdb-reader).
+function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJavaFor(rootPackagePaths: String[1], basePackage: String[1], platformPackage: String[1], hooksPackage: String[1]): String[1]
+{
+   meta::external::language::java::translation::translatePackagesToJavaForHost($rootPackagePaths->split(','), $basePackage, $platformPackage, $hooksPackage, $hooksPackage);
+}
+
 // The same translation, emitted for a NAMED host: `basePackage` roots the
 // generated element classes and `platformPackage` roots the support classes
 // they call into. Truffle generates its own copy of the PDB reader this way, so
@@ -68,7 +78,15 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
 // share `reader.pure`, not a jar.
 function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJavaFor(rootPackagePaths: String[*], basePackage: String[1], platformPackage: String[1]): String[1]
 {
-   let base     = meta::external::language::java::translation::conventionsFor($basePackage, $platformPackage);
+   meta::external::language::java::translation::translatePackagesToJavaForHost($rootPackagePaths, $basePackage, $platformPackage, meta::external::language::java::translation::defaultPdbPackage($platformPackage), meta::external::language::java::translation::defaultRuntimePackage($platformPackage));
+}
+
+// Where the generated code looks for the metadata hooks and for the runtime helpers, as
+// two separate packages: the three-argument forms pass the Java platform's `.pdb` and
+// `.runtime`, while a host that keeps both groups together passes the same package twice.
+function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJavaForHost(rootPackagePaths: String[*], basePackage: String[1], platformPackage: String[1], hooksPackage: String[1], runtimePackage: String[1]): String[1]
+{
+   let base     = ^(meta::external::language::java::translation::conventionsFor($basePackage, $platformPackage))(pdbPackage = $hooksPackage, runtimePkg = $runtimePackage);
    let conv     = ^$base(metadataElements = true);
    let elements = $rootPackagePaths->map(p | $p->pathToElement()->cast(@meta::pure::metamodel::Package)->translatableElements());
    let seeds    = $elements->filter(e | $e->instanceOf(UserDefinedFunction))->cast(@UserDefinedFunction<Any>);

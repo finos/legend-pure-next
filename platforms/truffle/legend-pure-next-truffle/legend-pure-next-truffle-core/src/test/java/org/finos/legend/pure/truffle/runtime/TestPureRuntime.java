@@ -66,19 +66,25 @@ class TestPureRuntime
                 .withRegistry(registry)
                 .build();
 
-        runtime.setSource("sample", "sample.pure", SOURCE);
-        CompilationResult result = runtime.compile();
-        if (result.errors().isEmpty())
+        try
         {
-            System.out.println(
-                    runtime.execute(
-                            runtime.registry().getElement("sample::greet_String_1__String_1__String_1_"),
-                            "Ada",
-                            "Lovelace"
-                    )
-            );
+            runtime.setSource("sample", "sample.pure", SOURCE);
+            CompilationResult result = runtime.compile();
+            if (result.errors().isEmpty())
+            {
+                System.out.println(
+                        runtime.execute(
+                                runtime.registry().getElement("sample::greet_String_1__String_1__String_1_"),
+                                "Ada",
+                                "Lovelace"
+                        )
+                );
+            }
         }
-        runtime.close();
+        finally
+        {
+            runtime.close();
+        }
     }
 
     private static Path locateSharedDir()

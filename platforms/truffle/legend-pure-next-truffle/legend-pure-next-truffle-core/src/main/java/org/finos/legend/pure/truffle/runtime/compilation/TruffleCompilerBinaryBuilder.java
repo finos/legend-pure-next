@@ -20,8 +20,8 @@ import org.finos.legend.pure.truffle.compiler.module.ModuleRegistry;
 import org.finos.legend.pure.truffle.compiler.module.MetadataAccess;
 import org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.PurePdbArchiveWriter;
 import org.finos.legend.pure.truffle.compiler.module.pdbModule.PdbModule;
-import org.finos.legend.pure.truffle.module.ModuleManifest;
-import org.finos.legend.pure.truffle.module.TestElementFilter;
+import org.finos.legend.pure.truffle.compiler.module.ModuleManifest;
+import org.finos.legend.pure.truffle.compiler.module.TestElementFilter;
 import org.finos.legend.pure.truffle.runtime.PureRuntime;
 import org.finos.legend.pure.truffle.execution.types.PureSequence;
 
@@ -393,7 +393,7 @@ public final class TruffleCompilerBinaryBuilder
                 java.util.Set<String> leanPaths = elementPaths(lean, resolver);
                 writePdb("lean (" + lean.size() + "/" + elements.size() + ")",
                         lean, manifest, outputFile,
-                        org.finos.legend.pure.truffle.module.ReverseIndexSection.filter(referencedBy, leanPaths::contains),
+                        org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains),
                         runtime, resolver);
             }
             case ONLY ->
@@ -405,7 +405,7 @@ public final class TruffleCompilerBinaryBuilder
                 writePdb("tests-only (" + tests.size() + "/" + elements.size() + ")",
                         tests, TestElementFilter.testsManifest(manifest),
                         TestElementFilter.testsOnlyPath(outputFile),
-                        org.finos.legend.pure.truffle.module.ReverseIndexSection.filter(referencedBy, testPaths::contains),
+                        org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains),
                         runtime, resolver);
             }
             case SPLIT ->
@@ -430,12 +430,12 @@ public final class TruffleCompilerBinaryBuilder
                 List<Object> testsWithShadows = withShadowPackages(tests, lean, testPaths, resolver);
                 writePdb("lean (" + leanFiltered.size() + "/" + elements.size() + ")",
                         leanFiltered, manifest, outputFile,
-                        org.finos.legend.pure.truffle.module.ReverseIndexSection.filter(referencedBy, leanPaths::contains),
+                        org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, leanPaths::contains),
                         runtime, resolver);
                 writePdb("tests-only (" + testsWithShadows.size() + "/" + elements.size() + ")",
                         testsWithShadows, TestElementFilter.testsManifest(manifest),
                         TestElementFilter.testsOnlyPath(outputFile),
-                        org.finos.legend.pure.truffle.module.ReverseIndexSection.filter(referencedBy, testPaths::contains),
+                        org.finos.legend.pure.truffle.compiler.module.pdbModule.archive.ReverseIndexSection.filter(referencedBy, testPaths::contains),
                         runtime, resolver);
             }
         }

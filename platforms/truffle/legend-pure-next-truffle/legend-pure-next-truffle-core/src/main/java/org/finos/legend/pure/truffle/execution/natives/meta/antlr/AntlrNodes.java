@@ -364,7 +364,7 @@ public final class AntlrNodes
         @CompilerDirectives.TruffleBoundary
         private static String doExecute(String text)
         {
-            return org.finos.legend.pure.truffle.parser.shared.TripleStringStripper.strip(text);
+            return org.finos.legend.pure.truffle.grammar.shared.TripleStringStripper.strip(text);
         }
     }
 
@@ -400,7 +400,7 @@ public final class AntlrNodes
             // Dispatch via the per-runtime GrammarExtension registry (set up
             // by PureRuntime.Builder.withGrammarExtensions). The
             // node itself stays grammar-agnostic.
-            org.finos.legend.pure.truffle.parser.GrammarExtension ext =
+            org.finos.legend.pure.truffle.grammar.GrammarExtension ext =
                     org.finos.legend.pure.truffle.execution.PureLanguage.get(null).grammars().get(grammar);
             if (ext == null)
             {

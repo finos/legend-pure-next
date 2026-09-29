@@ -61,7 +61,7 @@ public final class PureRuntime
 
     private PureRuntime(MetadataAccess resolver,
                         NativeRegistry natives,
-                               List<? extends org.finos.legend.pure.truffle.parser.GrammarExtension> grammarExtensions,
+                               List<? extends org.finos.legend.pure.truffle.grammar.GrammarExtension> grammarExtensions,
                                List<Path> sourceRoots,
                                Map<String, String> polyglotOptions)
     {
@@ -155,8 +155,8 @@ public final class PureRuntime
         }
 
         // Configure and create the Truffle polyglot context
-        Map<String, org.finos.legend.pure.truffle.parser.GrammarExtension> grammarMap = new LinkedHashMap<>();
-        for (org.finos.legend.pure.truffle.parser.GrammarExtension g : grammarExtensions)
+        Map<String, org.finos.legend.pure.truffle.grammar.GrammarExtension> grammarMap = new LinkedHashMap<>();
+        for (org.finos.legend.pure.truffle.grammar.GrammarExtension g : grammarExtensions)
         {
             if (grammarMap.put(g.grammarName(), g) != null)
             {
@@ -333,7 +333,7 @@ public final class PureRuntime
     {
         private MetadataAccess resolver;
         private NativeRegistry natives;
-        private final List<org.finos.legend.pure.truffle.parser.GrammarExtension> grammarExtensions = new ArrayList<>();
+        private final List<org.finos.legend.pure.truffle.grammar.GrammarExtension> grammarExtensions = new ArrayList<>();
         private final List<Path> sourceRoots = new ArrayList<>();
         private final Map<String, String> polyglotOptions = new LinkedHashMap<>();
 
@@ -353,10 +353,10 @@ public final class PureRuntime
         /**
          * Register grammar extensions consulted by the {@code parseAntlr}
          * native. Reuses the bootstrap-side
-         * {@link org.finos.legend.pure.truffle.parser.GrammarExtension} interface
+         * {@link org.finos.legend.pure.truffle.grammar.GrammarExtension} interface
          * — the M3/Top implementations work for both runtimes.
          */
-        public Builder withGrammarExtensions(Iterable<? extends org.finos.legend.pure.truffle.parser.GrammarExtension> extensions)
+        public Builder withGrammarExtensions(Iterable<? extends org.finos.legend.pure.truffle.grammar.GrammarExtension> extensions)
         {
             if (extensions != null)
             {
@@ -428,15 +428,15 @@ public final class PureRuntime
             // parseAntlr native works out of the box. Callers that need a
             // custom grammar add it via withGrammarExtensions; conflicts on
             // the same grammarName throw at runtime construction time.
-            List<org.finos.legend.pure.truffle.parser.GrammarExtension> allGrammars = new ArrayList<>(grammarExtensions);
+            List<org.finos.legend.pure.truffle.grammar.GrammarExtension> allGrammars = new ArrayList<>(grammarExtensions);
             boolean hasM3 = false, hasTop = false;
-            for (org.finos.legend.pure.truffle.parser.GrammarExtension g : allGrammars)
+            for (org.finos.legend.pure.truffle.grammar.GrammarExtension g : allGrammars)
             {
                 if ("M3Parser".equals(g.grammarName())) hasM3 = true;
                 if ("TopParser".equals(g.grammarName())) hasTop = true;
             }
-            if (!hasM3) allGrammars.add(new org.finos.legend.pure.truffle.parser.M3GrammarExtension());
-            if (!hasTop) allGrammars.add(new org.finos.legend.pure.truffle.parser.TopGrammarExtension());
+            if (!hasM3) allGrammars.add(new org.finos.legend.pure.truffle.grammar.M3GrammarExtension());
+            if (!hasTop) allGrammars.add(new org.finos.legend.pure.truffle.grammar.TopGrammarExtension());
             return new PureRuntime(resolver, natives != null ? natives : NativeRegistry.createDefault(),
                     allGrammars, sourceRoots, polyglotOptions);
         }

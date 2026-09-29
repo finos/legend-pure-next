@@ -42,13 +42,13 @@ emit_rt_recipe         := if pure_rt == "truffle" { "just truffle::build" } else
 module                 := java_root / "legend-pure-next-java"
 generated              := module / "generated"
 classes                := module / "target" / "classes"
-# The ANTLR extension: optional, and the only part of this platform that is not
-# JDK-only. Build order is Layer 0 (bootstrap jar, which carries the parsers
-# ANTLR generates from the grammars and the ANTLR runtime) -> ext-classes.
-antlr_ext              := java_root / "build" / "ext-classes"
-bootstrap_jar          := repo_root / "bootstrap" / "build" / "pure-bootstrap.jar"
-# What a run needs: the platform, then the extension when it has been built.
-run_classpath          := classes + ":" + antlr_ext + ":" + bootstrap_jar
+# The ANTLR runtime, staged by the module's build (copy-dependencies) because a run is
+# `java -cp` assembled here rather than by maven. Parsing is part of the platform now:
+# it used to be a separate ext/antlr compiled against the bootstrap fat jar, which was
+# this platform's last dependency on another platform.
+antlr_runtime          := module / "target" / "lib" / "antlr4-runtime-4.13.2.jar"
+# What a run needs. Nothing from bootstrap or Truffle.
+run_classpath          := classes + ":" + antlr_runtime
 
 # Heap for a suite run. Measured on the PDB golden corpus (the heaviest): it
 # passes in 512m, and 6g bought nothing once the writer was pre-generated —
@@ -263,7 +263,7 @@ compile: _depCheck_emit_rt clean-generated generate-types generate-runtime gener
     @{{header}} 'compile'
     @{{substep}} 'mvn compile: src/main/java + target/generated-sources/pure, JDK only'
     cd {{module}} && mvn -q clean compile
-    test -f {{classes}}/org/finos/legend/pure/platform/java/pdb/PdbRuntime.class
+    test -f {{classes}}/org/finos/legend/pure/platform/java/compiler/module/pdbModule/PdbRuntime.class
     @echo "  $(find {{classes}} -name '*.class' | wc -l | tr -d ' ') classes"
 
 # Inner loop for hand iteration: recompile WITHOUT cleaning and WITHOUT
@@ -281,7 +281,7 @@ compile-fast:
     @{{header}} 'compile-fast'
     @{{substep}} 'incremental mvn compile — no clean, no regeneration (hand iteration only)'
     cd {{module}} && mvn -q compile
-    test -f {{classes}}/org/finos/legend/pure/platform/java/pdb/PdbRuntime.class
+    test -f {{classes}}/org/finos/legend/pure/platform/java/compiler/module/pdbModule/PdbRuntime.class
     @echo "  $(find {{classes}} -name '*.class' | wc -l | tr -d ' ') classes"
 
 # The transform's own Java, generated twice: once by the Pure runtime that builds
@@ -307,8 +307,7 @@ fixpoint: compile
         --args "{{transform_roots}}" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{java_root}}/build/fixpoint-ref" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
-    set -o pipefail; java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.Execute \
-        --schema {{repo_root}}/shared/specification/m3.fbs \
+    set -o pipefail; java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{shared}}/compiler.pdb \
@@ -322,19 +321,6 @@ fixpoint: compile
         | awk -v root="{{java_root}}/build/fixpoint" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
     diff -r {{java_root}}/build/fixpoint-ref {{java_root}}/build/fixpoint > {{java_root}}/build/fixpoint.diff 2>&1 && echo "  fixpoint: $(find {{java_root}}/build/fixpoint -name '*.java' | wc -l | tr -d ' ') files, the transform reproduces its own sources" || (echo "  FIXPOINT DIFFERS (build/fixpoint.diff):" && head -20 {{java_root}}/build/fixpoint.diff && exit 1)
 
-# Build the ANTLR extension (optional). The platform core never needs it: only a
-# program that parses does, and then it must be on the class path. Sequence:
-#   just bootstrap::build   (the jar with the generated parsers + ANTLR runtime)
-#   just java::compile      (the JDK-only platform)
-#   just java::build-antlr-ext
-build-antlr-ext:
-    @{{header}} 'build-antlr-ext'
-    @{{substep}} 'javac ext/antlr -> build/ext-classes (against the bootstrap jar)'
-    test -f {{bootstrap_jar}} || (echo "ERROR: missing {{bootstrap_jar}} (run \`just bootstrap::build\` first)" && exit 1)
-    rm -rf {{antlr_ext}} && mkdir -p {{antlr_ext}}
-    javac -nowarn -cp {{bootstrap_jar}} -d {{antlr_ext}} $(find {{java_root}}/ext/antlr/src -name '*.java')
-    @echo "  $(find {{antlr_ext}} -name '*.class' | wc -l | tr -d ' ') classes"
-
 # The PCT corpus ON this platform: the translated runner discovers the tests,
 # the platform translates and compiles each one in memory, and runs it with the
 # in-memory adapter (`$f->eval()` — the lambda is already Java here).
@@ -342,8 +328,7 @@ pct PACKAGE="meta::pure::functions": compile
     @{{header}} 'pct'
     @{{substep}} 'run {{PACKAGE}} PCT tests on the platform'
     mkdir -p {{repo_root}}/test-results/spec/pct
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.Execute \
-        --schema {{repo_root}}/shared/specification/m3.fbs \
+    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{shared}}/compiler.pdb \
@@ -358,15 +343,11 @@ pct PACKAGE="meta::pure::functions": compile
 
 # The grammar corpus ON this platform: parse each fixture under
 # pure/specification/grammar/tests and compare with its expected protocol.
-# Needs the ANTLR extension (`just java::build-antlr-ext`) — parsing is the
-# whole point of this suite, and the core stays JDK-only without it.
 spec-grammar: compile
     @{{header}} 'spec-grammar'
     @{{substep}} 'runGrammarCorpus over pure/specification/grammar/tests (Java platform)'
-    test -d {{antlr_ext}} || (echo "ERROR: this suite parses, so it needs the ANTLR extension (run \`just java::build-antlr-ext\`)" && exit 1)
     mkdir -p {{repo_root}}/test-results/spec/grammar
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.Execute \
-        --schema {{repo_root}}/shared/specification/m3.fbs \
+    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{shared}}/compiler.pdb \
@@ -386,10 +367,8 @@ spec-grammar: compile
 spec-compiler: compile
     @{{header}} 'spec-compiler'
     @{{substep}} 'runCompiledGraphTests over pure/specification/compiler/tests (Java platform)'
-    test -d {{antlr_ext}} || (echo "ERROR: this suite parses, so it needs the ANTLR extension (run \`just java::build-antlr-ext\`)" && exit 1)
     mkdir -p {{repo_root}}/test-results/spec/compiler
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.Execute \
-        --schema {{repo_root}}/shared/specification/m3.fbs \
+    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{shared}}/compiler.pdb \
@@ -410,8 +389,7 @@ spec-functions PACKAGE="meta::pure::functions": compile
     @{{header}} 'spec-functions'
     @{{substep}} 'runTests over {{PACKAGE}} (Java platform)'
     mkdir -p {{repo_root}}/test-results/spec/functions
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.Execute \
-        --schema {{repo_root}}/shared/specification/m3.fbs \
+    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{shared}}/compiler.pdb \
@@ -431,8 +409,7 @@ spec-pdb-format: compile
     @{{header}} 'spec-pdb-format'
     @{{substep}} 'runTests over meta::pure::compiler::pdb (Java platform)'
     mkdir -p {{repo_root}}/test-results/spec/pdb-format
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.Execute \
-        --schema {{repo_root}}/shared/specification/m3.fbs \
+    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{shared}}/compiler.pdb \
@@ -454,10 +431,8 @@ spec-pdb-format: compile
 spec-pdb: compile
     @{{header}} 'spec-pdb'
     @{{substep}} 'runPdbGoldenTests: the Pure writer against the Java golden archives (Java platform)'
-    test -d {{antlr_ext}} || (echo "ERROR: this suite parses, so it needs the ANTLR extension (run \`just java::build-antlr-ext\`)" && exit 1)
     mkdir -p {{repo_root}}/test-results/spec/pdb
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.Execute \
-        --schema {{repo_root}}/shared/specification/m3.fbs \
+    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{shared}}/compiler.pdb \
@@ -480,8 +455,7 @@ test-translation: compile
     @{{header}} 'test-translation'
     @{{substep}} 'runTests meta::external::language::java::translation (Java platform)'
     mkdir -p {{repo_root}}/test-results/pure/translation-java
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.Execute \
-        --schema {{repo_root}}/shared/specification/m3.fbs \
+    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{shared}}/compiler.pdb \
@@ -497,7 +471,14 @@ test-translation: compile
 # Every suite this platform runs, each writing its own java@platform report for
 # the dashboard. `compile` is a dependency of each and just runs it once.
 # Failures land in the reports rather than failing the build (see each recipe).
-test-all: build-antlr-ext pct test-translation spec-functions spec-grammar spec-compiler spec-pdb-format spec-pdb
+# The module's JUnit tests: the host API end to end (TestPureRuntime), as bootstrap and
+# Truffle run theirs. Needs `compile` first — the tests drive the compiled platform.
+test-junit: compile
+    @{{header}} 'test-junit'
+    @{{substep}} 'mvn test: src/test/java'
+    cd {{module}} && mvn -q test
+
+test-all: pct test-junit test-translation spec-functions spec-grammar spec-compiler spec-pdb-format spec-pdb
 
 # The Pure -> Java gallery, rendered BY THIS PLATFORM: the translated renderer
 # runs on the JVM, so every card shows the Java this platform generates and runs
@@ -505,8 +486,7 @@ test-all: build-antlr-ext pct test-translation spec-functions spec-grammar spec-
 gallery PACKAGE="meta::pure::functions" OUT=(java_root / "build" / "java-platform-gallery.html"): compile
     @{{header}} 'gallery'
     @{{substep}} 'render {{PACKAGE}} -> {{OUT}}'
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.Execute \
-        --schema {{repo_root}}/shared/specification/m3.fbs \
+    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{shared}}/compiler.pdb \
@@ -523,16 +503,16 @@ gallery PACKAGE="meta::pure::functions" OUT=(java_root / "build" / "java-platfor
 spike PDB=(shared / "core.pdb") ELEMENT="meta::pure::metamodel::type::Class": compile
     @{{header}} 'spike'
     @{{substep}} 'java: read {{ELEMENT}}'
-    java -cp {{classes}} org.finos.legend.pure.platform.java.pdb.PdbSpike "{{PDB}}" {{repo_root}}/shared/specification/m3.fbs "{{ELEMENT}}"
+    java -cp {{classes}} org.finos.legend.pure.platform.java.compiler.module.pdbModule.PdbSpike "{{PDB}}" {{repo_root}}/shared/specification/m3.fbs "{{ELEMENT}}"
 
 # Navigate the Pure metamodel from PDBs through the generated typed interfaces.
 metamodel-spike ELEMENT="meta::pure::metamodel::type::Class": compile
     @{{header}} 'metamodel-spike'
     @{{substep}} 'java: navigate {{ELEMENT}} (core.pdb + compiler.pdb)'
-    java -cp {{classes}} org.finos.legend.pure.platform.java.pdb.MetamodelSpike {{repo_root}}/shared/specification/m3.fbs "{{ELEMENT}}" {{shared}}/core.pdb {{shared}}/compiler.pdb
+    java -cp {{classes}} org.finos.legend.pure.platform.java.compiler.module.pdbModule.MetamodelSpike {{repo_root}}/shared/specification/m3.fbs "{{ELEMENT}}" {{shared}}/core.pdb {{shared}}/compiler.pdb
 
 # One object model: instances built at run time next to PDB-read ones.
 model-spike: compile
     @{{header}} 'model-spike'
     @{{substep}} 'java: build a Class in memory, copy a PDB element'
-    java -cp {{classes}} org.finos.legend.pure.platform.java.pdb.ModelSpike {{repo_root}}/shared/specification/m3.fbs {{shared}}/core.pdb
+    java -cp {{classes}} org.finos.legend.pure.platform.java.compiler.module.pdbModule.ModelSpike {{repo_root}}/shared/specification/m3.fbs {{shared}}/core.pdb

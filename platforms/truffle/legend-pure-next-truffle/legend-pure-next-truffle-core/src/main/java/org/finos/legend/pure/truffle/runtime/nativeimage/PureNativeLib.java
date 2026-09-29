@@ -100,7 +100,7 @@ public final class PureNativeLib
             // be written (filename derived from module manifest).
             org.finos.legend.pure.truffle.runtime.compilation.TruffleCompilerBinaryBuilder.compile(
                     basePdbs, Path.of(src), Path.of(out),
-                    org.finos.legend.pure.truffle.module.TestElementFilter.Mode.NONE,
+                    org.finos.legend.pure.truffle.compiler.module.TestElementFilter.Mode.NONE,
                     b -> {});
             return 0;
         }

@@ -15,7 +15,7 @@
 package org.finos.legend.pure.truffle.compiler.module.pdbModule.archive;
 
 import org.finos.legend.pure.truffle.compiler.module.MetadataAccess;
-import org.finos.legend.pure.truffle.module.ModuleManifest;
+import org.finos.legend.pure.truffle.compiler.module.ModuleManifest;
 import org.finos.legend.pure.truffle.runtime.PureRuntime;
 import org.finos.legend.pure.truffle.execution.types.ObjectSequence;
 import org.finos.legend.pure.truffle.execution.types.PureSequence;

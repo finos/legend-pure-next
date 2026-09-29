@@ -328,7 +328,7 @@ public class TruffleCompileToPdbTest
                     try
                     {
                         PurePdbArchiveWriter.write(runtime, resolver, elements,
-                                new org.finos.legend.pure.truffle.module.ModuleManifest("roundtrip", "*", java.util.List.of()),
+                                new org.finos.legend.pure.truffle.compiler.module.ModuleManifest("roundtrip", "*", java.util.List.of()),
                                 java.util.Map.of(), tmpPdb);
                         if (Files.size(tmpPdb) == 0) issues.add("Round-tripped PDB is empty");
                         PdbModule rt = new PdbModule(tmpPdb);
