@@ -80,6 +80,25 @@ export class InMemoryModule {
         this.onChange?.();
     }
 
+    /**
+     * `[path, kind]` for what the module holds, the kind read off each element's classifier.
+     * The PDB module answers the same question from its archive index; here the elements are
+     * already live objects, so reading the classifier costs nothing and gives the concept
+     * tree the same information for code compiled in this session as for code from an
+     * archive.
+     */
+    *elementKinds() {
+        for (const [path, obj] of this.#elements) {
+            let kind = "";
+            try {
+                kind = obj?.classifierGenericType?.type?.__purePath?.split("::").pop() ?? "";
+            } catch {
+                // An element whose classifier cannot be read is still listed, without a kind.
+            }
+            yield [path, kind];
+        }
+    }
+
     hasElement(path) { return this.#elements.has(path); }
     getElement(path) { return this.#elements.get(path) ?? null; }
     elementPaths() { return this.#elements.keys(); }
@@ -116,6 +135,39 @@ export class InMemoryModule {
         }
         if (added.length) this.onChange?.();
         return added;
+    }
+
+    /**
+     * Make the module hold exactly `els` — what a fresh compile produced — and invalidate
+     * ONLY the paths that actually changed.
+     *
+     * `clearElements()` then `addElements()` gets the same contents but flushes the whole
+     * registry cache twice, and the caches it throws away are mostly PDB-derived: the next
+     * compile then re-walks the core working set (measured: a recompile went from ~45ms to
+     * ~650ms). Per-path invalidation is the same reason the gallery went from 189s to 27s.
+     *
+     * Returns the paths the module now holds.
+     */
+    replaceElements(els) {
+        const next = new Map();
+        for (const e of els ?? []) {
+            let path;
+            try { path = globalThis.__elementToPath?.(e); } catch { path = undefined; }
+            if (path) next.set(path, e);
+        }
+        const changed = [];
+        for (const path of [...this.#elements.keys()]) {
+            if (!next.has(path)) { this.#elements.delete(path); changed.push(path); }
+        }
+        for (const [path, obj] of next) {
+            if (this.#elements.get(path) !== obj) { this.#elements.set(path, obj); changed.push(path); }
+        }
+        if (changed.length) {
+            // Per path when the registry can do it; one whole-cache flush only as a fallback.
+            if (this.onPathChange) changed.forEach((path) => this.onPathChange(path));
+            else this.onChange?.();
+        }
+        return [...next.keys()];
     }
 
     /** The translated global for a Pure function path: exact mangled name, else a unique prefix match (by arity). */

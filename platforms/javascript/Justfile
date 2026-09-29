@@ -282,9 +282,22 @@ test-pure-runtime: generate-all
 # translation/java runs its through bin/pure-truffle.
 test-all: test test-compiler test-execution spec-grammar spec-compiler spec-pct test-pdb spec-pdb-golden test-printer-compiled test-printer-protocol test-host-api test-pure-runtime
 
+# Vendor Monaco for the browser demo: pnpm installs the pinned monaco-editor and its
+# prebuilt AMD distribution is copied to build/vs, which index.html loads. Vendored
+# rather than pulled from a CDN so the page stays exactly what it claims to be — a
+# compiler that runs with no network — and so the editor version is pinned like the
+# antlr4 bundle translation/javascript vendors.
+#
+# build/ is gitignored; re-run after changing the monaco-editor version.
+web-deps:
+    @{{header}} 'web-deps'
+    @{{substep}} 'pnpm install + copy monaco min/vs -> build/vs'
+    cd {{js_root}} && pnpm install --silent && rm -rf build/vs && mkdir -p build && cp -R node_modules/monaco-editor/min/vs build/vs
+    @echo "  $(du -sh {{js_root}}/build/vs | cut -f1) in build/vs"
+
 # Serve the browser demo. Served from the repo root so src/interfaces/web/index.html's
 # relative paths to the parser bundle resolve; open the printed URL.
-serve:
+serve: web-deps
     @{{header}} 'serve'
     @{{substep}} 'static server at repo root'
     @echo "  open  http://localhost:8000/platforms/javascript/src/interfaces/web/index.html"

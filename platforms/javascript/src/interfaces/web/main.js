@@ -34,6 +34,12 @@ import { antlrExtension } from "../../core/execution/natives/AntlrExtension.js";
 import { compileSourceExtension } from "../../core/execution/natives/CompileSourceExtension.js";
 import { NativeRegistry } from "../../core/execution/natives/NativeRegistry.js";
 import { PureRuntime } from "../../core/runtime/PureRuntime.js";
+import { registerPureLanguage, keywordsFromGrammar, primitivesFromRegistry,
+         compileErrorMarkers, parseErrorMarkers } from "./pure-language.js";
+import { createConceptTree } from "./concepts.js";
+import { createConsole } from "./console-panel.js";
+import { initSplitters, initTheme, definePureThemes } from "./layout.js";
+import { openInspector } from "./inspector.js";
 
 const REPO = "../../../../..";
 const SHARED = `${REPO}/shared`;
@@ -59,104 +65,44 @@ const GEN_MODULES = [
 ];
 
 const COMPILE = "meta$pure$compiler$compile_PureFile_MANY__CompilationResult_1_";
-const PRINT_GRAPH =
-    "meta$pure$compiler$test$printer$printCompiledGraph_PackageableElement_MANY__CompilerContext_1__String_1_";
 const TO_REPRESENTATION = "meta$pure$functions$string$toRepresentation_Any_1__String_1_";
 const GO_PATH = "go__Any_MANY_"; // mangled path of `function go():Any[*]`
+// One element's JavaScript, without eval'ing or registering it — what the inspector shows.
+const TRANSLATE_ELEMENT =
+    "meta$external$language$javascript$translation$pdb$translateElement_PackageableElement_1__String_1_";
+const GRAMMAR = `${REPO}/pure/specification/grammar/antlr/m3/M3Lexer.g4`;
 
-const out = document.getElementById("out");
-const graph = document.getElementById("graph");
-const gen = document.getElementById("gen");
 const status = document.getElementById("status");
 const runBtn = document.getElementById("run");
-const src = document.getElementById("src");
-const highlights = document.getElementById("highlights");
 
-const SECTIONS = { out: "outSec", graph: "graphSec", gen: "genSec" };
-function show(pre, text) {
-    pre.textContent = text;
-    document.getElementById(SECTIONS[pre.id]).hidden = false;
-}
-function clearOutputs() {
-    for (const [preId, secId] of Object.entries(SECTIONS)) {
-        document.getElementById(preId).textContent = "";
-        document.getElementById(secId).hidden = true;
-    }
-}
+const panel = createConsole(document.getElementById("console"));
+let editor = null;    // the Monaco editor, once its loader has run
+let monaco = null;
+let tree = null;
 
-// ---- error highlighting ------------------------------------------------------
-// Plain (header-less) source is what the demo uses; __pureParseTop synthesizes
-// the ###Pure header, and BOTH parse and compile positions then map directly to
-// textarea lines (1-based). Compile columns are 1-based; antlr4 parse columns
-// are 0-based.
-
-const escapeHtml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-// Char offset of (1-based line, 0-based column) in `text`.
-function offsetOf(text, line, col0) {
-    const lines = text.split("\n");
-    let off = 0;
-    for (let i = 0; i < line - 1 && i < lines.length; i++) off += lines[i].length + 1;
-    return off + col0;
-}
-
-function clearHighlights() { highlights.innerHTML = ""; }
-
-// Render the textarea text with <mark> spans over the given [{start,end}] ranges.
-function showHighlights(ranges) {
-    const text = src.value;
-    const clean = ranges
-        .map((r) => ({ start: Math.max(0, r.start), end: Math.min(text.length, r.end) }))
-        .filter((r) => r.end > r.start)
-        .sort((a, b) => a.start - b.start);
-    let html = "", pos = 0;
-    for (const r of clean) {
-        const s = Math.max(r.start, pos);
-        if (s >= r.end) continue; // fully covered by a previous (merged) range
-        if (s > pos) html += escapeHtml(text.slice(pos, s));
-        html += "<mark>" + escapeHtml(text.slice(s, r.end)) + "</mark>";
-        pos = r.end;
-    }
-    html += escapeHtml(text.slice(pos));
-    highlights.innerHTML = html;
-    highlights.scrollTop = src.scrollTop;
-    highlights.scrollLeft = src.scrollLeft;
-}
-
-// Compile errors carry "... (at <id>:<sl>c<sc>-<el>c<ec>)" (1-based line+col).
-function compileErrorRanges(errors) {
-    const text = src.value;
-    const re = /\(at [^:)]+:(\d+)c(\d+)-(\d+)c(\d+)\)/g;
-    const ranges = [];
-    for (const err of errors) {
-        let m;
-        while ((m = re.exec(err))) {
-            const start = offsetOf(text, +m[1], +m[2] - 1);
-            const end = offsetOf(text, +m[3], +m[4] - 1) + 1; // end col is inclusive
-            ranges.push({ start, end });
+/** Monaco's AMD loader is a classic script; this resolves once editor.main has loaded. */
+function loadMonaco() {
+    return new Promise((resolve, reject) => {
+        const req = globalThis.require;
+        if (typeof req !== "function") {
+            reject(new Error("Monaco was not vendored — run `just javascript::web-deps`"));
+            return;
         }
-    }
-    return ranges;
-}
-
-// Parse errors give {line (1-based), column (0-based)}; highlight the token there.
-function parseErrorRanges(parseErrors) {
-    const text = src.value;
-    return parseErrors.map(({ line, column }) => {
-        const start = offsetOf(text, line, column);
-        let end = start;
-        while (end < text.length && !/\s/.test(text[end])) end++;
-        return { start, end: Math.max(end, start + 1) };
+        // The worker is started from a blob so the AMD build needs no separate entry file;
+        // without it Monaco runs its services on the main thread and logs a warning.
+        globalThis.MonacoEnvironment = {
+            getWorkerUrl() {
+                const base = new URL("../../../build/vs/", location.href).href;
+                return URL.createObjectURL(new Blob([
+                    `self.MonacoEnvironment = { baseUrl: ${JSON.stringify(base)} };`,
+                    `importScripts(${JSON.stringify(base + "base/worker/workerMain.js")});`,
+                ], { type: "text/javascript" }));
+            },
+        };
+        req.config({ paths: { vs: new URL("../../../build/vs", location.href).href } });
+        req(["vs/editor/editor.main"], () => resolve(globalThis.monaco), reject);
     });
 }
-
-src.addEventListener("input", clearHighlights);
-src.addEventListener("scroll", () => {
-    highlights.scrollTop = src.scrollTop;
-    highlights.scrollLeft = src.scrollLeft;
-});
-
-// ---- load + compile ----------------------------------------------------------
 
 async function fetchBytes(url) {
     const r = await fetch(url);
@@ -169,8 +115,9 @@ async function fetchText(url) {
     return r.text();
 }
 
-let compileFn, printGraphFn;
-let runtime = null; // the PureRuntime built in setup(); Run parses through it
+let compileFn;
+let runtime = null;  // the PureRuntime built in setup(); Run parses through it
+let registry = null; // its ModuleRegistry — the concept tree lists it, clicks resolve through it
 
 // The registry's in-memory module: translated globals (including the ones
 // __hostCompileSource evals at Run time) are its function store, so
@@ -224,7 +171,7 @@ async function setup() {
     // (pdb/schema/parser.pure), which is only available once the generated compiler
     // modules below have loaded; the first metadata read comes after that.
     const schemaText = await fetchText(`${SHARED}/specification/m3.fbs`);
-    const registry = new ModuleRegistry(schemaText);
+    registry = new ModuleRegistry(schemaText);
     for (const f of PDBS) registry.register(new PdbModule(openZip(await fetchBytes(`${REPO}/${f}`)), f));
     registry.register(runtimeModule); // __metadataInvoke routes here via the metadata globals
     registry.validate();
@@ -241,107 +188,241 @@ async function setup() {
     for (const m of GEN_MODULES) Object.assign(globalThis, await import(`${GEN}/${m}`));
     runtimeModule.invalidate();
     compileFn = globalThis[COMPILE];
-    printGraphFn = globalThis[PRINT_GRAPH];
-    if (typeof compileFn !== "function" || typeof printGraphFn !== "function") {
-        throw new Error("compiler entry points not found after loading generated JS");
+    if (typeof compileFn !== "function") {
+        throw new Error("compiler entry point not found after loading generated JS");
     }
 
-    // Warm the reader's node cache before enabling Run, so the first Run is
-    // fast (~60ms) instead of paying the ~3.5s cold-decode cost on the click.
+    // The editor, its language (keywords from the grammar, primitives from the graph just
+    // loaded) and the concept tree. Monaco comes up AFTER the metadata so the primitive
+    // list is real rather than guessed.
+    status.textContent = "Starting editor…";
+    monaco = await loadMonaco();
+    registerPureLanguage(monaco, {
+        keywords: keywordsFromGrammar(await fetchText(GRAMMAR)),
+        primitives: primitivesFromRegistry(registry),
+    });
+    definePureThemes(monaco);
+    editor = monaco.editor.create(document.getElementById("editor"), {
+        value: SAMPLE,
+        language: "pure",
+        automaticLayout: true,
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        fontSize: 13,
+        tabSize: 2,
+        renderWhitespace: "selection",
+    });
+    editor.addCommand(monaco.KeyCode.F9, () => { if (!runBtn.disabled) run(); });
+    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F9, () => { if (!runBtn.disabled) compileOnly(); });
+    editor.getModel().onDidChangeContent(() => monaco.editor.setModelMarkers(editor.getModel(), "pure", []));
+
+    // The theme is applied after the editor exists so Monaco switches with the page.
+    initTheme(monaco, document.getElementById("theme"));
+    initSplitters(document.querySelector("main"));
+
+    tree = createConceptTree(document.getElementById("concepts"), showConcept, inspectConcept);
+    tree.setEntries(registry.elementKinds());
+    panel.info(`${registry.elementKinds().length} elements loaded from ${PDBS.length} archives.`);
+
     status.textContent = "Warming compiler (one-time)…";
     await paint();
     warmCompilerCache();
 
     status.textContent = "Ready.";
     runBtn.disabled = false;
+    document.getElementById("compile").disabled = false;
+
+    // Compile the sample straight away so the page opens on a compiled graph rather than
+    // an empty console — but do NOT execute it: opening a page should not run a program.
+    // The warmup above has already paid the cold-decode cost, so this is the warm path.
+    compileOnly();
 }
 
-// ---- run (button or F9): parse -> compile -> translate+eval -> go() ----------
+/**
+ * A concept clicked in the tree.
+ *
+ * Elements the editor compiled carry a source position into the text on screen, so
+ * clicking one selects its declaration — the tree doubles as an outline of what you are
+ * editing. A concept from an archive has a position too, but into a source file this page
+ * does not have, so clicking it does nothing for now.
+ */
+function showConcept(path, kind, module) {
+    if (module !== runtimeModule.name) return;
+    const element = registry.getElement(path);
+    // Pure multiplicity crosses into this host as a value OR a one-element array, so the
+    // SourceInformation itself has to be unwrapped before its fields are read; and Pure
+    // Integers arrive as BigInt, which Monaco refuses to mix with Number ("Cannot mix
+    // BigInt and other types"), so each field is coerced.
+    const one = (v) => (Array.isArray(v) ? v[0] : v);
+    const num = (v) => { const x = one(v); return x === undefined || x === null ? undefined : Number(x); };
+    const si = one(element?.sourceInformation);
+    const startLine = num(si?.startLine);
+    if (!startLine) return;
+    // Pure's end column is inclusive; Monaco's is exclusive.
+    const range = new monaco.Range(startLine, num(si.startColumn) ?? 1,
+                                   num(si.endLine) ?? startLine, (num(si.endColumn) ?? 1) + 1);
+    editor.revealRangeInCenterIfOutsideViewport(range);
+    editor.setSelection(range);
+    editor.focus();
+}
 
-function run() {
-    clearOutputs();
-    clearHighlights();
+/**
+ * Right-click ▸ Inspect: the element's graph beside the JavaScript it translates to.
+ * Translation here is a pure function of the element — nothing is eval'd and nothing joins
+ * the graph, so inspecting an archive concept leaves the page exactly as it was.
+ */
+function inspectConcept(path, kind) {
+    const element = registry.getElement(path);
+    if (!element) return;
+    openInspector({
+        path, kind, element,
+        translate: () => globalThis[TRANSLATE_ELEMENT]?.(element),
+    });
+}
 
+/** The source the editor opens with — the textarea's former contents. */
+const SAMPLE = `Class test::Person
+{
+  firstName: String[1];
+  lastName: String[1];
+}
+
+function test::greet(p: test::Person[1]): String[1]
+{
+  'Hello, ' + $p.firstName + ' ' + $p.lastName + '!'
+}
+
+function go(): Any[*]
+{
+  let people = [^test::Person(firstName = 'Pierre', lastName = 'Doe'),
+                ^test::Person(firstName = 'Ada', lastName = 'Lovelace')];
+  $people->map(p | test::greet($p));
+}
+`;
+
+const since = (t0) => `${Math.round(performance.now() - t0)}ms`;
+
+/**
+ * Parse and compile what the editor holds. Returns null when it did not compile, having
+ * already reported why — errors in the console and markers in the editor.
+ *
+ * This is compilation ONLY: no JavaScript is emitted and nothing is eval'd, so a program
+ * can be checked without any of it running. `run()` adds those steps.
+ */
+function compileEditor() {
+    panel.clear();
+    const model = editor.getModel();
+    const setMarkers = (ms) => monaco.editor.setModelMarkers(model, "pure", ms);
+    setMarkers([]);
+
+    let t0 = performance.now();
     let parsed;
     try {
-        parsed = runtime.parse("editor", src.value);
+        parsed = runtime.parse("editor", editor.getValue());
     } catch (e) {
-        show(out, e.message);
-        if (Array.isArray(e.parseErrors)) showHighlights(parseErrorRanges(e.parseErrors));
-        return;
+        panel.error(e.message);
+        if (Array.isArray(e.parseErrors)) setMarkers(parseErrorMarkers(monaco, e.parseErrors, model));
+        return null;
     }
+    panel.info(`parsed in ${since(t0)}`);
 
+    t0 = performance.now();
     let compiled;
     try {
         compiled = compileFn([parsed]);
     } catch (e) {
-        show(out, "Error: " + (e && e.stack ? e.stack : String(e)));
-        return;
+        panel.error(e && e.stack ? e.stack : String(e));
+        return null;
     }
     const errors = (compiled.errors || []).map(String);
     if (errors.length) {
-        show(out, "Compile errors:\n  " + errors.join("\n  "));
-        showHighlights(compileErrorRanges(errors));
-        return;
+        errors.forEach((e) => panel.error(e));
+        setMarkers(compileErrorMarkers(monaco, errors));
+        return null;
     }
+    panel.info(`compiled in ${since(t0)}`);
 
-    const ctx = Array.isArray(compiled.context) ? compiled.context[0] : compiled.context;
-    show(graph, printGraphFn(compiled.elements, ctx));
+    // The compile IS the graph now: its elements replace whatever the previous one left in
+    // the in-memory module, which is registered in the registry — so the concept tree, and
+    // anything else that reads the graph, sees them without waiting for a translation.
+    // replaceElements diffs rather than clearing, so the registry's PDB-derived caches
+    // survive; clearing them made every recompile pay the cold walk again.
+    runtimeModule.replaceElements(compiled.elements || []);
 
-    // Translate each compiled element to JavaScript in-process and eval it
-    // into this page's global scope — the same loop the compileSource host
-    // uses; its emissions are exactly what we display. Nothing is registered:
-    // the compiled values are self-contained, the boot registry stays
-    // immutable.
-    const elements = compiled.elements || [];
-    // PLATFORM mode: the editor's compile IS the program, so its elements join
-    // the graph and reflection over them resolves.
+    return {
+        elements: compiled.elements || [],
+        context: Array.isArray(compiled.context) ? compiled.context[0] : compiled.context,
+    };
+}
+
+/** Compile and show the graph — nothing is translated, eval'd or executed. */
+function compileOnly() {
+    const result = compileEditor();
+    if (!result) return;
+    tree.setEntries(registry.elementKinds());
+    const n = result.elements.length;
+    panel.info(`${n} element${n === 1 ? "" : "s"} in the graph — browse them on the left`);
+    panel.info("compiled only — press Run (F9) to execute");
+}
+
+// ---- run (button or F9): compile -> translate+eval -> go() -------------------------
+function run() {
+    const result = compileEditor();
+    if (!result) return;
+    const { elements } = result;
+
+    // Translate each compiled element to JavaScript in-process and eval it into this
+    // page's global scope — the same loop the compileSource host uses; its emissions are
+    // exactly what the Generated JavaScript block shows. PLATFORM mode: the editor's
+    // compile IS the program, so its elements join the graph and reflection resolves.
+    let t0 = performance.now();
     const emitted = translateProgramElements(elements, evalJs, "editor", runtimeModule);
-    show(gen, emitted.map((e) => e.source).join("\n\n") || "// nothing translatable");
+    panel.info(`translated ${emitted.length} element${emitted.length === 1 ? "" : "s"} in ${since(t0)}`);
+
+    // Already in the graph from the compile; refreshed because translation may have added
+    // the function stores behind them.
+    tree.setEntries(registry.elementKinds());
 
     const goEl = elements.find((el) => el && el.__purePath === GO_PATH);
+    const goFn = goEl ? runtimeModule.resolveFn(GO_PATH, 0) : null;
     if (!goEl) {
-        show(out, "No `function go():Any[*]` found — add one and Run again.");
-        return;
-    }
-    const goFn = runtimeModule.resolveFn(GO_PATH, 0);
-    if (typeof goFn !== "function") {
-        show(out, "go() compiled but its translated global was not found.");
-        return;
-    }
-
-    // print()/println() write to console.log — mirror them onto the page.
-    // Captured strings carry Pure's own newlines (println appends \n, print
-    // does not), so join with "" to keep Pure semantics.
-    const printed = [];
-    const origLog = console.log;
-    console.log = (...args) => { printed.push(args.join(" ")); origLog.apply(console, args); };
-    let result;
-    try {
-        result = goFn();
-    } catch (e) {
-        show(out, printed.join("") + "\nExecution error: " + (e && e.message ? e.message : String(e)));
-        return;
-    } finally {
-        console.log = origLog;
+        panel.error("No `function go():Any[*]` found — add one and Run again.");
+    } else if (typeof goFn !== "function") {
+        panel.error("go() compiled but its translated global was not found.");
+    } else {
+        // print()/println() reach the panel as they happen (console-panel tees console.log,
+        // which is where runtime-lib's __writeOut lands in a browser).
+        t0 = performance.now();
+        let value, failed = false;
+        try {
+            value = panel.capture(() => goFn());
+        } catch (e) {
+            failed = true;
+            panel.error("Execution error: " + (e && e.message ? e.message : String(e)));
+        }
+        if (!failed) {
+            const repr = globalThis[TO_REPRESENTATION];
+            const vals = value === undefined || value === null ? [] : Array.isArray(value) ? value : [value];
+            const rendered = vals.map((v) => { try { return repr(v); } catch { return String(v); } });
+            panel.block("Result", rendered.length === 1 ? rendered[0] : `[${rendered.join(", ")}]`);
+            panel.ok(`ran in ${since(t0)}`);
+        }
     }
 
-    const repr = globalThis[TO_REPRESENTATION];
-    const vals = result === undefined || result === null ? [] : Array.isArray(result) ? result : [result];
-    const rendered = vals.map((v) => { try { return repr(v); } catch { return String(v); } });
-    show(out, printed.join("") +
-        (rendered.length === 1 ? `-> ${rendered[0]}` : `-> [${rendered.join(", ")}]`));
 }
 
 runBtn.addEventListener("click", run);
+document.getElementById("compile").addEventListener("click", compileOnly);
+
+// F9 also works when focus is outside the editor (the editor binds its own).
 document.addEventListener("keydown", (e) => {
-    if (e.key === "F9") {
-        e.preventDefault();
-        if (!runBtn.disabled) run();
-    }
+    if (e.key !== "F9") return;
+    e.preventDefault();
+    if (runBtn.disabled) return;
+    e.shiftKey ? compileOnly() : run();
 });
 
 setup().catch((e) => {
     status.textContent = "Setup failed.";
-    out.textContent = String(e && e.stack ? e.stack : e);
+    panel.error(String(e && e.stack ? e.stack : e));
 });
