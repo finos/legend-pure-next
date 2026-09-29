@@ -70,13 +70,15 @@ public final class PureFeature implements Feature
             // AntlrNodes#invokeNamed -> ctx.<rule>(), e.g.
             // TopParser$DocumentContext.section(). Truffle's own copy since the
             // decoupling — NOT org.finos.legend.pure.next.parser.
-            "org/finos/legend/pure/truffle/parser",
+            "org/finos/legend/pure/truffle/grammar",
             // The translated PDB reader and the metamodel it decodes into, emitted
             // under the m3 base package by truffle::generate-pdb-reader.
             "org/finos/legend/pure/m3",
-            // Support classes the generated reader calls into (LazyObject, Metadata,
-            // PureLambda, PureValues).
-            "org/finos/legend/pure/truffle/pdbgen",
+            // The reader's own module code, and with it the four support classes the
+            // generated reader calls (hooks/: LazyObject, Metadata, PureLambda,
+            // PureValues) — passed to the generator as `hooksPackage`, see
+            // truffle::generate-pdb-reader.
+            "org/finos/legend/pure/truffle/compiler/module/pdbModule",
             // TruffleInstanceFactory targets.
             "org/finos/legend/pure/truffle/runtime"
     };
@@ -213,7 +215,7 @@ public final class PureFeature implements Feature
         {
             return;
         }
-        // jar:file:/path/to/foo.jar!/org/finos/legend/pure/truffle/parser
+        // jar:file:/path/to/foo.jar!/org/finos/legend/pure/truffle/grammar
         String spec = url.toString();
         int bang = spec.indexOf('!');
         String innerPath = spec.substring(bang + 1);

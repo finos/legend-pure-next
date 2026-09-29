@@ -77,11 +77,24 @@ function <<test.TestDependency>> meta::external::language::java::translation::pl
 // The same generation, emitted for a NAMED host — see translatePackagesToJavaFor.
 function <<test.TestDependency>> meta::external::language::java::translation::platform::generatePlatformTypesFor(rootPackagePaths: String[1], javaRoot: String[1], platformPackage: String[1]): String[1]
 {
+   meta::external::language::java::translation::platform::generatePlatformTypesForHost($rootPackagePaths, $javaRoot, $platformPackage, meta::external::language::java::translation::defaultPdbPackage($platformPackage), meta::external::language::java::translation::defaultRuntimePackage($platformPackage));
+}
+
+// The same, for a host that keeps its support classes in ONE package: `hooksPackage` is
+// where the generated types look for both the metadata hooks and the runtime helpers.
+function <<test.TestDependency>> meta::external::language::java::translation::platform::generatePlatformTypesFor(rootPackagePaths: String[1], javaRoot: String[1], platformPackage: String[1], hooksPackage: String[1]): String[1]
+{
+   meta::external::language::java::translation::platform::generatePlatformTypesForHost($rootPackagePaths, $javaRoot, $platformPackage, $hooksPackage, $hooksPackage);
+}
+
+// The two support packages, separately — see translatePackagesToJavaForHost.
+function <<test.TestDependency>> meta::external::language::java::translation::platform::generatePlatformTypesForHost(rootPackagePaths: String[1], javaRoot: String[1], platformPackage: String[1], hooksPackage: String[1], runtimePackage: String[1]): String[1]
+{
    let elements = $rootPackagePaths->split(',')->map(p | $p->pathToElement()->cast(@meta::pure::metamodel::Package)->translatableElements());
    // A package walk misses types stored in another archive than their package
    // (meta::pure::metamodel::relation::ColSpec is defined with the functions),
    // so generate what the generated types name, too.
-   let conv     = ^(meta::external::language::java::translation::conventionsFor($javaRoot, $platformPackage))(metadataElements = true);
+   let conv     = ^(meta::external::language::java::translation::conventionsFor($javaRoot, $platformPackage))(metadataElements = true, pdbPackage = $hooksPackage, runtimePkg = $runtimePackage);
    let types    = $elements->filter(e | $e->instanceOf(Type))->cast(@Type)->withReferencedTypes();
    let classes  = $types->filter(e | $e->instanceOf(Class) && !$e->instanceOf(Enumeration))->cast(@Class<Any>);
    let enums    = $types->filter(e | $e->instanceOf(Enumeration))->cast(@Enumeration<Any>);
@@ -291,7 +304,7 @@ function meta::external::language::java::translation::platform::platformImplemen
    let entry = if ($cls == meta::pure::functions::collection::Pair, | [javaClass('java.util.Map.Entry')], | []->cast(@meta::external::language::java::metamodel::Type));
    let base = $entry->fold({e, c | $c->implements($e)},
                  javaClass(['public', 'final'], $cls->platformTypeName($javaRoot) + 'Impl')
-                 ->jextends(javaClass($conv->meta::external::language::java::translation::platformClass('pdb.LazyObject')))
+                 ->jextends(javaClass($conv->meta::external::language::java::translation::pdbClass('LazyObject')))
                  ->implements(javaClass($cls->platformTypeName($javaRoot))))
                  ->javaDoc('PDB-backed implementation of Pure class ' + $cls->elementToPath() + '. Generated.')
                  ->addMethod(javaMethod(['public'], javaString(), '_purePath', [], 'return "' + $cls->elementToPath() + '";'))
@@ -333,7 +346,7 @@ function meta::external::language::java::translation::platform::withAssociationF
    let props = $cls->generalizationClosure()->map(c | $c.propertiesFromAssociations)->removeDuplicatesBy(p | $p.name->toOne());
    if ($props->isEmpty(),
       | $impl,
-      | let newType = $conv->meta::external::language::java::translation::platformClass('pdb.PureNew');
+      | let newType = $conv->meta::external::language::java::translation::pdbClass('PureNew');
         let checks  = $props->map(p | $newType + '.checkFresh(__values("' + $p.name->toOne() + '"), "' + $p.name->toOne() + '", "' + $cls->elementToPath() + '");');
         let links   = $props->map(p |
            $p.owner->cast(@meta::pure::metamodel::relationship::Association).properties->filter(q | $q.name != $p.name)
@@ -359,7 +372,7 @@ function meta::external::language::java::translation::platform::withKeyEquality(
       | $impl->addMethod(javaMethod(['public'], javaBoolean(), 'equals', [j_parameter(javaObject(), 'o')],
            'if (this == o) { return true; }\n'
            + 'if (o == null || o.getClass() != getClass()) { return false; }\n'
-           + $conv->meta::external::language::java::translation::platformClass('pdb.LazyObject') + ' other = (' + $conv->meta::external::language::java::translation::platformClass('pdb.LazyObject') + ') o;\n'
+           + $conv->meta::external::language::java::translation::pdbClass('LazyObject') + ' other = (' + $conv->meta::external::language::java::translation::pdbClass('LazyObject') + ') o;\n'
            + 'return ' + $keys->map(k | 'java.util.Objects.equals(__values("' + $k + '"), other.__values("' + $k + '"))')->joinStrings(' && ') + ';'))
              ->addMethod(javaMethod(['public'], javaInt(), 'hashCode', [],
            'return java.util.Objects.hash(' + $keys->map(k | '__values("' + $k + '")')->joinStrings(', ') + ');')));
@@ -395,7 +408,7 @@ function meta::external::language::java::translation::platform::platformTypeFact
    let cases = $storable->map(c | '    case "' + $c.name->toOne() + 'Def": return new ' + $c->platformTypeName($javaRoot) + 'Impl();')->joinStrings('\n');
    javaClass(['public', 'final'], $javaRoot + '.PdbTypes')
       ->javaDoc('FlatBuffer table name to generated implementation. Generated.')
-      ->addMethod(javaMethod(['public', 'static'], javaClass($conv->meta::external::language::java::translation::platformClass('pdb.LazyObject')), 'create', [j_parameter(javaString(), 'table')],
+      ->addMethod(javaMethod(['public', 'static'], javaClass($conv->meta::external::language::java::translation::pdbClass('LazyObject')), 'create', [j_parameter(javaString(), 'table')],
            'switch (table)\n{\n' + $cases + '\n    default: return null;\n}'));
 }
 
@@ -405,6 +418,6 @@ function meta::external::language::java::translation::platform::platformEnum(e: 
    // `type()` on an enum value resolve through the platform's metadata.
    javaEnum(['public'], $e->platformTypeName($javaRoot))
       ->addEntries($e->meta::pure::functions::meta::enumValues()->map(v | javaEnumEntry($v.name->toOne()->safeJavaName())))
-      ->implements(javaClass($conv->meta::external::language::java::translation::platformClass('pdb.PureEnumValue')))
+      ->implements(javaClass($conv->meta::external::language::java::translation::pdbClass('PureEnumValue')))
       ->addMethod(javaMethod(['public'], javaString(), '_purePath', [], j_return(j_string($e->elementToPath()))));
 }

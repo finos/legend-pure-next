@@ -47,7 +47,7 @@ public final class PureLanguage extends TruffleLanguage<PureContext>
      * The configuration is consumed by {@link #createContext} and cleared.
      */
     public static void configure(MetadataAccess resolver, NativeRegistry registry,
-                                 java.util.Map<String, org.finos.legend.pure.truffle.parser.GrammarExtension> grammars)
+                                 java.util.Map<String, org.finos.legend.pure.truffle.grammar.GrammarExtension> grammars)
     {
         pendingConfig = new PendingConfig(resolver, registry, grammars);
     }
@@ -86,5 +86,5 @@ public final class PureLanguage extends TruffleLanguage<PureContext>
     }
 
     private record PendingConfig(MetadataAccess resolver, NativeRegistry registry,
-                                  java.util.Map<String, org.finos.legend.pure.truffle.parser.GrammarExtension> grammars) {}
+                                  java.util.Map<String, org.finos.legend.pure.truffle.grammar.GrammarExtension> grammars) {}
 }

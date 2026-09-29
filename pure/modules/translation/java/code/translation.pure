@@ -36,6 +36,16 @@ Class meta::external::language::java::translation::Conventions
    // which generates its own copy of the PDB reader) can own those classes
    // instead of depending on the Java platform's.
    platformPackage : String[1];
+   // Where the host keeps the two groups of support class: the metadata hooks
+   // generated code calls (`Metadata`, `LazyObject`, `PureLambda`, `PureNew`, ...)
+   // and the runtime helpers the translator emits (`PureValues`, `PureDate`, ...).
+   // `conventionsFor` defaults them to `<platformPackage>.pdb` and
+   // `<platformPackage>.runtime`, which is the Java platform's own layout. A host
+   // whose support surface is small enough to live in one package beside its only
+   // consumer — Truffle, whose four hooks sit with the PDB reader that calls them —
+   // sets both to that package.
+   pdbPackage      : String[1];
+   runtimePkg      : String[1];
    // Element literals (`NativeFunction`, `PureOne`) as the metamodel objects of
    // the Java platform's installed PDBs (Metadata.element), rather than their names.
    metadataElements : Boolean[1];
@@ -136,7 +146,20 @@ function meta::external::language::java::translation::defaultPlatformPackage(): 
 
 function meta::external::language::java::translation::runtimePackage(conv: Conventions[1]): String[1]
 {
-   $conv.platformPackage + '.runtime'
+   $conv.runtimePkg
+}
+
+// Where a host keeps the two groups of support class unless it says otherwise. ONE
+// definition each: `conventionsFor` and every entry point that defaults them read these,
+// so a host layout change is a single edit (it was three, and two of them were missed).
+function meta::external::language::java::translation::defaultPdbPackage(platformPackage: String[1]): String[1]
+{
+   $platformPackage + '.compiler.module.pdbModule'
+}
+
+function meta::external::language::java::translation::defaultRuntimePackage(platformPackage: String[1]): String[1]
+{
+   $platformPackage + '.runtime'
 }
 
 function meta::external::language::java::translation::runtimeClass(conv: Conventions[1], simpleName: String[1]): String[1]
@@ -144,10 +167,18 @@ function meta::external::language::java::translation::runtimeClass(conv: Convent
    $conv->runtimePackage() + '.' + $simpleName
 }
 
-// A host support class under `<platformPackage>.<suffix>`, e.g. 'pdb.Metadata'.
+// A host support class under `<platformPackage>.<suffix>`, e.g. 'PureStack'.
 function meta::external::language::java::translation::platformClass(conv: Conventions[1], suffix: String[1]): String[1]
 {
    $conv.platformPackage + '.' + $suffix
+}
+
+// One of the metadata hooks, in whichever package the host keeps them in. Callers
+// name the class only — `pdbClass('Metadata')`, not `pdbClass('Metadata')` —
+// so a host that does not use a `.pdb` sub-package needs no change here.
+function meta::external::language::java::translation::pdbClass(conv: Conventions[1], simpleName: String[1]): String[1]
+{
+   $conv.pdbPackage + '.' + $simpleName
 }
 
 // Value normalisation as the Pure language sees values: `null` is `[]`, and a
@@ -234,8 +265,8 @@ function <<access.private>> meta::external::language::java::translation::pureVal
       ->addMethod(javaMethod(['public', 'static'], javaBoolean(), 'same', [j_parameter(javaObject(), 'a'), j_parameter(javaObject(), 'b')],
            'Object x = norm(a), y = norm(b);\n'
          // A function reference is the element it names.
-         + 'Object ea = ' + $conv->platformClass('pdb.PureLambda') + '.elementOf(x);\n'
-         + 'Object eb = ' + $conv->platformClass('pdb.PureLambda') + '.elementOf(y);\n'
+         + 'Object ea = ' + $conv->pdbClass('PureLambda') + '.elementOf(x);\n'
+         + 'Object eb = ' + $conv->pdbClass('PureLambda') + '.elementOf(y);\n'
          + 'return (ea == null ? x : ea) == (eb == null ? y : eb);'))
       // Java has no unary minus for Number: `-n` where n is a function
       // parameter typed Number (Pure's minus accepts any). Each kind keeps its
@@ -287,6 +318,8 @@ function meta::external::language::java::translation::conventionsFor(basePackage
    ^Conventions(
       basePackageName = $basePackageName,
       platformPackage = $platformPackage,
+      pdbPackage      = meta::external::language::java::translation::defaultPdbPackage($platformPackage),
+      runtimePkg      = meta::external::language::java::translation::defaultRuntimePackage($platformPackage),
       metadataElements = false,
       owner            = [],
       scope            = [],
@@ -736,7 +769,7 @@ function <<access.private>> meta::external::language::java::translation::element
 {
    if (!$conv.metadataElements,
       | '',
-      | let lazy = 'org.finos.legend.pure.platform.java.pdb.LazyObject';
+      | let lazy = 'org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject';
         'if (' + $var + ' instanceof ' + $lazy + ' && !((' + $lazy + ') ' + $var + ').__values("package").isEmpty() '
            + '&& !((' + $lazy + ') ' + $var + ').__values("name").isEmpty()) '
            + '{ return String.valueOf(((' + $lazy + ') ' + $var + ').__values("name").get(0)); } ';
@@ -1001,7 +1034,7 @@ function <<access.private>> meta::external::language::java::translation::asJavaF
       | $f,
       | j_lambda([j_parameter(javaObject(), 'pureFnArg')],
            j_block([j_return(
-              j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'invoke',
+              j_invoke(javaClass($conv->pdbClass('Metadata')), 'invoke',
                  [$f->toObjectCode(),
                   j_invoke(javaClass('java.util.List'), 'of', [j_variable(javaObject(), 'pureFnArg')], javaList())],
                  javaObject()))]))
@@ -1086,7 +1119,7 @@ function <<access.private>> meta::external::language::java::translation::evaluat
    let argsCode   = if ($argVals->isEmpty(),
                        | j_null(),
                        | $conv->translateExpression($argVals->toOne())->toObjectCode());
-   j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'evaluate',
+   j_invoke(javaClass($conv->pdbClass('Metadata')), 'evaluate',
             [$lambdaCode, $argsCode], javaObject());
 }
 
@@ -1104,7 +1137,7 @@ function <<access.private>> meta::external::language::java::translation::evalCod
    // On the platform the callee may be a function of the metadata (a test the
    // runner discovered), which is called through its translated class.
    if ($conv.metadataElements,
-      | j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'invoke',
+      | j_invoke(javaClass($conv->pdbClass('Metadata')), 'invoke',
                  [$lambdaCode->typedFunctionValue(),
                   j_invoke(javaArrays(), 'asList', $evalArgs->map(a | $a->typedFunctionValue()), javaList())], javaObject()),
    |if ($evalArgs->isEmpty(),
@@ -1200,7 +1233,7 @@ function <<access.private>> meta::external::language::java::translation::withEle
                                 | []->cast(@meta::external::language::java::metamodel::Type))));
    if (!$conv.metadataElements || $type->isEmpty(),
       | $code,
-      | j_invoke(javaClass($conv->platformClass('pdb.PureLambda')), 'ofElement',
+      | j_invoke(javaClass($conv->pdbClass('PureLambda')), 'ofElement',
                  [$code->j_castWithoutChecks($type->toOne()), j_string($fn->elementToPath())], javaObject())
            ->j_castWithoutChecks($type->toOne()));
 }
@@ -1313,7 +1346,7 @@ function <<access.private>> meta::external::language::java::translation::printCo
          + 'if (v instanceof String) { return d == 0 ? (String) v : String.valueOf((char) 39) + v + String.valueOf((char) 39); } '
          + pureFloatStringJava('v')
          + 'if (v instanceof Enum) { return ((Enum<?>) v).name(); } '
-         + 'if (v instanceof org.finos.legend.pure.platform.java.pdb.LazyObject) { org.finos.legend.pure.platform.java.pdb.LazyObject lo = (org.finos.legend.pure.platform.java.pdb.LazyObject) v; '
+         + 'if (v instanceof org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) { org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject lo = (org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v; '
          + 'String path = lo._purePath(); StringBuilder sb = new StringBuilder(path.substring(path.lastIndexOf(58) + 1)); '
          + 'for (String pn : lo._propertyNames()) { '
          + 'if (pn.equals("classifierGenericType") || pn.equals("elementOverride")) { continue; } '
@@ -2001,7 +2034,7 @@ function <<access.private>> meta::external::language::java::translation::generic
 {
    assert($fe.parametersValues->size() == 1, | 'genericTypeCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
    assert($conv.metadataElements, | 'No coder for Pure function: genericType');
-   j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'genericType',
+   j_invoke(javaClass($conv->pdbClass('Metadata')), 'genericType',
             [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaObject())
       ->j_castWithoutChecks($conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed());
 }
@@ -2015,14 +2048,14 @@ function <<access.private>> meta::external::language::java::translation::generic
 function <<access.private>> meta::external::language::java::translation::entryNamesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 1, | 'entryNamesCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
-   j_invoke(javaClass($conv->platformClass('pdb.PdbArchives')), 'entryNames',
+   j_invoke(javaClass($conv->pdbClass('PdbArchives')), 'entryNames',
             [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte()))], javaList(javaObject()));
 }
 
 function <<access.private>> meta::external::language::java::translation::entryBytesCoder(fe: FunctionExpression[1], conv: Conventions[1]): Code[1]
 {
    assert($fe.parametersValues->size() == 2, | 'entryBytesCoder expects exactly 2 arguments, got ' + $fe.parametersValues->size()->toString());
-   j_invoke(javaClass($conv->platformClass('pdb.PdbArchives')), 'entryBytes',
+   j_invoke(javaClass($conv->pdbClass('PdbArchives')), 'entryBytes',
             [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaArray(javaByte())),
              $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString())], javaArray(javaByte()));
 }
@@ -2031,7 +2064,7 @@ function <<access.private>> meta::external::language::java::translation::element
 {
    assert($fe.parametersValues->size() == 1, | 'elementPathCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
    assert($conv.metadataElements, | 'No coder for Pure function: elementPath');
-   j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'elementPath',
+   j_invoke(javaClass($conv->pdbClass('Metadata')), 'elementPath',
             [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaList(javaObject()));
 }
 
@@ -2042,7 +2075,7 @@ function <<access.private>> meta::external::language::java::translation::element
    let el = $conv->translateExpression($fe.parametersValues->at(0));
    let separator = if ($n == 2, | $conv->translateExpression($fe.parametersValues->at(1)), | j_string('::'));
    if ($conv.metadataElements,
-      | j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'path', [$el->toObjectCode(), $separator], javaString()),
+      | j_invoke(javaClass($conv->pdbClass('Metadata')), 'path', [$el->toObjectCode(), $separator], javaString()),
       | j_invoke(javaString(), 'valueOf', [$el], javaString()));
 }
 
@@ -2449,7 +2482,7 @@ function <<access.private>> meta::external::language::java::translation::enumVal
    // metadata the Java platform has installed.
    assert($enumeration->isNotEmpty() || $conv.metadataElements, | 'enumValuesCoder: the enumeration argument must be a literal');
    if ($enumeration->isEmpty(),
-      | j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'enumValues',
+      | j_invoke(javaClass($conv->pdbClass('Metadata')), 'enumValues',
                  [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaList()),
       | j_invoke(javaArrays(), 'asList', [j_invoke($conv->javaEnumType($enumeration->toOne()), 'values', [], javaObject())], javaList()));
 }
@@ -2477,7 +2510,7 @@ function <<access.private>> meta::external::language::java::translation::tryEval
          // every error a Pure program or a test suite ever sees. Frames are
          // unpositioned; PureStack says why.
          + 'pureTryR._failure(new org.finos.legend.pure.m3.meta.pure.functions.lang.ErrorImpl()._message(String.valueOf(pureTryEx.getMessage()))._stack('
-         + $conv->meta::external::language::java::translation::platformClass('PureStack') + '.frames(pureTryEx))); } '
+         + $conv->meta::external::language::java::translation::platformClass('execution.PureStack') + '.frames(pureTryEx))); } '
          + 'return pureTryR;', javaVoid())]);
 }
 
@@ -2673,7 +2706,7 @@ function <<access.private>> meta::external::language::java::translation::assertE
          // chain, which is where bootstrap (NativeRegistry), Truffle
          // (AssertErrorNode) and the JS runtime (__assertError) all append it —
          // at the catch boundary, never at the throw site.
-         + '  String actual = ' + $conv->meta::external::language::java::translation::platformClass('PureStack') + '.describe(t); '
+         + '  String actual = ' + $conv->meta::external::language::java::translation::platformClass('execution.PureStack') + '.describe(t); '
          // Containment, as the other hosts match: a test pins the part of the
          // message that is the contract ('multiplicity'), not the whole of it.
          + '  if (!actual.contains(expected)) throw new AssertionError("expected: " + expected + ", actual: " + actual); '
@@ -2880,7 +2913,7 @@ function <<access.private>> meta::external::language::java::translation::compile
 {
    assert($fe.parametersValues->size() == 4, | 'compileAndExecuteCoder expects exactly 4 arguments, got ' + $fe.parametersValues->size()->toString());
    assert($conv.metadataElements, | 'No coder for Pure function: compileAndExecute');
-   j_invoke(javaClass($conv->platformClass('JavaSource')), 'compileAndExecute',
+   j_invoke(javaClass($conv->platformClass('execution.JavaSource')), 'compileAndExecute',
             [$conv->translateExpression($fe.parametersValues->at(0))->j_cast(javaString()),
              $conv->translateExpression($fe.parametersValues->at(1))->j_cast(javaString()),
              $conv->translateExpression($fe.parametersValues->at(2))->j_cast(javaString()),
@@ -2895,7 +2928,7 @@ function <<access.private>> meta::external::language::java::translation::antlrCo
 {
    assert($conv.metadataElements, | 'No coder for Pure function: ' + $fe->coderName());
    let args = $fe.parametersValues->map(p | $conv->antlrArgument($p));
-   j_invoke(javaClass($conv->platformClass('antlr.Antlr')), $fe->coderName(), $args, javaObject())
+   j_invoke(javaClass($conv->platformClass('grammar.Antlr')), $fe->coderName(), $args, javaObject())
       ->fitToType($conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed(), $conv);
 }
 
@@ -2917,7 +2950,7 @@ function <<access.private>> meta::external::language::java::translation::openVar
 {
    assert($fe.parametersValues->size() == 1, | 'openVariableValuesCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
    assert($conv.metadataElements, | 'No coder for Pure function: openVariableValues');
-   j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'openVariables',
+   j_invoke(javaClass($conv->pdbClass('Metadata')), 'openVariables',
             [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaClass('java.util.Map'));
 }
 
@@ -3001,7 +3034,7 @@ function <<access.private>> meta::external::language::java::translation::transla
                 ->filter(t | $t->instanceOf(meta::pure::metamodel::PackageableElement))
                 ->cast(@meta::pure::metamodel::PackageableElement);
    assert($conv.metadataElements && $raw->isNotEmpty(), | 'No coder for Pure function: genericTypeHolder');
-   j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'genericTypeHolderOf',
+   j_invoke(javaClass($conv->pdbClass('Metadata')), 'genericTypeHolderOf',
             [j_string($raw->toOne()->elementToPath())], javaObject());
 }
 
@@ -3010,7 +3043,7 @@ function <<access.private>> meta::external::language::java::translation::generic
 {
    assert($fe.parametersValues->size() == 1, | 'genericTypeHolderCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
    assert($conv.metadataElements, | 'No coder for Pure function: genericTypeHolder');
-   j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'genericTypeHolder',
+   j_invoke(javaClass($conv->pdbClass('Metadata')), 'genericTypeHolder',
             [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaObject());
 }
 
@@ -3023,7 +3056,7 @@ function <<access.private>> meta::external::language::java::translation::parseCo
 
 function <<access.private>> meta::external::language::java::translation::parseCall(conv: Conventions[1], sourceId: ValueSpecification[1], content: ValueSpecification[1]): Code[1]
 {
-   j_invoke(javaClass($conv->platformClass('parser.PureParsing')), 'parse',
+   j_invoke(javaClass($conv->platformClass('grammar.PureParsing')), 'parse',
             [$conv->translateExpression($sourceId)->j_cast(javaString()),
              $conv->translateExpression($content)->j_cast(javaString())], javaObject());
 }
@@ -3035,7 +3068,7 @@ function <<access.private>> meta::external::language::java::translation::resolve
 {
    assert($fe.parametersValues->size() == 1, | 'resolveAndReturnGraphCoder expects exactly 1 argument, got ' + $fe.parametersValues->size()->toString());
    assert($conv.metadataElements, | 'No coder for Pure function: resolveAndReturnGraph');
-   j_invoke(javaClass($conv->platformClass('pdb.PointerGraph')), 'resolveAndReturnGraph',
+   j_invoke(javaClass($conv->pdbClass('PointerGraph')), 'resolveAndReturnGraph',
             [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaList());
 }
 
@@ -3366,7 +3399,7 @@ function <<access.private>> meta::external::language::java::translation::instanc
    // from the metadata: the value's type, or one of its generalizations, is it.
    assert($typeArg->instanceOf(AtomicValue) || $conv.metadataElements, | 'instanceOfCoder: type arg must be a literal AtomicValue, got non-AtomicValue');
    if (!$typeArg->instanceOf(AtomicValue),
-      | j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'instanceOf',
+      | j_invoke(javaClass($conv->pdbClass('Metadata')), 'instanceOf',
                  [$value->toObjectCode(), $conv->translateExpression($typeArg)->toObjectCode()], javaBoolean()),
       | $conv->literalInstanceOf($value, $typeArg->cast(@AtomicValue).value->toOne()));
 }
@@ -3375,7 +3408,7 @@ function <<access.private>> meta::external::language::java::translation::instanc
 // is marked with PureEnumValue, and one read from a PDB is a metamodel Enum.
 function <<access.private>> meta::external::language::java::translation::enumValueInstanceOf(conv: Conventions[1], value: Code[1]): Code[1]
 {
-   j_or(j_instanceof($value->j_cast(javaObject()), javaClass($conv->platformClass('pdb.PureEnumValue'))),
+   j_or(j_instanceof($value->j_cast(javaObject()), javaClass($conv->pdbClass('PureEnumValue'))),
         j_instanceof($value->j_cast(javaObject()), javaClass(meta::pure::metamodel::type::Enum->meta::external::language::java::translation::platform::platformTypeName(meta::external::language::java::translation::platform::platformRoot()))));
 }
 
@@ -3528,7 +3561,7 @@ function <<access.private>> meta::external::language::java::translation::pathToE
                                      | $conv->translateExpression($fe.parametersValues->at(1))->j_castWithoutChecks(javaString()),
                                      | []->cast(@Code)));
    if ($conv.metadataElements,
-      | j_invoke(javaClass($conv->platformClass('pdb.Metadata')), $method, $args, javaObject())
+      | j_invoke(javaClass($conv->pdbClass('Metadata')), $method, $args, javaObject())
            ->j_castWithoutChecks($conv->pureTypeToJavaType($fe.genericType, $fe.multiplicity)->toBoxed()),
       | $path);
 }
@@ -3653,7 +3686,7 @@ function <<access.private>> meta::external::language::java::translation::witness
 // check covers the count too.
 function <<access.private>> meta::external::language::java::translation::witnessedCast(conv: Conventions[1], value: Code[1], witness: TypeVarWitness[1], fe: FunctionExpression[1]): Code[1]
 {
-   let metadata  = javaClass($conv->platformClass('pdb.Metadata'));
+   let metadata  = javaClass($conv->pdbClass('Metadata'));
    let witnessed = j_variable(javaObject(), $witness.parameter);
    let bindsMul  = $witness.mulParameter->isNotEmpty()
                    && !$fe.multiplicity->instanceOf(meta::pure::metamodel::multiplicity::ConcreteMultiplicity)
@@ -4037,14 +4070,14 @@ function <<access.private>> meta::external::language::java::translation::pureMat
        j_parameter(javaObject(), 'extra'), j_parameter(javaBoolean(), 'withExtra'), j_parameter(javaBoolean(), 'many')],
       'java.util.List values = value instanceof java.util.List ? (java.util.List) value : value == null ? java.util.Collections.emptyList() : java.util.Collections.singletonList(value);\n'
       + 'for (int i = 0; i < arms.size(); i++) {\n'
-      + '    Object[] arm = org.finos.legend.pure.platform.java.pdb.Metadata.matchArm(arms.get(i));\n'
+      + '    Object[] arm = org.finos.legend.pure.platform.java.compiler.module.pdbModule.Metadata.matchArm(arms.get(i));\n'
       + '    long lower = (Long) arm[1], upper = (Long) arm[2];\n'
       + '    if (values.size() < lower || (upper >= 0 && values.size() > upper)) { continue; }\n'
       + '    boolean accepted = true;\n'
-      + '    for (Object v : values) { if (!org.finos.legend.pure.platform.java.pdb.Metadata.instanceOf(v, arm[0])) { accepted = false; break; } }\n'
+      + '    for (Object v : values) { if (!org.finos.legend.pure.platform.java.compiler.module.pdbModule.Metadata.instanceOf(v, arm[0])) { accepted = false; break; } }\n'
       + '    if (!accepted) { continue; }\n'
       + '    Object arg = upper == 1 ? (values.isEmpty() ? null : values.get(0)) : values;\n'
-      + '    Object result = org.finos.legend.pure.platform.java.pdb.Metadata.invoke(arms.get(i), withExtra ? java.util.Arrays.asList(arg, extra) : java.util.Collections.singletonList(arg));\n'
+      + '    Object result = org.finos.legend.pure.platform.java.compiler.module.pdbModule.Metadata.invoke(arms.get(i), withExtra ? java.util.Arrays.asList(arg, extra) : java.util.Collections.singletonList(arg));\n'
       + '    if (many) { return result instanceof java.util.List ? result : result == null ? java.util.Collections.emptyList() : java.util.Collections.singletonList(result); }\n'
       + '    if (result instanceof java.util.List) { java.util.List l = (java.util.List) result; return l.isEmpty() ? null : l.size() == 1 ? l.get(0) : l; }\n'
       + '    return result;\n'
@@ -4524,12 +4557,44 @@ function <<access.private>> meta::external::language::java::translation::transla
    );
 }
 
+// The Property an FE reads, resolved — every caller that needs a slot off it goes
+// through here rather than reading `$fe.func` directly.
+//
+// Two shapes of `func` arrive. Normally it is already a Property. But when the property
+// belongs to a class compiled in this session — `compileSource`, or a PureRuntime
+// in-memory module — it is a PropertyPointer: the pointer-resolution boundary leaves one
+// alone on purpose, because it names a property rather than a packageable element
+// (PointerGraph and both other JVM hosts agree), and PropertyPointer extends Property, so
+// it passes an `instanceOf(Property)` test. Reading any slot but the four pointer-native
+// ones off it trips the unresolved-pointer guard — `owner` and `multiplicity` are both
+// read below, which is why this resolves ONCE here instead of per slot.
+//
+// Only `path` is read off the pointer (whitelisted); the property's name comes from
+// `$fe.functionName`, which the FE carries anyway. Same `instanceOf` / `pathToElement`
+// idiom functionTestRunner.pure uses for Package.children.
+//
+// The JavaScript translator never hit this: it needs no owner or declared multiplicity
+// for a plain property read. Only a typed host has to name the declaring class.
+function <<access.private>> meta::external::language::java::translation::resolvedProperty(fe: FunctionExpression[1]): meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Nil, Any|*>[0..1]
+{
+   let candidates = $fe.func->filter(f | $f->instanceOf(meta::pure::metamodel::function::property::Property));
+   let live       = $candidates->filter(f | !$f->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer))
+                       ->cast(@meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Nil, Any|*>);
+   let resolved   = $candidates->filter(f | $f->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer))
+                       ->map(f | pathToElement($f->cast(@meta::pure::metamodel::pointer::TempCompilerPointer).path))
+                       ->filter(o | $o->instanceOf(meta::pure::metamodel::type::Class))
+                       ->cast(@meta::pure::metamodel::type::Class<Any>)
+                       ->map(c | $c.properties->filter(p | $p.name == $fe.functionName))
+                       ->cast(@meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Nil, Any|*>);
+   let all = $live->concatenate($resolved);
+   if ($all->isEmpty(), | []->cast(@meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Nil, Any|*>), | $all->at(0));
+}
+
 // The class declaring the property an FE reads, when it is one with a generated
 // class (a user class, or the Pure List / Pair).
 function <<access.private>> meta::external::language::java::translation::propertyOwnerClass(fe: FunctionExpression[1]): meta::pure::metamodel::type::Class<Any>[0..1]
 {
-   let owners = $fe.func->filter(f | $f->instanceOf(meta::pure::metamodel::function::property::Property))
-                   ->map(f | $f->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>).owner)
+   let owners = $fe->meta::external::language::java::translation::resolvedProperty().owner
                    ->filter(o | $o->instanceOf(meta::pure::metamodel::type::Class) && !$o->instanceOf(meta::pure::metamodel::type::Enumeration))
                    ->cast(@meta::pure::metamodel::type::Class<Any>);
    if ($owners->isEmpty(), | []->cast(@meta::pure::metamodel::type::Class<Any>), | $owners->at(0));
@@ -4566,7 +4631,7 @@ function <<access.private>> meta::external::language::java::translation::transla
    // An enum value is a Java enum constant, or — with metadata — the metamodel
    // object of an enumeration read from a PDB.
    |if ($isEnum && $fe.functionName == 'name' && $conv.metadataElements,
-                                                  | j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'enumName', [$translated->toObjectCode()], javaString()),
+                                                  | j_invoke(javaClass($conv->pdbClass('Metadata')), 'enumName', [$translated->toObjectCode()], javaString()),
    |if ($isEnum && $fe.functionName == 'name',     | $receiver->j_cast(javaClass('java.lang.Enum'))->j_invoke('name', [], javaString()),
                                                    | $conv->typedFieldRead($fe, $receiver->j_invoke($fe.functionName->toOne()->meta::external::language::java::translation::platform::getterName(), [], javaObject()))
    )));
@@ -4580,8 +4645,7 @@ function <<access.private>> meta::external::language::java::translation::typedFi
 {
    // A property whose multiplicity is a parameter (`TryResult.value` is `V[m]`)
    // is a List on the platform type, whatever this read's multiplicity is.
-   let declared = $fe.func->filter(f | $f->instanceOf(meta::pure::metamodel::function::property::Property))
-                     ->map(f | $f->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>).multiplicity);
+   let declared = $fe->meta::external::language::java::translation::resolvedProperty().multiplicity;
    let listed   = $declared->exists(m | !$m->instanceOf(meta::pure::metamodel::multiplicity::ConcreteMultiplicity));
    if ($fe.multiplicity->holdsManyValues(),
       | $read->j_castWithoutChecks(javaList()),
@@ -4614,7 +4678,7 @@ function <<access.private>> meta::external::language::java::translation::newCode
    // instance and its keys go through the metadata.
    let dynamic = $conv.metadataElements && ($pureClass->isEmpty() || $pureClass->at(0) == Any);
    let fresh = if ($dynamic,
-                  | j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'newInstance',
+                  | j_invoke(javaClass($conv->pdbClass('Metadata')), 'newInstance',
                              [$conv->translateExpression($fe.parametersValues->at(0))->toObjectCode()], javaObject()),
                   | ^meta::external::language::java::metamodel::New(type = $cls, arguments = []));
    // With metadata, an instance carries its classifier, so `$x.classifierGenericType`
@@ -4632,7 +4696,7 @@ function <<access.private>> meta::external::language::java::translation::newCode
    // those are only known when `new` runs.
    let writtenKeys = $keyExprs->forAll(k | $k.functionName == 'keyExpression');
    let built = if (!$writtenKeys,
-      | j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'setKeysFrom',
+      | j_invoke(javaClass($conv->pdbClass('Metadata')), 'setKeysFrom',
                  [if ($dynamic, | $fresh, | $ctor), $conv->translateAsList($fe.parametersValues->at(1))], javaObject())
            ->j_castWithoutChecks($cls),
    |if ($dynamic,                                                    | $conv->setKeysDynamically($fresh, $keyExprs),
@@ -4686,7 +4750,7 @@ function <<access.private>> meta::external::language::java::translation::withCla
         // `^X(8)(...)`: a class may declare type VARIABLES, and their values
         // belong to the classifier — that is where `$x` is read from.
         let typeVars = $typeVariableValues->map(v | $conv->translateExpression($v)->toObjectCode());
-        let classifier = j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'classifier',
+        let classifier = j_invoke(javaClass($conv->pdbClass('Metadata')), 'classifier',
                                   [j_string($pureClass->at(0)->elementToPath()),
                                    j_invoke(javaArrays(), 'asList', $typeArgs, javaList()),
                                    j_invoke(javaArrays(), 'asList', $typeVars, javaList())], javaObject());
@@ -4700,7 +4764,7 @@ function <<access.private>> meta::external::language::java::translation::setKeys
    $keyExprs->fold({ke, acc |
       let propName = $conv->extractKeyExpressionPropName($ke);
       let valCode  = $conv->translateExpression($ke.parametersValues->at(1))->toObjectCode();
-      j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'set', [$acc, j_string($propName), $valCode], javaObject());
+      j_invoke(javaClass($conv->pdbClass('Metadata')), 'set', [$acc, j_string($propName), $valCode], javaObject());
    }, $target);
 }
 
@@ -4731,7 +4795,7 @@ function <<access.private>> meta::external::language::java::translation::needsCo
 // constructions can't clash on a name.
 function <<access.private>> meta::external::language::java::translation::scopedConstruction(conv: Conventions[1], instance: Code[1], cls: meta::external::language::java::metamodel::Type[1], pureClass: meta::pure::metamodel::type::Class<Any>[*], keyExprs: FunctionExpression[*]): Code[1]
 {
-   let newType = javaClass($conv->platformClass('pdb.PureNew'));
+   let newType = javaClass($conv->pdbClass('PureNew'));
    let self    = j_invoke($newType, 'self', [j_int(0)], javaObject())->j_castWithoutChecks($cls);
    let keyed   = $conv->setKeys($self, $cls, $keyExprs);
    let body    = if ($pureClass->exists(c | $c->hasAssociationProperties()), | $keyed->j_invoke('_pureFinish', [], $cls), | $keyed);
@@ -4770,7 +4834,7 @@ function <<access.private>> meta::external::language::java::translation::contain
 // A parent reference as the object on the construction stack, cast to its type.
 function <<access.private>> meta::external::language::java::translation::parentRefCode(conv: Conventions[1], vs: ValueSpecification[1]): Code[1]
 {
-   j_invoke(javaClass($conv->platformClass('pdb.PureNew')), 'self', [j_int($vs->parentRefDepth()->toOne())], javaObject())
+   j_invoke(javaClass($conv->pdbClass('PureNew')), 'self', [j_int($vs->parentRefDepth()->toOne())], javaObject())
       ->j_castWithoutChecks($conv->pureTypeToJavaType($vs.genericType, PureOne)->toBoxed());
 }
 
@@ -5385,7 +5449,7 @@ function <<access.private>> meta::external::language::java::translation::qualifi
    let typeVars = $cls.typeVariables->map(v |
       j_declare($conv->pureTypeToJavaType($v.genericType, $v.multiplicity)->toBoxed(),
                 $v.name->meta::external::language::java::translation::safeJavaName(),
-                j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'typeVariable',
+                j_invoke(javaClass($conv->pdbClass('Metadata')), 'typeVariable',
                          [j_variable(javaObject(), 'this'), j_string($v.name->toOne())], javaObject())
                    ->j_castWithoutChecks($conv->pureTypeToJavaType($v.genericType, $v.multiplicity)->toBoxed())));
    let attempt  = tryEval(| let raw = $conv->buildJavaBodyReturning($qp.expressionSequence->toOneMany(), $qp.multiplicity->holdsManyValues());
@@ -5402,7 +5466,7 @@ function <<access.private>> meta::external::language::java::translation::qualifi
 function <<access.private>> meta::external::language::java::translation::metadataElement(conv: Conventions[1], element: meta::pure::metamodel::PackageableElement[1]): Code[1]
 {
    let classifier = $conv->pureTypeToJavaType($element->meta::pure::functions::meta::genericType(), PureOne)->toBoxed();
-   j_invoke(javaClass($conv->platformClass('pdb.Metadata')), 'element', [j_string($element->elementToPath())], javaObject())
+   j_invoke(javaClass($conv->pdbClass('Metadata')), 'element', [j_string($element->elementToPath())], javaObject())
       ->j_castWithoutChecks($classifier);
 }
 
@@ -5585,7 +5649,7 @@ function <<access.private>> meta::external::language::java::translation::withLam
                                  | []->cast(@meta::external::language::java::metamodel::Type))));
    if ($index->isEmpty() || $type->isEmpty(),
       | $code,
-      | j_invoke(javaClass($conv->platformClass('pdb.PureLambda')), 'of',
+      | j_invoke(javaClass($conv->pdbClass('PureLambda')), 'of',
                  [$code->j_castWithoutChecks($type->toOne()), j_string($conv.owner->toOne()), j_long($index->at(0)), $lambda->capturesCode($conv.scope, $conv)], javaObject())
            ->j_castWithoutChecks($type->toOne()));
 }
@@ -6282,7 +6346,7 @@ function <<access.private>> meta::external::language::java::translation::pureVar
       javaMethod(['public', 'static'], $variantType, 'toVariant', [j_parameter(javaObject(), 'value')],
          'if (value instanceof java.util.List) {\n    java.util.List<?> values = (java.util.List<?>) value;\n    if (values.isEmpty()) { return make("NULL", null, false); }\n    if (values.size() == 1) { return of(values.get(0)); }\n}\nreturn of(value);'),
       javaMethod(['static'], $variantType, 'of', [j_parameter(javaObject(), 'value')],
-         'if (value == null) { return make("NULL", null, false); }\nif (value instanceof Variant) { return (Variant) value; }\nif (value instanceof java.util.List || (value instanceof org.finos.legend.pure.platform.java.pdb.LazyObject && ((org.finos.legend.pure.platform.java.pdb.LazyObject) value)._purePath().equals("meta::pure::functions::collection::List"))) {\n    Object values = value instanceof java.util.List ? value : ((org.finos.legend.pure.platform.java.pdb.LazyObject) value).__values("values");\n    java.util.ArrayList<Object> elements = new java.util.ArrayList<>();\n    if (values instanceof java.util.List) { for (Object e : (java.util.List<?>) values) { elements.add(of(e)); } } else if (values != null) { elements.add(of(values)); }\n    return make("ARRAY", elements, false);\n}\nif (value instanceof java.util.Map) {\n    java.util.TreeMap<String, Object> sorted = new java.util.TreeMap<>();\n    for (java.util.Map.Entry<?, ?> e : ((java.util.Map<?, ?>) value).entrySet()) {\n        if (!(e.getKey() instanceof String)) { throw new RuntimeException("Only maps with String keys can be converted to Variant, got key: " + e.getKey()); }\n        sorted.put((String) e.getKey(), of(e.getValue()));\n    }\n    return make("OBJECT", new java.util.LinkedHashMap<>(sorted), false);\n}\nif (value instanceof Long || value instanceof Integer) { return make("NUMBER", value.toString(), true); }\nif (value instanceof Double) { return make("NUMBER", Double.toString((Double) value), false); }\nif (value instanceof java.math.BigDecimal) { return make("NUMBER", ((java.math.BigDecimal) value).toPlainString(), false); }\nif (value instanceof Boolean) { return make("BOOLEAN", value, false); }\nif (value instanceof String || value instanceof java.time.temporal.Temporal || value instanceof PureDate) { return make("STRING", value.toString(), false); }\nthrow new RuntimeException(value.getClass().getSimpleName() + " - not supported!");'),
+         'if (value == null) { return make("NULL", null, false); }\nif (value instanceof Variant) { return (Variant) value; }\nif (value instanceof java.util.List || (value instanceof org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject && ((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) value)._purePath().equals("meta::pure::functions::collection::List"))) {\n    Object values = value instanceof java.util.List ? value : ((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) value).__values("values");\n    java.util.ArrayList<Object> elements = new java.util.ArrayList<>();\n    if (values instanceof java.util.List) { for (Object e : (java.util.List<?>) values) { elements.add(of(e)); } } else if (values != null) { elements.add(of(values)); }\n    return make("ARRAY", elements, false);\n}\nif (value instanceof java.util.Map) {\n    java.util.TreeMap<String, Object> sorted = new java.util.TreeMap<>();\n    for (java.util.Map.Entry<?, ?> e : ((java.util.Map<?, ?>) value).entrySet()) {\n        if (!(e.getKey() instanceof String)) { throw new RuntimeException("Only maps with String keys can be converted to Variant, got key: " + e.getKey()); }\n        sorted.put((String) e.getKey(), of(e.getValue()));\n    }\n    return make("OBJECT", new java.util.LinkedHashMap<>(sorted), false);\n}\nif (value instanceof Long || value instanceof Integer) { return make("NUMBER", value.toString(), true); }\nif (value instanceof Double) { return make("NUMBER", Double.toString((Double) value), false); }\nif (value instanceof java.math.BigDecimal) { return make("NUMBER", ((java.math.BigDecimal) value).toPlainString(), false); }\nif (value instanceof Boolean) { return make("BOOLEAN", value, false); }\nif (value instanceof String || value instanceof java.time.temporal.Temporal || value instanceof PureDate) { return make("STRING", value.toString(), false); }\nthrow new RuntimeException(value.getClass().getSimpleName() + " - not supported!");'),
       javaMethod(['static'], javaClass('java.lang.RuntimeException'), 'wrong', [j_parameter($variantType, 'v'), j_parameter(javaString(), 'target')],
          'return new RuntimeException("Variant of type \'" + v.type + "\' cannot be converted to " + target);'),
       javaMethod(['public', 'static'], javaObject(), 'to', [j_parameter($variantType, 'v'), j_parameter(javaClass('java.util.function.Function'), 'convert')],
@@ -6527,7 +6591,7 @@ function <<access.private>> meta::external::language::java::translation::pureFor
       javaMethod(['static'], javaObject(), 'field', [j_parameter(javaObject(), 'o'), j_parameter(javaString(), 'name')],
          'try {\n    java.lang.reflect.Field f = o.getClass().getField(name);\n    f.setAccessible(true);\n    return f.get(o);\n} catch (ReflectiveOperationException e) {\n    return null;\n}'),
       javaMethod(['public', 'static'], javaString(), 'str', [j_parameter(javaObject(), 'v')],
-         'if (v == null) { return ""; }\nif (v instanceof String) { return (String) v; }\nif (v instanceof Double) {\n    double d = (Double) v;\n    if (Double.isNaN(d) || Double.isInfinite(d)) { return Double.toString(d); }\n    String s = new java.math.BigDecimal(Double.toString(d)).stripTrailingZeros().toPlainString();\n    return s.contains(".") ? s : s + ".0";\n}\nif (v instanceof java.util.Map.Entry) { return "<" + str(((java.util.Map.Entry<?, ?>) v).getKey()) + ", " + str(((java.util.Map.Entry<?, ?>) v).getValue()) + ">"; }\nif (v instanceof Enum) { return ((Enum<?>) v).name(); }\nString purePath = v instanceof org.finos.legend.pure.platform.java.pdb.LazyObject ? ((org.finos.legend.pure.platform.java.pdb.LazyObject) v)._purePath() : "";\nif (purePath.equals("meta::pure::functions::collection::Pair")) { return "<" + str(((org.finos.legend.pure.platform.java.pdb.LazyObject) v).__values("first").stream().findFirst().orElse(null)) + ", " + str(((org.finos.legend.pure.platform.java.pdb.LazyObject) v).__values("second").stream().findFirst().orElse(null)) + ">"; }\nObject values = purePath.equals("meta::pure::functions::collection::List") ? ((org.finos.legend.pure.platform.java.pdb.LazyObject) v).__values("values") : v instanceof java.util.List ? v : null;\nif (purePath.equals("meta::pure::functions::collection::List") || v instanceof java.util.List) {\n    java.util.List<?> elements = values instanceof java.util.List ? (java.util.List<?>) values : values == null ? java.util.Collections.emptyList() : java.util.Collections.singletonList(values);\n    StringBuilder sb = new StringBuilder("[");\n    for (int i = 0; i < elements.size(); i++) { if (i > 0) { sb.append(", "); } sb.append(str(elements.get(i))); }\n    return sb.append(\']\').toString();\n}\nif (v instanceof org.finos.legend.pure.platform.java.pdb.LazyObject) {\n    org.finos.legend.pure.platform.java.pdb.LazyObject lo = (org.finos.legend.pure.platform.java.pdb.LazyObject) v;\n    // A packageable element prints as its name (`STR_Person->toString()`); an\n    // instance that merely HAS a name property does not, so the package decides.\n    if (!lo.__values("package").isEmpty() && !lo.__values("name").isEmpty()) { return String.valueOf(lo.__values("name").get(0)); }\n}\nreturn String.valueOf(v);'),
+         'if (v == null) { return ""; }\nif (v instanceof String) { return (String) v; }\nif (v instanceof Double) {\n    double d = (Double) v;\n    if (Double.isNaN(d) || Double.isInfinite(d)) { return Double.toString(d); }\n    String s = new java.math.BigDecimal(Double.toString(d)).stripTrailingZeros().toPlainString();\n    return s.contains(".") ? s : s + ".0";\n}\nif (v instanceof java.util.Map.Entry) { return "<" + str(((java.util.Map.Entry<?, ?>) v).getKey()) + ", " + str(((java.util.Map.Entry<?, ?>) v).getValue()) + ">"; }\nif (v instanceof Enum) { return ((Enum<?>) v).name(); }\nString purePath = v instanceof org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject ? ((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v)._purePath() : "";\nif (purePath.equals("meta::pure::functions::collection::Pair")) { return "<" + str(((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v).__values("first").stream().findFirst().orElse(null)) + ", " + str(((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v).__values("second").stream().findFirst().orElse(null)) + ">"; }\nObject values = purePath.equals("meta::pure::functions::collection::List") ? ((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v).__values("values") : v instanceof java.util.List ? v : null;\nif (purePath.equals("meta::pure::functions::collection::List") || v instanceof java.util.List) {\n    java.util.List<?> elements = values instanceof java.util.List ? (java.util.List<?>) values : values == null ? java.util.Collections.emptyList() : java.util.Collections.singletonList(values);\n    StringBuilder sb = new StringBuilder("[");\n    for (int i = 0; i < elements.size(); i++) { if (i > 0) { sb.append(", "); } sb.append(str(elements.get(i))); }\n    return sb.append(\']\').toString();\n}\nif (v instanceof org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) {\n    org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject lo = (org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) v;\n    // A packageable element prints as its name (`STR_Person->toString()`); an\n    // instance that merely HAS a name property does not, so the package decides.\n    if (!lo.__values("package").isEmpty() && !lo.__values("name").isEmpty()) { return String.valueOf(lo.__values("name").get(0)); }\n}\nreturn String.valueOf(v);'),
       javaMethod(['static'], javaString(), 'repr', [j_parameter(javaObject(), 'v')],
          'if (v instanceof String) { return "\'" + ((String) v).replace("\\\\", "\\\\\\\\").replace("\'", "\\\\\'") + "\'"; }\nif (v.getClass().getSimpleName().equals("PureDate") || v instanceof java.time.temporal.Temporal) { return "%" + v; }\nif (v instanceof Enum) {\n    try {\n        java.lang.reflect.Method m = v.getClass().getMethod("_purePath");\n        m.setAccessible(true);\n        return m.invoke(v) + "." + ((Enum<?>) v).name();\n    } catch (ReflectiveOperationException e) {\n        return ((Enum<?>) v).name();\n    }\n}\nreturn str(v);'),
       javaMethod(['static'], javaString(), 'formatFloat', [j_parameter(javaObject(), 'v'), j_parameter(javaInt(), 'precision')],

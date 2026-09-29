@@ -15,8 +15,8 @@
 
 package org.finos.legend.pure.platform.java.compiler;
 
-import org.finos.legend.pure.platform.java.Execute;
-import org.finos.legend.pure.platform.java.pdb.Metadata;
+import org.finos.legend.pure.platform.java.execution.Execute;
+import org.finos.legend.pure.platform.java.compiler.module.pdbModule.Metadata;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -244,7 +244,7 @@ public final class Compilation
 
     private static List<Object> values(Object result, String property)
     {
-        List<Object> read = ((org.finos.legend.pure.platform.java.pdb.LazyObject) result).__values(property);
+        List<Object> read = ((org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject) result).__values(property);
         return new ArrayList<>(read);
     }
 
