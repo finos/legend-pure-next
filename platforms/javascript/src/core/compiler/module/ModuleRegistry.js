@@ -224,6 +224,27 @@ function createRegistryState(schemaSrc) {
         for (const m of mods) for (const p of m.elementPaths()) seen.add(p);
         return seen;
     }
+
+    /**
+     * `[path, kind, moduleName]` for every element, first registration wins — the same
+     * order `getElement` resolves in. A PDB module answers from its archive index, so this
+     * never decodes; a module without `elementKinds` (the in-memory one) reports its
+     * elements with an empty kind rather than forcing a read.
+     *
+     * For LISTING the graph only. Anything that needs an element's real classifier should
+     * ask for the element.
+     */
+    function allElementKinds() {
+        const seen = new Map();
+        for (const m of mods) {
+            if (typeof m.elementKinds === "function") {
+                for (const [path, kind] of m.elementKinds()) if (!seen.has(path)) seen.set(path, [path, kind, m.name]);
+            } else {
+                for (const path of m.elementPaths()) if (!seen.has(path)) seen.set(path, [path, "", m.name]);
+            }
+        }
+        return [...seen.values()];
+    }
     function allTypes() {
         if (typesCache) return typesCache;
         typesCache = [];
@@ -275,7 +296,7 @@ function createRegistryState(schemaSrc) {
         addInvalidationListener: (l) => invalidationListeners.push(l),
         has, allPaths, resolve, resolveAll,
         subtypeOf, instanceOf, classifierPath, directSupers,
-        allTypes, functionsByNameAndArity, invoke,
+        allTypes, functionsByNameAndArity, invoke, allElementKinds,
         get elementCount() { return allPaths().size; },
     };
 }
@@ -324,6 +345,8 @@ export class ModuleRegistry {
     /** The element's proxy (its reads go through the metadata globals), or null when no module stores it. */
     getElement(path) { return this.#state.has(path) ? globalThis.__pureResolve(path) : null; }
     elementPaths() { return this.#state.allPaths(); }
+    /** `[path, kind, moduleName]` for every element, without decoding any (see allElementKinds). */
+    elementKinds() { return this.#state.allElementKinds(); }
 
     // --- services for the metadata globals (pdb/marshal.js) -------------------
     get schema() { return this.#state.schema; }

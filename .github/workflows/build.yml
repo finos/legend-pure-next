@@ -1176,6 +1176,52 @@ jobs:
           path: ${{ matrix.gallery_file }}
           retention-days: 1
 
+      # The browser IDE (platforms/javascript/src/interfaces/web): a Pure compiler that runs
+      # with no JVM, so what it needs is exactly what this job has just built — the .pdb
+      # archives, the generated compiler/translator JS and the parser bundles — plus Monaco,
+      # vendored by web-deps. Everything is copied at its REPOSITORY path because the page
+      # resolves its assets relative to the repo root (which is why `just serve` serves from
+      # there); publishing the same shape means the served page is the page developers run.
+      #
+      # ~44MB staged, ~20MB over the wire: Pages gzips the JS to about a tenth, while the
+      # .pdb archives are already deflated and compress by ~6%.
+      - name: Stage the browser IDE
+        if: matrix.target == 'javascript'
+        run: |
+          set -euo pipefail
+          just javascript::web-deps
+          mkdir -p ide-site
+          for path in \
+            platforms/javascript/src/interfaces/web \
+            platforms/javascript/src/core \
+            platforms/javascript/generated \
+            platforms/javascript/build/vs \
+            pure/modules/translation/javascript/js/runtime-lib.js \
+            pure/modules/translation/javascript/js/build/antlr-bundle.js \
+            pure/modules/translation/javascript/js/build/parser-mappings-bundle.js \
+            pure/modules/language/javascript/build/javascript.pdb \
+            pure/modules/translation/javascript/build/javascript-translation.pdb \
+            pure/modules/translation/shared/build/translation-shared.pdb \
+            pure/specification/grammar/antlr/m3/M3Lexer.g4 \
+            shared/core.pdb shared/core-tests.pdb shared/compiler.pdb \
+            shared/specification/m3.fbs
+          do
+            mkdir -p "ide-site/$(dirname "$path")"
+            cp -R "$path" "ide-site/$path"
+          done
+          # Locales and the other languages' grammars are never loaded by this page.
+          rm -rf ide-site/platforms/javascript/build/vs/basic-languages
+          rm -f  ide-site/platforms/javascript/build/vs/nls.messages.*.js
+          du -sh ide-site
+
+      - name: Upload the browser IDE
+        if: matrix.target == 'javascript'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ide-site
+          path: ide-site
+          retention-days: 1
+
       # Test dashboard: turn this job's JUnit XML into reports, then ship its test-results/ to
       # publish-gallery, which renders one dashboard from every job's reports.
       - name: Collect dashboard reports
@@ -1265,6 +1311,13 @@ jobs:
           name: gallery-truffle
           path: gallery-truffle
 
+      - name: Download the browser IDE
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: ide-site
+          path: ide-site
+
       - name: Download dashboard reports
         continue-on-error: true
         uses: actions/download-artifact@v8
@@ -1308,6 +1361,16 @@ jobs:
               echo "::warning::$1 is missing (did its job fail?), so $2 is not published"
             fi
           }
+          # The IDE is a TREE, not a page: it keeps its repository layout so the page resolves
+          # its .pdb archives, generated JS and Monaco exactly as it does locally. Its link
+          # therefore points at the deep path rather than a copied-up index.html — copying the
+          # page alone would break every relative path it uses.
+          if [[ -d ide-site ]]; then
+            cp -R ide-site/. _site/
+            links+=$'\n'"    <li><a href=\"platforms/javascript/src/interfaces/web/index.html\">Pure IDE &mdash; compile and run Pure in the browser</a></li>"
+          else
+            echo "::warning::ide-site is missing (did the javascript translation job fail?), so the IDE is not published"
+          fi
           publish gallery-java/java-translation-gallery.html             java.html       'Pure &rarr; Java translation gallery'
           publish gallery-javascript/javascript-translation-gallery.html javascript.html 'Pure &rarr; JavaScript translation gallery'
           publish gallery-truffle/truffle-translation-gallery.html       truffle.html    'Pure &rarr; Truffle AST gallery'

@@ -79,6 +79,18 @@ export class PdbModule {
     getElement(path) { return this.#index.has(path) ? globalThis.__pureResolve(path) : null; }
     elementPaths() { return this.#index.keys(); }
 
+    /**
+     * `[path, kind]` for every element this archive holds, where `kind` is the stored type
+     * ("Class", "Enumeration", "ConcreteFunctionDefinition", ...). Read straight off the
+     * archive index — the entry name carries it — so a caller that wants to LIST the graph
+     * (the web interface's concept tree) pays nothing. Decoding every element to ask its
+     * classifier instead would force the whole lazy reader, which is the cost the browser
+     * warmup exists to avoid.
+     */
+    *elementKinds() {
+        for (const [path, e] of this.#index) yield [path, e.typeName];
+    }
+
     /** Decode the element node for `path` (undefined when not stored here). */
     node(path) {
         const e = this.#index.get(path);

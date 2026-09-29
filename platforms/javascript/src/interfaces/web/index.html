@@ -3,101 +3,234 @@
   Pure compiler + executor in the browser — no JVM, no GraalVM.
 
   Loads the same self-contained parser bundle translation/javascript builds
-  (runtime-lib.js + antlr-bundle.js + parser-mappings-bundle.js) as plain <script>s, then main.js (an ES
-  module) fetches the metamodel (m3.fbs + .pdb files), backs the metadata
+  (runtime-lib.js + antlr-bundle.js + parser-mappings-bundle.js) as plain <script>s, then
+  main.js (an ES module) fetches the metamodel (m3.fbs + .pdb files), backs the metadata
   globals with the in-browser PDB reader (src/core/compiler/module), imports the generated
   compiler + translator JS, and wires Run (button or F9):
-    parse -> compile -> translate each element to JS in-process (the
-    translated translator doing the translating) -> eval -> call
-    `function go():Any[*]` and render the returned values, with the compiled
-    graph (printCompiledGraph) and the generated JavaScript shown below.
-  Parse/compile errors are highlighted in the source via a backdrop overlay
-  behind the textarea. Open via a static server from the repo root (e.g.
-  `just serve` from platforms/javascript) so the relative paths resolve.
+    parse -> compile -> translate each element to JS in-process (the translated translator
+    doing the translating) -> eval -> call `function go():Any[*]`.
+
+  Three panes: the graph the runtime has loaded (left), a Monaco editor (centre), and the
+  console (bottom), which carries the program's print output live plus the result, the
+  compiled graph and the generated JavaScript.
+
+  Monaco is vendored into build/vs by `just javascript::web-deps` rather than loaded from a
+  CDN, so the page keeps working with no network — the same reason the parser bundle and
+  the .pdb files are local. Open via a static server from the repo root (`just
+  javascript::serve`, which runs web-deps first) so the relative paths resolve.
 -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <title>Legend Pure — standalone JS compiler</title>
   <style>
-    body { font: 14px/1.5 system-ui, sans-serif; margin: 1.5rem; max-width: 70rem; }
-    pre { background: #f5f5f5; padding: 1rem; overflow: auto; max-height: 30rem; }
-    button { font-size: 14px; padding: 6px 14px; margin: 8px 0; }
-    #status { color: #555; margin-left: 0.75rem; }
-
-    /* Backdrop-highlight editor: a #highlights div renders the same text behind a
-       transparent-background <textarea>, with <mark>s around error spans. Both
-       share identical box metrics + `white-space: pre` (no wrapping, via wrap=off)
-       so glyphs line up; the textarea scrolls and we mirror its scroll offset. */
-    #editor { position: relative; height: 14rem; margin: 0.5rem 0; }
-    #highlights, #src {
-      position: absolute; inset: 0; margin: 0;
-      box-sizing: border-box; padding: 8px; border: 1px solid #ccc;
-      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
-      tab-size: 2; white-space: pre; overflow: hidden;
+    :root {
+      --bg: #ffffff; --panel: #f7f7f8; --rule: #e0e0e3; --ink: #1c1c1e; --muted: #61616b;
+      --accent: #6D45D9; --error: #cf4a2e; --ok: #1e8a4c; --hover: #ececef;
+      --k-class: #2f6fd0; --k-enum: #b8860b; --k-prim: #1e8a4c; --k-profile: #9147bf;
+      --k-assoc: #2f8f8f; --k-native: #8a8a94; --k-other: #b0b0b8;
+      --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
-    #highlights { z-index: 1; color: transparent; background: #fff; pointer-events: none; }
-    #highlights mark { background: #ffc2c2; color: transparent; border-radius: 2px; }
-    #src { z-index: 2; color: #111; caret-color: #111; background: transparent; resize: none; overflow: auto; }
+    /* Dark follows the system unless the header button pinned light; the same tokens are
+       redefined so nothing below this point knows which theme is in force. */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #15151a; --panel: #1c1c22; --rule: #2e2e37; --ink: #e6e6ea; --muted: #9a9aa6;
+        --accent: #A98BFF; --error: #ff8a70; --ok: #5fd08a; --hover: #26262f;
+        --k-class: #7fb2ff; --k-enum: #e0b341; --k-prim: #6fd08f; --k-profile: #c58af9;
+        --k-assoc: #5fc7c7; --k-native: #8a8a94; --k-other: #5a5a66;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #15151a; --panel: #1c1c22; --rule: #2e2e37; --ink: #e6e6ea; --muted: #9a9aa6;
+      --accent: #A98BFF; --error: #ff8a70; --ok: #5fd08a; --hover: #26262f;
+      --k-class: #7fb2ff; --k-enum: #e0b341; --k-prim: #6fd08f; --k-profile: #c58af9;
+      --k-assoc: #5fc7c7; --k-native: #8a8a94; --k-other: #5a5a66;
+    }
+    html { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font: 14px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--bg);
+      display: grid; grid-template-rows: auto 1fr; height: 100vh; overflow: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 14px; border-bottom: 1px solid var(--rule); background: var(--panel);
+    }
+    header h1 { font: 600 15px/1 system-ui; margin: 0; }
+    header .sub { color: var(--muted); font-size: 12px; }
+    #run {
+      font: 600 13px/1 system-ui; padding: 7px 14px; border: 1px solid var(--accent);
+      background: var(--accent); color: #fff; border-radius: 5px; cursor: pointer;
+    }
+    #run:disabled, #compile:disabled { opacity: 0.45; cursor: default; }
+    #compile {
+      font: 600 13px/1 system-ui; padding: 7px 12px; border-radius: 5px; cursor: pointer;
+      border: 1px solid var(--rule); background: var(--bg); color: var(--ink);
+    }
+    #compile:hover:not(:disabled) { background: var(--hover); }
+    #status { color: var(--muted); font-size: 12px; }
+    .icon-btn {
+      margin-left: auto; font-size: 14px; line-height: 1; padding: 6px 9px; cursor: pointer;
+      border: 1px solid var(--rule); border-radius: 5px; background: var(--bg); color: var(--ink);
+    }
+    .icon-btn:hover { background: var(--hover); }
+
+    /* Three panes with a splitter track between each pair. The two sizes are custom
+       properties so a drag is a single property write (layout.js); the defaults here are
+       what double-clicking a splitter restores. */
+    main {
+      display: grid; min-height: 0;
+      --sidew: 19rem; --consoleh: 16rem;
+      grid-template-columns: var(--sidew) 6px 1fr;
+      grid-template-rows: 1fr 6px var(--consoleh);
+    }
+    #concepts {
+      grid-area: 1 / 1 / 4 / 2; background: var(--panel);
+      display: flex; flex-direction: column; min-height: 0; min-width: 0;
+    }
+    #editor  { grid-area: 1 / 3 / 2 / 4; min-height: 0; min-width: 0; }
+    #console { grid-area: 3 / 3 / 4 / 4; display: flex; flex-direction: column; min-height: 0; }
+
+    .splitter { background: var(--rule); touch-action: none; }
+    .splitter:hover, .splitter.dragging { background: var(--accent); }
+    #vsplit { grid-area: 1 / 2 / 4 / 3; cursor: col-resize; }
+    #hsplit { grid-area: 2 / 3 / 3 / 4; cursor: row-resize; }
+
+    /* ---- concepts ------------------------------------------------------------- */
+    .concept-filter {
+      margin: 8px; padding: 6px 8px; font: 13px/1 system-ui;
+      border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--ink);
+    }
+    .concept-count { padding: 0 10px 6px; font-size: 11px; color: var(--muted); }
+    .concept-body { overflow: auto; padding: 0 6px 10px; flex: 1; font: 12px/1.6 var(--mono); }
+    details.pkg > summary {
+      cursor: pointer; padding: 1px 4px; border-radius: 3px; color: var(--muted);
+      list-style: none; white-space: nowrap;
+    }
+    details.pkg > summary::before { content: "▸ "; }
+    details.pkg[open] > summary::before { content: "▾ "; }
+    details.pkg > summary:hover { background: var(--hover); color: var(--ink); }
+    .pkg-body { padding-left: 11px; border-left: 1px solid var(--rule); margin-left: 5px; }
+    button.concept {
+      display: flex; align-items: baseline; gap: 6px; width: 100%; text-align: left;
+      background: none; border: 0; padding: 1px 4px; border-radius: 3px; cursor: pointer;
+      font: inherit; color: var(--ink); white-space: nowrap;
+    }
+    button.concept:hover { background: var(--hover); }
+    button.concept.selected { background: color-mix(in oklab, var(--accent) 18%, var(--panel)); }
+    button.concept.flat .name { overflow: hidden; text-overflow: ellipsis; }
+    .concept .icon { width: 1.1em; text-align: center; font-weight: 700; flex: none; }
+    .k-class  .icon { color: var(--k-class); }
+    .k-enum   .icon { color: var(--k-enum); }
+    .k-prim   .icon { color: var(--k-prim); }
+    .k-profile .icon { color: var(--k-profile); }
+    .k-assoc  .icon { color: var(--k-assoc); }
+    .k-fn     .icon { color: var(--accent); }
+    .k-native .icon { color: var(--k-native); }
+    .k-other  .icon { color: var(--k-other); }
+
+    /* ---- console -------------------------------------------------------------- */
+    .console-body { overflow: auto; flex: 1; padding: 8px 12px; font: 12px/1.6 var(--mono); }
+    .console-body .line { white-space: pre-wrap; }
+    .console-body .line.info  { color: var(--muted); }
+    .console-body .line.error { color: var(--error); }
+    .console-body .line.ok    { color: var(--ok); }
+    .console-body pre { margin: 2px 0 10px; white-space: pre-wrap; }
+    .console-body pre.program-out { margin: 0; }
+    /* ---- context menu + inspector --------------------------------------------- */
+    .concept-menu {
+      position: fixed; z-index: 20; background: var(--bg); border: 1px solid var(--rule);
+      border-radius: 6px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.18); padding: 4px; min-width: 9rem;
+    }
+    .concept-menu button {
+      display: block; width: 100%; text-align: left; border: 0; background: none;
+      font: 13px/1.6 system-ui; color: var(--ink); padding: 5px 10px; border-radius: 4px; cursor: pointer;
+    }
+    .concept-menu button:hover { background: var(--hover); }
+
+    .insp-overlay {
+      position: fixed; inset: 0; z-index: 30; background: rgb(0 0 0 / 0.45);
+      display: grid; place-items: center;
+    }
+    .insp-panel {
+      width: min(92vw, 78rem); height: min(86vh, 52rem); background: var(--bg);
+      border: 1px solid var(--rule); border-radius: 8px; box-shadow: 0 20px 60px rgb(0 0 0 / 0.35);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .insp-head {
+      display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+      border-bottom: 1px solid var(--rule); background: var(--panel);
+    }
+    .insp-path { font: 600 13px/1 var(--mono); }
+    .insp-kind { font-size: 11px; color: var(--muted); }
+    .insp-close {
+      margin-left: auto; border: 0; background: none; color: var(--muted);
+      font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px;
+    }
+    .insp-close:hover { color: var(--ink); }
+    .insp-split {
+      flex: 1; min-height: 0; display: grid; --graphw: 50%;
+      grid-template-columns: var(--graphw) 6px 1fr;
+    }
+    .insp-divider { background: var(--rule); cursor: col-resize; touch-action: none; }
+    .insp-divider:hover, .insp-divider.dragging { background: var(--accent); }
+    .insp-pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+    .insp-pane h4 {
+      margin: 0; padding: 7px 12px; font: 600 11px/1.4 system-ui; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--rule);
+    }
+    .insp-tree, .insp-js { overflow: auto; flex: 1; padding: 8px 12px; font: 12px/1.6 var(--mono); margin: 0; }
+    .insp-body { padding-left: 12px; border-left: 1px solid var(--rule); margin-left: 4px; }
+    .insp-leaf, .insp-node > summary { display: flex; gap: 8px; padding: 1px 2px; white-space: nowrap; }
+    .insp-node > summary { cursor: pointer; list-style: none; }
+    .insp-node > summary::before { content: "▸"; color: var(--muted); }
+    .insp-node[open] > summary::before { content: "▾"; }
+    .insp-group {
+      margin: 8px 0 2px; font: 600 10px/1.6 system-ui; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--ink);
+    }
+    .insp-group.inherited { color: var(--muted); font-weight: 500; text-transform: none; letter-spacing: 0; }
+    .insp-name { color: var(--accent); }
+    .insp-val { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+
+    .block-title {
+      margin-top: 10px; font: 600 11px/1.6 system-ui; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--muted);
+    }
   </style>
 </head>
 <body>
-  <h1>Legend Pure — standalone JavaScript compiler &amp; executor</h1>
-  <p>Parses, compiles <em>and runs</em> Pure source entirely in the browser (no JVM).
-     The parser bundle, the compiler JS and the translator JS are the artifacts
-     <code>translation/javascript</code> produces; the metamodel is read from the
-     committed <code>.pdb</code> files by the in-browser PDB reader.
-     <strong>Run (or F9)</strong> compiles, translates each element to JavaScript
-     in-process, evals it, then calls <code>function go():Any[*]</code>; the
-     compiled graph and the generated JavaScript are shown below the result.
-     Errors are highlighted in the source.</p>
-
-  <div id="editor">
-    <div id="highlights"></div>
-    <textarea id="src" wrap="off" spellcheck="false">Class test::Person
-{
-  firstName: String[1];
-  lastName: String[1];
-}
-
-function test::greet(p: test::Person[1]): String[1]
-{
-  'Hello, ' + $p.firstName + ' ' + $p.lastName + '!'
-}
-
-function go(): Any[*]
-{
-  let people = [^test::Person(firstName = 'Pierre', lastName = 'Doe'),
-                ^test::Person(firstName = 'Ada', lastName = 'Lovelace')];
-  $people->map(p | test::greet($p));
-}
-</textarea>
-  </div>
-  <div>
+  <header>
+    <h1>Legend Pure</h1>
+    <span class="sub">compiles and runs Pure in the browser — no JVM</span>
+    <button id="compile" class="secondary" disabled>Compile (⇧F9)</button>
     <button id="run" disabled>Run ▶ (F9)</button>
     <span id="status">Loading…</span>
-  </div>
-  <section id="outSec" hidden>
-    <h3>Result</h3>
-    <pre id="out"></pre>
-  </section>
-  <section id="graphSec" hidden>
-    <h3>Compiled graph</h3>
-    <pre id="graph"></pre>
-  </section>
-  <section id="genSec" hidden>
-    <h3>Generated JavaScript</h3>
-    <pre id="gen"></pre>
-  </section>
+    <button id="theme" class="icon-btn" title="theme">☀</button>
+  </header>
+
+  <main>
+    <aside id="concepts"></aside>
+    <div id="vsplit" class="splitter" role="separator" aria-orientation="vertical"
+         title="drag to resize · double-click to reset"></div>
+    <div id="editor"></div>
+    <div id="hsplit" class="splitter" role="separator" aria-orientation="horizontal"
+         title="drag to resize · double-click to reset"></div>
+    <section id="console"></section>
+  </main>
 
   <!-- The standalone parser + runtime: helpers first, then the antlr bundle
-       (the translated parser-mappings). Order
-       matters. main.js (module) runs after these classic scripts. -->
+       (the translated parser-mappings). Order matters. -->
   <script src="../../../../../pure/modules/translation/javascript/js/runtime-lib.js"></script>
   <script src="../../../../../pure/modules/translation/javascript/js/build/antlr-bundle.js"></script>
-  <!-- Mappings half: the translated parser-mappings. Must come
-       after runtime-lib.js; the PureRuntime main.js builds drives both bundles. -->
+  <!-- Mappings half: the translated parser-mappings. Must come after runtime-lib.js;
+       the PureRuntime main.js builds drives both bundles. -->
   <script src="../../../../../pure/modules/translation/javascript/js/build/parser-mappings-bundle.js"></script>
+  <!-- Monaco's AMD loader, vendored (just javascript::web-deps). main.js waits for it. -->
+  <script src="../../../build/vs/loader.js"></script>
   <script type="module" src="./main.js"></script>
 </body>
 </html>

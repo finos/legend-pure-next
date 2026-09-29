@@ -11,7 +11,11 @@
     "test:compiler": "node --stack-size=4000 src/core/compiler/tests/compiler-tests.js",
     "test:execution": "node --stack-size=4000 src/core/execution/tests/pct-tests.js",
     "test:host-api": "node --stack-size=4000 src/core/tests/host-api-tests.js",
-    "test:pure-runtime": "node --stack-size=4000 src/core/tests/pure-runtime-tests.js"
+    "test:pure-runtime": "node --stack-size=4000 src/core/tests/pure-runtime-tests.js",
+    "web:deps": "pnpm install && rm -rf build/vs && mkdir -p build && cp -R node_modules/monaco-editor/min/vs build/vs"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "monaco-editor": "0.52.2"
+  }
 }
