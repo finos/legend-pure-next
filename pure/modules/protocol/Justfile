@@ -1,0 +1,120 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# pure/modules/protocol/Justfile — builds the JavaScript-generation module
+# into a single PDB.
+#
+# Direct invocation: just <recipe>     (from pure/modules/protocol/)
+#
+# Inputs:  shared/core.pdb (produced by `bootstrap::build`).
+# Output:  build/protocol.pdb
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+ts_root        := source_directory()
+repo_root      := ts_root / ".." / ".." / ".."
+shared_out     := repo_root / "shared"
+test_results   := repo_root / "test-results"
+# Module build outputs: each module writes its own pdbs (and gallery) into its build/.
+protocol_out    := repo_root / "pure" / "modules" / "protocol" / "build"
+pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+
+verbose := ""
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+header := "h(){ s=\"[protocol::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
+
+# Default: build protocol.pdb.
+default: build
+
+# Requires shared/core.pdb (run `just bootstrap::build` from repo root first).
+
+# Compile pure/modules/protocol into build/protocol.pdb.
+build:
+    @{{header}} 'build'
+    @{{substep}} 'compile pure/modules/protocol -> build/protocol.pdb'
+    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    mkdir -p {{protocol_out}}
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --source {{ts_root}} \
+        --output-dir {{protocol_out}} {{err_filter}}
+
+# No sibling-module deps — alias of `build` for symmetry with translation/* modules.
+build-all: build
+
+# Compile -> build/protocol.pdb via the Pure compiler on Truffle (picks up compiler-pure changes automatically).
+build-truffle:
+    @{{header}} 'build-truffle'
+    @{{substep}} 'compile pure/modules/protocol -> build/protocol.pdb (Truffle)'
+    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared_out}}/compiler.pdb || (echo "ERROR: missing {{shared_out}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
+    mkdir -p {{protocol_out}}
+    {{pure_truffle}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source {{ts_root}} \
+        --output-dir {{protocol_out}} {{err_filter}}
+
+# Compile with tests split into build/protocol-tests.pdb (needed by `test-all`).
+build-tests:
+    @{{header}} 'build-tests'
+    @{{substep}} 'compile pure/modules/protocol -> build/protocol.pdb + protocol-tests.pdb'
+    test -f {{shared_out}}/core.pdb || (echo "ERROR: missing {{shared_out}}/core.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    mkdir -p {{protocol_out}}
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --source {{ts_root}} \
+        --output-dir {{protocol_out}} \
+        --tests split {{err_filter}}
+
+# The `compileAndExecute` native is implemented in the Truffle JavaScript
+# natives are HOST-implemented on the standalone JS platform (js-natives.js);
+# no JVM backend registers them, so
+# testCompileAndExecute* tests fail there with "No native implementation
+# for: compileAndExecute".
+
+# Run all Pure tests under meta::pure::protocol::generation via pure-truffle.
+test-all: build-tests _depCheck_runtime-pdbs
+    @{{header}} 'test-all'
+    @{{substep}} 'runTests meta::pure::protocol::generation (Truffle)'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{protocol_out}}/protocol.pdb \
+        --pdb {{protocol_out}}/protocol-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::pure::protocol::generation" "{{test_results}}/pure/protocol/pure@cli-truffle.json" {{err_filter}}
+
+# Internal: fail loudly if PDBs / pure-truffle aren't staged.
+_depCheck_runtime-pdbs:
+    #!/usr/bin/env bash
+    if [[ ! -f "{{shared_out}}/core-tests.pdb" ]]; then
+        echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" >&2
+        exit 1
+    fi
+    if [[ ! -x "{{pure_truffle}}" ]]; then
+        echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" >&2
+        exit 1
+    fi
+
+# Remove build/protocol.pdb (and the tests PDB).
+clean:
+    @{{header}} 'clean'
+    @{{substep}} 'remove build/protocol.pdb + build/protocol-tests.pdb'
+    rm -f {{protocol_out}}/protocol.pdb {{protocol_out}}/protocol-tests.pdb

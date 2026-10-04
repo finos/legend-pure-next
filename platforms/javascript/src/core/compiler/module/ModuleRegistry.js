@@ -309,6 +309,8 @@ function createRegistryState(schemaSrc) {
  */
 export class ModuleRegistry {
     #state;
+    /** Language-extension descriptors, paired with their modules by `registerExtension`. */
+    #extensions = [];
 
     constructor(schema) {
         this.#state = createRegistryState(schema);
@@ -317,6 +319,41 @@ export class ModuleRegistry {
     /** Register `module` after the current ones (`{front: true}`: before them). Returns the module. */
     register(module, opts = {}) { return this.#state.register(module, opts); }
 
+    /**
+     * Register a LANGUAGE EXTENSION: its Pure module, and the fact that the extension is here.
+     *
+     * One act rather than two, because the two halves fail in opposite, quiet ways when they are
+     * separate. Register the module and forget the extension and its section never parses; register
+     * the extension and forget the module and both its halves fall through their `hasElement` guards
+     * and contribute nothing — no error, just a section that mysteriously compiles to nothing. Pairing
+     * them here makes each impossible, and lets `validate()` say which half is missing.
+     *
+     * `descriptor` is the generated manifest data (generated/extensions/<name>/language_<name>.js), so the
+     * module's name is checked against what the extension declares rather than taken on trust.
+     *
+     * Order is free: an extension may be registered before or after the modules it depends on, and
+     * before or after the runtime is built — both halves resolve lazily, at parse and compile time.
+     * Call `validate()` once the set is complete; it is cheap and may be called as often as you like.
+     */
+    registerExtension(descriptor, module) {
+        if (!descriptor || !descriptor.name || !descriptor.module) {
+            throw new Error("registerExtension: expected an extension descriptor with a name and a module");
+        }
+        if (!module) {
+            throw new Error(`Language extension '${descriptor.name}' needs its module '${descriptor.module}' `
+                          + `(build it with \`just extensions::build-tests\` and load ${descriptor.pdbPath})`);
+        }
+        if (module.name !== descriptor.module) {
+            throw new Error(`Language extension '${descriptor.name}' declares module '${descriptor.module}' `
+                          + `but was given '${module.name}'`);
+        }
+        this.#extensions.push(descriptor);
+        return this.register(module);
+    }
+
+    /** The extension descriptors registered here. */
+    get extensions() { return [...this.#extensions]; }
+
     /** Remove the module named `name`. Returns it, or null when no such module is registered. */
     unregister(name) {
         const module = this.module(name);
@@ -324,13 +361,43 @@ export class ModuleRegistry {
         return module;
     }
 
-    /** Every declared dependency must name a registered module. Returns this registry. */
+    /**
+     * Every declared dependency must name a registered module, and every registered language
+     * extension must have its own module loaded with that module's dependencies available too.
+     * Returns this registry.
+     *
+     * CALL IT AS OFTEN AS YOU LIKE. It is pure — it reads the module list and either throws or
+     * returns — and cache coherence is not its job: `register` and `unregister` invalidate on their
+     * own. Under registration it is also monotone: adding a module can only satisfy more
+     * dependencies, never break one that already held, so re-validating after a late registration is
+     * equivalent to checking just the newcomer. Removal is the asymmetric case, which is why this
+     * checks the whole graph rather than a delta.
+     *
+     * It is deliberately NOT called from `register`: registration order has to stay free, so a
+     * module may be registered before the dependency it declares.
+     */
     validate() {
         const loaded = this.modules.map((m) => m.name);
         for (const m of this.modules) {
             for (const dep of m.dependencies) {
                 if (!loaded.includes(dep)) {
                     throw new Error(`Module '${m.name}' declares dependency '${dep}' but it was not loaded (loaded: [${loaded.join(", ")}])`);
+                }
+            }
+        }
+        for (const extension of this.#extensions) {
+            const module = this.module(extension.module);
+            if (!module) {
+                throw new Error(`Language extension '${extension.name}' needs module '${extension.module}' `
+                              + `but it is not loaded (loaded: [${loaded.join(", ")}])`);
+            }
+            // Named separately from the loop above so the message blames the extension rather than a
+            // module the caller may not know it pulled in.
+            for (const dep of module.dependencies) {
+                if (!loaded.includes(dep)) {
+                    throw new Error(`Language extension '${extension.name}' needs module '${extension.module}', `
+                                  + `which declares dependency '${dep}' but it was not loaded `
+                                  + `(loaded: [${loaded.join(", ")}])`);
                 }
             }
         }

@@ -25,8 +25,10 @@ import { NativeRegistry, hostHookFor } from "../execution/natives/NativeRegistry
 import { DEFAULT_LANGUAGE_EXTENSIONS } from "./LanguageExtensions.js";
 import { translateProgramElements } from "../execution/translate-elements.js";
 
-// The translated compiler-pure entry point, silent overload (generated/compiler.js).
-const COMPILE = "meta$pure$compiler$compile_PureFile_MANY__Boolean_1__Boolean_1__CompilationResult_1_";
+// The translated compiler-pure entry point (generated/pure/compiler/compiler.js): the overload that takes the
+// language extensions, so a `###Diagram` section becomes a graph element rather than being
+// parsed and dropped. Silent — the live progress bar belongs to the CLI.
+const COMPILE = "meta$pure$compiler$compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
 const asArray = (v) => (v === undefined || v === null ? [] : Array.isArray(v) ? v : [v]);
 
 /** Modules in dependency order (a module after the modules it depends on). */
@@ -105,6 +107,14 @@ export class PureRuntime {
         return this.#languageExtensions.flatMap((extension) => extension.sectionParsers(this));
     }
 
+    /**
+     * The compiler extensions of every registered language extension. Optional on an extension,
+     * because a section whose text the compiler merely carries has no compiler half.
+     */
+    compilerExtensions() {
+        return this.#languageExtensions.flatMap((extension) => extension.compilerExtensions?.(this) ?? []);
+    }
+
     /** Add or replace source `sourceId` in the registered in-memory module `moduleName`. */
     setSource(moduleName, sourceId, content) { this.#sourceModule(moduleName).setSource(sourceId, content); }
 
@@ -130,11 +140,15 @@ export class PureRuntime {
         for (const module of dependencyOrder(this.#registry.modules)) {
             if (typeof module.hasCode !== "function" || !module.hasCode()) continue;
             const compile = globalThis[COMPILE];
-            if (typeof compile !== "function") throw new Error("PureRuntime.compile: compiler-pure is not loaded (generated/compiler.js)");
+            if (typeof compile !== "function") {
+                throw new Error("PureRuntime.compile: compiler-pure is not loaded, or predates the language-extension "
+                                + "overload of compile (run `just javascript::generate`)");
+            }
             if (typeof this.#evalJs !== "function") throw new Error("PureRuntime.compile: withEvalJs(evalJs) is required to run compiled code");
             let result;
             try {
-                result = compile(module.sources().map(({ sourceId, content }) => this.parse(sourceId, content)), false, true);
+                result = compile(module.sources().map(({ sourceId, content }) => this.parse(sourceId, content)),
+                                 this.compilerExtensions(), true);
             } catch (e) {
                 errors.push(`${module.name}: ${e && e.message ? e.message : e}`);
                 break;
@@ -150,7 +164,10 @@ export class PureRuntime {
             module.invalidate?.();
             elements.push(...compiled);
         }
-        return { elements, errors };
+        // A Pure CompilationResult, built through the generated class so a caller reads it with the
+        // same accessors as any other Pure value (`$r.elements`, `$r.errors`).
+        const Cls = globalThis["meta$pure$compiler$CompilationResult"];
+        return typeof Cls === "function" ? Object.assign(new Cls(), { elements, errors }) : { elements, errors };
     }
 
     /** Execute `fn` — an element from registry.getElement(path), or its path — with `args`. */

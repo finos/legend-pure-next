@@ -1,3 +1,17 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # platforms/truffle/Justfile — builds and tests the Truffle interpreter.
 #
 # Direct invocation:    just <recipe>          (from platforms/truffle/)
@@ -37,6 +51,9 @@ spec              := repo_root / "pure" / "specification"
 compiler_src      := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 truffle_out       := truffle_root / "build"
 shared_out        := repo_root / "shared"
+# Module build outputs the gallery reads: each module writes its own pdbs into its build/.
+translation_shared_out  := repo_root / "pure" / "modules" / "translation" / "shared" / "build"
+translation_truffle_out := repo_root / "pure" / "modules" / "translation" / "truffle" / "build"
 test_results := repo_root / "test-results"
 truffle_cli       := truffle_out / "pure-truffle.jar"
 pure_truffle      := truffle_root / "bin" / "pure-truffle"
@@ -312,6 +329,34 @@ bench: (_mvn "skip-tests")
     @{{header}} 'bench'
     @{{substep}} 'PureEvaluatorBenchmark'
     cd {{truffle}} && mvn -Pbench test -Dtest=PureEvaluatorBenchmark
+
+# Render the Pure -> Truffle AST translation gallery: every <<PCT.test>> under PACKAGE with its Pure
+# source beside its translated AST, and a pass/fail icon from EXECUTING it on this host.
+#
+# The execution and the output belong here, not to the translation module: the pass/fail column is
+# this host's behaviour. `gallery.pure` stays with the translator, and
+# `modules::translation_truffle::gallery` delegates here.
+gallery PACKAGE="meta::pure::functions" OUT=(truffle_root / "build" / "truffle-translation-gallery.html"):
+    @{{header}} 'gallery'
+    @{{substep}} 'render {{PACKAGE}} -> {{OUT}}'
+    test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` first)" && exit 1)
+    test -f {{translation_truffle_out}}/truffle-translation-gallery-tests.pdb || (echo "ERROR: missing {{translation_truffle_out}}/truffle-translation-gallery-tests.pdb (run \`just modules::translation_truffle::build-tests\` first — renderGallery is <<test.TestDependency>>)" && exit 1)
+    mkdir -p "$(dirname "{{OUT}}")"
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_truffle_out}}/truffle-translation-gallery.pdb \
+        --pdb {{translation_truffle_out}}/truffle-translation-gallery-tests.pdb \
+        --function "meta::external::language::truffle::gallery::renderGallery_String_1__String_1_" \
+        --args "{{PACKAGE}}" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
+        | grep -v '^\[graal-tripwire\]' \
+        | awk '/<!DOCTYPE/{p=1} p' \
+        > {{OUT}}
+    @echo "  wrote {{OUT}} ($(wc -c < {{OUT}} | tr -d ' ') bytes)"
 
 # Remove truffle/build/ and run mvn clean across the unified truffle reactor.
 clean:

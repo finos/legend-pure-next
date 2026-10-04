@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -86,7 +87,8 @@ public class CompilerBinaryBuilder
         {
             System.out.println("          " + p);
         }
-        System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies());
+        System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies()
+                + (manifest.testDependencies().isEmpty() ? "" : ", testDeps=" + manifest.testDependencies()));
         System.out.println("  Output dir: " + outputDir);
         System.out.println("  Tests mode: " + mode);
 
@@ -101,9 +103,13 @@ public class CompilerBinaryBuilder
         }
         verifyDependencies(manifest, loadedNames);
 
-        // Source module for the source files, identity from the source manifest
+        // Source module for the source files, identity from the source manifest.
+        // Compile-time visibility uses ALL dependencies, test-only ones included: a module's
+        // declared dependencies gate which of the loaded base PDBs' elements it can see, and
+        // the test half genuinely references its testDependencies. Only the LEAN archive's
+        // written manifest is narrowed (see writeFiltered).
         SourceModule localModule = new SourceModule(
-                manifest.name(), manifest.packagePattern(), manifest.dependencies(), sourceDir);
+                manifest.name(), manifest.packagePattern(), manifest.allDependencies(), sourceDir);
 
         // Compile through the runtime with the Java compiler, against the base PDBs.
         MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());
@@ -127,6 +133,11 @@ public class CompilerBinaryBuilder
         List<PackageableElement> elements = result.elements();
         System.out.println("  Compiled " + elements.size() + " elements");
 
+        // `testDependencies` are left out of the LEAN archive, so a consumer may load it
+        // alone. Enforce that nothing in the non-test half reaches into them, or that
+        // consumer gets a dangling reference far from the edit that caused it.
+        verifyTestDependencyBoundary(manifest, elements, baseModules, result.referencedBy());
+
         Files.createDirectories(outputFile.getParent());
         writeFiltered(elements, extensions, localModule, manifest, outputFile, mode, result.referencedBy());
     }
@@ -142,8 +153,10 @@ public class CompilerBinaryBuilder
     {
         switch (mode)
         {
+            // One archive holding both halves: its test elements are present, so their
+            // dependencies are ordinary dependencies of this archive.
             case WITH ->
-                    writePdb("full", elements, extensions, localModule, manifest,
+                    writePdb("full", elements, extensions, localModule, manifest.withAllDependencies(),
                             TestElementFilter.withTestsPath(outputFile), referencedBy);
             case NONE ->
             {
@@ -196,6 +209,57 @@ public class CompilerBinaryBuilder
         }
     }
 
+    /**
+     * Fail the build when a non-test element references a module the manifest declares as a
+     * test-only dependency. The packaging counterpart of {@code LeanReferencesValidator},
+     * which enforces the same boundary within a module; kept here in the CLI rather than in
+     * the compiler because {@code testDependencies} is a property of the module's manifest,
+     * not of the language — the Pure compiler has no notion of it, so putting it in the
+     * compile would break self-host parity.
+     */
+    private static void verifyTestDependencyBoundary(
+            ModuleManifest manifest,
+            List<PackageableElement> elements,
+            List<PdbModule> baseModules,
+            java.util.Map<String, java.util.Set<String>> referencedBy)
+    {
+        if (manifest.testDependencies().isEmpty())
+        {
+            return;
+        }
+        java.util.Map<String, PackageableElement> byPath = new java.util.HashMap<>();
+        for (PackageableElement e : elements)
+        {
+            String p = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(e);
+            if (p != null) byPath.put(p, e);
+        }
+        java.util.function.Function<String, String> moduleOfTarget = path ->
+        {
+            for (PdbModule mod : baseModules)
+            {
+                if (mod.hasElement(path)) return mod.name();
+            }
+            return null;
+        };
+        java.util.function.Function<String, org.finos.legend.pure.m3.module.TestDependencyValidator.Caller> callerOf = path ->
+        {
+            PackageableElement e = byPath.get(path);
+            return e == null ? null : new org.finos.legend.pure.m3.module.TestDependencyValidator.Caller(
+                    org.finos.legend.pure.m3.module.TestElementFilter.isTestElement(e), e._sourceInformation());
+        };
+        List<org.finos.legend.pure.m3.module.CompilationError> violations =
+                org.finos.legend.pure.m3.module.TestDependencyValidator.validate(
+                        referencedBy, manifest.testDependencies(), moduleOfTarget, callerOf);
+        if (!violations.isEmpty())
+        {
+            System.err.println("testDependencies boundary violations:");
+            violations.forEach(v -> System.err.println("  " + v.message()
+                    + (v.sourceInformation() == null ? "" : " (at " + v.sourceInformation() + ")")));
+            throw new RuntimeException("Non-test code references a test-only dependency in "
+                    + violations.size() + " place(s)");
+        }
+    }
+
     private static java.util.Set<String> pathSet(List<PackageableElement> elements)
     {
         java.util.Set<String> set = new java.util.HashSet<>();
@@ -227,7 +291,8 @@ public class CompilerBinaryBuilder
 
     private static void verifyDependencies(ModuleManifest manifest, List<String> availableNames)
     {
-        for (String dep : manifest.dependencies())
+        // Both halves': compiling the test half needs its testDependencies loaded too.
+        for (String dep : manifest.allDependencies())
         {
             if (!availableNames.contains(dep))
             {

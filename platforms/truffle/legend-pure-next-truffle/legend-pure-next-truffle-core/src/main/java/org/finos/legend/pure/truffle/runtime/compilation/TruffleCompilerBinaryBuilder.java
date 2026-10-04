@@ -100,7 +100,8 @@ public final class TruffleCompilerBinaryBuilder
 
         System.out.println("Compiling Pure model from " + sourceDir
                 + " (base: " + basePdbs + ") via truffle interpreter...");
-        System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies());
+        System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies()
+                + (manifest.testDependencies().isEmpty() ? "" : ", testDeps=" + manifest.testDependencies()));
         System.out.println("  Output dir: " + outputDir);
         System.out.println("  Tests mode: " + mode);
 
@@ -384,7 +385,9 @@ public final class TruffleCompilerBinaryBuilder
     {
         switch (mode)
         {
-            case WITH -> writePdb("full", elements, manifest, TestElementFilter.withTestsPath(outputFile), referencedBy, runtime, resolver);
+            // Both halves in one archive: its test elements are present, so their
+            // testDependencies are ordinary dependencies of this archive.
+            case WITH -> writePdb("full", elements, manifest.withAllDependencies(), TestElementFilter.withTestsPath(outputFile), referencedBy, runtime, resolver);
             case NONE ->
             {
                 List<Object> lean = elements.stream()

@@ -1,0 +1,50 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The `###Diagram` section parser — the same two-step the `###Pure` section is parsed with:
+// `parseAntlr` with this extension's grammar, then Pure rules over the resulting AntlrContext.
+// Compare meta::pure::parser::mappings::interpreter::pureSectionParser(), which differs only
+// in the grammar name and the rules it applies.
+//
+// `DiagramParser` is resolved by NAME, not by import: each platform generates a parser from
+// grammar/Diagram{Lexer,Parser}.g4 and registers it under that name, so this function is the
+// same on every host while the parser behind it is host-generated. A host that has not
+// generated it fails here with "Unknown grammar: DiagramParser", which is the honest error —
+// the extension exists but that platform has not adapted it.
+
+import meta::pure::diagram::parser::*;
+import meta::pure::diagram::protocol::*;
+import meta::pure::protocol::grammar::*;
+
+// Parse one `###Diagram` section body into one protocol element per diagram it declares.
+function meta::pure::diagram::parser::buildDiagramSection(
+   content: String[1], sourceId: String[1], lineOffset: Integer[1]
+): meta::pure::protocol::grammar::PackageableElement[*]
+{
+   buildDiagrams(meta::pure::functions::meta::antlr::parseAntlr($content, 'DiagramParser', $sourceId, $lineOffset), $lineOffset)
+      ->cast(@meta::pure::protocol::grammar::PackageableElement);
+}
+
+// The registry entry a host appends to whatever section parsers it already has — the same
+// shape as meta::pure::parser::mappings::interpreter::pureSectionParser(), so a host composes
+// the two without either side knowing about the other.
+function meta::pure::diagram::parser::diagramSectionParsers():
+   meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>[*]
+{
+   [
+      ^meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>(
+         first  = 'Diagram',
+         second = {c:String[1], s:String[1], o:Integer[1] | buildDiagramSection($c, $s, $o)})
+   ]
+}

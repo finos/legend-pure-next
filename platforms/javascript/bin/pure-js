@@ -27,7 +27,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 JS_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-if [[ ! -f "${JS_DIR}/generated/translator.js" ]]; then
+if [[ ! -f "${JS_DIR}/generated/pure/runtime/translator/translation.js" ]]; then
     echo "Error: generated JavaScript not found under ${JS_DIR}/generated" >&2
     echo "Run 'just javascript::generate-all' first." >&2
     exit 1

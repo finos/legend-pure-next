@@ -70,7 +70,9 @@ function findTests(dir) {
 async function main() {
     const roundtrip = process.argv.includes("--roundtrip");
     const golden = process.argv.includes("--golden");
-    const { parse, compile, printGraph, registry } = await loadCompiler();
+    // `{ tests: true }`: printGraph and the compiled-graph assertions are `<<test.TestDependency>>`,
+    // so they are in the generated TEST halves rather than the library ones.
+    const { parse, compile, printGraph, registry } = await loadCompiler({ tests: true });
 
     // The compiler prints progress/stats to stdout; mute it during the run.
     const realWrite = process.stdout.write.bind(process.stdout);

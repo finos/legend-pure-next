@@ -1,3 +1,17 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # platforms/javascript/Justfile — builds and tests the JavaScript runtime.
 #
 # Direct invocation:    just <recipe>             (from platforms/javascript/)
@@ -17,8 +31,23 @@ build_step     := "node " + repo_root / "tools" / "test-dashboard" / "build-step
 shared    := repo_root / "shared"
 test_results := repo_root / "test-results"
 spec      := repo_root / "pure" / "specification"
+# THE JAVASCRIPT HOST'S PARSER. Generated from the grammars in pure/specification (the Pure
+# language) and pure/extensions/*/grammar (each extension), then bundled with antlr4 for a host that
+# has no module loader. This is platform territory, not translation: a parser turns text into a
+# tree, which has nothing to do with turning Pure into JavaScript. What DOES belong to translation is
+# runtime-lib.js — the 170 helpers the translator emits calls to — which stays in that module.
+grammar_src  := spec / "grammar" / "antlr"
+antlr_gen    := js_root / "generated" / "pure" / "grammar" / "antlr"
+ext_gen      := js_root / "generated" / "extensions"
+antlr_entry  := js_root / "src" / "core" / "grammar" / "antlr-entry.js"
+mappings_entry := js_root / "src" / "core" / "grammar" / "parser-mappings-entry.js"
+antlr_bundle := js_root / "build" / "antlr-bundle.js"
+mappings_bundle := js_root / "build" / "parser-mappings-bundle.js"
+translation_js_dir := repo_root / "pure" / "modules" / "translation" / "javascript" / "js"
 # Module build outputs: each module writes its own pdbs (and gallery) into its build/.
 language_javascript_out    := repo_root / "pure" / "modules" / "language" / "javascript" / "build"
+# Language extensions (pure/extensions/*) each write their own pdb into their build/.
+extension_diagram_out      := repo_root / "pure" / "extensions" / "diagram" / "build"
 translation_shared_out     := repo_root / "pure" / "modules" / "translation" / "shared" / "build"
 translation_javascript_out := repo_root / "pure" / "modules" / "translation" / "javascript" / "build"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
@@ -34,10 +63,18 @@ emit_rt := if pure_rt == "truffle" { pure_truffle } else { pure_bootstrap }
 
 # Pure package -> standalone JS, emitted into generated/ (gitignored).
 translate_fn := "meta::external::language::javascript::translation::pdb::translatePackageToJs_String_1__String_1_"
+# The TEST half of a package. Tests are not in a package of their own — a PCT test model sits
+# inside meta::pure::functions — so the emit splits them by stereotype instead, the same rule the
+# pdb split uses. Only the test harnesses load the companions; the browser IDE does not.
+translate_tests_fn := "meta::external::language::javascript::translation::pdb::translatePackageTestsToJs_String_1__String_1_"
+# The test FRAMEWORK package (meta::pure::test) emits whole: its adapters are test material by
+# the stereotype rule, but only test hosts ever load it, so splitting it would just produce two
+# files that always travel together.
+translate_all_fn := "meta::external::language::javascript::translation::pdb::translatePackageAllToJs_String_1__String_1_"
 
 # Everything an emission reads: the pdbs the translator runs against and the jars
 # of the runtime running it (bin/pure-truffle puts every build/*.jar on its classpath).
-emit_pdbs := shared / "core.pdb" + " " + shared / "core-tests.pdb" + " " + shared / "compiler.pdb" + " " + shared / "compiler-tests.pdb" + " " + language_javascript_out / "javascript.pdb" + " " + language_javascript_out / "javascript-tests.pdb" + " " + translation_shared_out / "translation-shared.pdb" + " " + translation_shared_out / "translation-shared-tests.pdb" + " " + translation_javascript_out / "javascript-translation.pdb" + " " + translation_javascript_out / "javascript-translation-tests.pdb"
+emit_pdbs := shared / "core.pdb" + " " + shared / "core-tests.pdb" + " " + shared / "parser-mappings.pdb" + " " + shared / "compiler.pdb" + " " + shared / "compiler-tests.pdb" + " " + language_javascript_out / "javascript.pdb" + " " + language_javascript_out / "javascript-tests.pdb" + " " + translation_shared_out / "translation-shared.pdb" + " " + translation_shared_out / "translation-shared-tests.pdb" + " " + translation_javascript_out / "javascript-translation.pdb" + " " + translation_javascript_out / "javascript-translation-tests.pdb" + " " + extension_diagram_out / "diagram.pdb" + " " + extension_diagram_out / "diagram-tests.pdb"
 emit_rt_jars := if pure_rt == "truffle" { repo_root / "platforms" / "truffle" / "build" / "*.jar" } else { repo_root / "bootstrap" / "build" / "pure-bootstrap.jar" }
 
 header := "h(){ s=\"[javascript::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
@@ -58,15 +95,18 @@ build-all: build
 # Translate one Pure package to generated/<out> via the JVM translator. All
 # emitted JS is gitignored. Functions are emitted under full-path-mangled names,
 # so files compose: load them all and cross-file refs resolve as globals.
-_emit PKG OUT:
+_emit PKG OUT FN=translate_fn:
     @{{substep}} 'translate {{PKG}} -> generated/{{OUT}}'
     test -f {{shared}}/compiler.pdb || (echo "ERROR: missing {{shared}}/compiler.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -f {{shared}}/parser-mappings.pdb || (echo "ERROR: missing {{shared}}/parser-mappings.pdb (run \`just bootstrap::build\` first — the parser-mappings module is translated into this host's parser bundle)" && exit 1)
     test -f {{language_javascript_out}}/javascript.pdb || (echo "ERROR: missing {{language_javascript_out}}/javascript.pdb (run \`just modules::build\` first — the generate step runs the TRANSLATED translator from the modules tree's pdbs)" && exit 1)
     test -f {{translation_shared_out}}/translation-shared.pdb || (echo "ERROR: missing {{translation_shared_out}}/translation-shared.pdb (run \`just modules::build\` first)" && exit 1)
     test -f {{translation_javascript_out}}/javascript-translation.pdb || (echo "ERROR: missing {{translation_javascript_out}}/javascript-translation.pdb (run \`just modules::build\` first)" && exit 1)
-    test -f {{translation_javascript_out}}/javascript-translation-tests.pdb || (echo "ERROR: missing {{translation_javascript_out}}/javascript-translation-tests.pdb (run \`just modules::build\` first — translatePackageToJs is <<test.TestDependency>> and lives in the -tests pdb)" && exit 1)
+    test -f {{translation_javascript_out}}/javascript-translation-tests.pdb || (echo "ERROR: missing {{translation_javascript_out}}/javascript-translation-tests.pdb (run \`just modules::build\` first — split-built lean pdbs carry refs into their -tests companion)" && exit 1)
     test -f {{language_javascript_out}}/javascript-tests.pdb || (echo "ERROR: missing {{language_javascript_out}}/javascript-tests.pdb (run \`just modules::build\` first — split-built lean pdbs carry refs into their -tests companion)" && exit 1)
     test -f {{translation_shared_out}}/translation-shared-tests.pdb || (echo "ERROR: missing {{translation_shared_out}}/translation-shared-tests.pdb (run \`just modules::build\` first — split-built lean pdbs carry refs into their -tests companion)" && exit 1)
+    test -f {{extension_diagram_out}}/diagram.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram.pdb (run \`just extensions::build\` first)" && exit 1)
+    test -f {{extension_diagram_out}}/diagram-tests.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram-tests.pdb (run \`just extensions::build-tests\` first — the extension's <<test.Test>> functions are translated too, so `test-extensions` can run them on this host)" && exit 1)
     mkdir -p {{js_root}}/generated/.stamps
     # Skip when the inputs hash to the key of the last successful emission: each
     # `just` process re-runs its dependencies, and a CI job reaches generate-all
@@ -79,50 +119,100 @@ _emit PKG OUT:
     # decompressing anything.
     set -o pipefail; \
     out={{js_root}}/generated/{{OUT}}; stamp={{js_root}}/generated/.stamps/{{OUT}}.sha256; \
-    key=$({ echo "{{PKG}} {{translate_fn}} {{pure_rt}}"; for f in {{emit_pdbs}} {{emit_rt_jars}}; do echo "$f"; unzip -v "$f" | awk 'NR > 3 && $1 ~ /^[0-9]+$/ && $8 != "" { print $1, $2, $3, $7, $8 }'; done; } | shasum -a 256 | cut -d' ' -f1); \
+    mkdir -p "$(dirname "$out")" "$(dirname "$stamp")"; \
+    key=$({ echo "{{PKG}} {{FN}} {{pure_rt}}"; for f in {{emit_pdbs}} {{emit_rt_jars}}; do echo "$f"; unzip -v "$f" | awk 'NR > 3 && $1 ~ /^[0-9]+$/ && $8 != "" { print $1, $2, $3, $7, $8 }'; done; } | shasum -a 256 | cut -d' ' -f1); \
     if [ -s "$out" ] && [ "$(cat "$stamp" 2>/dev/null)" = "$key" ]; then \
         echo "  generated/{{OUT}} up to date (inputs unchanged)"; exit 0; \
     fi; \
     rm -f "$stamp"; \
     cd {{repo_root}} && {{emit_rt}} execute \
         $(printf -- '--pdb %s ' {{emit_pdbs}}) \
-        --function "{{translate_fn}}" --args "{{PKG}}" \
+        --function "{{FN}}" --args "{{PKG}}" \
         2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
         | grep -v '^\[graal-tripwire\]' > "$out" \
     && echo "$key" > "$stamp" \
     && echo "  wrote generated/{{OUT}} ($(wc -c < "$out" | tr -d ' ') bytes)"
 
 # Generate the compiler.
-generate: (_emit "meta::pure::compiler" "compiler.js")
+generate: (_emit "meta::pure::compiler" "pure/compiler/compiler.js") (_emit "meta::pure::compiler" "pure/compiler/compiler-tests.js" translate_tests_fn)
     @{{header}} 'generate'
 
 # Generate the core library the compiler depends on (metamodel enums + function
 # library + UI). Classes emit nothing; metamodel enums (AggregationKind, …) emit
 # `export const`, which the compiler references.
-generate-core: (_emit "meta::pure::metamodel" "core-metamodel.js") (_emit "meta::pure::functions" "core-functions.js") (_emit "meta::pure::ui" "core-ui.js")
+generate-core: (_emit "meta::pure::metamodel" "pure/compiler/metamodel.js") (_emit "meta::pure::protocol" "pure/grammar/protocol.js") (_emit "meta::pure::functions" "pure/runtime/functions.js") (_emit "meta::pure::ui" "ui.js") (_emit "meta::pure::metamodel" "pure/compiler/metamodel-tests.js" translate_tests_fn) (_emit "meta::pure::protocol" "pure/grammar/protocol-tests.js" translate_tests_fn) (_emit "meta::pure::functions" "pure/runtime/functions-tests.js" translate_tests_fn)
     @{{header}} 'generate-core'
 
 # Generate just the PDB reader/schema package (a small subset of compiler.js).
 # The parser-only host (grammar/load-parser.js) loads this to back its metadata
 # globals with the translated Pure reader without pulling in the whole compiler.
-generate-pdb-reader: (_emit "meta::pure::compiler::pdb" "pdb-reader.js")
+generate-pdb-reader: (_emit "meta::pure::compiler::pdb" "pure/compiler/pdb.js")
     @{{header}} 'generate-pdb-reader'
 
 # Generate the in-process translator stack for the execution host
 # (src/core/execution): the Pure→JS translator itself translated to JS, its shared
 # canonicalization pipeline, the JS-language metamodel/factories it builds on,
 # and the meta::pure::test helpers (resolveChild & co.) its package walker calls.
-generate-translator: (_emit "meta::pure::test" "test-utils.js") (_emit "meta::pure::translation::shared" "translation-shared.js") (_emit "meta::external::language::javascript" "js-lang.js") (_emit "meta::external::language::javascript::translation" "translator.js")
+generate-translator: (_emit "meta::pure::test" "test.js" translate_all_fn) (_emit "meta::pure::translation::shared" "pure/runtime/translator/shared.js") (_emit "meta::external::language::javascript" "pure/runtime/translator/javascript.js") (_emit "meta::external::language::javascript::translation" "pure/runtime/translator/translation.js") (_emit "meta::pure::translation::shared" "pure/runtime/translator/shared-tests.js" translate_tests_fn) (_emit "meta::external::language::javascript" "pure/runtime/translator/javascript-tests.js" translate_tests_fn) (_emit "meta::external::language::javascript::translation" "pure/runtime/translator/translation-tests.js" translate_tests_fn)
     @{{header}} 'generate-translator'
 
+# THE PLATFORM'S EXTENSION AREA: one descriptor per extension found under pure/extensions, read
+# from its `language_<name>.json`. This is how the host learns a language exists — the module that carries
+# its Pure code, where that module's pdb is built, and the Pure entry points for its section parser
+# and its compiler passes. src/core/runtime/LanguageExtensions.js builds its registry from it, so
+# adding a language is a directory on disk rather than an edit to the host.
+generate-extensions:
+    @{{header}} 'generate-extensions'
+    @{{substep}} 'pure/extensions/*/language_<name>.json -> generated/extensions/<name>/language_<name>.js'
+    mkdir -p {{js_root}}/generated
+    node {{js_root}}/bin/generate-languages.mjs {{repo_root}} "{{js_root}}/generated"
+    @echo "  (the same run writes extensions/antlr-modules.js, which only antlr-bundle.js may import)"
+
+# Translate every extension's Pure into its own directory under the platform's extension area, ONE
+# FILE PER HALF of the language: `parser.js` for the grammar mapping rules, `compiler.js` for the
+# compiler passes. They used to be one `code.js`, whose name said nothing about what was in it.
+#
+# No extension and no package is named here — the generated descriptors say which packages to
+# translate and where, derived from each `language_<name>.json`.
+#
+# The browser IDE needs these loaded before a source containing that section will parse at all:
+# dispatchSection fails hard on an unregistered section.
+generate-extensions-code: generate-extensions
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'generate-extensions-code'
+    node --input-type=module -e '
+        import { LANGUAGES } from "{{js_root}}/generated/languages.js";
+        for (const e of LANGUAGES) {
+            for (const t of e.translate ?? []) console.log(`${t.package}\t${t.out}`);
+        }
+    ' | while IFS=$'\t' read -r pkg out; do
+        # WHOLE, not split. An extension's tests sit inside the packages it declares
+        # (meta::pure::diagram::parser::tests is part of meta::pure::diagram::parser), and its whole
+        # generated output is ~80 KB — so there is nothing to save by cutting it in two, and a host
+        # that registers an extension loads all of it anyway. The library/test split exists for
+        # functions.js, where the test corpus was 1.2 MB.
+        just --justfile "{{js_root}}/Justfile" _emit "$pkg" "$out" "{{translate_all_fn}}"
+    done
+
 # Generate everything the standalone compiler + execution hosts need.
-generate-all: (_step-start "javascript/generate") generate-core generate generate-pdb-reader generate-translator
+# `antlr-all` is a dependency because the parser the hosts actually RUN is the bundle, not
+# generated/pure/grammar/parser.js: re-translating the parser without re-bundling leaves the old
+# parser in place, and nothing says so. That cost a long debugging detour — a bundle built before
+# Pure classes were emitted kept producing plain object literals while the freshly generated
+# compiler read them through accessors, so the failure surfaced as `file._sections is not a
+# function` in the compiler, nowhere near the stale artifact. Both bundles together rebuild in ~2s.
+generate-all: (_step-start "javascript/generate") generate-extensions generate-core generate generate-pdb-reader generate-translator generate-extensions-code antlr-all
     {{build_step}} end "javascript/generate"
 
 # Run the grammar-corpus suite (standalone JS parser vs committed protocol.json).
 # Needs the parser bundle (build/antlr-bundle.js) plus generated/pdb-reader.js
 # (the parser host's metadata globals decodes core.pdb with the Pure reader).
-test: build generate-pdb-reader
+# `generate-all` rather than just the pdb reader: this runs the grammar corpus against the parser
+# BUNDLE, and test-all lists this recipe first — so without the dependency the corpus exercises
+# whatever bundle happened to be lying around, and a later recipe in the same run regenerates it.
+# That is how a stale bundle produced `__rdiag is not defined` from a since-removed helper.
+test: build generate-all
     @{{header}} 'test'
     @{{substep}} 'grammar corpus (pnpm run test:grammar)'
     cd {{js_root}} && pnpm run test:grammar --report {{test_results}}/javascript/core/grammar-tests.json
@@ -137,13 +227,16 @@ test-compiler: generate-all
 
 # Run the PCT suite through the execution host (src/core/execution): translate
 # meta::pure::functions IN-PROCESS with the translated translator, eval the
-# emitted JS, and run every <<PCT.test>> against it. PCTs are stabilising
-# (translated-runtime gaps remain) — invoke directly, not part of test-all
-# (mirrors the truffle translation module's stance).
+# emitted JS, and run every <<PCT.test>> against it.
+#
+# A PCT failure FAILS THE BUILD. It used to be swallowed with `|| echo`, from when the translated
+# runtime still had gaps; both PCT recipes have been at 831/831 on this platform for a while, so all
+# the mask could still do was hide a regression — and it did: a change that dropped 10 tests to
+# 821/831 was reported as a clean run, because the suite carried on and exited 0.
 test-execution: generate-all
     @{{header}} 'test-execution'
     @{{substep}} 'PCT via in-process translator (pnpm run test:execution)'
-    cd {{js_root}} && pnpm run test:execution --report {{test_results}}/javascript/core/pct-tests.json || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+    cd {{js_root}} && pnpm run test:execution --report {{test_results}}/javascript/core/pct-tests.json
 
 # Grammar corpus specification: parse each grammar.pure and compare with its protocol.json, through bin/pure-js.
 spec-grammar: generate-all
@@ -191,7 +284,7 @@ spec-pct: generate-all
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
         --function "meta::pure::test::runPCTTests_String_1__String_1__String_1_" \
-        --args "meta::pure::functions" "{{test_results}}/spec/pct/pure@cli-javascript.json" || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+        --args "meta::pure::functions" "{{test_results}}/spec/pct/pure@cli-javascript.json"
 
 # The self-hosted PDB stack's <<test.Test>> suite (meta::pure::compiler::pdb:
 # schema, reader, writer, archive), translated: byte-exact wire format against the
@@ -270,17 +363,174 @@ test-host-api: generate-all
 
 # The host API end to end, as bootstrap's TestPureRuntime: set Pure source into an in-memory module,
 # compile through the PureRuntime, execute a function it defines, modify and recompile.
-test-pure-runtime: generate-all
-    @{{header}} 'test-pure-runtime'
-    @{{substep}} 'PureRuntime setSource / compile / execute (pnpm run test:pure-runtime)'
-    cd {{js_root}} && pnpm run test:pure-runtime --report {{test_results}}/javascript/core/pure-runtime-tests.json
+# Run the usage example — the simplest way to start Pure on JavaScript
+# (src/core/tests/usage-example.js). It asserts nothing and writes no report: it is here so the
+# example cannot rot, and it fails the build by throwing if the system no longer starts. The
+# behaviour it demonstrates is pinned by `test-host-api`.
+usage-example: generate-all
+    @{{header}} 'usage-example'
+    @{{substep}} 'start a runtime, compile a source, execute a function'
+    cd {{js_root}} && pnpm run usage-example
+
+# The browser IDE's diagram engine: `###Diagram` text -> model -> text. Needs no PDB or
+# generated code, so it does not depend on generate-all.
+test-diagram:
+    @{{header}} 'test-diagram'
+    @{{substep}} 'diagram parse / serialize round trip (pnpm run test:diagram)'
+    cd {{js_root}} && pnpm run test:diagram --report {{test_results}}/javascript/core/diagram-tests.json
+
+# What the browser IDE says when a `###Section` header is misspelt — the failure that stops
+# a whole file compiling. Pure JavaScript, no PDB needed.
+test-section-hint:
+    @{{header}} 'test-section-hint'
+    @{{substep}} 'unknown ###Section diagnostics (pnpm run test:section-hint)'
+    cd {{js_root}} && pnpm run test:section-hint --report {{test_results}}/javascript/core/section-hint-tests.json
+
+# The browser IDE's workspace store: what survives a reload, and what happens when the
+# browser refuses to remember. Pure JavaScript, no PDB needed.
+test-source-store:
+    @{{header}} 'test-source-store'
+    @{{substep}} 'workspace persistence (pnpm run test:source-store)'
+    cd {{js_root}} && pnpm run test:source-store --report {{test_results}}/javascript/core/source-store-tests.json
+
+# The browser IDE, driven in a real browser over the DevTools Protocol: load index.html, wait for it
+# to report Ready, compile a source with a ###Diagram section, find the element in the concept tree.
+#
+# `web-deps` and `generate-all` are dependencies because the page loads what they produce — Monaco
+# from build/vs, the two bundles, and generated/. Chrome comes from the environment (CHROME_PATH or
+# the usual locations) and is preinstalled on GitHub's ubuntu runners.
+#
+# This is the only suite that exercises how the PAGE assembles itself: classic <script>s for
+# runtime-lib and the bundles, ES modules for the rest. Everything else here runs in Node, where that
+# split does not exist — which is how the page once silently stopped compiling diagrams.
+test-ide: web-deps generate-all
+    @{{header}} 'test-ide'
+    @{{substep}} 'browser IDE over CDP (pnpm run test:ide)'
+    cd {{js_root}} && pnpm run test:ide --report {{test_results}}/javascript/web/ide-tests.json
 
 # Every platform suite: grammar parsing, compiler conformance, the PCT corpus, and
 # the translated PDB stack.
 # The translation module's own suites and gallery run from
 # pure/modules/translation/javascript through bin/pure-js, the same way
 # translation/java runs its through bin/pure-truffle.
-test-all: test test-compiler test-execution spec-grammar spec-compiler spec-pct test-pdb spec-pdb-golden test-printer-compiled test-printer-protocol test-host-api test-pure-runtime
+# The TRANSLATION MODULE's own Pure tests, run on this host. Here rather than only under
+# `modules::translation_javascript` because they exercise the translator's OUTPUT on this platform, and
+# a platform suite that skips them is a platform suite with a hole: the read switch to `_prop()`
+# accessors passed everything in this file while leaving two of those five red, because a captured
+# instance was still being emitted as an object literal.
+test-translation: generate-all
+    @{{header}} 'test-translation'
+    @{{substep}} 'runTests meta::external::language::javascript::translation (the module that generated this host)'
+    just --justfile {{repo_root}}/Justfile modules::translation_javascript::test-translation
+
+test-all: test test-compiler test-execution spec-grammar spec-compiler spec-pct test-pdb spec-pdb-golden test-printer-compiled test-printer-protocol test-host-api usage-example test-extensions test-diagram test-section-hint test-source-store test-ide test-translation
+
+# The `###Diagram` language extension's OWN Pure tests (pure/extensions/diagram/code/tests):
+# its grammar mapping rules and its compiler passes.
+#
+# They run HERE rather than next to the extension because they call parseAntlr with the
+# DiagramParser grammar, and this is the platform that generates and registers it — the Pure is
+# cross-platform, the parser behind it is not yet. On a host whose adapter has not been
+# generated they fail with "Unknown grammar: DiagramParser", which is the honest signal that
+# that platform has not adapted the extension; see pure/extensions/diagram/Justfile.
+test-extensions: generate-all
+    @{{header}} 'test-extensions'
+    @{{substep}} 'runTests meta::pure::diagram (JavaScript host)'
+    test -f {{extension_diagram_out}}/diagram.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram.pdb (run \`just extensions::build\` first)" && exit 1)
+    test -f {{extension_diagram_out}}/diagram-tests.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram-tests.pdb (run \`just extensions::build-tests\` first — the lean pdb drops <<test.Test>> elements whether or not the build splits)" && exit 1)
+    mkdir -p {{test_results}}/pure/extensions-diagram
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{extension_diagram_out}}/diagram.pdb \
+        --pdb {{extension_diagram_out}}/diagram-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-javascript.json"
+
+# Generate the lexers/parsers this host parses with: the Pure language's own (Top + M3) and one
+# directory per extension. ANTLR's JavaScript target via the complete jar bundled with antlr4ng-cli
+# (its `antlr4ng` wrapper only emits TypeScript); each grammar is generated from its own directory so
+# `-lib` finds the lexer's token vocabulary beside it.
+antlr-generate-parsers: web-deps
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'antlr-generate-parsers'
+    {{substep}} "antlr4 on the Pure language's grammars -> generated/pure/grammar/antlr/"
+    rm -rf "{{antlr_gen}}"
+    mkdir -p "{{antlr_gen}}"
+    jar="$(ls {{js_root}}/node_modules/antlr4ng-cli/antlr4-*-complete.jar | head -1)"
+    ( cd "{{grammar_src}}" && java -jar "$jar" -Dlanguage=JavaScript -no-listener -no-visitor -o "{{antlr_gen}}" -lib "{{antlr_gen}}" TopLexer.g4 TopParser.g4 )
+    ( cd "{{grammar_src}}/m3" && java -jar "$jar" -Dlanguage=JavaScript -no-listener -no-visitor -o "{{antlr_gen}}" -lib "{{antlr_gen}}" M3Lexer.g4 M3Parser.g4 )
+    {{substep}} 'antlr4 on each extension grammar -> generated/extensions/<name>/grammar/antlr/'
+    for ext in {{repo_root}}/pure/extensions/*/; do
+        [ -d "$ext/code/grammar/antlr" ] || continue
+        name=$(basename "$ext"); dest="{{ext_gen}}/$name/grammar/antlr"
+        # Safe to wipe wholesale: this directory holds ANTLR output and nothing else, so a grammar
+        # that was renamed or removed cannot leave a stale parser behind to resolve and fail quietly.
+        # The extension's own generated files (language_<name>.js, grammar/parser.js, compiler.js) are above it.
+        rm -rf "$dest"
+        mkdir -p "$dest"
+        ( cd "$ext/code/grammar/antlr" && java -jar "$jar" -Dlanguage=JavaScript -no-listener -no-visitor -o "$dest" -lib "$dest" *.g4 )
+    done
+    echo "  generated $(ls {{antlr_gen}}/*.js | wc -l | tr -d ' ') for the language + $(ls {{ext_gen}}/*/grammar/antlr/*.js 2>/dev/null | wc -l | tr -d ' ') for extensions"
+
+# Bundle antlr4 + the generated parsers + the ANTLR natives -> build/antlr-bundle.js (a no-imports
+# IIFE exposing `PureAntlr`). `--conditions=browser` selects antlr4's browser build (no node
+# fs/path), which is what the browser and any non-Node host needs.
+#
+# PARSER HALF: depends only on antlr-generate-parsers, so it needs no PDB and no Pure runtime. Keep
+# it that way — it is what lets a host parse before anything has been compiled.
+antlr-bundle: antlr-generate-parsers
+    @{{header}} 'antlr-bundle'
+    @{{substep}} 'esbuild --bundle src/core/grammar/antlr-entry.js -> build/antlr-bundle.js'
+    mkdir -p "$(dirname "{{antlr_bundle}}")"
+    cd {{js_root}} && pnpm exec esbuild "{{antlr_entry}}" \
+        --bundle --format=iife --global-name=PureAntlr --platform=neutral --conditions=browser --target=es2020 \
+        --outfile="{{antlr_bundle}}" --log-level=warning
+    @echo "  wrote build/antlr-bundle.js ($(wc -c < {{antlr_bundle}} | tr -d ' ') bytes)"
+
+# Translate the parser-mappings module -> generated/pure/grammar/parser.js, then bundle it with
+# __pureParseTop -> build/parser-mappings-bundle.js.
+#
+# MAPPINGS HALF: this one needs the PDBs, because it IS translated Pure. load-parser installs a
+# throwing stub for `__pureParseTop` when the bundle is absent — only Pure's `parse` needs it.
+parser-mappings-bundle: (_emit "meta::pure::parser::mappings" "pure/grammar/parser.js") antlr-generate-parsers
+    @{{header}} 'parser-mappings-bundle'
+    @{{substep}} 'esbuild --bundle src/core/grammar/parser-mappings-entry.js -> build/parser-mappings-bundle.js'
+    mkdir -p "$(dirname "{{mappings_bundle}}")"
+    cd {{js_root}} && pnpm exec esbuild "{{mappings_entry}}" \
+        --bundle --format=iife --platform=neutral --conditions=browser --target=es2020 \
+        --outfile="{{mappings_bundle}}" --log-level=warning
+    @echo "  wrote build/parser-mappings-bundle.js ($(wc -c < {{mappings_bundle}} | tr -d ' ') bytes)"
+
+# Both halves of the host's parser.
+antlr-all: antlr-bundle parser-mappings-bundle
+
+# Render the Pure -> JavaScript translation gallery: every <<PCT.test>> under PACKAGE, with its Pure
+# source beside its translated JavaScript, and a pass/fail icon from COMPILING AND EXECUTING the
+# translated source on this host.
+#
+# The execution and the output belong here, not to the translation module: the gallery's pass/fail
+# column is this host's behaviour, so it is a report about the platform. `gallery.pure` itself stays
+# with the translator — it needs the translator's own API to render a card — and
+# `modules::translation_javascript::gallery` delegates here, as translation/java already does.
+gallery PACKAGE="meta::pure::functions" OUT=(js_root / "build" / "javascript-translation-gallery.html"): generate-all
+    @{{header}} 'gallery'
+    @{{substep}} 'render {{PACKAGE}} -> {{OUT}}'
+    test -f {{translation_javascript_out}}/javascript-translation-tests.pdb || (echo "ERROR: missing {{translation_javascript_out}}/javascript-translation-tests.pdb (run \`just modules::translation_javascript::build-tests\` first — renderGallery is <<test.TestDependency>>)" && exit 1)
+    mkdir -p "$(dirname "{{OUT}}")"
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{language_javascript_out}}/javascript.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
+        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
+        --function "meta::external::language::javascript::translation::gallery::renderGallery_String_1__String_1_" \
+        --args "{{PACKAGE}}" > {{OUT}}
+    @echo "  wrote {{OUT}} ($(wc -c < {{OUT}} | tr -d ' ') bytes)"
 
 # Vendor Monaco for the browser demo: pnpm installs the pinned monaco-editor and its
 # prebuilt AMD distribution is copied to build/vs, which index.html loads. Vendored

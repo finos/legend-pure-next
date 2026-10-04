@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Host wiring over the TRANSLATED SELF-HOSTED PURE READER (pdb/reader/reader.pure +
-// pdb/schema/parser.pure, compiled into generated/compiler.js — the same Pure code
+// pdb/schema/parser.pure, compiled into generated/pure/compiler/compiler.js — the same Pure code
 // that runs on the JVM and Truffle). reader.pure is deliberately format-only:
 // element identity, caching and reference resolution are the host's job, and
 // this module is that thin layer for JS — translated-function lookup, byte-list
@@ -23,7 +23,7 @@
 // ReadAncestorRef, which surface as plain objects with .pos / .segs / .depth).
 //
 // The translated functions are resolved from globalThis lazily AT CALL TIME:
-// the store is built (and the metadata globals installed) before generated/compiler.js
+// the store is built (and the metadata globals installed) before generated/pure/compiler/compiler.js
 // is imported, and nothing here may touch the translated code until the first
 // real metadata read — which only happens once the compiler is loaded.
 

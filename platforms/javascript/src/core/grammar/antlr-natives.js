@@ -27,10 +27,16 @@
 
 import antlr4 from "antlr4";
 
-import TopLexer from "./generated/TopLexer.js";
-import TopParser from "./generated/TopParser.js";
-import M3Lexer from "./generated/M3Lexer.js";
-import M3Parser from "./generated/M3Parser.js";
+import TopLexer from "../../../generated/pure/grammar/antlr/TopLexer.js";
+import TopParser from "../../../generated/pure/grammar/antlr/TopParser.js";
+import M3Lexer from "../../../generated/pure/grammar/antlr/M3Lexer.js";
+import M3Parser from "../../../generated/pure/grammar/antlr/M3Parser.js";
+
+
+// BUNDLE-ONLY: the parsers these name must be inlined here, with this file's antlr4 — see the table
+// below. A host module graph must never reach them.
+import { EXTENSION_GRAMMAR_CLASSES } from "../../../generated/extensions/antlr-modules.js";
+import { LANGUAGES } from "../../../generated/languages.js";
 
 const { ParserRuleContext, Token } = antlr4;
 const TerminalNode = antlr4.tree.TerminalNode;
@@ -70,9 +76,27 @@ function parseWith(LexerClass, ParserClass, rule, source) {
     return ctx;
 }
 
+// The language's own two grammars, then every extension that declares one.
+//
+// Grammar INFO comes from walking the extensions: each descriptor
+// (generated/extensions/<dir>/language_<dir>.js, its language_<dir>.json verbatim) is the single authority on
+// its grammar's name and entry rule, and nothing restates them. Only the CLASSES come from
+// antlr-modules.js, and they have to: every ANTLR object must belong to ONE antlr4 runtime, because
+// the natives below identify contexts with `instanceof ParserRuleContext` against the classes esbuild
+// inlines here. A parser reached any other way brings its own antlr4, and the bridge then sees an
+// empty tree — measured, as zero elements from a ###Diagram section.
+//
+// Adding a language is therefore a directory on disk and no host edit. This table used to be a
+// literal, which is why `###Diagram` could not have a grammar at all.
 const GRAMMARS = {
     "TopParser": (source) => parseWith(TopLexer, TopParser, "document", source),
     "M3Parser": (source) => parseWith(M3Lexer, M3Parser, "definition", source),
+    ...Object.fromEntries(LANGUAGES
+        .filter((e) => e.grammar && EXTENSION_GRAMMAR_CLASSES[e.dir])
+        .map((e) => {
+            const { lexer, parser } = EXTENSION_GRAMMAR_CLASSES[e.dir];
+            return [e.grammar.parser, (source) => parseWith(lexer, parser, e.grammar.entryRule, source)];
+        })),
 };
 
 // Each root context is registered with the ruleNames array of the parser that

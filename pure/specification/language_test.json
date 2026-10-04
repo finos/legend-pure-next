@@ -1,0 +1,13 @@
+{
+  "name": "compiler test sections",
+  "sections": [
+    "CompiledGraph",
+    "CompilerStats",
+    "ReverseIndex",
+    "File"
+  ],
+  "module": "compiler-tests",
+  "pure": {
+    "sectionParsers": "meta::pure::compiler::test::testSectionParsers__Pair_MANY_"
+  }
+}

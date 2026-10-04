@@ -1,0 +1,201 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// What a diagram does NOT show.
+//
+// A `###Diagram` is carried as text and never validated by the compiler, so it drifts: a
+// property is added to a class, a subclass appears, two classes already on the diagram turn
+// out to be related — and the diagram silently keeps describing the model as it used to be.
+// This finds those gaps, between classes the diagram ALREADY shows.
+//
+// It takes the diagram's views and edges as plain values rather than parsing the section
+// text, so the analysis is a function of the model and the drawing, and the parsing stays
+// where it already lives (the editor's parse.js). Classes arrive resolved, so a type view
+// naming a class that no longer exists is simply absent from the input rather than a failure
+// in here.
+
+import meta::pure::diagram::analysis::*;
+import meta::pure::diagram::metamodel::*;
+
+// THE DIAGRAM ITSELF IS THE INPUT. This used to carry its own `DiagramClassView` / `DiagramEdge`
+// records — a second model of boxes and lines, which the caller had to populate from a real diagram
+// and which drifted from it by construction. A compiled `Diagram` already says all of it: `typeViews`
+// are the boxes, with `type` resolved to the class each one shows, and the three view collections are
+// the lines.
+
+// The class a box shows, when it resolves to one. Empty for a view whose `type=` named something that
+// is not a class, or nothing at all — the compiler reports that, and the analysis just skips it.
+function meta::pure::diagram::analysis::shownClass(v: TypeView[1]): Class<Any>[0..1]
+{
+   $v.type->filter(t | $t->instanceOf(Class))->cast(@Class<Any>)->head();
+}
+
+// The boxes worth analysing: those whose class resolved.
+function meta::pure::diagram::analysis::resolvedViews(d: Diagram[1]): TypeView[*]
+{
+   $d.typeViews->filter(v | $v->shownClass()->isNotEmpty());
+}
+
+// A relationship the model has and the diagram does not.
+Class meta::pure::diagram::analysis::MissingRelationship
+{
+   kind    : String[1];
+   source  : String[1];
+   target  : String[1];
+   detail  : String[1];
+   message : String[1];
+}
+
+// How deep to follow `extends` when looking for an indirect relationship. Deep enough for
+// any real hierarchy, and a guard against a cycle in a malformed graph.
+function meta::pure::diagram::analysis::maxHierarchyDepth(): Integer[1]
+{
+   24;
+}
+
+// The classes `cls` directly extends.
+function meta::pure::diagram::analysis::directSupertypes(cls: Class<Any>[1]): Class<Any>[*]
+{
+   $cls.generalizations
+      ->map(g | $g.general->rawType())
+      ->filter(t | $t->instanceOf(Class))
+      ->cast(@Class<Any>);
+}
+
+// Every class `cls` extends, directly or through others.
+function meta::pure::diagram::analysis::allSupertypes(cls: Class<Any>[1], depth: Integer[1]): Class<Any>[*]
+{
+   let direct = $cls->directSupertypes();
+   if ($depth <= 0,
+       | $direct,
+       | $direct->concatenate($direct->map(s | $s->allSupertypes($depth - 1))));
+}
+
+function meta::pure::diagram::analysis::pathOf(cls: Class<Any>[1]): String[1]
+{
+   $cls->elementToPath();
+}
+
+// Whether the diagram already joins these two boxes with a property view for `property`. Compared by
+// VIEW ID, not by class, so two views of the same class are told apart.
+function meta::pure::diagram::analysis::hasPropertyView(
+   d: Diagram[1], source: String[1], target: String[1], property: String[1]): Boolean[1]
+{
+   $d.propertyViews->exists(e | $e.source == $source && $e.target == $target && $e.property == $property);
+}
+
+// Whether the diagram already joins these two boxes with a generalization view.
+function meta::pure::diagram::analysis::hasGeneralizationView(
+   d: Diagram[1], source: String[1], target: String[1]): Boolean[1]
+{
+   $d.generalizationViews->exists(e | $e.source == $source && $e.target == $target);
+}
+
+// ---------------------------------------------------------------------------------------
+// Properties
+// ---------------------------------------------------------------------------------------
+
+function meta::pure::diagram::analysis::missingForProperty(
+   property: Property<Nil, Any|*>[1],
+   view: TypeView[1],
+   d: Diagram[1]): MissingRelationship[*]
+{
+   let target = $property.genericType->rawType();
+   let detail = $view->shownClass()->toOne()->pathOf() + '.' + $property.name->toOne();
+   let targetPath = if ($target->isEmpty(), | '', | $target->toOne()->elementToPath());
+   resolvedViews($d)
+      ->filter(w | $targetPath != '' && $w->shownClass()->toOne()->pathOf() == $targetPath)
+      ->filter(w | !hasPropertyView($d, $view.id, $w.id, $detail))
+      ->map(w | ^MissingRelationship(
+                   kind    = 'property',
+                   source  = $view.id,
+                   target  = $w.id,
+                   detail  = $detail,
+                   message = 'Property ' + $detail + ' points at ' + $targetPath
+                             + ', which is on the diagram, but no property view joins them'));
+}
+
+// Properties whose type is also on the diagram, with no line drawn for them.
+function meta::pure::diagram::analysis::missingPropertyViews(d: Diagram[1]): MissingRelationship[*]
+{
+   resolvedViews($d)->map(v | $v->shownClass()->toOne().properties->map(p | $p->missingForProperty($v, $d)));
+}
+
+// ---------------------------------------------------------------------------------------
+// Inheritance, up and down
+// ---------------------------------------------------------------------------------------
+
+// Whether any class strictly between `sub` and `super` is itself on the diagram.
+//
+// If one is, the chain is already drawable hop by hop — and each of those hops is reported on
+// its own if it is missing — so the long-range relationship is not a gap, it is the sum of
+// the short ones.
+function meta::pure::diagram::analysis::hasShownIntermediate(
+   sub: Class<Any>[1], super: Class<Any>[1], views: TypeView[*]): Boolean[1]
+{
+   let subPath = $sub->pathOf();
+   let superPath = $super->pathOf();
+   let between = $sub->allSupertypes(maxHierarchyDepth())
+                    ->filter(c | $c->pathOf() != $subPath && $c->pathOf() != $superPath)
+                    ->filter(c | $c->allSupertypes(maxHierarchyDepth())->exists(s | $s->pathOf() == $superPath));
+   $between->exists(c | $views->exists(v | $v->shownClass()->toOne()->pathOf() == $c->pathOf()));
+}
+
+// `sub` extends `super`: directly, only through classes the diagram does not show, or in no
+// way worth reporting.
+function meta::pure::diagram::analysis::inheritanceKind(
+   sub: Class<Any>[1], super: Class<Any>[1], views: TypeView[*]): String[1]
+{
+   let superPath = $super->pathOf();
+   let direct = $sub->directSupertypes()->exists(s | $s->pathOf() == $superPath);
+   let indirect = $sub->allSupertypes(maxHierarchyDepth())->exists(s | $s->pathOf() == $superPath);
+   if ($direct, | 'generalization',
+      | if ($indirect && !hasShownIntermediate($sub, $super, $views), | 'generalizationIndirect', | ''));
+}
+
+function meta::pure::diagram::analysis::missingBetween(
+   sub: TypeView[1], super: TypeView[1], d: Diagram[1]): MissingRelationship[*]
+{
+   let subClass = $sub->shownClass()->toOne();
+   let superClass = $super->shownClass()->toOne();
+   let kind = inheritanceKind($subClass, $superClass, resolvedViews($d));
+   let drawn = hasGeneralizationView($d, $sub.id, $super.id);
+   let note = if ($kind == 'generalizationIndirect',
+                  | ' (through classes the diagram does not show)',
+                  | '');
+   if ($kind == '' || $drawn,
+      | [],
+      | ^MissingRelationship(
+           kind    = $kind,
+           source  = $sub.id,
+           target  = $super.id,
+           detail  = $subClass->pathOf() + ' extends ' + $superClass->pathOf(),
+           message = $subClass->pathOf() + ' extends ' + $superClass->pathOf() + $note
+                     + ', but no generalization view joins them'));
+}
+
+// Inheritance between classes already on the diagram, in BOTH directions: every ordered pair
+// is examined, so a missing line is found whether the subclass or the superclass was the one
+// added first.
+function meta::pure::diagram::analysis::missingGeneralizationViews(d: Diagram[1]): MissingRelationship[*]
+{
+   let views = resolvedViews($d);
+   $views->map(a | $views->filter(b | $b.id != $a.id)->map(b | missingBetween($a, $b, $d)));
+}
+
+// Everything the diagram leaves out, between the classes it already shows.
+function meta::pure::diagram::analysis::analyzeDiagram(d: Diagram[1]): MissingRelationship[*]
+{
+   missingPropertyViews($d)->concatenate(missingGeneralizationViews($d));
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Pure",
+  "section": "Pure",
+  "bundled": true,
+  "pure": {
+    "sectionParsers": "meta::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_"
+  },
+  "pdbs": [
+    "shared/core.pdb",
+    "shared/compiler.pdb"
+  ]
+}

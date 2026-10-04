@@ -1,5 +1,21 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # pure/modules/Justfile — orchestrates the Pure module Justfiles
 # (language/{java,javascript}, translation/{shared,java,javascript,truffle}).
+#
+# LANGUAGE EXTENSIONS are not modules and do not live here — see pure/extensions/.
 #
 # Direct invocation:    just <recipe>            (from pure/modules/)
 # Via the root Justfile: just modules::<recipe>  (from repo root)
@@ -17,6 +33,8 @@ set shell := ["bash", "-c"]
 # Records heavy build steps for the dashboard build time trend.
 build_step := "node " + source_directory() / ".." / ".." / "tools" / "test-dashboard" / "build-step.mjs"
 
+mod analysis_diagram       "analysis/diagram/Justfile"
+mod protocol               "protocol/Justfile"
 mod language_java          "language/java/Justfile"
 mod language_javascript    "language/javascript/Justfile"
 mod translation_shared     "translation/shared/Justfile"
@@ -47,7 +65,7 @@ default: build
 # split build carries refs into its -tests companion — loading one without
 # the other yields [PTR-FAIL] pointer resolutions. Splitting here keeps
 # shared/ consistent regardless of whether `build` or `test-all` ran last.
-build-layer0: language_java::build language_javascript::build-tests translation_shared::build-tests
+build-layer0: analysis_diagram::build protocol::build language_java::build language_javascript::build-tests translation_shared::build-tests
 
 # Build every module PDB (Layer 0 → Layer 1).
 # translation_javascript builds WITH --tests split: the javascript platform's
@@ -69,7 +87,7 @@ test-all: test-all-layer0 translation_java::test-all translation_javascript::tes
 gallery: translation_java::gallery translation_javascript::gallery translation_truffle::gallery
 
 # Remove every module's PDB outputs.
-clean: language_java::clean language_javascript::clean translation_shared::clean translation_java::clean translation_javascript::clean translation_truffle::clean
+clean: analysis_diagram::clean protocol::clean language_java::clean language_javascript::clean translation_shared::clean translation_java::clean translation_javascript::clean translation_truffle::clean
 
 # Build time trend (tools/test-dashboard/build-step.mjs): the first dependency of a heavy recipe, whose last line runs `{{build_step}} end`.
 _step-start STEP:

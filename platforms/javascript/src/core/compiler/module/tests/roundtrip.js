@@ -15,7 +15,7 @@
 // Round-trip harness for the PDB writer, exercised by the compiler tests: take a
 // freshly compiled in-memory graph, serialize it to .pdb bytes with the
 // TRANSLATED SELF-HOSTED PURE WRITER (meta::pure::compiler::pdb::archive +
-// gen::writeX, compiled into generated/compiler.js — the same Pure code that
+// gen::writeX, compiled into generated/pure/compiler/compiler.js — the same Pure code that
 // runs on the JVM), reopen those bytes with the TRANSLATED SELF-HOSTED PURE
 // READER (pdb/reader/reader.pure via store.js/pure-reader.js), and re-print the graph
 // straight out of the reader. Diffing that against the direct print is a

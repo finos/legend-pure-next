@@ -499,7 +499,13 @@ function __parseDec(x) {
 }
 function __assert(c, m) {
   if (!c) {
-    throw new Error(String(m));
+    // The message is LAZY by design — `assert($cond, | 'expensive ' + $detail)` builds it only on
+    // failure — so a function here has to be CALLED. `String(fn)` stringifies a function to its
+    // SOURCE, which turned every lazy assert message into a dump of the generated lambda and hid
+    // what actually failed (the pdb golden runner reported `() => __add(__add(__toString(__size(
+    // findings)), ' difference(s) from the Java golden, first: '), __at(findings, 0n))` instead of
+    // the difference). A Pure message is always a String, never a function value, so this is safe.
+    throw new Error(String(typeof m === "function" ? m() : m));
   }
   return true;
 }
@@ -1135,30 +1141,21 @@ function __leBytesToFloat(b) {
   if (b.length !== 8) throw new Error("leBytesToFloat expects exactly 8 bytes, got " + b.length);
   return new DataView(b.buffer, b.byteOffset, 8).getFloat64(0, true);
 }
-// Path-keyed CLASS METADATA registry. `__registerClass` statements (emitted by
-// translateClassDecl) publish a class's static metadata — property and
-// qualified-property entries whose `eval` closures are TRANSLATED bodies —
-// and `__classRef(path)` reads it back at reference sites. Keying by path
-// avoids `const <ShortName>` globals (collision-prone; a Pure class named
-// `Map` or `Error` would shadow the JS builtin for the whole realm). The
-// registered companion carries `__purePath` so element-flavored operations
-// (`__eq` identity, `__elementToPath`, metadata instanceOf) treat it as the
-// class element; unregistered paths fall back to the `__pureResolve` proxy,
-// whose property reads route through the metadata globals (PDB-backed hosts).
-const __classRegistry = new Map();
-function __registerClass(path, decl) {
-  decl.__purePath = path;
-  decl.path = path;
-  __classRegistry.set(path, decl);
-  return decl;
-}
-function __classRef(path) {
-  const d = __classRegistry.get(path);
-  return d !== undefined ? d : __pureResolve(path);
+// A class's qualified properties, read off the generated class itself (`static qualifiedProperties`).
+// Empty when that class is not loaded in this host, or declares none.
+//
+// This replaced a path-keyed side registry filled by `__registerClass` statements. That registry also
+// carried a `properties` list of accessor closures for every class — 346 of them — which nothing
+// read: a `<Class>.properties` reflection goes to the pdb, which is authoritative, and a slot read
+// goes through the class's own `_<name>()` accessor. Only the qualified properties had to survive,
+// because their `eval` is a TRANSLATED BODY no pdb can supply.
+function __qpsOf(path) {
+  const Cls = globalThis[path.split("::").join("$")];
+  return typeof Cls === "function" ? __asArr(Cls.qualifiedProperties) : [];
 }
 // Qualified-property call dispatched on the receiver's RUNTIME class: walk from
-// its class up the generalizations (breadth-first) to the first registered
-// class declaring `name` at this arity — the eval arrow's `.length` counts the
+// its class up the generalizations (breadth-first) to the first class
+// declaring `name` at this arity — the eval arrow's `.length` counts the
 // receiver plus supplied args — and fall back to the static owner.
 function __qp(ownerPath, name, recv, ...rest) {
   const arity = rest.length + 1;
@@ -1171,8 +1168,7 @@ function __qp(ownerPath, name, recv, ...rest) {
     const path = queue.shift();
     if (seen.has(path)) continue;
     seen.add(path);
-    const decl = __classRegistry.get(path);
-    const q = decl && declared(decl.qualifiedProperties);
+    const q = declared(__qpsOf(path));
     if (q) return q.eval(recv, ...rest);
     if (path === ownerPath || path === "meta::pure::metamodel::type::Any") continue;
     for (const g of __asArr(__pureResolve(path).generalizations)) {
@@ -1180,7 +1176,7 @@ function __qp(ownerPath, name, recv, ...rest) {
       if (typeof p === "string") queue.push(p);
     }
   }
-  const fallback = ownerPath ? declared(__classRef(ownerPath).qualifiedProperties) : void 0;
+  const fallback = ownerPath ? declared(__qpsOf(ownerPath)) : void 0;
   if (!fallback) throw new Error("qualified property " + name + "/" + (arity - 1) + " not found on " + ownerPath);
   return fallback.eval(recv, ...rest);
 }
@@ -1287,9 +1283,9 @@ function __jsDrainCompiledSources() {
 }
 function __gtmHolder(clsPath, typeArgTypes) {
   const udgCgt = __pureResolve("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType");
-  const cgt = { type: __pureResolve(clsPath), classifierGenericType: udgCgt };
-  cgt.typeArguments = __asArr(typeArgTypes).map((t) => ({ type: t, classifierGenericType: udgCgt }));
-  const holder = { classifierGenericType: cgt };
+  const cgt = __newCgt({ type: __pureResolve(clsPath), classifierGenericType: udgCgt });
+  cgt.typeArguments = __asArr(typeArgTypes).map((t) => __newCgt({ type: t, classifierGenericType: udgCgt }));
+  const holder = __newOf("meta$pure$metamodel$valuespecification$GenericTypeAndMultiplicityHolder", { classifierGenericType: cgt });
   holder.genericType = cgt; // self-reference: the holder is described by its own CGT
   return holder;
 }
@@ -1298,7 +1294,11 @@ function __pair(first, second) {
   // so __eq compares by first/second even against a constant-folded bare
   // `{first, second}` literal (the translator emits those for pair(...) in
   // expected-value positions).
-  return { first, second, classifierGenericType: { type: __pureResolve("meta::pure::functions::collection::Pair"), typeArguments: [{}, {}], __equalityKeys: ["first", "second"] } };
+  //
+  // The two type arguments are UNKNOWN but still GenericTypeValues: a Pair's element types are not
+  // tracked here, and `[{}, {}]` placeholders answered no accessor — `$gtv.typeArguments` on one of
+  // them is `gtv._typeArguments()`, which is how the zip tests failed.
+  return __newOf("meta$pure$functions$collection$Pair", { first, second, classifierGenericType: __newCgt({ type: __pureResolve("meta::pure::functions::collection::Pair"), typeArguments: [__newCgt({}), __newCgt({})], __equalityKeys: ["first", "second"] }) });
 }
 function __zip(a, b) {
   const A = __asArr(a), B = __asArr(b);
@@ -1326,11 +1326,11 @@ function __firstNonEmpty(thunks) {
 }
 function __tryEval(thunk) {
   try {
-    return {
+    return __newOf("meta$pure$functions$lang$TryResult", {
       value: thunk(),
       failure: void 0,
-      classifierGenericType: { type: __pureResolve("meta::pure::functions::lang::TryResult") }
-    };
+      classifierGenericType: __newCgt({ type: __pureResolve("meta::pure::functions::lang::TryResult") })
+    });
   } catch (e) {
     const msg = e && e.message !== void 0 ? String(e.message) : String(e);
     // Pure frames when the generated code carries position markers (Truffle's
@@ -1342,15 +1342,15 @@ function __tryEval(thunk) {
       frames = lines.filter((s) => s.startsWith("at ") || s.includes("@"));
       if (frames.length === 0 && lines.length > 0) frames = lines;
     }
-    return {
+    return __newOf("meta$pure$functions$lang$TryResult", {
       value: void 0,
-      failure: {
+      failure: __newOf("meta$pure$functions$lang$Error", {
         message: msg,
         stack: frames,
-        classifierGenericType: { type: __pureResolve("meta::pure::functions::lang::Error") }
-      },
-      classifierGenericType: { type: __pureResolve("meta::pure::functions::lang::TryResult") }
-    };
+        classifierGenericType: __newCgt({ type: __pureResolve("meta::pure::functions::lang::Error") })
+      }),
+      classifierGenericType: __newCgt({ type: __pureResolve("meta::pure::functions::lang::TryResult") })
+    });
   }
 }
 function __removeDuplicatesBy(coll, fn1, fn2) {
@@ -1524,7 +1524,7 @@ function __removeAll(set, other) {
   return __asArr(set).filter((x) => !os.some((o) => __eq(x, o)));
 }
 function __mapKeyValues(m) {
-  return __mapEntriesOf(m).map(([k, v]) => ({ first: k, second: v }));
+  return __mapEntriesOf(m).map(([k, v]) => __newOf("meta$pure$functions$collection$Pair", { first: k, second: v }));
 }
 function __mapKeys(m) {
   return __mapEntriesOf(m).map((x) => x[0]);
@@ -1575,7 +1575,7 @@ function __groupBy(coll, keyFn) {
     const k = keyFn(x);
     let i = __mapFindIdx(entries, k);
     if (i < 0) {
-      entries.push([k, { values: [] }]);
+      entries.push([k, __newOf("meta$pure$functions$collection$List", { values: [] })]);
       i = entries.length - 1;
     }
     entries[i][1].values.push(x);
@@ -1729,7 +1729,13 @@ function __pgr_process(v, byPath, copies) {
   if (typeof v.__purePath === "string") return v;
   const seen = copies.get(v);
   if (seen !== void 0) return seen;
-  const clone = {};
+  // KEEP THE CLASS, exactly as __spreadEager does for `^$x(...)`. This walk rebuilds every object in
+  // the graph, so cloning into a bare `{}` meant every element `compile()` returned was a plain
+  // Object: the `new X(...)` instances the translator emits were silently demoted to untyped bags on
+  // the way out, and none of the generated `_<property>()` accessors were reachable on a compiled
+  // graph. The clone is still created BEFORE the recursion, so the cycle guard below is unaffected.
+  const proto = Object.getPrototypeOf(v);
+  const clone = proto === null || proto === Object.prototype ? {} : Object.create(proto);
   copies.set(v, clone);
   for (const k of Object.keys(v)) {
     if (k.startsWith("__")) {
@@ -1781,7 +1787,13 @@ function __sort(coll, key, comp) {
   return __asArr(coll).slice().sort((a, b) => Number(c(k(a), k(b))));
 }
 function __orElse(v, def) {
-  return __isEmpty(v) ? def : v;
+  // `orElse` RETURNS T[1], so the result has to be in the one-value representation (a bare
+  // value), not the [0..1] array representation `v` arrives in. Handing `[x]` back makes the
+  // value compare unequal under the `===` fast paths — __mapFindIdx keys a map by identity, so
+  // `map->get($pdo.prop)` missed every entry when `prop` had been filled by an orElse, even
+  // though Pure sees a plain String on both sides.
+  if (__isEmpty(v)) return def;
+  return Array.isArray(v) && v.length === 1 ? v[0] : v;
 }
 function __toOne(v, message) {
   const arr = __asArr(v);
@@ -2227,15 +2239,16 @@ function __instanceOf(v, t) {
   if (typeof v === "boolean") {
     return tPath === "meta::pure::metamodel::type::primitives::Boolean";
   }
-  if (typeof v === "object" && v._kind) {
-    const kindPath = "meta::pure::metamodel::type::" + v._kind;
-    if (kindPath === tPath) return true;
-    const chain = __metaHierarchy[kindPath] || [];
-    return chain.includes(tPath || "");
-  }
-  if (typeof v === "object" && Array.isArray(v._type)) {
-    if (v._type.includes(tPath || "")) return true;
-  }
+  // Two vestigial tag branches used to sit here, `v._kind` (a type-leaf name concatenated into a
+  // path) and `v._type` (a flattened supertype chain). Both said what the NEXT branch derives
+  // properly from `classifierGenericType` by walking generalizations, and both were dead: nothing
+  // in the repo produced `_kind`, and `_type`'s producer (instanceTypeEntry) had no callers.
+  //
+  // They were also a hazard, because one underscore is the namespace of the generated property
+  // accessors (`_<name>()`). `_kind` tested for TRUTHINESS, so once ReadPointerRef — which has a
+  // `kind` property — carried a `_kind` METHOD, the dead branch fired on a function, built a
+  // garbage path and made `instanceOf(ReadPointerRef)` answer false. Every one of the 149 pdb
+  // goldens differed as a result.
   if (typeof v === "object" && v.classifierGenericType && v.classifierGenericType.type && tPath) {
     return __subtypeViaGeneralizations(v.classifierGenericType.type, tPath);
   }
@@ -2640,6 +2653,8 @@ const __OPT_DEFAULTS = {
 function __pureResolve(address) {
   const hit = __resolveCache[address];
   if (hit !== void 0) return hit;
+  // Lazily created: only elements someone actually calls an accessor on pay for the map.
+  let accessors;
   const isOptCgt = address.startsWith(__OPT_CGT_PREFIX);
   const optTarget = isOptCgt ? address.substring(__OPT_CGT_PREFIX.length).replace(/_/g, "::") : null;
   const p = new Proxy({ __purePath: address, path: address }, {
@@ -2661,6 +2676,29 @@ function __pureResolve(address) {
       // Pure properties; never route them through the metadata globals.
       if (prop.startsWith("__")) return void 0;
       if (__reservedProxyProps.has(prop)) return void 0;
+      // A GENERATED ACCESSOR on a pdb-backed element. Every translated class declares `_<name>()`
+      // for each of its properties, and a caller holding a graph object has no way to know whether
+      // that object came out of a pdb (this proxy) or was built by the compiler (a class instance).
+      // Answering the same call here makes the accessor API uniform across both.
+      //
+      // Read-only: a pdb element is immutable and Pure mutates nothing — `^$x(...)` copies through
+      // __copy — so a write is a bug worth naming rather than silently dropping.
+      if (prop.length > 1 && prop.charCodeAt(0) === 95 && prop.charCodeAt(1) !== 95) {
+        // MEMOIZED per element. A `get` trap that built the function fresh each time would allocate
+        // a closure on every single `el._name()` — the trap fires per access, unlike a prototype
+        // method, which is looked up once and shared by every instance of the class.
+        if (accessors === void 0) accessors = new Map();
+        const hit = accessors.get(prop);
+        if (hit !== void 0) return hit;
+        const slot = prop.slice(1);
+        const fn = function (...args) {
+          if (args.length === 0) return p[slot];
+          throw new Error("Cannot set " + slot + " on " + address
+            + ": a pdb-backed element is immutable — copy it (`^$x(" + slot + " = ...)`) instead");
+        };
+        accessors.set(prop, fn);
+        return fn;
+      }
       try {
         const raw = __metadataRead(address, prop);
         return __rewrapStubs(raw);
@@ -2676,6 +2714,86 @@ function __pureResolve(address) {
   });
   __resolveCache[address] = p;
   return p;
+}
+// `new($type)` — the REFLECTION form of construction, where the class is known only at run time.
+// The static form emits `new X()._a(1)`; here the path comes out of the supplied GenericType, so the
+// class global is looked up under the same mangled name the translator emits for it.
+//
+// Without this the reflection form produced a bare `{ classifierGenericType }` literal, and anything
+// copied from it stayed a plain object: the resolved Property that
+// meta::pure::compiler::helper::property::resolveProperty returns was the one part of a compiled
+// graph that was not an instance of its own class, so none of its accessors resolved.
+function __newByType(cgt) {
+  const t = cgt && cgt.type;
+  const path = t && (typeof t.__purePath === "string" ? t.__purePath
+                   : typeof t.path === "string" ? t.path : void 0);
+  let Cls = typeof path === "string" ? globalThis[path.split("::").join("$")] : void 0;
+  if (typeof Cls !== "function") {
+    // The type may be an ENUMERATION, whose global is a const object of its values rather than a
+    // constructor — and an enumeration built at RUN TIME has no path to look up at all. Either way
+    // the value being created is an enum value, and every enum value is an instance of
+    // meta::pure::metamodel::type::Enum.
+    const tcgt = t && t.classifierGenericType && t.classifierGenericType.type;
+    const tPath = tcgt && (tcgt.__purePath !== void 0 ? tcgt.__purePath : tcgt.path);
+    if (tPath === "meta::pure::metamodel::type::Enumeration" || (Cls && typeof Cls === "object")) {
+      Cls = globalThis["meta$pure$metamodel$type$Enum"];
+    }
+  }
+  if (typeof Cls !== "function") return { classifierGenericType: cgt };
+  const out = new Cls();
+  out.classifierGenericType = cgt;
+  return out;
+}
+// A `classifierGenericType` object IS a GenericTypeValue, so make it an instance of that class —
+// otherwise it is one of the last values in a compiled graph answering no accessor.
+//
+// The class is looked up at run time rather than emitted as a bare `new meta$...GenericTypeValue()`
+// because the STANDALONE PARSER loads neither the compiler's metamodel module nor its classes: a
+// bare identifier there is a ReferenceError, which is exactly how the grammar corpus failed
+// ("meta$pure$metamodel$type$generics$GenericTypeValue is not defined"). Where the class is absent
+// this falls back to the plain self-describing object, which is all this ever was.
+//
+// `slots` carries runtime-internal keys too (`__equalityKeys`), which have no accessor to chain —
+// the single underscore belongs to generated accessors — so they are assigned with everything else.
+// A construction whose class the TRANSLATOR could not name. `^X(...)` normally emits `new X()._a(1)`,
+// but the static type is not always there to read: the translated-JavaScript test adapter
+// canonicalises the function first, and a canonicalised holder has lost it. The classifier the literal
+// carries is then the only thing left to go on, so the class is resolved from it here — and when it
+// genuinely is not loaded, the plain object comes back, which is all this used to be.
+//
+// Without this, such an instance answered no accessor: `p._lastName is not a function`, from
+// meta::external::language::javascript::translation's own test suite.
+function __newOfSlots(slots) {
+  const cgt = slots.classifierGenericType;
+  const out = __newByType(cgt);
+  // NO SILENT FALLBACK here. Every Pure class is translated and every host that runs user code loads
+  // it, so an unresolvable class is a build problem — and a plain object would hide it until some
+  // later read failed with `x._p is not a function`, which is a much worse error than this one.
+  // (`__newOf`/`__newCgt` do degrade gracefully, deliberately: the lean parser host builds protocol
+  // values with none of the compiler's classes loaded, and a plain object is correct there.)
+  if (Object.getPrototypeOf(out) === Object.prototype) {
+    const t = cgt && cgt.type;
+    throw new Error("cannot construct: no translated class for "
+      + ((t && (t.__purePath ?? t.path)) ?? "an unknown classifier")
+      + " — the class is missing from this host's generated modules");
+  }
+  return Object.assign(out, slots);
+}
+function __newCgt(slots) {
+  return __newOf("meta$pure$metamodel$type$generics$GenericTypeValue", slots);
+}
+// Build an instance of a translated class named at run time, falling back to the plain slots object
+// when that class is not loaded in this host.
+//
+// Every helper in here that RETURNS a Pure-classed value goes through this (pair, tryEval's
+// TryResult/Error, the variant List, …). Translated code reads a scalar Class-typed receiver through
+// its accessor, so a value this library synthesises as a bare literal would answer no accessor —
+// `acc._first is not a function`, raised deep inside the compiler, far from here. Shared by every emission that has to name a class in
+// code which may run in the standalone parser, where none of the compiler's classes exist.
+function __newOf(mangled, slots) {
+  const Cls = globalThis[mangled];
+  if (typeof Cls !== "function") return slots;
+  return Object.assign(new Cls(), slots);
 }
 function __rewrapStubs(v) {
   if (v === void 0 || v === null) return void 0;
@@ -2702,7 +2820,7 @@ function __openVariableValues(lam) {
   // Entries are thunks by convention (see wrapLambdaWithAst): the capture is
   // read here, not at lambda construction, so a snapshot never trips a
   // temporal-dead-zone ReferenceError for over-approximated open variables.
-  for (const k of Object.keys(ov)) entries.push([k, { values: __asArr(ov[k]()) }]);
+  for (const k of Object.keys(ov)) entries.push([k, __newOf("meta$pure$functions$collection$List", { values: __asArr(ov[k]()) })]);
   return { __mapEntries: entries };
 }
 const __ctorStack = [];
@@ -2720,7 +2838,16 @@ function __newObj(base, fill) {
 }
 function __spreadEager(src) {
   if (src === null || typeof src !== "object" || Array.isArray(src)) return src;
-  const out = "__purePath" in src ? { ...src, classifierGenericType: src.classifierGenericType } : { ...src };
+  // KEEP THE CLASS. `^$x(k = v)` copies an instance, and a Pure class now translates to a JavaScript
+  // class — so a copy has to stay an instance of it rather than decay into an anonymous object on the
+  // first `->`. The spread below only carries own properties, which is why the prototype is restored
+  // explicitly. A plain object (a metadata-backed element, a map entry) has Object.prototype and is
+  // unaffected.
+  const proto = Object.getPrototypeOf(src);
+  const base = proto === null || proto === Object.prototype ? {} : Object.create(proto);
+  const out = "__purePath" in src
+      ? Object.assign(base, src, { classifierGenericType: src.classifierGenericType })
+      : Object.assign(base, src);
   for (const k of Object.keys(out)) {
     if (Array.isArray(out[k])) out[k] = out[k].slice();
   }
@@ -2830,7 +2957,7 @@ function __genericType(v) {
   // generalization step (through the metadata globals) until every element's
   // type is a subtype of it.
   if (Array.isArray(v)) {
-    if (v.length === 0) return { type: __pureResolve("meta::pure::metamodel::type::Nil") };
+    if (v.length === 0) return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::Nil") });
     if (v.length === 1) return __genericType(v[0]);
     const pathOf = (x) => {
       const g = __genericType(x);
@@ -2846,25 +2973,25 @@ function __genericType(v) {
       const st = gens[0] && gens[0].general && gens[0].general.type;
       cand = st ? (st.__purePath !== void 0 ? st.__purePath : st.path) : ANY;
     }
-    return { type: __pureResolve(cand && covers(cand) ? cand : ANY) };
+    return __newCgt({ type: __pureResolve(cand && covers(cand) ? cand : ANY) });
   }
   if (typeof v === "bigint") {
-    return { type: __pureResolve("meta::pure::metamodel::type::primitives::Integer") };
+    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::Integer") });
   }
   if (v instanceof Big) {
-    return { type: __pureResolve("meta::pure::metamodel::type::primitives::Decimal") };
+    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::Decimal") });
   }
   if (typeof v === "number") {
-    return { type: __pureResolve("meta::pure::metamodel::type::primitives::Float") };
+    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::Float") });
   }
   if (typeof v === "string") {
-    return { type: __pureResolve("meta::pure::metamodel::type::primitives::String") };
+    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::String") });
   }
   if (typeof v === "boolean") {
-    return { type: __pureResolve("meta::pure::metamodel::type::primitives::Boolean") };
+    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::Boolean") });
   }
   if (v instanceof Date) {
-    return { type: __pureResolve("meta::pure::metamodel::type::primitives::Date") };
+    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::Date") });
   }
   return __pdo(v).classifierGenericType;
 }
@@ -2944,7 +3071,7 @@ const __VARIANT_PATH = "meta::pure::metamodel::variant::Variant";
 const __VARIANT_P = "meta::pure::metamodel::type::primitives::";
 function __mkVariant(tree) {
   // classifierGenericType makes __matchType/cast/instanceOf see a Variant
-  return { __variantJson: tree, classifierGenericType: { type: { path: __VARIANT_PATH } } };
+  return { __variantJson: tree, classifierGenericType: __newCgt({ type: { path: __VARIANT_PATH } }) };
 }
 function __vScalar(v) {
   return Array.isArray(v) ? (v.length === 0 ? null : v[0]) : v === void 0 ? null : v;
@@ -3183,11 +3310,11 @@ function __variantCoerce(t, d) {
   if (d.p === "meta::pure::functions::collection::List") {
     if (Array.isArray(t)) {
       const ed = d.a[0] || { p: void 0, a: [] };
-      return {
+      return __newOf("meta$pure$functions$collection$List", {
         values: t.map((e) => __variantCoerce(e, ed)).filter((e) => e !== null),
         // self-describing tag so the JS->Truffle marshaller lifts to a List PDO
-        classifierGenericType: { type: { path: "meta::pure::functions::collection::List" } }
-      };
+        classifierGenericType: __newCgt({ type: { path: "meta::pure::functions::collection::List" } })
+      });
     }
     wrong = true;
   } else if (d.p === "meta::pure::functions::collection::Map" && d.a[0] && d.a[0].p === __VARIANT_P + "String") {

@@ -38,7 +38,8 @@ import java.util.Objects;
  * loaders can reconstruct the module's identity without relying on
  * filename heuristics or constructor arguments.</p>
  */
-public record ModuleManifest(String name, String packagePattern, List<String> dependencies)
+public record ModuleManifest(String name, String packagePattern, List<String> dependencies,
+                             List<String> testDependencies)
 {
     public static final String ARCHIVE_SECTION = "manifest";
 
@@ -47,6 +48,44 @@ public record ModuleManifest(String name, String packagePattern, List<String> de
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(packagePattern, "packagePattern");
         dependencies = List.copyOf(dependencies);
+        testDependencies = testDependencies == null ? List.of() : List.copyOf(testDependencies);
+    }
+
+    /** A manifest with no test-only dependencies — the shape read back from an archive. */
+    public ModuleManifest(String name, String packagePattern, List<String> dependencies)
+    {
+        this(name, packagePattern, dependencies, List.of());
+    }
+
+    /**
+     * Everything the module needs to compile: both halves' dependencies. `testDependencies`
+     * is source-only and never written to an archive — see the bootstrap ModuleManifest's
+     * class note; this is a deliberate duplicate (Truffle must not depend on bootstrap), so
+     * the two must be changed together.
+     */
+    public List<String> allDependencies()
+    {
+        if (testDependencies.isEmpty())
+        {
+            return dependencies;
+        }
+        List<String> all = new java.util.ArrayList<>(dependencies);
+        for (String dep : testDependencies)
+        {
+            if (!all.contains(dep))
+            {
+                all.add(dep);
+            }
+        }
+        return List.copyOf(all);
+    }
+
+    /** The manifest for an archive that holds BOTH halves (a non-split build). */
+    public ModuleManifest withAllDependencies()
+    {
+        return testDependencies.isEmpty()
+                ? this
+                : new ModuleManifest(name, packagePattern, allDependencies(), List.of());
     }
 
     public String toJson()
@@ -125,6 +164,7 @@ public record ModuleManifest(String name, String packagePattern, List<String> de
         String name = null;
         String packagePattern = null;
         List<String> dependencies = null;
+        List<String> testDependencies = List.of();
         boolean first = true;
         while (true)
         {
@@ -145,6 +185,7 @@ public record ModuleManifest(String name, String packagePattern, List<String> de
                 case "name" -> name = c.readString();
                 case "packagePattern" -> packagePattern = c.readString();
                 case "dependencies" -> dependencies = c.readStringArray();
+                case "testDependencies" -> testDependencies = c.readStringArray();
                 default -> throw new IllegalArgumentException("Unknown manifest key: '" + key + "'");
             }
         }
@@ -156,7 +197,7 @@ public record ModuleManifest(String name, String packagePattern, List<String> de
         if (name == null) throw new IllegalArgumentException("manifest is missing required 'name' field");
         if (packagePattern == null) throw new IllegalArgumentException("manifest is missing required 'packagePattern' field");
         if (dependencies == null) throw new IllegalArgumentException("manifest is missing required 'dependencies' field");
-        return new ModuleManifest(name, packagePattern, dependencies);
+        return new ModuleManifest(name, packagePattern, dependencies, testDependencies);
     }
 
     private static String quote(String s)

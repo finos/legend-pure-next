@@ -35,32 +35,38 @@ import { Execution } from "../execution/Execution.js";
 import { DEFAULT_NATIVES_EXTENSIONS, NativeRegistry } from "../execution/natives/NativeRegistry.js";
 import { fileSystemExtension } from "../execution/natives/FileSystemExtension.js";
 import { PureRuntime } from "./PureRuntime.js";
+import { EXTENSION_DESCRIPTORS, PURE_LANGUAGE_PDBS } from "./LanguageExtensions.js";
+import { PLATFORM_PDBS } from "./PlatformModules.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));   // .../platforms/javascript/src/core/runtime
 const REPO = join(HERE, "../../../../..");                 // -> repo root
 const SHARED = join(REPO, "shared");
 const GEN = join(HERE, "../../../generated");              // -> platforms/javascript/generated
 
-// PDBs backing the metadata globals: the code being translated (core +
-// core-tests) plus the translator's own metamodels (JS language, translation
-// conventions, shared canonicalization) — the translator instanceOf/matches
-// against those classes while building its output AST.
-// Repo-relative: bootstrap outputs live in shared/, module outputs in each
-// module's own build/ dir.
-const PDBS = [
-    "shared/core.pdb", "shared/core-tests.pdb", "shared/compiler.pdb",
-    "pure/modules/language/javascript/build/javascript.pdb",
-    "pure/modules/translation/javascript/build/javascript-translation.pdb",
-    "pure/modules/translation/javascript/build/javascript-translation-tests.pdb",
-    "pure/modules/translation/shared/build/translation-shared.pdb",
-];
+// The Pure language and nothing else — the same set the browser IDE loads. This entry point also
+// TRANSLATES at run time (bin/pure-js execute, the PCT and spec harnesses go through
+// `translatePackage`), which used to mean loading the translator's -tests pdb for its entry point
+// and, transitively, core-tests: 5.35 MB of PCT corpus for five lines of package walking. The entry
+// point now lives in the lean pdb where it belongs, so neither is needed.
+// The language, then what this platform adds to make it executable. Two lists because they have two
+// owners: the first is pure/specification/language_pure.json, the second is PlatformModules.js.
+const PDBS = [...PURE_LANGUAGE_PDBS, ...PLATFORM_PDBS];
 // Generated JS loaded into the shared global scope: the core library the
 // emitted code calls into, the meta::pure::test helpers (package walking,
 // PCT discovery, the in-memory adapter), and the translator stack.
 const GEN_MODULES = [
-    "core-metamodel.js", "core-functions.js", "core-ui.js",
-    "test-utils.js", "translation-shared.js", "js-lang.js", "translator.js",
-    "compiler.js", // dynamic compilation (__hostCompileSource) runs the translated compiler
+    "pure/compiler/metamodel.js", "pure/grammar/protocol.js", "pure/runtime/functions.js", "ui.js",
+    "test.js", "pure/runtime/translator/shared.js", "pure/runtime/translator/javascript.js", "pure/runtime/translator/translation.js",
+    "pure/compiler/compiler.js", // dynamic compilation (__hostCompileSource) runs the translated compiler
+    // The TEST halves. This host runs test functions — every `spec-*` recipe goes through the CLI,
+    // and the in-process PCT translates and evaluates the corpus — so it needs the elements the
+    // library halves leave out. The browser IDE's list (interfaces/web/main.js) deliberately has
+    // none of these: they were 1.2 MB of PCT corpus inside functions.js.
+    "pure/compiler/metamodel-tests.js", "pure/grammar/protocol-tests.js", "pure/runtime/functions-tests.js",
+    "pure/compiler/compiler-tests.js", "pure/runtime/translator/shared-tests.js",
+    "pure/runtime/translator/javascript-tests.js", "pure/runtime/translator/translation-tests.js",
+    // Every extension's translated Pure, from its descriptor — no extension is named here.
+    ...EXTENSION_DESCRIPTORS.flatMap((extension) => extension.jsPaths),
 ];
 
 /**
@@ -80,15 +86,28 @@ let loaded = null;
  * Load the runtime into the current context (idempotent) and return
  * `{ registry, runtime, execution, translatePackage, evalJs, call, resolveFn }`.
  * `pdbs` replaces the default PDB set (bin/pure-js passes its `--pdb` arguments through).
+ *
+ * `extraPdbs` ADDS to it, repo-relative, for a caller that needs Pure code the language itself does
+ * not: the PCT harness runs the corpus in core-tests, which is test content to execute and not part
+ * of what it takes to compile and run Pure. Keeping it out of the default is the difference between
+ * every host paying 5.35 MB and only the harness that reads it paying.
  */
-export async function loadRuntime({ pdbs } = {}) {
+export async function loadRuntime({ pdbs, extraPdbs = [] } = {}) {
     if (!loaded) {
         const runtimeModule = new InMemoryModule("runtime");
         const execution = new Execution(runtimeModule);
 
         const registry = new ModuleRegistry(readFileSync(join(SHARED, "specification/m3.fbs"), "utf8"));
-        for (const p of pdbs ? pdbs.map((f) => resolve(f)) : PDBS.map((f) => join(REPO, f))) {
+        for (const p of pdbs ? pdbs.map((f) => resolve(f)) : [...PDBS, ...extraPdbs].map((f) => join(REPO, f))) {
             registry.register(PdbModule.open(p));
+        }
+        // Every language extension on disk, module and language together. Skipped when the caller
+        // named its own `pdbs`: it chose exactly what to load, and an extension it did not ask for
+        // should not appear behind its back.
+        if (!pdbs) {
+            for (const extension of EXTENSION_DESCRIPTORS) {
+                registry.registerExtension(extension, PdbModule.open(join(REPO, extension.pdbPath)));
+            }
         }
         registry.register(runtimeModule); // __metadataInvoke routes here via the metadata globals
         registry.validate();

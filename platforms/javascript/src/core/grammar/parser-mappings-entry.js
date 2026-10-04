@@ -34,7 +34,7 @@
 // its sibling functions' lexical closures — `parseDocument` finds
 // `buildSection`, etc. without needing globalThis lookups internally; we only
 // publish the top-level entry points.
-import * as pm from "./build/parser-mappings.js";
+import * as pm from "../../../generated/pure/grammar/parser.js";
 
 const g = globalThis;
 

@@ -14,7 +14,7 @@
 
 // The ANTLR natives (meta::pure::functions::meta::antlr::*) as a NativesExtension:
 // parse with a named grammar and walk the resulting parse tree. They are implemented
-// by the ANTLR bundle (pure/modules/translation/javascript/js/build/antlr-bundle.js),
+// by the ANTLR bundle (platforms/javascript/build/antlr-bundle.js),
 // a classic script exposing them as the `PureAntlr` namespace. Hosts load that script
 // after building the runtime, so each hook finds its implementation on first call.
 

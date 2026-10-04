@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -76,6 +77,11 @@ Class meta::pure::compiler::CompilerContext
     // — non-PE types and any path not in the cache fall back to walking, with the
     // miss reported via println so coverage gaps are visible.
     linearizationCache : Map<String, List<String>>[1];
+    // Language extensions this compile runs with. Empty for an ordinary compile, in which
+    // case every pass behaves exactly as it did before extensions existed. Handed in by the
+    // host (see compile(files, extensions)) and read only by the catch-all arms, so
+    // compiler-pure never depends on an extension module.
+    extensions : meta::pure::compiler::extension::CompilerExtension[*];
     errors : String[*];
     scopeTypeParams : String[*];
     scopeMulParams : String[*];
@@ -339,6 +345,11 @@ Class meta::pure::compiler::CompilationStatistics
 Class meta::pure::compiler::CompilationResult
 {
     elements : PackageableElement[*];
+    // Language extensions this compile runs with. Empty for an ordinary compile, in which
+    // case every pass behaves exactly as it did before extensions existed. Handed in by the
+    // host (see compile(files, extensions)) and read only by the catch-all arms, so
+    // compiler-pure never depends on an extension module.
+    extensions : meta::pure::compiler::extension::CompilerExtension[*];
     errors : String[*];
     statistics : CompilationStatistics[0..1];
     context : CompilerContext[0..1];

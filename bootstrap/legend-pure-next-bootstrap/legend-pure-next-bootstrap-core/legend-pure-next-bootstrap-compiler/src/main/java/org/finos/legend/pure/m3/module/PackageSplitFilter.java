@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +22,8 @@ import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -56,20 +59,50 @@ public final class PackageSplitFilter
     public static List<PackageableElement> filterPackageChildren(
             List<? extends PackageableElement> partition, Set<String> keepPaths)
     {
+        // Elements of this partition by the path of the package that owns them, so a Package's children
+        // can be COMPLETED and not merely narrowed. Narrowing alone was not enough: a child added to a
+        // package by a source file other than the one that first defined it could be absent from every
+        // copy of that Package, leaving the element in the archive with nothing pointing at it — a
+        // package-tree walk then could not reach it, which is how `meta::pure::metamodel::relation`
+        // came to list 6 children while 12 of its classes were written.
+        Map<String, List<PackageableElement>> byParent = new LinkedHashMap<>();
+        for (PackageableElement e : partition)
+        {
+            String path = _PackageableElement.path(e);
+            if (path == null || !path.contains("::")) continue;
+            byParent.computeIfAbsent(path.substring(0, path.lastIndexOf("::")), k -> new ArrayList<>()).add(e);
+        }
+
         List<PackageableElement> out = new ArrayList<>(partition.size());
         for (PackageableElement e : partition)
         {
             if (e instanceof Package pkg)
             {
                 MutableList<PackageableElement> filtered = Lists.mutable.empty();
+                Set<String> have = new LinkedHashSet<>();
                 MutableList<PackageableElement> original = pkg._children();
                 if (original != null)
                 {
                     for (PackageableElement child : original)
                     {
                         String cp = _PackageableElement.path(child);
-                        if (cp != null && keepPaths.contains(cp)) filtered.add(child);
+                        if (cp != null && keepPaths.contains(cp)) { filtered.add(child); have.add(cp); }
                     }
+                }
+                // Append anything this partition owns that the children list missed. Existing entries keep
+                // their order, so a package that was already complete serialises exactly as before.
+                String pkgPath = _PackageableElement.path(pkg);
+                List<PackageableElement> owned = pkgPath == null ? null : byParent.get(pkgPath);
+                if (owned != null)
+                {
+                    List<PackageableElement> missing = new ArrayList<>();
+                    for (PackageableElement child : owned)
+                    {
+                        String cp = _PackageableElement.path(child);
+                        if (cp != null && keepPaths.contains(cp) && !have.contains(cp)) missing.add(child);
+                    }
+                    missing.sort(Comparator.comparing(_PackageableElement::path));
+                    filtered.addAll(missing);
                 }
                 out.add(((Package) pkg._copy())._children(filtered));
             }

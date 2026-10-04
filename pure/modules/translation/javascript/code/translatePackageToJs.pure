@@ -47,30 +47,121 @@ import meta::pure::translation::shared::*;
 //     duplicates, only the last definition under the same short name wins.
 // ============================================================================
 
-function <<test.TestDependency>> meta::external::language::javascript::translation::pdb::translatePackageToJs(rootPackagePath: String[1]): String[1]
+// TEST material, by the same rule the pdb split uses (bootstrap's TestElementFilter): a stereotype
+// from `meta::pure::profiles::test`, or `test`/`adapter` from the PCT profile. The other PCT
+// stereotypes — `function`, `platformOnly`, `testQualifierProfile` — annotate real platform code like
+// `map` and `filter`, so they must NOT count.
+//
+// Sharing the rule with the pdb split is the point: the two halves of a package agree about what a
+// test is, whichever side you look from.
+function meta::external::language::javascript::translation::pdb::isTestStereotype(
+   s: meta::pure::metamodel::extension::Stereotype[1]): Boolean[1]
+{
+   let profilePath = $s.profile->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
+   $profilePath == 'meta::pure::profiles::test'
+      || ($profilePath == 'meta::pure::test::pct::PCT' && ['test', 'adapter']->contains($s.value));
+}
+
+function meta::external::language::javascript::translation::pdb::isTestElement(
+   e: meta::pure::metamodel::PackageableElement[1]): Boolean[1]
+{
+   if (!$e->instanceOf(meta::pure::metamodel::extension::ElementWithStereotypes),
+      | false,
+      | $e->cast(@meta::pure::metamodel::extension::ElementWithStereotypes).stereotypes
+           ->exists(s | $s->isTestStereotype()));
+}
+
+// The LIBRARY half of a package: everything that is not test material.
+//
+// Tests are emitted separately (translatePackageTestsToJs) because they are not in a package of
+// their own — `meta::pure::functions::collection::tests::model::CO_Person` sits inside
+// `meta::pure::functions` — so a package walk cannot help but collect them. They were 63% of
+// functions.js, shipped to every host including the browser IDE, which needs none of it.
+function meta::external::language::javascript::translation::pdb::translatePackageToJs(rootPackagePath: String[1]): String[1]
+{
+   $rootPackagePath->translatePackageHalfToJs(false);
+}
+
+// The TEST half of a package: only test material. Loaded by the test harnesses, nothing else.
+function meta::external::language::javascript::translation::pdb::translatePackageTestsToJs(rootPackagePath: String[1]): String[1]
+{
+   $rootPackagePath->translatePackageHalfToJs(true);
+}
+
+// BOTH halves. For `meta::pure::test` — the test FRAMEWORK: runTests, PCT discovery, the adapters —
+// where a split makes no sense. Its `<<PCT.adapter>>` functions are test material by the rule above,
+// but the package exists only to run tests and only test hosts load it, so it stays whole rather than
+// being cut into `test.js` plus a companion that always travels with it.
+function meta::external::language::javascript::translation::pdb::translatePackageAllToJs(rootPackagePath: String[1]): String[1]
 {
    let root = pathToElement($rootPackagePath)->cast(@meta::pure::metamodel::Package);
-   let elements = $root->collectAllElements();
-   let header = '// Auto-generated from Pure PDB rooted at ' + $rootPackagePath + '\n' +
+   $rootPackagePath->emitElements($root->collectAllElements(), '');
+}
+
+function meta::external::language::javascript::translation::pdb::translatePackageHalfToJs(
+   rootPackagePath: String[1], tests: Boolean[1]): String[1]
+{
+   let root = pathToElement($rootPackagePath)->cast(@meta::pure::metamodel::Package);
+   let elements = $root->collectAllElements()->filter(e | $e->isTestElement() == $tests);
+   $rootPackagePath->emitElements($elements,
+      if($tests, | ' (TEST elements only)', | ' (library elements; tests are in the -tests companion)'));
+}
+
+function meta::external::language::javascript::translation::pdb::emitElements(
+   rootPackagePath: String[1],
+   elements: meta::pure::metamodel::PackageableElement[*],
+   half: String[1]): String[1]
+{
+   let header = '// Auto-generated from Pure PDB rooted at ' + $rootPackagePath + $half + '\n' +
                 '// Source: pure/modules/translation/javascript/code/translatePackageToJs.pure\n\n';
-   let parts = $elements->map(e | $e->translateElement());
+   // CLASSES FIRST. A generated file builds values at LOAD time — an enumeration's const is
+   // evaluated as the file runs, and each member is an `meta::pure::metamodel::type::Enum` whose
+   // classifier is a GenericTypeValue — so the classes those builds name have to be declared above
+   // them. metamodel.js held both: its enumeration const sat ~700 lines above the class
+   // declarations, so every member and classifier in it fell back to a plain object, and the
+   // `typeof globalThis.X === 'undefined'` guard meant no later load could repair it.
+   //
+   // A class declaration itself builds nothing, so hoisting them is always safe.
+   let classes = $elements->filter(e | $e->instanceOf(meta::pure::metamodel::type::Class));
+   let others  = $elements->filter(e | !$e->instanceOf(meta::pure::metamodel::type::Class));
+   let parts = $classes->concatenate($others)->map(e | $e->translateElement());
    let nonEmpty = $parts->filter(p | $p != '');
    $header + $nonEmpty->joinStrings('\n\n');
 }
 
 // Walk a Package recursively, returning every PE we know how to translate:
+// A Package.children entry resolved to the live element.
+//
+// The in-memory compile path stores children as TempCompilerPointer subtypes, so that cross-pass
+// updates to elementMap do not leave stale skeletons behind; pathToElement looks the canonical
+// pass-3 element up through the runtime resolver. Children that are not pointers — the PDB-load
+// path, which derefs at load time — pass through unchanged.
+//
+// This is deliberately a LOCAL COPY of meta::pure::test::resolveChild rather than a call to it:
+// that function lives in core-tests, and translatePackageToJs is the translator's entry point. A
+// host that translates at run time would otherwise have to load the whole PCT corpus (5.35 MB) to
+// reach five lines, which is what kept this file's entry point tagged <<test.TestDependency>>.
+function meta::external::language::javascript::translation::pdb::resolvePackageChild(
+   c: meta::pure::metamodel::PackageableElement[1]
+): meta::pure::metamodel::PackageableElement[1]
+{
+   if($c->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer),
+      | pathToElement($c->cast(@meta::pure::metamodel::pointer::TempCompilerPointer).path),
+      | $c);
+}
+
 // Classes, Enumerations, UserDefinedFunctions. Skips functions whose body
 // is wholly built from natives the translator already covers (everything is
 // included by default; the runtime preamble carries the natives).
-function <<test.TestDependency>> meta::external::language::javascript::translation::pdb::collectAllElements(
+function meta::external::language::javascript::translation::pdb::collectAllElements(
    pkg: meta::pure::metamodel::Package[1]
 ): meta::pure::metamodel::PackageableElement[*]
 {
    let direct = $pkg.children
-                   ->map(c | meta::pure::test::resolveChild($c))
+                   ->map(c | $c->resolvePackageChild())
                    ->filter(e | $e->isTranslatableElement());
    let subPackages = $pkg.children
-                        ->map(c | meta::pure::test::resolveChild($c))
+                        ->map(c | $c->resolvePackageChild())
                         ->filter(e | $e->instanceOf(meta::pure::metamodel::Package))
                         ->cast(@meta::pure::metamodel::Package);
    concatenate($direct, $subPackages->map(p | $p->collectAllElements()));
@@ -105,26 +196,24 @@ function meta::external::language::javascript::translation::pdb::translateElemen
 }
 
 // Pure Classes have no runtime representation in the emitted JavaScript —
-// instances are plain object literals built by the translator. There is no
-// `interface`/`type` in JS, so a Class emits nothing (the '' is dropped by the
-// caller's non-empty filter).
-// Publish the class's static metadata into the path-keyed registry
-// (`__registerClass('<path>', {properties: [{name, eval}], …})`) so reflective
-// `<Class>.properties->…->eval(instance)` chains and QP dispatch
-// (`__classRef(path).qualifiedProperties…`) resolve in the bundle, exactly as
-// the per-lambda adapter emits them next to each translated lambda. Classes
-// whose property/QP bodies the translator can't render yet degrade to a
-// comment — references then fall back to the `__pureResolve` proxy.
+// A Pure Class becomes a JavaScript class (translateClassDecl): accessors for its properties, and a
+// `static qualifiedProperties` for the ones whose bodies only the translator can render. A class the
+// translator cannot render degrades to a comment, and references to it then fall back to the
+// `__pureResolve` proxy.
 function meta::external::language::javascript::translation::pdb::translateClass(
    cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]
 ): String[1]
 {
    let path = $cls->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
-   let attempt = tryEval(|
+   // ONE thing per class now: the class. Its accessors are how slots are read and written, and its
+   // `static qualifiedProperties` is what `__qp` dispatches through — so the `__registerClass` side
+   // registry is gone, and with it 478 registrations whose `properties` half nothing read.
+   let decl = tryEval(|
       jsSourceFile('translated.js', [$cls->translateClassDecl(defaultConvention())])->serialize());
-   if ($attempt.failure->isNotEmpty(),
-      | '// class registration failed for ' + $path + ': ' + $attempt.failure->toOne().message,
-      | '// Class ' + $path + '\n' + $attempt.value);
+   let declText = if($decl.failure->isNotEmpty(),
+                     | '// class declaration failed for ' + $path + ': ' + $decl.failure->toOne().message,
+                     | $decl.value->toOne());
+   '// Class ' + $path + '\n' + $declText;
 }
 
 // `Enum Pkg::Color { RED, GREEN }` → the same SELF-DESCRIBING const the
@@ -137,9 +226,20 @@ function meta::external::language::javascript::translation::pdb::translateEnumer
 ): String[1]
 {
    let decl = $en->translateEnumerationDecl(defaultConvention());
-   let stmt = ^$decl(modifiers = ModifierFlag.Export);
+   // GUARDED and published, for the same reason a class is (see translateClassDeclaration): a
+   // top-level `const E = {...}` is a global lexical binding under `vm.runInThisContext`, so an
+   // enumeration arriving twice in one process — a module loaded by two hosts, or the in-process
+   // path translating a package whose enums are already loaded — is a SyntaxError. Enum members are
+   // referenced by the SHORT name (`AggregationKind.None`), which resolves through globalThis.
+   let name = safeJsName($en->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->split('::')->last()->toOne());
+   let publish = jsExprStmt(jsBinary(jsAccess(jsId('globalThis'), $name), '=', jsId($name)));
    '// Enumeration ' + $en->elementToPath() + '\n' +
-   jsSourceFile('translated.js', [$stmt])->serialize();
+   jsSourceFile('translated.js', [
+      jsIfStmt(jsBinary(jsTypeof(jsAccess(jsId('globalThis'), $name)), '===', jsStrLit('undefined')),
+               jsBlock([$decl->cast(@meta::external::language::javascript::metamodel::Statement),
+                        $publish->cast(@meta::external::language::javascript::metamodel::Statement)]),
+               [])
+   ])->serialize();
 }
 
 // Translate a UDF through the existing `translateFunction` pipeline, then

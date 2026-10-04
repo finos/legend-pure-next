@@ -37,34 +37,45 @@ import { PureRuntime } from "../../core/runtime/PureRuntime.js";
 import { registerPureLanguage, keywordsFromGrammar, primitivesFromRegistry,
          compileErrorMarkers, parseErrorMarkers } from "./pure-language.js";
 import { createConceptTree } from "./concepts.js";
+import { createModulePanel } from "./modules-panel.js";
+import { createWorkspace } from "./workspace.js";
+import { debounce } from "./source-store.js";
+import { createProgress, downloadAll, fetchBytesWithProgress } from "./progress.js";
+import { EXTENSION_DESCRIPTORS, PURE_LANGUAGE_PDBS } from "../../core/runtime/LanguageExtensions.js";
+import { PLATFORM_PDBS } from "../../core/runtime/PlatformModules.js";
 import { createConsole } from "./console-panel.js";
 import { initSplitters, initTheme, definePureThemes } from "./layout.js";
 import { openInspector } from "./inspector.js";
+import { createDiagramPanel } from "./diagram/panel.js";
+import { unknownSectionHint, unknownSectionName, sectionHeaderLine } from "./section-hint.js";
 
 const REPO = "../../../../..";
 const SHARED = `${REPO}/shared`;
 const GEN = "../../../generated";
 
-// Same module list as the Node runtime (src/core/runtime/load-runtime.js):
-// core + compiler compile user code; javascript/translation-shared/
-// javascript-translation are the translator's own metamodels (it
-// instanceOf/matches against those classes while building its output AST).
-// Repo-relative: bootstrap outputs in shared/, module outputs in each module's build/.
-const PDBS = [
-    "shared/core.pdb", "shared/core-tests.pdb", "shared/compiler.pdb",
-    "pure/modules/language/javascript/build/javascript.pdb",
-    "pure/modules/translation/javascript/build/javascript-translation.pdb",
-    "pure/modules/translation/shared/build/translation-shared.pdb",
-];
+// The Pure language and nothing else. In particular NOT core-tests: nothing in the language needs
+// it, and the only thing that pulls it in is the translator's -tests pdb, which this page does not
+// load (javascript-translation declares core-tests as a `testDependencies` module, so the lean pdb
+// here does not claim it and `validate()` does not demand it). That is 5.35 MB of PCT corpus the
+// page never reads.
+const PDBS = [...PURE_LANGUAGE_PDBS, ...PLATFORM_PDBS];
+// The language extensions' own pdbs, from their generated descriptors rather than named here. They
+// are downloaded with the rest so the progress bar still covers every byte the page needs, but they
+// are REGISTERED differently — paired with the language each one adds.
+const EXTENSION_PDBS = EXTENSION_DESCRIPTORS.map((extension) => extension.pdbPath);
 // Generated JS loaded into the shared global scope: the core library the
 // emitted code calls into, then the translator stack, then the compiler.
 const GEN_MODULES = [
-    "core-metamodel.js", "core-functions.js", "core-ui.js",
-    "test-utils.js", "translation-shared.js", "js-lang.js", "translator.js",
-    "compiler.js",
+    "pure/compiler/metamodel.js", "pure/grammar/protocol.js", "pure/runtime/functions.js", "ui.js",
+    "test.js", "pure/runtime/translator/shared.js", "pure/runtime/translator/javascript.js", "pure/runtime/translator/translation.js",
+    "pure/compiler/compiler.js",
+    // Every extension's translated Pure, from its descriptor — no extension is named here.
+    ...EXTENSION_DESCRIPTORS.flatMap((extension) => extension.jsPaths),
 ];
 
-const COMPILE = "meta$pure$compiler$compile_PureFile_MANY__CompilationResult_1_";
+// The overload that takes the language extensions, so a `###Diagram` section becomes a real
+// element rather than being parsed and dropped. Silent: the console panel prints the errors.
+const COMPILE = "meta$pure$compiler$compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
 const TO_REPRESENTATION = "meta$pure$functions$string$toRepresentation_Any_1__String_1_";
 const GO_PATH = "go__Any_MANY_"; // mangled path of `function go():Any[*]`
 // One element's JavaScript, without eval'ing or registering it — what the inspector shows.
@@ -79,6 +90,10 @@ const panel = createConsole(document.getElementById("console"));
 let editor = null;    // the Monaco editor, once its loader has run
 let monaco = null;
 let tree = null;
+let workspace = null;     // the files, and the Monaco editor over them
+let progress = null;      // the start-up bar, removed once Ready
+let modulePanel = null;   // the Modules tab beside Concepts
+let diagramPanel = null;  // the Diagram tab, created once Monaco exists
 
 /** Monaco's AMD loader is a classic script; this resolves once editor.main has loaded. */
 function loadMonaco() {
@@ -105,9 +120,7 @@ function loadMonaco() {
 }
 
 async function fetchBytes(url) {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
-    return new Uint8Array(await r.arrayBuffer());
+    return fetchBytesWithProgress(url);
 }
 async function fetchText(url) {
     const r = await fetch(url);
@@ -157,7 +170,7 @@ const paint = () => new Promise((r) => requestAnimationFrame(() => requestAnimat
 
 function warmCompilerCache() {
     try {
-        compileFn([runtime.parse("warmup", WARMUP_SRC)]);
+        compileFn([runtime.parse("warmup", WARMUP_SRC)], runtime.compilerExtensions(), true);
     } catch (e) {
         // Best-effort: if the snippet ever fails to compile, the app still
         // works — the first real Run just pays the cold cost as before.
@@ -166,13 +179,27 @@ function warmCompilerCache() {
 }
 
 async function setup() {
-    status.textContent = "Loading metamodel (m3.fbs + PDBs)…";
+    // The bar overlays the header's bottom edge and the status line is its label, so there is
+    // no progress row to insert and remove — which is what made the page jump on load.
+    progress = createProgress({ bar: document.getElementById("startup-bar"), label: status });
+    progress.indeterminate("fetching the metamodel schema…");
     // Schema TEXT — the store parses it lazily with the translated Pure parser
     // (pdb/schema/parser.pure), which is only available once the generated compiler
     // modules below have loaded; the first metadata read comes after that.
     const schemaText = await fetchText(`${SHARED}/specification/m3.fbs`);
     registry = new ModuleRegistry(schemaText);
-    for (const f of PDBS) registry.register(new PdbModule(openZip(await fetchBytes(`${REPO}/${f}`)), f));
+
+    // The archives are the only part of start-up with a real denominator — ~13 MB of them —
+    // so this is where the bar is determinate. Opening them is deliberately NOT inside the
+    // download loop: openZip reads the central directory, which is cheap but not free, and
+    // interleaving it would make the byte count stutter for reasons the label cannot explain.
+    const allPdbs = [...PDBS, ...EXTENSION_PDBS];
+    const archives = await downloadAll(allPdbs.map((f) => `${REPO}/${f}`), progress,
+                                       { label: (url) => url.split("/").pop() });
+    progress.indeterminate("opening archives…");
+    PDBS.forEach((f, i) => registry.register(new PdbModule(openZip(archives[i]), f)));
+    EXTENSION_DESCRIPTORS.forEach((extension, i) => registry.registerExtension(
+        extension, new PdbModule(openZip(archives[PDBS.length + i]), extension.pdbPath)));
     registry.register(runtimeModule); // __metadataInvoke routes here via the metadata globals
     registry.validate();
     // Metadata globals (globalThis.__metadata*, PDB-backed), the compileSource hook and
@@ -184,7 +211,7 @@ async function setup() {
         .withRuntimeModule(runtimeModule)
         .build();
 
-    status.textContent = "Loading compiler + translator…";
+    progress.indeterminate("loading the compiler and translator…");
     for (const m of GEN_MODULES) Object.assign(globalThis, await import(`${GEN}/${m}`));
     runtimeModule.invalidate();
     compileFn = globalThis[COMPILE];
@@ -195,40 +222,127 @@ async function setup() {
     // The editor, its language (keywords from the grammar, primitives from the graph just
     // loaded) and the concept tree. Monaco comes up AFTER the metadata so the primitive
     // list is real rather than guessed.
-    status.textContent = "Starting editor…";
+    progress.indeterminate("starting the editor…");
     monaco = await loadMonaco();
     registerPureLanguage(monaco, {
         keywords: keywordsFromGrammar(await fetchText(GRAMMAR)),
         primitives: primitivesFromRegistry(registry),
     });
     definePureThemes(monaco);
-    editor = monaco.editor.create(document.getElementById("editor"), {
-        value: SAMPLE,
-        language: "pure",
-        automaticLayout: true,
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        fontSize: 13,
-        tabSize: 2,
-        renderWhitespace: "selection",
+    // The files. The in-memory module is the workspace, so every edit writes through to it
+    // and a reload restores what was there (source-store.js).
+    workspace = createWorkspace({
+        monaco,
+        container: document.getElementById("editor"),
+        runtimeModule,
+        sample: SAMPLE,
+        onFilesChange: () => { refreshTree(); },
+        onActiveChange: () => { diagramPanel?.sourceChanged(); refreshTree(); },
+        onSaveFailed: () => panel.error("This browser will not remember your files "
+            + "(private window, or storage full). Editing still works; a reload will start from the sample."),
+        editorOptions: {
+            automaticLayout: true,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            fontSize: 13,
+            tabSize: 2,
+            renderWhitespace: "selection",
+        },
     });
+    editor = workspace.editor;
+
     editor.addCommand(monaco.KeyCode.F9, () => { if (!runBtn.disabled) run(); });
     editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F9, () => { if (!runBtn.disabled) compileOnly(); });
-    editor.getModel().onDidChangeContent(() => monaco.editor.setModelMarkers(editor.getModel(), "pure", []));
+    // onDidChangeModelContent follows whichever file is open; onDidChangeContent on a single
+    // model would go dead the moment you switched files.
+    editor.onDidChangeModelContent(() => monaco.editor.setModelMarkers(editor.getModel(), "pure", []));
 
     // The theme is applied after the editor exists so Monaco switches with the page.
     initTheme(monaco, document.getElementById("theme"));
     initSplitters(document.querySelector("main"));
 
-    tree = createConceptTree(document.getElementById("concepts"), showConcept, inspectConcept);
-    tree.setEntries(registry.elementKinds());
+    // The Diagram tab. The source text is the model — it parses the `###Diagram` section
+    // out of the editor and writes every gesture straight back, so Undo, Compile and Run
+    // need to know nothing about diagrams.
+    diagramPanel = createDiagramPanel({
+        host: {
+            tabs: document.getElementById("tabs"),
+            editorEl: document.getElementById("editor"),
+            panelEl: document.getElementById("diagramPanel"),
+            canvas: document.getElementById("diagramCanvas"),
+            tools: document.getElementById("diagramTools"),
+            zoomLabel: document.getElementById("dgZoom"),
+            fit: document.getElementById("dgFit"),
+            zoomIn: document.getElementById("dgIn"),
+            zoomOut: document.getElementById("dgOut"),
+        },
+        getSource: () => editor.getValue(),
+        setSource: (text) => {
+            // An undoable edit over the whole model, not setValue — setValue would wipe the
+            // undo stack, so a mis-drag could not be undone.
+            const model = editor.getModel();
+            editor.executeEdits("diagram", [{ range: model.getFullModelRange(), text }]);
+        },
+        getRegistry: () => registry,
+        onDiagramsChanged: () => refreshTree(),
+        onOpenType: (path) => { diagramPanel.showCode(); showConcept(path, "Class", runtimeModule.name); },
+        onRelayout: () => editor.layout(),
+    });
+    editor.onDidChangeModelContent(() => diagramPanel.sourceChanged());
+    // Keep the Modules tab's line/char counts honest while typing. Debounced, because it
+    // reads every file's text; the panel itself declines to redraw over an open name input.
+    const refreshModules = debounce(() => modulePanel?.refresh(), 300);
+    editor.onDidChangeModelContent(refreshModules);
+    // Clean-up is user-initiated and always reports what it did: the diagram is part of the
+    // user's source, so nothing may be deleted from it quietly.
+    document.getElementById("dgClean").addEventListener("click", () => {
+        const removed = diagramPanel.cleanUp();
+        if (!removed) return;
+        const { removedTypeViews, removedEdges } = removed;
+        if (!removedTypeViews && !removedEdges) panel.info("diagram: nothing to clean up");
+        else panel.info(`diagram: removed ${removedTypeViews} class${removedTypeViews === 1 ? "" : "es"}`
+                        + ` and ${removedEdges} edge${removedEdges === 1 ? "" : "s"} with no counterpart in the graph`);
+    });
+
+    tree = createConceptTree(document.getElementById("concepts"), showConcept, inspectConcept,
+                             (path) => diagramPanel.addType(path),
+                             // Cleared from the concept tab: keep the Modules tab in step.
+                             (moduleName) => { if (moduleName === null) modulePanel.clearSelection(); });
+    // The left pane's second tab: which archive the graph came from, and what each one
+    // declares. Selecting a module filters the concept tree to it.
+    modulePanel = createModulePanel(
+        document.getElementById("modules"),
+        (moduleName) => { tree.setModuleFilter(moduleName); selectSide("concepts"); },
+        // The in-memory module's sources ARE the workspace's files, so the panel edits them
+        // directly. Opening one shows the Code tab, because that is where editing happens.
+        {
+            list: () => workspace.files(),
+            open: (id) => { workspace.open(id); diagramPanel.showCode(); },
+            create: (name) => { workspace.create(name); diagramPanel.showCode(); },
+            rename: (id, name) => workspace.rename(id, name),
+            remove: (id) => workspace.remove(id),
+        });
+
+    document.getElementById("reset").addEventListener("click", () => {
+        workspace.reset();
+        panel.info("workspace reset to the sample");
+        compileOnly();
+    });
+    const sideTabs = document.getElementById("sideTabs");
+    sideTabs.addEventListener("click", (e) => {
+        const button = e.target.closest(".tab");
+        if (button) selectSide(button.dataset.side);
+    });
+
+    refreshTree();
     panel.info(`${registry.elementKinds().length} elements loaded from ${PDBS.length} archives.`);
 
-    status.textContent = "Warming compiler (one-time)…";
+    progress.indeterminate("warming the compiler (one-time)…");
     await paint();
     warmCompilerCache();
 
     status.textContent = "Ready.";
+    progress.done();
     runBtn.disabled = false;
     document.getElementById("compile").disabled = false;
 
@@ -236,6 +350,41 @@ async function setup() {
     // an empty console — but do NOT execute it: opening a page should not run a program.
     // The warmup above has already paid the cold-decode cost, so this is the warm path.
     compileOnly();
+}
+
+/**
+ * Everything the tree lists: the compiled graph, plus the `###Diagram` sections of the open
+ * source that have not been compiled yet.
+ *
+ * A COMPILED diagram is an ordinary graph element — the `###Diagram` extension
+ * (pure/extensions/diagram) puts it there — so `registry.elementKinds()` lists it like any
+ * class, with no change to m3.ttl: `Diagram` is a class in the extension's own PDB, so it
+ * shifts no `AnyUnion` discriminant and invalidates no archive or golden.
+ *
+ * The editor's own names are still merged in, for the diagram a person is typing right now:
+ * it exists in the buffer before any compile has seen it, and the tree should show it then.
+ * Names the graph already has are dropped, so a compiled diagram is listed once, as a graph
+ * element rather than as a buffer one.
+ */
+function refreshTree() {
+    const compiled = registry.elementKinds();
+    const known = new Set(compiled.map(([path]) => path));
+    const diagrams = (diagramPanel?.names() ?? [])
+        .filter((name) => !known.has(name))
+        .map((name) => [name, "Diagram", "editor"]);
+    tree.setEntries([...compiled, ...diagrams]);
+    // Element counts move as the editor's module is recompiled, so the module list is
+    // refreshed with the tree rather than only once at start-up.
+    modulePanel?.setRegistry(registry);
+}
+
+/** Swap the left pane between the concept tree and the module list. */
+function selectSide(side) {
+    for (const button of document.querySelectorAll("#sideTabs .tab")) {
+        button.classList.toggle("selected", button.dataset.side === side);
+    }
+    document.getElementById("concepts").hidden = side !== "concepts";
+    document.getElementById("modules").hidden = side !== "modules";
 }
 
 /**
@@ -247,7 +396,11 @@ async function setup() {
  * does not have, so clicking it does nothing for now.
  */
 function showConcept(path, kind, module) {
+    // A diagram has no source position to jump to — showing it means opening it.
+    if (kind === "Diagram") { diagramPanel.show(path); return; }
     if (module !== runtimeModule.name) return;
+    // With several files the element may not be in the one on screen, so follow its
+    // sourceId first; the range below is meaningless against the wrong file.
     const element = registry.getElement(path);
     // Pure multiplicity crosses into this host as a value OR a one-element array, so the
     // SourceInformation itself has to be unwrapped before its fields are read; and Pure
@@ -258,6 +411,11 @@ function showConcept(path, kind, module) {
     const si = one(element?.sourceInformation);
     const startLine = num(si?.startLine);
     if (!startLine) return;
+    const sourceId = one(si.sourceId);
+    if (typeof sourceId === "string" && sourceId) {
+        diagramPanel.showCode();
+        workspace.open(sourceId);
+    }
     // Pure's end column is inclusive; Monaco's is exclusive.
     const range = new monaco.Range(startLine, num(si.startColumn) ?? 1,
                                    num(si.endLine) ?? startLine, (num(si.endColumn) ?? 1) + 1);
@@ -303,6 +461,49 @@ function go(): Any[*]
 const since = (t0) => `${Math.round(performance.now() - t0)}ms`;
 
 /**
+ * The `###Section` names this runtime can parse — `Pure`, whatever compiler-tests
+ * contributes, and `Diagram`. Read from the runtime's own language extensions, so the list
+ * is whatever is actually loaded rather than a list kept in step by hand.
+ */
+function knownSectionNames() {
+    const one = (v) => (Array.isArray(v) ? v[0] : v);
+    try {
+        return runtime.sectionParsers()
+            .map((pair) => one(one(pair)?.first))
+            .filter((name) => typeof name === "string")
+            .sort();
+    } catch {
+        return [];
+    }
+}
+
+/** Report a parse failure against the file it happened in, with markers on that file. */
+function reportParseFailure(sourceId, content, e) {
+    panel.error(`${sourceId}: ${e.message}`);
+    const model = workspace.model(sourceId);
+    const setMarkers = (ms) => { if (model) monaco.editor.setModelMarkers(model, "pure", ms); };
+    // A misspelt `###Section` stops the whole file compiling, and the failure names only the
+    // section that does not exist. Say which ones do, and mark the header itself.
+    const unknown = unknownSectionName(e);
+    if (unknown) {
+        for (const line of unknownSectionHint(e, knownSectionNames())) panel.info(line);
+        const at = sectionHeaderLine(content, unknown);
+        if (at) {
+            setMarkers([{
+                severity: monaco.MarkerSeverity.Error,
+                message: `Unknown section ###${unknown}`,
+                startLineNumber: at, startColumn: 1,
+                endLineNumber: at, endColumn: unknown.length + 4,
+            }]);
+        }
+    } else if (Array.isArray(e.parseErrors)) {
+        setMarkers(parseErrorMarkers(monaco, e.parseErrors, model));
+    }
+    // Bring the offending file to the front — an error in a file you cannot see is a puzzle.
+    workspace.open(sourceId);
+}
+
+/**
  * Parse and compile what the editor holds. Returns null when it did not compile, having
  * already reported why — errors in the console and markers in the editor.
  *
@@ -311,25 +512,32 @@ const since = (t0) => `${Math.round(performance.now() - t0)}ms`;
  */
 function compileEditor() {
     panel.clear();
-    const model = editor.getModel();
-    const setMarkers = (ms) => monaco.editor.setModelMarkers(model, "pure", ms);
-    setMarkers([]);
+    // Clear markers on EVERY file: an error fixed in one file must not leave its squiggle
+    // behind just because the compile now fails in another.
+    for (const { id } of workspace.files()) {
+        const model = workspace.model(id);
+        if (model) monaco.editor.setModelMarkers(model, "pure", []);
+    }
 
     let t0 = performance.now();
-    let parsed;
-    try {
-        parsed = runtime.parse("editor", editor.getValue());
-    } catch (e) {
-        panel.error(e.message);
-        if (Array.isArray(e.parseErrors)) setMarkers(parseErrorMarkers(monaco, e.parseErrors, model));
-        return null;
+    // The whole workspace compiles together — that is what lets one file reference another.
+    // The module already holds each file's text (workspace writes through on every edit), so
+    // its sources and its elements always describe the same thing.
+    const parsedFiles = [];
+    for (const { sourceId, content } of workspace.sources()) {
+        try {
+            parsedFiles.push(runtime.parse(sourceId, content));
+        } catch (e) {
+            reportParseFailure(sourceId, content, e);
+            return null;
+        }
     }
     panel.info(`parsed in ${since(t0)}`);
 
     t0 = performance.now();
     let compiled;
     try {
-        compiled = compileFn([parsed]);
+        compiled = compileFn(parsedFiles, runtime.compilerExtensions(), true);
     } catch (e) {
         panel.error(e && e.stack ? e.stack : String(e));
         return null;
@@ -337,7 +545,15 @@ function compileEditor() {
     const errors = (compiled.errors || []).map(String);
     if (errors.length) {
         errors.forEach((e) => panel.error(e));
-        setMarkers(compileErrorMarkers(monaco, errors));
+        const files = workspace.files();
+        for (const { id } of files) {
+            const model = workspace.model(id);
+            if (!model) continue;
+            // A compile error's text names the sourceId it came from, so each file gets its
+            // own; with a single file there is nothing to attribute and they all belong to it.
+            const mine = files.length === 1 ? errors : errors.filter((message) => message.includes(id));
+            monaco.editor.setModelMarkers(model, "pure", compileErrorMarkers(monaco, mine));
+        }
         return null;
     }
     panel.info(`compiled in ${since(t0)}`);
@@ -359,7 +575,9 @@ function compileEditor() {
 function compileOnly() {
     const result = compileEditor();
     if (!result) return;
-    tree.setEntries(registry.elementKinds());
+    refreshTree();
+    // A compile can add or change properties, which is what fills the diagram's boxes.
+    diagramPanel?.graphChanged();
     const n = result.elements.length;
     panel.info(`${n} element${n === 1 ? "" : "s"} in the graph — browse them on the left`);
     panel.info("compiled only — press Run (F9) to execute");
@@ -381,7 +599,7 @@ function run() {
 
     // Already in the graph from the compile; refreshed because translation may have added
     // the function stores behind them.
-    tree.setEntries(registry.elementKinds());
+    refreshTree();
 
     const goEl = elements.find((el) => el && el.__purePath === GO_PATH);
     const goFn = goEl ? runtimeModule.resolveFn(GO_PATH, 0) : null;
@@ -424,5 +642,7 @@ document.addEventListener("keydown", (e) => {
 
 setup().catch((e) => {
     status.textContent = "Setup failed.";
+    // Leaving the bar spinning would suggest something is still happening.
+    progress?.done();
     panel.error(String(e && e.stack ? e.stack : e));
 });

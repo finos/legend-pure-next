@@ -1,3 +1,17 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // tools/test-dashboard/surefire.mjs - turns the JUnit results Maven's surefire plugin leaves in
 // <module>/target/surefire-reports/TEST-*.xml into dashboard reports (see README.md):
 //   test-results/java/<maven-module>/<class>.json   one per test class
@@ -22,6 +36,12 @@ const SPEC_RUNS = [
   { spec: "grammar", run: "pure@cli-bootstrap", classes: ["org.finos.legend.pure.next.parser.mappings.PureParserMatchesJavaParserTest"], idPrefix: "grammar:" },
   { spec: "compiler", run: "java", classes: ["org.finos.legend.pure.m3.specification.CompilerCompiledGraphTest", "org.finos.legend.pure.m3.specification.CompilerErrorTest"] },
   { spec: "pdb", run: "java", classes: ["org.finos.legend.pure.m3.specification.CompilerCompiledGraphPdbRoundTripTest"] },
+  // The PCT corpus as the MAVEN BUILD runs it: in-process, through JUnit, rather than through the
+  // bootstrap CLI. 831 of its 833 ids are the `pure@cli-bootstrap` set, so the column is mostly a
+  // second view of that host — but it is the view that gates `mvn test`, and it carries two rawType
+  // tests the corpus the other columns share does not. Its skipped ids arrive as
+  // "<path> [skipped: <reason>]" and are normalised in caseOf, so rows line up with every other run.
+  { spec: "pct", run: "pure@junit-bootstrap", classes: ["org.finos.legend.pure.runtime.TestPCT"] },
 ];
 
 function surefireFiles(repoRoot) {

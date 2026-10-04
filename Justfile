@@ -1,3 +1,17 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Legend Pure Next — top-level orchestrator.
 #
 # Quickstart:
@@ -20,6 +34,7 @@ mod truffle "platforms/truffle/Justfile"
 mod javascript "platforms/javascript/Justfile"
 mod java "platforms/java/Justfile"
 mod modules "pure/modules/Justfile"
+mod extensions "pure/extensions/Justfile"
 
 root := justfile_directory()
 out  := root / "shared"
@@ -34,7 +49,7 @@ default: test
 # javascript platform's generate recipes run the TRANSLATED translator, which
 # lives in the modules tree's pdbs (javascript.pdb, translation-shared.pdb,
 # javascript-translation.pdb) — so modules must build first.
-build: bootstrap::build truffle::build modules::build javascript::build
+build: bootstrap::build truffle::build extensions::build-tests modules::build javascript::build
 
 # Top-level `build` already chains every subproject's `build` in dep order — alias for symmetry with sub-Justfiles' `build-all`.
 build-all: build
@@ -49,13 +64,13 @@ test:
 
 # The suites `test` runs. modules::build stages the translator pdbs
 # javascript::test's generate step needs (see `build` ordering note).
-_test: bootstrap::test truffle::test modules::build javascript::test java::test-all
+_test: bootstrap::test truffle::test extensions::build-tests modules::build javascript::test java::test-all
 
 # Delete every generated/ directory so the suites below cannot pass against
 # stale output. These are all gitignored build artifacts, each with a recipe
 # that rebuilds it — nothing here is recoverable only from a backup:
 #   pure/specification/compiler/compiler-pure/pdb/writer/generated      <- bootstrap::generate-writer
-#   pure/modules/translation/javascript/js/generated         <- modules::translation_javascript::antlr-generate-parsers
+#   platforms/javascript/generated                           <- javascript::generate-all + javascript::antlr-generate-parsers
 #   platforms/javascript/generated                           <- javascript::generate-all
 # Found by name rather than listed, so a new one is covered automatically; if it
 # has no rebuild recipe, the suite that needs it fails loudly, which is the point.
@@ -71,14 +86,16 @@ clean-generated:
 # Run `test-all` across subprojects.
 #
 # `clean-generated` runs first so every generated/ tree is rebuilt from source
-# during this run. `antlr-bundle` then has to run BEFORE truffle::test-all:
-# it regenerates js/generated (the ANTLR parsers) and re-bundles
-# js/build/antlr-bundle.js, which the truffle extension jar bakes in at
-# process-resources. Without it the delete above would leave the parsers gone
-# and the jar would silently bake the previous bundle — the stale-artifact bug
-# this recipe exists to prevent. The other two generated/ trees are rebuilt by
-# the subproject test-alls themselves (bootstrap::generate-writer via
-# build-compiler-pdb; javascript::generate-all via test-compiler).
+# during this run. `javascript::antlr-bundle` then has to run early, because the
+# delete above removes platforms/javascript/generated/grammar (the ANTLR parsers)
+# and nothing else regenerates them before a host tries to parse.
+#
+# It no longer has anything to do with the truffle jar: that jar once baked the
+# bundle in at process-resources, and this comment said so until the JS platform
+# became standalone — `PureAntlr` is now referenced only from platforms/javascript.
+# The other generated/ trees are rebuilt by the subproject test-alls themselves
+# (bootstrap::generate-writer via build-compiler-pdb; javascript::generate-all via
+# test-compiler).
 #
 # The dashboard is rendered at the end even when a suite fails, so the failures show
 # up there; the recipe still exits with the suites' status.
@@ -106,7 +123,7 @@ test-all:
 # modules::build alone is not enough: it builds translation_java::build, not
 # build-tests, and the reader generation needs the tests PDB as well (its entry
 # points are <<test.TestDependency>>).
-_test-all: clean modules::translation_javascript::antlr-bundle bootstrap::test-all modules::build modules::translation_java::build-tests truffle::test-all javascript::test-all modules::test-all
+_test-all: clean javascript::antlr-bundle bootstrap::test-all modules::build modules::translation_java::build-tests truffle::test-all javascript::test-all modules::test-all
 
 # Render every translator gallery (java + javascript + truffle).
 gallery: modules::gallery

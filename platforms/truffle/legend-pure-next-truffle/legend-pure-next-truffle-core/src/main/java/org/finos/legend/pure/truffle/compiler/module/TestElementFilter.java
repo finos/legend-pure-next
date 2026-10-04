@@ -147,7 +147,7 @@ public final class TestElementFilter
     public static ModuleManifest testsManifest(
             ModuleManifest base)
     {
-        List<String> deps = new java.util.ArrayList<>(base.dependencies());
+        List<String> deps = new java.util.ArrayList<>(base.allDependencies());
         if (!deps.contains(base.name()))
         {
             deps.add(base.name());

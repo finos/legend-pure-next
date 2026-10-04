@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -367,7 +368,10 @@ function meta::pure::compiler::runCompilePass1(e:meta::pure::protocol::grammar::
                 sourceInformation = compileSourceInformation($p.p_sourceInformation, $ctx)
             );
             putElementUnderPackage($pkgRes.context, $pName, $packagePath, $primSkeleton);,
-        a:meta::pure::protocol::grammar::PackageableElement[1] | $ctx
+        // Unrecognised by every arm above: offer it to the extensions. Unclaimed, the
+        // context comes back untouched, which is what this arm did on its own.
+        a:meta::pure::protocol::grammar::PackageableElement[1] |
+            meta::pure::compiler::extension::runExtensionPass1($ctx.extensions, $a, $ctx)
     ]);
 }
 
@@ -448,7 +452,7 @@ function meta::pure::compiler::runCompilePass2(e:meta::pure::protocol::grammar::
             let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
             ^$acc(values += $acc.context.elementMap->get($prName)->toOne()->cast(@meta::pure::metamodel::PackageableElement));,
         a:meta::pure::protocol::grammar::PackageableElement[1] |
-            $acc
+            meta::pure::compiler::extension::runExtensionPass2($acc.context.extensions, $a, $acc)
     ]);
     let elapsed = currentTimeMillis() - $beforeT;
     let postCtx = $newAcc.context;
@@ -486,6 +490,9 @@ function meta::pure::compiler::runCompilePass3(elem:meta::pure::metamodel::Packa
             resolveAssociation($assoc, $scopedCtx);,
         pt:PrimitiveType[1] |
             resolvePrimitive($pt, $scopedCtx);,
+        // Pass 3 sees COMPILED elements, so an extension claims its own through `owns`.
+        a:meta::pure::metamodel::PackageableElement[1] |
+            meta::pure::compiler::extension::runExtensionPass3($scopedCtx.extensions, $a, $scopedCtx),
         a:Any[1] | $scopedCtx
     ])->clearCurrentElement();
     let elapsed = currentTimeMillis() - $beforeT;
@@ -502,6 +509,20 @@ function meta::pure::compiler::runCompilePass3(elem:meta::pure::metamodel::Packa
 function meta::pure::compiler::compile(files:meta::pure::protocol::PureFile[*]):CompilationResult[1]
 {
     meta::pure::compiler::compile($files, false);
+}
+
+// Compile WITH language extensions. The extensions ride on the context, so every pass can
+// reach them; each is offered the elements the built-in arms do not recognise.
+//
+// This is the only entry point a host needs for an extension to take part: nothing else in
+// compiler-pure knows that extensions exist, and nothing here names one.
+function meta::pure::compiler::compile(
+   files:meta::pure::protocol::PureFile[*],
+   extensions:meta::pure::compiler::extension::CompilerExtension[*],
+   silent:Boolean[1]):CompilationResult[1]
+{
+    let ctx = newCompilerContext(false);
+    meta::pure::compiler::compile($files, ^$ctx(extensions = $extensions), false, $silent);
 }
 
 // Default 2-arg form is verbose (CLI-friendly): live 3-line progress bar
