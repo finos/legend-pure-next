@@ -570,6 +570,10 @@ test-all: pct test-junit test-translation spec-functions spec-grammar spec-compi
 gallery PACKAGE="meta::pure::functions" OUT=(java_root / "build" / "java-platform-gallery.html"): compile
     @{{header}} 'gallery'
     @{{substep}} 'render {{PACKAGE}} -> {{OUT}}'
+    # The redirect below cannot create the directory, and nothing else here owns build/: every other
+    # recipe that writes there makes its own sub-directory. Absent locally only because earlier runs
+    # left one behind, which is why CI was the first to see "No such file or directory".
+    mkdir -p "$(dirname "{{OUT}}")"
     java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
         --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
