@@ -1,0 +1,21 @@
+{
+  "name": "diagram",
+  "section": "Diagram",
+  "module": "diagram",
+  "grammar": {
+    "lexer": "DiagramLexer",
+    "parser": "DiagramParser",
+    "entryRule": "section"
+  },
+  "pure": {
+    "sectionParsers": "meta::pure::diagram::parser::diagramSectionParsers__Pair_MANY_",
+    "compilerExtension": "meta::pure::diagram::compiler::diagramExtension__CompilerExtension_1_"
+  },
+  "pdbs": [
+    "pure/extensions/diagram/build/diagram.pdb"
+  ],
+  "packages": [
+    "meta::pure::diagram::metamodel",
+    "meta::pure::diagram::protocol"
+  ]
+}

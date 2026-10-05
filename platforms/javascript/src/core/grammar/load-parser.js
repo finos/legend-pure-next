@@ -34,8 +34,8 @@
 // hand-maintained subtype table.
 //
 // The PDB decoding itself is done by the TRANSLATED SELF-HOSTED PURE READER
-// (pdb/reader/reader.pure). The compiler host gets it as part of generated/compiler.js;
-// this parser-only host loads the small generated/pdb-reader.js instead
+// (pdb/reader/reader.pure). The compiler host gets it as part of generated/pure/compiler/compiler.js;
+// this parser-only host loads the small generated/pure/compiler/pdb.js instead
 // (`just javascript::generate-pdb-reader`), so it still doesn't depend on the
 // whole generated compiler.
 
@@ -50,13 +50,30 @@ import { antlrExtension } from "../execution/natives/AntlrExtension.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SHARED = join(HERE, "../../../../../shared");
-const BUNDLE_DIR = join(HERE, "../../../../../pure/modules/translation/javascript/js");
-const RUNTIME_LIB = join(BUNDLE_DIR, "runtime-lib.js");
-const ANTLR_BUNDLE = join(BUNDLE_DIR, "build/antlr-bundle.js");
-const PARSER_MAPPINGS_BUNDLE = join(BUNDLE_DIR, "build/parser-mappings-bundle.js");
-const PDB_READER = join(HERE, "../../../generated/pdb-reader.js");
+// The two parser bundles are this platform's own artifacts. runtime-lib.js is not: it is the
+// contract the TRANSLATOR emits against — the 170 `__` helpers its output calls — so it lives with
+// the translator and is read from there.
+const BUILD = join(HERE, "../../../build");
+const ANTLR_BUNDLE = join(BUILD, "antlr-bundle.js");
+const PARSER_MAPPINGS_BUNDLE = join(BUILD, "parser-mappings-bundle.js");
+const RUNTIME_LIB = join(HERE, "../../../../../pure/modules/translation/javascript/js/runtime-lib.js");
+const PDB_READER = join(HERE, "../../../generated/pure/compiler/pdb.js");
+// The CLASSES the translated parser constructs. A Pure class is emitted as a JavaScript class and
+// `^X(...)` as `new X()._a(1)`, so the module that DEFINES a class has to be loaded in every host
+// that runs code constructing it — this one builds 44 protocol classes plus Pair. Without them the
+// parser dies on `meta$pure$protocol$grammar$Class is not defined`, which the parser bundle hid for
+// a while by being stale (it predated class emission and still built plain object literals).
+// ORDER MATTERS: metamodel.js defines the classes the other two build with at LOAD time —
+// functions.js evaluates its enumeration consts immediately, and each member is an
+// `meta::pure::metamodel::type::Enum` whose classifier is a GenericTypeValue. Loading functions.js
+// first left every enum value and classifier as the plain-object fallback, and because a generated
+// const only builds once (the `typeof globalThis.X === 'undefined'` guard), re-loading it later
+// could not repair them.
+const METAMODEL = join(HERE, "../../../generated/pure/compiler/metamodel.js");
+const PROTOCOL = join(HERE, "../../../generated/pure/grammar/protocol.js");
+const FUNCTIONS = join(HERE, "../../../generated/pure/runtime/functions.js");
 
-function readBundleFile(path, buildHint = "just modules::translation_javascript::antlr-all") {
+function readBundleFile(path, buildHint = "just javascript::antlr-all") {
     try {
         return readFileSync(path, "utf8");
     } catch (e) {
@@ -77,8 +94,31 @@ export function loadBundle() {
     // parser-mappings reference by bare name, and the mappings bundle calls
     // `__parseAntlr` — published by the antlr bundle — so it must come last.
     vm.runInThisContext(readBundleFile(RUNTIME_LIB), { filename: "runtime-lib.js" });
+    // The CLASS modules come before the bundles, because a generated module builds values at LOAD
+    // time (an enumeration's const, with each member an Enum and its classifier a GenericTypeValue)
+    // and those builds have to find their classes. Only runtime-lib has to precede them.
+    //
+    // GUARDED on a representative class, the way loadPdbReader guards on a representative function:
+    // `export ` is stripped, so a `class X {}` lands as a LEXICAL binding in the global scope and a
+    // second runInThisContext of the same text is a SyntaxError ("Identifier ... has already been
+    // declared"). A host that brought these in already — the compiler host imports them as ES
+    // modules — must not have them loaded twice.
+    for (const [path, filename, sentinel] of [
+        [METAMODEL, "pure/compiler/metamodel.js", "meta$pure$metamodel$type$Enum"],
+        [PROTOCOL, "pure/grammar/protocol.js", "meta$pure$protocol$PureFile"],
+        [FUNCTIONS, "pure/runtime/functions.js", "meta$pure$functions$collection$Pair"],
+    ]) {
+        if (typeof globalThis[sentinel] === "function") continue;
+        vm.runInThisContext(readBundleFile(path, "just javascript::generate-all").replace(/^export /gm, ""),
+                            { filename });
+    }
     vm.runInThisContext(readBundleFile(ANTLR_BUNDLE), { filename: "antlr-bundle.js" });
     vm.runInThisContext(readBundleFile(PARSER_MAPPINGS_BUNDLE), { filename: "parser-mappings-bundle.js" });
+    // After the bundles, because these only have to be in scope by the time a parse RUNS, and
+    // `export ` is stripped for the same reason loadPdbReader strips it: a classic script's
+    // top-level declarations bind to globalThis, which is how the bundle's bare class references
+    // resolve. (A `class X {}` would bind only lexically, hence the explicit `globalThis.X = X`
+    // each generated class carries.)
     if (typeof globalThis.meta$pure$parser$mappings$interpreter$parseDocument_AntlrContext_1__String_1__Boolean_1__Pair_MANY__PureFile_1_ !== "function") {
         throw new Error("parseDocument was not defined after loading the parser-mappings bundle");
     }
@@ -97,7 +137,7 @@ export function loadPdbReader() {
     if (pdbReaderLoaded || typeof globalThis.meta$pure$compiler$pdb$schema$parseFbs_String_1__FbsSchema_1_ === "function") return;
     vm.runInThisContext(
         readBundleFile(PDB_READER, "just javascript::generate-pdb-reader").replace(/^export /gm, ""),
-        { filename: "pdb-reader.js" },
+        { filename: "pure/compiler/pdb.js" },
     );
     pdbReaderLoaded = true;
 }

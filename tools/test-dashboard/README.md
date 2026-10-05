@@ -70,7 +70,7 @@ run a specification corpus into specification runs:
 | `CompilerCompiledGraphTest` + `CompilerErrorTest` | `spec/compiler/java` |
 | `CompilerCompiledGraphPdbRoundTripTest` | `spec/pdb/java` |
 
-Both parent poms (`bootstrap/legend-pure-next-bootstrap/pom.xml`, `platforms/truffle/legend-pure-next-truffle/pom.xml`)
+Both parent poms (`bootstrap/legend-pure-next-bootstrap/pom.xml`, `platforms/truffle/legend-pure-next-platform-truffle/pom.xml`)
 turn on surefire's `usePhrasedTestCaseMethodName`, so a parameterized or dynamic test is recorded under its
 display name: the corpus path or Pure element path, the same id the Pure runners report. Only those generated
 tests go into a specification run; plain `@Test` methods stay in the class report.

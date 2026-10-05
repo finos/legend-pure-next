@@ -167,7 +167,7 @@ platforms/
     └─ Gallery: <a href="https://finos.github.io/legend-pure-next/java.html">Live ↗</a>
 </pre>
 
-**Truffle** ([`truffle/`](platforms/truffle/)) — partial-evaluating execution + native-image build for fast one-shot runs. Internally: `legend-pure-next-truffle-core/` (interpreter, PDB loading, natives) and `legend-pure-next-truffle-interfaces/` (`-cli`: the `pure-truffle` fat jar and native image; `-ide`).
+**Truffle** ([`truffle/`](platforms/truffle/)) — partial-evaluating execution + native-image build for fast one-shot runs. Internally: `legend-pure-next-platform-truffle-pure/` (interpreter, PDB loading, natives) and `legend-pure-next-platform-truffle-interfaces/` (`-cli`: the `pure-truffle` fat jar and native image; `-ide`).
 
 **JavaScript** ([`javascript/`](platforms/javascript/)) — Pure models + queries run in the browser or Node. Paired with [`pure/modules/translation/javascript/`](pure/modules/translation/javascript/).
 
@@ -200,7 +200,26 @@ Per-platform recipes are addressable as `just bootstrap::<recipe>`, `just truffl
 
 ## Usage example
 
-> TODO: a minimal end-to-end snippet — define a class in Pure, compile it, run a query.
+Every platform carries the same embedding example. Each is a program rather than a test — it is read as
+often as it is run — and `test-all` runs it, so an example that stops working cannot go unnoticed.
+
+| Platform | Example | Run it |
+| --- | --- | --- |
+| JavaScript | [`usage-example.js`](platforms/javascript/src/interfaces/usage-example/usage-example.js) | `just javascript::usage-example` |
+| Java | [`UsageExample.java`](platforms/java/legend-pure-next-platform-java/legend-pure-next-platform-java-interfaces/legend-pure-next-platform-java-usage-example/src/main/java/org/finos/legend/pure/platform/java/example/UsageExample.java) | `just java::usage-example` |
+| Truffle | [`UsageExample.java`](platforms/truffle/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-interfaces/legend-pure-next-platform-truffle-usage-example/src/main/java/org/finos/legend/pure/truffle/example/UsageExample.java) | `just truffle::usage-example` |
+
+All three do the same four things: name the languages the host wants, put Pure source held in a string
+into a module of their own, compile it, and call a function it defines. The source is one file in two
+languages — a `###Pure` section defining a class and a function, and a `###Diagram` section from the
+[diagram extension](pure/extensions/diagram/) — so each example also reads the compiled diagram back out
+of the graph, where it sits as an element beside the class its view points at.
+
+What the examples deliberately do **not** contain is a list of modules. Every language declares what it
+needs in its own manifest — [`language_pure.json`](pure/specification/language_pure.json),
+[`language_diagram.json`](pure/extensions/diagram/language_diagram.json) — and the runtime registers those
+along with whatever the platform itself brings to make Pure executable. An embedder names languages, not
+modules.
 
 ## Roadmap
 

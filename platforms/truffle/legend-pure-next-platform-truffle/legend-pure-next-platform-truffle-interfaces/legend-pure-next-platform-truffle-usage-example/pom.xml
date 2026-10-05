@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ©2026 JP Morgan Chase & Co. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-platform-truffle-interfaces</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-platform-truffle-usage-example</artifactId>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Truffle - Usage Example</name>
+
+    <!--
+      EMBEDDING THIS PLATFORM, as a program that runs. It was TestPureRuntime in truffle-core's own
+      src/test, which was the wrong place twice over: it is not a test of the core's internals but a
+      demonstration of its public API, and living inside the core it could reach things a real embedder
+      cannot. An INTERFACE to the platform, like the CLI and the IDE beside it.
+
+      The Java platform has the same module for the same reason; run with `just truffle::usage-example`.
+    -->
+
+    <dependencies>
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-platform-truffle-pure</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- A language extension, so the example can show a host naming more than one language. -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-platform-truffle-extensions-diagram</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+</project>

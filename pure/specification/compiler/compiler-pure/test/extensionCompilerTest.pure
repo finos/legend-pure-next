@@ -1,0 +1,81 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The compiler's extension seam, exercised with a toy language.
+//
+// `###CompiledGraph` already parses into a carried-text element that every pass ignores, so
+// it is the honest subject: the point of the seam is that an extension can turn such an
+// element into something real. The extension here claims those elements and registers a
+// Class for each, which is enough to prove the delegation reaches pass 1 and that the result
+// lands in the graph.
+
+import meta::pure::compiler::*;
+import meta::pure::compiler::extension::*;
+import meta::pure::compiler::helper::pointer::*;
+import meta::pure::compiler::test::*;
+import meta::pure::metamodel::*;
+
+// Claims the carried-text elements that `###CompiledGraph` produces.
+function meta::pure::compiler::test::extensionTestHandles(e: meta::pure::protocol::grammar::PackageableElement[1]): Boolean[1]
+{
+   $e->instanceOf(meta::pure::compiler::test::CompiledGraph);
+}
+
+// Registers one Class per claimed element, named after the section it came from.
+function meta::pure::compiler::test::extensionTestPass1(
+   e: meta::pure::protocol::grammar::PackageableElement[1], ctx: CompilerContext[1]): CompilerContext[1]
+{
+   let path = 'extensionTest::Claimed';
+   let pkgRes = getOrCreatePackagePath($ctx, 'extensionTest');
+   let shell = ^meta::pure::metamodel::type::Class<Any>(
+      name = 'Claimed',
+      package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package)
+   );
+   putElementUnderPackage($pkgRes.context, $path, 'extensionTest', $shell);
+}
+
+function meta::pure::compiler::test::extensionTestExtension(): CompilerExtension[1]
+{
+   ^CompilerExtension(
+      name    = 'extensionTest',
+      handles = e: meta::pure::protocol::grammar::PackageableElement[1] | extensionTestHandles($e),
+      pass1   = {e: meta::pure::protocol::grammar::PackageableElement[1], ctx: CompilerContext[1] |
+                   extensionTestPass1($e, $ctx)}
+   );
+}
+
+function <<test.Test>> meta::pure::compiler::test::testExtensionCompilesAnUnknownSection(): Boolean[1]
+{
+   let file = meta::pure::functions::meta::parse('extTest',
+      '###Pure\nClass a::B {}\n\n###CompiledGraph\nanything at all\n');
+   let withExt = meta::pure::compiler::compile($file, extensionTestExtension(), true);
+   let paths = $withExt.elements->map(e | $e->elementToPath());
+   assert($paths->contains('a::B'), | 'the ordinary class still compiles: ' + $paths->joinStrings(', '));
+   assert($paths->contains('extensionTest::Claimed'),
+          | 'the extension\'s element reached the graph: ' + $paths->joinStrings(', '));
+   true;
+}
+
+function <<test.Test>> meta::pure::compiler::test::testWithoutExtensionTheSectionIsIgnored(): Boolean[1]
+{
+   // The behaviour that was there before the seam existed, and must still be there: with no
+   // extension registered, the carried-text element contributes nothing at all.
+   let file = meta::pure::functions::meta::parse('extTest',
+      '###Pure\nClass a::B {}\n\n###CompiledGraph\nanything at all\n');
+   let plain = meta::pure::compiler::compile($file, [], true);
+   let paths = $plain.elements->map(e | $e->elementToPath());
+   assert($paths->contains('a::B'), | 'the ordinary class compiles');
+   assert(!$paths->contains('extensionTest::Claimed'), | 'nothing was claimed');
+   true;
+}

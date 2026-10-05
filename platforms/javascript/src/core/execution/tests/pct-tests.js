@@ -42,7 +42,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const GEN = join(HERE, "../../../../generated");
 const ROOT_PACKAGE = "meta::pure::functions";
 
-const { translatePackage, evalJs, call, resolveFn } = await loadRuntime();
+// The PCT corpus itself lives in core-tests — test content this harness runs, which is why it asks
+// for it rather than the language carrying it for everyone.
+const { translatePackage, evalJs, call, resolveFn } = await loadRuntime({ extraPdbs: ["shared/core-tests.pdb"] });
 
 // The compiler/translator print progress to stdout; mute while they run.
 const realWrite = process.stdout.write.bind(process.stdout);
@@ -58,16 +60,16 @@ let t0 = Date.now();
 const source = silently(() => translatePackage(ROOT_PACKAGE));
 console.log(`translated ${ROOT_PACKAGE} in-process: ${source.length} bytes in ${Date.now() - t0} ms`);
 
-const jvmEmitted = readFileSync(join(GEN, "core-functions.js"), "utf8");
+const jvmEmitted = readFileSync(join(GEN, "pure/runtime/functions.js"), "utf8");
 const failCount = (s) => (s.match(/^\/\/ translation failed for /gm) || []).length;
 const inProcFails = failCount(source), jvmFails = failCount(jvmEmitted);
 console.log(source === jvmEmitted
-    ? "translator parity vs generated/core-functions.js (JVM-emitted): IDENTICAL"
+    ? "translator parity vs generated/pure/runtime/functions.js (JVM-emitted): IDENTICAL"
     : `translator vs JVM emission: ${source.length} vs ${jvmEmitted.length} bytes, ` +
       `${inProcFails} vs ${jvmFails} elements failed to translate (informational — byte parity is aspirational)`);
 
 // --- 2. eval the emitted source ----------------------------------------------
-evalJs(source, "core-functions.inprocess.js");
+evalJs(source, "pure-runtime-functions.inprocess.js");
 
 // --- 3. discover and run the PCT corpus --------------------------------------
 const asArr = (v) => (v === undefined || v === null ? [] : Array.isArray(v) ? v : [v]);

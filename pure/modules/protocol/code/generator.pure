@@ -1,0 +1,263 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// THE PROTOCOL GENERATOR, over Pure.
+//
+// The metamodel says what something IS; the protocol says what a PARSER can produce before
+// anything has been resolved. The two differ only in how references are carried, so the second
+// should be derived from the first rather than written twice — which is what
+// bootstrap's M3ProtocolGenerator does for M3, reading m3.ttl and emitting m3_protocol.ttl.
+//
+// This is that generator for a metamodel written in PURE, so a language extension gets the same
+// treatment. The RULES are the same ones, and
+// pure/specification/PROTOCOL_INFO_ANNOTATIONS.md is the authority for both:
+//
+//   class   <<ProtocolInfo.transientCompilerOnly>>  compile-time only -> not mirrored
+//           <<ProtocolInfo.excluded>>               skip entirely
+//           <<ProtocolInfo.pointerSource>>          foundational: instances have stable identity
+//   prop    <<ProtocolInfo.pointer>>                always a path      -> type becomes T_Pointer
+//           <<ProtocolInfo.maybePointer>>           path OR inline     -> type becomes T_Protocol
+//           <<ProtocolInfo.nonPointer>>             inline             -> type unchanged
+//           <<ProtocolInfo.excluded>>               skip the property
+//
+// WHY THIS CANNOT REPLACE THE TTL ONE. M3's own protocol has to exist before anything can read
+// Pure at all: reading m3.pure needs the M3 grammar, the compiler and a metamodel to compile
+// against, all of which are built from the generated specs. So M3 keeps the TTL route and this
+// generator serves everything compiled afterwards. One specification, two implementations — which
+// is why the rules live in that document and not in either generator's head.
+
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::protocol::generation::*;
+
+// The ProtocolInfo profile, by path: this module must not depend on where it is declared.
+function meta::pure::protocol::generation::protocolInfoProfile(): String[1]
+{
+   'meta::pure::metamodel::ProtocolInfo';
+}
+
+// Whether `element` carries the named stereotype of the ProtocolInfo profile.
+function meta::pure::protocol::generation::hasProtocolStereotype(
+   stereotypes: Stereotype[*], name: String[1]): Boolean[1]
+{
+   $stereotypes->exists(s | $s.value == $name);
+}
+
+// A Package child resolved to the live element. A local copy of the same five lines the translator
+// keeps, for the same reason: meta::pure::test::resolveChild lives in core-tests, and a build-time
+// generator must not drag the PCT corpus in to walk a package.
+function meta::pure::protocol::generation::resolveChild(
+   c: meta::pure::metamodel::PackageableElement[1]): meta::pure::metamodel::PackageableElement[1]
+{
+   if($c->instanceOf(meta::pure::metamodel::pointer::TempCompilerPointer),
+      | pathToElement($c->cast(@meta::pure::metamodel::pointer::TempCompilerPointer).path),
+      | $c);
+}
+
+// Every class directly under `packagePath`, in declaration-independent (sorted) order so the emitted
+// source is stable from run to run.
+function meta::pure::protocol::generation::classesIn(packagePath: String[1]): Class<Any>[*]
+{
+   let pkg = pathToElement($packagePath)->cast(@meta::pure::metamodel::Package);
+   $pkg.children
+      ->map(c | $c->resolveChild())
+      ->filter(e | $e->instanceOf(Class))
+      ->cast(@Class<Any>)
+      ->sort(c | $c.name->toOne(), {a, b | if($a < $b, | -1, | if($a == $b, | 0, | 1))});
+}
+
+// The classes this generator mirrors: everything except what the annotations exclude.
+function meta::pure::protocol::generation::mirroredClasses(packagePath: String[1]): Class<Any>[*]
+{
+   classesIn($packagePath)
+      ->filter(c | !hasProtocolStereotype($c.stereotypes, 'transientCompilerOnly')
+                && !hasProtocolStereotype($c.stereotypes, 'excluded'));
+}
+
+// ---------------------------------------------------------------------------
+// Path mapping
+// ---------------------------------------------------------------------------
+
+// A metamodel path rewritten to its protocol counterpart.
+//
+// Three cases, in order. A class in the metamodel package being mirrored maps into the target
+// protocol package. A class from the LANGUAGE's metamodel maps to the language's own protocol
+// grammar, which is how an extension's element reaches `protocol::grammar::PackageableElement`.
+// Anything else — a primitive above all — is left alone: `m3_protocol.pure` keeps
+// `meta::pure::metamodel::type::primitives::String` verbatim, and rewriting it would invent a type.
+function meta::pure::protocol::generation::protocolPathOf(
+   path: String[1], metamodelPackage: String[1], protocolPackage: String[1]): String[1]
+{
+   let languageMetamodel = 'meta::pure::metamodel';
+   let languageProtocol  = 'meta::pure::protocol::grammar';
+   if($path->contains('::type::primitives::'),
+      | $path,
+      | if($path->startsWith($metamodelPackage + '::'),
+           | $protocolPackage + $path->substring($metamodelPackage->length(), $path->length()),
+           | if($path->startsWith($languageMetamodel + '::'),
+                | $languageProtocol + $path->substring($languageMetamodel->length(), $path->length()),
+                | $path)));
+}
+
+// ---------------------------------------------------------------------------
+// Properties
+// ---------------------------------------------------------------------------
+
+// The pointer wrapper a `@pointer` slot should REFERENCE.
+//
+// The wrappers already exist: the language's protocol declares one per pointer-encodable taxonomy
+// (`Type_Pointer`, `GenericType_Pointer`, `Package_Pointer`, …), so a slot referring to a class must
+// use the taxonomy's wrapper rather than invent one of its own. m3 does exactly this — a Class-typed
+// reference is declared as `Type` and emitted as `Type_Protocol`.
+//
+// So: try the declared type's own wrapper, then walk up its generalizations for the nearest ancestor
+// that has one. Nothing found is an ERROR rather than a silently invented class, because an extension
+// may not declare into the language's protocol package and a wrapper of its own would not be the type
+// anything else speaks.
+function meta::pure::protocol::generation::existingPointerWrapper(
+   type: meta::pure::metamodel::type::Type[1], metamodelPackage: String[1], protocolPackage: String[1]
+): String[0..1]
+{
+   let own = protocolPathOf($type->elementToPath(), $metamodelPackage, $protocolPackage) + '_Pointer';
+   if($own->lenientPathToElement()->isNotEmpty(),
+      | $own,
+      | $type->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>).generalizations
+             ->map(g | $g.general->meta::pure::metamodel::type::rawType())
+             ->filter(a | $a->isNotEmpty())
+             ->map(a | existingPointerWrapper($a->toOne(), $metamodelPackage, $protocolPackage))
+             ->head());
+}
+
+// The protocol type of one property, and whether it needs a pointer wrapper emitted.
+//
+//   <<ProtocolInfo.pointer>>       the slot is always a path          -> T_Pointer
+//   <<ProtocolInfo.maybePointer>>  a path OR a listed inline subtype  -> T_Protocol
+//   otherwise (incl. <<nonPointer>>) inline                          -> T, mapped
+function meta::pure::protocol::generation::protocolTypeOf(
+   p: meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Any, meta::pure::metamodel::type::Any>[1],
+   metamodelPackage: String[1], protocolPackage: String[1]): String[1]
+{
+   let raw = $p.genericType->meta::pure::metamodel::type::rawType()->toOne()->elementToPath();
+   let mapped = protocolPathOf($raw, $metamodelPackage, $protocolPackage);
+   let raw2 = $p.genericType->meta::pure::metamodel::type::rawType()->toOne();
+   if(hasProtocolStereotype($p.stereotypes, 'pointer'),
+      // NOT orElse(..., fail(...)): arguments evaluate eagerly, so the failure would fire even when a
+      // wrapper was found. The branch has to be lazy.
+      | let found = existingPointerWrapper($raw2, $metamodelPackage, $protocolPackage);
+        if($found->isEmpty(),
+           | fail('no pointer wrapper exists for ' + $raw2->elementToPath()
+                  + ' (referenced by ' + $p.name->toOne() + '); declare the slot as a taxonomy that has '
+                  + 'one, e.g. meta::pure::metamodel::type::Type')->cast(@String),
+           | $found->toOne());,
+      | if(hasProtocolStereotype($p.stereotypes, 'maybePointer'),
+           | $mapped + '_Protocol',
+           | $mapped));
+}
+
+// `  name: Type[mul];`
+function meta::pure::protocol::generation::emitProperty(
+   p: meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Any, meta::pure::metamodel::type::Any>[1],
+   metamodelPackage: String[1], protocolPackage: String[1]): String[1]
+{
+   '   ' + $p.name->toOne() + ': ' + protocolTypeOf($p, $metamodelPackage, $protocolPackage)
+         + meta::pure::functions::printer::compiled::printMultiplicity($p.multiplicity) + ';';
+}
+
+// The properties that reach the protocol at all.
+function meta::pure::protocol::generation::protocolProperties(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]
+): meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Any, meta::pure::metamodel::type::Any>[*]
+{
+   $cls.properties->filter(p | !hasProtocolStereotype($p.stereotypes, 'excluded'));
+}
+
+// ---------------------------------------------------------------------------
+// Inheritance
+// ---------------------------------------------------------------------------
+
+// The parents the protocol form keeps.
+//
+// Per PROTOCOL_INFO_ANNOTATIONS.md: the edge to the closest `@pointerSource` ancestor is preserved
+// and edges to other taxonomy ancestors are STRIPPED, so the only way to reference such an instance
+// from a taxonomy-typed slot is through a pointer wrapper. A parent inside the metamodel being
+// mirrored is kept too — it has a protocol counterpart of its own.
+function meta::pure::protocol::generation::protocolParentsOf(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1],
+   metamodelPackage: String[1], protocolPackage: String[1]): String[*]
+{
+   $cls.generalizations
+      ->map(g | $g.general->meta::pure::metamodel::type::rawType())
+      ->filter(t | $t->isNotEmpty())
+      ->map(t | $t->toOne())
+      ->filter(t | $t->elementToPath()->startsWith($metamodelPackage + '::')
+                || hasProtocolStereotype($t->cast(@meta::pure::metamodel::extension::AnnotatedElement).stereotypes, 'pointerSource'))
+      ->map(t | protocolPathOf($t->elementToPath(), $metamodelPackage, $protocolPackage));
+}
+
+// ---------------------------------------------------------------------------
+// Emission
+// ---------------------------------------------------------------------------
+
+// One mirrored class.
+function meta::pure::protocol::generation::emitClass(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1],
+   metamodelPackage: String[1], protocolPackage: String[1]): String[1]
+{
+   let path = protocolPathOf($cls->elementToPath(), $metamodelPackage, $protocolPackage);
+   let parents = protocolParentsOf($cls, $metamodelPackage, $protocolPackage);
+   let extends = if($parents->isEmpty(), | '', | ' extends ' + $parents->joinStrings(', '));
+   let props = protocolProperties($cls)->map(p | emitProperty($p, $metamodelPackage, $protocolPackage));
+   'Class ' + $path + $extends + '\n{\n' + $props->joinStrings('\n') + if($props->isEmpty(), | '', | '\n') + '}';
+}
+
+// THE ENTRY POINT: the protocol form of `metamodelPackage`, as Pure source for `protocolPackage`.
+//
+// Output is a file, exactly as bootstrap's M3ProtocolGenerator writes m3_protocol.ttl — the build
+// compiles it alongside the metamodel it was derived from.
+function meta::pure::protocol::generation::generateProtocol(
+   metamodelPackage: String[1], protocolPackage: String[1]): String[1]
+{
+   let classes = mirroredClasses($metamodelPackage);
+   let header = '// GENERATED by meta::pure::protocol::generation::generateProtocol — do not edit.\n'
+              + '//\n'
+              + '// The protocol form of ' + $metamodelPackage + ': what a parser produces before anything is\n'
+              + '// resolved. Derived from the metamodel\'s <<ProtocolInfo>> annotations, the same rules\n'
+              + '// bootstrap\'s M3ProtocolGenerator applies to m3.ttl — see\n'
+              + '// pure/specification/PROTOCOL_INFO_ANNOTATIONS.md.\n';
+   // No wrappers are emitted: the language's protocol already declares one per pointer-encodable
+   // taxonomy, and `protocolTypeOf` fails loudly rather than invent one.
+   let mirrored = $classes->map(c | emitClass($c, $metamodelPackage, $protocolPackage));
+   $header + '\n' + $mirrored->joinStrings('\n\n') + '\n';
+}
+
+// Diagnostic: whether a path resolves in the loaded graph. Used to check that the language's protocol
+// classes are visible to this generator at all.
+function meta::pure::protocol::generation::probePaths(paths: String[1]): String[1]
+{
+   $paths->split(',')->map(p | $p + ' -> ' + if($p->lenientPathToElement()->isNotEmpty(), | 'FOUND', | 'missing'))
+                     ->joinStrings('\n');
+}
+
+// Diagnostic: the names of a package's children, as the PACKAGE TREE reports them. Used to tell a
+// path-index-only element (visible to lenientPathToElement) from one that is also a child of its
+// package (visible to a tree walk like collectAllElements).
+function meta::pure::protocol::generation::probeChildren(packagePath: String[1]): String[1]
+{
+   let pkg = $packagePath->lenientPathToElement();
+   if($pkg->isEmpty(),
+      | $packagePath + ' -> NOT FOUND',
+      | $packagePath + ' -> ' + $pkg->toOne()->cast(@meta::pure::metamodel::Package).children
+                                     ->map(c | $c->resolveChild()->elementToPath())
+                                     ->sort()->joinStrings(', '));
+}

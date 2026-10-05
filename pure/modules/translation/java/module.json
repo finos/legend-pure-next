@@ -1,5 +1,12 @@
 {
   "name": "java-translation",
   "packagePattern": "(meta::external::language::java::translation)(::.*)?",
-  "dependencies": ["core", "core-tests", "java", "translation-shared"]
+  "dependencies": [
+    "core",
+    "java",
+    "translation-shared"
+  ],
+  "testDependencies": [
+    "core-tests"
+  ]
 }

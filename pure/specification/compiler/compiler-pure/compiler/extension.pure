@@ -1,0 +1,101 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The seam a language extension compiles through.
+//
+// Each of the three passes dispatches on the element's type and ends in a catch-all arm that
+// ignores anything it does not recognise — which is why a `###Diagram` section could be
+// parsed but never became part of the graph. An extension fills that arm: it claims the
+// elements it understands and compiles them with the same context every other element uses.
+//
+// THE DEPENDENCY RUNS ONE WAY. compiler-pure knows this shape and nothing else; it never
+// references an extension module. Extensions are handed to `compile` by the host and travel
+// on the CompilerContext, so adding a language needs no change here.
+//
+// An extension sees the passes for the same reason the built-in types do: pass 1 may only
+// create a skeleton, because the elements it refers to might not exist yet; pass 2 fills
+// structure; pass 3 resolves expressions. An extension that needs none of this can implement
+// pass 1 alone — see `meta::pure::compiler::extension::simpleExtension`.
+
+import meta::pure::compiler::*;
+import meta::pure::compiler::extension::*;
+
+Class meta::pure::compiler::extension::CompilerExtension
+{
+   // For diagnostics and for telling two extensions apart in an error.
+   name : String[1];
+
+   // Whether this extension compiles that parsed element. The first extension to claim an
+   // element gets it; the rest are not asked.
+   handles : meta::pure::metamodel::function::Function<{meta::pure::protocol::grammar::PackageableElement[1] -> Boolean[1]}>[1];
+
+   // Pass 1 — the element's skeleton, registered in the context's elementMap. Left empty,
+   // the element contributes nothing and the following passes never see it.
+   pass1 : meta::pure::metamodel::function::Function<{meta::pure::protocol::grammar::PackageableElement[1], CompilerContext[1] -> CompilerContext[1]}>[0..1];
+
+   // Pass 2 — structure, appending the compiled element to the accumulator.
+   pass2 : meta::pure::metamodel::function::Function<{meta::pure::protocol::grammar::PackageableElement[1], CompilerListResult<meta::pure::metamodel::PackageableElement>[1] -> CompilerListResult<meta::pure::metamodel::PackageableElement>[1]}>[0..1];
+
+   // Pass 3 — resolution, over the COMPILED element rather than the parsed one.
+   pass3 : meta::pure::metamodel::function::Function<{meta::pure::metamodel::PackageableElement[1], CompilerContext[1] -> CompilerContext[1]}>[0..1];
+
+   // Whether this extension owns a compiled element, for pass 3. Left empty, pass 3 is not
+   // offered to it.
+   owns : meta::pure::metamodel::function::Function<{meta::pure::metamodel::PackageableElement[1] -> Boolean[1]}>[0..1];
+}
+
+// The extension that claims `element`, if any.
+function meta::pure::compiler::extension::extensionFor(
+   extensions: CompilerExtension[*], element: meta::pure::protocol::grammar::PackageableElement[1]): CompilerExtension[0..1]
+{
+   $extensions->filter(x | $x.handles->eval($element))->head();
+}
+
+// Pass 1 for an element none of the built-in arms matched. Unclaimed, the context is handed
+// back untouched — exactly what the catch-all did before extensions existed.
+function meta::pure::compiler::extension::runExtensionPass1(
+   extensions: CompilerExtension[*],
+   element: meta::pure::protocol::grammar::PackageableElement[1],
+   ctx: CompilerContext[1]): CompilerContext[1]
+{
+   let owner = extensionFor($extensions, $element);
+   if ($owner->isEmpty() || $owner->toOne().pass1->isEmpty(),
+       | $ctx,
+       | $owner->toOne().pass1->toOne()->eval($element, $ctx));
+}
+
+// Pass 2 for an unmatched element.
+function meta::pure::compiler::extension::runExtensionPass2(
+   extensions: CompilerExtension[*],
+   element: meta::pure::protocol::grammar::PackageableElement[1],
+   acc: CompilerListResult<meta::pure::metamodel::PackageableElement>[1]): CompilerListResult<meta::pure::metamodel::PackageableElement>[1]
+{
+   let owner = extensionFor($extensions, $element);
+   if ($owner->isEmpty() || $owner->toOne().pass2->isEmpty(),
+       | $acc,
+       | $owner->toOne().pass2->toOne()->eval($element, $acc));
+}
+
+// Pass 3 for a compiled element none of the built-in arms matched. Claimed by `owns`, which
+// sees metamodel elements rather than parsed ones.
+function meta::pure::compiler::extension::runExtensionPass3(
+   extensions: CompilerExtension[*],
+   element: meta::pure::metamodel::PackageableElement[1],
+   ctx: CompilerContext[1]): CompilerContext[1]
+{
+   let owner = $extensions->filter(x | $x.owns->isNotEmpty() && $x.owns->toOne()->eval($element))->head();
+   if ($owner->isEmpty() || $owner->toOne().pass3->isEmpty(),
+       | $ctx,
+       | $owner->toOne().pass3->toOne()->eval($element, $ctx));
+}

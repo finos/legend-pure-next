@@ -1,3 +1,18 @@
+# Copyright 2026 Goldman Sachs
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # pure/modules/translation/javascript/Justfile — builds the Pure-to-JavaScript translator
 # into a single PDB.
 #
@@ -9,6 +24,12 @@
 # The translator consumes the language/javascript metamodel + factories + serializer
 # (pure/modules/language/javascript/build/javascript.pdb) and the Pure metamodel (shared/core.pdb), and emits a
 # JavaScript AST that serializes back to source.
+#
+# TRANSLATING PURE INTO JAVASCRIPT IS ALL THIS MODULE DOES. The only JavaScript it owns is
+# js/runtime-lib.js — the ~170 `__` helpers the translator emits calls to, i.e. the contract its
+# output is written against. The JavaScript HOST's parser (the ANTLR natives, the generated
+# lexers/parsers, their bundles and the antlr4/esbuild toolchain) lives in platforms/javascript:
+# turning text into a tree is a platform concern and has nothing to do with translation.
 
 set quiet := true
 set shell := ["bash", "-c"]
@@ -38,15 +59,15 @@ test_results   := repo_root / "test-results"
 #     just pure_rt=truffle parser-mappings-bundle   (overrides precede the recipe)
 pure_rt := "bootstrap"
 emit_rt := if pure_rt == "truffle" { pure_truffle } else { pure_bootstrap }
-grammar_dir    := repo_root / "pure" / "specification" / "grammar" / "antlr"
 
 # `--source` sees only `code/` (not the module root, as other modules pass):
 # the compiler walks every file under it, and `js/` holds npm tooling.
 code_dir       := trn_root / "code"
+# runtime-lib.js is the ONLY JavaScript this module owns: the 170 helpers the translator emits calls
+# to, i.e. the contract its output is written against. The host's PARSER — the ANTLR natives, the
+# generated lexers/parsers and their bundle — moved to platforms/javascript, where it belongs: this
+# module translates Pure into a language and does nothing else.
 js_dir         := trn_root / "js"
-gen_dir        := js_dir / "generated"
-bundle_out     := js_dir / "build" / "antlr-bundle.js"
-mappings_bundle_out := js_dir / "build" / "parser-mappings-bundle.js"
 
 verbose := ""
 err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
@@ -169,21 +190,13 @@ test-pure-runtime-PCTs: build-tests _host-generate _depCheck_runtime-pdbs
 
 # Build the Pure -> JavaScript translation gallery as a self-contained HTML page.
 # pure-js prints the returned String to stdout, so a plain redirect is enough.
-gallery: build-tests _host-generate _depCheck_runtime-pdbs
+# The gallery's pass/fail column comes from compiling and executing the translated source on the
+# JavaScript host, so the execution and the output belong to that platform; `code/gallery.pure` stays
+# here because rendering a card needs the translator's own API. Same delegation translation/java uses.
+gallery: build-tests
     @{{header}} 'gallery'
-    @{{substep}} 'render Pure -> JavaScript gallery -> build/javascript-translation-gallery.html'
-    {{pure_js}} execute \
-        --pdb {{shared_out}}/core.pdb \
-        --pdb {{shared_out}}/core-tests.pdb \
-        --pdb {{shared_out}}/compiler.pdb \
-        --pdb {{language_javascript_out}}/javascript.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
-        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::external::language::javascript::translation::gallery::renderGallery_String_1__String_1_" \
-        --args "meta::pure::functions" \
-        > {{translation_javascript_out}}/javascript-translation-gallery.html
-    @echo "wrote {{translation_javascript_out}}/javascript-translation-gallery.html ($(wc -c < {{translation_javascript_out}}/javascript-translation-gallery.html) bytes)"
+    @{{substep}} 'render Pure -> JavaScript gallery on the JavaScript platform'
+    cd {{repo_root}} && just javascript::gallery
 
 # Internal: the one step translation/java has no counterpart for. Truffle
 # interprets PDBs directly; the JavaScript host runs code TRANSLATED from them,
@@ -202,89 +215,6 @@ _depCheck_runtime-pdbs:
         echo "ERROR: missing {{pure_js}}" >&2
         exit 1
     fi
-
-_npm-install:
-    #!/usr/bin/env bash
-    set -e
-    if [[ ! -d "{{js_dir}}/node_modules" ]]; then
-        echo "  ↳ pnpm install (antlr4 + antlr4ng-cli + esbuild)"
-        cd "{{js_dir}}" && pnpm install
-    fi
-
-# Generate TS lexer/parser from grammar/antlr/*.g4 -> js/generated/.
-# ANTLR's JavaScript target via the complete jar bundled with antlr4ng-cli
-# (its `antlr4ng` wrapper only emits TypeScript). Each grammar is generated
-# from its own directory so output lands flat in gen_dir and `-lib gen_dir`
-# lets the parser grammars find the lexer-generated `.tokens`.
-antlr-generate-parsers: _npm-install
-    @{{header}} 'antlr-generate-parsers'
-    @{{substep}} 'antlr4 -Dlanguage=JavaScript on Top/M3 grammars'
-    rm -f "{{gen_dir}}"/*.ts "{{gen_dir}}"/*.js "{{gen_dir}}"/*.interp "{{gen_dir}}"/*.tokens
-    mkdir -p "{{gen_dir}}"
-    jar="$(ls {{js_dir}}/node_modules/antlr4ng-cli/antlr4-*-complete.jar | head -1)"; \
-    cd "{{grammar_dir}}" && java -jar "$jar" -Dlanguage=JavaScript -no-listener -no-visitor -o "{{gen_dir}}" -lib "{{gen_dir}}" TopLexer.g4 TopParser.g4 && \
-    cd "{{grammar_dir}}/m3" && java -jar "$jar" -Dlanguage=JavaScript -no-listener -no-visitor -o "{{gen_dir}}" -lib "{{gen_dir}}" M3Lexer.g4 M3Parser.g4
-    @echo "  generated $(ls {{gen_dir}}/*.js | wc -l | tr -d ' ') JS files"
-
-# Translate parser-mappings.pdb -> js/build/parser-mappings.js (re-exported by antlr bundle).
-antlr-generate-ts-parserMapping: build-tests _depCheck_emit-pdbs
-    @{{header}} 'antlr-generate-ts-parserMapping'
-    @{{substep}} 'translate meta::pure::parser::mappings -> js/build/parser-mappings.js'
-    mkdir -p "$(dirname "{{bundle_out}}")"
-    {{emit_rt}} execute \
-        --pdb {{shared_out}}/core.pdb \
-        --pdb {{shared_out}}/parser-mappings.pdb \
-        --pdb {{shared_out}}/core-tests.pdb \
-        --pdb {{shared_out}}/compiler.pdb \
-        --pdb {{language_javascript_out}}/javascript.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_javascript_out}}/javascript-translation.pdb \
-        --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::external::language::javascript::translation::pdb::translatePackageToJs_String_1__String_1_" \
-        --args "meta::pure::parser::mappings" \
-        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
-        | grep -v '^\[graal-tripwire\]' \
-        > "{{js_dir}}/build/parser-mappings.js"
-    @echo "  wrote {{js_dir}}/build/parser-mappings.js ($(wc -c < {{js_dir}}/build/parser-mappings.js | tr -d ' ') bytes)"
-
-# Bundle antlr4 + generated parsers + native impls -> js/build/antlr-bundle.js (no-imports IIFE exposing `PureAntlr`).
-# `--conditions=browser` selects antlr4's browser build (no node `fs`/`path`),
-# which is what the browser (and any non-Node host) needs.
-#
-# PARSER HALF. Depends only on antlr-generate-parsers, so it needs nothing from
-# Pure: no pure-truffle, no PDBs. That is deliberate — the JS platform's parser
-# bakes this in at process-resources, and CI packages that jar in truffle-self-host,
-# which runs UPSTREAM of the jobs producing javascript.pdb. Keep it PDB-free or
-# that ordering breaks again.
-antlr-bundle: antlr-generate-parsers
-    @{{header}} 'antlr-bundle'
-    @{{substep}} 'esbuild --bundle js/antlr-entry.js -> js/build/antlr-bundle.js'
-    mkdir -p "$(dirname "{{bundle_out}}")"
-    cd "{{js_dir}}" && pnpm exec esbuild antlr-entry.js \
-        --bundle --format=iife --global-name=PureAntlr --platform=neutral --conditions=browser --target=es2020 \
-        --outfile="{{bundle_out}}" \
-        --log-level=warning
-    @echo "  wrote {{bundle_out}} ($(wc -c < {{bundle_out}} | tr -d ' ') bytes)"
-
-# Bundle the translated parser-mappings interpreter + __pureParseTop ->
-# js/build/parser-mappings-bundle.js (no-imports IIFE).
-#
-# MAPPINGS HALF. Needs pure-truffle and the javascript/translation PDBs (via
-# antlr-generate-ts-parserMapping), so it can only run after those exist. The
-# extension loads it when present and installs a throwing stub for
-# `__pureParseTop` when it is not — only Pure's `parse` needs it.
-parser-mappings-bundle: antlr-generate-ts-parserMapping
-    @{{header}} 'parser-mappings-bundle'
-    @{{substep}} 'esbuild --bundle js/parser-mappings-entry.js -> js/build/parser-mappings-bundle.js'
-    mkdir -p "$(dirname "{{mappings_bundle_out}}")"
-    cd "{{js_dir}}" && pnpm exec esbuild parser-mappings-entry.js \
-        --bundle --format=iife --platform=neutral --conditions=browser --target=es2020 \
-        --outfile="{{mappings_bundle_out}}" \
-        --log-level=warning
-    @echo "  wrote {{mappings_bundle_out}} ($(wc -c < {{mappings_bundle_out}} | tr -d ' ') bytes)"
-
-# Both halves — the full local setup (browser demo + Pure `parse` support).
-antlr-all: antlr-bundle parser-mappings-bundle
 
 # Internal: fail loudly if the emit recipes' deps aren't staged — the base
 # pdbs plus whichever Pure runtime `pure_rt` selected (bootstrap by default,

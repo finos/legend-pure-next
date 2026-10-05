@@ -48,7 +48,15 @@ const PRINT_GRAPH =
 // PDBs that back the metadata globals (the type/function graph the compiler reads).
 const PDBS = ["core.pdb", "core-tests.pdb", "compiler.pdb", "compiler-tests.pdb"];
 // Generated JS the compiler depends on, loaded into the shared global scope.
-const GEN_MODULES = ["core-metamodel.js", "core-functions.js", "core-ui.js", "compiler.js"];
+const GEN_MODULES = ["pure/compiler/metamodel.js", "pure/grammar/protocol.js", "pure/runtime/functions.js", "ui.js", "pure/compiler/compiler.js"];
+// The TEST halves of those packages, which a caller asks for explicitly. `loadCompiler()` is the
+// public entry point, so it stays the library: an API consumer has no use for 1.3 MB of PCT corpus.
+// A harness that needs test infrastructure — `printGraph` and the compiled-graph assertions are
+// `<<test.TestDependency>>`, so they live in the companions — passes `{ tests: true }`.
+const GEN_TEST_MODULES = [
+    "pure/compiler/metamodel-tests.js", "pure/grammar/protocol-tests.js", "pure/runtime/functions-tests.js",
+    "pure/compiler/compiler-tests.js", "test.js",
+];
 
 let loaded = false;
 let registry = null; // the PDB-backed module registry (also handed to callers)
@@ -68,7 +76,7 @@ let runtime = null;
 // generated-dispatch lookup) is invoked through it by __metadataInvoke.
 const runtimeModule = new InMemoryModule("runtime");
 
-export async function loadCompiler() {
+export async function loadCompiler({ tests = false } = {}) {
     if (!loaded) {
         registry = new ModuleRegistry(readFileSync(join(SHARED, "specification/m3.fbs"), "utf8"));
         for (const f of PDBS) registry.register(PdbModule.open(join(SHARED, f)));
@@ -80,7 +88,9 @@ export async function loadCompiler() {
             .withRuntimeModule(runtimeModule)
             .build();
         loadBundle();
-        for (const m of GEN_MODULES) Object.assign(globalThis, await import(join(GEN, m)));
+        for (const m of (tests ? [...GEN_MODULES, ...GEN_TEST_MODULES] : GEN_MODULES)) {
+            Object.assign(globalThis, await import(join(GEN, m)));
+        }
         runtimeModule.invalidate();
         loaded = true;
     }

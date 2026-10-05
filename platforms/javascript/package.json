@@ -5,17 +5,26 @@
   "type": "module",
   "main": "src/core/index.js",
   "scripts": {
-    "build": "echo 'no build — plain JavaScript' && exit 0",
+    "build": "echo 'no build \u2014 plain JavaScript' && exit 0",
     "test": "node src/core/grammar/tests/grammar-tests.js",
     "test:grammar": "node src/core/grammar/tests/grammar-tests.js",
     "test:compiler": "node --stack-size=4000 src/core/compiler/tests/compiler-tests.js",
     "test:execution": "node --stack-size=4000 src/core/execution/tests/pct-tests.js",
     "test:host-api": "node --stack-size=4000 src/core/tests/host-api-tests.js",
-    "test:pure-runtime": "node --stack-size=4000 src/core/tests/pure-runtime-tests.js",
+    "usage-example": "node --stack-size=4000 src/interfaces/usage-example/usage-example.js",
+    "test:diagram": "node src/interfaces/web/diagram/tests/diagram-tests.js",
+    "test:section-hint": "node src/interfaces/web/tests/section-hint-tests.js",
+    "test:source-store": "node src/interfaces/web/tests/source-store-tests.js",
+    "test:ide": "node src/interfaces/web/tests/ide-tests.js",
     "web:deps": "pnpm install && rm -rf build/vs && mkdir -p build && cp -R node_modules/monaco-editor/min/vs build/vs"
   },
   "license": "Apache-2.0",
   "devDependencies": {
+    "antlr4ng-cli": "^2.0.0",
+    "esbuild": "^0.24.0",
     "monaco-editor": "0.52.2"
+  },
+  "dependencies": {
+    "antlr4": "^4.13.2"
   }
 }

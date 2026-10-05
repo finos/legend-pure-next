@@ -143,7 +143,7 @@ bench
 clean
 └── body
     ├── rm -rf platforms/truffle/build
-    └── cd legend-pure-next-truffle && mvn clean
+    └── cd legend-pure-next-platform-truffle && mvn clean
 ```
 
 ## Why two paths

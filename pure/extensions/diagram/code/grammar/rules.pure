@@ -1,0 +1,190 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Parse tree -> diagram model.
+//
+// The same shape the `###Pure` section uses: `parseAntlr` runs the grammar, and these rules
+// walk the resulting AntlrContext into the metamodel — the DiagramParser.g4 counterpart of
+// `meta::pure::parser::mappings::allRules`. Nothing here scans characters; the grammar did
+// that, and one parser per language is the point of doing it this way.
+//
+// Every view is a bag of `key=value`, because the grammar deliberately does not fix which
+// keys are meaningful. That is settled here, where an unknown key is ignored rather than
+// failing the file — a diagram written by a newer editor still opens in an older one.
+
+// The rules build the PROTOCOL form (meta::pure::diagram::protocol), which is GENERATED from
+// code/metamodel.pure — a parser produces paths, not resolved elements. The metamodel is imported
+// only for the nothing it contributes here; the compiler is what maps one onto the other.
+import meta::pure::diagram::parser::*;
+import meta::pure::diagram::protocol::*;
+import meta::pure::functions::meta::antlr::*;
+
+// A `key=value` pair, already reduced to text. Points keep their context, since a point is a
+// structure rather than a word.
+Class meta::pure::diagram::parser::ViewProperty
+{
+   key   : String[1];
+   text  : String[1];
+   value : AntlrContext[1];
+}
+
+function meta::pure::diagram::parser::viewProperties(view: AntlrContext[1]): ViewProperty[*]
+{
+   $view->getChildren('propertyList')
+        ->map(l | $l->getChildren('property'))
+        ->map(p | ^ViewProperty(
+                     key   = $p->getTokenText('QUALIFIED_NAME')->toOne(),
+                     value = $p->getChildren('value')->toOne(),
+                     text  = $p->getChildren('value')->toOne()->getText()));
+}
+
+function meta::pure::diagram::parser::textOf(props: ViewProperty[*], key: String[1]): String[0..1]
+{
+   $props->filter(p | $p.key == $key)->head().text;
+}
+
+function meta::pure::diagram::parser::floatOf(props: ViewProperty[*], key: String[1]): Float[0..1]
+{
+   let text = textOf($props, $key);
+   if ($text->isEmpty(), | [], | $text->toOne()->parseFloat());
+}
+
+// A flag defaults to TRUE when absent: the editor omits what it has not changed, and a view
+// that says nothing about its stereotypes is showing them.
+function meta::pure::diagram::parser::flagOf(props: ViewProperty[*], key: String[1]): Boolean[1]
+{
+   let text = textOf($props, $key);
+   if ($text->isEmpty(), | true, | $text->toOne() == 'true');
+}
+
+function meta::pure::diagram::parser::buildPoint(ctx: AntlrContext[1]): Point[1]
+{
+   let numbers = $ctx->getChildren('number')->map(n | $n->getText()->parseFloat());
+   ^Point(x = $numbers->at(0), y = $numbers->at(1));
+}
+
+function meta::pure::diagram::parser::pointOf(props: ViewProperty[*], key: String[1]): Point[0..1]
+{
+   $props->filter(p | $p.key == $key)
+         ->map(p | $p.value->getChildren('point'))
+         ->map(c | buildPoint($c))
+         ->head();
+}
+
+function meta::pure::diagram::parser::pointsOf(props: ViewProperty[*], key: String[1]): Point[*]
+{
+   $props->filter(p | $p.key == $key)
+         ->map(p | $p.value->getChildren('pointList'))
+         ->map(l | $l->getChildren('point'))
+         ->map(c | buildPoint($c));
+}
+
+function meta::pure::diagram::parser::buildTypeView(ctx: AntlrContext[1]): TypeView[1]
+{
+   let props = viewProperties($ctx);
+   ^TypeView(
+      id                 = $ctx->getTokenText('QUALIFIED_NAME')->toOne(),
+      // A PATH, wrapped the way every protocol reference is: the compiler resolves it to a Type.
+      type               = ^meta::pure::protocol::grammar::type::Type_Pointer(
+                             value = textOf($props, 'type')->orElse('')),
+      position           = pointOf($props, 'position')->orElse(^Point(x = 0.0, y = 0.0)),
+      width              = floatOf($props, 'width')->orElse(200.0),
+      height             = floatOf($props, 'height')->orElse(90.0),
+      color              = textOf($props, 'color'),
+      stereotypesVisible = flagOf($props, 'stereotypesVisible'),
+      attributesVisible  = flagOf($props, 'attributesVisible'));
+}
+
+function meta::pure::diagram::parser::buildPropertyView(ctx: AntlrContext[1]): PropertyView[1]
+{
+   let props = viewProperties($ctx);
+   ^PropertyView(
+      id        = $ctx->getTokenText('QUALIFIED_NAME')->toOne(),
+      property  = textOf($props, 'property')->orElse(''),
+      source    = textOf($props, 'source')->orElse(''),
+      target    = textOf($props, 'target')->orElse(''),
+      points    = pointsOf($props, 'points'),
+      color     = textOf($props, 'color'),
+      lineWidth = floatOf($props, 'lineWidth'),
+      label     = textOf($props, 'label'));
+}
+
+function meta::pure::diagram::parser::buildAssociationView(ctx: AntlrContext[1]): AssociationView[1]
+{
+   let props = viewProperties($ctx);
+   ^AssociationView(
+      id          = $ctx->getTokenText('QUALIFIED_NAME')->toOne(),
+      association = textOf($props, 'association')->orElse(''),
+      source      = textOf($props, 'source')->orElse(''),
+      target      = textOf($props, 'target')->orElse(''),
+      points      = pointsOf($props, 'points'),
+      color       = textOf($props, 'color'),
+      lineWidth   = floatOf($props, 'lineWidth'),
+      label       = textOf($props, 'label'));
+}
+
+function meta::pure::diagram::parser::buildGeneralizationView(ctx: AntlrContext[1]): GeneralizationView[1]
+{
+   let props = viewProperties($ctx);
+   ^GeneralizationView(
+      id        = $ctx->getTokenText('QUALIFIED_NAME')->toOne(),
+      source    = textOf($props, 'source')->orElse(''),
+      target    = textOf($props, 'target')->orElse(''),
+      points    = pointsOf($props, 'points'),
+      color     = textOf($props, 'color'),
+      lineWidth = floatOf($props, 'lineWidth'),
+      label     = textOf($props, 'label'));
+}
+
+// Protocol SourceInformation for a parsed context, offset by the section's position in the
+// file. Deliberately a local copy of meta::pure::parser::mappings::buildSourceInfo rather
+// than a dependency on the parser-mappings module: five lines against a module edge.
+function meta::pure::diagram::parser::sourceInfoOf(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::SourceInformation[1]
+{
+   ^meta::pure::protocol::grammar::SourceInformation(
+      startLine   = $ctx->getStartLine() + $lineOffset,
+      startColumn = $ctx->getStartColumn(),
+      endLine     = $ctx->getStopLine() + $lineOffset,
+      endColumn   = $ctx->getStopColumn());
+}
+
+// One `Diagram m::D(…) { … }` block, in protocol form: `m::D` splits into the element's name
+// and a Package_Pointer, so the compiler's pass 1 can place it under a real package.
+function meta::pure::diagram::parser::buildDiagram(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::diagram::protocol::Diagram[1]
+{
+   let dimension = $ctx->getChildren('dimension')->map(d | viewProperties($d));
+   let path = $ctx->getTokenText('QUALIFIED_NAME')->toOne();
+   let parts = $path->split('::');
+   ^meta::pure::diagram::protocol::Diagram(
+      name                = $parts->last()->toOne(),
+      package             = if($parts->size() < 2,
+                               | [],
+                               | ^meta::pure::protocol::grammar::Package_Pointer(
+                                    value = $parts->init()->joinStrings('::'))),
+      p_sourceInformation = sourceInfoOf($ctx, $lineOffset),
+      width               = floatOf($dimension, 'width'),
+      height              = floatOf($dimension, 'height'),
+      typeViews           = $ctx->getChildren('typeView')->map(v | buildTypeView($v)),
+      propertyViews       = $ctx->getChildren('propertyView')->map(v | buildPropertyView($v)),
+      associationViews    = $ctx->getChildren('associationView')->map(v | buildAssociationView($v)),
+      generalizationViews = $ctx->getChildren('generalizationView')->map(v | buildGeneralizationView($v)));
+}
+
+// Every diagram in a parsed `###Diagram` section. `lineOffset` is where the section starts in
+// the file, so a diagram's source information points at the real line rather than at line 1
+// of the section body.
+function meta::pure::diagram::parser::buildDiagrams(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::diagram::protocol::Diagram[*]
+{
+   $ctx->getChildren('diagram')->map(d | buildDiagram($d, $lineOffset));
+}

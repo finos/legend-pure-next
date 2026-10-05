@@ -1,0 +1,5 @@
+{
+  "name": "diagram",
+  "packagePattern": "(meta::pure::diagram)(::.*)?",
+  "dependencies": ["core", "compiler"]
+}

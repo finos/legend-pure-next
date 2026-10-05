@@ -1,5 +1,21 @@
 <!DOCTYPE html>
 <!--
+  Copyright 2026 Goldman Sachs
+  ©2026 JP Morgan Chase & Co. All rights reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!--
   Pure compiler + executor in the browser — no JVM, no GraalVM.
 
   Loads the same self-contained parser bundle translation/javascript builds
@@ -23,12 +39,17 @@
 <head>
   <meta charset="utf-8" />
   <title>Legend Pure — standalone JS compiler</title>
+  <!-- Legend's L, inline. A data: URI rather than a file because the icon is nine glyph-free path
+       commands: no extra request, nothing to stage into the published IDE, and no 404 for a browser
+       that asks for /favicon.ico unprompted (which is what Chrome does, and it logs a console error
+       when the answer is 404 — see src/interfaces/web/tests/ide-tests.js). --accent, #6D45D9. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%236D45D9'/%3E%3Cpath d='M11 7h4.2v14.4H23V25H11z' fill='%23fff'/%3E%3C/svg%3E" />
   <style>
     :root {
       --bg: #ffffff; --panel: #f7f7f8; --rule: #e0e0e3; --ink: #1c1c1e; --muted: #61616b;
       --accent: #6D45D9; --error: #cf4a2e; --ok: #1e8a4c; --hover: #ececef;
       --k-class: #2f6fd0; --k-enum: #b8860b; --k-prim: #1e8a4c; --k-profile: #9147bf;
-      --k-assoc: #2f8f8f; --k-native: #8a8a94; --k-other: #b0b0b8;
+      --k-assoc: #2f8f8f; --k-native: #8a8a94; --k-other: #b0b0b8; --k-diagram: #c2571a;
       --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
     /* Dark follows the system unless the header button pinned light; the same tokens are
@@ -38,14 +59,14 @@
         --bg: #15151a; --panel: #1c1c22; --rule: #2e2e37; --ink: #e6e6ea; --muted: #9a9aa6;
         --accent: #A98BFF; --error: #ff8a70; --ok: #5fd08a; --hover: #26262f;
         --k-class: #7fb2ff; --k-enum: #e0b341; --k-prim: #6fd08f; --k-profile: #c58af9;
-        --k-assoc: #5fc7c7; --k-native: #8a8a94; --k-other: #5a5a66;
+        --k-assoc: #5fc7c7; --k-native: #8a8a94; --k-other: #5a5a66; --k-diagram: #ff9a5c;
       }
     }
     :root[data-theme="dark"] {
       --bg: #15151a; --panel: #1c1c22; --rule: #2e2e37; --ink: #e6e6ea; --muted: #9a9aa6;
       --accent: #A98BFF; --error: #ff8a70; --ok: #5fd08a; --hover: #26262f;
       --k-class: #7fb2ff; --k-enum: #e0b341; --k-prim: #6fd08f; --k-profile: #c58af9;
-      --k-assoc: #5fc7c7; --k-native: #8a8a94; --k-other: #5a5a66;
+      --k-assoc: #5fc7c7; --k-native: #8a8a94; --k-other: #5a5a66; --k-diagram: #ff9a5c;
     }
     html { color-scheme: light dark; }
     * { box-sizing: border-box; }
@@ -56,11 +77,11 @@
     }
 
     header {
+      position: relative;   /* for #startup-bar */
       display: flex; align-items: center; gap: 12px;
       padding: 8px 14px; border-bottom: 1px solid var(--rule); background: var(--panel);
     }
     header h1 { font: 600 15px/1 system-ui; margin: 0; }
-    header .sub { color: var(--muted); font-size: 12px; }
     #run {
       font: 600 13px/1 system-ui; padding: 7px 14px; border: 1px solid var(--accent);
       background: var(--accent); color: #fff; border-radius: 5px; cursor: pointer;
@@ -71,9 +92,25 @@
       border: 1px solid var(--rule); background: var(--bg); color: var(--ink);
     }
     #compile:hover:not(:disabled) { background: var(--hover); }
-    #status { color: var(--muted); font-size: 12px; }
+    /* Absorbs the header's slack so its text never pushes anything: the buttons to its left
+       and right keep their positions whatever it says. */
+    #status {
+      flex: 1; min-width: 0; color: var(--muted); font-size: 12px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* Reset throws work away, so it does not look like Compile and Run beside it. */
+    .danger-btn {
+      appearance: none; cursor: pointer; border-radius: 4px;
+      font: 600 12px/1 system-ui; padding: 7px 10px;
+      color: var(--error); background: none; border: 1px solid var(--rule);
+    }
+    .danger-btn:hover { background: var(--hover); border-color: var(--error); }
     .icon-btn {
-      margin-left: auto; font-size: 14px; line-height: 1; padding: 6px 9px; cursor: pointer;
+      /* A fixed box: the glyph inside changes with the theme (☀/☾) and those are different
+         widths, so without this the button resized and shifted whenever the theme switched. */
+      flex: none; width: 34px; height: 28px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 14px; line-height: 1; cursor: pointer;
       border: 1px solid var(--rule); border-radius: 5px; background: var(--bg); color: var(--ink);
     }
     .icon-btn:hover { background: var(--hover); }
@@ -87,11 +124,115 @@
       grid-template-columns: var(--sidew) 6px 1fr;
       grid-template-rows: 1fr 6px var(--consoleh);
     }
-    #concepts {
+    /* The left pane is tabbed: the compiled graph, and the modules it came from. Both fill
+       the same cell and swap, so neither pays for the other's width. */
+    #sidebar {
       grid-area: 1 / 1 / 4 / 2; background: var(--panel);
-      display: flex; flex-direction: column; min-height: 0; min-width: 0;
+      display: grid; grid-template-rows: auto 1fr; min-height: 0; min-width: 0;
     }
-    #editor  { grid-area: 1 / 3 / 2 / 4; min-height: 0; min-width: 0; }
+    #sideTabs {
+      display: flex; align-items: center; gap: 2px; padding: 0 6px;
+      border-bottom: 1px solid var(--rule);
+    }
+    #concepts, #modules {
+      grid-row: 2; grid-column: 1; min-height: 0; min-width: 0;
+      display: flex; flex-direction: column;
+    }
+    #concepts[hidden], #modules[hidden] { display: none; }
+
+    /* ---- modules ---------------------------------------------------------------- */
+    .mod-body { overflow: auto; flex: 1; padding: 6px 0 10px; }
+    /* The active module filter, shown above the concept list with its own way out. */
+    .concept-scope {
+      margin: 0 8px 6px; padding: 3px 8px; text-align: left; cursor: pointer;
+      font: 11px/1.4 var(--mono); color: var(--accent);
+      background: var(--bg); border: 1px solid var(--accent); border-radius: 3px;
+    }
+    .concept-scope::after { content: " ✕"; color: var(--muted); }
+    .concept-scope:hover { background: var(--hover); }
+    .concept-scope[hidden] { display: none; }
+
+    .mod-body details.mod-node > summary,
+    .mod-leaf, .mod-file {
+      font: 12px/1.6 var(--mono); padding: 3px 8px; color: var(--ink);
+    }
+    .mod-leaf, .mod-file {
+      display: block; width: 100%; text-align: left; border: 0; background: none;
+    }
+    .mod-name {
+      font-weight: 600; cursor: pointer; border-radius: 3px; padding: 0 2px;
+    }
+    .mod-name:hover { background: var(--hover); text-decoration: underline; }
+    .mod-name.selected { color: var(--accent); }
+    .mod-count { color: var(--muted); font-size: 11px; margin-left: 6px; }
+    /* A shared module, already expanded higher up — named so the sharing is visible. */
+    .mod-leaf.repeat { opacity: 0.75; }
+    .mod-leaf.repeat .mod-name::after { content: " ⟲"; color: var(--muted); font-weight: 400; }
+    .mod-leaf.missing { color: var(--error); }
+    .mod-file { display: flex; align-items: center; gap: 2px; color: var(--muted); }
+    .mod-file:hover { background: var(--hover); }
+    .mod-file.active { background: var(--hover); }
+    .mod-file.active .mod-file-name { color: var(--accent); }
+    .mod-file-open {
+      flex: 1; min-width: 0; text-align: left; border: 0; background: none; cursor: pointer;
+      font: inherit; color: inherit; padding: 0; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .mod-file-name { color: var(--k-class); }
+    .mod-file-name::before { content: "▤ "; color: var(--muted); }
+    .mod-file-act {
+      flex: none; border: 0; background: none; cursor: pointer; color: var(--muted);
+      font: 11px/1 var(--mono); padding: 2px 4px; border-radius: 3px;
+    }
+    .mod-file-act:hover:not(:disabled) { background: var(--bg); color: var(--ink); }
+    .mod-file-act:disabled { opacity: 0.3; cursor: default; }
+    /* A delete waiting on its second click says so rather than relying on a dialog. */
+    .mod-file-act.danger { color: var(--error); border: 1px solid var(--error); }
+    .mod-file-add { cursor: pointer; color: var(--accent); border: 0; background: none;
+      font: 11px/1.6 var(--mono); text-align: left; }
+    .mod-file-add:hover { background: var(--hover); }
+    .mod-file-input {
+      flex: 1; min-width: 0; font: 12px/1.4 var(--mono); padding: 2px 4px;
+      background: var(--bg); color: var(--ink); border: 1px solid var(--accent); border-radius: 3px;
+    }
+    .mod-kind {
+      float: right; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .mod-total {
+      padding: 8px 10px; color: var(--muted); font: 11px/1.5 system-ui;
+      border-top: 1px solid var(--rule);
+    }
+    /* Monaco and the diagram canvas share one cell and swap, rather than competing for
+       width; Monaco's automaticLayout picks up the size change when it is shown again. */
+    #editorArea {
+      grid-area: 1 / 3 / 2 / 4; min-height: 0; min-width: 0;
+      display: grid; grid-template-rows: auto 1fr;
+    }
+    #editor, #diagramPanel { grid-row: 2; grid-column: 1; min-height: 0; min-width: 0; }
+    #diagramPanel[hidden], #editor[hidden] { display: none; }
+    #diagramPanel { position: relative; overflow: hidden; background: var(--bg); }
+    #diagramCanvas { display: block; width: 100%; height: 100%; cursor: default; }
+    #diagramCanvas.moving  { cursor: grabbing; }
+    #diagramCanvas.dragging { cursor: grab; }
+    /* A class being dragged out of the tree is over the canvas and will land here. */
+    #diagramCanvas.dropping { outline: 2px dashed var(--accent); outline-offset: -4px; }
+    .concept[draggable="true"] { cursor: grab; }
+
+    #tabs {
+      display: flex; align-items: center; gap: 2px; padding: 0 6px;
+      border-bottom: 1px solid var(--rule); background: var(--panel);
+    }
+    .tab {
+      appearance: none; border: 0; background: none; color: var(--muted);
+      font: 600 11px/1 system-ui; letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 9px 10px; cursor: pointer; border-bottom: 2px solid transparent;
+    }
+    .tab:hover { color: var(--ink); }
+    .tab.selected { color: var(--accent); border-bottom-color: var(--accent); }
+    #diagramTools { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+    #diagramTools[hidden] { display: none; }
+    #dgZoom { font: 600 11px/1 var(--mono); color: var(--muted); min-width: 3.2em; text-align: center; }
     #console { grid-area: 3 / 3 / 4 / 4; display: flex; flex-direction: column; min-height: 0; }
 
     .splitter { background: var(--rule); touch-action: none; }
@@ -131,6 +272,40 @@
     .k-fn     .icon { color: var(--accent); }
     .k-native .icon { color: var(--k-native); }
     .k-other  .icon { color: var(--k-other); }
+    .k-diagram .icon { color: var(--k-diagram); }
+
+    /* ---- start-up progress ------------------------------------------------------ */
+    /* Overlays the header's bottom border; no layout box, so nothing moves when it goes. */
+    /* Fills the HEADER as it advances, rather than being a hairline on its border — a 2px
+       strip over a 1px border was invisible in practice, which defeated the point. It is the
+       header's first child so the title and buttons paint over it, and it is out of flow so
+       it still costs no layout. */
+    #startup-bar {
+      position: absolute; inset: 0;
+      pointer-events: none; overflow: hidden;
+    }
+    #startup-bar[hidden] { display: none; }
+    /* The tint is translucent through the COLOUR, not through `opacity` — element opacity
+       would dim the leading edge with it, and that crisp line is what makes the position
+       readable at a glance. */
+    .progress-bar {
+      height: 100%; width: 0;
+      background: color-mix(in srgb, var(--accent) 22%, transparent);
+      border-right: 2px solid var(--accent);
+      transition: width 120ms linear;
+    }
+    /* No denominator to show, so the stripes move instead of the width. */
+    #startup-bar.indeterminate .progress-bar {
+      width: 100%; border-right: 0;
+      background: repeating-linear-gradient(135deg,
+          color-mix(in srgb, var(--accent) 22%, transparent) 0 8px, transparent 8px 16px);
+      animation: progress-slide 700ms linear infinite;
+    }
+    @keyframes progress-slide { from { background-position: 0 0; } to { background-position: 22.6px 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .progress-bar { transition: none; }
+      #startup-bar.indeterminate .progress-bar { animation: none; }
+    }
 
     /* ---- console -------------------------------------------------------------- */
     .console-body { overflow: auto; flex: 1; padding: 8px 12px; font: 12px/1.6 var(--mono); }
@@ -204,19 +379,47 @@
 </head>
 <body>
   <header>
+    <!-- Start-up progress: fills the header as it advances. First child so the header's own
+         content paints over it, and absolutely positioned so it occupies no layout at all —
+         appearing and disappearing cannot reflow the page. -->
+    <div id="startup-bar"></div>
     <h1>Legend Pure</h1>
-    <span class="sub">compiles and runs Pure in the browser — no JVM</span>
     <button id="compile" class="secondary" disabled>Compile (⇧F9)</button>
     <button id="run" disabled>Run ▶ (F9)</button>
+    <button id="reset" class="danger-btn"
+            title="Discard every file in this workspace and start again from the sample.">Reset files</button>
+    <!-- The status takes all the slack and clips, so changing its text cannot move the
+         buttons on either side of it. -->
     <span id="status">Loading…</span>
     <button id="theme" class="icon-btn" title="theme">☀</button>
   </header>
 
   <main>
-    <aside id="concepts"></aside>
+    <aside id="sidebar">
+      <div id="sideTabs" role="tablist">
+        <button class="tab selected" data-side="concepts" role="tab">Concepts</button>
+        <button class="tab" data-side="modules" role="tab">Modules</button>
+      </div>
+      <div id="concepts"></div>
+      <div id="modules" hidden></div>
+    </aside>
     <div id="vsplit" class="splitter" role="separator" aria-orientation="vertical"
          title="drag to resize · double-click to reset"></div>
-    <div id="editor"></div>
+    <div id="editorArea">
+      <div id="tabs" role="tablist">
+        <button class="tab selected" data-tab="code" role="tab">Code</button>
+        <button class="tab" data-tab="diagram" role="tab">Diagram</button>
+        <span id="diagramTools" hidden>
+          <button id="dgClean" class="icon-btn" title="remove views whose class no longer exists">🧹</button>
+          <button id="dgFit" class="icon-btn" title="fit to screen">⤢</button>
+          <button id="dgOut" class="icon-btn" title="zoom out">−</button>
+          <span id="dgZoom">100%</span>
+          <button id="dgIn" class="icon-btn" title="zoom in">+</button>
+        </span>
+      </div>
+      <div id="editor"></div>
+      <div id="diagramPanel" hidden><canvas id="diagramCanvas"></canvas></div>
+    </div>
     <div id="hsplit" class="splitter" role="separator" aria-orientation="horizontal"
          title="drag to resize · double-click to reset"></div>
     <section id="console"></section>
@@ -225,10 +428,10 @@
   <!-- The standalone parser + runtime: helpers first, then the antlr bundle
        (the translated parser-mappings). Order matters. -->
   <script src="../../../../../pure/modules/translation/javascript/js/runtime-lib.js"></script>
-  <script src="../../../../../pure/modules/translation/javascript/js/build/antlr-bundle.js"></script>
+  <script src="../../../build/antlr-bundle.js"></script>
   <!-- Mappings half: the translated parser-mappings. Must come after runtime-lib.js;
        the PureRuntime main.js builds drives both bundles. -->
-  <script src="../../../../../pure/modules/translation/javascript/js/build/parser-mappings-bundle.js"></script>
+  <script src="../../../build/parser-mappings-bundle.js"></script>
   <!-- Monaco's AMD loader, vendored (just javascript::web-deps). main.js waits for it. -->
   <script src="../../../build/vs/loader.js"></script>
   <script type="module" src="./main.js"></script>

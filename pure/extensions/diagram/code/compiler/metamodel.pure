@@ -1,0 +1,96 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The `###Diagram` language: what a diagram IS, as metamodel rather than carried text.
+//
+// These are ordinary classes in this extension's own PDB, not additions to m3 — nothing here
+// touches the `AnyUnion` discriminants, so no existing archive or golden is affected.
+//
+// Shape taken from legend-pure's `platform_dsl_diagram/diagram.pure`, trimmed to what the
+// grammar actually carries. Views refer to each other by ID, never by class: the same class
+// may be shown twice, and an edge has to know which box it joins.
+
+Class meta::pure::diagram::metamodel::Point
+{
+   x : Float[1];
+   y : Float[1];
+}
+
+// A class on the diagram. `type` is the class path as written; it stays a string until the
+// compiler's pass resolves it, so a diagram naming a class that does not exist can still be
+// parsed, reported on, and written back out unharmed.
+Class meta::pure::diagram::metamodel::TypeView
+{
+   id                 : String[1];
+   position           : meta::pure::diagram::metamodel::Point[1];
+   width              : Float[1];
+   height             : Float[1];
+   color              : String[0..1];
+   stereotypesVisible : Boolean[1];
+   attributesVisible  : Boolean[1];
+
+   // THE CLASS THIS BOX SHOWS. One slot, not a path plus a resolved copy: the metamodel holds the
+   // real reference, and `<<pointer>>` is what tells the protocol generator to carry it as a PATH on
+   // the parser's side — the generated protocol form gets `Type_Pointer`, which is where the
+   // as-written `m::Person` lives until the compiler resolves it.
+   //
+   // Declared as Type rather than Class because Type is the pointer-encodable taxonomy, so the
+   // protocol reuses the language's existing `Type_Pointer` instead of inventing a wrapper this
+   // extension would be the only speaker of. m3's own metamodel does the same: GenericType.rawType
+   // is a Type, not a Class.
+   //
+   // [0..1] because a diagram naming a class that was since renamed must still compile — the view
+   // survives with nothing resolved and the compiler reports it, so the editor can open the diagram
+   // and repair it. Making it [1] would mean refusing the file and putting the stale view out of reach.
+   <<meta::pure::metamodel::ProtocolInfo.pointer>> type : meta::pure::metamodel::type::Type[0..1];
+}
+
+Class meta::pure::diagram::metamodel::RelationshipView
+{
+   id        : String[1];
+   source    : String[1];
+   target    : String[1];
+   points    : meta::pure::diagram::metamodel::Point[*];
+   color     : String[0..1];
+   lineWidth : Float[0..1];
+   label     : String[0..1];
+}
+
+Class meta::pure::diagram::metamodel::PropertyView extends meta::pure::diagram::metamodel::RelationshipView
+{
+   // `m::Person.firm` as written.
+   property : String[1];
+}
+
+Class meta::pure::diagram::metamodel::AssociationView extends meta::pure::diagram::metamodel::RelationshipView
+{
+   association : String[1];
+}
+
+Class meta::pure::diagram::metamodel::GeneralizationView extends meta::pure::diagram::metamodel::RelationshipView
+{
+}
+
+// A compiled diagram. `width`/`height` are the optional `(width=…, height=…)` on the Diagram
+// line; absent, they stay empty and are not written back, so a file that never had them does
+// not acquire them.
+Class meta::pure::diagram::metamodel::Diagram extends meta::pure::metamodel::PackageableElement
+{
+   width               : Float[0..1];
+   height              : Float[0..1];
+   typeViews           : meta::pure::diagram::metamodel::TypeView[*];
+   propertyViews       : meta::pure::diagram::metamodel::PropertyView[*];
+   associationViews    : meta::pure::diagram::metamodel::AssociationView[*];
+   generalizationViews : meta::pure::diagram::metamodel::GeneralizationView[*];
+}

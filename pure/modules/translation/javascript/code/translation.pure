@@ -705,12 +705,10 @@ function meta::external::language::javascript::translation::translateExpressionN
                             && $fe.func->toOne()->instanceOf(meta::pure::metamodel::function::property::QualifiedProperty);
          let enumAccess = $fe->enumValueAccess();
          // Class metadata access (`<Class>.properties` / `.qualifiedProperties`):
-         // route through the PATH-KEYED class registry (`__classRef('pkg::X')`,
-         // populated by the `__registerClass` decl statements) instead of the
-         // `__pureResolve` proxy. Closures on each entry let reflective
-         // `prop->eval(instance)` chains resolve in pure JS (no host metadata
-         // round-trip); path keying avoids `const <ShortName>` globals that could
-         // shadow JS builtins (a Pure class named `Map` or `Error`).
+         // `.qualifiedProperties` reads the generated class's static (translated bodies);
+         // anything else reads the pdb through `__pureResolve`. Reflective
+         // `prop->eval(instance)` still resolves on the pdb form: `__eval` applies a
+         // metadata-marshaled Property as a slot read off the receiver.
          let classMeta = $fe->classMetadataAccess();
          if ($selfDepth->isNotEmpty(),
              | jsCall(jsId('__ctorAt'), [jsNumLit($selfDepth->toOne()->toString())]),
@@ -731,8 +729,38 @@ function meta::external::language::javascript::translation::translateExpressionN
                   | if ($enumAccess->isNotEmpty(),
                        | jsAccess(jsId(safeJsName($enumAccess->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->split('::')->last()->toOne())), $fe.functionName),
                        |if ($classMeta->isNotEmpty(),
-                       | jsAccess(jsCall(jsId('__classRef'), [jsStrLit($classMeta->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath())]), $fe.functionName),
-                       | jsAccess(jsCall(jsId('__pdo'), [translateExpression($fe.parametersValues->at(0), $conv)]), $fe.functionName)))),
+                       | // `<Class>.qualifiedProperties` comes off the generated class's static, because
+                         // each entry's `eval` is a translated body. Everything else a class can be
+                         // asked for — `.properties` above all — comes from the pdb, which is the
+                         // authoritative description. Both used to go through one `__classRef` into a
+                         // side registry that stood in for the class element.
+                         let metaPath = $classMeta->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath();
+                         if ($fe.functionName == 'qualifiedProperties',
+                            | jsCall(jsId('__qpsOf'), [jsStrLit($metaPath)]),
+                            | jsAccess(jsCall(jsId('__pureResolve'), [jsStrLit($metaPath)]), $fe.functionName));,
+                       | // Reads are `__pdo(p).name`, not `p._name()`. Cost is not the reason — `__pdo`
+                         // is already a call, so an accessor replaces it rather than adding one.
+                         // The reason is that an accessor read requires EVERY producer of a Pure
+                         // value to build an instance of its class.
+                         //
+                         // That invariant is most of the way there. With the pdb marshaller
+                         // classifying decoded values and the runtime helpers building instances
+                         // (pair, tryEval, __genericType, __gtmHolder, the variant List, the
+                         // compileSource result), a type-directed emission — accessor when the
+                         // receiver is scalar `[1]`, its rawType a Class, and NOT a Function-valued
+                         // class, since a `LambdaFunction[1]` receiver holds a JS function — gives
+                         // compiler conformance 259/259 and in-process PCT 826/831.
+                         //
+                         // The last 5 are all enum-value provenance under the IN-PROCESS
+                         // translator: something there yields an enum value that is a bare
+                         // `{name}`. Already ruled out: the EnumDef decode path (typed from the
+                         // writer's table name), rehydrateEnum and rehydrateAtomicEnum (both build
+                         // Enum instances now), and class availability in that host (Enum, Pair and
+                         // GenericTypeValue are all defined there).
+                         let recv = translateExpression($fe.parametersValues->at(0), $conv);
+                         if ($fe.parametersValues->at(0)->isScalarClassReceiver(),
+                            | jsCall(jsAccess($recv, '_' + $fe.functionName), []),
+                            | jsAccess(jsCall(jsId('__pdo'), [$recv]), $fe.functionName));))),
              | // Coder dispatch tolerates fully-qualified function names by
              //   falling back to the last `::`-separated segment. The canonical
              //   recompile occasionally produces FQNs (`meta::pure::functions::
@@ -983,7 +1011,10 @@ function meta::external::language::javascript::translation::newCoder(args: Value
         // holder branch's `classifierGenericTypeEntry` behaviour and the
         // canonical-anchor invariant tests like
         // `testNewGenericTypeAnchorsAtCanonical` assert).
-        jsObject([jsEntry('classifierGenericType', jsCall(jsId('__toCanonicalCgt'), [translateExpression($args->at(0), $conv)]))]),
+        // `__newByType` so the reflection form builds an INSTANCE of the class named by the supplied
+        // GenericType, the same as the static form below does with `new X()`. It was a bare object
+        // literal, which left the one dynamically-constructed element of a compiled graph classless.
+        jsCall(jsId('__newByType'), [jsCall(jsId('__toCanonicalCgt'), [translateExpression($args->at(0), $conv)])]),
       | let keyExprs = if ($args->size() >= 2,
            | $args->at(1)->cast(@meta::pure::metamodel::valuespecification::Collection).values,
            | []->cast(@ValueSpecification));
@@ -1033,9 +1064,45 @@ function meta::external::language::javascript::translation::newCoder(args: Value
         // read an earlier one.
         let assigns = $allEntries->map(e |
            jsExprStmt(jsBinary(jsAccess(jsId('self'), $e.name), '=', $e.initializer))->cast(@meta::external::language::javascript::metamodel::Statement));
+        // `^X(a = 1, b = 2)` constructs an INSTANCE OF THE TRANSLATED CLASS by CHAINING ITS SETTERS —
+        // `new X()._a(1)._b(2)` — so a slot is written through the same accessor that reads it and the
+        // class needs no constructor at all. Each setter returns the receiver. An instance's own
+        // properties are still exactly the slots that were set, so every read in the runtime stays a
+        // plain `v.x`.
+        //
+        // The parent-reference form keeps __newObj, which pushes `self` so `~` resolves and assigns keys
+        // in source order; only its SEED becomes a class instance instead of `{}`. Its keys stay plain
+        // assignments because that branch also serves the classless fallback below, which has no
+        // accessors to call.
+        //
+        // No fallback to a literal: `host-api-tests` asserts that every class in the graph has a
+        // translated class, so a missing one is a build error rather than a silent second representation.
+        let targetClassPath = $args->at(0)->holderTargetType()->map(ty |
+           if ($ty->instanceOf(meta::pure::metamodel::PackageableElement),
+              | $ty->cast(@meta::pure::metamodel::PackageableElement)->elementToPath(),
+              | ''))->filter(s | $s != '');
+        let classRef = $targetClassPath->map(cp | jsId(safeJsName($cp->split('::')->joinStrings('$'))));
         let instExpr = if ($keyExprs->containsParentRef(),
-           | jsCall(jsId('__newObj'), [jsObject([]), jsArrowBlock([jsParam('self')], jsBlock($assigns))]),
-           | jsObject($allEntries));
+           | let cgtInit = $allEntries->filter(e | $e.name == 'classifierGenericType')->map(e | $e.initializer);
+             let seed = if($classRef->isEmpty(),
+                          // No static class, so the classifier is the only thing left to resolve one
+                          // from. `~` is assigned after the seed exists, which is why the slots cannot
+                          // carry it here and only the classifier can.
+                          | if($cgtInit->isEmpty(), | jsObject([]), | jsCall(jsId('__newByType'), [$cgtInit->toOne()])),
+                          | ^meta::external::language::javascript::metamodel::NewExpression(
+                               expression = $classRef->toOne(), arguments = []));
+             jsCall(jsId('__newObj'), [$seed, jsArrowBlock([jsParam('self')], jsBlock($assigns))]);,
+           | if($classRef->isEmpty(),
+                // NOT a bare object literal. A Pure construction always has a class, so when the
+                // translator cannot see it — a canonicalised holder has no user type, which is what the
+                // translated-JavaScript test adapter produces — the classifier the slots carry is used
+                // to resolve it at run time. A literal here answered no accessor, surfacing as
+                // `p._lastName is not a function` nowhere near the construction.
+                | jsCall(jsId('__newOfSlots'), [jsObject($allEntries)]),
+                | $allEntries->fold({e, acc | jsCall(jsAccess($acc, '_' + $e.name), [$e.initializer])},
+                                    ^meta::external::language::javascript::metamodel::NewExpression(
+                                       expression = $classRef->toOne(), arguments = [])
+                                    ->cast(@Expression))));
         // Class-level constraints (incl. inherited via the generalization
         // chain) fire at construction in Pure — `^Foo(...)` evaluates
         // `Foo.constraints` against the new instance, with `$this` bound to
@@ -1174,7 +1241,15 @@ function meta::external::language::javascript::translation::genericTypeToCgtObje
                        && $rt->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->startsWith('meta::pure::metamodel::'),
                        | [jsEntry('classifierGenericType', jsCall(jsId('__pureResolve'), [jsStrLit('meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType')]))],
                        | []->cast(@meta::external::language::javascript::metamodel::PropertyAssignment));
-   jsObject($typeEntry->concatenate($taEntry)->concatenate($tvvEntry)->concatenate($eqEntry)->concatenate($cgtEntry));
+   // A cgt object IS a GenericTypeValue, so hand the slots to `__newCgt`, which makes it an instance
+   // of that class. It used to be a bare object literal, which left it answering no accessor.
+   //
+   // NOT `new meta$...GenericTypeValue()` with chained setters, which is what `^X(...)` emits: this
+   // runs in the STANDALONE PARSER too, and that host loads none of the compiler's classes, so a
+   // bare class identifier is a ReferenceError there. The helper looks the class up and degrades to
+   // the plain object when it is absent.
+   jsCall(jsId('__newCgt'),
+      [jsObject($typeEntry->concatenate($taEntry)->concatenate($tvvEntry)->concatenate($eqEntry)->concatenate($cgtEntry))]);
 }
 
 // Collect a class's `<<equality.Key>>` property names, including inherited
@@ -1214,23 +1289,6 @@ function meta::external::language::javascript::translation::allUserProperties(
                     ->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>);
    let inherited = $supers->map(s | $s->allUserProperties());
    $cls.properties->concatenate($inherited)->removeDuplicatesBy(p | $p.name->toOne());
-}
-
-// Build the `_type: [path, super1, super2, ..., Any]` entry from the holder.
-// Walk the class's `generalizations` chain to capture the full supertype
-// list. Translator-internal `_`-prefixed key is skipped by `__eq` and by
-// the Java-side `liftToPdo` so it doesn't pollute structural compare or
-// Pure-side PDO writes.
-function meta::external::language::javascript::translation::instanceTypeEntry(holder: ValueSpecification[1]): meta::external::language::javascript::metamodel::PropertyAssignment[*]
-{
-   let rawType = $holder->holderTargetType();
-   if ($rawType->isEmpty() || !$rawType->toOne()->instanceOf(meta::pure::metamodel::type::Class),
-      | []->cast(@meta::external::language::javascript::metamodel::PropertyAssignment),
-      | let cls = $rawType->toOne()->cast(@Class<Any>);
-        let chain = $cls->classChain();
-        let chainArr = jsArrayLit($chain->map(p | jsStrLit($p)));
-        [jsEntry('_type', $chainArr)];
-   );
 }
 
 // Extract the user-facing target class from a holder VS. The holder's
@@ -1922,6 +1980,38 @@ function meta::external::language::javascript::translation::assertFalseCoder(arg
 // cast(x, type) -> identity in JS (no runtime type check). Pure's cast either
 // succeeds or throws; we lose the throw-on-mismatch behavior but most PCTs
 // pass a correctly-typed value.
+function meta::external::language::javascript::translation::isExactlyOneMult(m: meta::pure::metamodel::multiplicity::Multiplicity[1]): Boolean[1]
+{
+   if (!$m->instanceOf(meta::pure::metamodel::multiplicity::ConcreteMultiplicity),
+      | false,
+      | let cm = $m->cast(@meta::pure::metamodel::multiplicity::ConcreteMultiplicity);
+        $cm.lowerBound->isNotEmpty() && $cm.upperBound->isNotEmpty()
+           && $cm.lowerBound->toOne().value->toOne() == 1
+           && $cm.upperBound->toOne().value->toOne() == 1;
+   );
+}
+
+function meta::external::language::javascript::translation::isFunctionValuedClass(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]): Boolean[1]
+{
+   if ($cls->cast(@meta::pure::metamodel::PackageableElement)->elementToPath() == 'meta::pure::metamodel::function::Function',
+      | true,
+      | $cls.generalizations
+           ->map(g | $g.general->meta::pure::metamodel::type::rawType())
+           ->filter(ty | $ty->isNotEmpty() && $ty->toOne()->instanceOf(meta::pure::metamodel::type::Class))
+           ->map(ty | $ty->toOne()->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>))
+           ->exists(s | $s->isFunctionValuedClass()));
+}
+
+function meta::external::language::javascript::translation::isScalarClassReceiver(vs: ValueSpecification[1]): Boolean[1]
+{
+   let rt = $vs.genericType->rawType();
+   $vs.multiplicity->isExactlyOneMult()
+      && $rt->isNotEmpty()
+      && $rt->toOne()->instanceOf(meta::pure::metamodel::type::Class)
+      && !$rt->toOne()->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>)->isFunctionValuedClass();
+}
+
 // True when the multiplicity is a concrete `[*]`/`[1..*]` (to-many). Non-concrete
 // multiplicities (a `[m]` parameter) are treated as scalar here.
 function meta::external::language::javascript::translation::isToManyMult(m: meta::pure::metamodel::multiplicity::Multiplicity[1]): Boolean[1]
@@ -2255,8 +2345,8 @@ function meta::external::language::javascript::translation::castResolvedExpr(t: 
 
 // instanceOf(v, type) -> runtime helper that walks the metamodel
 // classifier hierarchy embedded in the runtime preamble. Knows about
-// JS primitives (typeof checks) and Pure class-refs / instances tagged
-// with `_kind` / `_type`.
+// JS primitives (typeof checks) and, for instances, the classifier the value
+// itself carries (`__purePath` or `classifierGenericType`).
 function meta::external::language::javascript::translation::instanceOfCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 2, | 'instanceOfCoder expects 2 args');
@@ -2815,10 +2905,30 @@ function meta::external::language::javascript::translation::parseDateCoder(args:
 
 // pair(first, second) -> `{ first, second }` matches Pure's Pair shape. Used
 // inside multi-if's [pair(|cond, |val), ...] form and elsewhere.
+// `new <Class>()._a(1)._b(2)` — the shape `^X(...)` emits, for the coders that know their class.
+//
+// NOT `__newOf('mangled', {...})`, which looks the class up at run time and silently hands back a
+// plain object when it is absent. That lookup belongs to runtime-lib, which is a classic script loaded
+// before any generated module and so genuinely cannot name a class; a coder can, and naming it means a
+// missing class is a ReferenceError at the exact line rather than an untyped value that fails a read
+// much later. It did: an enumeration const built before metamodel.js had defined Enum degraded
+// quietly, and surfaced as `enumVal._classifierGenericType is not a function`.
+function meta::external::language::javascript::translation::newInstanceOf(
+   mangledClass: String[1],
+   entries: meta::external::language::javascript::metamodel::PropertyAssignment[*]): Expression[1]
+{
+   $entries->fold({e, acc | jsCall(jsAccess($acc, '_' + $e.name), [$e.initializer])},
+                  ^meta::external::language::javascript::metamodel::NewExpression(
+                     expression = jsId($mangledClass), arguments = [])->cast(@Expression));
+}
+
 function meta::external::language::javascript::translation::pairCoder(args: ValueSpecification[*], conv: Convention[1]): Expression[1]
 {
    assert($args->size() == 2, | 'pairCoder expects exactly 2 args');
-   jsObject([
+   // An instance of Pair, not a bare literal: a scalar Class-typed receiver is read through its
+   // accessor, so a literal here answers `acc._first is not a function` wherever a Pair is read.
+   // `__multiIf` is the biggest consumer, via `[pair(|cond, |val), ...]`.
+   newInstanceOf('meta$pure$functions$collection$Pair', [
       jsEntry('first',  translateExpression($args->at(0), $conv)),
       jsEntry('second', translateExpression($args->at(1), $conv))
    ]);
@@ -3110,11 +3220,12 @@ function meta::external::language::javascript::translation::genericTypeHolderCod
    // [genericType(x)] }`, so `holder->genericType().typeArguments[0].type`
    // recovers x's type (the holder is consumed in JS — it isn't lifted).
    let arg = translateExpression($args->at(0), $conv);
-   jsObject([jsEntry('classifierGenericType', jsObject([
-      jsEntry('type', jsCall(jsId('__pureResolve'),
-                             [jsStrLit('meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder')])),
-      jsEntry('typeArguments', jsArrayLit([jsCall(jsId('__genericType'), [$arg])]))
-   ]))]);
+   newInstanceOf('meta$pure$metamodel$valuespecification$GenericTypeAndMultiplicityHolder', [
+      jsEntry('classifierGenericType', jsCall(jsId('__newCgt'), [jsObject([
+         jsEntry('type', jsCall(jsId('__pureResolve'),
+                                [jsStrLit('meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder')])),
+         jsEntry('typeArguments', jsArrayLit([jsCall(jsId('__genericType'), [$arg])]))
+      ])]))]);
 }
 
 // parse(sourceId, content) — drive the bundled parser-mappings interpreter
@@ -3628,7 +3739,23 @@ function meta::external::language::javascript::translation::classInstanceToObjec
         // instance round-trips as an untyped Map and fails structural equality
         // against the Pure-side PDO (find/filter/head/relationship tests).
         let cgtEntry = jsEntry('classifierGenericType', $v->genericType()->genericTypeToCgtObject());
-        jsObject($entries->concatenate($cgtEntry));
+        // AN INSTANCE OF THE CLASS, not an object literal. This is the path a CAPTURED instance takes
+        // — the test adapter canonicalises a function first, which const-folds `^CO_Person(...)` into a
+        // value, so the construction never reaches newCoder and this arm is what emits it.
+        //
+        // A literal here is invisible until something reads a slot: `$p.lastName` translates to
+        // `p._lastName()`, which a literal cannot answer, and the failure lands in the test's lambda
+        // with no hint that the instance was built wrong. Generated Java has the same property for the
+        // same reason — a captured instance is a typed impl there, never a map.
+        //
+        // The class is known right here (`$cls`), so it is named directly; the chained setters are the
+        // same shape `^X(...)` emits.
+        let allEntries = $entries->concatenate($cgtEntry);
+        $allEntries->fold({e, acc | jsCall(jsAccess($acc, '_' + $e.name), [$e.initializer])},
+                          ^meta::external::language::javascript::metamodel::NewExpression(
+                             expression = jsId(safeJsName($cls->cast(@meta::pure::metamodel::PackageableElement)
+                                                              ->elementToPath()->split('::')->joinStrings('$'))),
+                             arguments = [])->cast(@Expression));
    ))))))));
 }
 
@@ -3966,8 +4093,8 @@ function meta::external::language::javascript::translation::classMetadataAccess(
    fe: FunctionExpression[1]
 ): meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[0..1]
 {
-   // Only qualifiedProperties routes through the static registry — QP dispatch
-   // needs the TRANSLATED body closures only __registerClass carries. Plain
+   // Only qualifiedProperties routes through the generated class — QP dispatch
+   // needs the TRANSLATED body closures, which only the class's static holds. Plain
    // `.properties` reads go through the `__pureResolve` proxy (the metadata
    // globals) so they surface the same marshaled Property shape every other
    // metadata read produces — reflective `prop->eval(inst)` on those is
@@ -4042,45 +4169,135 @@ function meta::external::language::javascript::translation::addClass(
    if ($seen->contains($cls), | $seen, | $seen->concatenate($cls));
 }
 
-// Emit `__registerClass('<path>', { properties: [...], qualifiedProperties: [...] })`
-// — each entry is `{ name, eval }` where `eval` is a closure that receives
-// the receiver instance (plus any extra QP params) and returns the slot value /
-// QP body result. The closure path keeps reflective
-// `<Class>.properties->filter(...)->toOne()->eval(instance)` chains resolvable
-// in pure JS without routing through Truffle's `EvalNode.dispatch`.
-// Registration is keyed by the class PATH (references emit `__classRef(path)`):
-// a `const <ShortName>` global would collide across packages and could shadow
-// JS builtins (Pure classes named `Map`, `Error`, …).
-function meta::external::language::javascript::translation::translateClassDecl(
-   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1],
-   conv: Convention[1]
-): meta::external::language::javascript::metamodel::ExpressionStatement[1]
+// The JS identifier for a Pure class: the full element path with `::` replaced by `$`, the same rule
+// jsUdfName uses for functions. A function always carries a `_<signature>` suffix, so a class and a
+// function can never collide.
+function meta::external::language::javascript::translation::jsClassName(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]): String[1]
 {
-   let pe        = $cls->cast(@meta::pure::metamodel::PackageableElement);
-   let typeVars  = $cls.typeVariables;
-   let propEntries = $cls.properties->map(p | $p->translatePropertyEntry($conv));
-   let qpEntries   = $cls.qualifiedProperties->map(q | translateQpEntry($typeVars, $q, $conv));
-   jsExprStmt(jsCall(jsId('__registerClass'), [
-      jsStrLit($pe->elementToPath()),
-      jsObject([
-         jsEntry('properties',          jsArrayLit($propEntries)),
-         jsEntry('qualifiedProperties', jsArrayLit($qpEntries))
-      ])
-   ]));
+   safeJsName($cls->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()->split('::')->joinStrings('$'));
 }
 
-// Per-property emitter: `{ name, eval: (self) => __pdo(self).<name> }`.
-function meta::external::language::javascript::translation::translatePropertyEntry(
-   p: meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Nil, meta::pure::metamodel::type::Any|*>[1],
-   conv: Convention[1]
-): Expression[1]
+// The CLASS ITSELF, as a JavaScript class.
+//
+// A Pure class used to emit no JavaScript at all — instances were plain object literals, and class
+// identity came from the PDB. That works, but it means nothing in the emitted code says what a
+// TypeView is, and a host reading an instance is poking at an untyped bag.
+//
+// The constructor takes the slots as one object and assigns them, so an instance's own properties are
+// exactly what a literal had: every read in the runtime is a plain `v.x` (see `__pdo`, which only
+// redirects lambdas), so this is representation-compatible with what came before.
+// Every property of a class INCLUDING inherited ones, by walking the generalization chain.
+//
+// The chain is FLATTENED rather than mirrored, because the two type systems disagree: a Pure class may
+// have several generalizations (12 do, among them a real diamond in the equality test model) while a
+// JavaScript class has exactly one `extends` and one prototype chain. Generated Java expresses this
+// with interfaces, which may extend many; JavaScript has no equivalent, so each class carries the
+// accessors it inherits.
+function meta::external::language::javascript::translation::allPropertyNames(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1]): String[*]
 {
-   let pname = $p.name->toOne();
-   let arrow = jsArrowExpr(
-                  [jsParam('self')],
-                  jsAccess(jsCall(jsId('__pdo'), [jsId('self')]), $pname));
-   jsObject([jsEntry('name', jsStrLit($pname)),
-             jsEntry('eval', $arrow)]);
+   // BOTH lists. An association contributes its far side through `propertiesFromAssociations`, not
+   // `properties` — `^Person(firm = $f)` sets one of those — so leaving them out produced a class
+   // that silently lacked `_firm`. The runtime's own __classPropertyNames walks exactly these two.
+   let direct = $cls.properties->concatenate($cls.propertiesFromAssociations)->map(p | $p.name->toOne());
+   let supers = $cls.generalizations
+      ->map(g | $g.general->meta::pure::metamodel::type::rawType())
+      ->filter(ty | $ty->isNotEmpty() && $ty->toOne()->instanceOf(meta::pure::metamodel::type::Class))
+      ->map(ty | $ty->toOne()->cast(@meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>));
+   $direct->concatenate($supers->map(s | $s->allPropertyNames()))->removeDuplicates();
+}
+
+// The accessor for one property: `_<name>()` reads the slot, `_<name>(value)` writes it and returns
+// the receiver.
+//
+// A METHOD, not a field, and that distinction is the entire point. Methods live on the prototype, so
+// they add nothing to an instance's own keys — which is what makes this safe where declared fields
+// were not (see translateClassDeclaration below). The slot itself is untouched: the getter returns
+// exactly what a direct read returns, scalar for `[1]` and an array otherwise, so nothing about the
+// representation changes.
+//
+// Generated Java does the same thing, splitting the two by name (`name()` reads, `_name(value)`
+// writes). One method covering both arities keeps a single name per property, which is what a reader
+// of the class wants to see.
+function meta::external::language::javascript::translation::propertyAccessor(
+   name: String[1]): meta::external::language::javascript::metamodel::MethodDeclaration[1]
+{
+   let slot = jsAccess(jsThis(), $name);
+   jsMethod('_' + $name, [jsParam('value')],
+      jsBlock([
+         jsIfStmt(jsBinary(jsLength(jsId('arguments')), '===', jsNumLit('0')), jsReturn($slot), []),
+         jsExprStmt(jsBinary($slot, '=', jsId('value'))),
+         jsReturn(jsThis())
+      ]));
+}
+
+function meta::external::language::javascript::translation::translateClassDecl(
+   cls: meta::pure::metamodel::type::Class<meta::pure::metamodel::type::Any>[1],
+   conv: Convention[1]): meta::external::language::javascript::metamodel::Statement[1]
+{
+   let name = $cls->jsClassName();
+   // NO CONSTRUCTOR. A class is its accessors and nothing else: `^X(a = 1, b = 2)` emits
+   // `new X()._a(1)._b(2)`, so the slots are set through the same methods that read them rather than
+   // through a second, parallel entry point that bulk-assigned an object. Each setter returns the
+   // receiver, which is what makes the chain work — the shape generated Java builds with.
+   // The class declaration ALONE is not enough. A generated file loaded as a module has its exports
+   // copied onto globalThis, but the in-process path (Execution.evalJs) strips `export ` and runs the
+   // text with vm.runInThisContext — where `class X {}` creates a LEXICAL binding, not a global
+   // property, unlike `function f(){}`. A class compiled at run time would then be invisible to the
+   // `new X(...)` sites that need it. The explicit assignment makes both paths agree.
+   // The properties are stated as ACCESSORS, never as declared fields, and that is load-bearing
+   // rather than a style choice.
+   //
+   // A declared field initialises to `undefined`, so an instance owns a key for EVERY slot, including
+   // the ones Pure left empty. That breaks the pointer guard, which is what keeps an unresolved
+   // pointer opaque: reading an element property off a `^ClassPointer(...)` throws until the pointer
+   // is resolved, and the guard's premise is that an unresolved pointer does not have those keys.
+   //
+   // Equality is where it bites, because `__eq` compares own keys and has to READ each one to drop
+   // the undefined ones:
+   //
+   //    const keysOf = (o) => Object.keys(o).filter((k) => !k.startsWith("_") && o[k] !== void 0);
+   //
+   // so a ClassPointer that owns `propertiesFromAssociations` gets read there and the guard fires —
+   //   Unresolved pointer access: meta::pure::metamodel::pointer::ClassPointer.propertiesFromAssociations
+   //      at keysOf -> __eq -> meta::pure::compiler::helper::type::typeEquals
+   // The undefined-filter cannot save it: filtering IS the read. Declared fields cost 100 of the 259
+   // compiler-conformance fixtures this way, and weakening the guard would be the wrong trade — it is
+   // the check that proves the compiler resolves every pointer before returning.
+   //
+   // Prototype methods say the same thing without the cost: they declare every property the class
+   // holds and put not one key on an instance.
+   let accessors = $cls->allPropertyNames()
+      ->map(n | propertyAccessor($n)->cast(@meta::external::language::javascript::metamodel::ClassMember));
+   // GUARDED, and not exported. A top-level `class X {}` is a global LEXICAL binding when a host
+   // runs the file through `vm.runInThisContext` (which is how the lean parser host loads generated
+   // modules, after stripping `export `), so the same class arriving twice in one process is a hard
+   // `SyntaxError: Identifier 'X' has already been declared`. Two things do that routinely: a host
+   // that loads a generated module another host already loaded, and the in-process execution path,
+   // which TRANSLATES AND EVALUATES packages at run time whose classes are also in a loaded module.
+   //
+   // Declaring inside an `if` block keeps the binding block-scoped and publishes it by assignment,
+   // so loading twice is a no-op and every `new X(...)` site — which resolves the bare name through
+   // globalThis — keeps working. The assignment is also what makes the class visible at all under
+   // runInThisContext, where a lexical `class` would be invisible to other scripts.
+   // The QUALIFIED PROPERTIES live on the class, as a static. They are the one thing a pdb cannot
+   // supply — `eval` is a translated body — and they used to sit in a path-keyed side registry
+   // (`__registerClass`) that also carried a `properties` list nothing ever read. A static keeps them
+   // where the class is, and `__qp` dispatches on the receiver's runtime class to find them.
+   let qpEntries = $cls.qualifiedProperties->map(q | translateQpEntry($cls.typeVariables, $q, $conv));
+   let statics = if ($qpEntries->isEmpty(),
+      | []->cast(@meta::external::language::javascript::metamodel::ClassMember),
+      | ^meta::external::language::javascript::metamodel::PropertyDeclaration(
+           name = 'qualifiedProperties',
+           modifiers = [meta::external::language::javascript::metamodel::ModifierFlag.Static],
+           initializer = jsArrayLit($qpEntries))
+        ->cast(@meta::external::language::javascript::metamodel::ClassMember));
+   let publish = jsExprStmt(jsBinary(jsAccess(jsId('globalThis'), $name), '=', jsId($name)));
+   jsIfStmt(jsBinary(jsTypeof(jsAccess(jsId('globalThis'), $name)), '===', jsStrLit('undefined')),
+            jsBlock([jsClass($name, $statics->concatenate($accessors))->cast(@meta::external::language::javascript::metamodel::Statement),
+                     $publish->cast(@meta::external::language::javascript::metamodel::Statement)]),
+            [])->cast(@meta::external::language::javascript::metamodel::Statement);
 }
 
 // Per-qualifiedProperty emitter: `{ name, eval: (this, ...args) => <body> }`.
@@ -4132,12 +4349,20 @@ function meta::external::language::javascript::translation::translateEnumeration
    // reflection — `$v.name`, `genericType()`, `instanceOf` — and distinguishing
    // same-named values across different enumerations. (A bare string can do
    // neither.)
+   //
+   // A member is an instance of `meta::pure::metamodel::type::Enum`, and its classifier a
+   // GenericTypeValue, so an enum value answers `_name()` like everything else in a graph. Both go
+   // The class is NAMED, so an enumeration const built before metamodel.js has defined Enum is a
+   // ReferenceError here rather than a plain object that fails a read later — which is how a load-order
+   // bug hid once already. The classifier keeps `__newCgt`: GenericTypeValue is absent from the parser
+   // bundle, where 172 of these calls land.
    let members   = $en.properties->map(p |
       let vname = $p.name->toOne();
       jsEntry($vname,
-              jsObject([jsEntry('name', jsStrLit($vname)),
-                        jsEntry('classifierGenericType',
-                                jsObject([jsEntry('type', encodePeRef($en))]))]));
+              newInstanceOf('meta$pure$metamodel$type$Enum', [
+                 jsEntry('name', jsStrLit($vname)),
+                 jsEntry('classifierGenericType',
+                         jsCall(jsId('__newCgt'), [jsObject([jsEntry('type', encodePeRef($en))])]))]));
    );
    jsConst($shortName, jsObject($members));
 }

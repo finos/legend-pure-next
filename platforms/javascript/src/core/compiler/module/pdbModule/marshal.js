@@ -67,7 +67,11 @@ function rehydrateEnum(fieldName, v) {
     const enumType = ENUM_STRING_FIELDS[fieldName];
     if (!enumType || typeof v !== "string") return v;
     const values = globalThis[enumType];
-    return (values && values[v]) || { name: v };
+    // An Enum instance, not a bare `{name}`: a pdb-decoded enum value is read like any other graph
+    // value, so it has to answer `_name()` the way the generated enum consts do. No classifier is
+    // synthesised here — an enum value's classifier is its ENUMERATION, and this path knows only
+    // the enum type's short name.
+    return (values && values[v]) || globalThis.__newOf("meta$pure$metamodel$type$Enum", { name: v });
 }
 
 // Enum-value LITERALS are stored as an AtomicValue whose string payload is
@@ -88,7 +92,15 @@ function rehydrateAtomicEnum(raw, genericType) {
     }
     const name = raw.slice(raw.lastIndexOf(".") + 1);
     const values = globalThis[typePath.split("::").pop()];
-    return (values && values[name]) || { name };
+    if (values && values[name]) return values[name];
+    // The generated const for this enumeration is not loaded in this host (a test-model enumeration
+    // under the in-process translator, say), so synthesise the value. An Enum INSTANCE with a real
+    // classifier, not a bare `{name}`: `$v->type()` and `$v->genericType()` read it, and so does
+    // every accessor — an enum value is read like any other graph value.
+    return globalThis.__newOf("meta$pure$metamodel$type$Enum", {
+        name,
+        classifierGenericType: globalThis.__newCgt({ type: globalThis.__pureResolve(typePath) }),
+    });
 }
 
 // Marshal a decoded value into the shape the translated runtime expects:
@@ -104,6 +116,49 @@ function rehydrateAtomicEnum(raw, genericType) {
 // itself — so resolving it returns the same mutable object, closing the cycle
 // exactly as the JVM wrapper's _fbParent() walk does. This is the wiring half
 // of AncestorRef; the format half (decoding depth) lives in reader.pure.
+// Give a decoded value the prototype of its Pure class, so a pdb-backed object answers the
+// generated `_<property>()` accessors exactly as a compiler-built instance does. The class path
+// comes from the value's own `classifierGenericType`, which is the only thing that identifies it:
+// an FBS table is named `<SimpleName>Def` with no package, and the same simple name exists in more
+// than one package (`GenericType` is both a metamodel and a protocol class), so the table name
+// cannot be mapped back to a Pure path.
+//
+// setPrototypeOf, NOT a copy: `stack` has already published this exact object for AncestorRef
+// back-references to point at, and the graph is genuinely cyclic, so swapping in a new object here
+// would leave those cycles pointing at the abandoned one.
+function classify(out, tableType) {
+    // An ENUM VALUE cannot be typed from its classifier, because an enum value's classifier names
+    // its ENUMERATION (whose global is the generated const — an object, not a class), not the class
+    // it is an instance of. The writer's table name says it exactly: every enum value is an
+    // instance of meta::pure::metamodel::type::Enum.
+    if (tableType === "EnumDef") {
+        const E = globalThis["meta$pure$metamodel$type$Enum"];
+        if (typeof E === "function") Object.setPrototypeOf(out, E.prototype);
+        return out;
+    }
+    const t = out.classifierGenericType && out.classifierGenericType.type;
+    const path = t && (typeof t.__purePath === "string" ? t.__purePath
+                     : typeof t.path === "string" ? t.path : undefined);
+    if (typeof path !== "string") return out;
+    const Cls = globalThis[path.split("::").join("$")];
+    if (typeof Cls === "function") {
+        Object.setPrototypeOf(out, Cls.prototype);
+        return out;
+    }
+    // The classifier names an ENUMERATION rather than a class — a generated enumeration's global is
+    // a const object of its values, not a constructor — so what we are classifying is an ENUM
+    // VALUE, and every enum value is an instance of meta::pure::metamodel::type::Enum.
+    //
+    // The table name cannot tell us this: an Enumeration stores its values in
+    // `properties: [PropertyDef]` (see EnumerationDef in m3.fbs), so an enum value arrives here
+    // looking exactly like a real property.
+    if (Cls && typeof Cls === "object") {
+        const E = globalThis["meta$pure$metamodel$type$Enum"];
+        if (typeof E === "function") Object.setPrototypeOf(out, E.prototype);
+    }
+    return out;
+}
+
 export function marshal(sx, v, stack = []) {
     if (v === undefined || v === null) return undefined;
     if (Array.isArray(v)) return v.map((x) => marshal(sx, x, stack));
@@ -114,11 +169,11 @@ export function marshal(sx, v, stack = []) {
         // Synthesize the annotation with its profile + value (name).
         if (kind === "Stereotype" || kind === "Tag") {
             const cls = kind === "Stereotype" ? "meta::pure::metamodel::extension::Stereotype" : "meta::pure::metamodel::extension::Tag";
-            return {
+            return classify({
                 profile: globalThis.__pureResolve(arr.slice(0, -1).join("::")),
                 value: arr[arr.length - 1],
                 classifierGenericType: { type: globalThis.__pureResolve(cls) },
-            };
+            });
         }
         // (Qualified)Property pointers are TempCompilerPointers, not elements: the
         // path is [..owner segments, member]. Rebuild the pointer object so the
@@ -127,11 +182,11 @@ export function marshal(sx, v, stack = []) {
             const cls = "meta::pure::metamodel::pointer::" + kind + "Pointer";
             const ownerPath = arr.slice(0, -1).join("::");
             const member = arr[arr.length - 1];
-            const ptr = {
+            const ptr = classify({
                 path: ownerPath,
                 element: member,
                 classifierGenericType: { type: globalThis.__pureResolve(cls) },
-            };
+            });
             // Property-shaped reads resolve lazily through the owner element
             // (e.g. the translator's findAssociationPartner walks
             // `cls.propertiesFromAssociations` reading `.name`/`.owner`/
@@ -191,7 +246,7 @@ export function marshal(sx, v, stack = []) {
         } finally {
             stack.pop();
         }
-        return out;
+        return classify(out, v.type);
     }
     return v;
 }
@@ -224,7 +279,7 @@ const OPT_PREFIX = "meta::pure::metamodel::type::generics::optimization::Generic
 const UDPGT = "meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType";
 function synthOptGenericType(address, prop) {
     if (prop === "type") return globalThis.__pureResolve(address.slice(OPT_PREFIX.length).replace(/_/g, "::"));
-    if (prop === "classifierGenericType") return { type: globalThis.__pureResolve(UDPGT) };
+    if (prop === "classifierGenericType") return globalThis.__newCgt({ type: globalThis.__pureResolve(UDPGT) });
     if (prop === "typeArguments" || prop === "multiplicityArguments" || prop === "typeVariableValues") return [];
     return undefined;
 }

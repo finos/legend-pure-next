@@ -89,7 +89,7 @@ env:
   #   NODE_VERSION      ↔ node on PATH locally; the JS translation runtime needs
   #                       node + pnpm to esbuild-bundle the antlr natives
   #   PNPM_VERSION      ↔ `pnpm --version` locally; major must match
-  #                       pure/modules/translation/javascript/js/pnpm-lock.yaml's lockfileVersion
+  #                       platforms/javascript/pnpm-lock.yaml's lockfileVersion
   NODE_VERSION: '22'
   PNPM_VERSION: '9'
 
@@ -602,7 +602,7 @@ jobs:
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
 
       # generate-pdb-reader translates meta::pure::compiler::pdb::{reader,schema}
-      # into legend-pure-next-truffle-core/generated with the JAVA translator,
+      # into legend-pure-next-platform-truffle-pure/generated with the JAVA translator,
       # running on the bootstrap CLI — so it needs those modules' PDBs. They are
       # NOT in bootstrap-artifacts, and the jobs that publish them (translation-deps
       # / translations) run after this one, so this job builds them itself. Takes
@@ -755,7 +755,7 @@ jobs:
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
 
       # generate-pdb-reader translates meta::pure::compiler::pdb::{reader,schema}
-      # into legend-pure-next-truffle-core/generated with the JAVA translator,
+      # into legend-pure-next-platform-truffle-pure/generated with the JAVA translator,
       # running on the bootstrap CLI — so it needs those modules' PDBs. They are
       # NOT in bootstrap-artifacts, and the jobs that publish them (translation-deps
       # / translations) run after this one, so this job builds them itself. Takes
@@ -1068,7 +1068,7 @@ jobs:
       matrix:
         include:
           - target: java
-            gallery_file: pure/modules/translation/java/build/java-translation-gallery.html
+            gallery_file: platforms/java/build/java-platform-gallery.html
             language_pdb_artifact: language-java-pdb
             gallery_cmd: just build test-all gallery
             # The Java platform's own seven suites, so the dashboard's java@platform
@@ -1079,12 +1079,16 @@ jobs:
             # two java-translation PDBs built by the step above.
             platform_suite: just java::test-all
           - target: javascript
-            gallery_file: pure/modules/translation/javascript/build/javascript-translation-gallery.html
+            gallery_file: platforms/javascript/build/javascript-translation-gallery.html
             language_pdb_artifact: language-javascript-pdb
-            gallery_cmd: just build antlr-all test-all gallery
+            # build-TESTS, not build: the platform's antlr-all runs `_emit` over
+            # meta::pure::parser::mappings, and a split-built lean pdb carries refs into its -tests
+            # companion, so javascript-translation-tests.pdb has to exist. `modules::build` uses
+            # build-tests for this module for the same reason.
+            gallery_cmd: just build-tests && just --justfile ../../../../Justfile javascript::antlr-all && just test-all gallery
             platform_suite: just javascript::test-all
           - target: truffle
-            gallery_file: pure/modules/translation/truffle/build/truffle-translation-gallery.html
+            gallery_file: platforms/truffle/build/truffle-translation-gallery.html
             language_pdb_artifact: ''
             gallery_cmd: just gallery
             platform_suite: ''
@@ -1161,6 +1165,23 @@ jobs:
             tar -xf ${{ matrix.language_pdb_artifact }}.tar
           fi
 
+      # The language extensions under pure/extensions — today the `###Diagram` one. BOTH platforms
+      # need it: javascript::generate-all translates it into generated/extensions/ for the browser
+      # IDE's diagram editor, and the Java platform's -extensions-diagram module generates its parser
+      # and AOT-translates meta::pure::diagram from this PDB (java::spec-diagram runs its tests).
+      # Built here rather than shipped as a translation-deps artifact: it depends only on core.pdb and
+      # compiler.pdb (both restored above with bootstrap-artifacts) and compiles in well under a
+      # second, so an artifact round trip would cost more than the build.
+      - name: Build the language extensions
+        if: matrix.target == 'javascript' || matrix.target == 'java'
+        # modules/protocol first: the diagram extension DERIVES its protocol form from a compiled
+        # metamodel (see its generate-protocol), so protocol.pdb has to exist before it builds. The root
+        # Justfile orders these the same way; this job restores artifacts rather than running that, so it
+        # has to say so itself. It needs only core.pdb, already restored above.
+        run: |
+          just modules::protocol::build
+          just extensions::build-tests
+
       - name: Translation ${{ matrix.target }}
         working-directory: pure/modules/translation/${{ matrix.target }}
         run: ${{ matrix.gallery_cmd }}
@@ -1197,17 +1218,27 @@ jobs:
             platforms/javascript/generated \
             platforms/javascript/build/vs \
             pure/modules/translation/javascript/js/runtime-lib.js \
-            pure/modules/translation/javascript/js/build/antlr-bundle.js \
-            pure/modules/translation/javascript/js/build/parser-mappings-bundle.js \
+            platforms/javascript/build/antlr-bundle.js \
+            platforms/javascript/build/parser-mappings-bundle.js \
             pure/modules/language/javascript/build/javascript.pdb \
             pure/modules/translation/javascript/build/javascript-translation.pdb \
             pure/modules/translation/shared/build/translation-shared.pdb \
             pure/specification/grammar/antlr/m3/M3Lexer.g4 \
-            shared/core.pdb shared/core-tests.pdb shared/compiler.pdb \
+            shared/core.pdb shared/compiler.pdb \
             shared/specification/m3.fbs
           do
             mkdir -p "ide-site/$(dirname "$path")"
             cp -R "$path" "ide-site/$path"
+          done
+          # Every language extension's pdb, found by glob rather than named: the page's module list
+          # comes from the generated descriptors (platforms/javascript/generated/languages.js),
+          # so adding an extension must not need an edit here either. The -tests companions are left
+          # behind — the page runs no tests.
+          for path in pure/extensions/*/build/*.pdb
+          do
+            case "$path" in *-tests.pdb) continue ;; esac
+            mkdir -p "ide-site/$(dirname "$path")"
+            cp "$path" "ide-site/$path"
           done
           # Locales and the other languages' grammars are never loaded by this page.
           rm -rf ide-site/platforms/javascript/build/vs/basic-languages
@@ -1371,7 +1402,7 @@ jobs:
           else
             echo "::warning::ide-site is missing (did the javascript translation job fail?), so the IDE is not published"
           fi
-          publish gallery-java/java-translation-gallery.html             java.html       'Pure &rarr; Java translation gallery'
+          publish gallery-java/java-platform-gallery.html                java.html       'Pure &rarr; Java translation gallery'
           publish gallery-javascript/javascript-translation-gallery.html javascript.html 'Pure &rarr; JavaScript translation gallery'
           publish gallery-truffle/truffle-translation-gallery.html       truffle.html    'Pure &rarr; Truffle AST gallery'
           # After the galleries: --published links the PCT runs to the galleries copied next to the page.

@@ -1,0 +1,169 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# pure/extensions/diagram/Justfile — builds the `###Diagram` language extension.
+#
+# Direct invocation: just <recipe>     (from pure/extensions/diagram/)
+#
+# Inputs:  shared/core.pdb, shared/compiler.pdb (produced by `bootstrap::build`).
+# Output:  build/diagram.pdb (+ build/diagram-tests.pdb from `build-tests`)
+#
+# The extension is grammar + Pure, the same pair the Pure language itself is built from:
+# grammar/antlr/Diagram{Lexer,Parser}.g4 is generated per platform, and grammar/rules.pure maps
+# the resulting AntlrContext onto the protocol form derived from compiler/metamodel.pure. Nothing here is host-specific — a platform
+# adapts the extension by generating its own parser from the .g4 and translating the rules.
+#
+# `compiler` is a dependency because the extension plugs into the compiler's extension seam
+# (meta::pure::compiler::extension::CompilerExtension), not because the parser needs it: the
+# ANTLR natives and AntlrContext live in core.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+ts_root        := source_directory()
+repo_root      := ts_root / ".." / ".." / ".."
+shared_out     := repo_root / "shared"
+test_results   := repo_root / "test-results"
+diagram_out    := ts_root / "build"
+# The generated protocol is self-contained under code/protocol/generated: `--source` picks it up and
+# `**/generated/` keeps it out of git, because it is derived from code/compiler/metamodel.pure and must
+# never be hand-edited.
+protocol_gen   := ts_root / "code" / "protocol" / "generated"
+protocol_pdb   := repo_root / "pure" / "modules" / "protocol" / "build" / "protocol.pdb"
+metamodel_stage := ts_root / "build" / "metamodel-stage"
+pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
+pure_truffle   := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+
+verbose := ""
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+header := "h(){ s=\"[extensions-diagram::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\n  ↳ %s\\n  %s\\n' \"$ru\" \"$1\" \"$ru\"; }; p"
+
+# Default: build diagram.pdb.
+default: build
+
+# Compile pure/extensions/diagram into build/diagram.pdb.
+# THREE PHASES, because the protocol form is DERIVED from the metamodel rather than written beside
+# it (pure/modules/protocol). The metamodel is the only authored shape; `<<ProtocolInfo.pointer>>` on
+# a slot is what makes the protocol carry a path where the metamodel carries the resolved element.
+#
+#   1. compile code/metamodel.pure ALONE — the generator reads a compiled metamodel, and the rest of
+#      the extension cannot compile yet because it references classes that do not exist until step 2.
+#   2. run generateProtocol over it -> code/generated/protocol.pure
+#   3. compile the extension, generated protocol included -> build/diagram.pdb
+build: _depCheck_base-pdbs generate-protocol
+    @{{header}} 'build'
+    @{{substep}} 'compile pure/extensions/diagram -> build/diagram.pdb'
+    mkdir -p {{diagram_out}}
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source {{ts_root}} \
+        --output-dir {{diagram_out}} {{err_filter}}
+
+# Phases 1 and 2: the metamodel compiled on its own, then its protocol form generated from it.
+generate-protocol: _depCheck_base-pdbs
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'generate-protocol'
+    test -f {{protocol_pdb}} || (echo "ERROR: missing {{protocol_pdb}} (run \`just modules::protocol::build\` first)" && exit 1)
+    {{substep}} 'compile code/compiler/metamodel.pure alone (the generator reads a compiled metamodel)'
+    rm -rf "{{metamodel_stage}}"
+    mkdir -p "{{metamodel_stage}}/code/compiler"
+    cp "{{ts_root}}/module.json" "{{metamodel_stage}}/"
+    cp "{{ts_root}}/code/compiler/metamodel.pure" "{{metamodel_stage}}/code/compiler/"
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source "{{metamodel_stage}}" \
+        --output-dir "{{metamodel_stage}}/build" 2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2)
+    {{substep}} 'generateProtocol -> code/protocol/generated/protocol.pure'
+    mkdir -p "{{protocol_gen}}"
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{protocol_pdb}} \
+        --pdb "{{metamodel_stage}}/build/diagram.pdb" \
+        --function "meta::pure::protocol::generation::generateProtocol_String_1__String_1__String_1_" \
+        --args "meta::pure::diagram::metamodel" "meta::pure::diagram::protocol" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) > "{{protocol_gen}}/protocol.pure"
+    rm -rf "{{metamodel_stage}}"
+    echo "  wrote code/protocol/generated/protocol.pure ($(wc -c < "{{protocol_gen}}/protocol.pure" | tr -d ' ') bytes)"
+
+# No sibling-extension deps — alias of `build` for symmetry with the module Justfiles.
+build-all: build
+
+# Compile with tests split into build/diagram-tests.pdb (needed by `test-all`).
+build-tests: _depCheck_base-pdbs generate-protocol
+    @{{header}} 'build-tests'
+    @{{substep}} 'compile pure/extensions/diagram -> build/diagram.pdb + diagram-tests.pdb'
+    mkdir -p {{diagram_out}}
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source {{ts_root}} \
+        --output-dir {{diagram_out}} \
+        --tests split {{err_filter}}
+
+# Compile -> build/diagram.pdb via the Pure compiler on Truffle (picks up compiler-pure changes automatically).
+build-truffle: _depCheck_base-pdbs generate-protocol
+    @{{header}} 'build-truffle'
+    @{{substep}} 'compile pure/extensions/diagram -> build/diagram.pdb (Truffle)'
+    test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
+    mkdir -p {{diagram_out}}
+    {{pure_truffle}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source {{ts_root}} \
+        --output-dir {{diagram_out}} {{err_filter}}
+
+# Run the extension's Pure tests.
+#
+# The parser tests call parseAntlr with the DiagramParser grammar, so they need a host that has the
+# generated parser REGISTERED — not merely generated. On Truffle that is the CLI naming its languages
+# (PureCompileMain installs PureLanguage + DiagramLanguage); a host that does not fails with "Unknown
+# grammar: DiagramParser", which is the signal that its adapter is missing or uninstalled.
+#
+# Only the TEST pdbs are named below. `--root` lets the runtime register what each language declares in
+# its own manifest — core.pdb, parser-mappings.pdb and compiler.pdb from language_pure.json, diagram.pdb
+# from language_diagram.json — so this list holds only what no language declares: test content.
+test-all: build-tests
+    @{{header}} 'test-all'
+    @{{substep}} 'runTests meta::pure::diagram (Truffle)'
+    test -f {{shared_out}}/core-tests.pdb || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)
+    test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
+    mkdir -p {{test_results}}/pure/extensions-diagram
+    {{pure_truffle}} execute \
+        --root {{repo_root}} \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{diagram_out}}/diagram-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-truffle.json" {{err_filter}}
+
+# Internal: fail loudly if the base PDBs aren't staged.
+_depCheck_base-pdbs:
+    #!/usr/bin/env bash
+    for pdb in core compiler; do
+        if [[ ! -f "{{shared_out}}/$pdb.pdb" ]]; then
+            echo "ERROR: missing {{shared_out}}/$pdb.pdb (run \`just bootstrap::build\` first)" >&2
+            exit 1
+        fi
+    done
+
+# Remove build/diagram.pdb (and the tests PDB).
+clean:
+    @{{header}} 'clean'
+    @{{substep}} 'remove build/diagram.pdb + build/diagram-tests.pdb'
+    rm -f {{diagram_out}}/diagram.pdb {{diagram_out}}/diagram-tests.pdb

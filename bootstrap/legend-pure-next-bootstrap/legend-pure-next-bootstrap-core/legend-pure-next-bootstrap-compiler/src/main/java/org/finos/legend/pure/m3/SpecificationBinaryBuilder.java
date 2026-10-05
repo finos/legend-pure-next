@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -139,18 +140,38 @@ public class SpecificationBinaryBuilder
         System.out.print(result.statistics().summary());
 
         // --- Collect elements from the index (all modules), deduplicated by path ---
+        //
+        // THE COMPILED COPY WINS. A Package is the one element both modules legitimately hold: m3.ttl
+        // defines `meta::pure::metamodel::relation`, and a source file then adds `ColSpec` to it. The
+        // compiled copy has m3's children PLUS whatever the sources contributed, so it is strictly the
+        // more complete one.
+        //
+        // Preferring m3 here (which iterating `modules` in order did, since m3 comes first and the
+        // de-duplication kept the first occurrence) silently dropped those additions: core.pdb's
+        // `relation` package listed only m3's six children while `ColSpec` and friends existed as
+        // element entries that nothing pointed at. A package-tree walk could not reach them, so the
+        // translator emitted 103 of the metamodel's 110 classes. The elements were never lost — only
+        // the links to them.
         LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();
+        // ONLY FOR PACKAGES. m3.pure is itself one of the source dirs, so every m3 CLASS also exists in
+        // both modules — and there the m3.ttl copy is the authoritative one: it carries the FBS field
+        // ids and ProtocolInfo annotations the generators read, which the copy compiled from m3.pure
+        // does not reproduce. Preferring the compiled copy for everything breaks the writer generator
+        // outright ("no writer class named InferredGenericType"). A Package is different: the two
+        // copies are not rivals, the compiled one is the m3 one plus the sources' additions.
         for (Module module : modules)
         {
             for (String path : module.elementPaths())
             {
-                if (!elementsByPath.containsKey(path))
+                PackageableElement element = module.getElement(path);
+                if (element == null)
                 {
-                    PackageableElement element = module.getElement(path);
-                    if (element != null)
-                    {
-                        elementsByPath.put(path, element);
-                    }
+                    continue;
+                }
+                PackageableElement existing = elementsByPath.get(path);
+                if (existing == null || (existing instanceof meta.pure.metamodel.Package && element instanceof meta.pure.metamodel.Package))
+                {
+                    elementsByPath.put(path, element);
                 }
             }
         }

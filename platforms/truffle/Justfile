@@ -1,3 +1,18 @@
+# Copyright 2026 Goldman Sachs
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # platforms/truffle/Justfile — builds and tests the Truffle interpreter.
 #
 # Direct invocation:    just <recipe>          (from platforms/truffle/)
@@ -31,14 +46,23 @@ truffle_root      := source_directory()
 repo_root         := truffle_root / ".." / ".."
 # Records heavy build steps for the dashboard build time trend.
 build_step     := "node " + repo_root / "tools" / "test-dashboard" / "build-step.mjs"
-truffle           := truffle_root / "legend-pure-next-truffle"
-truffle_cli_module := truffle / "legend-pure-next-truffle-interfaces" / "legend-pure-next-truffle-cli"
+truffle           := truffle_root / "legend-pure-next-platform-truffle"
+truffle_cli_module := truffle / "legend-pure-next-platform-truffle-interfaces" / "legend-pure-next-platform-truffle-cli"
 spec              := repo_root / "pure" / "specification"
 compiler_src      := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 truffle_out       := truffle_root / "build"
 shared_out        := repo_root / "shared"
+# Module build outputs the gallery reads: each module writes its own pdbs into its build/.
+translation_shared_out  := repo_root / "pure" / "modules" / "translation" / "shared" / "build"
+translation_truffle_out := repo_root / "pure" / "modules" / "translation" / "truffle" / "build"
 test_results := repo_root / "test-results"
 truffle_cli       := truffle_out / "pure-truffle.jar"
+# The embedding example's classes. Run against the fat CLI jar, which already carries truffle-core and
+# every dependency, so there is no class path to assemble by hand.
+example_classes   := truffle_root / "legend-pure-next-platform-truffle" / "legend-pure-next-platform-truffle-interfaces" / "legend-pure-next-platform-truffle-usage-example" / "target" / "classes"
+# The diagram extension's classes: its generated DiagramParser and its DiagramLanguage. Not inside the
+# fat CLI jar, because the CLI does not depend on it — an extension is added to a host's class path.
+diagram_classes   := truffle_root / "legend-pure-next-platform-truffle" / "legend-pure-next-platform-truffle-extensions" / "legend-pure-next-platform-truffle-extensions-diagram" / "target" / "classes"
 pure_truffle      := truffle_root / "bin" / "pure-truffle"
 pure_bootstrap    := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 
@@ -53,7 +77,7 @@ substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\
 default: test
 
 # Translate the PDB reader (meta::pure::compiler::pdb::reader + ::schema) from
-# Pure into legend-pure-next-truffle-core/generated.
+# Pure into legend-pure-next-platform-truffle-pure/generated.
 #
 # This is what frees Truffle from flatc, and so from the bootstrap-compiler jar:
 # the reader is shared with the other platforms AS PURE SOURCE, never as a
@@ -70,7 +94,7 @@ generate-pdb-reader:
     set -euo pipefail
     {{header}} 'generate-pdb-reader'
     cd "{{repo_root}}"
-    out="{{truffle_root}}/legend-pure-next-truffle/legend-pure-next-truffle-core/generated"
+    out="{{truffle_root}}/legend-pure-next-platform-truffle/legend-pure-next-platform-truffle-pure/generated"
     pkgs="meta::pure::compiler::pdb::reader,meta::pure::compiler::pdb::schema"
     host="org.finos.legend.pure.truffle"
     # The four support classes the generated reader calls (LazyObject, Metadata,
@@ -106,7 +130,20 @@ build-all: _mod_bootstrap::build build
 test: test-java spec-compiler
 
 # `test` plus every other specification run (self-hosted compiler, in-memory sources) + the native (AOT) suite.
-test-all: test spec-compiler-selfhost spec native::test-all
+# EMBEDDING THIS PLATFORM, run: name the language, compile a source held in a string, call a function it
+# defines. It asserts nothing and writes no report — it is here so that an example which stopped working
+# cannot go unnoticed, and because the shortest honest answer to "how do I use this?" is a program that
+# runs. The sibling of `java::usage-example` and `javascript::usage-example`.
+#
+# It was TestPureRuntime in truffle-core's src/test: a demonstration of the public API living inside the
+# thing it demonstrates, where it could reach what an embedder cannot.
+usage-example: build _depCheck_pdbs
+    @{{header}} 'usage-example'
+    @{{substep}} 'run the embedding example (the language declares its own modules)'
+    cd {{repo_root}} && java -cp "{{example_classes}}:{{diagram_classes}}:{{truffle_cli}}" \
+        org.finos.legend.pure.truffle.example.UsageExample
+
+test-all: test spec-compiler-selfhost spec usage-example native::test-all
 
 # Each `spec-*` recipe runs one specification on the Truffle host and writes
 # test-results/spec/<spec>/pure@cli-truffle[+<source>].json.
@@ -313,6 +350,34 @@ bench: (_mvn "skip-tests")
     @{{substep}} 'PureEvaluatorBenchmark'
     cd {{truffle}} && mvn -Pbench test -Dtest=PureEvaluatorBenchmark
 
+# Render the Pure -> Truffle AST translation gallery: every <<PCT.test>> under PACKAGE with its Pure
+# source beside its translated AST, and a pass/fail icon from EXECUTING it on this host.
+#
+# The execution and the output belong here, not to the translation module: the pass/fail column is
+# this host's behaviour. `gallery.pure` stays with the translator, and
+# `modules::translation_truffle::gallery` delegates here.
+gallery PACKAGE="meta::pure::functions" OUT=(truffle_root / "build" / "truffle-translation-gallery.html"):
+    @{{header}} 'gallery'
+    @{{substep}} 'render {{PACKAGE}} -> {{OUT}}'
+    test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` first)" && exit 1)
+    test -f {{translation_truffle_out}}/truffle-translation-gallery-tests.pdb || (echo "ERROR: missing {{translation_truffle_out}}/truffle-translation-gallery-tests.pdb (run \`just modules::translation_truffle::build-tests\` first — renderGallery is <<test.TestDependency>>)" && exit 1)
+    mkdir -p "$(dirname "{{OUT}}")"
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/parser-mappings.pdb \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_truffle_out}}/truffle-translation-gallery.pdb \
+        --pdb {{translation_truffle_out}}/truffle-translation-gallery-tests.pdb \
+        --function "meta::external::language::truffle::gallery::renderGallery_String_1__String_1_" \
+        --args "{{PACKAGE}}" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
+        | grep -v '^\[graal-tripwire\]' \
+        | awk '/<!DOCTYPE/{p=1} p' \
+        > {{OUT}}
+    @echo "  wrote {{OUT}} ($(wc -c < {{OUT}} | tr -d ' ') bytes)"
+
 # Remove truffle/build/ and run mvn clean across the unified truffle reactor.
 clean:
     @{{header}} 'clean'
@@ -323,7 +388,7 @@ clean:
 # Internal: parameterized `mvn install` invocation.
 # `mode` is "skip-tests" (fast, no Java tests) or "with-tests" (surefire runs unit tests).
 # Walks the unified truffle reactor in one launch:
-#   parent (legend-pure-next-truffle)
+#   parent (legend-pure-next-platform-truffle)
 #     → core
 #     → interfaces/cli, interfaces/ide
 # Maven derives the build order from compile deps (cli and ide depend on core).

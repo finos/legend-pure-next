@@ -1,0 +1,186 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The extension's compiler passes — what turns a parsed diagram into a graph element.
+//
+// It plugs into meta::pure::compiler::extension, whose three hooks are the catch-all arms of
+// the compiler's own passes. The split between them is not ceremony: pass 1 may only build
+// what needs nothing else to exist, and pass 3 is the first point at which every class in the
+// compile is in the graph. A diagram's geometry needs nothing, and its `type=` references
+// need everything, so they land in pass 1 and pass 3 respectively.
+//
+// WHY A DANGLING REFERENCE IS AN ERROR AND NOT A FAILURE. A diagram naming a class that was
+// since renamed still compiles: the view keeps the path it was written with, `resolvedType`
+// stays empty, and the compiler records an error. The editor needs that — it has to be able
+// to open a stale diagram in order to repair it, and refusing the file would make the stale
+// reference unreachable.
+
+import meta::pure::compiler::*;
+import meta::pure::compiler::extension::*;
+import meta::pure::compiler::helper::pointer::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::diagram::compiler::*;
+import meta::pure::diagram::metamodel::*;
+import meta::pure::diagram::protocol::*;
+
+// Claims the elements this extension's section parser produces, and nothing else.
+function meta::pure::diagram::compiler::handles(e: meta::pure::protocol::grammar::PackageableElement[1]): Boolean[1]
+{
+   $e->instanceOf(meta::pure::diagram::protocol::Diagram);
+}
+
+// The path a parsed diagram compiles to.
+function meta::pure::diagram::compiler::pathOf(parsed: meta::pure::diagram::protocol::Diagram[1]): String[1]
+{
+   let packagePath = if($parsed.package->isEmpty(), | '', | $parsed.package->toOne().value);
+   if($packagePath == '', | $parsed.name, | $packagePath + '::' + $parsed.name);
+}
+
+// Pass 1 — the SKELETON only: a Diagram at its own path, with no views.
+//
+// The views cannot be built yet. Each one points at a class by path, and the classes in this same
+// compile are themselves only skeletons until pass 1 finishes — so resolving here would miss every
+// class declared after the diagram. Pass 2 is the first point at which they are all registered, and
+// it still receives the parsed element, which is what carries the paths.
+function meta::pure::diagram::compiler::pass1(
+   e: meta::pure::protocol::grammar::PackageableElement[1], ctx: CompilerContext[1]): CompilerContext[1]
+{
+   let parsed = $e->cast(@meta::pure::diagram::protocol::Diagram);
+   let packagePath = if($parsed.package->isEmpty(), | '', | $parsed.package->toOne().value);
+   let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+   let skeleton = ^meta::pure::diagram::metamodel::Diagram(
+      name              = $parsed.name,
+      package           = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package),
+      sourceInformation = compileSourceInformation($parsed.p_sourceInformation, $ctx));
+   putElementUnderPackage($pkgRes.context, pathOf($parsed), $packagePath, $skeleton);
+}
+
+// ---------------------------------------------------------------------------
+// Protocol -> metamodel
+//
+// The two forms are different classes, so every one is mapped. Geometry copies across unchanged;
+// the only thing that changes is the reference, which arrives as a path and leaves as an element.
+// ---------------------------------------------------------------------------
+
+function meta::pure::diagram::compiler::compilePoint(
+   p: meta::pure::diagram::protocol::Point[1]): meta::pure::diagram::metamodel::Point[1]
+{
+   ^meta::pure::diagram::metamodel::Point(x = $p.x, y = $p.y);
+}
+
+// `type` is a Type_Pointer carrying the path as written. Resolved, the metamodel view holds the real
+// Type; unresolved, it holds nothing and the caller reports it — a diagram naming a class that was
+// since renamed still compiles, so the editor can open it and repair it.
+function meta::pure::diagram::compiler::compileTypeView(
+   v: meta::pure::diagram::protocol::TypeView[1], ctx: CompilerContext[1]
+): meta::pure::diagram::metamodel::TypeView[1]
+{
+   let found = $v.type->map(ptr | pathToElementInContext($ctx, $ptr.value))
+                      ->filter(f | $f->instanceOf(meta::pure::metamodel::type::Type))
+                      ->cast(@meta::pure::metamodel::type::Type);
+   ^meta::pure::diagram::metamodel::TypeView(
+      id                 = $v.id,
+      position           = compilePoint($v.position),
+      width              = $v.width,
+      height             = $v.height,
+      color              = $v.color,
+      stereotypesVisible = $v.stereotypesVisible,
+      attributesVisible  = $v.attributesVisible,
+      type               = $found->head());
+}
+
+function meta::pure::diagram::compiler::compilePropertyView(
+   v: meta::pure::diagram::protocol::PropertyView[1]): meta::pure::diagram::metamodel::PropertyView[1]
+{
+   ^meta::pure::diagram::metamodel::PropertyView(
+      id = $v.id, source = $v.source, target = $v.target,
+      points = $v.points->map(p | compilePoint($p)),
+      color = $v.color, lineWidth = $v.lineWidth, label = $v.label,
+      property = $v.property);
+}
+
+function meta::pure::diagram::compiler::compileAssociationView(
+   v: meta::pure::diagram::protocol::AssociationView[1]): meta::pure::diagram::metamodel::AssociationView[1]
+{
+   ^meta::pure::diagram::metamodel::AssociationView(
+      id = $v.id, source = $v.source, target = $v.target,
+      points = $v.points->map(p | compilePoint($p)),
+      color = $v.color, lineWidth = $v.lineWidth, label = $v.label,
+      association = $v.association);
+}
+
+function meta::pure::diagram::compiler::compileGeneralizationView(
+   v: meta::pure::diagram::protocol::GeneralizationView[1]): meta::pure::diagram::metamodel::GeneralizationView[1]
+{
+   ^meta::pure::diagram::metamodel::GeneralizationView(
+      id = $v.id, source = $v.source, target = $v.target,
+      points = $v.points->map(p | compilePoint($p)),
+      color = $v.color, lineWidth = $v.lineWidth, label = $v.label);
+}
+
+// The error a view whose class could not be found contributes.
+function meta::pure::diagram::compiler::unresolvedMessage(
+   diagramPath: String[1], v: meta::pure::diagram::protocol::TypeView[1]): String[1]
+{
+   'Diagram ' + $diagramPath + ': TypeView ' + $v.id + ' refers to \''
+      + $v.type->map(p | $p.value)->orElse('') + '\', which is not a type in scope';
+}
+
+// Pass 2 — the diagram itself: every view mapped onto the metamodel, each `type` resolved against a
+// graph that now holds every element pass 1 registered.
+function meta::pure::diagram::compiler::pass2(
+   e: meta::pure::protocol::grammar::PackageableElement[1],
+   acc: CompilerListResult<meta::pure::metamodel::PackageableElement>[1]
+): CompilerListResult<meta::pure::metamodel::PackageableElement>[1]
+{
+   let parsed = $e->cast(@meta::pure::diagram::protocol::Diagram);
+   let path = pathOf($parsed);
+   let skeleton = $acc.context.elementMap->get($path);
+   if($skeleton->isEmpty(),
+      | $acc,
+      | let views = $parsed.typeViews->map(v | compileTypeView($v, $acc.context));
+        let unresolved = $parsed.typeViews->filter(v |
+           $v.type->map(ptr | pathToElementInContext($acc.context, $ptr.value))->isEmpty());
+        let diagram = ^$skeleton->toOne()->cast(@meta::pure::diagram::metamodel::Diagram)(
+           width               = $parsed.width,
+           height              = $parsed.height,
+           typeViews           = $views,
+           propertyViews       = $parsed.propertyViews->map(v | compilePropertyView($v)),
+           associationViews    = $parsed.associationViews->map(v | compileAssociationView($v)),
+           generalizationViews = $parsed.generalizationViews->map(v | compileGeneralizationView($v)));
+        let messages = $unresolved->map(v | unresolvedMessage($path, $v));
+        let ctx = ^$acc.context(
+           elementMap = $acc.context.elementMap->put($path, $diagram),
+           errors     = $acc.context.errors->concatenate($messages));
+        ^$acc(values += $diagram->cast(@meta::pure::metamodel::PackageableElement), context = $ctx););
+}
+
+// The extension a host registers. Named for the section it owns, so an error that names an
+// extension names something the reader can find in the source.
+function meta::pure::diagram::compiler::diagramExtension(): CompilerExtension[1]
+{
+   ^CompilerExtension(
+      name    = 'Diagram',
+      handles = e: meta::pure::protocol::grammar::PackageableElement[1] |
+                   meta::pure::diagram::compiler::handles($e),
+      pass1   = {e: meta::pure::protocol::grammar::PackageableElement[1], ctx: CompilerContext[1] |
+                   meta::pure::diagram::compiler::pass1($e, $ctx)},
+      // No pass 3, and so no `owns`: pass 3 sees the COMPILED element, which no longer carries the
+      // paths — the pointers live on the parsed form. Pass 2 is both the first pass with every
+      // skeleton registered and the last that still has the parsed element, so resolution belongs
+      // there and nothing is left for pass 3 to do.
+      pass2   = {e: meta::pure::protocol::grammar::PackageableElement[1],
+                 acc: CompilerListResult<meta::pure::metamodel::PackageableElement>[1] |
+                   meta::pure::diagram::compiler::pass2($e, $acc)});
+}

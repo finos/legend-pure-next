@@ -4229,7 +4229,10 @@ function <<access.private>> meta::external::language::java::translation::pureTyp
                 pair(| $raw->instanceOf(meta::pure::metamodel::PackageableElement) && $raw->cast(@meta::pure::metamodel::PackageableElement)->elementToPath() == variantTypePath(), | $conv->javaVariantType()),
                 // An AntlrContext is a parse-tree node of the ANTLR extension, not
                 // a value with a platform class: it is opaque to translated code.
-                pair(| $raw == meta::pure::functions::meta::antlr::AntlrContext, | javaObject()),
+                // The same predicate types a PROPERTY of this type (platformValueType), so the two
+                // cannot drift — they did, and a typed getter then cast a real ANTLR context to the
+                // generated interface it does not implement.
+                pair(| $raw->meta::external::language::java::translation::platform::isOpaqueHostType(), | javaObject()),
                 // A Pure Map is a java.util.Map, so this check must come before
                 // the generic Class branch (a Pure Map would otherwise be its
                 // platform interface, which PureMap's values are not).

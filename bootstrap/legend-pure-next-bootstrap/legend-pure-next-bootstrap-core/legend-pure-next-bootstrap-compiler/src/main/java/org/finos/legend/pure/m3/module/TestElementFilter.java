@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -176,7 +177,10 @@ public final class TestElementFilter
     public static org.finos.legend.pure.m3.module.ModuleManifest testsManifest(
             org.finos.legend.pure.m3.module.ModuleManifest base)
     {
-        List<String> deps = new java.util.ArrayList<>(base.dependencies());
+        // The test half is where `testDependencies` are actually used, so they become
+        // ordinary dependencies here and are absent from the lean manifest. That asymmetry
+        // is the whole point of the field: see ModuleManifest's class note.
+        List<String> deps = new java.util.ArrayList<>(base.allDependencies());
         if (!deps.contains(base.name()))
         {
             deps.add(base.name());

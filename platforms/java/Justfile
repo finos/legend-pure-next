@@ -1,3 +1,18 @@
+# Copyright 2026 Goldman Sachs
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # platforms/java/Justfile — the Java platform.
 #
 # Direct invocation:    just <recipe>         (from platforms/java/)
@@ -17,6 +32,8 @@ language_java_out      := repo_root / "pure" / "modules" / "language" / "java" /
 translation_shared_out := repo_root / "pure" / "modules" / "translation" / "shared" / "build"
 translation_java_out   := repo_root / "pure" / "modules" / "translation" / "java" / "build"
 pure_truffle           := repo_root / "platforms" / "truffle" / "bin" / "pure-truffle"
+# The diagram extension's PDBs, built by `just extensions::diagram::build-tests`.
+diagram_out            := repo_root / "pure" / "extensions" / "diagram" / "build"
 pure_bootstrap         := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 
 # The Pure runtime that RUNS the transform when generating this platform's Java.
@@ -37,18 +54,38 @@ pure_rt                := "truffle"
 emit_rt                := if pure_rt == "truffle" { pure_truffle } else { pure_bootstrap }
 emit_rt_jar            := if pure_rt == "truffle" { repo_root / "platforms" / "truffle" / "build" / "pure-truffle.jar" } else { repo_root / "bootstrap" / "build" / "pure-bootstrap.jar" }
 emit_rt_recipe         := if pure_rt == "truffle" { "just truffle::build" } else { "just bootstrap::build" }
-# The Maven module: the handwritten host plus the translator's output, compiled
-# as ONE unit (they reference each other) with no dependencies — see its pom.
-module                 := java_root / "legend-pure-next-java"
+# The reactor root. Maven runs HERE, so one invocation builds every module: the engine, the
+# generator, each language extension and the CLI. See its pom for what depends on what.
+aggregator             := java_root / "legend-pure-next-platform-java"
+# The engine module: the handwritten host plus the translator's output, compiled as ONE unit
+# (they reference each other) with no dependencies — see its pom. It carries the Pure language;
+# an extension is its own module beside it.
+module                 := aggregator / "legend-pure-next-platform-java-pure"
 generated              := module / "generated"
 classes                := module / "target" / "classes"
 # The ANTLR runtime, staged by the module's build (copy-dependencies) because a run is
 # `java -cp` assembled here rather than by maven. Parsing is part of the platform now:
 # it used to be a separate ext/antlr compiled against the bootstrap fat jar, which was
 # this platform's last dependency on another platform.
-antlr_runtime          := module / "target" / "lib" / "antlr4-runtime-4.13.2.jar"
+# Every jar the host needs at run time, staged by the module's build (copy-dependencies) because a run
+# is `java -cp` assembled here rather than by maven: the ANTLR runtime and Eclipse Collections today.
+# A WILDCARD entry, so adding a dependency never means editing this file — which is why every `-cp`
+# below is quoted, or the shell would expand it before java saw it.
+lib_jars               := module / "target" / "lib" / "*"
+# The language extensions and the CLI. An extension is its own module so that its generated parser and
+# its translated Pure stay out of the engine's tree; the CLI is the composition root, the only place
+# that names every language. Adding an extension means a directory here and a dependency in the CLI's
+# pom — the cost of a module per language.
+extensions             := aggregator / "legend-pure-next-platform-java-extensions"
+diagram_module         := extensions / "legend-pure-next-platform-java-extensions-diagram"
+diagram_generated      := diagram_module / "generated"
+diagram_classes        := diagram_module / "target" / "classes"
+cli_classes            := aggregator / "legend-pure-next-platform-java-interfaces" / "legend-pure-next-platform-java-cli" / "target" / "classes"
+example_classes        := aggregator / "legend-pure-next-platform-java-interfaces" / "legend-pure-next-platform-java-usage-example" / "target" / "classes"
 # What a run needs. Nothing from bootstrap or Truffle.
-run_classpath          := classes + ":" + antlr_runtime
+run_classpath          := classes + ":" + diagram_classes + ":" + cli_classes + ":" + lib_jars
+# `main` is the CLI's, not the engine's: it installs the languages, and the engine must not name one.
+main_class             := "org.finos.legend.pure.platform.java.cli.PureJava"
 
 # Heap for a suite run. Measured on the PDB golden corpus (the heaviest): it
 # passes in 512m, and 6g bought nothing once the writer was pre-generated —
@@ -234,6 +271,58 @@ generate-tests:
         | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
     @echo "  $(find {{generated}} -path '*tests*' -name '*.java' | wc -l | tr -d ' ') test classes"
 
+# The DIAGRAM EXTENSION's Pure, translated into its own module: meta::pure::diagram's metamodel,
+# protocol, parser rules and compiler passes, and — in the second step — its TEST functions, which
+# live in diagram-tests.pdb and which the first step therefore cannot see. Both halves, because
+# everything this platform runs is generated at build time.
+#
+# Without the second step the library half loads from disk and the eleven test functions are still
+# translated at run time, which is where the suite's time goes: measured with `-verbose:class`, 49
+# diagram classes came from target/classes and 32 from __JVM_DefineClass__, every one of the 32 a test.
+#
+# FILTERED TO meta::pure::diagram. The translator also emits the types the diagram's code REFERENCES
+# (meta::pure::compiler, protocol::grammar, functions::collection — 55 of the 112 files it produces),
+# and the engine already generates every one of them. Writing them here too would put the same
+# fully-qualified classes in two modules, where the class path order would decide which one runs.
+generate-diagram: _depCheck_emit_rt
+    @{{header}} 'generate-diagram'
+    @{{substep}} 'translate meta::pure::diagram -> the diagram module''s generated/'
+    test -f {{diagram_out}}/diagram-tests.pdb || (echo "ERROR: missing {{diagram_out}}/diagram-tests.pdb (run \`just extensions::diagram::build-tests\` first)" && exit 1)
+    rm -rf {{diagram_generated}}
+    set -o pipefail; {{emit_rt}} execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/parser-mappings.pdb \
+        --pdb {{language_java_out}}/java.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_java_out}}/java-translation.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{diagram_out}}/diagram.pdb \
+        --function "meta::external::language::java::translation::translatePackagesToJava_String_1__String_1_" \
+        --args "meta::pure::diagram" \
+        2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
+        | awk -v root="{{diagram_generated}}" -v keep="org/finos/legend/pure/m3/meta/pure/diagram/" \
+              '/^\/\/\/\/ FILE /{ if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { print > file }'
+    @{{substep}} 'translate the extension''s test packages (they live in diagram-tests.pdb)'
+    set -o pipefail; {{emit_rt}} execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/parser-mappings.pdb \
+        --pdb {{language_java_out}}/java.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_java_out}}/java-translation.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{diagram_out}}/diagram.pdb \
+        --pdb {{diagram_out}}/diagram-tests.pdb \
+        --function "meta::external::language::java::translation::translateTestPackagesToJava_String_1__String_1_" \
+        --args "meta::pure::diagram" \
+        2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
+        | awk -v root="{{diagram_generated}}" -v keep="org/finos/legend/pure/m3/meta/pure/diagram/" \
+              '/^\/\/\/\/ FILE /{ if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { print > file }'
+    @echo "  $(find {{diagram_generated}} -name '*.java' | wc -l | tr -d ' ') files ($(find {{diagram_generated}} -path '*tests*' -name '*.java' | wc -l | tr -d ' ') of them tests)"
+
 # Remove everything this platform builds: the translator's output AND Maven's
 # target/. `clean-generated` alone leaves target/classes behind, so a compiled
 # class could outlive both its Pure source and the generated Java it came from.
@@ -242,11 +331,11 @@ generate-tests:
 clean: clean-generated
     @{{header}} 'clean'
     @{{substep}} 'remove generated/ and mvn target/'
-    cd {{module}} && mvn -q clean
+    cd {{aggregator}} && mvn -q clean
 
 # Remove everything generated, so no stale class outlives its Pure source.
 clean-generated:
-    rm -rf {{generated}}
+    rm -rf {{generated}} {{diagram_generated}}
 
 # Compile the module: the handwritten host and the translator's output together,
 # with the JDK alone. The pom declares NO dependencies, so a generated class that
@@ -259,10 +348,10 @@ clean-generated:
 _depCheck_emit_rt:
     test -f {{emit_rt_jar}} || (echo "ERROR: missing {{emit_rt_jar}} — this platform generates its Java with {{pure_rt}}. Run \`{{emit_rt_recipe}}\` first, or generate with the other runtime: \`just pure_rt=bootstrap java::compile\`" && exit 1)
 
-compile: _depCheck_emit_rt clean-generated generate-types generate-runtime generate-pdb generate-translator generate-functions generate-tests
+compile: _depCheck_emit_rt clean-generated generate-types generate-runtime generate-pdb generate-translator generate-functions generate-tests generate-diagram
     @{{header}} 'compile'
     @{{substep}} 'mvn compile: src/main/java + target/generated-sources/pure, JDK only'
-    cd {{module}} && mvn -q clean compile
+    cd {{aggregator}} && mvn -q clean compile
     test -f {{classes}}/org/finos/legend/pure/platform/java/compiler/module/pdbModule/PdbRuntime.class
     @echo "  $(find {{classes}} -name '*.class' | wc -l | tr -d ' ') classes"
 
@@ -280,7 +369,7 @@ compile: _depCheck_emit_rt clean-generated generate-types generate-runtime gener
 compile-fast:
     @{{header}} 'compile-fast'
     @{{substep}} 'incremental mvn compile — no clean, no regeneration (hand iteration only)'
-    cd {{module}} && mvn -q compile
+    cd {{aggregator}} && mvn -q compile
     test -f {{classes}}/org/finos/legend/pure/platform/java/compiler/module/pdbModule/PdbRuntime.class
     @echo "  $(find {{classes}} -name '*.class' | wc -l | tr -d ' ') classes"
 
@@ -307,14 +396,9 @@ fixpoint: compile
         --args "{{transform_roots}}" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{java_root}}/build/fixpoint-ref" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
-    set -o pipefail; java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
-        --pdb {{shared}}/core.pdb \
+    set -o pipefail; java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
-        --pdb {{shared}}/compiler.pdb \
-        --pdb {{shared}}/parser-mappings.pdb \
-        --pdb {{language_java_out}}/java.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "meta::external::language::java::translation::translatePackagesToJava_String_1__String_1_" \
         --args "{{transform_roots}}" \
@@ -328,14 +412,9 @@ pct PACKAGE="meta::pure::functions": compile
     @{{header}} 'pct'
     @{{substep}} 'run {{PACKAGE}} PCT tests on the platform'
     mkdir -p {{repo_root}}/test-results/spec/pct
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
-        --pdb {{shared}}/core.pdb \
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
-        --pdb {{shared}}/compiler.pdb \
-        --pdb {{shared}}/parser-mappings.pdb \
-        --pdb {{language_java_out}}/java.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "meta::pure::test::runPCTTests_String_1__String_1__String_1_" \
         --args "{{PACKAGE}}" "{{repo_root}}/test-results/spec/pct/java@platform.json" \
@@ -347,15 +426,10 @@ spec-grammar: compile
     @{{header}} 'spec-grammar'
     @{{substep}} 'runGrammarCorpus over pure/specification/grammar/tests (Java platform)'
     mkdir -p {{repo_root}}/test-results/spec/grammar
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
-        --pdb {{shared}}/core.pdb \
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
-        --pdb {{shared}}/compiler.pdb \
         --pdb {{shared}}/compiler-tests.pdb \
-        --pdb {{shared}}/parser-mappings.pdb \
-        --pdb {{language_java_out}}/java.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "meta::pure::test::grammar::runGrammarCorpus_String_1__String_1__String_1_" \
         --args "{{repo_root}}/pure/specification/grammar/tests" "{{repo_root}}/test-results/spec/grammar/java@platform.json" \
@@ -368,18 +442,48 @@ spec-compiler: compile
     @{{header}} 'spec-compiler'
     @{{substep}} 'runCompiledGraphTests over pure/specification/compiler/tests (Java platform)'
     mkdir -p {{repo_root}}/test-results/spec/compiler
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
-        --pdb {{shared}}/core.pdb \
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
-        --pdb {{shared}}/compiler.pdb \
         --pdb {{shared}}/compiler-tests.pdb \
-        --pdb {{shared}}/parser-mappings.pdb \
-        --pdb {{language_java_out}}/java.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
         --args "{{repo_root}}/pure/specification/compiler/tests" "{{repo_root}}/test-results/spec/compiler/java@platform.json" \
+        || echo "  failures do not fail the build: they are in the report"
+
+# EMBEDDING THIS PLATFORM, run: name two languages, compile a source holding a `###Pure` and a
+# `###Diagram` section, call a function and read the compiled diagram. It asserts nothing and writes no
+# report — it is here so that an example which stopped working cannot go unnoticed, and because the
+# shortest honest answer to "how do I use this?" is a program that runs.
+#
+# The sibling of `javascript::usage-example`.
+usage-example: compile
+    @{{header}} 'usage-example'
+    @{{substep}} 'run the embedding example (two languages, one source)'
+    test -f {{diagram_out}}/diagram.pdb || (echo "ERROR: missing {{diagram_out}}/diagram.pdb (run \`just extensions::diagram::build\` first)" && exit 1)
+    cd {{repo_root}} && java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}:{{example_classes}}" \
+        org.finos.legend.pure.platform.java.example.UsageExample
+
+# The DIAGRAM EXTENSION's own Pure tests ON this platform: the parser tests call
+# `parseAntlr($source, 'DiagramParser', ...)`, so they only pass on a host that has generated that
+# parser and registered it — which is what legend-pure-next-platform-java-extensions-diagram is for. On
+# a host without it they fail with "Unknown grammar: DiagramParser", and before this they failed on
+# every JVM host, Truffle included.
+#
+# meta::pure::diagram is not pre-generated, so Execute translates it at run time: hence the translator
+# PDBs below, the same set spec-grammar passes.
+spec-diagram: compile
+    @{{header}} 'spec-diagram'
+    @{{substep}} 'runTests over meta::pure::diagram (Java platform)'
+    test -f {{diagram_out}}/diagram-tests.pdb || (echo "ERROR: missing {{diagram_out}}/diagram-tests.pdb (run \`just extensions::diagram::build-tests\` first)" && exit 1)
+    mkdir -p {{repo_root}}/test-results/pure/extensions-diagram
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{diagram_out}}/diagram-tests.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "meta::pure::diagram" "{{repo_root}}/test-results/pure/extensions-diagram/java@platform.json" \
         || echo "  failures do not fail the build: they are in the report"
 
 # The function corpus ON this platform: every `<<test.Test>>` under
@@ -389,14 +493,9 @@ spec-functions PACKAGE="meta::pure::functions": compile
     @{{header}} 'spec-functions'
     @{{substep}} 'runTests over {{PACKAGE}} (Java platform)'
     mkdir -p {{repo_root}}/test-results/spec/functions
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
-        --pdb {{shared}}/core.pdb \
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
-        --pdb {{shared}}/compiler.pdb \
-        --pdb {{shared}}/parser-mappings.pdb \
-        --pdb {{language_java_out}}/java.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
         --args "{{PACKAGE}}" "{{repo_root}}/test-results/spec/functions/java@platform.json" \
@@ -409,15 +508,10 @@ spec-pdb-format: compile
     @{{header}} 'spec-pdb-format'
     @{{substep}} 'runTests over meta::pure::compiler::pdb (Java platform)'
     mkdir -p {{repo_root}}/test-results/spec/pdb-format
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
-        --pdb {{shared}}/core.pdb \
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
-        --pdb {{shared}}/compiler.pdb \
         --pdb {{shared}}/compiler-tests.pdb \
-        --pdb {{shared}}/parser-mappings.pdb \
-        --pdb {{language_java_out}}/java.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
         --args "meta::pure::compiler::pdb" "{{repo_root}}/test-results/spec/pdb-format/java@platform.json" \
@@ -432,15 +526,10 @@ spec-pdb: compile
     @{{header}} 'spec-pdb'
     @{{substep}} 'runPdbGoldenTests: the Pure writer against the Java golden archives (Java platform)'
     mkdir -p {{repo_root}}/test-results/spec/pdb
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
-        --pdb {{shared}}/core.pdb \
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
-        --pdb {{shared}}/compiler.pdb \
         --pdb {{shared}}/compiler-tests.pdb \
-        --pdb {{shared}}/parser-mappings.pdb \
-        --pdb {{language_java_out}}/java.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "meta::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_" \
         --args "{{repo_root}}/pure/specification/compiler/tests" "{{repo_root}}/pure/specification/compiler/tests-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{repo_root}}/test-results/spec/pdb/java@platform.json" \
@@ -455,14 +544,9 @@ test-translation: compile
     @{{header}} 'test-translation'
     @{{substep}} 'runTests meta::external::language::java::translation (Java platform)'
     mkdir -p {{repo_root}}/test-results/pure/translation-java
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
-        --pdb {{shared}}/core.pdb \
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
-        --pdb {{shared}}/compiler.pdb \
-        --pdb {{shared}}/parser-mappings.pdb \
-        --pdb {{language_java_out}}/java.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
         --args "meta::external::language::java::translation" "{{repo_root}}/test-results/pure/translation-java/java@platform.json" \
@@ -476,9 +560,9 @@ test-translation: compile
 test-junit: compile
     @{{header}} 'test-junit'
     @{{substep}} 'mvn test: src/test/java'
-    cd {{module}} && mvn -q test
+    cd {{aggregator}} && mvn -q test
 
-test-all: pct test-junit test-translation spec-functions spec-grammar spec-compiler spec-pdb-format spec-pdb
+test-all: pct test-junit test-translation spec-functions spec-grammar spec-compiler spec-pdb-format spec-pdb spec-diagram usage-example
 
 # The Pure -> Java gallery, rendered BY THIS PLATFORM: the translated renderer
 # runs on the JVM, so every card shows the Java this platform generates and runs
@@ -486,14 +570,13 @@ test-all: pct test-junit test-translation spec-functions spec-grammar spec-compi
 gallery PACKAGE="meta::pure::functions" OUT=(java_root / "build" / "java-platform-gallery.html"): compile
     @{{header}} 'gallery'
     @{{substep}} 'render {{PACKAGE}} -> {{OUT}}'
-    java -Xmx{{jvm_heap}} -Xss64m -cp {{run_classpath}} org.finos.legend.pure.platform.java.execution.Execute \
-        --pdb {{shared}}/core.pdb \
+    # The redirect below cannot create the directory, and nothing else here owns build/: every other
+    # recipe that writes there makes its own sub-directory. Absent locally only because earlier runs
+    # left one behind, which is why CI was the first to see "No such file or directory".
+    mkdir -p "$(dirname "{{OUT}}")"
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
-        --pdb {{shared}}/compiler.pdb \
-        --pdb {{shared}}/parser-mappings.pdb \
-        --pdb {{language_java_out}}/java.pdb \
-        --pdb {{translation_shared_out}}/translation-shared.pdb \
-        --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "meta::external::language::java::translation::gallery::renderGallery_String_1__String_1_" \
         --args "{{PACKAGE}}" > {{OUT}}

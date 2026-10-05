@@ -1,3 +1,18 @@
+# Copyright 2026 Goldman Sachs
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # pure/modules/translation/java/Justfile — builds the Pure-to-Java translator
 # into a single PDB.
 #
@@ -112,7 +127,7 @@ test-all: build-tests
 
 # Each `sample_*` UDF in code/gallery.pure is rendered as a side-by-side card
 # (literal Pure snippet on the left, translateFunction + classToString Java
-# on the right). Writes build/java-translation-gallery.html.
+# on the right). Rendered by, and written into, platforms/java/build.
 #
 # pure-truffle prints the returned String to stdout verbatim (no `'...'`
 # quoting wrapper, no `\n` escaping), so a plain redirect is enough.
@@ -122,8 +137,10 @@ test-all: build-tests
 # platform generates, compiles and runs, and has no Truffle dependency.
 gallery: build-tests
     @{{header}} 'gallery'
-    @{{substep}} 'render Pure -> Java gallery on the Java platform -> build/java-translation-gallery.html'
-    cd {{repo_root}} && just java::gallery "meta::pure::functions" "{{translation_java_out}}/java-translation-gallery.html"
+    @{{substep}} 'render Pure -> Java gallery on the Java platform'
+    # No OUT override: the gallery is a report about the Java host, so it lands in that platform's
+    # build/ with the other two.
+    cd {{repo_root}} && just java::gallery "meta::pure::functions"
 
 clean:
     @{{header}} 'clean'
@@ -132,4 +149,4 @@ clean:
     # The gallery too: it is this module's output, and nothing else removes it —
     # which is how a gallery built against an older test corpus survived weeks of
     # rebuilds and kept showing stale counts on the dashboard.
-    rm -f {{translation_java_out}}/java-translation-gallery.html
+    rm -f {{translation_java_out}}/java-translation-gallery.html   # legacy location, before the gallery moved to platforms/java

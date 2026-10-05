@@ -22,11 +22,14 @@
 
 import { metadataHost } from "../compiler/module/pdbModule/marshal.js";
 import { NativeRegistry, hostHookFor } from "../execution/natives/NativeRegistry.js";
-import { DEFAULT_LANGUAGE_EXTENSIONS } from "./LanguageExtensions.js";
+import { DEFAULT_LANGUAGE_EXTENSIONS, EXTENSION_DESCRIPTORS, PURE_LANGUAGE_PDBS } from "./LanguageExtensions.js";
+import { PLATFORM_PDBS } from "./PlatformModules.js";
 import { translateProgramElements } from "../execution/translate-elements.js";
 
-// The translated compiler-pure entry point, silent overload (generated/compiler.js).
-const COMPILE = "meta$pure$compiler$compile_PureFile_MANY__Boolean_1__Boolean_1__CompilationResult_1_";
+// The translated compiler-pure entry point (generated/pure/compiler/compiler.js): the overload that takes the
+// language extensions, so a `###Diagram` section becomes a graph element rather than being
+// parsed and dropped. Silent — the live progress bar belongs to the CLI.
+const COMPILE = "meta$pure$compiler$compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
 const asArray = (v) => (v === undefined || v === null ? [] : Array.isArray(v) ? v : [v]);
 
 /** Modules in dependency order (a module after the modules it depends on). */
@@ -105,18 +108,14 @@ export class PureRuntime {
         return this.#languageExtensions.flatMap((extension) => extension.sectionParsers(this));
     }
 
-    /** Add or replace source `sourceId` in the registered in-memory module `moduleName`. */
-    setSource(moduleName, sourceId, content) { this.#sourceModule(moduleName).setSource(sourceId, content); }
-
-    /** Remove source `sourceId` from the registered in-memory module `moduleName`. */
-    removeSource(moduleName, sourceId) { this.#sourceModule(moduleName).removeSource(sourceId); }
-
-    #sourceModule(name) {
-        const module = this.#registry.module(name);
-        if (!module) throw new Error(`no module '${name}' is registered`);
-        if (typeof module.setSource !== "function") throw new Error(`module '${name}' does not hold sources`);
-        return module;
+    /**
+     * The compiler extensions of every registered language extension. Optional on an extension,
+     * because a section whose text the compiler merely carries has no compiler half.
+     */
+    compilerExtensions() {
+        return this.#languageExtensions.flatMap((extension) => extension.compilerExtensions?.(this) ?? []);
     }
+
 
     /**
      * Compile, in dependency order, the in-memory modules with code: parse their sources through the
@@ -130,11 +129,15 @@ export class PureRuntime {
         for (const module of dependencyOrder(this.#registry.modules)) {
             if (typeof module.hasCode !== "function" || !module.hasCode()) continue;
             const compile = globalThis[COMPILE];
-            if (typeof compile !== "function") throw new Error("PureRuntime.compile: compiler-pure is not loaded (generated/compiler.js)");
+            if (typeof compile !== "function") {
+                throw new Error("PureRuntime.compile: compiler-pure is not loaded, or predates the language-extension "
+                                + "overload of compile (run `just javascript::generate`)");
+            }
             if (typeof this.#evalJs !== "function") throw new Error("PureRuntime.compile: withEvalJs(evalJs) is required to run compiled code");
             let result;
             try {
-                result = compile(module.sources().map(({ sourceId, content }) => this.parse(sourceId, content)), false, true);
+                result = compile(module.sources().map(({ sourceId, content }) => this.parse(sourceId, content)),
+                                 this.compilerExtensions(), true);
             } catch (e) {
                 errors.push(`${module.name}: ${e && e.message ? e.message : e}`);
                 break;
@@ -150,7 +153,10 @@ export class PureRuntime {
             module.invalidate?.();
             elements.push(...compiled);
         }
-        return { elements, errors };
+        // A Pure CompilationResult, built through the generated class so a caller reads it with the
+        // same accessors as any other Pure value (`$r.elements`, `$r.errors`).
+        const Cls = globalThis["meta$pure$compiler$CompilationResult"];
+        return typeof Cls === "function" ? Object.assign(new Cls(), { elements, errors }) : { elements, errors };
     }
 
     /** Execute `fn` — an element from registry.getElement(path), or its path — with `args`. */
@@ -179,6 +185,8 @@ export class PureRuntimeBuilder {
     #evalJs = null;
     #runtimeModule = null;
     #sourceText = null;
+    #loadModules = null;
+    #loadTranslatedCode = null;
 
     withRegistry(registry) { this.#registry = registry; return this; }
     withNatives(natives) { this.#natives = natives; return this; }
@@ -188,6 +196,70 @@ export class PureRuntimeBuilder {
     withRuntimeModule(runtimeModule) { this.#runtimeModule = runtimeModule; return this; }
     /** `fileName -> source text` of evaluated JavaScript, for Pure stack traces. */
     withSourceText(sourceText) { this.#sourceText = sourceText; return this; }
+
+    /**
+     * How to obtain the modules the LANGUAGES declare, so `buildAsync()` can register them and no host
+     * has to name them. `load(repoRelativePaths) => Promise<Module[]>`, same order.
+     *
+     * ALL THE PATHS AT ONCE, not one per call, because the two environments load differently and only
+     * the host knows how: Node opens files, and the browser fetches — in PARALLEL, behind one progress
+     * bar. A loader called once per module would serialise those fetches and make the page slower.
+     *
+     * Injected rather than chosen here: this file must not reach for `node:fs` (the browser cannot
+     * import it) nor assume `fetch` (Node's host reads from disk). It is the counterpart of the Java
+     * platform's `withModuleRoot`, where opening a file is synchronous and the runtime can do it itself.
+     */
+    withModuleLoader(load) { this.#loadModules = load; return this; }
+
+    /**
+     * How to load the TRANSLATED CODE this runtime runs on — `load() => Promise<void>`, awaited by
+     * `buildAsync()` after the runtime exists.
+     *
+     * AFTER, not before: the generated modules resolve metadata as they load (an enum constant reaches
+     * for its Enumeration through `__pureResolve`), so the metadata globals this runtime installs have to
+     * be in place first. Injected for the same reason as the module loader — Node imports from the file
+     * system and the browser from URLs.
+     */
+    withTranslatedCode(load) { this.#loadTranslatedCode = load; return this; }
+
+    /**
+     * Register what the languages declare, then build.
+     *
+     * <p>`PURE_LANGUAGE_PDBS` is what `###Pure` MEANS — from pure/specification/language_pure.json —
+     * and `PLATFORM_PDBS` is what makes it runnable HERE; each extension found on disk is registered as
+     * one act, its module paired with the language it adds. A module the host already registered is
+     * left alone, and registration order is preserved because it decides the order the archives are
+     * opened in: core.pdb has to be first.</p>
+     *
+     * <p>This used to be copied in three places — load-runtime.js, the browser page and the usage
+     * example — each with its own `[...PURE_LANGUAGE_PDBS, ...PLATFORM_PDBS]`.</p>
+     */
+    async buildAsync() {
+        if (!this.#registry) throw new Error("PureRuntime.builder(): withRegistry(registry) is required");
+        if (typeof this.#loadModules !== "function") {
+            throw new Error("PureRuntime.buildAsync(): withModuleLoader(load) is required — it is what "
+                          + "reads the modules the languages declare (fs on Node, fetch in a browser)");
+        }
+        const declared = [...PURE_LANGUAGE_PDBS, ...PLATFORM_PDBS];
+        const loaded = await this.#loadModules([...declared, ...EXTENSION_DESCRIPTORS.map((e) => e.pdbPath)]);
+        loaded.slice(0, declared.length)
+            .filter((module) => !this.#registry.module(module.name))
+            .forEach((module) => this.#registry.register(module));
+        EXTENSION_DESCRIPTORS.forEach((extension, i) =>
+            this.#registry.registerExtension(extension, loaded[declared.length + i]));
+        // Every module's dependencies are present, and each extension came with its own module. Cheap
+        // and repeatable, so a host that also validates loses nothing.
+        this.#registry.validate();
+
+        const runtime = this.build();
+        if (typeof this.#loadTranslatedCode === "function") {
+            await this.#loadTranslatedCode();
+            // The in-memory module's elements were resolved against the code that was loaded BEFORE
+            // this, so they are stale now. Both hosts did this by hand, immediately after loading.
+            this.#runtimeModule?.invalidate?.();
+        }
+        return runtime;
+    }
 
     build() {
         if (!this.#registry) throw new Error("PureRuntime.builder(): withRegistry(registry) is required");

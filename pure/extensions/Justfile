@@ -1,0 +1,56 @@
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# pure/extensions/Justfile — orchestrates the LANGUAGE EXTENSIONS.
+#
+# Direct invocation: just <recipe>     (from pure/extensions/)
+# Addressable from the root as `just extensions::<recipe>` / `just extensions::diagram::<recipe>`.
+#
+# An extension is a language of its own — a `###Section`, a grammar, and the compiler passes
+# that turn its text into graph elements. It is NOT a library module: `pure/modules/*` adds
+# functions to the existing language, whereas an extension adds syntax to it.
+#
+# WHAT MAKES A DIRECTORY HERE AN EXTENSION is `language_<name>.json`: the section keyword, the
+# module that holds the Pure code, and the ANTLR lexer/parser/entry rule. Each platform reads
+# those files and generates its own adapter — see
+# pure/extensions/bin/platforms/javascript/bin/generate-languages.mjs for the JavaScript one — so an extension is
+# registered by existing on disk rather than by being named in a list of hosts.
+#
+# Inputs:  shared/core.pdb, shared/compiler.pdb (produced by `bootstrap::build`).
+# Outputs: <extension>/build/<module>.pdb
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+mod diagram "diagram/Justfile"
+
+header := "h(){ s=\"[extensions::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
+
+# Default: build every extension.
+default: build
+
+# Build every extension's pdb.
+build: diagram::build
+
+# Build every extension, tests split into their own pdb.
+build-tests: diagram::build-tests
+
+# Alias of `build` for symmetry with the other orchestrators.
+build-all: build
+
+# Run every extension's Pure tests.
+test-all: diagram::test-all
+
+# Remove every extension's build output.
+clean: diagram::clean

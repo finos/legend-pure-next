@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,8 +32,26 @@ import java.util.Objects;
  * every {@code .pdb} archive as the {@code manifest} section so that
  * loaders can reconstruct the module's identity without relying on
  * filename heuristics or constructor arguments.</p>
+ *
+ * <p><b>{@code testDependencies} is a source-only field.</b> It records modules that only
+ * the module's TEST half needs — its {@code <<test.TestDependency>>} functions and the
+ * suites under {@code code/tests/}. A {@code --tests split} build folds them into the
+ * {@code -tests} archive's {@code dependencies} (see
+ * {@link TestElementFilter#testsManifest}) and leaves them out of the lean archive, so a
+ * consumer that loads only the lean PDB is not made to carry test corpora it never reads.
+ * {@code javascript-translation} declaring {@code core-tests} cost the browser IDE 5.35 MB
+ * of exactly that.</p>
+ *
+ * <p>Because of this, {@link #toJson} emits only the three archive fields and NEVER
+ * {@code testDependencies} — the archive format is unchanged, so every other reader of a
+ * {@code manifest} section (the JavaScript and Truffle hosts, and the self-hosted Pure
+ * writer in {@code meta::pure::compiler::pdb::archive::manifestJson}) is untouched and the
+ * PDB goldens cannot move. {@link #parse} accepts the field so {@code module.json} can
+ * carry it; a manifest round-tripped through {@code toJson} therefore loses it, which is
+ * correct for an archive and is pinned by {@code ModuleManifestTest}.</p>
  */
-public record ModuleManifest(String name, String packagePattern, List<String> dependencies)
+public record ModuleManifest(String name, String packagePattern, List<String> dependencies,
+                             List<String> testDependencies)
 {
     public static final String ARCHIVE_SECTION = "manifest";
 
@@ -41,8 +60,49 @@ public record ModuleManifest(String name, String packagePattern, List<String> de
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(packagePattern, "packagePattern");
         dependencies = List.copyOf(dependencies);
+        testDependencies = testDependencies == null ? List.of() : List.copyOf(testDependencies);
     }
 
+    /** A manifest with no test-only dependencies — the shape read back from an archive. */
+    public ModuleManifest(String name, String packagePattern, List<String> dependencies)
+    {
+        this(name, packagePattern, dependencies, List.of());
+    }
+
+    /**
+     * The manifest for an archive that holds BOTH halves (a non-split build): its test
+     * elements are present, so their dependencies must be declared as ordinary ones.
+     */
+    public ModuleManifest withAllDependencies()
+    {
+        return testDependencies.isEmpty()
+                ? this
+                : new ModuleManifest(name, packagePattern, allDependencies(), List.of());
+    }
+
+    /** Everything the module needs to compile: both halves' dependencies. */
+    public List<String> allDependencies()
+    {
+        if (testDependencies.isEmpty())
+        {
+            return dependencies;
+        }
+        List<String> all = new ArrayList<>(dependencies);
+        for (String dep : testDependencies)
+        {
+            if (!all.contains(dep))
+            {
+                all.add(dep);
+            }
+        }
+        return List.copyOf(all);
+    }
+
+    /**
+     * The archive {@code manifest} section: three fields, never {@code testDependencies}.
+     * See the class note — widening this changes the on-disk format for four independent
+     * readers and moves every PDB golden.
+     */
     public String toJson()
     {
         StringBuilder sb = new StringBuilder();
@@ -119,6 +179,7 @@ public record ModuleManifest(String name, String packagePattern, List<String> de
         String name = null;
         String packagePattern = null;
         List<String> dependencies = null;
+        List<String> testDependencies = List.of();
         boolean first = true;
         while (true)
         {
@@ -139,6 +200,7 @@ public record ModuleManifest(String name, String packagePattern, List<String> de
                 case "name" -> name = c.readString();
                 case "packagePattern" -> packagePattern = c.readString();
                 case "dependencies" -> dependencies = c.readStringArray();
+                case "testDependencies" -> testDependencies = c.readStringArray();
                 default -> throw new IllegalArgumentException("Unknown manifest key: '" + key + "'");
             }
         }
@@ -150,7 +212,7 @@ public record ModuleManifest(String name, String packagePattern, List<String> de
         if (name == null) throw new IllegalArgumentException("manifest is missing required 'name' field");
         if (packagePattern == null) throw new IllegalArgumentException("manifest is missing required 'packagePattern' field");
         if (dependencies == null) throw new IllegalArgumentException("manifest is missing required 'dependencies' field");
-        return new ModuleManifest(name, packagePattern, dependencies);
+        return new ModuleManifest(name, packagePattern, dependencies, testDependencies);
     }
 
     private static String quote(String s)

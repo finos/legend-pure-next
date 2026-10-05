@@ -1,4 +1,20 @@
 <!doctype html>
+<!--
+  Copyright 2026 Goldman Sachs
+  ©2026 JP Morgan Chase & Co. All rights reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -429,6 +445,7 @@ const TECHS = [
   { id: "bootstrap", label: "Bootstrap", note: "Java & Java Interpreter", columns: [
     ["java", "Bootstrap", ["grammar", "compiler", "pdb"], "the Java reference implements the parser, compiler and PDB writer; Pure tests and printers are Pure code"],
     ["pure@cli-bootstrap", "Bootstrap"],
+    ["pure@junit-bootstrap", "Junit", ["pct"], "the same interpreter, running the PCT corpus in-process inside the Maven build rather than through the CLI — the view that gates `mvn test`"],
     ["pure@cli-bootstrap+selfhost", "self-compiled compiler", ...SELF_HOST]
   ] },
   { id: "java", label: "Java", note: "AOT", columns: [

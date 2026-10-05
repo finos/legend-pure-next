@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ©2026 JP Morgan Chase & Co. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-platform-java-extensions</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-platform-java-extensions-diagram</artifactId>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Java Platform - Diagram Extension</name>
+
+    <!--
+      The `###Diagram` language on this platform: the ANTLR parser generated from the extension's own
+      grammar, and its manifest staged where the engine's reader can find it.
+
+      The extension itself is host-neutral — pure/extensions/diagram is grammar plus Pure, exactly the
+      pair the Pure language is built from — so adapting it to a platform means generating that
+      platform's parser from the .g4 and letting it register. Nothing here is diagram-specific beyond
+      the two paths below, which is the point: a second extension is a copy of this pom with one word
+      changed.
+
+      WHY THE PARSER MUST BE GENERATED HERE, since it is the thing that was missing: the Pure tests call
+      `parseAntlr($source, 'DiagramParser', ...)`, and a host without the generated parser fails with
+      "Unknown grammar: DiagramParser". No JVM host had one — Truffle has only M3 and Top as well — so
+      those tests failed everywhere but JavaScript.
+    -->
+
+    <properties>
+        <repo.dir>${project.basedir}/../../../../..</repo.dir>
+        <extension.dir>${repo.dir}/pure/extensions/diagram</extension.dir>
+        <!-- Where ANTLR generates, and therefore where the engine's reflective lookup finds the classes
+             this extension's manifest names. The plugin derives the package from the path below its
+             source directory, so the staging below decides it. -->
+        <antlr.package.dir>org/finos/legend/pure/platform/java/extensions/diagram</antlr.package.dir>
+    </properties>
+
+    <dependencies>
+        <!-- The engine: GrammarExtension, Language and the reader. One way only — it never depends on
+             this module. -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-platform-java-pure</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- The extension's grammar, staged under this module's ANTLR package. Lexer and parser must
+                 land in ONE directory or `tokenVocab = DiagramLexer` cannot resolve. -->
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>stage-grammar</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/antlr4/${antlr.package.dir}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${extension.dir}/code/grammar/antlr</directory>
+                                    <includes>
+                                        <include>*.g4</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <!-- Its manifest, read at startup by the engine: the Pure elements that parse a
+                         `###Diagram` section and supply its compiler passes, and the grammar's name and
+                         entry rule. Staged under the same `languages/` prefix the engine uses for its
+                         own, because one reader reads both. -->
+                    <execution>
+                        <id>stage-language</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/languages</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${extension.dir}</directory>
+                                    <includes>
+                                        <include>language_diagram.json</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <version>4.13.2</version>
+                <executions>
+                    <execution>
+                        <id>antlr</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>${project.build.directory}/antlr4</sourceDirectory>
+                            <outputDirectory>${project.build.directory}/generated-sources/antlr4</outputDirectory>
+                            <visitor>true</visitor>
+                            <listener>false</listener>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- The extension's translated Pure — meta::pure::diagram's metamodel, protocol, parser
+                 rules and compiler passes — written here by `just java::generate-diagram`, exactly as
+                 the engine's own generated/ is written by its generate-* steps. It compiles against the
+                 engine's generated metamodel, which is what the dependency direction is for.
+
+                 generated/ sits BESIDE target/, not inside it: `mvn clean` owns target/ and would
+                 delete the translator's output, leaving a module that cannot compile. Maven alone
+                 cannot build this module from a clean checkout for the same reason the engine cannot —
+                 the transform has to RUN first. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.9.1</version>
+                <executions>
+                    <execution>
+                        <id>add-translated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/generated</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-nowarn</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <!-- The tests reach shared/*.pdb and the extension's build/*.pdb at the repository root. -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <workingDirectory>${repo.dir}</workingDirectory>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

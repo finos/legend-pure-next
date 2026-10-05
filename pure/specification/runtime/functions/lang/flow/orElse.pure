@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,5 +45,32 @@ function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrEl
     assertEquals('default', $f->eval(|
         let empty = []->cast(@String);
         $empty->orElse('default');
+    ));
+}
+
+// `orElse` returns T[1] — ONE value, not a collection that happens to hold one. The four tests
+// above cannot see that difference: equality treats a single value and a one-element collection as
+// the same, so a host may hand back the wrong shape and still pass all four.
+//
+// `instanceOf` can see it, because it takes its instance as `Any[1]`: ask whether the result is a
+// String and a result still wearing the collection shape says no.
+//
+// The input has to come from a REAL [0..1] expression — `head()` here. A literal written into the
+// call (`'present'->orElse(…)`) is already one value, so it comes back unchanged whatever the host
+// does with the shape, and would pin nothing.
+function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElsePresentResultIsOneValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(true, $f->eval(|
+        let present = ['present', 'other']->head();
+        $present->orElse('fallback')->instanceOf(String);
+    ));
+}
+
+// And the defaulted arm has to come back in the same shape as the present one.
+function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElseDefaultedResultIsOneValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(true, $f->eval(|
+        let missing = []->cast(@String)->head();
+        $missing->orElse('fallback')->instanceOf(String);
     ));
 }

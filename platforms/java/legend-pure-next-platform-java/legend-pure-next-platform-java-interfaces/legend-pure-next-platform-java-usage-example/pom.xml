@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ©2026 JP Morgan Chase & Co. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-platform-java-interfaces</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-platform-java-usage-example</artifactId>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Java Platform - Usage Example</name>
+
+    <!--
+      EMBEDDING THE PLATFORM, as an example that is also run. It was TestPureRuntime in the engine's own
+      src/test, which was the wrong place twice over: it is not a test of the engine's internals but a
+      demonstration of its public API, and living inside the engine it could reach package-private
+      things a real embedder cannot. Here it compiles against exactly what any consumer has.
+
+      An INTERFACE to the platform, like the CLI: both are ways the platform is driven from outside, and
+      both are the composition root of their own run — they choose the languages and the modules.
+
+      A PROGRAM, not a test: it is read as much as it is run, and `main` is what an embedder writes. It
+      is still executed — `just java::usage-example` runs it and `test-all` includes that — so an example
+      that stopped working cannot go unnoticed. The JavaScript platform's usage example is the same
+      shape: a script its Justfile runs.
+    -->
+
+    <dependencies>
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-platform-java-pure</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- A language extension, so the example can show a host naming more than one language. -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-platform-java-extensions-diagram</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+</project>

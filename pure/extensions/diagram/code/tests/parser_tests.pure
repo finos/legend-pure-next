@@ -1,0 +1,115 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::diagram::metamodel::*;
+import meta::pure::diagram::parser::*;
+import meta::pure::diagram::protocol::*;
+import meta::pure::functions::meta::antlr::*;
+
+function meta::pure::diagram::parser::tests::sample(): String[1]
+{
+   'Diagram m::D(width=800.0, height=600.0)\n' +
+   '{\n' +
+   '   TypeView tv_a(type=m::Person, position=(40.0, 60.0), width=200.0, height=90.0,\n' +
+   '                 color=#FFFFCC, stereotypesVisible=true, attributesVisible=false,\n' +
+   '                 attributeStereotype=none, attributeTypes=none, lineWidth=-1.0)\n' +
+   '   TypeView tv_b(type=m::Firm, position=(400.0, 60.0), width=200.0, height=90.0)\n' +
+   '   PropertyView pv(property=m::Person.firm, source=tv_a, target=tv_b,\n' +
+   '                   points=[(140.0, 105.0), (500.0, 105.0)])\n' +
+   '   AssociationView av(association=m::Employment, source=tv_a, target=tv_b, points=[])\n' +
+   '   GeneralizationView gv(source=tv_b, target=tv_a, points=[(1.0, 2.0)], label=extends)\n' +
+   '}\n';
+}
+
+function meta::pure::diagram::parser::tests::parsed(): meta::pure::diagram::protocol::Diagram[*]
+{
+   buildDiagrams(parseAntlr(meta::pure::diagram::parser::tests::sample(), 'DiagramParser', 'd.pure', 0), 0);
+}
+
+function <<test.Test>> meta::pure::diagram::parser::tests::testDiagramShape(): Boolean[1]
+{
+   let ds = meta::pure::diagram::parser::tests::parsed();
+   assert($ds->size() == 1, | 'one diagram, got ' + $ds->size()->toString());
+   let d = $ds->toOne();
+   assert($d.name == 'D', | 'name is the last path segment, got ' + $d.name);
+   assert($d.width == 800.0 && $d.height == 600.0, | 'the dimension clause is read');
+   assert($d.typeViews->size() == 2, | 'two type views');
+   assert($d.propertyViews->size() == 1 && $d.associationViews->size() == 1
+          && $d.generalizationViews->size() == 1, | 'one of each edge');
+   true;
+}
+
+function <<test.Test>> meta::pure::diagram::parser::tests::testTypeViewValues(): Boolean[1]
+{
+   let tv = meta::pure::diagram::parser::tests::parsed()->toOne().typeViews->at(0);
+   assert($tv.id == 'tv_a', | 'id, got ' + $tv.id);
+   // The qualified name survives as ONE token: `::` is part of the identifier.
+   // The protocol carries the path in a Type_Pointer; resolving it is the compiler's job.
+   assert($tv.type->toOne().value == 'm::Person', | 'type path, got ' + $tv.type->toOne().value);
+   assert($tv.position.x == 40.0 && $tv.position.y == 60.0, | 'position');
+   assert($tv.width == 200.0 && $tv.height == 90.0, | 'size');
+   assert($tv.color == '#FFFFCC', | 'colour, got ' + $tv.color->orElse('(none)'));
+   assert($tv.stereotypesVisible, | 'an explicit true');
+   assert(!$tv.attributesVisible, | 'an explicit false');
+   true;
+}
+
+function <<test.Test>> meta::pure::diagram::parser::tests::testFlagsDefaultWhenAbsent(): Boolean[1]
+{
+   // tv_b says nothing about visibility; the editor omits what it has not changed.
+   let tv = meta::pure::diagram::parser::tests::parsed()->toOne().typeViews->at(1);
+   assert($tv.stereotypesVisible && $tv.attributesVisible, | 'absent flags default to true');
+   assert($tv.color->isEmpty(), | 'an absent colour stays absent rather than becoming a default');
+   true;
+}
+
+function <<test.Test>> meta::pure::diagram::parser::tests::testPropertyViewAndPoints(): Boolean[1]
+{
+   let pv = meta::pure::diagram::parser::tests::parsed()->toOne().propertyViews->toOne();
+   // `m::Person.firm` — the dot segment is part of the same token.
+   assert($pv.property == 'm::Person.firm', | 'property, got ' + $pv.property);
+   assert($pv.source == 'tv_a' && $pv.target == 'tv_b', | 'ends');
+   assert($pv.points->size() == 2, | 'two points, got ' + $pv.points->size()->toString());
+   assert($pv.points->at(0).x == 140.0 && $pv.points->at(1).y == 105.0, | 'point values');
+   true;
+}
+
+function <<test.Test>> meta::pure::diagram::parser::tests::testEmptyPointListAndLabel(): Boolean[1]
+{
+   let d = meta::pure::diagram::parser::tests::parsed()->toOne();
+   assert($d.associationViews->toOne().points->isEmpty(), | 'an empty point list is empty, not a failure');
+   assert($d.associationViews->toOne().association == 'm::Employment', | 'association path');
+   assert($d.generalizationViews->toOne().label == 'extends', | 'a label is carried');
+   assert($d.generalizationViews->toOne().points->size() == 1, | 'a single-point list');
+   true;
+}
+
+function <<test.Test>> meta::pure::diagram::parser::tests::testDiagramWithoutDimension(): Boolean[1]
+{
+   // A file that never had `(width=…, height=…)` must not acquire one.
+   let ds = buildDiagrams(parseAntlr('Diagram a::B\n{\n}\n', 'DiagramParser', 'd.pure', 0), 0);
+   let d = $ds->toOne();
+   assert($d.width->isEmpty() && $d.height->isEmpty(), | 'no dimension');
+   assert($d.typeViews->isEmpty(), | 'an empty diagram parses');
+   true;
+}
+
+function <<test.Test>> meta::pure::diagram::parser::tests::testSeveralDiagramsInOneSection(): Boolean[1]
+{
+   let ds = buildDiagrams(parseAntlr('Diagram a::One\n{\n}\nDiagram a::Two\n{\n}\n',
+                                     'DiagramParser', 'd.pure', 0), 0);
+   assert($ds->size() == 2, | 'two diagrams, got ' + $ds->size()->toString());
+   assert($ds->at(0).name == 'One' && $ds->at(1).name == 'Two', | 'in order');
+   true;
+}

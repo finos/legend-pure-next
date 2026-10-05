@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ©2026 JP Morgan Chase & Co. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.finos.legend.pure</groupId>
+    <artifactId>legend-pure-next-platform-java</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>Legend Pure - Next - Java Platform</name>
+
+    <!--
+      The Java platform, as modules. It was ONE module until the diagram extension needed a home:
+      an extension's generated parser and its translated Pure do not belong in the engine's own
+      `generated/`, and the only thing that keeps them apart is a module boundary.
+
+      WHAT DEPENDS ON WHAT — the direction is the design:
+
+          -generator                    (nothing)
+          -pure                         (nothing)
+          -extensions-diagram      ->   -pure
+          -cli                     ->   -pure, -extensions-diagram
+
+      The engine never references a language extension; an extension depends on the engine. That is
+      what lets the diagram's translated Java compile against the engine's generated metamodel while
+      living in its own tree, and it is why adding an extension cannot break the engine.
+
+      WHY PURE IS INSIDE THE ENGINE rather than a sibling of diagram. `pure/specification/language_pure.json`
+      declares `bundled: true`: `###Pure` arrives with the compiler rather than through a registered
+      module, and is not optional — there is no Pure platform in which the Pure language is absent.
+      The module layout says so. The CODE PATH is still uniform: both languages are `Language`
+      descriptors read from their own manifests, and neither is special-cased.
+
+      The Top grammar belongs to the engine and to no language: it splits a file into `###Section`
+      blocks before any language is consulted, `###Diagram` included.
+
+      NO SERVICE LOADER. `-cli` is the composition root and the only place the set of languages is
+      named. That keeps the order explicit (`###Pure` must be installed before anything parses) and
+      lets a test build a runtime with one language or two, which is what pins that an extension
+      contributes nothing until its module is registered.
+
+      LANGUAGES ARE READ, NOT GENERATED. Each module stages the manifests it owns as classpath
+      resources and reads them at startup, resolving the grammar's lexer and parser by REFLECTION from
+      the simple names the manifest gives. The alternative was a generator module emitting a compiled
+      `Language` list, which made `DiagramParser::section` checkable by javac; reading wins on size —
+      no generator module, no exec-maven-plugin, no build-time dependency — and the cost is that a
+      manifest naming a grammar class or entry rule that does not exist is caught at STARTUP rather
+      than by javac. Startup and not first-parse because the constructors and the rule method are
+      resolved when the manifest is read; TestLanguages pins the messages that replaced the compile
+      error.
+    -->
+
+    <!-- Shared by every module, so a new one compiles the same way without restating it: this is what
+         the generator module was missing when it was added. -->
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <!-- Same version bootstrap and legend-pure-next-platform-truffle pin, under the same property name. -->
+        <eclipsecollections.version>13.0.0</eclipsecollections.version>
+    </properties>
+
+    <!--
+      Eclipse Collections, managed here so every module takes the same version. It is the house
+      collection library across bootstrap and Truffle, and now here.
+
+      TODAY IT IS THE HANDWRITTEN HOST ONLY. JavaSource.compile runs javac with an EMPTY class path and
+      the platform loader, so the translator's output is currently JDK-only whatever this pom says —
+      that rule lives there, not here. Generated code is INTENDED to use Eclipse Collections too; when
+      it does, that class path is what has to change, and these coordinates are already in one place.
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.eclipse.collections</groupId>
+                <artifactId>eclipse-collections-api</artifactId>
+                <version>${eclipsecollections.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.collections</groupId>
+                <artifactId>eclipse-collections</artifactId>
+                <version>${eclipsecollections.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <modules>
+        <module>legend-pure-next-platform-java-pure</module>
+        <module>legend-pure-next-platform-java-extensions</module>
+        <module>legend-pure-next-platform-java-interfaces</module>
+    </modules>
+</project>
