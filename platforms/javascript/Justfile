@@ -1,3 +1,4 @@
+# Copyright 2026 Goldman Sachs
 # ©2026 JP Morgan Chase & Co. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -364,7 +365,8 @@ test-host-api: generate-all
 # The host API end to end, as bootstrap's TestPureRuntime: set Pure source into an in-memory module,
 # compile through the PureRuntime, execute a function it defines, modify and recompile.
 # Run the usage example — the simplest way to start Pure on JavaScript
-# (src/core/tests/usage-example.js). It asserts nothing and writes no report: it is here so the
+# (src/interfaces/usage-example/). An INTERFACE to the platform, like the browser IDE and like the
+# Java platform's own usage-example module. It asserts nothing and writes no report: it is here so the
 # example cannot rot, and it fails the build by throwing if the system no longer starts. The
 # behaviour it demonstrates is pinned by `test-host-api`.
 usage-example: generate-all

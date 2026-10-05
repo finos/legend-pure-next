@@ -35,8 +35,7 @@ import { Execution } from "../execution/Execution.js";
 import { DEFAULT_NATIVES_EXTENSIONS, NativeRegistry } from "../execution/natives/NativeRegistry.js";
 import { fileSystemExtension } from "../execution/natives/FileSystemExtension.js";
 import { PureRuntime } from "./PureRuntime.js";
-import { EXTENSION_DESCRIPTORS, PURE_LANGUAGE_PDBS } from "./LanguageExtensions.js";
-import { PLATFORM_PDBS } from "./PlatformModules.js";
+import { EXTENSION_DESCRIPTORS } from "./LanguageExtensions.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));   // .../platforms/javascript/src/core/runtime
 const REPO = join(HERE, "../../../../..");                 // -> repo root
@@ -48,9 +47,6 @@ const GEN = join(HERE, "../../../generated");              // -> platforms/javas
 // `translatePackage`), which used to mean loading the translator's -tests pdb for its entry point
 // and, transitively, core-tests: 5.35 MB of PCT corpus for five lines of package walking. The entry
 // point now lives in the lean pdb where it belongs, so neither is needed.
-// The language, then what this platform adds to make it executable. Two lists because they have two
-// owners: the first is pure/specification/language_pure.json, the second is PlatformModules.js.
-const PDBS = [...PURE_LANGUAGE_PDBS, ...PLATFORM_PDBS];
 // Generated JS loaded into the shared global scope: the core library the
 // emitted code calls into, the meta::pure::test helpers (package walking,
 // PCT discovery, the in-memory adapter), and the translator stack.
@@ -77,7 +73,12 @@ const GEN_MODULES = [
 export async function loadTranslatedCode(modules = GEN_MODULES) {
     loadBundle();
     loadPdbReader();
-    for (const m of modules) Object.assign(globalThis, await import(join(GEN, m)));
+    // SEQUENTIAL, because the generated modules are order-dependent: an enum constant resolves its
+    // Enumeration as it loads, so the module declaring the class has to have run first.
+    await modules.reduce(async (previous, m) => {
+        await previous;
+        Object.assign(globalThis, await import(join(GEN, m)));
+    }, Promise.resolve());
 }
 
 let loaded = null;
@@ -98,30 +99,35 @@ export async function loadRuntime({ pdbs, extraPdbs = [] } = {}) {
         const execution = new Execution(runtimeModule);
 
         const registry = new ModuleRegistry(readFileSync(join(SHARED, "specification/m3.fbs"), "utf8"));
-        for (const p of pdbs ? pdbs.map((f) => resolve(f)) : [...PDBS, ...extraPdbs].map((f) => join(REPO, f))) {
-            registry.register(PdbModule.open(p));
-        }
-        // Every language extension on disk, module and language together. Skipped when the caller
-        // named its own `pdbs`: it chose exactly what to load, and an extension it did not ask for
-        // should not appear behind its back.
-        if (!pdbs) {
-            for (const extension of EXTENSION_DESCRIPTORS) {
-                registry.registerExtension(extension, PdbModule.open(join(REPO, extension.pdbPath)));
-            }
-        }
+        // A caller that named its own `pdbs` chose exactly what to load, so nothing is autoloaded for it
+        // — an extension it did not ask for must not appear behind its back. Otherwise only the EXTRA
+        // modules are registered here and the runtime brings the rest.
+        (pdbs ? pdbs.map((f) => resolve(f)) : extraPdbs.map((f) => join(REPO, f)))
+            .forEach((p) => registry.register(PdbModule.open(p)));
         registry.register(runtimeModule); // __metadataInvoke routes here via the metadata globals
-        registry.validate();
 
-        const runtime = PureRuntime.builder()
+        const builder = PureRuntime.builder()
             .withRegistry(registry)
             .withNatives(NativeRegistry.createDefault([...DEFAULT_NATIVES_EXTENSIONS, fileSystemExtension]))
             .withEvalJs(execution.evalJs)
             .withSourceText(execution.sourceText)
-            .withRuntimeModule(runtimeModule)
-            .build();
+            .withRuntimeModule(runtimeModule);
 
-        await loadTranslatedCode();
-        runtimeModule.invalidate();
+        let runtime;
+        if (pdbs) {
+            registry.validate();
+            runtime = builder.build();
+            await loadTranslatedCode();
+            runtimeModule.invalidate();
+        } else {
+            // What the languages declare, the platform's own modules and every extension on disk — all
+            // registered by the runtime, which then loads the translated code. Opening a pdb is
+            // synchronous here; the browser's loader fetches instead (see interfaces/web/main.js).
+            runtime = await builder
+                .withModuleLoader(async (paths) => paths.map((f) => PdbModule.open(join(REPO, f))))
+                .withTranslatedCode(() => loadTranslatedCode())
+                .buildAsync();
+        }
         loaded = { registry, runtime, execution };
     }
     const { registry, runtime, execution } = loaded;

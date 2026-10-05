@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ©2026 JP Morgan Chase & Co. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-platform-java</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-platform-java-pure</artifactId>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Java Platform - Pure</name>
+
+    <!--
+      The Java platform: Pure translated to JDK-only Java.
+
+      src/main/java is the handwritten host; generated/ is the translator's
+      output. They are ONE compilation unit, not two: the host imports the
+      generated metamodel (PdbTypes, FbsNode, ...) and ~1250 generated classes
+      call back into the host (Metadata, runtime.*). build-helper adds the
+      generated tree as a second source root so javac sees both at once.
+
+      generated/ sits BESIDE target/, not inside it: `mvn clean` owns target/ and
+      would delete the translator's output, leaving a module that cannot compile
+      ("package org.finos.legend.pure.m3 does not exist").
+
+      Maven alone cannot build this module from a clean checkout — generated/ has
+      to be produced first. `just java::compile` runs the generate steps and then
+      this build; an IDE needs the same done once before it can resolve.
+
+      NO DEPENDENCY ON ANOTHER PLATFORM. That is the constraint: nothing here may
+      bind to bootstrap's, Truffle's or the Pure jars' classes, because translated
+      code has to stand on its own. The ANTLR runtime below is not a platform — it
+      is a parser library, and this module generates its own parsers from the shared
+      grammars, exactly as bootstrap, Truffle and the JavaScript host each do. The
+      rule for TRANSLATED code is enforced where it belongs, in JavaSource.compile:
+      javac runs there with an empty class path and the platform loader, so generated
+      Java cannot reach anything but the JDK and this module whatever the pom says.
+
+      (Until 2026-09 the parsing half lived in a separate ext/antlr built by a bare
+      javac against the bootstrap FAT JAR, which pulled in bootstrap's generated
+      parsers and was this platform's last cross-platform dependency. The empty
+      dependency list had been read as "no dependencies at all" rather than "no
+      other platform".)
+    -->
+
+    <properties>
+        <build-helper.maven.plugin.version>1.9.1</build-helper.maven.plugin.version>
+        <antlr.version>4.13.2</antlr.version>
+        <spec.dir>${project.basedir}/../../../../pure/specification</spec.dir>
+        <shared.dir>${project.basedir}/../../../../shared</shared.dir>
+        <antlr.package.dir>org/finos/legend/pure/platform/java/grammar</antlr.package.dir>
+        <repo.dir>${project.basedir}/../../../..</repo.dir>
+    </properties>
+
+    <dependencies>
+        <!-- The parser library, for the `meta::pure::functions::meta::antlr` natives.
+             Not another platform: see the note above. -->
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4-runtime</artifactId>
+            <version>${antlr.version}</version>
+        </dependency>
+        <!-- Eclipse Collections: the house collection library. Version managed by the parent. On the
+             handwritten host's class path today; generated code is compiled with an empty one until
+             JavaSource.compile is taught to pass these jars (see the parent pom). -->
+        <dependency>
+            <groupId>org.eclipse.collections</groupId>
+            <artifactId>eclipse-collections-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.collections</groupId>
+            <artifactId>eclipse-collections</artifactId>
+        </dependency>
+        <!-- Test scope only: never on the compile class path, so generated code cannot see it. -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!--
+          The translator's position tables (`Foo.java.pos`, one per generated
+          class, mapping a generated Java line to the Pure source position it came
+          from). They are data, not source, so they are copied as resources and
+          read back by PureStack to put positions on Pure stack frames. There is
+          no src/main/resources in this module, so this replaces nothing.
+        -->
+        <resources>
+            <resource>
+                <directory>${project.basedir}/generated</directory>
+                <includes>
+                    <include>**/*.pos</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+            <!-- The .g4 sources are shared. Stage them under this module's antlr package so
+                 ANTLR generates into it (the plugin derives the package from the path below
+                 sourceDirectory), keeping the `m3/` sub-directory: M3Lexer/M3Parser land in
+                 ...java.antlr.m3 and TopLexer/TopParser in ...java.antlr, which is what
+                 M3GrammarExtension and TopGrammarExtension import. A .g4 edit regenerates
+                 HERE too, and a stale parser fails silently. -->
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>stage-grammars</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/antlr4/${antlr.package.dir}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${spec.dir}/grammar/antlr</directory>
+                                    <includes>
+                                        <include>**/*.g4</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- The FlatBuffers schema the archives are decoded with, packaged as a classpath
+                 resource so the platform carries its own contract: the decoder is generated
+                 against a specific m3.fbs, and an archive must match the schema that
+                 describes it. It used to be a schema path every caller had to pass on the command
+                 line, which let the two drift. Same arrangement as Truffle's
+                 GenericFbDecoder. -->
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>stage-schema</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/generated-specification</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${shared.dir}/specification</directory>
+                                    <includes>
+                                        <include>m3.fbs</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <!-- The LANGUAGE MANIFESTS this module owns: `###Pure` and compiler-pure's test
+                         sections. Read at startup (see Languages) rather than compiled in, so the Pure
+                         element paths a host calls live in the language's own files.
+
+                         Classpath resources, not files read from the repository: a run is
+                         `java -cp <classes>` from wherever the caller happens to be, and `###Pure` must
+                         not depend on the working directory. An extension stages its own manifest the
+                         same way, in its own module. -->
+                    <execution>
+                        <id>stage-languages</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/languages</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${spec.dir}</directory>
+                                    <includes>
+                                        <include>language_*.json</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <version>${antlr.version}</version>
+                <executions>
+                    <execution>
+                        <id>antlr</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>${project.build.directory}/antlr4</sourceDirectory>
+                            <outputDirectory>${project.build.directory}/generated-sources/antlr4</outputDirectory>
+                            <visitor>true</visitor>
+                            <listener>false</listener>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- The platform runs as `java -cp <classes>:<jars>`, assembled by hand in
+                 platforms/java/Justfile, so the ANTLR runtime must be somewhere the recipes
+                 can name. generate-sources, not package: `just java::compile` stops at the
+                 compile phase. -->
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>stage-runtime-jars</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Surefire runs from the module directory, and the tests need shared/*.pdb plus
+                 shared/specification/m3.fbs, which live at the repository root. Point the
+                 working directory there so a test locates them the way the CLI does. -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <workingDirectory>${project.basedir}/../../../..</workingDirectory>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper.maven.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>add-translated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/generated</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <!-- The translated tree is large; -nowarn keeps the build readable. -->
+                    <compilerArgs>
+                        <arg>-nowarn</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

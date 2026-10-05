@@ -21,8 +21,8 @@ truffle_root    := native_root
 repo_root       := truffle_root / ".." / ".."
 # Records heavy build steps for the dashboard build time trend.
 build_step     := "node " + repo_root / "tools" / "test-dashboard" / "build-step.mjs"
-truffle         := truffle_root / "legend-pure-next-truffle"
-truffle_cli_module := truffle / "legend-pure-next-truffle-interfaces" / "legend-pure-next-truffle-cli"
+truffle         := truffle_root / "legend-pure-next-platform-truffle"
+truffle_cli_module := truffle / "legend-pure-next-platform-truffle-interfaces" / "legend-pure-next-platform-truffle-cli"
 spec            := repo_root / "pure" / "specification"
 compiler_src    := repo_root / "pure" / "specification" / "compiler" / "compiler-pure"
 truffle_out     := truffle_root / "build"

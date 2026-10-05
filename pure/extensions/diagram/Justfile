@@ -131,10 +131,14 @@ build-truffle: _depCheck_base-pdbs generate-protocol
 
 # Run the extension's Pure tests.
 #
-# The parser tests call parseAntlr with the DiagramParser grammar, so they need a host that
-# has the generated parser registered. Truffle picks it up from the extension's .g4 via
-# `truffle::build`; on a host without it the tests fail with "Unknown grammar: DiagramParser",
-# which is the signal that that platform's adapter has not been generated.
+# The parser tests call parseAntlr with the DiagramParser grammar, so they need a host that has the
+# generated parser REGISTERED — not merely generated. On Truffle that is the CLI naming its languages
+# (PureCompileMain installs PureLanguage + DiagramLanguage); a host that does not fails with "Unknown
+# grammar: DiagramParser", which is the signal that its adapter is missing or uninstalled.
+#
+# Only the TEST pdbs are named below. `--root` lets the runtime register what each language declares in
+# its own manifest — core.pdb, parser-mappings.pdb and compiler.pdb from language_pure.json, diagram.pdb
+# from language_diagram.json — so this list holds only what no language declares: test content.
 test-all: build-tests
     @{{header}} 'test-all'
     @{{substep}} 'runTests meta::pure::diagram (Truffle)'
@@ -142,10 +146,8 @@ test-all: build-tests
     test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
     mkdir -p {{test_results}}/pure/extensions-diagram
     {{pure_truffle}} execute \
-        --pdb {{shared_out}}/core.pdb \
+        --root {{repo_root}} \
         --pdb {{shared_out}}/core-tests.pdb \
-        --pdb {{shared_out}}/compiler.pdb \
-        --pdb {{diagram_out}}/diagram.pdb \
         --pdb {{diagram_out}}/diagram-tests.pdb \
         --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
         --args "meta::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-truffle.json" {{err_filter}}

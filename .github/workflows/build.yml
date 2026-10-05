@@ -602,7 +602,7 @@ jobs:
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
 
       # generate-pdb-reader translates meta::pure::compiler::pdb::{reader,schema}
-      # into legend-pure-next-truffle-core/generated with the JAVA translator,
+      # into legend-pure-next-platform-truffle-pure/generated with the JAVA translator,
       # running on the bootstrap CLI — so it needs those modules' PDBs. They are
       # NOT in bootstrap-artifacts, and the jobs that publish them (translation-deps
       # / translations) run after this one, so this job builds them itself. Takes
@@ -755,7 +755,7 @@ jobs:
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
 
       # generate-pdb-reader translates meta::pure::compiler::pdb::{reader,schema}
-      # into legend-pure-next-truffle-core/generated with the JAVA translator,
+      # into legend-pure-next-platform-truffle-pure/generated with the JAVA translator,
       # running on the bootstrap CLI — so it needs those modules' PDBs. They are
       # NOT in bootstrap-artifacts, and the jobs that publish them (translation-deps
       # / translations) run after this one, so this job builds them itself. Takes
@@ -1161,13 +1161,15 @@ jobs:
             tar -xf ${{ matrix.language_pdb_artifact }}.tar
           fi
 
-      # The language extensions under pure/extensions — today the `###Diagram` one the browser IDE's
-      # diagram editor needs, which javascript::generate-all translates into generated/extensions/. Built here
-      # rather than shipped as a translation-deps artifact: they depend only on core.pdb and
-      # compiler.pdb (both restored above with bootstrap-artifacts) and compile in well under a
+      # The language extensions under pure/extensions — today the `###Diagram` one. BOTH platforms
+      # need it: javascript::generate-all translates it into generated/extensions/ for the browser
+      # IDE's diagram editor, and the Java platform's -extensions-diagram module generates its parser
+      # and AOT-translates meta::pure::diagram from this PDB (java::spec-diagram runs its tests).
+      # Built here rather than shipped as a translation-deps artifact: it depends only on core.pdb and
+      # compiler.pdb (both restored above with bootstrap-artifacts) and compiles in well under a
       # second, so an artifact round trip would cost more than the build.
       - name: Build the language extensions
-        if: matrix.target == 'javascript'
+        if: matrix.target == 'javascript' || matrix.target == 'java'
         run: just extensions::build-tests
 
       - name: Translation ${{ matrix.target }}

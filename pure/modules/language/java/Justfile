@@ -91,7 +91,7 @@ build-tests:
         --tests split {{err_filter}}
 
 # The `compileAndExecute` native is implemented in the Truffle Java extension
-# runtime (legend-pure-next-truffle-core's natives/javacompile JavaCompileNatives) — the
+# runtime (legend-pure-next-platform-truffle-pure's natives/javacompile JavaCompileNatives) — the
 # bootstrap CLI does NOT register it, so testCompileAndExecute* tests fail
 # there with "No native implementation for: compileAndExecute".
 # Needs core-tests.pdb because runTests is <<test.TestDependency>>.

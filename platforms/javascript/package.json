@@ -11,7 +11,7 @@
     "test:compiler": "node --stack-size=4000 src/core/compiler/tests/compiler-tests.js",
     "test:execution": "node --stack-size=4000 src/core/execution/tests/pct-tests.js",
     "test:host-api": "node --stack-size=4000 src/core/tests/host-api-tests.js",
-    "usage-example": "node --stack-size=4000 src/core/tests/usage-example.js",
+    "usage-example": "node --stack-size=4000 src/interfaces/usage-example/usage-example.js",
     "test:diagram": "node src/interfaces/web/diagram/tests/diagram-tests.js",
     "test:section-hint": "node src/interfaces/web/tests/section-hint-tests.js",
     "test:source-store": "node src/interfaces/web/tests/source-store-tests.js",

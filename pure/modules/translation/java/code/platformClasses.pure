@@ -157,14 +157,28 @@ function meta::external::language::java::translation::platform::platformValueTyp
                |if ($raw == [Boolean], | javaClass('java.lang.Boolean'),
                |if ($raw == [meta::pure::metamodel::type::primitives::Decimal], | javaClass('java.math.BigDecimal'),
                |if ($raw == [Number],  | javaClass('java.lang.Number'),
-               // Only classes and enumerations have platform types; Any and the
+               // Only classes and enumerations have platform types; Any, an opaque host type and the
                // other primitives (the dates, ...) are Object.
-               |if ($path->isNotEmpty() && !$raw->isTopType()
+               |if ($path->isNotEmpty() && !$raw->isTopType() && !$raw->isOpaqueHostType()
                    && ($raw->toOne()->instanceOf(Class) || $raw->toOne()->instanceOf(Enumeration)), | javaClass($raw->toOne()->cast(@meta::pure::metamodel::PackageableElement)->platformTypeName($javaRoot)),
                                        | javaObject())))))))));
    if ($m->holdsManyValues() || !$m->instanceOf(meta::pure::metamodel::multiplicity::ConcreteMultiplicity),
       | javaParameterizedType(javaClass('java.util.List'), [$one]),
       | $one);
+}
+
+// A Pure class whose instances are HOST objects rather than translated values. An AntlrContext is a
+// parse-tree node of whichever parser the platform generated, so it has no platform interface: it must
+// be read as Object, for the same reason a top type must.
+//
+// SHARED WITH pureTypeToJavaTypeResolved, which maps the same type to Object, because the two
+// disagreeing is the bug this exists to prevent. A parameter typed AntlrContext was already Object,
+// while a PROPERTY typed AntlrContext got a typed getter — so the diagram extension's
+// `value : AntlrContext[1]` generated `(AntlrContext) one("value")` and failed with a
+// ClassCastException on a real ANTLR context, on the only host where a property holds one.
+function meta::external::language::java::translation::platform::isOpaqueHostType(raw: meta::pure::metamodel::type::Type[*]): Boolean[1]
+{
+   $raw == [meta::pure::functions::meta::antlr::AntlrContext];
 }
 
 // The top type of a hierarchy — the metamodel's Any, and the protocol grammar's

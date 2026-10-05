@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ©2026 JP Morgan Chase & Co. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-platform-java-interfaces</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-platform-java-cli</artifactId>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Java Platform - CLI</name>
+
+    <!--
+      THE COMPOSITION ROOT. The only module that depends on the engine AND on every language
+      extension, and therefore the only place the set of languages is named. That is deliberate: the
+      alternative was a ServiceLoader, which would decide registration ORDER by classpath scan — and
+      `###Pure` has to be present before anything parses — while making it impossible for a test to ask
+      for one language rather than two.
+
+      It holds `main` and nothing else. `Execute.call` stays in the engine, which needs it: parsing and
+      compiling both run translated Pure through it, as does an extension's own compiled code.
+    -->
+
+    <dependencies>
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-platform-java-pure</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Every language extension. A new one is added HERE and in the Justfile's class path, which
+             is the whole cost of the module-per-extension layout. -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-platform-java-extensions-diagram</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+</project>

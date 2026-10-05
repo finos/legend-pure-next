@@ -252,6 +252,19 @@ check("the extension descriptors come from the extensions' own manifests", () =>
     assert.ok(diagram.pure.compilerExtension.startsWith("meta::pure::diagram::"));
 });
 
+check("the Pure language declares its grammar like any other, and Top is not a language", () => {
+    // M3 used to be a literal in antlr-natives.js's grammar table beside Top. It is the Pure
+    // language's grammar, so it belongs in the Pure language's manifest, and the host builds its
+    // entry from here. Dropped from the manifest, the table loses M3Parser and nothing parses — a
+    // failure a long way from its cause, which is what this pins.
+    const pure = languageNamed("Pure");
+    assert.deepEqual(pure.descriptor.grammar, { lexer: "M3Lexer", parser: "M3Parser", entryRule: "definition" });
+    // Top frames a document into `###Section` blocks before any language is consulted (`###Diagram`
+    // goes through it too), so no descriptor may claim it.
+    const claimsTop = (l) => l.descriptor.grammar && l.descriptor.grammar.parser === "TopParser";
+    assert.ok(!DEFAULT_LANGUAGE_EXTENSIONS.some(claimsTop), "no language may declare the Top grammar");
+});
+
 check("both halves of the diagram language are contributed only when its module is registered", () => {
     const diagram = extensionNamed("diagram");
     const withDiagram = new ModuleRegistry(SCHEMA);
@@ -329,7 +342,8 @@ check("a ###Diagram section compiles to a Diagram element with its types resolve
     // Both halves of the extension, through the host API: the section parses, and the compiler
     // passes put a Diagram in the graph with each view's `type=` resolved to the class the same
     // compile produced. While `###Diagram` was carried text the element did not exist at all.
-    runtime.setSource("runtime", "diagram.pure", [
+    // The source goes into the MODULE that holds it, as the browser IDE and both usage examples do.
+    host.module("runtime").setSource("diagram.pure", [
         "###Pure",
         "Class probe::Person { name : String[1]; }",
         "",
@@ -352,7 +366,7 @@ check("a ###Diagram section compiles to a Diagram element with its types resolve
     const resolved = asArray(view.type);
     assert.equal(resolved.length, 1, "pass 2 did not resolve probe::Person");
     assert.equal(one(resolved[0].__purePath ?? one(resolved[0].name)), "Person");
-    runtime.removeSource("runtime", "diagram.pure");
+    host.module("runtime").removeSource("diagram.pure");
 });
 
 check("PureRuntime.execute runs a function element", () => {

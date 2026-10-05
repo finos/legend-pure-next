@@ -41,8 +41,7 @@ import { createModulePanel } from "./modules-panel.js";
 import { createWorkspace } from "./workspace.js";
 import { debounce } from "./source-store.js";
 import { createProgress, downloadAll, fetchBytesWithProgress } from "./progress.js";
-import { EXTENSION_DESCRIPTORS, PURE_LANGUAGE_PDBS } from "../../core/runtime/LanguageExtensions.js";
-import { PLATFORM_PDBS } from "../../core/runtime/PlatformModules.js";
+import { EXTENSION_DESCRIPTORS } from "../../core/runtime/LanguageExtensions.js";
 import { createConsole } from "./console-panel.js";
 import { initSplitters, initTheme, definePureThemes } from "./layout.js";
 import { openInspector } from "./inspector.js";
@@ -53,16 +52,6 @@ const REPO = "../../../../..";
 const SHARED = `${REPO}/shared`;
 const GEN = "../../../generated";
 
-// The Pure language and nothing else. In particular NOT core-tests: nothing in the language needs
-// it, and the only thing that pulls it in is the translator's -tests pdb, which this page does not
-// load (javascript-translation declares core-tests as a `testDependencies` module, so the lean pdb
-// here does not claim it and `validate()` does not demand it). That is 5.35 MB of PCT corpus the
-// page never reads.
-const PDBS = [...PURE_LANGUAGE_PDBS, ...PLATFORM_PDBS];
-// The language extensions' own pdbs, from their generated descriptors rather than named here. They
-// are downloaded with the rest so the progress bar still covers every byte the page needs, but they
-// are REGISTERED differently — paired with the language each one adds.
-const EXTENSION_PDBS = EXTENSION_DESCRIPTORS.map((extension) => extension.pdbPath);
 // Generated JS loaded into the shared global scope: the core library the
 // emitted code calls into, then the translator stack, then the compiler.
 const GEN_MODULES = [
@@ -189,31 +178,40 @@ async function setup() {
     const schemaText = await fetchText(`${SHARED}/specification/m3.fbs`);
     registry = new ModuleRegistry(schemaText);
 
-    // The archives are the only part of start-up with a real denominator — ~13 MB of them —
-    // so this is where the bar is determinate. Opening them is deliberately NOT inside the
-    // download loop: openZip reads the central directory, which is cheap but not free, and
-    // interleaving it would make the byte count stutter for reasons the label cannot explain.
-    const allPdbs = [...PDBS, ...EXTENSION_PDBS];
-    const archives = await downloadAll(allPdbs.map((f) => `${REPO}/${f}`), progress,
-                                       { label: (url) => url.split("/").pop() });
-    progress.indeterminate("opening archives…");
-    PDBS.forEach((f, i) => registry.register(new PdbModule(openZip(archives[i]), f)));
-    EXTENSION_DESCRIPTORS.forEach((extension, i) => registry.registerExtension(
-        extension, new PdbModule(openZip(archives[PDBS.length + i]), extension.pdbPath)));
     registry.register(runtimeModule); // __metadataInvoke routes here via the metadata globals
-    registry.validate();
     // Metadata globals (globalThis.__metadata*, PDB-backed), the compileSource hook and
     // parsing through the runtime's language extensions — all on globalThis.__pureHost.
-    runtime = PureRuntime.builder()
+    //
+    // WHICH modules are registered is the runtime's business, from the languages' own manifests; HOW
+    // they are read is this page's, which is why the loader is passed in. The page fetched and
+    // registered them itself until `buildAsync` existed, with its own copy of the two pdb lists.
+    runtime = await PureRuntime.builder()
         .withRegistry(registry)
         .withNatives(NativeRegistry.createDefault([compileSourceExtension, antlrExtension]))
         .withEvalJs(evalJs)
         .withRuntimeModule(runtimeModule)
-        .build();
+        // ALL the paths in one call, so they download in parallel behind one bar. The archives are the
+        // only part of start-up with a real denominator — ~13 MB — so this is where it is determinate.
+        // Opening them is deliberately NOT interleaved with the download: openZip reads the central
+        // directory, which is cheap but not free, and interleaving would make the byte count stutter for
+        // reasons the label cannot explain.
+        .withModuleLoader(async (paths) => {
+            const archives = await downloadAll(paths.map((f) => `${REPO}/${f}`), progress,
+                                               { label: (url) => url.split("/").pop() });
+            progress.indeterminate("opening archives…");
+            return paths.map((f, i) => new PdbModule(openZip(archives[i]), f));
+        })
+        .withTranslatedCode(async () => {
+            progress.indeterminate("loading the compiler and translator…");
+            // SEQUENTIAL: the generated modules are order-dependent, an enum constant resolving its
+            // Enumeration as it loads.
+            await GEN_MODULES.reduce(async (previous, m) => {
+                await previous;
+                Object.assign(globalThis, await import(`${GEN}/${m}`));
+            }, Promise.resolve());
+        })
+        .buildAsync();
 
-    progress.indeterminate("loading the compiler and translator…");
-    for (const m of GEN_MODULES) Object.assign(globalThis, await import(`${GEN}/${m}`));
-    runtimeModule.invalidate();
     compileFn = globalThis[COMPILE];
     if (typeof compileFn !== "function") {
         throw new Error("compiler entry point not found after loading generated JS");
@@ -335,7 +333,7 @@ async function setup() {
     });
 
     refreshTree();
-    panel.info(`${registry.elementKinds().length} elements loaded from ${PDBS.length} archives.`);
+    panel.info(`${registry.elementKinds().length} elements loaded from ${registry.modules.length} modules.`);
 
     progress.indeterminate("warming the compiler (one-time)…");
     await paint();

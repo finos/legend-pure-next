@@ -1,3 +1,4 @@
+// Copyright 2026 Goldman Sachs
 // ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");

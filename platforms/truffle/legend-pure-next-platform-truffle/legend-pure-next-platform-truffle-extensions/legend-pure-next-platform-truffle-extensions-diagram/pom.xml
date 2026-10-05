@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ©2026 JP Morgan Chase & Co. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-platform-truffle-extensions</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-platform-truffle-extensions-diagram</artifactId>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Truffle Platform - Diagram Extension</name>
+
+    <!--
+      The `###Diagram` language on this platform: the ANTLR parser generated from the extension's own
+      grammar, and its manifest staged where the engine's reader finds it.
+
+      WHY THE PARSER MUST BE GENERATED HERE: the extension's Pure tests call
+      `parseAntlr($source, 'DiagramParser', ...)`, and a host without the generated parser fails with
+      "Unknown grammar: DiagramParser" — which is what this platform did until now, and the reason the
+      extension's eleven tests failed here while passing on JavaScript and Java.
+    -->
+
+    <properties>
+        <repo.dir>${project.basedir}/../../../../..</repo.dir>
+        <extension.dir>${repo.dir}/pure/extensions/diagram</extension.dir>
+        <!-- Where ANTLR generates, and therefore where the engine's reflective lookup finds the classes
+             this extension's manifest names: the plugin derives the package from the path below its
+             source directory, so the staging below decides it. -->
+        <antlr.package.dir>org/finos/legend/pure/truffle/extensions/diagram</antlr.package.dir>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-platform-truffle-pure</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- The extension's grammar. Lexer and parser must land in ONE directory or
+                 `tokenVocab = DiagramLexer` cannot resolve. -->
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>stage-grammar</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/antlr4/${antlr.package.dir}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${extension.dir}/code/grammar/antlr</directory>
+                                    <includes>
+                                        <include>*.g4</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <!-- Its manifest, read at startup by the engine, under the same `languages/` prefix the
+                         engine uses for its own: one reader reads both. -->
+                    <execution>
+                        <id>stage-language</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/languages</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${extension.dir}</directory>
+                                    <includes>
+                                        <include>language_diagram.json</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <version>4.13.2</version>
+                <executions>
+                    <execution>
+                        <id>antlr</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>${project.build.directory}/antlr4</sourceDirectory>
+                            <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
+                            <visitor>true</visitor>
+                            <listener>false</listener>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
