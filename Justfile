@@ -50,7 +50,12 @@ default: test
 # javascript platform's generate recipes run the TRANSLATED translator, which
 # lives in the modules tree's pdbs (javascript.pdb, translation-shared.pdb,
 # javascript-translation.pdb) — so modules must build first.
-build: bootstrap::build truffle::build extensions::build-tests modules::build javascript::build
+# `modules::protocol::build` comes BEFORE the extensions and the rest of modules after them, because the
+# dependency interleaves: the diagram extension derives its protocol form from modules/protocol, and
+# `diagram-analysis` (pure/modules/analysis/diagram) declares the diagram EXTENSION as a dependency. So
+# protocol -> extensions -> modules, not modules -> extensions or the reverse. A clean checkout is what
+# turns getting this wrong into a hard failure — "missing pure/modules/protocol/build/protocol.pdb".
+build: bootstrap::build truffle::build modules::protocol::build extensions::build-tests modules::build javascript::build
 
 # Top-level `build` already chains every subproject's `build` in dep order — alias for symmetry with sub-Justfiles' `build-all`.
 build-all: build
@@ -65,7 +70,7 @@ test:
 
 # The suites `test` runs. modules::build stages the translator pdbs
 # javascript::test's generate step needs (see `build` ordering note).
-_test: bootstrap::test truffle::test extensions::build-tests modules::build javascript::test java::test-all
+_test: bootstrap::test truffle::test modules::protocol::build extensions::build-tests modules::build javascript::test java::test-all
 
 # Delete every generated/ directory so the suites below cannot pass against
 # stale output. These are all gitignored build artifacts, each with a recipe

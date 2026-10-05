@@ -1170,7 +1170,13 @@ jobs:
       # second, so an artifact round trip would cost more than the build.
       - name: Build the language extensions
         if: matrix.target == 'javascript' || matrix.target == 'java'
-        run: just extensions::build-tests
+        # modules/protocol first: the diagram extension DERIVES its protocol form from a compiled
+        # metamodel (see its generate-protocol), so protocol.pdb has to exist before it builds. The root
+        # Justfile orders these the same way; this job restores artifacts rather than running that, so it
+        # has to say so itself. It needs only core.pdb, already restored above.
+        run: |
+          just modules::protocol::build
+          just extensions::build-tests
 
       - name: Translation ${{ matrix.target }}
         working-directory: pure/modules/translation/${{ matrix.target }}
