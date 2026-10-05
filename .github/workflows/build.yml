@@ -1081,7 +1081,11 @@ jobs:
           - target: javascript
             gallery_file: platforms/javascript/build/javascript-translation-gallery.html
             language_pdb_artifact: language-javascript-pdb
-            gallery_cmd: just build && just --justfile ../../../../Justfile javascript::antlr-all && just test-all gallery
+            # build-TESTS, not build: the platform's antlr-all runs `_emit` over
+            # meta::pure::parser::mappings, and a split-built lean pdb carries refs into its -tests
+            # companion, so javascript-translation-tests.pdb has to exist. `modules::build` uses
+            # build-tests for this module for the same reason.
+            gallery_cmd: just build-tests && just --justfile ../../../../Justfile javascript::antlr-all && just test-all gallery
             platform_suite: just javascript::test-all
           - target: truffle
             gallery_file: platforms/truffle/build/truffle-translation-gallery.html
