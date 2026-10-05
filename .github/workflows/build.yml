@@ -1224,16 +1224,34 @@ jobs:
             pure/modules/translation/javascript/build/javascript-translation.pdb \
             pure/modules/translation/shared/build/translation-shared.pdb \
             pure/specification/grammar/antlr/m3/M3Lexer.g4 \
-            shared/core.pdb shared/compiler.pdb \
             shared/specification/m3.fbs
           do
             mkdir -p "ide-site/$(dirname "$path")"
             cp -R "$path" "ide-site/$path"
           done
-          # Every language extension's pdb, found by glob rather than named: the page's module list
-          # comes from the generated descriptors (platforms/javascript/generated/languages.js),
-          # so adding an extension must not need an edit here either. The -tests companions are left
-          # behind — the page runs no tests.
+          # THE MODULES THE LANGUAGES DECLARE, read from their own manifests rather than named here.
+          # The page fetches exactly this list — the same manifests reach it through
+          # generated/languages.js — so the two cannot drift. Naming them here is what served a 404 for
+          # shared/parser-mappings.pdb the day language_pure.json started declaring it.
+          while IFS= read -r path
+          do
+            mkdir -p "ide-site/$(dirname "$path")"
+            cp "$path" "ide-site/$path"
+          done < <(node -e '
+            const fs = require("node:fs");
+            const out = [];
+            const add = (f) => (JSON.parse(fs.readFileSync(f, "utf8")).pdbs ?? []).forEach((p) => out.push(p));
+            fs.readdirSync("pure/specification").filter((n) => /^language_.*\.json$/.test(n))
+              .forEach((n) => add("pure/specification/" + n));
+            fs.readdirSync("pure/extensions", { withFileTypes: true }).filter((e) => e.isDirectory())
+              .forEach((e) => {
+                const f = "pure/extensions/" + e.name + "/language_" + e.name + ".json";
+                if (fs.existsSync(f)) add(f);
+              });
+            console.log([...new Set(out)].join("\n"));
+          ')
+          # Every language extension's pdb, found by glob rather than named, for an extension that
+          # declares no `pdbs` of its own. The -tests companions are left behind — the page runs no tests.
           for path in pure/extensions/*/build/*.pdb
           do
             case "$path" in *-tests.pdb) continue ;; esac
