@@ -483,7 +483,12 @@ antlr-generate-parsers: web-deps
 #
 # PARSER HALF: depends only on antlr-generate-parsers, so it needs no PDB and no Pure runtime. Keep
 # it that way — it is what lets a host parse before anything has been compiled.
-antlr-bundle: antlr-generate-parsers
+# generate-extensions too, and not only antlr-generate-parsers: the bundled antlr-natives.js imports the
+# generated descriptors — `generated/extensions/antlr-modules.js` for the parser CLASSES and
+# `generated/languages.js` for each grammar's name and entry rule — so esbuild cannot resolve them until
+# the generator has run. `generate-all` happens to order these correctly, which is why only a caller that
+# runs `antlr-all` on its own (CI's javascript job) saw "Could not resolve".
+antlr-bundle: antlr-generate-parsers generate-extensions
     @{{header}} 'antlr-bundle'
     @{{substep}} 'esbuild --bundle src/core/grammar/antlr-entry.js -> build/antlr-bundle.js'
     mkdir -p "$(dirname "{{antlr_bundle}}")"
