@@ -589,7 +589,7 @@
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "value" : "Integer"
+                "value" : "meta::pure::metamodel::type::primitives::Integer"
               }
             },
             "p_sourceInformation" : {

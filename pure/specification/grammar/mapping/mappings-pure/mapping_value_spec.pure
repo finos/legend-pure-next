@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Value-specification parsing.
 //
 // Walks the precedence ladder (combinedExpression → orExpression → andExpression
@@ -25,10 +40,26 @@ import meta::pure::protocol::grammar::*;
 // Primitive-type helper used by all literal builders.
 // -----------------------------------------------------------------------
 
+// The FULL PATH, not the simple name: a literal's type is the parser's OWN claim, so the parser owes
+// the precision. Nothing in the source says `Integer` when you write `1` -- the type is chosen from the
+// token kind -- so there is nothing for a simple name to be faithful to, and emitting one makes the
+// protocol say something it cannot mean on its own.
+//
+// Emitted bare, the compiler had to resolve it through the enclosing file's imports, where a module
+// declaring its own class named after a primitive made every literal of that type in the SAME FILE
+// ambiguous -- "The element 'Integer' is ambiguous, found in multiple imports" -- naming a function the
+// author never wrote `Integer` in. Found compiling legend-engine-xt-haskell-pure unchanged, whose
+// Haskell metamodel declares `Integer`, `Decimal` and `DateTime`: `if($d->size() > 1, ..)` failed on
+// the `1`. Avro, protobuf and GraphQL declare the same names.
+//
+// Kept in step with PureLanguageProtocolBuilder's literal builders, which emit the same paths;
+// PureParserMatchesJavaParserTest compares the two parsers slot-for-slot, and the protocol.json corpus
+// is re-minted from them by RegenerateProtocolJson.
 function meta::pure::parser::mappings::primitiveType(name: String[1]): meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1]
 {
    ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
-      type = ^meta::pure::protocol::grammar::type::Type_Pointer(value = $name)
+      type = ^meta::pure::protocol::grammar::type::Type_Pointer(
+         value = 'meta::pure::metamodel::type::primitives::' + $name)
    )
 }
 
@@ -614,8 +645,7 @@ function meta::pure::parser::mappings::atomicBoolean(ctx: AntlrContext[1], value
 {
    ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
       p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
-      genericType         = ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
-         type = ^meta::pure::protocol::grammar::type::Type_Pointer(value = 'Boolean')),
+      genericType         = primitiveType('Boolean'),
       value               = $value
    )
 }

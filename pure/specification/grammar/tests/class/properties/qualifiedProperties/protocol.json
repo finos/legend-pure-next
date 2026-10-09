@@ -34,7 +34,7 @@
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "value" : "String"
+                "value" : "meta::pure::metamodel::type::primitives::String"
               }
             },
             "p_sourceInformation" : {
@@ -71,7 +71,7 @@
                   "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
-                    "value" : "String"
+                    "value" : "meta::pure::metamodel::type::primitives::String"
                   }
                 },
                 "p_sourceInformation" : {
