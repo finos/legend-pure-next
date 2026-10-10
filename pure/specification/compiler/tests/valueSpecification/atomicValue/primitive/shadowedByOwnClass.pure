@@ -1,0 +1,26 @@
+###Pure
+import shadow::mm::*;
+
+Class shadow::mm::Integer
+{
+}
+
+function shadow::countOf(xs: String[*]): Boolean[1]
+{
+   $xs->size() > 1;
+}
+
+###CompiledGraph
+class shadow::mm::Integer extends Any  ~Class<shadow::mm::Integer>  @4:1-6:1
+
+function shadow::countOf_String_MANY__Boolean_1_(xs:@String@[*]):@Boolean@[1]  ~UserDefinedFunction<{@String@[*]->@Boolean@[1]}>
+  FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @10:7-10:18
+    ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @10:7-10:14
+      Variable xs :#String##[*]#  ~@VariableExpression@  @10:4-10:6
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @10:18-10:18
+
+###ReverseIndex
+meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
+  shadow::countOf_String_MANY__Boolean_1_
+meta::pure::functions::collection::size_Any_MANY__Integer_1_:
+  shadow::countOf_String_MANY__Boolean_1_

@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,138 +20,87 @@ import org.finos.legend.pure.next.parser.pureLanguage.PureLanguageParser;
 import org.finos.legend.pure.next.parser.topLevel.TopLevelParser;
 import org.finos.legend.pure.next.parser.topLevel.TopLevelProtocolJsonSerializer;
 
-import java.net.URI;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collections;
+import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Utility to regenerate all protocol.json files from grammar.pure files.
+ * Re-mints every {@code protocol.json} in the grammar corpus from its {@code grammar.pure}.
  *
- * <p>Usage: Run the main method to re-generate all protocol.json files
- * under src/test/resources/tests/ using the current parser and serializer.
+ * <p>The goldens are DERIVED, not authored: this parser plus {@link TopLevelProtocolJsonSerializer} is
+ * their only source, and {@link PureToJsonRoundtripTest} then pins the parser against them. So a
+ * deliberate protocol change is made here and re-minted — never hand-edited, because the same literal
+ * text means different things in different slots (a bare {@code "Integer"} can be an author-written
+ * annotation that must stay bare, or a literal's type that must not).</p>
+ *
+ * <p>Run it from anywhere in the checkout:
+ * {@code java -cp <parser classes>:<test classes>:<deps> org.finos.legend.pure.next.parser.RegenerateProtocolJson},
+ * then review the diff and run {@code just bootstrap::test}.</p>
+ *
+ * <p>Locates the corpus by WALKING UP from the working directory, exactly as
+ * {@link PureToJsonRoundtripTest} does. It previously resolved {@code pure/specification/grammar/tests/}
+ * as a CLASSPATH RESOURCE, which no module stages any more — so it had been failing with "Cannot find
+ * tests root" and quietly regenerating nothing.</p>
  */
 public class RegenerateProtocolJson
 {
-    private static final String TESTS_ROOT = "pure/specification/grammar/tests/";
     private static final String GRAMMAR_FILE = "grammar.pure";
     private static final String PROTOCOL_FILE = "protocol.json";
 
-    public static void main(final String[] args) throws Exception
+    public static void main(String[] args) throws IOException
     {
-        ClassLoader cl = RegenerateProtocolJson.class.getClassLoader();
-        java.net.URL baseUrl = cl.getResource(TESTS_ROOT);
-        if (baseUrl == null)
+        Path root = locateTestsRoot();
+        TopLevelProtocolJsonSerializer serializer = new TopLevelProtocolJsonSerializer();
+
+        List<Path> fixtures;
+        try (Stream<Path> walk = Files.walk(root))
         {
-            System.err.println("Cannot find tests root: " + TESTS_ROOT);
-            return;
-        }
-
-        // Find the source resources directory
-        Path sourceResourcesDir = findSourceResourcesDir();
-        if (sourceResourcesDir == null)
-        {
-            System.err.println("Cannot find source resources directory");
-            return;
-        }
-
-        URI baseUri = baseUrl.toURI();
-        Path rootDir;
-        FileSystem jarFs = null;
-
-        if ("jar".equals(baseUri.getScheme()))
-        {
-            String[] parts = baseUri.toString().split("!");
-            jarFs = FileSystems.newFileSystem(
-                    URI.create(parts[0]), Collections.emptyMap());
-            rootDir = jarFs.getPath(parts[1]);
-        }
-        else
-        {
-            rootDir = Paths.get(baseUri);
-        }
-
-
-        TopLevelProtocolJsonSerializer jsonSerializer =
-                new TopLevelProtocolJsonSerializer();
-
-        try (Stream<Path> walk = Files.walk(rootDir))
-        {
-            walk.filter(Files::isDirectory)
-                    .filter(dir -> Files.exists(dir.resolve(GRAMMAR_FILE))
-                            && Files.exists(dir.resolve(PROTOCOL_FILE)))
+            // Only directories that ALREADY hold both files: a grammar.pure with no golden beside it is
+            // an error-path fixture (grammar_error) or a comparison target, not a corpus entry.
+            fixtures = walk.filter(Files::isDirectory)
+                    .filter(d -> Files.exists(d.resolve(GRAMMAR_FILE)) && Files.exists(d.resolve(PROTOCOL_FILE)))
                     .sorted()
-                    .forEach(dir ->
-                    {
-                        try
-                        {
-                            String relative = rootDir.relativize(dir)
-                                    .toString().replace('\\', '/');
-                            if (relative.isEmpty())
-                            {
-                                return;
-                            }
-
-                            // Read grammar.pure
-                            String pureSource = Files.readString(
-                                    dir.resolve(GRAMMAR_FILE));
-
-                            // Parse and serialize to JSON
-                            meta.pure.protocol.PureFile pureFile =
-                                    TopLevelParser.parse(pureSource, "testFile", Lists.mutable.with(new PureLanguageParser()));
-                            String json = jsonSerializer.serialize(pureFile);
-
-                            // Write to source directory
-                            Path targetFile = sourceResourcesDir
-                                    .resolve(TESTS_ROOT)
-                                    .resolve(relative)
-                                    .resolve(PROTOCOL_FILE);
-                            Files.writeString(targetFile, json + "\n");
-
-                            System.out.println("Regenerated: " + relative
-                                    + "/" + PROTOCOL_FILE);
-                        }
-                        catch (Exception e)
-                        {
-                            System.err.println("Error processing " + dir
-                                    + ": " + e.getMessage());
-                            e.printStackTrace();
-                        }
-                    });
+                    .toList();
         }
-        finally
+
+        int written = 0;
+        for (Path dir : fixtures)
         {
-            if (jarFs != null)
+            String relative = root.relativize(dir).toString().replace('\\', '/');
+            try
             {
-                jarFs.close();
+                meta.pure.protocol.PureFile parsed = TopLevelParser.parse(
+                        Files.readString(dir.resolve(GRAMMAR_FILE)), "testFile", Lists.mutable.with(new PureLanguageParser()));
+                // No trailing newline: that is how the corpus is committed, and adding one would put all 59
+                // files in the diff of any change that touches one of them.
+                Files.writeString(dir.resolve(PROTOCOL_FILE), serializer.serialize(parsed));
+                written++;
+            }
+            catch (Exception e)
+            {
+                // Keep going: one unparseable fixture must not leave the rest of the corpus half-minted.
+                System.err.println("FAILED " + relative + ": " + e);
             }
         }
-
-        System.out.println("\nDone. Rebuild to pick up changes.");
+        System.out.println("Regenerated " + written + " / " + fixtures.size() + " protocol.json files under " + root);
     }
 
-    private static Path findSourceResourcesDir()
+    /** Walk up from the working directory until {@code pure/specification/grammar/tests} is found. */
+    private static Path locateTestsRoot()
     {
-        // Walk up from the specification target to find source dir
-        Path specResources = Paths.get(
-                "pure/specification");
-        if (Files.isDirectory(specResources))
+        Path current = Path.of("").toAbsolutePath();
+        while (current != null)
         {
-            return specResources;
+            Path candidate = current.resolve("pure").resolve("specification").resolve("grammar").resolve("tests");
+            if (Files.isDirectory(candidate))
+            {
+                return candidate;
+            }
+            current = current.getParent();
         }
-
-        // Try from project root
-        Path fromRoot = Paths.get(
-                "../pure/specification");
-        if (Files.isDirectory(fromRoot))
-        {
-            return fromRoot;
-        }
-
-        return null;
+        throw new IllegalStateException("Cannot locate pure/specification/grammar/tests by walking up from "
+                + Path.of("").toAbsolutePath());
     }
 }

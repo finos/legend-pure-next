@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // REFERENCE PARSER — committed source, hand-maintained until Pure-platform codegen lands.
 //
 // The canonical source of truth for the M3 visitor mapping is now
@@ -75,6 +90,28 @@ import org.finos.legend.pure.next.parser.m3.M3ParserBaseVisitor;
 
 public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
 {
+    /**
+     * The package every LITERAL's type is emitted under, in full.
+     *
+     * <p>A literal's type is this parser's OWN claim: nothing in the source says {@code Integer} when you
+     * write {@code 1} — the type comes from the token kind — so there is no simple name to be faithful to,
+     * and emitting one would make the protocol say something it cannot mean on its own. Emitted bare, the
+     * compiler had to resolve it through the enclosing file's imports, where a module declaring its own
+     * class named after a primitive made every literal of that type in the SAME FILE ambiguous: "The
+     * element 'Integer' is ambiguous, found in multiple imports", naming a function the author never wrote
+     * {@code Integer} in. Found compiling legend-engine-xt-haskell-pure unchanged, whose Haskell metamodel
+     * declares {@code Integer}, {@code Decimal} and {@code DateTime}: {@code if($d->size() > 1, ..)} failed
+     * on the {@code 1}. Avro, protobuf and GraphQL declare the same names.</p>
+     *
+     * <p>Author-written type references are NOT qualified here — {@code buildEnumValue}'s enumPath and the
+     * qualifiedName builders stay as the source spells them, and resolve through imports as they should.</p>
+     *
+     * <p>Kept in step with mapping_value_spec.pure's {@code primitiveType}: PureParserMatchesJavaParserTest
+     * compares the two parsers slot-for-slot, and RegenerateProtocolJson re-mints the protocol.json corpus
+     * from this one.</p>
+     */
+    private static final String PRIMITIVES = "meta::pure::metamodel::type::primitives::";
+
     protected final MutableList<PackageableElement> elements = Lists.mutable.empty();
 
     protected int lineOffset = 0;
@@ -121,41 +158,41 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
     {
         if (ctx.INTEGER() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(Long.parseLong(ctx.INTEGER().getText()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("Integer")));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(Long.parseLong(ctx.INTEGER().getText()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "Integer")));
         }
         if (ctx.STRING() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(ctx.STRING().getText().substring(1, ctx.STRING().getText().length() - 1))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("String")));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(ctx.STRING().getText().substring(1, ctx.STRING().getText().length() - 1))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")));
         }
         if (ctx.STRING_TRIPLE() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(org.finos.legend.pure.next.parser.shared.TripleStringStripper.strip(ctx.STRING_TRIPLE().getText()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("String")));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(org.finos.legend.pure.next.parser.shared.TripleStringStripper.strip(ctx.STRING_TRIPLE().getText()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")));
         }
         if (ctx.FLOAT() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(Double.parseDouble(ctx.FLOAT().getText()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("Float")));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(Double.parseDouble(ctx.FLOAT().getText()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "Float")));
         }
         if (ctx.DECIMAL() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(new java.math.BigDecimal(ctx.DECIMAL().getText().substring(0, ctx.DECIMAL().getText().length() - 1)))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("Decimal")));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(new java.math.BigDecimal(ctx.DECIMAL().getText().substring(0, ctx.DECIMAL().getText().length() - 1)))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "Decimal")));
         }
         if (ctx.BOOLEAN() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(Boolean.parseBoolean(ctx.BOOLEAN().getText()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("Boolean")));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(Boolean.parseBoolean(ctx.BOOLEAN().getText()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "Boolean")));
         }
         if (ctx.DATE() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value((ctx.DATE().getText().startsWith("%") ? ctx.DATE().getText().substring(1) : ctx.DATE().getText()))._genericType((ctx.DATE().getText().contains("T") ? new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("DateTime")) : new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("StrictDate"))));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value((ctx.DATE().getText().startsWith("%") ? ctx.DATE().getText().substring(1) : ctx.DATE().getText()))._genericType((ctx.DATE().getText().contains("T") ? new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "DateTime")) : new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "StrictDate"))));
         }
         if (ctx.STRICTTIME() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value((ctx.STRICTTIME().getText().startsWith("%") ? ctx.STRICTTIME().getText().substring(1) : ctx.STRICTTIME().getText()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("StrictTime")));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value((ctx.STRICTTIME().getText().startsWith("%") ? ctx.STRICTTIME().getText().substring(1) : ctx.STRICTTIME().getText()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "StrictTime")));
         }
         if (ctx.BINARY() != null)
         {
             // `0x1F8B` -> the hex text with `0x` dropped. The protocol carries a
             // Binary as its encoded text; the compiler decodes it to bytes.
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(ctx.BINARY().getText().substring(2))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("Binary")));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value(ctx.BINARY().getText().substring(2))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "Binary")));
         }
         throw new RuntimeException("Unsupported literal token" + ": " + ctx.getText());
     }
@@ -307,7 +344,7 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
         }
         if (ctx.dsl() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.dsl()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("String")))._value(ctx.dsl().DSL_TEXT().getText());
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.dsl()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")))._value(ctx.dsl().DSL_TEXT().getText());
         }
         if (ctx.columnBuilders() != null)
         {
@@ -361,7 +398,7 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
 
     protected ValueSpecification buildOneColSpec(final M3Parser.OneColSpecContext ctx)
     {
-        ValueSpecification nameAtomic = new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.columnName()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("String")))._value(ctx.columnName().getText());
+        ValueSpecification nameAtomic = new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.columnName()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")))._value(ctx.columnName().getText());
         ValueSpecification typeHolder = ((ctx.type() != null || ctx.multiplicity() != null) ? new UserDefinedGenericTypeAndMultiplicityHolderImpl()._genericType(new UserDefinedGenericTypeImpl()._type(new RelationTypeImpl()._columns(Lists.mutable.with(buildOneColSpecColumn(ctx))))) : new CompilerGenericTypeAndMultiplicityHolderImpl());
         return new FunctionInvocationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName((ctx.anyLambda() != null ? (ctx.extraFunction() != null ? "aggColSpec" : "funcColSpec") : "colSpec"))._parametersValues((ctx.anyLambda() != null ? (ctx.extraFunction() != null ? Lists.mutable.with(buildAnyLambda(ctx.anyLambda()), buildAnyLambda(ctx.extraFunction().anyLambda()), nameAtomic, typeHolder) : Lists.mutable.with(buildAnyLambda(ctx.anyLambda()), nameAtomic, typeHolder)) : Lists.mutable.with(nameAtomic, typeHolder)));
     }
@@ -385,7 +422,7 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
 
     protected ValueSpecification buildColumnNameAtomic(final M3Parser.OneColSpecContext ctx)
     {
-        return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.columnName()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("String")))._value(ctx.columnName().getText());
+        return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.columnName()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")))._value(ctx.columnName().getText());
     }
 
     protected ValueSpecification buildColSpecArrayHolder(final M3Parser.ColumnBuildersContext ctx)
@@ -487,7 +524,7 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
 
     protected FunctionInvocationImpl buildExpressionInstanceParserPropertyAssignment(final M3Parser.ExpressionInstanceParserPropertyAssignmentContext ctx)
     {
-        return new FunctionInvocationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName("keyExpression")._parametersValues((ctx.PLUS() != null ? Lists.mutable.with(new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("String")))._value(ctx.propertyName().getText()), buildExpressionInstanceRightSide(ctx.expressionInstanceRightSide()), new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("Boolean")))._value(true)) : Lists.mutable.with(new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("String")))._value(ctx.propertyName().getText()), buildExpressionInstanceRightSide(ctx.expressionInstanceRightSide()))));
+        return new FunctionInvocationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName("keyExpression")._parametersValues((ctx.PLUS() != null ? Lists.mutable.with(new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")))._value(ctx.propertyName().getText()), buildExpressionInstanceRightSide(ctx.expressionInstanceRightSide()), new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "Boolean")))._value(true)) : Lists.mutable.with(new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")))._value(ctx.propertyName().getText()), buildExpressionInstanceRightSide(ctx.expressionInstanceRightSide()))));
     }
 
     protected ValueSpecification buildExpressionInstanceRightSide(final M3Parser.ExpressionInstanceRightSideContext ctx)
@@ -605,7 +642,7 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
 
     protected ValueSpecification buildLetExpression(final M3Parser.LetExpressionContext ctx)
     {
-        return new FunctionInvocationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName("letFunction")._parametersValues(Lists.mutable.with(new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.identifier()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("String")))._value(ctx.identifier().getText()), buildCombinedExpression(ctx.combinedExpression())));
+        return new FunctionInvocationImpl()._p_sourceInformation(buildSourceInfo(ctx))._functionName("letFunction")._parametersValues(Lists.mutable.with(new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx.identifier()))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "String")))._value(ctx.identifier().getText()), buildCombinedExpression(ctx.combinedExpression())));
     }
 
     protected PrimitiveTypeImpl buildPrimitiveDefinition(final M3Parser.PrimitiveDefinitionContext ctx)
@@ -1052,15 +1089,15 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
         }
         if (ctx.INTEGER() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value((ctx.MINUS() != null ? -Long.parseLong(ctx.INTEGER().getText()) : Long.parseLong(ctx.INTEGER().getText())))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("Integer")));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value((ctx.MINUS() != null ? -Long.parseLong(ctx.INTEGER().getText()) : Long.parseLong(ctx.INTEGER().getText())))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "Integer")));
         }
         if (ctx.FLOAT() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value((ctx.MINUS() != null ? -Double.parseDouble(ctx.FLOAT().getText()) : Double.parseDouble(ctx.FLOAT().getText())))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("Float")));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value((ctx.MINUS() != null ? -Double.parseDouble(ctx.FLOAT().getText()) : Double.parseDouble(ctx.FLOAT().getText())))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "Float")));
         }
         if (ctx.DECIMAL() != null)
         {
-            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value((ctx.MINUS() != null ? new java.math.BigDecimal("-" + ctx.DECIMAL().getText().substring(0, ctx.DECIMAL().getText().length() - 1)) : new java.math.BigDecimal(ctx.DECIMAL().getText().substring(0, ctx.DECIMAL().getText().length() - 1))))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value("Decimal")));
+            return new AtomicValueImpl()._p_sourceInformation(buildSourceInfo(ctx))._value((ctx.MINUS() != null ? new java.math.BigDecimal("-" + ctx.DECIMAL().getText().substring(0, ctx.DECIMAL().getText().length() - 1)) : new java.math.BigDecimal(ctx.DECIMAL().getText().substring(0, ctx.DECIMAL().getText().length() - 1))))._genericType(new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(PRIMITIVES + "Decimal")));
         }
         throw new RuntimeException("Unsupported literal" + ": " + ctx.getText());
     }

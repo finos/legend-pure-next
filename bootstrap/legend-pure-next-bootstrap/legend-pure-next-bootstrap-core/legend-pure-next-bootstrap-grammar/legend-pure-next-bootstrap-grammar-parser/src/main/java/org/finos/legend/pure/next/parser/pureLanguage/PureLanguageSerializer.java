@@ -823,11 +823,23 @@ public class PureLanguageSerializer
         serializeTypedValue(sb, value, typeName);
     }
 
+    /**
+     * The SIMPLE name of a value's type, for deciding how to RENDER a literal.
+     *
+     * <p>Simple, because rendering depends on WHICH primitive it is, not where it lives: a Binary prints
+     * as {@code 0x..}, a Decimal gains a {@code d}, a date gains a {@code %}. Literal types are emitted
+     * fully qualified ({@code meta::pure::metamodel::type::primitives::Binary}, see PRIMITIVES in
+     * PureLanguageProtocolBuilder), so comparing the raw pointer value against {@code "Binary"} silently
+     * fell through to the default rendering and the Pure round-trip lost the {@code 0x} and {@code %}
+     * sigils. The Pure-side printer never had the bug: its {@code atomicValueTypeName} already took the
+     * last {@code ::} segment, which is what this now does too.</p>
+     */
     private String getTypeName(final ValueSpecification vs)
     {
         if (vs._genericType() instanceof GenericTypeValue gtv && gtv._type() != null)
         {
-            return getPointerValueFromProtocol(gtv._type());
+            String path = getPointerValueFromProtocol(gtv._type());
+            return path == null ? null : path.substring(path.lastIndexOf("::") + 2);
         }
         return null;
     }

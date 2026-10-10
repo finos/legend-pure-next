@@ -197,7 +197,7 @@
                   "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
-                    "value" : "Boolean"
+                    "value" : "meta::pure::metamodel::type::primitives::Boolean"
                   }
                 },
                 "p_sourceInformation" : {
