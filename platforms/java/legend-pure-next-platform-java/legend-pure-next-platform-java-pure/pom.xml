@@ -108,16 +108,21 @@
             </resource>
         </resources>
         <plugins>
-            <!-- The .g4 sources are shared. Stage them under this module's antlr package so
-                 ANTLR generates into it (the plugin derives the package from the path below
-                 sourceDirectory), keeping the `m3/` sub-directory: M3Lexer/M3Parser land in
-                 ...java.antlr.m3 and TopLexer/TopParser in ...java.antlr, which is what
-                 M3GrammarExtension and TopGrammarExtension import. A .g4 edit regenerates
-                 HERE too, and a stale parser fails silently. -->
+            <!-- Everything this module stages from outside its own tree: the shared grammars, the
+                 archive schema and the language manifests. ONE plugin declaration with one execution
+                 each - Maven requires a plugin to be declared once, and two blocks for the same
+                 plugin are a warning locally but a hard "must be unique" read failure on a clean
+                 machine, which is where CI builds. -->
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>3.3.1</version>
                 <executions>
+                    <!-- The .g4 sources are shared. Stage them under this module's antlr package so
+                         ANTLR generates into it (the plugin derives the package from the path below
+                         sourceDirectory), keeping the `m3/` sub-directory: M3Lexer/M3Parser land in
+                         ...java.antlr.m3 and TopLexer/TopParser in ...java.antlr, which is what
+                         M3GrammarExtension and TopGrammarExtension import. A .g4 edit regenerates
+                         HERE too, and a stale parser fails silently. -->
                     <execution>
                         <id>stage-grammars</id>
                         <phase>generate-sources</phase>
@@ -136,18 +141,12 @@
                             </resources>
                         </configuration>
                     </execution>
-                </executions>
-            </plugin>
-            <!-- The FlatBuffers schema the archives are decoded with, packaged as a classpath
-                 resource so the platform carries its own contract: the decoder is generated
-                 against a specific m3.fbs, and an archive must match the schema that
-                 describes it. It used to be a schema path every caller had to pass on the command
-                 line, which let the two drift. Same arrangement as Truffle's
-                 GenericFbDecoder. -->
-            <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>3.3.1</version>
-                <executions>
+                    <!-- The FlatBuffers schema the archives are decoded with, packaged as a classpath
+                         resource so the platform carries its own contract: the decoder is generated
+                         against a specific m3.fbs, and an archive must match the schema that
+                         describes it. It used to be a schema path every caller had to pass on the
+                         command line, which let the two drift. Same arrangement as Truffle's
+                         GenericFbDecoder. -->
                     <execution>
                         <id>stage-schema</id>
                         <phase>process-resources</phase>
