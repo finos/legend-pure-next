@@ -1,5 +1,5 @@
 {
   "name": "javascript",
-  "packagePattern": "platform::external::language::javascript(::.*)?",
+  "packagePattern": "platform::extensions::language::javascript(::.*)?",
   "dependencies": ["core"]
 }

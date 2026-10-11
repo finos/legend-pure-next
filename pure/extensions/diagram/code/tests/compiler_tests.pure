@@ -23,20 +23,20 @@
 // belongs — on the JavaScript platform, which registers the section for real.
 
 import platform::pure::compiler::*;
-import platform::pure::diagram::metamodel::*;
-import platform::pure::diagram::compiler::*;
-import platform::pure::diagram::parser::*;
+import platform::extensions::pure::diagram::metamodel::*;
+import platform::extensions::pure::diagram::compiler::*;
+import platform::extensions::pure::diagram::parser::*;
 
-function platform::pure::diagram::compiler::tests::model(): String[1]
+function platform::extensions::pure::diagram::compiler::tests::model(): String[1]
 {
    '###Pure\nClass m::Person { name : String[1]; }\nClass m::Firm { legalName : String[1]; }\n';
 }
 
 // A file whose `###Pure` half is parsed by the native and whose diagram half is parsed by this
 // extension — the same two protocol Sections the host would hand the compiler.
-function platform::pure::diagram::compiler::tests::fileWith(diagramSource: String[1]): platform::pure::protocol::PureFile[1]
+function platform::extensions::pure::diagram::compiler::tests::fileWith(diagramSource: String[1]): platform::pure::protocol::PureFile[1]
 {
-   let pureHalf = platform::pure::functions::meta::parse('d.pure', platform::pure::diagram::compiler::tests::model());
+   let pureHalf = platform::pure::functions::meta::parse('d.pure', platform::extensions::pure::diagram::compiler::tests::model());
    let section = ^platform::pure::protocol::Section(
       parserName = 'Diagram',
       imports    = [],
@@ -44,7 +44,7 @@ function platform::pure::diagram::compiler::tests::fileWith(diagramSource: Strin
    ^$pureHalf(sections = $pureHalf.sections->concatenate($section));
 }
 
-function platform::pure::diagram::compiler::tests::twoBoxes(): String[1]
+function platform::extensions::pure::diagram::compiler::tests::twoBoxes(): String[1]
 {
    'Diagram m::D(width=800.0, height=600.0)\n' +
    '{\n' +
@@ -54,10 +54,10 @@ function platform::pure::diagram::compiler::tests::twoBoxes(): String[1]
    '}\n';
 }
 
-function <<platform::pure::profiles::test.Test>> platform::pure::diagram::compiler::tests::testDiagramReachesTheGraph(): Boolean[1]
+function <<platform::pure::profiles::test.Test>> platform::extensions::pure::diagram::compiler::tests::testDiagramReachesTheGraph(): Boolean[1]
 {
-   let result = compile(platform::pure::diagram::compiler::tests::fileWith(
-      platform::pure::diagram::compiler::tests::twoBoxes()), diagramExtension(), true);
+   let result = compile(platform::extensions::pure::diagram::compiler::tests::fileWith(
+      platform::extensions::pure::diagram::compiler::tests::twoBoxes()), diagramExtension(), true);
    let paths = $result.elements->map(e | $e->elementToPath());
    assert($paths->contains('m::Person'), | 'the classes still compile: ' + $paths->joinStrings(', '));
    assert($paths->contains('m::D'),
@@ -65,21 +65,21 @@ function <<platform::pure::profiles::test.Test>> platform::pure::diagram::compil
    true;
 }
 
-function <<platform::pure::profiles::test.Test>> platform::pure::diagram::compiler::tests::testWithoutTheExtensionNothingIsClaimed(): Boolean[1]
+function <<platform::pure::profiles::test.Test>> platform::extensions::pure::diagram::compiler::tests::testWithoutTheExtensionNothingIsClaimed(): Boolean[1]
 {
    // The behaviour before the extension existed, and the proof that the seam is what adds it.
-   let result = compile(platform::pure::diagram::compiler::tests::fileWith(
-      platform::pure::diagram::compiler::tests::twoBoxes()), [], true);
+   let result = compile(platform::extensions::pure::diagram::compiler::tests::fileWith(
+      platform::extensions::pure::diagram::compiler::tests::twoBoxes()), [], true);
    let paths = $result.elements->map(e | $e->elementToPath());
    assert($paths->contains('m::Person'), | 'the classes still compile');
    assert(!$paths->contains('m::D'), | 'nothing claimed the parsed diagram');
    true;
 }
 
-function <<platform::pure::profiles::test.Test>> platform::pure::diagram::compiler::tests::testGeometryAndReferencesSurvive(): Boolean[1]
+function <<platform::pure::profiles::test.Test>> platform::extensions::pure::diagram::compiler::tests::testGeometryAndReferencesSurvive(): Boolean[1]
 {
-   let result = compile(platform::pure::diagram::compiler::tests::fileWith(
-      platform::pure::diagram::compiler::tests::twoBoxes()), diagramExtension(), true);
+   let result = compile(platform::extensions::pure::diagram::compiler::tests::fileWith(
+      platform::extensions::pure::diagram::compiler::tests::twoBoxes()), diagramExtension(), true);
    let d = $result.elements->filter(e | $e->instanceOf(Diagram))->toOne()->cast(@Diagram);
    assert($d.width == 800.0 && $d.height == 600.0, | 'the dimension clause survives the compile');
    assert($d.typeViews->size() == 2, | 'both boxes, got ' + $d.typeViews->size()->toString());
@@ -93,11 +93,11 @@ function <<platform::pure::profiles::test.Test>> platform::pure::diagram::compil
    true;
 }
 
-function <<platform::pure::profiles::test.Test>> platform::pure::diagram::compiler::tests::testDanglingReferenceIsReportedNotFatal(): Boolean[1]
+function <<platform::pure::profiles::test.Test>> platform::extensions::pure::diagram::compiler::tests::testDanglingReferenceIsReportedNotFatal(): Boolean[1]
 {
    // A class renamed out from under a diagram. The file must still compile, so the editor can
    // open the diagram and repair it; the compiler says what is wrong.
-   let result = compile(platform::pure::diagram::compiler::tests::fileWith(
+   let result = compile(platform::extensions::pure::diagram::compiler::tests::fileWith(
       'Diagram m::D\n{\n   TypeView tv(type=m::Gone, position=(0.0, 0.0), width=10.0, height=10.0)\n}\n'),
       diagramExtension(), true);
    let d = $result.elements->filter(e | $e->instanceOf(Diagram))->toOne()->cast(@Diagram);

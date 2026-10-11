@@ -1,6 +1,6 @@
 {
   "name": "truffle-translation-gallery",
-  "packagePattern": "(platform::external::language::truffle)(::.*)?",
+  "packagePattern": "(platform::extensions::language::truffle)(::.*)?",
   "dependencies": [
     "core",
     "compiler",

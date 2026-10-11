@@ -15,30 +15,30 @@
 
 // Statements (non-declarations) and Expressions. See metamodel_type.pure for the strategy.
 
-import platform::external::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::metamodel::*;
 
 // =============================================================================
 // Statements (other than Declaration; declarations live in metamodel_structure.pure).
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::Block extends Statement
+Class platform::extensions::language::javascript::metamodel::Block extends Statement
 {
    statements : Statement[*];
 }
 
-Class platform::external::language::javascript::metamodel::ReturnStatement extends Statement
+Class platform::extensions::language::javascript::metamodel::ReturnStatement extends Statement
 {
    expression : Expression[0..1];
 }
 
-Class platform::external::language::javascript::metamodel::IfStatement extends Statement
+Class platform::extensions::language::javascript::metamodel::IfStatement extends Statement
 {
    <<equality.Key>> expression : Expression[1];
    thenStatement : Statement[1];
    elseStatement : Statement[0..1];                  // may itself be an IfStatement (else-if chain)
 }
 
-Enum platform::external::language::javascript::metamodel::VariableDeclarationKind
+Enum platform::extensions::language::javascript::metamodel::VariableDeclarationKind
 {
    Var,
    Let,
@@ -48,7 +48,7 @@ Enum platform::external::language::javascript::metamodel::VariableDeclarationKin
 // VariableStatement wraps a `let`/`const`/`var` declaration list at the
 // statement level. Mirrors ts.VariableStatement which holds a
 // VariableDeclarationList.
-Class platform::external::language::javascript::metamodel::VariableStatement extends Statement
+Class platform::extensions::language::javascript::metamodel::VariableStatement extends Statement
 {
    modifiers       : ModifierFlag[*];                // `export const x = ...`
    declarationKind : VariableDeclarationKind[1];
@@ -59,13 +59,13 @@ Class platform::external::language::javascript::metamodel::VariableStatement ext
 //   - Identifier:               `let x = …`
 //   - ObjectBindingPattern:     `let { a, b } = …`
 //   - ArrayBindingPattern:      `let [a, b] = …`
-Class platform::external::language::javascript::metamodel::VariableDeclaration extends Node
+Class platform::extensions::language::javascript::metamodel::VariableDeclaration extends Node
 {
    <<equality.Key>> name : BindingName[1];
    initializer : Expression[0..1];
 }
 
-Class platform::external::language::javascript::metamodel::ExpressionStatement extends Statement
+Class platform::extensions::language::javascript::metamodel::ExpressionStatement extends Statement
 {
    <<equality.Key>> expression : Expression[1];
 }
@@ -74,7 +74,7 @@ Class platform::external::language::javascript::metamodel::ExpressionStatement e
 // Expressions.
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::Expression extends Node
+Class platform::extensions::language::javascript::metamodel::Expression extends Node
 {
 }
 
@@ -89,25 +89,25 @@ Class platform::external::language::javascript::metamodel::Expression extends No
 // another file. Used by resolveImports() to auto-add import declarations for
 // expression-position references (function names, constructor refs, etc.).
 // Local bindings (variables, parameters) leave it empty.
-Class platform::external::language::javascript::metamodel::Identifier extends Expression, BindingName
+Class platform::extensions::language::javascript::metamodel::Identifier extends Expression, BindingName
 {
    <<equality.Key>> text : String[1];
-   source : platform::external::language::javascript::metamodel::ImportSource[0..1];
+   source : platform::extensions::language::javascript::metamodel::ImportSource[0..1];
    // EXPORTED name from `source` when it differs from `text` (alias case).
    originalName : String[0..1];
 }
 
-Class platform::external::language::javascript::metamodel::ThisExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::ThisExpression extends Expression
 {
 }
 
-Class platform::external::language::javascript::metamodel::SuperExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::SuperExpression extends Expression
 {
 }
 
 // PropertyAccessExpression — `expression.name` (or `expression?.name`
 // when `isOptional` is true).
-Class platform::external::language::javascript::metamodel::PropertyAccessExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::PropertyAccessExpression extends Expression
 {
    <<equality.Key>> expression : Expression[1];
    <<equality.Key>> name       : String[1];
@@ -116,14 +116,14 @@ Class platform::external::language::javascript::metamodel::PropertyAccessExpress
 
 // CallExpression — `expression(args)` (or `expression?.(args)` when
 // `isOptional` is true).
-Class platform::external::language::javascript::metamodel::CallExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::CallExpression extends Expression
 {
    <<equality.Key>> expression    : Expression[1];   // callee
    arguments     : Expression[*];
    isOptional : Boolean[0..1];
 }
 
-Class platform::external::language::javascript::metamodel::NewExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::NewExpression extends Expression
 {
    <<equality.Key>> expression    : Expression[1];   // constructor reference
    arguments     : Expression[*];
@@ -134,7 +134,7 @@ Class platform::external::language::javascript::metamodel::NewExpression extends
 // it appears in source (e.g. '+', '===', '&&', '??', '=', '+='). This
 // matches the TS compiler's design of using SyntaxKind rather than a typed
 // enum at the metamodel level.
-Class platform::external::language::javascript::metamodel::BinaryExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::BinaryExpression extends Expression
 {
    <<equality.Key>> left          : Expression[1];
    <<equality.Key>> operatorToken : String[1];
@@ -143,20 +143,20 @@ Class platform::external::language::javascript::metamodel::BinaryExpression exte
 
 // ConditionalExpression — TS ternary: `cond ? whenTrue : whenFalse`.
 // Mirrors ts.ConditionalExpression { condition, whenTrue, whenFalse }.
-Class platform::external::language::javascript::metamodel::ConditionalExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::ConditionalExpression extends Expression
 {
    <<equality.Key>> condition : Expression[1];
    <<equality.Key>> whenTrue  : Expression[1];
    <<equality.Key>> whenFalse : Expression[1];
 }
 
-Class platform::external::language::javascript::metamodel::PrefixUnaryExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::PrefixUnaryExpression extends Expression
 {
    <<equality.Key>> operator : String[1];            // '!', '-', '+', '~', '++', '--', 'typeof', 'void', 'delete'
    <<equality.Key>> operand  : Expression[1];
 }
 
-Class platform::external::language::javascript::metamodel::PostfixUnaryExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::PostfixUnaryExpression extends Expression
 {
    <<equality.Key>> operand  : Expression[1];
    <<equality.Key>> operator : String[1];            // '++', '--'
@@ -169,7 +169,7 @@ Class platform::external::language::javascript::metamodel::PostfixUnaryExpressio
 // TS distinguishes concise-body (Expression) from block-body (Block). We
 // keep them on separate slots so the serializer can emit the correct form
 // without inspecting body shape. Exactly one must be set.
-Class platform::external::language::javascript::metamodel::ArrowFunction extends Expression
+Class platform::extensions::language::javascript::metamodel::ArrowFunction extends Expression
 [
    ($this.body->isEmpty() && $this.expressionBody->isNotEmpty()) ||
    ($this.body->isNotEmpty() && $this.expressionBody->isEmpty())
@@ -185,16 +185,16 @@ Class platform::external::language::javascript::metamodel::ArrowFunction extends
 // `properties` holds ObjectLiteralElements (PropertyAssignment or
 // SpreadAssignment). MethodDeclaration / getters / setters in object
 // literals remain deferred.
-Class platform::external::language::javascript::metamodel::ObjectLiteralExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::ObjectLiteralExpression extends Expression
 {
    properties : ObjectLiteralElement[*];
 }
 
-Class platform::external::language::javascript::metamodel::ObjectLiteralElement extends Node
+Class platform::extensions::language::javascript::metamodel::ObjectLiteralElement extends Node
 {
 }
 
-Class platform::external::language::javascript::metamodel::PropertyAssignment extends ObjectLiteralElement
+Class platform::extensions::language::javascript::metamodel::PropertyAssignment extends ObjectLiteralElement
 {
    <<equality.Key>> name : String[1];                // raw key text; quoted by serializer when needed
    computed : Boolean[0..1];                         // `[expr]: ...` keys deferred to v2
@@ -202,19 +202,19 @@ Class platform::external::language::javascript::metamodel::PropertyAssignment ex
 }
 
 // SpreadAssignment — `{ ...source }` inside an object literal.
-Class platform::external::language::javascript::metamodel::SpreadAssignment extends ObjectLiteralElement
+Class platform::extensions::language::javascript::metamodel::SpreadAssignment extends ObjectLiteralElement
 {
    <<equality.Key>> expression : Expression[1];
 }
 
 // ShorthandPropertyAssignment — `{ x }` shorthand for `{ x: x }`. The
 // `name` slot is both the property key AND the local identifier in scope.
-Class platform::external::language::javascript::metamodel::ShorthandPropertyAssignment extends ObjectLiteralElement
+Class platform::extensions::language::javascript::metamodel::ShorthandPropertyAssignment extends ObjectLiteralElement
 {
    <<equality.Key>> name : String[1];
 }
 
-Class platform::external::language::javascript::metamodel::ArrayLiteralExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::ArrayLiteralExpression extends Expression
 {
    elements : Expression[*];
 }
@@ -222,7 +222,7 @@ Class platform::external::language::javascript::metamodel::ArrayLiteralExpressio
 // SpreadElement — `...expr` in an array literal or call argument list.
 // In TS, SpreadElement extends Expression, allowing it in any
 // argument-list position without a special wrapper.
-Class platform::external::language::javascript::metamodel::SpreadElement extends Expression
+Class platform::extensions::language::javascript::metamodel::SpreadElement extends Expression
 {
    <<equality.Key>> expression : Expression[1];
 }
@@ -233,30 +233,30 @@ Class platform::external::language::javascript::metamodel::SpreadElement extends
 
 // `text` stores the literal as it appears in source so the serializer can
 // emit it byte-for-byte. Mirrors ts.StringLiteral.text + ts.StringLiteral.rawText.
-Class platform::external::language::javascript::metamodel::StringLiteral extends Expression
+Class platform::extensions::language::javascript::metamodel::StringLiteral extends Expression
 {
    <<equality.Key>> text : String[1];
 }
 
 // `text` because TS allows `1_000_000`, `0x1F`, `0b10`, `1n`, `1.5e3`, etc.
 // A typed Number would lose those forms.
-Class platform::external::language::javascript::metamodel::NumericLiteral extends Expression
+Class platform::extensions::language::javascript::metamodel::NumericLiteral extends Expression
 {
    <<equality.Key>> text : String[1];
 }
 
-Class platform::external::language::javascript::metamodel::BooleanLiteral extends Expression
+Class platform::extensions::language::javascript::metamodel::BooleanLiteral extends Expression
 {
    <<equality.Key>> value : Boolean[1];
 }
 
-Class platform::external::language::javascript::metamodel::NullLiteral extends Expression
+Class platform::extensions::language::javascript::metamodel::NullLiteral extends Expression
 {
 }
 
 // AwaitExpression — `await expr`. Valid only inside async functions; TS
 // enforces this — the metamodel does not.
-Class platform::external::language::javascript::metamodel::AwaitExpression extends Expression
+Class platform::extensions::language::javascript::metamodel::AwaitExpression extends Expression
 {
    <<equality.Key>> expression : Expression[1];
 }
@@ -273,22 +273,22 @@ Class platform::external::language::javascript::metamodel::AwaitExpression exten
 // literal text that follows it. Mirrors ts.TemplateExpression / ts.TemplateSpan.
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::TemplateLiteral extends Expression
+Class platform::extensions::language::javascript::metamodel::TemplateLiteral extends Expression
 {
 }
 
-Class platform::external::language::javascript::metamodel::NoSubstitutionTemplateLiteral extends TemplateLiteral
+Class platform::extensions::language::javascript::metamodel::NoSubstitutionTemplateLiteral extends TemplateLiteral
 {
    <<equality.Key>> text : String[1];
 }
 
-Class platform::external::language::javascript::metamodel::TemplateExpression extends TemplateLiteral
+Class platform::extensions::language::javascript::metamodel::TemplateExpression extends TemplateLiteral
 {
    <<equality.Key>> head  : String[1];
    <<equality.Key>> spans : TemplateSpan[1..*];
 }
 
-Class platform::external::language::javascript::metamodel::TemplateSpan extends Node
+Class platform::extensions::language::javascript::metamodel::TemplateSpan extends Node
 {
    <<equality.Key>> expression : Expression[1];
    <<equality.Key>> literal    : String[1];

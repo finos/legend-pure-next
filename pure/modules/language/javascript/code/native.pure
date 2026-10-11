@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::*;
+import platform::extensions::language::javascript::*;
 import platform::pure::metamodel::type::*;
 import platform::pure::metamodel::type::generics::*;
 import platform::pure::metamodel::multiplicity::*;
@@ -61,7 +61,7 @@ import platform::pure::metamodel::multiplicity::*;
 // would also capture platform::pure::compiler::compile — and compiler.js is itself
 // produced by translating platform::pure::compiler, so every internal call would be
 // rewritten into the JS eval pipe.
-native function platform::external::language::javascript::compileModule(
+native function platform::extensions::language::javascript::compileModule(
    source: String[1]
 ): Any[1];
 
@@ -70,9 +70,9 @@ native function platform::external::language::javascript::compileModule(
 // running a test through the PCT adapter, so the displayed JavaScript is the
 // EXACT source that was compiled + executed — keeping the gallery 100% in sync
 // with the PCT run rather than re-deriving source through a separate path.
-native function platform::external::language::javascript::drainCompiledSources(): String[*];
+native function platform::extensions::language::javascript::drainCompiledSources(): String[*];
 
-native function platform::external::language::javascript::execute(
+native function platform::extensions::language::javascript::execute(
    ctx: Any[1],
    fnName: String[1],
    args: Any[*],

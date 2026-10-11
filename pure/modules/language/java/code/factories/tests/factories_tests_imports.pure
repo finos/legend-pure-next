@@ -13,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::factory::*;
-import platform::external::language::java::factory::tests::*;
-import platform::external::language::java::metamodel::*;
-import platform::external::language::java::serialization::*;
+import platform::extensions::language::java::factory::*;
+import platform::extensions::language::java::factory::tests::*;
+import platform::extensions::language::java::metamodel::*;
+import platform::extensions::language::java::serialization::*;
 
-function <<test.Test>> platform::external::language::java::factory::tests::inferredImports():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::inferredImports():Boolean[1]
 {
    let cls = javaClass('test.pkg.TestClass')
                 ->addField(javaField('private', javaString(), 'aString'))
@@ -30,32 +30,32 @@ function <<test.Test>> platform::external::language::java::factory::tests::infer
    assertEquals(['java.util.List'], $cls.additionalImports);
 }
 
-function <<test.Test>> platform::external::language::java::factory::tests::inferredImportsOnEnum():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::inferredImportsOnEnum():Boolean[1]
 {
    let cls = javaEnum('public', 'org.finos.Things')
       ->addEntries([
-           javaEnumEntry('Alpha')->annotate(^platform::external::language::java::metamodel::annotations::generated::Generated(value='a', comments='In the beginning'))->javaDoc('The first one')
+           javaEnumEntry('Alpha')->annotate(^platform::extensions::language::java::metamodel::annotations::generated::Generated(value='a', comments='In the beginning'))->javaDoc('The first one')
         ])
       ->inferImports();
    
    assertEquals(['javax.annotation.Generated'], $cls.additionalImports);
 }
 
-function <<test.Test>> platform::external::language::java::factory::tests::inferredImportsEnum():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::inferredImportsEnum():Boolean[1]
 {
    let cls = javaClass('test.pkg.TestClass')
                 ->addField(javaField('private', javaString(), 'aString'))
                 ->addField(javaField('private', javaList(javaString()), 'aList'))
                 ->addField(javaField('private', javaClass('test.pkg.TestOther'), 'samePackage'))
                 ->addField(javaField('private', javaClass('test.pkg..other.TestOther'), 'sameNameAsClassInPackage'))
-                ->platform::external::language::java::factory::annotate(^platform::external::language::java::metamodel::annotations::json::JsonTypeInfo(
-                      use = ^platform::external::language::java::metamodel::annotations::json::EnumValue(value='JsonTypeInfo.Id.NAME'),
+                ->platform::extensions::language::java::factory::annotate(^platform::extensions::language::java::metamodel::annotations::json::JsonTypeInfo(
+                      use = ^platform::extensions::language::java::metamodel::annotations::json::EnumValue(value='JsonTypeInfo.Id.NAME'),
                       property = '_type'
                     )
                 )
-                ->platform::external::language::java::factory::annotate(^platform::external::language::java::metamodel::annotations::json::JsonSubTypes(
+                ->platform::extensions::language::java::factory::annotate(^platform::extensions::language::java::metamodel::annotations::json::JsonSubTypes(
                           subTypes=[
-                                  ^platform::external::language::java::metamodel::annotations::json::JsonSubType(
+                                  ^platform::extensions::language::java::metamodel::annotations::json::JsonSubType(
                                       value='test.pkg.TestClassOther',
                                       name='test'
                                   )

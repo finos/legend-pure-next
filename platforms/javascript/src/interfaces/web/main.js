@@ -69,7 +69,7 @@ const TO_REPRESENTATION = "platform$pure$functions$string$toRepresentation_Any_1
 const GO_PATH = "go__Any_MANY_"; // mangled path of `function go():Any[*]`
 // One element's JavaScript, without eval'ing or registering it — what the inspector shows.
 const TRANSLATE_ELEMENT =
-    "platform$external$language$javascript$translation$pdb$translateElement_PackageableElement_1__String_1_";
+    "platform$extensions$language$javascript$translation$pdb$translateElement_PackageableElement_1__String_1_";
 const GRAMMAR = `${REPO}/pure/specification/grammar/antlr/m3/M3Lexer.g4`;
 
 const status = document.getElementById("status");

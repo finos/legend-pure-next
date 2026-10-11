@@ -41,7 +41,7 @@
 #               │      │                     printers, in-memory sources; reuses the uploaded truffle jar)
 #               │      │
 #               │      ├── language-java     (GraalVM 25 — `just language::java::test-all`: runs
-#               │      │                     platform::external::language::java tests via pure-truffle.
+#               │      │                     platform::extensions::language::java tests via pure-truffle.
 #               │      │                     The `compileAndExecute` native is only registered in the
 #               │      │                     truffle Java extension, so this can't run on bootstrap.)
 #               │      │
@@ -895,7 +895,7 @@ jobs:
   # matrix box so the visualizer doesn't draw long arrows around standalone
   # nodes. Three targets:
   #   - language-java       : pure-bootstrap builds pure/modules/language/java/build/java.pdb, then
-  #                            pure-truffle runs `runTests platform::external::language::java`
+  #                            pure-truffle runs `runTests platform::extensions::language::java`
   #                            (the Java extension's JavaCompileNatives registers
   #                            `compileAndExecute`, which bootstrap doesn't have).
   #   - language-javascript : the 133 serialization tests; these need no host
@@ -1168,7 +1168,7 @@ jobs:
       # The language extensions under pure/extensions — today the `###Diagram` one. BOTH platforms
       # need it: javascript::generate-all translates it into generated/extensions/ for the browser
       # IDE's diagram editor, and the Java platform's -extensions-diagram module generates its parser
-      # and AOT-translates platform::pure::diagram from this PDB (java::spec-diagram runs its tests).
+      # and AOT-translates platform::extensions::pure::diagram from this PDB (java::spec-diagram runs its tests).
       # Built here rather than shipped as a translation-deps artifact: it depends only on core.pdb and
       # compiler.pdb (both restored above with bootstrap-artifacts) and compiles in well under a
       # second, so an artifact round trip would cost more than the build.

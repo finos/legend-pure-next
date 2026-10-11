@@ -13,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::factory::*;
-import platform::external::language::java::factory::project::*;
-import platform::external::language::java::metamodel::*;
-import platform::external::language::java::metamodel::annotations::java::validation::constraints::*;
-import platform::external::language::java::metamodel::annotations::json::*;
-import platform::external::language::java::metamodel::project::*;
-import platform::external::language::java::serialization::*;
-import platform::external::language::java::serialization::tests::*;
+import platform::extensions::language::java::factory::*;
+import platform::extensions::language::java::factory::project::*;
+import platform::extensions::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::annotations::java::validation::constraints::*;
+import platform::extensions::language::java::metamodel::annotations::json::*;
+import platform::extensions::language::java::metamodel::project::*;
+import platform::extensions::language::java::serialization::*;
+import platform::extensions::language::java::serialization::tests::*;
 
-function <<test.Test>> platform::external::language::java::serialization::tests::forEach():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::forEach():Boolean[1]
 {
    let param = j_parameter(javaString(), 's');
    let list  = j_variable(javaList(javaString()), 'strings');
@@ -45,7 +45,7 @@ function <<test.Test>> platform::external::language::java::serialization::tests:
    );
 }
 
-function <<test.Test>> platform::external::language::java::serialization::tests::forLoop():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::forLoop():Boolean[1]
 {
    let param  = j_parameter(javaInt(), 'i');
    let list   = j_variable(javaList(javaString()), 'strings');
@@ -70,7 +70,7 @@ function <<test.Test>> platform::external::language::java::serialization::tests:
    );
 }
 
-function <<test.Test>> platform::external::language::java::serialization::tests::conditionalAndInstanceOf():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::conditionalAndInstanceOf():Boolean[1]
 {
    let list = j_parameter(javaList(javaString()), 'list');
 
@@ -95,7 +95,7 @@ function <<test.Test>> platform::external::language::java::serialization::tests:
    );
 }
 
-function <<test.Test>> platform::external::language::java::serialization::tests::while():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::while():Boolean[1]
 {
    let list = j_parameter(javaList(javaString()), 'list');
 
@@ -122,7 +122,7 @@ function <<test.Test>> platform::external::language::java::serialization::tests:
    );
 }
 
-function <<test.Test>> platform::external::language::java::serialization::tests::doWhile():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::doWhile():Boolean[1]
 {
    let list = j_parameter(javaList(javaString()), 'list');
 
@@ -150,7 +150,7 @@ function <<test.Test>> platform::external::language::java::serialization::tests:
    );
 }
 
-function <<test.Test>> platform::external::language::java::serialization::tests::tryCatch():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::tryCatch():Boolean[1]
 {
    let list = j_parameter(javaList(javaString()), 'list');
    let e    = j_parameter(javaException(), 'e');
@@ -191,7 +191,7 @@ function <<test.Test>> platform::external::language::java::serialization::tests:
    );
 }
 
-function <<test.Test>> platform::external::language::java::serialization::tests::throw():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::throw():Boolean[1]
 {
    test('''
         package org.finos.test;

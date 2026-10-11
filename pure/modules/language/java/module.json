@@ -1,5 +1,5 @@
 {
   "name": "java",
-  "packagePattern": "(platform::(external::language|pure))(::.*)?",
+  "packagePattern": "(platform::(extensions::language|pure))(::.*)?",
   "dependencies": ["core"]
 }

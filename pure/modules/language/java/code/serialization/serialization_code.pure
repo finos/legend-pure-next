@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::factory::*;
-import platform::external::language::java::metamodel::*;
-import platform::external::language::java::metamodel::annotations::json::*;
-import platform::external::language::java::metamodel::project::*;
-import platform::external::language::java::serialization::*;
+import platform::extensions::language::java::factory::*;
+import platform::extensions::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::annotations::json::*;
+import platform::extensions::language::java::metamodel::project::*;
+import platform::extensions::language::java::serialization::*;
 
-function <<access.private>> platform::external::language::java::serialization::doCode(sfer:Stringifier[1], code: Code[0..1]) :Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::doCode(sfer:Stringifier[1], code: Code[0..1]) :Stringifier[1]
 {
    $sfer->ifNotEmpty($code, {s, c| $s->doCode($c->toOne())});
 }
@@ -29,21 +29,21 @@ function <<access.private>> platform::external::language::java::serialization::d
 // survives `applyFolds`, which turns one logical line into several physical
 // ones, so the position stays attached to the physical line it lands on.
 // classToString collects these into the class's position table and strips them.
-function <<access.private>> platform::external::language::java::serialization::positionMarker(sfer:Stringifier[1], code: Code[1]): Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::positionMarker(sfer:Stringifier[1], code: Code[1]): Stringifier[1]
 {
    $code.sourceInformation->fold({si, s |
-      $s->addText(platform::external::language::java::serialization::markerOpen() + $si.sourceId->joinStrings('') + ':' + $si.startLine->toString() + ':' + $si.startColumn->toString() + '*/')},
+      $s->addText(platform::extensions::language::java::serialization::markerOpen() + $si.sourceId->joinStrings('') + ':' + $si.startLine->toString() + ':' + $si.startColumn->toString() + '*/')},
       $sfer);
 }
 
-function <<access.private>> platform::external::language::java::serialization::doCode(sfer:Stringifier[1], code: Code[1]) :Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::doCode(sfer:Stringifier[1], code: Code[1]) :Stringifier[1]
 {
    let resolved = $code->resolveDeferred();
-   $sfer->platform::external::language::java::serialization::positionMarker($resolved)
-        ->platform::external::language::java::serialization::doCodeNode($resolved);
+   $sfer->platform::extensions::language::java::serialization::positionMarker($resolved)
+        ->platform::extensions::language::java::serialization::doCodeNode($resolved);
 }
 
-function <<access.private>> platform::external::language::java::serialization::doCodeNode(sfer:Stringifier[1], code: Code[1]) :Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::doCodeNode(sfer:Stringifier[1], code: Code[1]) :Stringifier[1]
 {
    $code->map(c| $c->resolveDeferred())->match([
       c:SimpleCode[1]               | $sfer->forEach($c.code->replace('\n\n','\nBLANKLINE\n')->split('\n')->map(l| if($l->trim() == '', |'BLANKLINE', |$l)), {s, l| if($l == 'BLANKLINE', |$s->blankLine(), |$s->addText($l)->newLine())}),
@@ -96,7 +96,7 @@ function <<access.private>> platform::external::language::java::serialization::d
    ]);
 }
 
-function <<access.private>> platform::external::language::java::serialization::doCodeNew(sfer:Stringifier[1], c:New[1]): Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::doCodeNew(sfer:Stringifier[1], c:New[1]): Stringifier[1]
 {
    let newAndArgs = $sfer
       ->addWord('new')
@@ -110,7 +110,7 @@ function <<access.private>> platform::external::language::java::serialization::d
    ]);
 }
 
-function <<access.private>> platform::external::language::java::serialization::doCodeNewArray(sfer:Stringifier[1], c:NewArray[1]): Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::doCodeNewArray(sfer:Stringifier[1], c:NewArray[1]): Stringifier[1]
 {
    let newAndArgs = $sfer
       ->addWord('new')
@@ -120,7 +120,7 @@ function <<access.private>> platform::external::language::java::serialization::d
       ->addText('}');
 }
 
-function <<access.private>> platform::external::language::java::serialization::doLambdaExpression(sfer:Stringifier[1], code: Code[1]): Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::doLambdaExpression(sfer:Stringifier[1], code: Code[1]): Stringifier[1]
 {
    $code->match([
       c:Block[1]  | if($c.statements->size() == 1 && ($c.statements->at(0)->instanceOf(Return) || !$c.statements->at(0)->isStatement()),
@@ -132,28 +132,28 @@ function <<access.private>> platform::external::language::java::serialization::d
    ]);
 }
 
-function <<access.private>> platform::external::language::java::serialization::doTypeArguments(sfer:Stringifier[1], args:platform::external::language::java::metamodel::Type[*]): Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::doTypeArguments(sfer:Stringifier[1], args:platform::extensions::language::java::metamodel::Type[*]): Stringifier[1]
 {
    $sfer->ifNotEmpty($args, {s, as| $s->joining($as, {s2,t| $s2->doType($t)}, '<', ', ', '>')});
 }
 
-function <<access.private>> platform::external::language::java::serialization::doArguments(sfer:Stringifier[1], args:Code[*]): Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::doArguments(sfer:Stringifier[1], args:Code[*]): Stringifier[1]
 {
    $sfer->joiningFoldable($args, {s,a| $s->doCode($a)}, '(', ', ', ')');
 }
 
 // True when the code is written starting with `-` or `+` (a negative literal,
 // a unary minus): after a cast, Java would read that as an infix operator.
-function <<access.private>> platform::external::language::java::serialization::startsWithSign(code: Code[1]): Boolean[1]
+function <<access.private>> platform::extensions::language::java::serialization::startsWithSign(code: Code[1]): Boolean[1]
 {
    $code->resolveDeferred()->match([
-      l: platform::external::language::java::metamodel::Literal[1]          | $l.literal->startsWith('-') || $l.literal->startsWith('+'),
-      p: platform::external::language::java::metamodel::PrefixExpression[1] | $p.op == '-' || $p.op == '+',
+      l: platform::extensions::language::java::metamodel::Literal[1]          | $l.literal->startsWith('-') || $l.literal->startsWith('+'),
+      p: platform::extensions::language::java::metamodel::PrefixExpression[1] | $p.op == '-' || $p.op == '+',
       other: Code[1]                                                    | false
    ]);
 }
 
-function <<access.private>> platform::external::language::java::serialization::precedence(code: Code[1]):Integer[1]
+function <<access.private>> platform::extensions::language::java::serialization::precedence(code: Code[1]):Integer[1]
 {
    $code->resolveDeferred()->match([
       post:PostfixExpression[1]                                 | 14,     // 14 postfix                expr++ expr--
@@ -183,7 +183,7 @@ function <<access.private>> platform::external::language::java::serialization::p
 }
 
 
-function platform::external::language::java::serialization::findProxyUnderlier(code:Code[1]):Code[1]
+function platform::extensions::language::java::serialization::findProxyUnderlier(code:Code[1]):Code[1]
 {
   $code->match(
     [
@@ -193,7 +193,7 @@ function platform::external::language::java::serialization::findProxyUnderlier(c
   );
 }
 
-function <<access.private>> platform::external::language::java::serialization::maybeParentheses(sfer:Stringifier[1], code:Code[1], wrt:Code[1]): Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::maybeParentheses(sfer:Stringifier[1], code:Code[1], wrt:Code[1]): Stringifier[1]
 {
    if($code->precedence() < $wrt->precedence(),
       | $sfer->addText('(')->doCode($code)->addText(')'),
@@ -206,7 +206,7 @@ function <<access.private>> platform::external::language::java::serialization::m
 // associativity-breaking side: the RIGHT operand of a left-associative parent
 // (e.g. `a - (b - c)` would otherwise reparse as `(a - b) - c`), or the LEFT
 // operand of a right-associative parent (e.g. ternary condition).
-function <<access.private>> platform::external::language::java::serialization::maybeParenthesesTighter(sfer:Stringifier[1], code:Code[1], wrt:Code[1]): Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::maybeParenthesesTighter(sfer:Stringifier[1], code:Code[1], wrt:Code[1]): Stringifier[1]
 {
    if($code->precedence() <= $wrt->precedence() && $code->precedence() != 99,
       | $sfer->addText('(')->doCode($code)->addText(')'),
@@ -214,7 +214,7 @@ function <<access.private>> platform::external::language::java::serialization::m
    );
 }
 
-function <<access.private>> platform::external::language::java::serialization::maybeInstanceParentheses(sfer:Stringifier[1], code:Code[1]): Stringifier[1]
+function <<access.private>> platform::extensions::language::java::serialization::maybeInstanceParentheses(sfer:Stringifier[1], code:Code[1]): Stringifier[1]
 {
    let required = $code->resolveDeferred()->match([
       c:SimpleCode[1]               | false,  // We don't know but safe at present and deprecated.  Any issues should be moved to new style

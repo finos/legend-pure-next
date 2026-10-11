@@ -13,10 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::*;
-import platform::external::language::javascript::serialization::*;
-import platform::external::language::javascript::translation::*;
-import platform::pure::translation::shared::*;
+import platform::extensions::language::javascript::*;
+import platform::extensions::language::javascript::serialization::*;
+import platform::extensions::language::javascript::translation::*;
 
 // Host-runtime adapter: translation.pure produces a SourceFile; this file
 // serialises it, runs it through `compileModule` (the host's eval pipe — the JS
@@ -24,7 +23,7 @@ import platform::pure::translation::shared::*;
 // `execute` export and surfaces the result for round-trip / PCT tests.
 
 function <<test.TestDependency>>
-   platform::external::language::javascript::translation::runViaTranslation(
+   platform::extensions::language::javascript::translation::runViaTranslation(
    f: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1],
    args: Any[*]
 ): Any[*]
@@ -47,7 +46,7 @@ function <<test.TestDependency>>
 // FunctionDefinition (UserDefinedFunction OR LambdaFunction), so both
 // shapes are handled by the same dispatch.
 function <<test.TestDependency>>
-   platform::external::language::javascript::translation::testAdapterForTranslatedJavaScript<X|o>(
+   platform::extensions::language::javascript::translation::testAdapterForTranslatedJavaScript<X|o>(
    f: platform::pure::metamodel::function::Function<{->X[o]}>[1]
 ): X[o]
 {
@@ -57,8 +56,8 @@ function <<test.TestDependency>>
    // each captured value once (so `is($x, $x)` is the same reference, and a
    // capture used inside a thunk resolves to the local binding) instead of
    // duplicating the value at every use site as InlineOpenVariables would.
-   let canonical = $lambda->platform::pure::translation::shared::makeCanonical(
-                       [platform::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]);
+   let canonical = $lambda->platform::extensions::pure::translation::canonical::makeCanonical(
+                       [platform::extensions::pure::translation::canonical::CanonicalMode.LocalizeOpenVariables]);
    let conv      = conventionForRoot($canonical);
    let sf        = $canonical->translateFunctionDef($conv);
    // The host loads `runtime-lib.js` into the same global scope as every
@@ -83,7 +82,7 @@ function <<test.TestDependency>>
 // translator adapter. Marked <<test.TestDependency>> so it lands in the
 // -tests PDB alongside the core PCT runner.
 function <<test.TestDependency>>
-   platform::external::language::javascript::translation::runPCTTestsViaTranslator(rootPackagePath:String[1]):String[1]
+   platform::extensions::language::javascript::translation::runPCTTestsViaTranslator(rootPackagePath:String[1]):String[1]
 {
    platform::pure::test::runPCTTests(
       $rootPackagePath,
@@ -93,7 +92,7 @@ function <<test.TestDependency>>
 
 // Same, also writing the run's test report to `reportPath` (read by tools/test-dashboard).
 function <<test.TestDependency>>
-   platform::external::language::javascript::translation::runPCTTestsViaTranslator(rootPackagePath:String[1], reportPath:String[1]):String[1]
+   platform::extensions::language::javascript::translation::runPCTTestsViaTranslator(rootPackagePath:String[1], reportPath:String[1]):String[1]
 {
    platform::pure::test::runPCTTests(
       $rootPackagePath,

@@ -297,7 +297,7 @@ function synthOptGenericType(address, prop) {
 // injected graph; this is the PDB-backed analog.
 const LAMBDA_SEP = "$lambda/";
 const COLLECT_LAMBDAS =
-    "platform$external$language$javascript$translation$collectLambdasInOrder_ValueSpecification_MANY__LambdaFunction_MANY_";
+    "platform$extensions$language$javascript$translation$collectLambdasInOrder_ValueSpecification_MANY__LambdaFunction_MANY_";
 function resolveLambdaAst(store, address) {
     const at = address.indexOf(LAMBDA_SEP);
     const basePath = address.slice(0, at);

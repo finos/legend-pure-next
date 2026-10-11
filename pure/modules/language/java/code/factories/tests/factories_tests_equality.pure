@@ -13,19 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::factory::*;
-import platform::external::language::java::factory::tests::*;
-import platform::external::language::java::metamodel::*;
-import platform::external::language::java::serialization::*;
+import platform::extensions::language::java::factory::*;
+import platform::extensions::language::java::factory::tests::*;
+import platform::extensions::language::java::metamodel::*;
+import platform::extensions::language::java::serialization::*;
 
-function <<test.Test>> platform::external::language::java::factory::tests::sameLiteral():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::sameLiteral():Boolean[1]
 {
    assert(j_string('literal')->isSameLiteral(j_string('literal')));
    assertFalse(j_string('literal1')->isSameLiteral(j_string('literal2')));
    assertFalse(j_string('l')->isSameLiteral(j_char('l')));  
 }
 
-function <<test.Test>> platform::external::language::java::factory::tests::equalityOfSameTypes():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::equalityOfSameTypes():Boolean[1]
 {
    let i = j_variable(javaIntBoxed(), 'i');
    let l = j_variable(javaLongBoxed(), 'l');
@@ -45,7 +45,7 @@ function <<test.Test>> platform::external::language::java::factory::tests::equal
    assertCode('b == b',        javaBoolean(), $b->j_eq($b));
 }
 
-function <<test.Test>> platform::external::language::java::factory::tests::inequalityOfSameTypes():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::inequalityOfSameTypes():Boolean[1]
 {
    let i = j_variable(javaIntBoxed(), 'i');
    let l = j_variable(javaLongBoxed(), 'l');
@@ -65,7 +65,7 @@ function <<test.Test>> platform::external::language::java::factory::tests::inequ
    assertCode('b != b',        javaBoolean(), $b->j_ne($b));
 }
 
-function <<test.Test>> platform::external::language::java::factory::tests::equalityOfCompatibleTypes():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::equalityOfCompatibleTypes():Boolean[1]
 {
    let i = j_variable(javaIntBoxed(), 'i');
    let l = j_variable(javaLongBoxed(), 'l');
@@ -182,7 +182,7 @@ function <<test.Test>> platform::external::language::java::factory::tests::equal
    assertCode('a == o',     javaBoolean(), $oA->j_eq($o));
 }
 
-function <<test.Test>> platform::external::language::java::factory::tests::inequalityOfCompatibleTypes():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::inequalityOfCompatibleTypes():Boolean[1]
 {
    let i = j_variable(javaIntBoxed(), 'i');
    let l = j_variable(javaLongBoxed(), 'l');
@@ -299,7 +299,7 @@ function <<test.Test>> platform::external::language::java::factory::tests::inequ
    assertCode('a != o',     javaBoolean(), $oA->j_ne($o));
 }
 
-function <<test.Test>> platform::external::language::java::factory::tests::equalityOfIncompatibleTypes():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::equalityOfIncompatibleTypes():Boolean[1]
 {
    let i = j_variable(javaIntBoxed(), 'i');
    let l = j_variable(javaLongBoxed(), 'l');
@@ -332,7 +332,7 @@ function <<test.Test>> platform::external::language::java::factory::tests::equal
    assertCode('(Object) a == b', javaBoolean(), $oA->j_eq($oB));
 }
 
-function <<test.Test>> platform::external::language::java::factory::tests::inequalityOfIncompatibleTypes():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::inequalityOfIncompatibleTypes():Boolean[1]
 {
    let i = j_variable(javaIntBoxed(), 'i');
    let l = j_variable(javaLongBoxed(), 'l');
@@ -365,7 +365,7 @@ function <<test.Test>> platform::external::language::java::factory::tests::inequ
    assertCode('(Object) a != b', javaBoolean(), $oA->j_ne($oB));
 }
 
-function <<test.Test>> platform::external::language::java::factory::tests::j_conditional():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::j_conditional():Boolean[1]
 {
    // compare two nulls
    assertCode('0', javaInt(), j_conditional(j_null()->j_eq(j_null()), j_int(0), j_int(1)));
@@ -378,7 +378,7 @@ function <<test.Test>> platform::external::language::java::factory::tests::j_con
    assertCode('null != "literal" ? 0 : 1', javaInt(), j_conditional(j_null()->j_ne(j_string('literal')), j_int(0), j_int(1)));
 }
 
-function <<test.Test>> platform::external::language::java::factory::tests::notInstanceOf():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::notInstanceOf():Boolean[1]
 {
    assertCode('!("Hello" instanceof String)', javaBoolean(), j_not(j_string('Hello')->j_instanceof(javaString())));
 }
@@ -395,7 +395,7 @@ function <<test.Test>> platform::external::language::java::factory::tests::notIn
 // generated platform type is, e.g.
 // org.finos.legend.pure.m3.platform.pure.protocol.grammar.function.property.Property
 // — compared unequal there and equal on bootstrap.
-function <<test.Test>> platform::external::language::java::factory::tests::classEqualityIsStructuralAtDepth():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::factory::tests::classEqualityIsStructuralAtDepth():Boolean[1]
 {
    assert(javaClass('B') == javaClass('B'), 'no package');
    assert(javaClass('a.B') == javaClass('a.B'), '1 package deep');

@@ -122,7 +122,7 @@ generate-pdb:
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "platform::external::language::java::translation::translatePackagesToJava_String_1__String_1_" \
+        --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
         --args "platform::pure::compiler::pdb" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
@@ -145,7 +145,7 @@ generate-types:
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "platform::external::language::java::translation::platform::generatePlatformTypes_String_1__String_1__String_1_" \
+        --function "platform::extensions::language::java::translation::platform::generatePlatformTypes_String_1__String_1__String_1_" \
         --args "platform::pure::metamodel,platform::pure::functions,platform::pure::compiler::test" "org.finos.legend.pure.m3" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } { print > file }'
@@ -167,17 +167,17 @@ generate-runtime:
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "platform::external::language::java::translation::generateRuntimeClasses__String_1_" \
+        --function "platform::extensions::language::java::translation::generateRuntimeClasses__String_1_" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
 
-# Translate the Java translator (platform::external::language::java::translation) and
+# Translate the Java translator (platform::extensions::language::java::translation) and
 # every function it reaches (the java factory and serializer, translation shared,
 # the Pure compiler, the core library) into generated/. A function that doesn't
 # translate is a stub throwing "not translated: <reason>".
 generate-translator:
     @{{header}} 'generate-translator'
-    @{{substep}} 'translate platform::external::language::java::translation -> generated/org/finos/legend/pure/m3'
+    @{{substep}} 'translate platform::extensions::language::java::translation -> generated/org/finos/legend/pure/m3'
     test -f {{translation_java_out}}/java-translation-tests.pdb || (echo "ERROR: missing {{translation_java_out}}/java-translation-tests.pdb (run \`just modules::translation_java::build-tests\` first)" && exit 1)
     set -o pipefail; {{emit_rt}} execute \
         --pdb {{shared}}/core.pdb \
@@ -188,8 +188,8 @@ generate-translator:
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "platform::external::language::java::translation::translatePackagesToJava_String_1__String_1_" \
-        --args "platform::external::language::java::translation" \
+        --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
+        --args "platform::extensions::language::java::translation" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
     echo "  $(grep -rl 'not translated' {{generated}} | wc -l | tr -d ' ') functions not translated"
@@ -222,7 +222,7 @@ generate-functions:
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "platform::external::language::java::translation::translatePackagesToJava_String_1__String_1_" \
+        --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
         --args "platform::pure::functions,platform::pure::test,platform::pure::parser::mappings,platform::pure::compiler::test" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
@@ -250,7 +250,7 @@ generate-tests:
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "platform::external::language::java::translation::translateTestPackagesToJava_String_1__String_1_" \
+        --function "platform::extensions::language::java::translation::translateTestPackagesToJava_String_1__String_1_" \
         --args "platform::pure::functions,platform::pure::compiler::pdb" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
@@ -265,13 +265,13 @@ generate-tests:
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "platform::external::language::java::translation::platform::generatePlatformTypesWithTests_String_1__String_1__String_1_" \
+        --function "platform::extensions::language::java::translation::platform::generatePlatformTypesWithTests_String_1__String_1__String_1_" \
         --args "platform::pure::functions,platform::pure::compiler::pdb" "org.finos.legend.pure.m3" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
     @echo "  $(find {{generated}} -path '*tests*' -name '*.java' | wc -l | tr -d ' ') test classes"
 
-# The DIAGRAM EXTENSION's Pure, translated into its own module: platform::pure::diagram's metamodel,
+# The DIAGRAM EXTENSION's Pure, translated into its own module: platform::extensions::pure::diagram's metamodel,
 # protocol, parser rules and compiler passes, and — in the second step — its TEST functions, which
 # live in diagram-tests.pdb and which the first step therefore cannot see. Both halves, because
 # everything this platform runs is generated at build time.
@@ -280,13 +280,13 @@ generate-tests:
 # translated at run time, which is where the suite's time goes: measured with `-verbose:class`, 49
 # diagram classes came from target/classes and 32 from __JVM_DefineClass__, every one of the 32 a test.
 #
-# FILTERED TO platform::pure::diagram. The translator also emits the types the diagram's code REFERENCES
+# FILTERED TO platform::extensions::pure::diagram. The translator also emits the types the diagram's code REFERENCES
 # (platform::pure::compiler, protocol::grammar, functions::collection — 55 of the 112 files it produces),
 # and the engine already generates every one of them. Writing them here too would put the same
 # fully-qualified classes in two modules, where the class path order would decide which one runs.
 generate-diagram: _depCheck_emit_rt
     @{{header}} 'generate-diagram'
-    @{{substep}} 'translate platform::pure::diagram -> the diagram module''s generated/'
+    @{{substep}} 'translate platform::extensions::pure::diagram -> the diagram module''s generated/'
     test -f {{diagram_out}}/diagram-tests.pdb || (echo "ERROR: missing {{diagram_out}}/diagram-tests.pdb (run \`just extensions::diagram::build-tests\` first)" && exit 1)
     rm -rf {{diagram_generated}}
     set -o pipefail; {{emit_rt}} execute \
@@ -299,10 +299,10 @@ generate-diagram: _depCheck_emit_rt
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --pdb {{diagram_out}}/diagram.pdb \
-        --function "platform::external::language::java::translation::translatePackagesToJava_String_1__String_1_" \
-        --args "platform::pure::diagram" \
+        --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
+        --args "platform::extensions::pure::diagram" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
-        | awk -v root="{{diagram_generated}}" -v keep="org/finos/legend/pure/m3/platform/pure/diagram/" \
+        | awk -v root="{{diagram_generated}}" -v keep="org/finos/legend/pure/m3/platform/extensions/pure/diagram/" \
               '/^\/\/\/\/ FILE /{ if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { print > file }'
     @{{substep}} 'translate the extension''s test packages (they live in diagram-tests.pdb)'
     set -o pipefail; {{emit_rt}} execute \
@@ -316,10 +316,10 @@ generate-diagram: _depCheck_emit_rt
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --pdb {{diagram_out}}/diagram.pdb \
         --pdb {{diagram_out}}/diagram-tests.pdb \
-        --function "platform::external::language::java::translation::translateTestPackagesToJava_String_1__String_1_" \
-        --args "platform::pure::diagram" \
+        --function "platform::extensions::language::java::translation::translateTestPackagesToJava_String_1__String_1_" \
+        --args "platform::extensions::pure::diagram" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
-        | awk -v root="{{diagram_generated}}" -v keep="org/finos/legend/pure/m3/platform/pure/diagram/" \
+        | awk -v root="{{diagram_generated}}" -v keep="org/finos/legend/pure/m3/platform/extensions/pure/diagram/" \
               '/^\/\/\/\/ FILE /{ if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { print > file }'
     @echo "  $(find {{diagram_generated}} -name '*.java' | wc -l | tr -d ' ') files ($(find {{diagram_generated}} -path '*tests*' -name '*.java' | wc -l | tr -d ' ') of them tests)"
 
@@ -377,7 +377,7 @@ compile-fast:
 # The transform's own Java, generated twice: once by the Pure runtime that builds
 # this platform, once by the COMPILED transform running on the JVM. They must
 # match — the check that the platform can build itself.
-transform_roots := "platform::external::language::java::translation"
+transform_roots := "platform::extensions::language::java::translation"
 
 fixpoint: compile
     @{{header}} 'fixpoint'
@@ -393,7 +393,7 @@ fixpoint: compile
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "platform::external::language::java::translation::translatePackagesToJava_String_1__String_1_" \
+        --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
         --args "{{transform_roots}}" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{java_root}}/build/fixpoint-ref" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
@@ -401,7 +401,7 @@ fixpoint: compile
         --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "platform::external::language::java::translation::translatePackagesToJava_String_1__String_1_" \
+        --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
         --args "{{transform_roots}}" \
         | awk -v root="{{java_root}}/build/fixpoint" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
     diff -r {{java_root}}/build/fixpoint-ref {{java_root}}/build/fixpoint > {{java_root}}/build/fixpoint.diff 2>&1 && echo "  fixpoint: $(find {{java_root}}/build/fixpoint -name '*.java' | wc -l | tr -d ' ') files, the transform reproduces its own sources" || (echo "  FIXPOINT DIFFERS (build/fixpoint.diff):" && head -20 {{java_root}}/build/fixpoint.diff && exit 1)
@@ -471,11 +471,11 @@ usage-example: compile
 # a host without it they fail with "Unknown grammar: DiagramParser", and before this they failed on
 # every JVM host, Truffle included.
 #
-# platform::pure::diagram is not pre-generated, so Execute translates it at run time: hence the translator
+# platform::extensions::pure::diagram is not pre-generated, so Execute translates it at run time: hence the translator
 # PDBs below, the same set spec-grammar passes.
 spec-diagram: compile
     @{{header}} 'spec-diagram'
-    @{{substep}} 'runTests over platform::pure::diagram (Java platform)'
+    @{{substep}} 'runTests over platform::extensions::pure::diagram (Java platform)'
     test -f {{diagram_out}}/diagram-tests.pdb || (echo "ERROR: missing {{diagram_out}}/diagram-tests.pdb (run \`just extensions::diagram::build-tests\` first)" && exit 1)
     mkdir -p {{repo_root}}/test-results/pure/extensions-diagram
     java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
@@ -484,7 +484,7 @@ spec-diagram: compile
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --pdb {{diagram_out}}/diagram-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::pure::diagram" "{{repo_root}}/test-results/pure/extensions-diagram/java@platform.json" \
+        --args "platform::extensions::pure::diagram" "{{repo_root}}/test-results/pure/extensions-diagram/java@platform.json" \
         || echo "  failures do not fail the build: they are in the report"
 
 # The function corpus ON this platform: every `<<test.Test>>` under
@@ -536,21 +536,21 @@ spec-pdb: compile
         --args "{{repo_root}}/pure/specification/compiler/tests" "{{repo_root}}/pure/specification/compiler/tests-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{repo_root}}/test-results/spec/pdb/java@platform.json" \
         || echo "  failures do not fail the build: they are in the report"
 
-# The translator's OWN <<test.Test>> suite (platform::external::language::java::translation,
+# The translator's OWN <<test.Test>> suite (platform::extensions::language::java::translation,
 # including the per-PCT wrappers in code/tests/) run ON this platform. This used to
 # live in pure/modules/translation/java as a pure-truffle recipe that reached back
 # into platforms/java/build/classes via PURE_JAVA_PLATFORM_CLASSES; it runs here
 # now, so `compileAndExecute` resolves to the platform's own JavaSource.
 test-translation: compile
     @{{header}} 'test-translation'
-    @{{substep}} 'runTests platform::external::language::java::translation (Java platform)'
+    @{{substep}} 'runTests platform::extensions::language::java::translation (Java platform)'
     mkdir -p {{repo_root}}/test-results/pure/translation-java
     java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
         --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::external::language::java::translation" "{{repo_root}}/test-results/pure/translation-java/java@platform.json" \
+        --args "platform::extensions::language::java::translation" "{{repo_root}}/test-results/pure/translation-java/java@platform.json" \
         || echo "  failures do not fail the build: they are in the report"
 
 # Every suite this platform runs, each writing its own java@platform report for
@@ -579,7 +579,7 @@ gallery PACKAGE="platform::pure::functions" OUT=(java_root / "build" / "java-pla
         --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
-        --function "platform::external::language::java::translation::gallery::renderGallery_String_1__String_1_" \
+        --function "platform::extensions::language::java::translation::gallery::renderGallery_String_1__String_1_" \
         --args "{{PACKAGE}}" > {{OUT}}
     @echo "  wrote {{OUT}} ($(wc -c < {{OUT}} | tr -d ' ') bytes)"
 

@@ -97,7 +97,7 @@ generate-protocol: _depCheck_base-pdbs
         --pdb {{protocol_pdb}} \
         --pdb "{{metamodel_stage}}/build/diagram.pdb" \
         --function "platform::pure::protocol::generation::generateProtocol_String_1__String_1__String_1_" \
-        --args "platform::pure::diagram::metamodel" "platform::pure::diagram::protocol" \
+        --args "platform::extensions::pure::diagram::metamodel" "platform::extensions::pure::diagram::protocol" \
         2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) > "{{protocol_gen}}/protocol.pure"
     rm -rf "{{metamodel_stage}}"
     echo "  wrote code/protocol/generated/protocol.pure ($(wc -c < "{{protocol_gen}}/protocol.pure" | tr -d ' ') bytes)"
@@ -141,7 +141,7 @@ build-truffle: _depCheck_base-pdbs generate-protocol
 # from language_diagram.json — so this list holds only what no language declares: test content.
 test-all: build-tests
     @{{header}} 'test-all'
-    @{{substep}} 'runTests platform::pure::diagram (Truffle)'
+    @{{substep}} 'runTests platform::extensions::pure::diagram (Truffle)'
     test -f {{shared_out}}/core-tests.pdb || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
     mkdir -p {{test_results}}/pure/extensions-diagram
@@ -150,7 +150,7 @@ test-all: build-tests
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{diagram_out}}/diagram-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-truffle.json" {{err_filter}}
+        --args "platform::extensions::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-truffle.json" {{err_filter}}
 
 # Internal: fail loudly if the base PDBs aren't staged.
 _depCheck_base-pdbs:

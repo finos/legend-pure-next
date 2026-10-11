@@ -19,7 +19,8 @@ import platform::pure::metamodel::function::*;
 import platform::pure::metamodel::type::*;
 import platform::pure::metamodel::type::generics::*;
 import platform::pure::metamodel::valuespecification::*;
-import platform::pure::translation::shared::*;
+import platform::extensions::pure::translation::canonical::*;
+import platform::extensions::pure::translation::decompile::*;
 
 // ============================================================================
 // makeCanonical — Pure-AST -> Pure-AST simplification pipeline. The pipeline
@@ -145,7 +146,7 @@ import platform::pure::translation::shared::*;
 //     and would need their own pass (lifting / inlining first).
 // ============================================================================
 
-Enum platform::pure::translation::shared::CanonicalMode
+Enum platform::extensions::pure::translation::canonical::CanonicalMode
 {
    InlineOpenVariables,
    LocalizeOpenVariables,
@@ -160,9 +161,9 @@ Enum platform::pure::translation::shared::CanonicalMode
 // Back-compat default — current callers pass no modes. Apply only
 // InlineOpenVariables to preserve the pre-mode-API behaviour. Callers that
 // want partial evaluation should opt in via the explicit overload.
-function platform::pure::translation::shared::makeCanonical(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
+function platform::extensions::pure::translation::canonical::makeCanonical(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
 {
-   makeCanonical($f, [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
+   makeCanonical($f, [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables]);
 }
 
 // Apply the named passes. The input list is treated as a SET — duplicates
@@ -181,9 +182,9 @@ function platform::pure::translation::shared::makeCanonical(f: FunctionDefinitio
 // hid a capture or a literal from a downstream pass. The set semantics
 // make {@code makeCanonical(f, [A, B])} and {@code makeCanonical(f, [B, A])}
 // equivalent — the canonicalization itself is canonical.
-function platform::pure::translation::shared::makeCanonical(
+function platform::extensions::pure::translation::canonical::makeCanonical(
    f: FunctionDefinition<Any>[1],
-   modes: platform::pure::translation::shared::CanonicalMode[*]
+   modes: platform::extensions::pure::translation::canonical::CanonicalMode[*]
 ): FunctionDefinition<Any>[1]
 {
    canonicalPassOrder()
@@ -232,49 +233,49 @@ function platform::pure::translation::shared::makeCanonical(
 //                              passes can render previously-live bindings
 //                              dead (e.g. a let used only by a pruned
 //                              if-branch).
-function platform::pure::translation::shared::canonicalPassOrder(): platform::pure::translation::shared::CanonicalMode[*]
+function platform::extensions::pure::translation::canonical::canonicalPassOrder(): platform::extensions::pure::translation::canonical::CanonicalMode[*]
 {
    [
-      platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-      platform::pure::translation::shared::CanonicalMode.LocalizeOpenVariables,
-      platform::pure::translation::shared::CanonicalMode.SingleUseLetInline,
-      platform::pure::translation::shared::CanonicalMode.PartialEvaluation,
-      platform::pure::translation::shared::CanonicalMode.NestedIfToMultiIf,
-      platform::pure::translation::shared::CanonicalMode.IfBranchPruning,
-      platform::pure::translation::shared::CanonicalMode.FilterFusion,
-      platform::pure::translation::shared::CanonicalMode.DeadLetElim
+      platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+      platform::extensions::pure::translation::canonical::CanonicalMode.LocalizeOpenVariables,
+      platform::extensions::pure::translation::canonical::CanonicalMode.SingleUseLetInline,
+      platform::extensions::pure::translation::canonical::CanonicalMode.PartialEvaluation,
+      platform::extensions::pure::translation::canonical::CanonicalMode.NestedIfToMultiIf,
+      platform::extensions::pure::translation::canonical::CanonicalMode.IfBranchPruning,
+      platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion,
+      platform::extensions::pure::translation::canonical::CanonicalMode.DeadLetElim
    ];
 }
 
-function platform::pure::translation::shared::applyCanonicalPass(
+function platform::extensions::pure::translation::canonical::applyCanonicalPass(
    f: FunctionDefinition<Any>[1],
-   mode: platform::pure::translation::shared::CanonicalMode[1]
+   mode: platform::extensions::pure::translation::canonical::CanonicalMode[1]
 ): FunctionDefinition<Any>[1]
 {
    if ([
-      pair(| $mode == platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
+      pair(| $mode == platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
            | $f->match([
                 lf: LambdaFunction<Any>[1] | $lf->inlineOpenVariables(),
                 // UserDefinedFunctions have no captures by construction — passthrough.
                 other: FunctionDefinition<Any>[1] | $other
              ])),
-      pair(| $mode == platform::pure::translation::shared::CanonicalMode.LocalizeOpenVariables,
+      pair(| $mode == platform::extensions::pure::translation::canonical::CanonicalMode.LocalizeOpenVariables,
            | $f->match([
                 lf: LambdaFunction<Any>[1] | $lf->localizeOpenVariables(),
                 // UserDefinedFunctions have no captures by construction — passthrough.
                 other: FunctionDefinition<Any>[1] | $other
              ])),
-      pair(| $mode == platform::pure::translation::shared::CanonicalMode.SingleUseLetInline,
+      pair(| $mode == platform::extensions::pure::translation::canonical::CanonicalMode.SingleUseLetInline,
            | $f->singleUseLetInline()),
-      pair(| $mode == platform::pure::translation::shared::CanonicalMode.PartialEvaluation,
+      pair(| $mode == platform::extensions::pure::translation::canonical::CanonicalMode.PartialEvaluation,
            | $f->partialEvaluate()),
-      pair(| $mode == platform::pure::translation::shared::CanonicalMode.NestedIfToMultiIf,
+      pair(| $mode == platform::extensions::pure::translation::canonical::CanonicalMode.NestedIfToMultiIf,
            | $f->nestedIfToMultiIf()),
-      pair(| $mode == platform::pure::translation::shared::CanonicalMode.IfBranchPruning,
+      pair(| $mode == platform::extensions::pure::translation::canonical::CanonicalMode.IfBranchPruning,
            | $f->ifBranchPrune()),
-      pair(| $mode == platform::pure::translation::shared::CanonicalMode.FilterFusion,
+      pair(| $mode == platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion,
            | $f->filterFusion()),
-      pair(| $mode == platform::pure::translation::shared::CanonicalMode.DeadLetElim,
+      pair(| $mode == platform::extensions::pure::translation::canonical::CanonicalMode.DeadLetElim,
            | $f->deadLetElim())
    ],
    | $f
@@ -303,7 +304,7 @@ function platform::pure::translation::shared::applyCanonicalPass(
 // both), so this is structurally compatible.
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::inlineOpenVariables(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
+function platform::extensions::pure::translation::canonical::inlineOpenVariables(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
 {
    if ($lambda.openVariables->isEmpty(),
       | $lambda,
@@ -311,7 +312,7 @@ function platform::pure::translation::shared::inlineOpenVariables(lambda: Lambda
    );
 }
 
-function platform::pure::translation::shared::inlineOpenVariablesViaRecompile(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
+function platform::extensions::pure::translation::canonical::inlineOpenVariablesViaRecompile(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
 {
    // openVariableValues() returns ALL referenced names — including those
    // bound by a `let` inside the body (the Truffle backend tags every
@@ -396,7 +397,7 @@ function platform::pure::translation::shared::inlineOpenVariablesViaRecompile(la
 // resolve to those bindings.
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::localizeOpenVariables(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
+function platform::extensions::pure::translation::canonical::localizeOpenVariables(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
 {
    if ($lambda.openVariables->isEmpty(),
       | $lambda,
@@ -406,7 +407,7 @@ function platform::pure::translation::shared::localizeOpenVariables(lambda: Lamb
 
 // True outer-scope captures of `lambda` — its open-variable values with the
 // let-bound locals stripped out (those are not captures, just body bindings).
-function platform::pure::translation::shared::realOpenVariableCaptures(lambda: LambdaFunction<Any>[1]): Map<String, List<Any>>[1]
+function platform::extensions::pure::translation::canonical::realOpenVariableCaptures(lambda: LambdaFunction<Any>[1]): Map<String, List<Any>>[1]
 {
    let allCaptures = $lambda->platform::pure::functions::meta::openVariableValues();
    let letBoundNames = $lambda.expressionSequence
@@ -435,11 +436,11 @@ function platform::pure::translation::shared::realOpenVariableCaptures(lambda: L
 // canonical-recompile PureFile's `imports` so short function names (e.g. a
 // `<<test.TestDependency>>` helper like `castViaSeq`) resolve. Without this the
 // recompile fails with "function ... not in scope" and leaves a broken func ref.
-function platform::pure::translation::shared::referencedFnPackages(exprs: platform::pure::metamodel::valuespecification::ValueSpecification[*]): String[*]
+function platform::extensions::pure::translation::canonical::referencedFnPackages(exprs: platform::pure::metamodel::valuespecification::ValueSpecification[*]): String[*]
 {
    $exprs->map(e | $e->referencedFnPackagesOne())->removeDuplicates()->filter(p | $p != '');
 }
-function platform::pure::translation::shared::referencedFnPackagesOne(vs: platform::pure::metamodel::valuespecification::ValueSpecification[1]): String[*]
+function platform::extensions::pure::translation::canonical::referencedFnPackagesOne(vs: platform::pure::metamodel::valuespecification::ValueSpecification[1]): String[*]
 {
    $vs->match([
       fe:  platform::pure::metamodel::valuespecification::FunctionExpression[1] | $fe->feFnPackage()->concatenate($fe.parametersValues->map(p | $p->referencedFnPackagesOne())),
@@ -449,26 +450,26 @@ function platform::pure::translation::shared::referencedFnPackagesOne(vs: platfo
       o:   platform::pure::metamodel::valuespecification::ValueSpecification[1] | []->cast(@String)
    ]);
 }
-function platform::pure::translation::shared::avFnPackages(av: platform::pure::metamodel::valuespecification::AtomicValue[1]): String[*]
+function platform::extensions::pure::translation::canonical::avFnPackages(av: platform::pure::metamodel::valuespecification::AtomicValue[1]): String[*]
 {
    if ($av.value->isNotEmpty() && $av.value->toOne()->instanceOf(platform::pure::metamodel::function::LambdaFunction),
       | $av.value->toOne()->cast(@platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>).expressionSequence->map(e | $e->referencedFnPackagesOne()),
       | []->cast(@String));
 }
-function platform::pure::translation::shared::feFnPackage(fe: platform::pure::metamodel::valuespecification::FunctionExpression[1]): String[*]
+function platform::extensions::pure::translation::canonical::feFnPackage(fe: platform::pure::metamodel::valuespecification::FunctionExpression[1]): String[*]
 {
    if ($fe.func->isEmpty() || !$fe.func->toOne()->instanceOf(platform::pure::metamodel::PackageableElement),
       | []->cast(@String),
       | $fe.func->toOne()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath()->packageOfPath());
 }
-function platform::pure::translation::shared::packageOfPath(path: String[1]): String[1]
+function platform::extensions::pure::translation::canonical::packageOfPath(path: String[1]): String[1]
 {
    let segs = $path->split('::');
    $segs->take($segs->size() - 1)->joinStrings('::');
 }
 
 
-function platform::pure::translation::shared::localizeOpenVariablesViaRecompile(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
+function platform::extensions::pure::translation::canonical::localizeOpenVariablesViaRecompile(lambda: LambdaFunction<Any>[1]): FunctionDefinition<Any>[1]
 {
    // True outer-scope captures (let-bound locals stripped) — each becomes a
    // top-of-body `let name = value` binding so its `$name` references survive.
@@ -562,7 +563,7 @@ function platform::pure::translation::shared::localizeOpenVariablesViaRecompile(
 // (which the translator adapter reads as the real return contract). Leaves the
 // function unchanged when the body is empty or its last expression lacks
 // inferred type/mult.
-function platform::pure::translation::shared::restampReturnFromBody(udf: UserDefinedFunction<Any>[1]): UserDefinedFunction<Any>[1]
+function platform::extensions::pure::translation::canonical::restampReturnFromBody(udf: UserDefinedFunction<Any>[1]): UserDefinedFunction<Any>[1]
 {
    let last = $udf.expressionSequence->last();
    if ($last->isEmpty()
@@ -589,7 +590,7 @@ function platform::pure::translation::shared::restampReturnFromBody(udf: UserDef
 // `parametersValues->at(0)->cast(@AtomicValue<String>).value`); the value
 // reuses InlineOpenVariables' capture lowering so the binding RHS matches
 // exactly what inlining would have substituted at each use site.
-function platform::pure::translation::shared::buildProtocolLet(
+function platform::extensions::pure::translation::canonical::buildProtocolLet(
    name: String[1],
    value: List<Any>[1]
 ): platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1]
@@ -621,7 +622,7 @@ function platform::pure::translation::shared::buildProtocolLet(
 // AtomicValue children after the inner fold.
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::partialEvaluate(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
+function platform::extensions::pure::translation::canonical::partialEvaluate(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
 {
    $f->match([
       udf: UserDefinedFunction<Any>[1] | $udf->partialEvaluateUDF(),
@@ -637,12 +638,12 @@ function platform::pure::translation::shared::partialEvaluate(f: FunctionDefinit
    ]);
 }
 
-function platform::pure::translation::shared::partialEvaluateUDF(udf: UserDefinedFunction<Any>[1]): UserDefinedFunction<Any>[1]
+function platform::extensions::pure::translation::canonical::partialEvaluateUDF(udf: UserDefinedFunction<Any>[1]): UserDefinedFunction<Any>[1]
 {
    ^$udf(expressionSequence = $udf.expressionSequence->map(vs | $vs->foldConstants()));
 }
 
-function platform::pure::translation::shared::foldConstants(vs: ValueSpecification[1]): ValueSpecification[1]
+function platform::extensions::pure::translation::canonical::foldConstants(vs: ValueSpecification[1]): ValueSpecification[1]
 {
    $vs->match([
       fe: FunctionExpression[1] |
@@ -682,7 +683,7 @@ function platform::pure::translation::shared::foldConstants(vs: ValueSpecificati
 // runtime throw from the callee (divide-by-zero, etc.) propagates — the
 // user's code would have thrown the same way at runtime, so failing the
 // translation surfaces a real bug rather than masking it.
-function platform::pure::translation::shared::tryFoldFunctionExpression(
+function platform::extensions::pure::translation::canonical::tryFoldFunctionExpression(
    fe: FunctionExpression[1],
    reducedParams: ValueSpecification[*]
 ): ValueSpecification[1]
@@ -704,7 +705,7 @@ function platform::pure::translation::shared::tryFoldFunctionExpression(
 // point and wrap the returned value back into a compiled AtomicValue (or
 // Collection for multi-value results). Carries the FE's genericType +
 // multiplicity onto the result so the rest of the AST stays well-typed.
-function platform::pure::translation::shared::evalFoldedFE(
+function platform::extensions::pure::translation::canonical::evalFoldedFE(
    fe: FunctionExpression[1],
    reducedParams: ValueSpecification[*]
 ): ValueSpecification[1]
@@ -734,7 +735,7 @@ function platform::pure::translation::shared::evalFoldedFE(
 // stereotype? Used to keep PartialEvaluation away from IO ({@code print}),
 // nondeterministic ops ({@code random}, {@code currentTimeMillis}), throwing
 // ops ({@code assert}, {@code assertError}).
-function platform::pure::translation::shared::hasSideEffect(func: Function<Any>[1]): Boolean[1]
+function platform::extensions::pure::translation::canonical::hasSideEffect(func: Function<Any>[1]): Boolean[1]
 {
    $func->cast(@platform::pure::metamodel::PackageableElement).stereotypes
       ->exists(s | $s.value == 'SideEffectFunction' && $s.profile.name == 'functionType');
@@ -745,7 +746,7 @@ function platform::pure::translation::shared::hasSideEffect(func: Function<Any>[
 // would execute the print at translation time even though `print` is the
 // thing carrying the stereotype. Peek at the first arg's underlying Function
 // value — if THAT is tagged, skip the fold.
-function platform::pure::translation::shared::foldWouldTriggerEvalSideEffect(
+function platform::extensions::pure::translation::canonical::foldWouldTriggerEvalSideEffect(
    func: Function<Any>[1],
    params: ValueSpecification[*]
 ): Boolean[1]
@@ -759,7 +760,7 @@ function platform::pure::translation::shared::foldWouldTriggerEvalSideEffect(
 // Is `func` one of {@code platform::pure::functions::lang::eval} (all 8 arity
 // overloads), {@code evaluate}, or {@code tryEval}? Identified via the
 // unmangled {@code .functionName} slot so it works across all arities.
-function platform::pure::translation::shared::isEvalFamily(func: Function<Any>[1]): Boolean[1]
+function platform::extensions::pure::translation::canonical::isEvalFamily(func: Function<Any>[1]): Boolean[1]
 {
    let pe = $func->cast(@platform::pure::metamodel::PackageableElement);
    if ($pe.package->isEmpty(),
@@ -778,7 +779,7 @@ function platform::pure::translation::shared::isEvalFamily(func: Function<Any>[1
 // {@link foldWouldTriggerEvalSideEffect} to peek through eval's first arg.
 // compile() resolves every PackageableFunctionPointer at its boundary so the
 // value is a live Function (UDF or LambdaFunction) by the time it gets here.
-function platform::pure::translation::shared::extractFunctionValue(vs: ValueSpecification[1]): Function<Any>[0..1]
+function platform::extensions::pure::translation::canonical::extractFunctionValue(vs: ValueSpecification[1]): Function<Any>[0..1]
 {
    if (!$vs->instanceOf(AtomicValue),
       | []->cast(@Function<Any>),
@@ -799,7 +800,7 @@ function platform::pure::translation::shared::extractFunctionValue(vs: ValueSpec
 // multi → Collection of per-element AtomicValues. The outer node's
 // genericType + multiplicity match the original FE's so the AST stays
 // well-typed.
-function platform::pure::translation::shared::foldedResultToValueSpec(
+function platform::extensions::pure::translation::canonical::foldedResultToValueSpec(
    values: Any[*],
    fe: FunctionExpression[1]
 ): ValueSpecification[1]
@@ -833,7 +834,7 @@ function platform::pure::translation::shared::foldedResultToValueSpec(
 // Collection of all-constant children counts (Pure auto-spreads the
 // values into List<Any>). VariableExpressions and FunctionExpressions
 // that the bottom-up walk couldn't fold to a literal fail the check.
-function platform::pure::translation::shared::isConstantValueSpec(vs: ValueSpecification[1]): Boolean[1]
+function platform::extensions::pure::translation::canonical::isConstantValueSpec(vs: ValueSpecification[1]): Boolean[1]
 {
    $vs->match([
       av: AtomicValue[1] | $av.value->isNotEmpty(),
@@ -847,7 +848,7 @@ function platform::pure::translation::shared::isConstantValueSpec(vs: ValueSpeci
 // build the `List<Any>` arg wrappers that {@code evaluate} expects. The
 // scalar shape is `[value]`; a Collection becomes the flat list of its
 // element values (matching how Pure passes a multi-valued arg).
-function platform::pure::translation::shared::extractRuntimeValues(vs: ValueSpecification[1]): Any[*]
+function platform::extensions::pure::translation::canonical::extractRuntimeValues(vs: ValueSpecification[1]): Any[*]
 {
    $vs->match([
       av: AtomicValue[1] | $av.value->toOne(),
@@ -885,7 +886,7 @@ function platform::pure::translation::shared::extractRuntimeValues(vs: ValueSpec
 // the live registry.
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::nestedIfToMultiIf(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
+function platform::extensions::pure::translation::canonical::nestedIfToMultiIf(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
 {
    $f->match([
       udf: UserDefinedFunction<Any>[1] |
@@ -898,12 +899,12 @@ function platform::pure::translation::shared::nestedIfToMultiIf(f: FunctionDefin
    ]);
 }
 
-function platform::pure::translation::shared::hasPeelableNestedIf(udf: UserDefinedFunction<Any>[1]): Boolean[1]
+function platform::extensions::pure::translation::canonical::hasPeelableNestedIf(udf: UserDefinedFunction<Any>[1]): Boolean[1]
 {
    $udf.expressionSequence->exists(vs | $vs->hasPeelableNestedIfInVS());
 }
 
-function platform::pure::translation::shared::hasPeelableNestedIfInVS(vs: ValueSpecification[1]): Boolean[1]
+function platform::extensions::pure::translation::canonical::hasPeelableNestedIfInVS(vs: ValueSpecification[1]): Boolean[1]
 {
    $vs->match([
       fe: FunctionExpression[1] |
@@ -922,7 +923,7 @@ function platform::pure::translation::shared::hasPeelableNestedIfInVS(vs: ValueS
 // Compiled-side check: an arity-3 `if` whose else-branch is itself an
 // arity-3 `if` wrapped in a single-expression 0-arg lambda. This is the
 // shape we know how to flatten without losing surrounding bindings.
-function platform::pure::translation::shared::isPeelableIf3(fe: FunctionExpression[1]): Boolean[1]
+function platform::extensions::pure::translation::canonical::isPeelableIf3(fe: FunctionExpression[1]): Boolean[1]
 {
    if (!($fe.functionName == 'if' && $fe.parametersValues->size() == 3),
       | false,
@@ -945,7 +946,7 @@ function platform::pure::translation::shared::isPeelableIf3(fe: FunctionExpressi
    );
 }
 
-function platform::pure::translation::shared::nestedIfToMultiIfViaRecompile(udf: UserDefinedFunction<Any>[1]): UserDefinedFunction<Any>[1]
+function platform::extensions::pure::translation::canonical::nestedIfToMultiIfViaRecompile(udf: UserDefinedFunction<Any>[1]): UserDefinedFunction<Any>[1]
 {
    let funcType = $udf.classifierGenericType.typeArguments
                      ->at(0)
@@ -998,7 +999,7 @@ function platform::pure::translation::shared::nestedIfToMultiIfViaRecompile(udf:
 // `ValueSpecification[*]`, and LambdaFunction is NOT a ValueSpecification
 // in the protocol metamodel). So when we walk into a lambda body, we
 // return a new AtomicValue wrapping a freshly-built protocol lambda.
-function platform::pure::translation::shared::rewriteIfsToMultiIfProtocol(
+function platform::extensions::pure::translation::canonical::rewriteIfsToMultiIfProtocol(
    vs: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 ): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
@@ -1042,7 +1043,7 @@ function platform::pure::translation::shared::rewriteIfsToMultiIfProtocol(
 // Protocol shape: the else-branch is `AtomicValue(value=LambdaFunction)`
 // (either the decompile's pass-through of a compiled lambda, or our own
 // re-wrap from recursing into one). Peek through both layers.
-function platform::pure::translation::shared::tryFlattenIfChainProtocol(
+function platform::extensions::pure::translation::canonical::tryFlattenIfChainProtocol(
    fi: platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1],
    recursed: platform::pure::protocol::grammar::valuespecification::ValueSpecification[*]
 ): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
@@ -1062,7 +1063,7 @@ function platform::pure::translation::shared::tryFlattenIfChainProtocol(
 // inner if. Otherwise empty. Handles both shapes the value may take: a
 // compiled LambdaFunction PDO (decompile pass-through) or a protocol
 // LambdaFunction (after recursion through this pass).
-function platform::pure::translation::shared::protocolLambdaIfBody(
+function platform::extensions::pure::translation::canonical::protocolLambdaIfBody(
    vs: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 ): platform::pure::protocol::grammar::valuespecification::FunctionInvocation[0..1]
 {
@@ -1083,7 +1084,7 @@ function platform::pure::translation::shared::protocolLambdaIfBody(
 // decompile pass-through) or a protocol
 // `platform::pure::protocol::grammar::function::LambdaFunction` (rebuilt by
 // this pass). Returns empty if shape doesn't match.
-function platform::pure::translation::shared::protocolLambdaBody(
+function platform::extensions::pure::translation::canonical::protocolLambdaBody(
    v: Any[1]
 ): platform::pure::protocol::grammar::valuespecification::ValueSpecification[0..1]
 {
@@ -1110,7 +1111,7 @@ function platform::pure::translation::shared::protocolLambdaBody(
 // pairs + innerElse-as-default) or an already-flattened 2-arg multi-if
 // (we prepend outer's pair to the existing collection). Falls back to
 // returning the unchanged outer FE if innerIf's shape is something else.
-function platform::pure::translation::shared::mergeOuterIntoInnerIf(
+function platform::extensions::pure::translation::canonical::mergeOuterIntoInnerIf(
    outerCond: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1],
    outerThen: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1],
    innerIf: platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1],
@@ -1134,7 +1135,7 @@ function platform::pure::translation::shared::mergeOuterIntoInnerIf(
 }
 
 // Build a 2-arg multi-if FunctionInvocation: `if([pair, pair, ...], |default)`.
-function platform::pure::translation::shared::buildMultiIfProtocol(
+function platform::extensions::pure::translation::canonical::buildMultiIfProtocol(
    pairs: platform::pure::protocol::grammar::valuespecification::ValueSpecification[*],
    defaultLambda: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 ): platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1]
@@ -1158,7 +1159,7 @@ function platform::pure::translation::shared::buildMultiIfProtocol(
 // is `ValueSpecification[*]` and LambdaFunction is not a ValueSpec. The
 // `thenLambda` parameter is already `AtomicValue(value=LambdaFunction)`
 // from the original if — pass through unchanged.
-function platform::pure::translation::shared::makeProtocolPair(
+function platform::extensions::pure::translation::canonical::makeProtocolPair(
    cond: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1],
    thenLambda: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 ): platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1]
@@ -1199,7 +1200,7 @@ function platform::pure::translation::shared::makeProtocolPair(
 // inlining would lose the surrounding let-bindings.
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::ifBranchPrune(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
+function platform::extensions::pure::translation::canonical::ifBranchPrune(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
 {
    $f->match([
       udf: UserDefinedFunction<Any>[1] |
@@ -1209,7 +1210,7 @@ function platform::pure::translation::shared::ifBranchPrune(f: FunctionDefinitio
    ]);
 }
 
-function platform::pure::translation::shared::pruneIfBranches(vs: ValueSpecification[1]): ValueSpecification[1]
+function platform::extensions::pure::translation::canonical::pruneIfBranches(vs: ValueSpecification[1]): ValueSpecification[1]
 {
    $vs->match([
       fe: FunctionExpression[1] |
@@ -1228,7 +1229,7 @@ function platform::pure::translation::shared::pruneIfBranches(vs: ValueSpecifica
    ]);
 }
 
-function platform::pure::translation::shared::tryPruneIf(
+function platform::extensions::pure::translation::canonical::tryPruneIf(
    fe: FunctionExpression[1],
    recursed: ValueSpecification[*]
 ): ValueSpecification[1]
@@ -1245,7 +1246,7 @@ function platform::pure::translation::shared::tryPruneIf(
    );
 }
 
-function platform::pure::translation::shared::tryPruneIf3(
+function platform::extensions::pure::translation::canonical::tryPruneIf3(
    fe: FunctionExpression[1],
    recursed: ValueSpecification[*]
 ): ValueSpecification[1]
@@ -1262,7 +1263,7 @@ function platform::pure::translation::shared::tryPruneIf3(
    );
 }
 
-function platform::pure::translation::shared::tryPruneMultiIf(
+function platform::extensions::pure::translation::canonical::tryPruneMultiIf(
    fe: FunctionExpression[1],
    recursed: ValueSpecification[*]
 ): ValueSpecification[1]
@@ -1296,7 +1297,7 @@ function platform::pure::translation::shared::tryPruneMultiIf(
 //   - Stop at a non-literal cond and keep this pair + remaining tail
 //     (we can't prove later pairs unreachable). hitTrue=false.
 //   - Reach the end with no survivors → empty, hitTrue=false.
-function platform::pure::translation::shared::walkMultiIfPairs(
+function platform::extensions::pure::translation::canonical::walkMultiIfPairs(
    remaining: ValueSpecification[*]
 ): Pair<List<ValueSpecification>, Boolean>[1]
 {
@@ -1330,7 +1331,7 @@ function platform::pure::translation::shared::walkMultiIfPairs(
 
 // If `vs` is an AtomicValue holding a literal Boolean, return [bool].
 // Otherwise empty. The conds in 3-arg `if(...)` land here directly.
-function platform::pure::translation::shared::literalBooleanValue(vs: ValueSpecification[1]): Boolean[0..1]
+function platform::extensions::pure::translation::canonical::literalBooleanValue(vs: ValueSpecification[1]): Boolean[0..1]
 {
    if (!$vs->instanceOf(AtomicValue),
       | []->cast(@Boolean),
@@ -1344,7 +1345,7 @@ function platform::pure::translation::shared::literalBooleanValue(vs: ValueSpeci
 
 // Multi-if conds are wrapped in 0-arg lambdas. Peek through the lambda to
 // the body and check for a literal Boolean there.
-function platform::pure::translation::shared::lambdaBodyLiteralBoolean(vs: ValueSpecification[1]): Boolean[0..1]
+function platform::extensions::pure::translation::canonical::lambdaBodyLiteralBoolean(vs: ValueSpecification[1]): Boolean[0..1]
 {
    if (!$vs->instanceOf(AtomicValue),
       | []->cast(@Boolean),
@@ -1364,7 +1365,7 @@ function platform::pure::translation::shared::lambdaBodyLiteralBoolean(vs: Value
 // LambdaFunction. Returns empty if the shape doesn't match (multi-statement
 // body, non-empty parameters, or the value isn't a lambda) so the caller
 // can fall back to leaving the if intact.
-function platform::pure::translation::shared::extractSingleLambdaBody(vs: ValueSpecification[1]): ValueSpecification[0..1]
+function platform::extensions::pure::translation::canonical::extractSingleLambdaBody(vs: ValueSpecification[1]): ValueSpecification[0..1]
 {
    if (!$vs->instanceOf(AtomicValue),
       | []->cast(@ValueSpecification),
@@ -1383,7 +1384,7 @@ function platform::pure::translation::shared::extractSingleLambdaBody(vs: ValueS
 // Helper: if `extracted` is non-empty, use it; otherwise fall back to the
 // unchanged FunctionExpression. Lets the prune sites express
 // "extract-lambda-body, else keep original" in one chain.
-function platform::pure::translation::shared::extractedOrUnchanged(
+function platform::extensions::pure::translation::canonical::extractedOrUnchanged(
    extracted: ValueSpecification[0..1],
    fe: FunctionExpression[1],
    recursed: ValueSpecification[*]
@@ -1414,7 +1415,7 @@ function platform::pure::translation::shared::extractedOrUnchanged(
 // to keep this safe in practice.
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::deadLetElim(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
+function platform::extensions::pure::translation::canonical::deadLetElim(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
 {
    $f->match([
       udf: UserDefinedFunction<Any>[1] |
@@ -1426,7 +1427,7 @@ function platform::pure::translation::shared::deadLetElim(f: FunctionDefinition<
 // Iterate the expression sequence end-to-start, building the kept tail.
 // For each let, check the already-built tail for any reference to its
 // variable; drop if 0 references. Cascades a chain of dead lets in one pass.
-function platform::pure::translation::shared::dropUnreferencedLets(exprs: ValueSpecification[*]): ValueSpecification[*]
+function platform::extensions::pure::translation::canonical::dropUnreferencedLets(exprs: ValueSpecification[*]): ValueSpecification[*]
 {
    let n = $exprs->size();
    range(0, $n)
@@ -1443,7 +1444,7 @@ function platform::pure::translation::shared::dropUnreferencedLets(exprs: ValueS
 // Returns the variable name iff `vs` is a top-level `letFunction('name', value)`
 // invocation in standard shape: an arity-2 FE whose first arg is an
 // AtomicValue holding a String. Otherwise empty (not a let, or weird shape).
-function platform::pure::translation::shared::letBoundVarName(vs: ValueSpecification[1]): String[0..1]
+function platform::extensions::pure::translation::canonical::letBoundVarName(vs: ValueSpecification[1]): String[0..1]
 {
    if (!$vs->instanceOf(FunctionExpression),
       | []->cast(@String),
@@ -1468,7 +1469,7 @@ function platform::pure::translation::shared::letBoundVarName(vs: ValueSpecifica
 // Collection.values, and AtomicValue-wrapped LambdaFunction bodies. Does NOT
 // follow into nested LambdaFunctions whose `parameters` include `name`
 // (proper lexical shadowing).
-function platform::pure::translation::shared::referencesVariable(vs: ValueSpecification[1], name: String[1]): Boolean[1]
+function platform::extensions::pure::translation::canonical::referencesVariable(vs: ValueSpecification[1], name: String[1]): Boolean[1]
 {
    $vs->match([
       ve: platform::pure::metamodel::valuespecification::VariableExpression[1] |
@@ -1528,7 +1529,7 @@ function platform::pure::translation::shared::referencesVariable(vs: ValueSpecif
 //     in the same relative order; only the (pure) RHS hops over them.
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::singleUseLetInline(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
+function platform::extensions::pure::translation::canonical::singleUseLetInline(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
 {
    $f->match([
       udf: UserDefinedFunction<Any>[1] |
@@ -1548,7 +1549,7 @@ function platform::pure::translation::shared::singleUseLetInline(f: FunctionDefi
 // body). First recurse into every expression so nested scopes (lambda bodies)
 // are processed at their own boundary, then run the single-scope inliner
 // over the sequence at this scope.
-function platform::pure::translation::shared::inlineSingleUseLetsInSequence(exprs: ValueSpecification[*]): ValueSpecification[*]
+function platform::extensions::pure::translation::canonical::inlineSingleUseLetsInSequence(exprs: ValueSpecification[*]): ValueSpecification[*]
 {
    $exprs->map(e | $e->inlineSingleUseLetsRecurseIntoScopes())
          ->inlineSingleUseLetsAtThisScope();
@@ -1560,7 +1561,7 @@ function platform::pure::translation::shared::inlineSingleUseLetsInSequence(expr
 // propagate the walk to their children. NB: this DOES NOT inline at the
 // current node — that's done by `inlineSingleUseLetsAtThisScope` after the
 // parent sequence-walk returns.
-function platform::pure::translation::shared::inlineSingleUseLetsRecurseIntoScopes(vs: ValueSpecification[1]): ValueSpecification[1]
+function platform::extensions::pure::translation::canonical::inlineSingleUseLetsRecurseIntoScopes(vs: ValueSpecification[1]): ValueSpecification[1]
 {
    $vs->match([
       fe: FunctionExpression[1] |
@@ -1583,7 +1584,7 @@ function platform::pure::translation::shared::inlineSingleUseLetsRecurseIntoScop
 // substitute the use and drop the let; then recurse on the modified
 // sequence to catch chained inlinings. If no such let exists, leave the
 // sequence intact.
-function platform::pure::translation::shared::inlineSingleUseLetsAtThisScope(exprs: ValueSpecification[*]): ValueSpecification[*]
+function platform::extensions::pure::translation::canonical::inlineSingleUseLetsAtThisScope(exprs: ValueSpecification[*]): ValueSpecification[*]
 {
    if ($exprs->isEmpty(),
       | [],
@@ -1596,7 +1597,7 @@ function platform::pure::translation::shared::inlineSingleUseLetsAtThisScope(exp
              let rhs = $head->cast(@FunctionExpression).parametersValues->at(1);
              let tailUses = $tail->map(e | $e->countVariableReferences($name))->fold({n, acc | $acc + $n}, 0);
              if ($tailUses == 1 && $rhs->isSideEffectFreeForInlining(),
-                | let sub = ^platform::pure::translation::shared::ParamSub(name = $name, value = $rhs);
+                | let sub = ^platform::extensions::pure::translation::canonical::ParamSub(name = $name, value = $rhs);
                   let inlinedTail = $tail->map(e | $e->substituteVariables([$sub]));
                   // Drop the let, restart from the modified tail (the
                   // substitution may have exposed further single-use
@@ -1611,7 +1612,7 @@ function platform::pure::translation::shared::inlineSingleUseLetsAtThisScope(exp
 // Count VariableExpression references to `name` in a value-spec tree,
 // respecting lexical shadowing in nested lambdas. Mirror of
 // `referencesVariable`'s recursion but accumulating an integer count.
-function platform::pure::translation::shared::countVariableReferences(vs: ValueSpecification[1], name: String[1]): Integer[1]
+function platform::extensions::pure::translation::canonical::countVariableReferences(vs: ValueSpecification[1], name: String[1]): Integer[1]
 {
    $vs->match([
       ve: platform::pure::metamodel::valuespecification::VariableExpression[1] |
@@ -1642,7 +1643,7 @@ function platform::pure::translation::shared::countVariableReferences(vs: ValueS
 // Lambda VALUES (literal closures) are inherently pure to embed — the
 // lambda's body only runs when the closure is invoked, not at the position
 // the RHS is moved to.
-function platform::pure::translation::shared::isSideEffectFreeForInlining(vs: ValueSpecification[1]): Boolean[1]
+function platform::extensions::pure::translation::canonical::isSideEffectFreeForInlining(vs: ValueSpecification[1]): Boolean[1]
 {
    $vs->match([
       ve: platform::pure::metamodel::valuespecification::VariableExpression[1] | true,
@@ -1688,7 +1689,7 @@ function platform::pure::translation::shared::isSideEffectFreeForInlining(vs: Va
 // {@code compile} so the freshly-emitted {@code and} reference resolves.
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::filterFusion(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
+function platform::extensions::pure::translation::canonical::filterFusion(f: FunctionDefinition<Any>[1]): FunctionDefinition<Any>[1]
 {
    $f->match([
       udf: UserDefinedFunction<Any>[1] |
@@ -1708,7 +1709,7 @@ function platform::pure::translation::shared::filterFusion(f: FunctionDefinition
    ]);
 }
 
-function platform::pure::translation::shared::hasFusableFilterChainInVS(vs: ValueSpecification[1]): Boolean[1]
+function platform::extensions::pure::translation::canonical::hasFusableFilterChainInVS(vs: ValueSpecification[1]): Boolean[1]
 {
    $vs->match([
       fe: FunctionExpression[1] |
@@ -1727,7 +1728,7 @@ function platform::pure::translation::shared::hasFusableFilterChainInVS(vs: Valu
 // Compiled-side check: arity-2 `filter` whose first param is itself an
 // arity-2 `filter`. Both lambdas must be single-param, single-body-
 // expression and pass the capture-safety check.
-function platform::pure::translation::shared::isFusableFilterPair(fe: FunctionExpression[1]): Boolean[1]
+function platform::extensions::pure::translation::canonical::isFusableFilterPair(fe: FunctionExpression[1]): Boolean[1]
 {
    if (!($fe.functionName == 'filter' && $fe.parametersValues->size() == 2),
       | false,
@@ -1753,7 +1754,7 @@ function platform::pure::translation::shared::isFusableFilterPair(fe: FunctionEx
 
 // Returns the compiled LambdaFunction iff `vs` is an AtomicValue wrapping a
 // LambdaFunction with exactly one parameter and one body expression.
-function platform::pure::translation::shared::extractFilterLambda(vs: ValueSpecification[1]): LambdaFunction<Any>[0..1]
+function platform::extensions::pure::translation::canonical::extractFilterLambda(vs: ValueSpecification[1]): LambdaFunction<Any>[0..1]
 {
    if (!$vs->instanceOf(AtomicValue),
       | []->cast(@LambdaFunction<Any>),
@@ -1773,7 +1774,7 @@ function platform::pure::translation::shared::extractFilterLambda(vs: ValueSpeci
 // body will be rewritten to use inner's name. Refuse if the outer body
 // references the inner name as a free variable (would be captured by the
 // rename). When names match no rename is needed and any pair fuses.
-function platform::pure::translation::shared::filterLambdasFuseSafely(
+function platform::extensions::pure::translation::canonical::filterLambdasFuseSafely(
    innerLam: LambdaFunction<Any>[1],
    outerLam: LambdaFunction<Any>[1]
 ): Boolean[1]
@@ -1786,7 +1787,7 @@ function platform::pure::translation::shared::filterLambdasFuseSafely(
    );
 }
 
-function platform::pure::translation::shared::filterFusionViaRecompileUDF(udf: UserDefinedFunction<Any>[1]): UserDefinedFunction<Any>[1]
+function platform::extensions::pure::translation::canonical::filterFusionViaRecompileUDF(udf: UserDefinedFunction<Any>[1]): UserDefinedFunction<Any>[1]
 {
    let funcType = $udf.classifierGenericType.typeArguments
                      ->at(0)
@@ -1801,7 +1802,7 @@ function platform::pure::translation::shared::filterFusionViaRecompileUDF(udf: U
    );
 }
 
-function platform::pure::translation::shared::filterFusionViaRecompileLambda(lambda: LambdaFunction<Any>[1]): UserDefinedFunction<Any>[1]
+function platform::extensions::pure::translation::canonical::filterFusionViaRecompileLambda(lambda: LambdaFunction<Any>[1]): UserDefinedFunction<Any>[1]
 {
    let funcType = $lambda.classifierGenericType.typeArguments
                      ->at(0)
@@ -1816,7 +1817,7 @@ function platform::pure::translation::shared::filterFusionViaRecompileLambda(lam
    );
 }
 
-function platform::pure::translation::shared::filterFusionRecompileFromParts(
+function platform::extensions::pure::translation::canonical::filterFusionRecompileFromParts(
    expressionSequence: ValueSpecification[*],
    parameters: platform::pure::metamodel::valuespecification::VariableExpression[*],
    returnType: GenericType[1],
@@ -1865,7 +1866,7 @@ function platform::pure::translation::shared::filterFusionRecompileFromParts(
 // shape, but the fusion output is ArrowInvocation, so the outer pass over
 // a chain that already fused once-inside sees ArrowInvocation as its inner
 // receiver.
-function platform::pure::translation::shared::fuseFiltersProtocol(
+function platform::extensions::pure::translation::canonical::fuseFiltersProtocol(
    vs: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 ): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
@@ -1920,7 +1921,7 @@ function platform::pure::translation::shared::fuseFiltersProtocol(
 // fusedLambda)` as a fresh ArrowInvocation. Otherwise return the original
 // node (`originalFE`) with the recursed parametersValues spliced back in,
 // preserving its concrete subtype (FunctionInvocation / ArrowInvocation).
-function platform::pure::translation::shared::tryFuseFilterPairProtocol(
+function platform::extensions::pure::translation::canonical::tryFuseFilterPairProtocol(
    name: String[1],
    recursed: platform::pure::protocol::grammar::valuespecification::ValueSpecification[*],
    originalFE: platform::pure::protocol::grammar::valuespecification::FunctionExpression[1]
@@ -1949,7 +1950,7 @@ function platform::pure::translation::shared::tryFuseFilterPairProtocol(
 // Returns the FunctionExpression iff `vs` is an arity-2 `filter` call (in
 // either FunctionInvocation or ArrowInvocation form). Both subtypes share
 // parametersValues + functionName via FunctionExpression.
-function platform::pure::translation::shared::protocolFilterCall(
+function platform::extensions::pure::translation::canonical::protocolFilterCall(
    vs: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 ): platform::pure::protocol::grammar::valuespecification::FunctionExpression[0..1]
 {
@@ -1967,7 +1968,7 @@ function platform::pure::translation::shared::protocolFilterCall(
 // subtype (FunctionInvocation / ArrowInvocation / DotApplication). The
 // protocol's FunctionExpression doesn't have a uniform copy constructor,
 // so dispatch on the concrete subtype.
-function platform::pure::translation::shared::rebuildFEWithParams(
+function platform::extensions::pure::translation::canonical::rebuildFEWithParams(
    fe: platform::pure::protocol::grammar::valuespecification::FunctionExpression[1],
    params: platform::pure::protocol::grammar::valuespecification::ValueSpecification[*]
 ): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
@@ -1983,7 +1984,7 @@ function platform::pure::translation::shared::rebuildFEWithParams(
 // Protocol-side mirror of extractFilterLambda. Returns the LambdaFunction
 // iff `vs` is `AtomicValue(value=LambdaFunction)` with exactly one parameter
 // and one body expression.
-function platform::pure::translation::shared::extractFilterLambdaProtocol(
+function platform::extensions::pure::translation::canonical::extractFilterLambdaProtocol(
    vs: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 ): platform::pure::protocol::grammar::function::LambdaFunction[0..1]
 {
@@ -2003,7 +2004,7 @@ function platform::pure::translation::shared::extractFilterLambdaProtocol(
 
 // Protocol-side capture-safety check — same logic as the compiled-side
 // variant but walking protocol VS shapes.
-function platform::pure::translation::shared::filterLambdasFuseSafelyProtocol(
+function platform::extensions::pure::translation::canonical::filterLambdasFuseSafelyProtocol(
    innerLam: platform::pure::protocol::grammar::function::LambdaFunction[1],
    outerLam: platform::pure::protocol::grammar::function::LambdaFunction[1]
 ): Boolean[1]
@@ -2020,7 +2021,7 @@ function platform::pure::translation::shared::filterLambdasFuseSafelyProtocol(
 // The combined lambda reuses the inner lambda's parameter (preserving any
 // type annotation), and the outer body's references to its own parameter
 // are renamed to the inner name so the combined body type-checks.
-function platform::pure::translation::shared::buildFusedFilterProtocol(
+function platform::extensions::pure::translation::canonical::buildFusedFilterProtocol(
    receiver: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1],
    innerLam: platform::pure::protocol::grammar::function::LambdaFunction[1],
    outerLam: platform::pure::protocol::grammar::function::LambdaFunction[1]
@@ -2066,7 +2067,7 @@ function platform::pure::translation::shared::buildFusedFilterProtocol(
 // Protocol-AST variable rename. Walks down the tree replacing every
 // VariableExpression(name=from) with VariableExpression(name=to). Respects
 // lexical shadowing — does not descend into a lambda that re-binds `from`.
-function platform::pure::translation::shared::renameProtocolVariable(
+function platform::extensions::pure::translation::canonical::renameProtocolVariable(
    vs: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1],
    from: String[1],
    to: String[1]
@@ -2100,7 +2101,7 @@ function platform::pure::translation::shared::renameProtocolVariable(
 // Protocol-side mirror of `referencesVariable`. Does `vs` reference a
 // VariableExpression named `name` anywhere in its subtree, respecting
 // lexical shadowing in nested lambdas.
-function platform::pure::translation::shared::protocolReferencesVariable(
+function platform::extensions::pure::translation::canonical::protocolReferencesVariable(
    vs: platform::pure::protocol::grammar::valuespecification::ValueSpecification[1],
    name: String[1]
 ): Boolean[1]
@@ -2156,15 +2157,15 @@ function platform::pure::translation::shared::protocolReferencesVariable(
 // coder can handle as if it were written {@code fn(arg)} directly.
 // ============================================================================
 
-Class platform::pure::translation::shared::ParamSub
+Class platform::extensions::pure::translation::canonical::ParamSub
 {
    name  : String[1];
    value : ValueSpecification[1];
 }
 
-function platform::pure::translation::shared::substituteVariables(
+function platform::extensions::pure::translation::canonical::substituteVariables(
    vs: ValueSpecification[1],
-   subs: platform::pure::translation::shared::ParamSub[*]
+   subs: platform::extensions::pure::translation::canonical::ParamSub[*]
 ): ValueSpecification[1]
 {
    $vs->match([
@@ -2183,9 +2184,9 @@ function platform::pure::translation::shared::substituteVariables(
 // Single-VariableExpression lookup. Match-arm bodies in Pure can't hold a
 // {@code let} followed by a non-trailing expression, so we extract this
 // to its own function rather than inline-letting in the match arm.
-function platform::pure::translation::shared::substituteVariableLookup(
+function platform::extensions::pure::translation::canonical::substituteVariableLookup(
    ve: platform::pure::metamodel::valuespecification::VariableExpression[1],
-   subs: platform::pure::translation::shared::ParamSub[*]
+   subs: platform::extensions::pure::translation::canonical::ParamSub[*]
 ): ValueSpecification[1]
 {
    let hit = $subs->filter(s | $s.name == $ve.name);
@@ -2194,9 +2195,9 @@ function platform::pure::translation::shared::substituteVariableLookup(
 
 // AtomicValue may wrap a LambdaFunction; recurse with proper lexical
 // scoping (drop subs that the inner lambda re-binds).
-function platform::pure::translation::shared::substituteVariablesInAtomicValue(
+function platform::extensions::pure::translation::canonical::substituteVariablesInAtomicValue(
    av: AtomicValue[1],
-   subs: platform::pure::translation::shared::ParamSub[*]
+   subs: platform::extensions::pure::translation::canonical::ParamSub[*]
 ): ValueSpecification[1]
 {
    if ($av.value->isNotEmpty() && $av.value->toOne()->instanceOf(LambdaFunction),

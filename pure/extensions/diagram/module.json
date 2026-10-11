@@ -1,5 +1,5 @@
 {
   "name": "diagram",
-  "packagePattern": "(platform::pure::diagram)(::.*)?",
+  "packagePattern": "(platform::extensions::pure::diagram)(::.*)?",
   "dependencies": ["core", "compiler"]
 }

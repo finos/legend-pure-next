@@ -13,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::factory::*;
-import platform::external::language::java::factory::project::*;
-import platform::external::language::java::metamodel::*;
-import platform::external::language::java::metamodel::annotations::java::validation::constraints::*;
-import platform::external::language::java::metamodel::annotations::json::*;
-import platform::external::language::java::metamodel::project::*;
-import platform::external::language::java::serialization::*;
-import platform::external::language::java::serialization::tests::*;
+import platform::extensions::language::java::factory::*;
+import platform::extensions::language::java::factory::project::*;
+import platform::extensions::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::annotations::java::validation::constraints::*;
+import platform::extensions::language::java::metamodel::annotations::json::*;
+import platform::extensions::language::java::metamodel::project::*;
+import platform::extensions::language::java::serialization::*;
+import platform::extensions::language::java::serialization::tests::*;
 
-function <<test.Test>> platform::external::language::java::serialization::tests::preformattedText():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::preformattedText():Boolean[1]
 {
    test('''
         package org.finos.test;
@@ -64,7 +64,7 @@ function <<test.Test>> platform::external::language::java::serialization::tests:
    );
 }
 
-function <<test.Test>> platform::external::language::java::serialization::tests::folding():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::folding():Boolean[1]
 {
    let list    = j_parameter(javaList(javaString()), 'list');
    let p1      = j_parameter(javaList(javaString()), 'someParameterThatsNotUsed');
@@ -121,7 +121,7 @@ function <<test.Test>> platform::external::language::java::serialization::tests:
    );
 }
 
-function <<test.Test>> platform::external::language::java::serialization::tests::foldMethodCallsInConditional():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::foldMethodCallsInConditional():Boolean[1]
 {
    let list    = j_parameter(javaList(javaString()), 'list');
    let p1      = j_parameter(javaList(javaString()), 'someParameterThatsNotUsed');
@@ -174,7 +174,7 @@ function <<test.Test>> platform::external::language::java::serialization::tests:
    );
 }
 
-function <<test.Test>> platform::external::language::java::serialization::tests::longString():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::longString():Boolean[1]
 {
    let as1k  = range(1000)->map(n| 'a')->joinStrings('');
    let as80k = range(80)->map(n| $as1k)->joinStrings('');
@@ -190,7 +190,7 @@ function <<test.Test>> platform::external::language::java::serialization::tests:
    assert($lineOfInterest->contains('" + "'));
 }
 
-function <<test.Test>> platform::external::language::java::serialization::tests::emptyString():Boolean[1]
+function <<test.Test>> platform::extensions::language::java::serialization::tests::emptyString():Boolean[1]
 {
    test('''
         package org.finos.test;

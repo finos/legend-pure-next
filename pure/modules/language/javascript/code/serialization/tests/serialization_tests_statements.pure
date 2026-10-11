@@ -13,32 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::metamodel::*;
-import platform::external::language::javascript::serialization::*;
-import platform::external::language::javascript::serialization::tests::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::serialization::*;
+import platform::extensions::language::javascript::serialization::tests::*;
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::returnVoidStmt(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::returnVoidStmt(): Boolean[1]
 {
    testStmt('return;', jsReturn([]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::returnWithValue(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::returnWithValue(): Boolean[1]
 {
    testStmt('return 42;', jsReturn(jsNumLit('42')));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::expressionStmt(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::expressionStmt(): Boolean[1]
 {
    testStmt('foo();', jsExprStmt(jsCall(jsId('foo'), [])));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::emptyBlock(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::emptyBlock(): Boolean[1]
 {
    testStmt('{}', jsBlock([]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::blockWithReturn(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::blockWithReturn(): Boolean[1]
 {
    testStmt('''
             {
@@ -47,7 +47,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             jsBlock([jsReturn(jsNumLit('42'))]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::blockTwoStatements(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::blockTwoStatements(): Boolean[1]
 {
    testStmt('''
             {

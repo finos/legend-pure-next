@@ -13,43 +13,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::translation::*;
-import platform::external::language::java::translation::tests::*;
+import platform::extensions::language::java::translation::*;
+import platform::extensions::language::java::translation::tests::*;
 
 // Round-trip: translate `add`, compile+execute the generated Java, and assert
 // the returned Java long matches what Pure computes natively. Re-uses the
 // `add`/`sub`/`mul`/`div`/`neg` functions defined in translation_tests.pure
 // for symmetry with the AST-shape tests.
 
-function <<test.Test>> platform::external::language::java::translation::tests::testRunAddViaTranslation(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::translation::tests::testRunAddViaTranslation(): Boolean[1]
 {
    let conv = defaultConventions('org.finos.test');
    let result = $conv->runViaTranslation(add_Integer_1__Integer_1__Integer_1_, [2, 3]);
    assertEquals(5, $result);
 }
 
-function <<test.Test>> platform::external::language::java::translation::tests::testRunSubViaTranslation(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::translation::tests::testRunSubViaTranslation(): Boolean[1]
 {
    let conv = defaultConventions('org.finos.test');
    let result = $conv->runViaTranslation(sub_Integer_1__Integer_1__Integer_1_, [10, 4]);
    assertEquals(6, $result);
 }
 
-function <<test.Test>> platform::external::language::java::translation::tests::testRunMulViaTranslation(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::translation::tests::testRunMulViaTranslation(): Boolean[1]
 {
    let conv = defaultConventions('org.finos.test');
    let result = $conv->runViaTranslation(mul_Integer_1__Integer_1__Integer_1_, [3, 7]);
    assertEquals(21, $result);
 }
 
-function <<test.Test>> platform::external::language::java::translation::tests::testRunDivViaTranslation(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::translation::tests::testRunDivViaTranslation(): Boolean[1]
 {
    let conv = defaultConventions('org.finos.test');
    let result = $conv->runViaTranslation(div_Float_1__Float_1__Float_1_, [10.0, 4.0]);
    assertEquals(2.5, $result);
 }
 
-function <<test.Test>> platform::external::language::java::translation::tests::testRunNegViaTranslation(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::translation::tests::testRunNegViaTranslation(): Boolean[1]
 {
    let conv = defaultConventions('org.finos.test');
    let result = $conv->runViaTranslation(neg_Integer_1__Integer_1_, [7]);

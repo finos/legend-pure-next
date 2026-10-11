@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::imports::*;
-import platform::external::language::javascript::metamodel::*;
-import platform::external::language::javascript::serialization::*;
-import platform::external::language::javascript::serialization::tests::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::imports::*;
+import platform::extensions::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::serialization::*;
+import platform::extensions::language::javascript::serialization::tests::*;
 
 // =============================================================================
 // await expression
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::awaitSimple(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::awaitSimple(): Boolean[1]
 {
    testExpr('await fetch()', jsAwait(jsCall(jsId('fetch'), [])));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::awaitMemberAccess(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::awaitMemberAccess(): Boolean[1]
 {
    testExpr('await user.save()',
             jsAwait(jsCall(jsAccess(jsId('user'), 'save'), [])));
@@ -37,7 +37,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
 // async function / method / arrow
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::asyncFunctionDeclaration(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::asyncFunctionDeclaration(): Boolean[1]
 {
    testStmt('''
             async function load() {
@@ -47,7 +47,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
                jsBlock([jsReturn(jsAwait(jsCall(jsId('fetchUser'), [])))])));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::asyncMethod(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::asyncMethod(): Boolean[1]
 {
    testStmt('''
             class Repo {
@@ -64,7 +64,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             ]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::asyncArrowExpression(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::asyncArrowExpression(): Boolean[1]
 {
    testExpr('async (id) => await fetchUser(id)',
             jsAsyncArrowExpr(
@@ -72,7 +72,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
                jsAwait(jsCall(jsId('fetchUser'), [jsId('id')]))));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::asyncArrowBlock(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::asyncArrowBlock(): Boolean[1]
 {
    testExpr('''
             async (id) => {
@@ -87,7 +87,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
 // Walker descends through await — imports inside `await ...` get picked up
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::awaitInsideResolvesImports(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::awaitInsideResolvesImports(): Boolean[1]
 {
    let apiFile = jsSourceFile('src/api.ts', []);
    let appFile = jsSourceFile('src/app.ts', [

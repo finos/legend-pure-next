@@ -13,34 +13,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::*;
 
 Class
 {
-  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'javax.validation.constraints.NotNull'
+  platform::extensions::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'javax.validation.constraints.NotNull'
 }
-platform::external::language::java::metamodel::annotations::java::validation::constraints::NotNull extends platform::external::language::java::metamodel::Annotation
+platform::extensions::language::java::metamodel::annotations::java::validation::constraints::NotNull extends platform::extensions::language::java::metamodel::Annotation
 {
 }
 
-Class platform::external::language::java::metamodel::annotations::java::validation::constraints::Valid extends platform::external::language::java::metamodel::Annotation
+Class platform::extensions::language::java::metamodel::annotations::java::validation::constraints::Valid extends platform::extensions::language::java::metamodel::Annotation
 {
 }
 
-Class platform::external::language::java::metamodel::annotations::java::validation::constraints::Size extends platform::external::language::java::metamodel::Annotation
+Class platform::extensions::language::java::metamodel::annotations::java::validation::constraints::Size extends platform::extensions::language::java::metamodel::Annotation
 {
    min      :Integer[0..1];
    max      :Integer[0..1];
    message  :String[0..1];
 }
 
-Class platform::external::language::java::metamodel::annotations::java::validation::constraints::Min extends platform::external::language::java::metamodel::Annotation
+Class platform::extensions::language::java::metamodel::annotations::java::validation::constraints::Min extends platform::extensions::language::java::metamodel::Annotation
 {
    value    :Integer[1];
    message  :String[0..1];
 }
 
-Class platform::external::language::java::metamodel::annotations::java::validation::constraints::Max extends platform::external::language::java::metamodel::Annotation
+Class platform::extensions::language::java::metamodel::annotations::java::validation::constraints::Max extends platform::extensions::language::java::metamodel::Annotation
 {
    value    :Integer[1];
    message  :String[0..1];

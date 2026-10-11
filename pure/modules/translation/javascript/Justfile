@@ -139,10 +139,10 @@ build-tests:
 # reach exist only on that host.
 test-all: test-translation test-pure-runtime
 
-# Run the translator's own <<test.Test>> suite (platform::external::language::javascript::translation).
+# Run the translator's own <<test.Test>> suite (platform::extensions::language::javascript::translation).
 test-translation: build-tests _host-generate _depCheck_runtime-pdbs
     @{{header}} 'test-translation'
-    @{{substep}} 'runTests platform::external::language::javascript::translation (JavaScript host)'
+    @{{substep}} 'runTests platform::extensions::language::javascript::translation (JavaScript host)'
     {{pure_js}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -152,7 +152,7 @@ test-translation: build-tests _host-generate _depCheck_runtime-pdbs
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::external::language::javascript::translation" "{{test_results}}/pure/translation-javascript/pure@cli-javascript.json"
+        --args "platform::extensions::language::javascript::translation" "{{test_results}}/pure/translation-javascript/pure@cli-javascript.json"
 
 # Run the standard Pure runtime suites over platform::pure::functions on the JavaScript host, plus the
 # PCT tests through the translator adapter (their failures are reported without failing the build).
@@ -185,7 +185,7 @@ test-pure-runtime-PCTs: build-tests _host-generate _depCheck_runtime-pdbs
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "platform::external::language::javascript::translation::runPCTTestsViaTranslator_String_1__String_1__String_1_" \
+        --function "platform::extensions::language::javascript::translation::runPCTTestsViaTranslator_String_1__String_1__String_1_" \
         --args "platform::pure::functions" "{{test_results}}/spec/pct/javascript-translation@cli-javascript.json" || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
 
 # Build the Pure -> JavaScript translation gallery as a self-contained HTML page.

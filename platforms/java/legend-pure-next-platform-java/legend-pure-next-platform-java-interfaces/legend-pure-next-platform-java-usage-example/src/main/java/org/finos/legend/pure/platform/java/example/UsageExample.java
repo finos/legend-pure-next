@@ -14,7 +14,7 @@
 
 package org.finos.legend.pure.platform.java.example;
 
-import org.finos.legend.pure.m3.platform.pure.diagram.metamodel.Diagram;
+import org.finos.legend.pure.m3.platform.extensions.pure.diagram.metamodel.Diagram;
 import org.finos.legend.pure.platform.java.compiler.module.CompilationResult;
 import org.finos.legend.pure.platform.java.compiler.module.ModuleRegistry;
 import org.finos.legend.pure.platform.java.compiler.module.inMemoryModule.InMemoryModule;

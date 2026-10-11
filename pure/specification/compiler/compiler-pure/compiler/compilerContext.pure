@@ -572,7 +572,7 @@ function platform::pure::compiler::resolveAllElements(context:CompilerContext[1]
     // from elsewhere in the source tree — that would falsely flag e.g.
     // `Enumeration` as ambiguous between `platform::pure::metamodel::type::Enumeration`
     // (the only one in scope via imports) and
-    // `platform::external::language::java::metamodel::Enumeration` (a peer package
+    // `platform::extensions::language::java::metamodel::Enumeration` (a peer package
     // present in the source tree but not imported by the file under
     // compilation).
     if($context.elementMap->get($path)->isNotEmpty(),

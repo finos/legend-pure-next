@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::metamodel::*;
-import platform::external::language::javascript::serialization::*;
-import platform::external::language::javascript::serialization::tests::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::serialization::*;
+import platform::extensions::language::javascript::serialization::tests::*;
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::emptyObject(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::emptyObject(): Boolean[1]
 {
    testExpr('{}', jsEmptyObject());
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::objectOneEntry(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::objectOneEntry(): Boolean[1]
 {
    testExpr('{ name: \'Ada\' }', jsObject([jsEntry('name', jsStrLit('Ada'))]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::objectMultipleEntries(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::objectMultipleEntries(): Boolean[1]
 {
    testExpr(
       '{ name: \'Ada\', age: 36, active: true }',
@@ -38,12 +38,12 @@ function <<test.Test>> platform::external::language::javascript::serialization::
       ]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::objectShorthand(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::objectShorthand(): Boolean[1]
 {
    testExpr('{ x, y }', jsObject([jsEntryShorthand('x'), jsEntryShorthand('y')]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::nestedObject(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::nestedObject(): Boolean[1]
 {
    testExpr(
       '{ user: { name: \'Ada\' }, role: \'admin\' }',
@@ -53,7 +53,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
       ]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::objectInsideArrayLit(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::objectInsideArrayLit(): Boolean[1]
 {
    testExpr(
       '[{ id: 1 }, { id: 2 }]',
@@ -63,7 +63,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
       ]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::objectInConstDeclaration(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::objectInConstDeclaration(): Boolean[1]
 {
    testStmt(
       'const user = { name: \'Ada\', age: 36 };',
@@ -74,7 +74,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
          ])));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::objectAsCallArg(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::objectAsCallArg(): Boolean[1]
 {
    testExpr(
       'configure({ verbose: true, retries: 3 })',
@@ -85,7 +85,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
          ])]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::objectFromMapPipeline(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::objectFromMapPipeline(): Boolean[1]
 {
    // Object literals in arrow concise body MUST be parenthesized — pinning
    // that the serializer emits `({...})`, not `{...}` (which TS would parse

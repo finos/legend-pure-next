@@ -1261,7 +1261,7 @@ function __writeFile(path, content) {
   if (typeof globalThis.__pureHost?.hostWriteFile === "function") return globalThis.__pureHost?.hostWriteFile(path, content);
   throw new Error("writeFile: no file system in this environment");
 }
-// platform::external::language::javascript::{compile,execute,drainCompiledSources}
+// platform::extensions::language::javascript::{compile,execute,drainCompiledSources}
 // — evaluating JavaScript is a HOST capability, so runtime-lib only routes. The
 // standalone JS platform installs these from src/execution/js-natives.js; an
 // environment without them throws rather than silently degrading.
@@ -2762,7 +2762,7 @@ function __newByType(cgt) {
 // genuinely is not loaded, the plain object comes back, which is all this used to be.
 //
 // Without this, such an instance answered no accessor: `p._lastName is not a function`, from
-// platform::external::language::javascript::translation's own test suite.
+// platform::extensions::language::javascript::translation's own test suite.
 function __newOfSlots(slots) {
   const cgt = slots.classifierGenericType;
   const out = __newByType(cgt);

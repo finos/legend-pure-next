@@ -14,10 +14,10 @@
 // limitations under the License.
 
 
-import platform::external::language::java::factory::*;
-import platform::external::language::java::serialization::*;
-import platform::external::language::java::translation::*;
-import platform::external::language::java::translation::platform::*;
+import platform::extensions::language::java::factory::*;
+import platform::extensions::language::java::serialization::*;
+import platform::extensions::language::java::translation::*;
+import platform::extensions::language::java::translation::platform::*;
 import platform::pure::metamodel::function::property::*;
 import platform::pure::metamodel::type::*;
 
@@ -37,10 +37,10 @@ import platform::pure::metamodel::type::*;
 // build splits into a source tree.
 // ============================================================================
 
-function <<test.TestDependency>> platform::external::language::java::translation::platform::generatePlatformTypes(rootPackagePaths: String[1], javaRoot: String[1]): String[1]
+function <<test.TestDependency>> platform::extensions::language::java::translation::platform::generatePlatformTypes(rootPackagePaths: String[1], javaRoot: String[1]): String[1]
 {
-   platform::external::language::java::translation::platform::generatePlatformTypesFor($rootPackagePaths, $javaRoot,
-      platform::external::language::java::translation::defaultPlatformPackage());
+   platform::extensions::language::java::translation::platform::generatePlatformTypesFor($rootPackagePaths, $javaRoot,
+      platform::extensions::language::java::translation::defaultPlatformPackage());
 }
 
 // The platform TYPES the test wrappers need.
@@ -51,11 +51,11 @@ function <<test.TestDependency>> platform::external::language::java::translation
 // platform::pure::metamodel::relation but stored with the functions, which is why
 // the package walk misses them) never gets emitted. Feed the same generator the
 // tests-including walk and it finds them.
-function <<test.TestDependency>> platform::external::language::java::translation::platform::generatePlatformTypesWithTests(rootPackagePaths: String[1], javaRoot: String[1]): String[1]
+function <<test.TestDependency>> platform::extensions::language::java::translation::platform::generatePlatformTypesWithTests(rootPackagePaths: String[1], javaRoot: String[1]): String[1]
 {
    let elements = $rootPackagePaths->split(',')->map(p | $p->pathToElement()->cast(@platform::pure::metamodel::Package)
-                     ->platform::external::language::java::translation::translatableElementsWithTests());
-   let conv     = ^(platform::external::language::java::translation::conventionsFor($javaRoot, platform::external::language::java::translation::defaultPlatformPackage()))(metadataElements = true);
+                     ->platform::extensions::language::java::translation::translatableElementsWithTests());
+   let conv     = ^(platform::extensions::language::java::translation::conventionsFor($javaRoot, platform::extensions::language::java::translation::defaultPlatformPackage()))(metadataElements = true);
    // Also the types the FUNCTION SIGNATURES name. AggColSpec / FuncColSpec are
    // declared in platform::pure::metamodel::relation but stored with the functions,
    // so no package walk reaches them and nothing else names them — only
@@ -68,72 +68,72 @@ function <<test.TestDependency>> platform::external::language::java::translation
    let classes  = $types->filter(e | $e->instanceOf(Class) && !$e->instanceOf(Enumeration))->cast(@Class<Any>);
    let enums    = $types->filter(e | $e->instanceOf(Enumeration))->cast(@Enumeration<Any>);
    $classes->map(c | $c->platformFile($javaRoot, $conv->platformInterface($c, $javaRoot)))
-      ->concatenate($classes->map(c | '//// FILE ' + ($c->platformTypeName($javaRoot) + 'Impl')->replace('.', '/') + '.java\n' + $conv->platformImplementation($c, $javaRoot)->platform::external::language::java::serialization::classToStringWithPositions()))
+      ->concatenate($classes->map(c | '//// FILE ' + ($c->platformTypeName($javaRoot) + 'Impl')->replace('.', '/') + '.java\n' + $conv->platformImplementation($c, $javaRoot)->platform::extensions::language::java::serialization::classToStringWithPositions()))
       ->concatenate($enums->map(e | $e->platformFile($javaRoot, $e->platformEnum($javaRoot, $conv))))
       ->joinStrings('\n')
-      ->platform::external::language::java::translation::withPositionTable();
+      ->platform::extensions::language::java::translation::withPositionTable();
 }
 
 // The same generation, emitted for a NAMED host — see translatePackagesToJavaFor.
-function <<test.TestDependency>> platform::external::language::java::translation::platform::generatePlatformTypesFor(rootPackagePaths: String[1], javaRoot: String[1], platformPackage: String[1]): String[1]
+function <<test.TestDependency>> platform::extensions::language::java::translation::platform::generatePlatformTypesFor(rootPackagePaths: String[1], javaRoot: String[1], platformPackage: String[1]): String[1]
 {
-   platform::external::language::java::translation::platform::generatePlatformTypesForHost($rootPackagePaths, $javaRoot, $platformPackage, platform::external::language::java::translation::defaultPdbPackage($platformPackage), platform::external::language::java::translation::defaultRuntimePackage($platformPackage));
+   platform::extensions::language::java::translation::platform::generatePlatformTypesForHost($rootPackagePaths, $javaRoot, $platformPackage, platform::extensions::language::java::translation::defaultPdbPackage($platformPackage), platform::extensions::language::java::translation::defaultRuntimePackage($platformPackage));
 }
 
 // The same, for a host that keeps its support classes in ONE package: `hooksPackage` is
 // where the generated types look for both the metadata hooks and the runtime helpers.
-function <<test.TestDependency>> platform::external::language::java::translation::platform::generatePlatformTypesFor(rootPackagePaths: String[1], javaRoot: String[1], platformPackage: String[1], hooksPackage: String[1]): String[1]
+function <<test.TestDependency>> platform::extensions::language::java::translation::platform::generatePlatformTypesFor(rootPackagePaths: String[1], javaRoot: String[1], platformPackage: String[1], hooksPackage: String[1]): String[1]
 {
-   platform::external::language::java::translation::platform::generatePlatformTypesForHost($rootPackagePaths, $javaRoot, $platformPackage, $hooksPackage, $hooksPackage);
+   platform::extensions::language::java::translation::platform::generatePlatformTypesForHost($rootPackagePaths, $javaRoot, $platformPackage, $hooksPackage, $hooksPackage);
 }
 
 // The two support packages, separately — see translatePackagesToJavaForHost.
-function <<test.TestDependency>> platform::external::language::java::translation::platform::generatePlatformTypesForHost(rootPackagePaths: String[1], javaRoot: String[1], platformPackage: String[1], hooksPackage: String[1], runtimePackage: String[1]): String[1]
+function <<test.TestDependency>> platform::extensions::language::java::translation::platform::generatePlatformTypesForHost(rootPackagePaths: String[1], javaRoot: String[1], platformPackage: String[1], hooksPackage: String[1], runtimePackage: String[1]): String[1]
 {
    let elements = $rootPackagePaths->split(',')->map(p | $p->pathToElement()->cast(@platform::pure::metamodel::Package)->translatableElements());
    // A package walk misses types stored in another archive than their package
    // (platform::pure::metamodel::relation::ColSpec is defined with the functions),
    // so generate what the generated types name, too.
-   let conv     = ^(platform::external::language::java::translation::conventionsFor($javaRoot, $platformPackage))(metadataElements = true, pdbPackage = $hooksPackage, runtimePkg = $runtimePackage);
+   let conv     = ^(platform::extensions::language::java::translation::conventionsFor($javaRoot, $platformPackage))(metadataElements = true, pdbPackage = $hooksPackage, runtimePkg = $runtimePackage);
    let types    = $elements->filter(e | $e->instanceOf(Type))->cast(@Type)->withReferencedTypes();
    let classes  = $types->filter(e | $e->instanceOf(Class) && !$e->instanceOf(Enumeration))->cast(@Class<Any>);
    let enums    = $types->filter(e | $e->instanceOf(Enumeration))->cast(@Enumeration<Any>);
    let factory  = javaClass(['public', 'final'], $javaRoot + '.PdbTypes');
    $classes->map(c | $c->platformFile($javaRoot, $conv->platformInterface($c, $javaRoot)))
-      ->concatenate($classes->map(c | '//// FILE ' + ($c->platformTypeName($javaRoot) + 'Impl')->replace('.', '/') + '.java\n' + $conv->platformImplementation($c, $javaRoot)->platform::external::language::java::serialization::classToStringWithPositions()))
+      ->concatenate($classes->map(c | '//// FILE ' + ($c->platformTypeName($javaRoot) + 'Impl')->replace('.', '/') + '.java\n' + $conv->platformImplementation($c, $javaRoot)->platform::extensions::language::java::serialization::classToStringWithPositions()))
       ->concatenate($enums->map(e | $e->platformFile($javaRoot, $e->platformEnum($javaRoot, $conv))))
-      ->concatenate('//// FILE ' + ($javaRoot + '.PdbTypes')->replace('.', '/') + '.java\n' + $classes->platform::external::language::java::translation::platform::platformTypeFactory($javaRoot, $conv)->platform::external::language::java::serialization::classToStringWithPositions())
+      ->concatenate('//// FILE ' + ($javaRoot + '.PdbTypes')->replace('.', '/') + '.java\n' + $classes->platform::extensions::language::java::translation::platform::platformTypeFactory($javaRoot, $conv)->platform::extensions::language::java::serialization::classToStringWithPositions())
       ->joinStrings('\n')
-      ->platform::external::language::java::translation::withPositionTable();
+      ->platform::extensions::language::java::translation::withPositionTable();
 }
 
 // A generated type's source, preceded by its `//// FILE <path>` line.
-function platform::external::language::java::translation::platform::platformFile(element: platform::pure::metamodel::PackageableElement[1], javaRoot: String[1], type: platform::external::language::java::metamodel::Class[1]): String[1]
+function platform::extensions::language::java::translation::platform::platformFile(element: platform::pure::metamodel::PackageableElement[1], javaRoot: String[1], type: platform::extensions::language::java::metamodel::Class[1]): String[1]
 {
-   '//// FILE ' + $element->platformTypeName($javaRoot)->replace('.', '/') + '.java\n' + $type->platform::external::language::java::serialization::classToStringWithPositions();
+   '//// FILE ' + $element->platformTypeName($javaRoot)->replace('.', '/') + '.java\n' + $type->platform::extensions::language::java::serialization::classToStringWithPositions();
 }
 
 // The Java package root of the platform's types.
-function platform::external::language::java::translation::platform::platformRoot(): String[1]
+function platform::extensions::language::java::translation::platform::platformRoot(): String[1]
 {
    'org.finos.legend.pure.m3'
 }
 
 // True for the types the platform prebuilds (`just java::generate-types`): the
 // metamodel's and the core library's, test models excepted.
-function platform::external::language::java::translation::platform::isPrebuiltType(path: String[1]): Boolean[1]
+function platform::extensions::language::java::translation::platform::isPrebuiltType(path: String[1]): Boolean[1]
 {
    $path->startsWith('platform::pure::metamodel::') || ($path->startsWith('platform::pure::functions::') && !$path->contains('::tests::'));
 }
 
 // The Java package of a Pure element: `javaRoot` + its Pure package, keywords mangled.
-function platform::external::language::java::translation::platform::platformPackage(element: platform::pure::metamodel::PackageableElement[1], javaRoot: String[1]): String[1]
+function platform::extensions::language::java::translation::platform::platformPackage(element: platform::pure::metamodel::PackageableElement[1], javaRoot: String[1]): String[1]
 {
    let segments = $element->elementToPath()->split('::');
    $javaRoot->concatenate($segments->slice(0, $segments->size() - 1)->map(s | $s->safeJavaName()))->joinStrings('.');
 }
 
-function platform::external::language::java::translation::platform::platformTypeName(element: platform::pure::metamodel::PackageableElement[1], javaRoot: String[1]): String[1]
+function platform::extensions::language::java::translation::platform::platformTypeName(element: platform::pure::metamodel::PackageableElement[1], javaRoot: String[1]): String[1]
 {
    $element->platformPackage($javaRoot) + '.' + $element.name->toOne();
 }
@@ -142,7 +142,7 @@ function platform::external::language::java::translation::platform::platformType
 // or enum of a class or enumeration (every one has one: a translation generates
 // the types its types name, see {@link withReferencedTypes}), Object for anything
 // else (type parameters included); a List of it when many-valued.
-function platform::external::language::java::translation::platform::platformValueType(g: platform::pure::metamodel::type::generics::GenericType[1], m: platform::pure::metamodel::multiplicity::Multiplicity[1], javaRoot: String[1]): platform::external::language::java::metamodel::Type[1]
+function platform::extensions::language::java::translation::platform::platformValueType(g: platform::pure::metamodel::type::generics::GenericType[1], m: platform::pure::metamodel::multiplicity::Multiplicity[1], javaRoot: String[1]): platform::extensions::language::java::metamodel::Type[1]
 {
    let raw   = $g->rawType();
    let path  = $raw->filter(t | $t->instanceOf(platform::pure::metamodel::PackageableElement))->map(t | $t->cast(@platform::pure::metamodel::PackageableElement)->elementToPath());
@@ -176,7 +176,7 @@ function platform::external::language::java::translation::platform::platformValu
 // while a PROPERTY typed AntlrContext got a typed getter — so the diagram extension's
 // `value : AntlrContext[1]` generated `(AntlrContext) one("value")` and failed with a
 // ClassCastException on a real ANTLR context, on the only host where a property holds one.
-function platform::external::language::java::translation::platform::isOpaqueHostType(raw: platform::pure::metamodel::type::Type[*]): Boolean[1]
+function platform::extensions::language::java::translation::platform::isOpaqueHostType(raw: platform::pure::metamodel::type::Type[*]): Boolean[1]
 {
    $raw == [platform::pure::functions::meta::antlr::AntlrContext];
 }
@@ -185,7 +185,7 @@ function platform::external::language::java::translation::platform::isOpaqueHost
 // own Any, which every protocol class extends. A property typed by one holds
 // ANY value, a literal included (an AtomicValue's `value` is a Long or a
 // String), so it is read as Object: a typed getter would cast and fail.
-function platform::external::language::java::translation::platform::isTopType(raw: platform::pure::metamodel::type::Type[*]): Boolean[1]
+function platform::extensions::language::java::translation::platform::isTopType(raw: platform::pure::metamodel::type::Type[*]): Boolean[1]
 {
    $raw == [Any]
       || ($raw->size() == 1
@@ -195,14 +195,14 @@ function platform::external::language::java::translation::platform::isTopType(ra
 
 // A getter name for a property: the property name, `_`-suffixed when it is a
 // Java keyword or the name of a java.lang.Object method.
-function platform::external::language::java::translation::platform::getterName(propertyName: String[1]): String[1]
+function platform::extensions::language::java::translation::platform::getterName(propertyName: String[1]): String[1]
 {
    if (['getClass', 'hashCode', 'equals', 'toString', 'notify', 'notifyAll', 'wait', 'clone', 'finalize']->contains($propertyName),
       | $propertyName + '_',
       | $propertyName->safeJavaName());
 }
 
-function platform::external::language::java::translation::platform::platformInterface(conv: platform::external::language::java::translation::Conventions[1], cls: Class<Any>[1], javaRoot: String[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::translation::platform::platformInterface(conv: platform::extensions::language::java::translation::Conventions[1], cls: Class<Any>[1], javaRoot: String[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    let supers  = $cls.generalizations->map(g | $g.general->rawType())
                     ->filter(t | $t->instanceOf(Class) && $t->instanceOf(platform::pure::metamodel::PackageableElement))
@@ -219,7 +219,7 @@ function platform::external::language::java::translation::platform::platformInte
    // Setters and _copy() for every property of the class, inherited ones
    // included, returning this interface: `copy`/`new` chains then type on any
    // subtype, and each implementation overrides them covariantly.
-   let withQps = $conv->platform::external::language::java::translation::platformQualifiedPropertyMethods($cls, $javaRoot, false)->fold({m, i | $i->addMethod($m)}, $getters);
+   let withQps = $conv->platform::extensions::language::java::translation::platformQualifiedPropertyMethods($cls, $javaRoot, false)->fold({m, i | $i->addMethod($m)}, $getters);
    $cls->allPlatformProperties()->fold({p, i |
       $i->addMethod(javaMethod([], $self, '_' + $p.name->toOne(), [j_parameter(javaObject(), 'value')]))
         ->addMethod(javaMethod([], $self, '_' + $p.name->toOne() + '_add', [j_parameter(javaObject(), 'value')]))
@@ -229,7 +229,7 @@ function platform::external::language::java::translation::platform::platformInte
 
 // `_pureFinish()` declared on the interface of a class with association
 // properties, so a copy chain typed by the interface can call it.
-function platform::external::language::java::translation::platform::withFinishDeclaration(i: platform::external::language::java::metamodel::Class[1], cls: Class<Any>[1], self: platform::external::language::java::metamodel::Type[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::translation::platform::withFinishDeclaration(i: platform::extensions::language::java::metamodel::Class[1], cls: Class<Any>[1], self: platform::extensions::language::java::metamodel::Type[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    if ($cls->generalizationClosure()->exists(c | $c.propertiesFromAssociations->isNotEmpty()),
       | $i->addMethod(javaMethod([], $self, '_pureFinish', [])),
@@ -237,7 +237,7 @@ function platform::external::language::java::translation::platform::withFinishDe
 }
 
 // Map.Entry over `first`/`second`, on the implementation of Pure's Pair.
-function platform::external::language::java::translation::platform::withMapEntry(impl: platform::external::language::java::metamodel::Class[1], cls: Class<Any>[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::translation::platform::withMapEntry(impl: platform::extensions::language::java::metamodel::Class[1], cls: Class<Any>[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    if ($cls != platform::pure::functions::collection::Pair,
       | $impl,
@@ -247,7 +247,7 @@ function platform::external::language::java::translation::platform::withMapEntry
 }
 
 // Every qualified property of `cls` and of its generalizations, each name once.
-function platform::external::language::java::translation::platform::allPlatformQualifiedProperties(cls: Class<Any>[1]): platform::pure::metamodel::function::property::QualifiedProperty<Any>[*]
+function platform::extensions::language::java::translation::platform::allPlatformQualifiedProperties(cls: Class<Any>[1]): platform::pure::metamodel::function::property::QualifiedProperty<Any>[*]
 {
    $cls->generalizationClosure()->map(c | $c.qualifiedProperties->concatenate($c.qualifiedPropertiesFromAssociations))
       ->removeDuplicatesBy(qp | $qp->qualifiedPropertyName() + '/' + $qp.parameters->size()->toString());
@@ -255,28 +255,28 @@ function platform::external::language::java::translation::platform::allPlatformQ
 
 // The method name of a qualified property: its name without the signature
 // (`inParameters()` is stored with its parentheses).
-function platform::external::language::java::translation::platform::qualifiedPropertyName(qp: platform::pure::metamodel::function::property::QualifiedProperty<Any>[1]): String[1]
+function platform::extensions::language::java::translation::platform::qualifiedPropertyName(qp: platform::pure::metamodel::function::property::QualifiedProperty<Any>[1]): String[1]
 {
    $qp.name->toOne('qualifiedPropertyName: qualified property without a name')->split('(')->at(0);
 }
 
 // Every property of `cls` and of all its generalizations (transitively), the
 // class's own first, each name once — what an implementation must provide.
-function platform::external::language::java::translation::platform::allPlatformProperties(cls: Class<Any>[1]): AbstractProperty<Any>[*]
+function platform::extensions::language::java::translation::platform::allPlatformProperties(cls: Class<Any>[1]): AbstractProperty<Any>[*]
 {
    $cls->generalizationClosure()->map(c | $c.properties->concatenate($c.propertiesFromAssociations))->removeDuplicatesBy(p | $p.name->toOne());
 }
 
 // `types` and every class or enumeration their Java types name (generalizations
 // and property types), transitively.
-function platform::external::language::java::translation::platform::withReferencedTypes(types: Type[*]): Type[*]
+function platform::extensions::language::java::translation::platform::withReferencedTypes(types: Type[*]): Type[*]
 {
    $types->withReferencedTypes(false);
 }
 
 // The same, not looking into the types the platform prebuilds when
 // `stopAtPrebuilt` (what they name is prebuilt too).
-function platform::external::language::java::translation::platform::withReferencedTypes(types: Type[*], stopAtPrebuilt: Boolean[1]): Type[*]
+function platform::extensions::language::java::translation::platform::withReferencedTypes(types: Type[*], stopAtPrebuilt: Boolean[1]): Type[*]
 {
    // Only a packageable type has a path and a platform type: a TypeParameter
    // reaches here through a property's generic type and belongs to no package.
@@ -290,7 +290,7 @@ function platform::external::language::java::translation::platform::withReferenc
    if ($next->size() == $distinct->size(), | $distinct, | $next->withReferencedTypes($stopAtPrebuilt));
 }
 
-function platform::external::language::java::translation::platform::directlyReferencedTypes(cls: Class<Any>[1]): Type[*]
+function platform::extensions::language::java::translation::platform::directlyReferencedTypes(cls: Class<Any>[1]): Type[*]
 {
    $cls.generalizations->map(g | $g.general->rawType())
       ->concatenate($cls.properties->concatenate($cls.propertiesFromAssociations)->map(p | $p.genericType->rawType()))
@@ -298,7 +298,7 @@ function platform::external::language::java::translation::platform::directlyRefe
 }
 
 // `cls` followed by its generalizations, breadth first, each once.
-function platform::external::language::java::translation::platform::generalizationClosure(cls: Class<Any>[1]): Class<Any>[*]
+function platform::extensions::language::java::translation::platform::generalizationClosure(cls: Class<Any>[1]): Class<Any>[*]
 {
    let direct = $cls.generalizations->map(g | $g.general->rawType())->filter(t | $t->instanceOf(Class))->cast(@Class<Any>);
    $cls->concatenate($direct->map(d | $d->generalizationClosure()))->removeDuplicatesBy(c | $c->elementToPath());
@@ -311,14 +311,14 @@ function platform::external::language::java::translation::platform::generalizati
 // property as a List. `_p(v)` sets a property and `_p_add(v)` appends to it,
 // both returning the object for chaining (`new XImpl()._a(1)._b(2)`), and
 // `_copy()` makes a shallow copy that keeps a PDB backing.
-function platform::external::language::java::translation::platform::platformImplementation(conv: platform::external::language::java::translation::Conventions[1], cls: Class<Any>[1], javaRoot: String[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::translation::platform::platformImplementation(conv: platform::extensions::language::java::translation::Conventions[1], cls: Class<Any>[1], javaRoot: String[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    // A Pure Pair is a Map.Entry in translated code (pairCoder): ^Pair(...) builds
    // a PairImpl, which is one too, so both fit a Pair-typed property.
-   let entry = if ($cls == platform::pure::functions::collection::Pair, | [javaClass('java.util.Map.Entry')], | []->cast(@platform::external::language::java::metamodel::Type));
+   let entry = if ($cls == platform::pure::functions::collection::Pair, | [javaClass('java.util.Map.Entry')], | []->cast(@platform::extensions::language::java::metamodel::Type));
    let base = $entry->fold({e, c | $c->implements($e)},
                  javaClass(['public', 'final'], $cls->platformTypeName($javaRoot) + 'Impl')
-                 ->jextends(javaClass($conv->platform::external::language::java::translation::pdbClass('LazyObject')))
+                 ->jextends(javaClass($conv->platform::extensions::language::java::translation::pdbClass('LazyObject')))
                  ->implements(javaClass($cls->platformTypeName($javaRoot))))
                  ->javaDoc('PDB-backed implementation of Pure class ' + $cls->elementToPath() + '. Generated.')
                  ->addMethod(javaMethod(['public'], javaString(), '_purePath', [], 'return "' + $cls->elementToPath() + '";'))
@@ -344,10 +344,10 @@ function platform::external::language::java::translation::platform::platformImpl
       $c->addMethod(javaMethod(['public'], $type, $name->getterName(), [], $guarded))
         ->addMethod(javaMethod(['public'], $implType, '_' + $name, [j_parameter(javaObject(), 'value')], 'set("' + $name + '", value);\nreturn this;'))
         ->addMethod(javaMethod(['public'], $implType, '_' + $name + '_add', [j_parameter(javaObject(), 'value')], 'add("' + $name + '", value);\nreturn this;'));
-   }, $conv->platform::external::language::java::translation::platformQualifiedPropertyMethods($cls, $javaRoot, true)->fold({m, c | $c->addMethod($m)},
+   }, $conv->platform::extensions::language::java::translation::platformQualifiedPropertyMethods($cls, $javaRoot, true)->fold({m, c | $c->addMethod($m)},
          $base->addMethod(javaMethod(['public'], javaClass($cls->platformTypeName($javaRoot) + 'Impl'), '_copy', [], 'return copyInto(new ' + $cls.name->toOne() + 'Impl());'))))
       ->withAssociationFinish($cls, $javaRoot, $conv)
-      ->platform::external::language::java::translation::platform::withKeyEquality($cls, $conv)
+      ->platform::extensions::language::java::translation::platform::withKeyEquality($cls, $conv)
       ->withPureToString($cls);
 }
 
@@ -355,12 +355,12 @@ function platform::external::language::java::translation::platform::platformImpl
 // every association value must have been instantiated within the enclosing
 // new/copy expression, then each value's reverse end is set to this object
 // (see the platform runtime's PureNew). Classes without associations get none.
-function platform::external::language::java::translation::platform::withAssociationFinish(impl: platform::external::language::java::metamodel::Class[1], cls: Class<Any>[1], javaRoot: String[1], conv: platform::external::language::java::translation::Conventions[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::translation::platform::withAssociationFinish(impl: platform::extensions::language::java::metamodel::Class[1], cls: Class<Any>[1], javaRoot: String[1], conv: platform::extensions::language::java::translation::Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    let props = $cls->generalizationClosure()->map(c | $c.propertiesFromAssociations)->removeDuplicatesBy(p | $p.name->toOne());
    if ($props->isEmpty(),
       | $impl,
-      | let newType = $conv->platform::external::language::java::translation::pdbClass('PureNew');
+      | let newType = $conv->platform::extensions::language::java::translation::pdbClass('PureNew');
         let checks  = $props->map(p | $newType + '.checkFresh(__values("' + $p.name->toOne() + '"), "' + $p.name->toOne() + '", "' + $cls->elementToPath() + '");');
         let links   = $props->map(p |
            $p.owner->cast(@platform::pure::metamodel::relationship::Association).properties->filter(q | $q.name != $p.name)
@@ -373,7 +373,7 @@ function platform::external::language::java::translation::platform::withAssociat
 // equals/hashCode over the `<<equality.Key>>` properties (inherited ones
 // included): instances of the same class with equal keys are equal, as `==`
 // and contains() see them in Pure. Identity otherwise.
-function platform::external::language::java::translation::platform::withKeyEquality(impl: platform::external::language::java::metamodel::Class[1], cls: Class<Any>[1], conv: platform::external::language::java::translation::Conventions[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::translation::platform::withKeyEquality(impl: platform::extensions::language::java::metamodel::Class[1], cls: Class<Any>[1], conv: platform::extensions::language::java::translation::Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    let keys = $cls->allPlatformProperties()
        ->filter(p | $p.stereotypes->exists(s |
@@ -386,7 +386,7 @@ function platform::external::language::java::translation::platform::withKeyEqual
       | $impl->addMethod(javaMethod(['public'], javaBoolean(), 'equals', [j_parameter(javaObject(), 'o')],
            'if (this == o) { return true; }\n'
            + 'if (o == null || o.getClass() != getClass()) { return false; }\n'
-           + $conv->platform::external::language::java::translation::pdbClass('LazyObject') + ' other = (' + $conv->platform::external::language::java::translation::pdbClass('LazyObject') + ') o;\n'
+           + $conv->platform::extensions::language::java::translation::pdbClass('LazyObject') + ' other = (' + $conv->platform::extensions::language::java::translation::pdbClass('LazyObject') + ') o;\n'
            + 'return ' + $keys->map(k | 'java.util.Objects.equals(__values("' + $k + '"), other.__values("' + $k + '"))')->joinStrings(' && ') + ';'))
              ->addMethod(javaMethod(['public'], javaInt(), 'hashCode', [],
            'return java.util.Objects.hash(' + $keys->map(k | '__values("' + $k + '")')->joinStrings(', ') + ');')));
@@ -394,7 +394,7 @@ function platform::external::language::java::translation::platform::withKeyEqual
 
 // Pure's toString for the collection classes: a List prints its values as
 // `[a, b]`, a Pair as `<a, b>`.
-function platform::external::language::java::translation::platform::withPureToString(impl: platform::external::language::java::metamodel::Class[1], cls: Class<Any>[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::translation::platform::withPureToString(impl: platform::extensions::language::java::metamodel::Class[1], cls: Class<Any>[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    let path = $cls->elementToPath();
    if ($path == 'platform::pure::functions::collection::List',
@@ -410,7 +410,7 @@ function platform::external::language::java::translation::platform::withPureToSt
 
 // PdbTypes.create(table): a new implementation for a FlatBuffer table name
 // (`<PureClassName>Def`), null for tables without one.
-function platform::external::language::java::translation::platform::platformTypeFactory(classes: Class<Any>[*], javaRoot: String[1], conv: platform::external::language::java::translation::Conventions[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::translation::platform::platformTypeFactory(classes: Class<Any>[*], javaRoot: String[1], conv: platform::extensions::language::java::translation::Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    // This maps a PDB TABLE to the implementation to build while decoding, so it
    // holds the types a PDB can store — the metamodel and the core library.
@@ -422,16 +422,16 @@ function platform::external::language::java::translation::platform::platformType
    let cases = $storable->map(c | '    case "' + $c.name->toOne() + 'Def": return new ' + $c->platformTypeName($javaRoot) + 'Impl();')->joinStrings('\n');
    javaClass(['public', 'final'], $javaRoot + '.PdbTypes')
       ->javaDoc('FlatBuffer table name to generated implementation. Generated.')
-      ->addMethod(javaMethod(['public', 'static'], javaClass($conv->platform::external::language::java::translation::pdbClass('LazyObject')), 'create', [j_parameter(javaString(), 'table')],
+      ->addMethod(javaMethod(['public', 'static'], javaClass($conv->platform::extensions::language::java::translation::pdbClass('LazyObject')), 'create', [j_parameter(javaString(), 'table')],
            'switch (table)\n{\n' + $cases + '\n    default: return null;\n}'));
 }
 
-function platform::external::language::java::translation::platform::platformEnum(e: Enumeration<Any>[1], javaRoot: String[1], conv: platform::external::language::java::translation::Conventions[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::translation::platform::platformEnum(e: Enumeration<Any>[1], javaRoot: String[1], conv: platform::extensions::language::java::translation::Conventions[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    // PureEnumValue: the constant names its enumeration, so `genericType()` and
    // `type()` on an enum value resolve through the platform's metadata.
    javaEnum(['public'], $e->platformTypeName($javaRoot))
       ->addEntries($e->platform::pure::functions::meta::enumValues()->map(v | javaEnumEntry($v.name->toOne()->safeJavaName())))
-      ->implements(javaClass($conv->platform::external::language::java::translation::pdbClass('PureEnumValue')))
+      ->implements(javaClass($conv->platform::extensions::language::java::translation::pdbClass('PureEnumValue')))
       ->addMethod(javaMethod(['public'], javaString(), '_purePath', [], j_return(j_string($e->elementToPath()))));
 }

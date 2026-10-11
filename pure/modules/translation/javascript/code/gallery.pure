@@ -13,16 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::*;
-import platform::external::language::javascript::serialization::*;
-import platform::external::language::javascript::translation::*;
-import platform::external::language::javascript::translation::gallery::*;
+import platform::extensions::language::javascript::*;
+import platform::extensions::language::javascript::serialization::*;
+import platform::extensions::language::javascript::translation::*;
+import platform::extensions::language::javascript::translation::gallery::*;
 import platform::pure::functions::printer::compiled::*;
 import platform::pure::metamodel::function::*;
 import platform::pure::metamodel::valuespecification::*;
 import platform::pure::test::*;
-import platform::pure::translation::shared::*;
-import platform::pure::translation::shared::gallery::*;
+import platform::extensions::pure::translation::gallery::*;
 
 // ============================================================================
 // Pure -> JavaScript translation gallery. Walks every <<PCT.test>> function
@@ -43,14 +42,14 @@ import platform::pure::translation::shared::gallery::*;
 //     in-card badge on the translated column.
 //
 // All HTML chrome (tree, JS, CSS) lives in the shared
-// `platform::pure::translation::shared::gallery` module; this file only emits
+// `platform::extensions::pure::translation::gallery` module; this file only emits
 // per-test cards with the data attributes the chrome consumes.
 //
 // Entry point: `renderGallery(rootPackagePath)`. The `gallery` Justfile
 // recipe pipes stdout to `pure/modules/translation/javascript/build/javascript-translation-gallery.html`.
 // ============================================================================
 
-function <<test.TestDependency>> platform::external::language::javascript::translation::gallery::renderGallery(rootPackagePath: String[1]): String[1]
+function <<test.TestDependency>> platform::extensions::language::javascript::translation::gallery::renderGallery(rootPackagePath: String[1]): String[1]
 {
     let root  = pathToElement($rootPackagePath)->cast(@platform::pure::metamodel::Package);
     let tests = platform::pure::test::collectPCTTests($root);
@@ -75,7 +74,7 @@ function <<test.TestDependency>> platform::external::language::javascript::trans
 // `$f->eval(|lambda)` call, translates each one to TS (for display), and
 // runs the whole test through the TS adapter (for runtime pass/fail).
 function <<test.TestDependency>>
-   platform::external::language::javascript::translation::gallery::renderTestCard(
+   platform::extensions::language::javascript::translation::gallery::renderTestCard(
     test: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1],
     ctx: platform::pure::functions::printer::compiled::PrintContext[1]
 ): String[1]
@@ -129,7 +128,7 @@ function <<test.TestDependency>>
 // assertEquals/assertSize which throw on mismatch, so a clean return is
 // always a pass.
 function <<test.TestDependency>>
-   platform::external::language::javascript::translation::gallery::runTestViaAdapter(
+   platform::extensions::language::javascript::translation::gallery::runTestViaAdapter(
     test: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1]
 ): platform::pure::functions::collection::Pair<Boolean, String>[1]
 {
@@ -143,7 +142,7 @@ function <<test.TestDependency>>
 }
 
 function <<test.TestDependency>>
-   platform::external::language::javascript::translation::gallery::sourceIdOf(
+   platform::extensions::language::javascript::translation::gallery::sourceIdOf(
     el: platform::pure::metamodel::PackageableElement[1]
 ): String[1]
 {

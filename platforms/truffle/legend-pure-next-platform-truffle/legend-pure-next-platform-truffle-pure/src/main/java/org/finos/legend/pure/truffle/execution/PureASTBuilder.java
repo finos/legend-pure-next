@@ -345,7 +345,7 @@ public final class PureASTBuilder
             {
                 MetadataAccess r =
                         org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver();
-                Object regField = r.getElement("platform::external::language::java::metamodel::Field");
+                Object regField = r.getElement("platform::extensions::language::java::metamodel::Field");
                 if (regField != null)
                 {
                     registryView.append("\n  registry Field@").append(System.identityHashCode(regField));

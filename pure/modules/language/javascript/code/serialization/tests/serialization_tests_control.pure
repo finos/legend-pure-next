@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::metamodel::*;
-import platform::external::language::javascript::serialization::*;
-import platform::external::language::javascript::serialization::tests::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::serialization::*;
+import platform::extensions::language::javascript::serialization::tests::*;
 
 // =============================================================================
 // Ternary
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::ternarySimple(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::ternarySimple(): Boolean[1]
 {
    testExpr('x > 0 ? \'pos\' : \'neg\'',
             jsTernary(
@@ -30,7 +30,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
                jsStrLit('neg')));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::ternaryNested(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::ternaryNested(): Boolean[1]
 {
    testExpr('x > 0 ? \'pos\' : x < 0 ? \'neg\' : \'zero\'',
             jsTernary(
@@ -46,7 +46,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
 // If statement
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::ifStmtSingleBranch(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::ifStmtSingleBranch(): Boolean[1]
 {
    testStmt('''
             if (ready) {
@@ -58,7 +58,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
                []));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::ifStmtWithElse(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::ifStmtWithElse(): Boolean[1]
 {
    testStmt('''
             if (ready) {
@@ -72,7 +72,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
                jsBlock([jsReturn(jsNumLit('0'))])));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::ifElseIfChain(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::ifElseIfChain(): Boolean[1]
 {
    testStmt('''
             if (a) {
@@ -95,27 +95,27 @@ function <<test.Test>> platform::external::language::javascript::serialization::
 // let / const
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::letWithInit(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::letWithInit(): Boolean[1]
 {
    testStmt('let count = 0;', jsLet('count', jsNumLit('0')));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::letStringInit(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::letStringInit(): Boolean[1]
 {
    testStmt('let name = \'world\';', jsLet('name', jsStrLit('world')));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::letNoInit(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::letNoInit(): Boolean[1]
 {
    testStmt('let value;', jsLet('value', []));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::constWithInit(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::constWithInit(): Boolean[1]
 {
    testStmt('const PI = 3.14;', jsConst('PI', jsNumLit('3.14')));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::constInferred(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::constInferred(): Boolean[1]
 {
    testStmt('const greeting = \'hi\';', jsConst('greeting', jsStrLit('hi')));
 }
@@ -124,17 +124,17 @@ function <<test.Test>> platform::external::language::javascript::serialization::
 // Unary operators in conditional position
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::notExpr(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::notExpr(): Boolean[1]
 {
    testExpr('!ready', jsNot(jsId('ready')));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::negExpr(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::negExpr(): Boolean[1]
 {
    testExpr('-x', jsNeg(jsId('x')));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::typeofExpr(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::typeofExpr(): Boolean[1]
 {
    testExpr('typeof x', jsTypeof(jsId('x')));
 }
@@ -143,7 +143,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
 // Combined: guard-clause pattern
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::guardClause(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::guardClause(): Boolean[1]
 {
    testStmt('''
             if (!items.length) {

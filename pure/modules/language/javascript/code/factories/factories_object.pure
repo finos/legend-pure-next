@@ -27,21 +27,21 @@
 // requires a new ShorthandPropertyAssignment node, which can land when a
 // real generator needs the byte-level difference. Same story for spreads.
 
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::metamodel::*;
 
 // =============================================================================
 // Property assignments.
 // =============================================================================
 
-function platform::external::language::javascript::factories::jsEntry(key: String[1], value: Expression[1]): PropertyAssignment[1]
+function platform::extensions::language::javascript::factories::jsEntry(key: String[1], value: Expression[1]): PropertyAssignment[1]
 {
    ^PropertyAssignment(name=$key, initializer=$value);
 }
 
 // Renders as `{ x }` shorthand for `{ x: x }`. v2 (this round) uses the
 // proper ShorthandPropertyAssignment node; v1 emitted the long form.
-function platform::external::language::javascript::factories::jsEntryShorthand(name: String[1]): ShorthandPropertyAssignment[1]
+function platform::extensions::language::javascript::factories::jsEntryShorthand(name: String[1]): ShorthandPropertyAssignment[1]
 {
    ^ShorthandPropertyAssignment(name=$name);
 }
@@ -50,12 +50,12 @@ function platform::external::language::javascript::factories::jsEntryShorthand(n
 // Object literal.
 // =============================================================================
 
-function platform::external::language::javascript::factories::jsObject(entries: ObjectLiteralElement[*]): ObjectLiteralExpression[1]
+function platform::extensions::language::javascript::factories::jsObject(entries: ObjectLiteralElement[*]): ObjectLiteralExpression[1]
 {
    ^ObjectLiteralExpression(properties=$entries);
 }
 
-function platform::external::language::javascript::factories::jsEmptyObject(): ObjectLiteralExpression[1]
+function platform::extensions::language::javascript::factories::jsEmptyObject(): ObjectLiteralExpression[1]
 {
    ^ObjectLiteralExpression(properties=[]);
 }

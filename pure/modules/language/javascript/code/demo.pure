@@ -17,11 +17,11 @@
 // serialize it, return the rendered text. Useful for manual round-tripping
 // through `node`.
 
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::metamodel::*;
-import platform::external::language::javascript::serialization::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::serialization::*;
 
-function platform::external::language::javascript::demo::greeterSource(): String[1]
+function platform::extensions::language::javascript::demo::greeterSource(): String[1]
 {
    let method = jsMethod(
       'greet',

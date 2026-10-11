@@ -23,23 +23,23 @@
 // keys are meaningful. That is settled here, where an unknown key is ignored rather than
 // failing the file — a diagram written by a newer editor still opens in an older one.
 
-// The rules build the PROTOCOL form (platform::pure::diagram::protocol), which is GENERATED from
+// The rules build the PROTOCOL form (platform::extensions::pure::diagram::protocol), which is GENERATED from
 // code/metamodel.pure — a parser produces paths, not resolved elements. The metamodel is imported
 // only for the nothing it contributes here; the compiler is what maps one onto the other.
-import platform::pure::diagram::parser::*;
-import platform::pure::diagram::protocol::*;
+import platform::extensions::pure::diagram::parser::*;
+import platform::extensions::pure::diagram::protocol::*;
 import platform::pure::functions::meta::antlr::*;
 
 // A `key=value` pair, already reduced to text. Points keep their context, since a point is a
 // structure rather than a word.
-Class platform::pure::diagram::parser::ViewProperty
+Class platform::extensions::pure::diagram::parser::ViewProperty
 {
    key   : String[1];
    text  : String[1];
    value : AntlrContext[1];
 }
 
-function platform::pure::diagram::parser::viewProperties(view: AntlrContext[1]): ViewProperty[*]
+function platform::extensions::pure::diagram::parser::viewProperties(view: AntlrContext[1]): ViewProperty[*]
 {
    $view->getChildren('propertyList')
         ->map(l | $l->getChildren('property'))
@@ -49,12 +49,12 @@ function platform::pure::diagram::parser::viewProperties(view: AntlrContext[1]):
                      text  = $p->getChildren('value')->toOne()->getText()));
 }
 
-function platform::pure::diagram::parser::textOf(props: ViewProperty[*], key: String[1]): String[0..1]
+function platform::extensions::pure::diagram::parser::textOf(props: ViewProperty[*], key: String[1]): String[0..1]
 {
    $props->filter(p | $p.key == $key)->head().text;
 }
 
-function platform::pure::diagram::parser::floatOf(props: ViewProperty[*], key: String[1]): Float[0..1]
+function platform::extensions::pure::diagram::parser::floatOf(props: ViewProperty[*], key: String[1]): Float[0..1]
 {
    let text = textOf($props, $key);
    if ($text->isEmpty(), | [], | $text->toOne()->parseFloat());
@@ -62,19 +62,19 @@ function platform::pure::diagram::parser::floatOf(props: ViewProperty[*], key: S
 
 // A flag defaults to TRUE when absent: the editor omits what it has not changed, and a view
 // that says nothing about its stereotypes is showing them.
-function platform::pure::diagram::parser::flagOf(props: ViewProperty[*], key: String[1]): Boolean[1]
+function platform::extensions::pure::diagram::parser::flagOf(props: ViewProperty[*], key: String[1]): Boolean[1]
 {
    let text = textOf($props, $key);
    if ($text->isEmpty(), | true, | $text->toOne() == 'true');
 }
 
-function platform::pure::diagram::parser::buildPoint(ctx: AntlrContext[1]): Point[1]
+function platform::extensions::pure::diagram::parser::buildPoint(ctx: AntlrContext[1]): Point[1]
 {
    let numbers = $ctx->getChildren('number')->map(n | $n->getText()->parseFloat());
    ^Point(x = $numbers->at(0), y = $numbers->at(1));
 }
 
-function platform::pure::diagram::parser::pointOf(props: ViewProperty[*], key: String[1]): Point[0..1]
+function platform::extensions::pure::diagram::parser::pointOf(props: ViewProperty[*], key: String[1]): Point[0..1]
 {
    $props->filter(p | $p.key == $key)
          ->map(p | $p.value->getChildren('point'))
@@ -82,7 +82,7 @@ function platform::pure::diagram::parser::pointOf(props: ViewProperty[*], key: S
          ->head();
 }
 
-function platform::pure::diagram::parser::pointsOf(props: ViewProperty[*], key: String[1]): Point[*]
+function platform::extensions::pure::diagram::parser::pointsOf(props: ViewProperty[*], key: String[1]): Point[*]
 {
    $props->filter(p | $p.key == $key)
          ->map(p | $p.value->getChildren('pointList'))
@@ -90,7 +90,7 @@ function platform::pure::diagram::parser::pointsOf(props: ViewProperty[*], key: 
          ->map(c | buildPoint($c));
 }
 
-function platform::pure::diagram::parser::buildTypeView(ctx: AntlrContext[1]): TypeView[1]
+function platform::extensions::pure::diagram::parser::buildTypeView(ctx: AntlrContext[1]): TypeView[1]
 {
    let props = viewProperties($ctx);
    ^TypeView(
@@ -106,7 +106,7 @@ function platform::pure::diagram::parser::buildTypeView(ctx: AntlrContext[1]): T
       attributesVisible  = flagOf($props, 'attributesVisible'));
 }
 
-function platform::pure::diagram::parser::buildPropertyView(ctx: AntlrContext[1]): PropertyView[1]
+function platform::extensions::pure::diagram::parser::buildPropertyView(ctx: AntlrContext[1]): PropertyView[1]
 {
    let props = viewProperties($ctx);
    ^PropertyView(
@@ -120,7 +120,7 @@ function platform::pure::diagram::parser::buildPropertyView(ctx: AntlrContext[1]
       label     = textOf($props, 'label'));
 }
 
-function platform::pure::diagram::parser::buildAssociationView(ctx: AntlrContext[1]): AssociationView[1]
+function platform::extensions::pure::diagram::parser::buildAssociationView(ctx: AntlrContext[1]): AssociationView[1]
 {
    let props = viewProperties($ctx);
    ^AssociationView(
@@ -134,7 +134,7 @@ function platform::pure::diagram::parser::buildAssociationView(ctx: AntlrContext
       label       = textOf($props, 'label'));
 }
 
-function platform::pure::diagram::parser::buildGeneralizationView(ctx: AntlrContext[1]): GeneralizationView[1]
+function platform::extensions::pure::diagram::parser::buildGeneralizationView(ctx: AntlrContext[1]): GeneralizationView[1]
 {
    let props = viewProperties($ctx);
    ^GeneralizationView(
@@ -150,7 +150,7 @@ function platform::pure::diagram::parser::buildGeneralizationView(ctx: AntlrCont
 // Protocol SourceInformation for a parsed context, offset by the section's position in the
 // file. Deliberately a local copy of platform::pure::parser::mappings::buildSourceInfo rather
 // than a dependency on the parser-mappings module: five lines against a module edge.
-function platform::pure::diagram::parser::sourceInfoOf(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::SourceInformation[1]
+function platform::extensions::pure::diagram::parser::sourceInfoOf(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::SourceInformation[1]
 {
    ^platform::pure::protocol::grammar::SourceInformation(
       startLine   = $ctx->getStartLine() + $lineOffset,
@@ -161,12 +161,12 @@ function platform::pure::diagram::parser::sourceInfoOf(ctx: AntlrContext[1], lin
 
 // One `Diagram m::D(…) { … }` block, in protocol form: `m::D` splits into the element's name
 // and a Package_Pointer, so the compiler's pass 1 can place it under a real package.
-function platform::pure::diagram::parser::buildDiagram(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::diagram::protocol::Diagram[1]
+function platform::extensions::pure::diagram::parser::buildDiagram(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::extensions::pure::diagram::protocol::Diagram[1]
 {
    let dimension = $ctx->getChildren('dimension')->map(d | viewProperties($d));
    let path = $ctx->getTokenText('QUALIFIED_NAME')->toOne();
    let parts = $path->split('::');
-   ^platform::pure::diagram::protocol::Diagram(
+   ^platform::extensions::pure::diagram::protocol::Diagram(
       name                = $parts->last()->toOne(),
       package             = if($parts->size() < 2,
                                | [],
@@ -184,7 +184,7 @@ function platform::pure::diagram::parser::buildDiagram(ctx: AntlrContext[1], lin
 // Every diagram in a parsed `###Diagram` section. `lineOffset` is where the section starts in
 // the file, so a diagram's source information points at the real line rather than at line 1
 // of the section body.
-function platform::pure::diagram::parser::buildDiagrams(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::diagram::protocol::Diagram[*]
+function platform::extensions::pure::diagram::parser::buildDiagrams(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::extensions::pure::diagram::protocol::Diagram[*]
 {
    $ctx->getChildren('diagram')->map(d | buildDiagram($d, $lineOffset));
 }

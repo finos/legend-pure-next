@@ -13,17 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::*;
 
-Class platform::external::language::java::metamodel::annotations::immutables::value::Immutable extends platform::external::language::java::metamodel::Annotation
+Class platform::extensions::language::java::metamodel::annotations::immutables::value::Immutable extends platform::extensions::language::java::metamodel::Annotation
 {
 }
 
-Class platform::external::language::java::metamodel::annotations::immutables::value::Auxiliary extends platform::external::language::java::metamodel::Annotation
+Class platform::extensions::language::java::metamodel::annotations::immutables::value::Auxiliary extends platform::extensions::language::java::metamodel::Annotation
 {
 }
 
-Class platform::external::language::java::metamodel::annotations::immutables::value::Style extends platform::external::language::java::metamodel::Annotation
+Class platform::extensions::language::java::metamodel::annotations::immutables::value::Style extends platform::extensions::language::java::metamodel::Annotation
 {
    init: String[0..1];
    get: String[0..1];
@@ -37,10 +37,10 @@ Class platform::external::language::java::metamodel::annotations::immutables::va
    jdkOnly: Boolean[0..1];
 }
 
-Class platform::external::language::java::metamodel::annotations::immutables::value::Default extends platform::external::language::java::metamodel::Annotation
+Class platform::extensions::language::java::metamodel::annotations::immutables::value::Default extends platform::extensions::language::java::metamodel::Annotation
 {
 }
 
-Class platform::external::language::java::metamodel::annotations::immutables::value::Check extends platform::external::language::java::metamodel::Annotation
+Class platform::extensions::language::java::metamodel::annotations::immutables::value::Check extends platform::extensions::language::java::metamodel::Annotation
 {
 }

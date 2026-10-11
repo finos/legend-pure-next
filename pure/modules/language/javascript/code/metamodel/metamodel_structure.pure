@@ -15,19 +15,19 @@
 
 // Declarations and their members. See metamodel_type.pure for the strategy.
 
-import platform::external::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::metamodel::*;
 
 // =============================================================================
 // Statement / Declaration / Expression bases
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::Statement extends Node
+Class platform::extensions::language::javascript::metamodel::Statement extends Node
 {
 }
 
 // Declaration is a Statement: in JavaScript, top-level class/interface/function
 // declarations sit in the same statement list as `if`, `return`, etc.
-Class platform::external::language::javascript::metamodel::Declaration extends Statement
+Class platform::extensions::language::javascript::metamodel::Declaration extends Statement
 {
 }
 
@@ -38,7 +38,7 @@ Class platform::external::language::javascript::metamodel::Declaration extends S
 // have no runtime form and were dropped.
 // =============================================================================
 
-Enum platform::external::language::javascript::metamodel::ModifierFlag
+Enum platform::extensions::language::javascript::metamodel::ModifierFlag
 {
    Static,
    Async,
@@ -50,7 +50,7 @@ Enum platform::external::language::javascript::metamodel::ModifierFlag
 // SourceFile — one .ts file. Top-level node; parent of all statements.
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::SourceFile extends Node
+Class platform::extensions::language::javascript::metamodel::SourceFile extends Node
 {
    <<equality.Key>> filePath   : String[1];          // e.g. 'src/foo/bar.ts'
    statements : Statement[*];                        // imports + declarations + statements
@@ -70,7 +70,7 @@ Class platform::external::language::javascript::metamodel::SourceFile extends No
 // but cannot mix namespace and named.
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::ImportDeclaration extends Statement
+Class platform::extensions::language::javascript::metamodel::ImportDeclaration extends Statement
 [
    $this.namespaceImport->isEmpty() || $this.namedImports->isEmpty()
 ]
@@ -81,7 +81,7 @@ Class platform::external::language::javascript::metamodel::ImportDeclaration ext
    namespaceImport : String[0..1];                   // `* as <name>`
 }
 
-Class platform::external::language::javascript::metamodel::ImportSpecifier extends Node
+Class platform::extensions::language::javascript::metamodel::ImportSpecifier extends Node
 {
    <<equality.Key>> name  : String[1];               // name as exported
    alias : String[0..1];                             // local alias (`name as alias`)
@@ -94,33 +94,33 @@ Class platform::external::language::javascript::metamodel::ImportSpecifier exten
 // type reference).
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::ClassMember extends Node
+Class platform::extensions::language::javascript::metamodel::ClassMember extends Node
 {
    modifiers : ModifierFlag[*];
 }
 
-Class platform::external::language::javascript::metamodel::ClassDeclaration extends Declaration
+Class platform::extensions::language::javascript::metamodel::ClassDeclaration extends Declaration
 {
    <<equality.Key>> name           : String[1];
    modifiers      : ModifierFlag[*];
-   extendsClause  : platform::external::language::javascript::metamodel::Expression[0..1];
+   extendsClause  : platform::extensions::language::javascript::metamodel::Expression[0..1];
    members        : ClassMember[*];
 }
 
-Class platform::external::language::javascript::metamodel::PropertyDeclaration extends ClassMember
+Class platform::extensions::language::javascript::metamodel::PropertyDeclaration extends ClassMember
 {
    <<equality.Key>> name : String[1];
-   initializer : platform::external::language::javascript::metamodel::Expression[0..1];
+   initializer : platform::extensions::language::javascript::metamodel::Expression[0..1];
 }
 
-Class platform::external::language::javascript::metamodel::MethodDeclaration extends ClassMember
+Class platform::extensions::language::javascript::metamodel::MethodDeclaration extends ClassMember
 {
    <<equality.Key>> name : String[1];
    parameters     : ParameterDeclaration[*];
    body           : Block[0..1];                     // empty body permitted
 }
 
-Class platform::external::language::javascript::metamodel::ConstructorDeclaration extends ClassMember
+Class platform::extensions::language::javascript::metamodel::ConstructorDeclaration extends ClassMember
 {
    parameters : ParameterDeclaration[*];
    body       : Block[0..1];
@@ -132,13 +132,13 @@ Class platform::external::language::javascript::metamodel::ConstructorDeclaratio
 //   set x(v) { ... }
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::GetAccessor extends ClassMember
+Class platform::extensions::language::javascript::metamodel::GetAccessor extends ClassMember
 {
    <<equality.Key>> name : String[1];
    body       : Block[0..1];
 }
 
-Class platform::external::language::javascript::metamodel::SetAccessor extends ClassMember
+Class platform::extensions::language::javascript::metamodel::SetAccessor extends ClassMember
 {
    <<equality.Key>> name : String[1];
    parameter  : ParameterDeclaration[1];
@@ -149,7 +149,7 @@ Class platform::external::language::javascript::metamodel::SetAccessor extends C
 // FunctionDeclaration — top-level functions.
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::FunctionDeclaration extends Declaration
+Class platform::extensions::language::javascript::metamodel::FunctionDeclaration extends Declaration
 {
    <<equality.Key>> name : String[1];
    modifiers      : ModifierFlag[*];
@@ -169,10 +169,10 @@ Class platform::external::language::javascript::metamodel::FunctionDeclaration e
 //   - ArrayBindingPattern:       `function f([a, b]: T)`
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::ParameterDeclaration extends Node
+Class platform::extensions::language::javascript::metamodel::ParameterDeclaration extends Node
 {
    <<equality.Key>> name : BindingName[1];
-   initializer : platform::external::language::javascript::metamodel::Expression[0..1];
+   initializer : platform::extensions::language::javascript::metamodel::Expression[0..1];
 }
 
 // =============================================================================
@@ -189,16 +189,16 @@ Class platform::external::language::javascript::metamodel::ParameterDeclaration 
 // built-in).
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::ImportSource extends Node
+Class platform::extensions::language::javascript::metamodel::ImportSource extends Node
 {
 }
 
-Class platform::external::language::javascript::metamodel::LocalSource extends ImportSource
+Class platform::extensions::language::javascript::metamodel::LocalSource extends ImportSource
 {
    <<equality.Key>> target : SourceFile[1];
 }
 
-Class platform::external::language::javascript::metamodel::ExternalSource extends ImportSource
+Class platform::extensions::language::javascript::metamodel::ExternalSource extends ImportSource
 {
    <<equality.Key>> moduleSpecifier : String[1];
 }
@@ -215,20 +215,20 @@ Class platform::external::language::javascript::metamodel::ExternalSource extend
 // binding-name roles, matching ts.Identifier.
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::BindingName extends Node
+Class platform::extensions::language::javascript::metamodel::BindingName extends Node
 {
 }
 
-Class platform::external::language::javascript::metamodel::BindingPattern extends BindingName
+Class platform::extensions::language::javascript::metamodel::BindingPattern extends BindingName
 {
 }
 
-Class platform::external::language::javascript::metamodel::ObjectBindingPattern extends BindingPattern
+Class platform::extensions::language::javascript::metamodel::ObjectBindingPattern extends BindingPattern
 {
    elements : BindingElement[*];
 }
 
-Class platform::external::language::javascript::metamodel::ArrayBindingPattern extends BindingPattern
+Class platform::extensions::language::javascript::metamodel::ArrayBindingPattern extends BindingPattern
 {
    elements : BindingElement[*];
 }
@@ -251,10 +251,10 @@ Class platform::external::language::javascript::metamodel::ArrayBindingPattern e
 //   - propertyName is String, not PropertyName: computed-key destructure
 //     `const { [k]: v } = obj` is deferred.
 //   - Array holes (`const [, a] = arr`) are not modeled.
-Class platform::external::language::javascript::metamodel::BindingElement extends Node
+Class platform::extensions::language::javascript::metamodel::BindingElement extends Node
 {
    propertyName : String[0..1];
    <<equality.Key>> name : BindingName[1];
-   initializer  : platform::external::language::javascript::metamodel::Expression[0..1];
+   initializer  : platform::extensions::language::javascript::metamodel::Expression[0..1];
    isRest       : Boolean[0..1];
 }

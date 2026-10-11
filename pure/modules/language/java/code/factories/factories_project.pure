@@ -13,36 +13,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::factory::packages::*;
-import platform::external::language::java::factory::*;
-import platform::external::language::java::factory::project::*;
-import platform::external::language::java::metamodel::*;
-import platform::external::language::java::metamodel::project::*;
-import platform::external::language::java::serialization::*;
+import platform::extensions::language::java::factory::packages::*;
+import platform::extensions::language::java::factory::*;
+import platform::extensions::language::java::factory::project::*;
+import platform::extensions::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::project::*;
+import platform::extensions::language::java::serialization::*;
 
-function platform::external::language::java::factory::methodsDependency(class:platform::external::language::java::metamodel::Class[1], methodNames:String[*]):CodeDependency[1]
+function platform::extensions::language::java::factory::methodsDependency(class:platform::extensions::language::java::metamodel::Class[1], methodNames:String[*]):CodeDependency[1]
 {
    let depClass = ^$class(methods=$class.methods->filter(m| $methodNames->contains($m.name)));
 
    newDependency($class->typeToString()+$methodNames->joinStrings('[', '&', ']'), $depClass);
 }
 
-function platform::external::language::java::factory::newDependency(name:String[1], classes:platform::external::language::java::metamodel::Class[*]):CodeDependency[1]
+function platform::extensions::language::java::factory::newDependency(name:String[1], classes:platform::extensions::language::java::metamodel::Class[*]):CodeDependency[1]
 {
    newDependency($name, newProject()->addClasses($classes));
 }
 
-function platform::external::language::java::factory::newDependency(name:String[1], project:Project[1]):CodeDependency[1]
+function platform::extensions::language::java::factory::newDependency(name:String[1], project:Project[1]):CodeDependency[1]
 {
    newDependency($name, {state| $state->addProjectIfMissing($name, {|$project})});
 }
 
-function platform::external::language::java::factory::newDependency(name:String[1], stateUpdater:Function<{CodeDependencyResolutionState[1]->CodeDependencyResolutionState[1]}>[1]):CodeDependency[1]
+function platform::extensions::language::java::factory::newDependency(name:String[1], stateUpdater:Function<{CodeDependencyResolutionState[1]->CodeDependencyResolutionState[1]}>[1]):CodeDependency[1]
 {
    ^CodeDependency(name=$name, stateUpdater=$stateUpdater);
 }
 
-function platform::external::language::java::factory::addProjectIfMissing(state:CodeDependencyResolutionState[1], name:String[1], projectSupplier:Function<{->Project[1]}>[1]):CodeDependencyResolutionState[1]
+function platform::extensions::language::java::factory::addProjectIfMissing(state:CodeDependencyResolutionState[1], name:String[1], projectSupplier:Function<{->Project[1]}>[1]):CodeDependencyResolutionState[1]
 {
    if($state.projectsByDependency->keys()->contains($name),
       | $state,
@@ -50,55 +50,55 @@ function platform::external::language::java::factory::addProjectIfMissing(state:
    );
 }
 
-function platform::external::language::java::factory::addDependencyProject(state:CodeDependencyResolutionState[1], name:String[1], project:Project[1]):CodeDependencyResolutionState[1]
+function platform::extensions::language::java::factory::addDependencyProject(state:CodeDependencyResolutionState[1], name:String[1], project:Project[1]):CodeDependencyResolutionState[1]
 {
    ^$state(projectsByDependency=$state.projectsByDependency->put($name, $project));
 }
 
-function platform::external::language::java::factory::resolveProjects(dependencies:CodeDependency[*]):CodeDependencyResolutionState[1]
+function platform::extensions::language::java::factory::resolveProjects(dependencies:CodeDependency[*]):CodeDependencyResolutionState[1]
 {
    $dependencies->resolveProjects(^CodeDependencyResolutionState(projectsByDependency=^Map<String, Project>()));
 }
 
-function platform::external::language::java::factory::resolveProjects(dependencies:CodeDependency[*], state:CodeDependencyResolutionState[1]):CodeDependencyResolutionState[1]
+function platform::extensions::language::java::factory::resolveProjects(dependencies:CodeDependency[*], state:CodeDependencyResolutionState[1]):CodeDependencyResolutionState[1]
 {
    $dependencies->fold({d, s| $d.stateUpdater->eval($s)}, $state);
 }
 
 
-function platform::external::language::java::factory::getProjects(state:CodeDependencyResolutionState[1], dependencies:CodeDependency[*]):Project[*]
+function platform::extensions::language::java::factory::getProjects(state:CodeDependencyResolutionState[1], dependencies:CodeDependency[*]):Project[*]
 {
    $state.projectsByDependency->keyValues()->filter({kv|$dependencies.name->contains($kv.first)}).second;
 }
 
-function platform::external::language::java::factory::getProjects(state:CodeDependencyResolutionState[1]):Project[*]
+function platform::extensions::language::java::factory::getProjects(state:CodeDependencyResolutionState[1]):Project[*]
 {
    $state.projectsByDependency->keyValues().second;
 }
 
-function platform::external::language::java::factory::resolveAndGetProjects(dependencies:CodeDependency[*]):Project[*]
+function platform::extensions::language::java::factory::resolveAndGetProjects(dependencies:CodeDependency[*]):Project[*]
 {
    $dependencies->resolveProjects()->getProjects();
 }
 
-function platform::external::language::java::factory::apiKnowledge(from:platform::external::language::java::metamodel::Type[1]):platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::factory::apiKnowledge(from:platform::extensions::language::java::metamodel::Type[1]):platform::extensions::language::java::metamodel::Class[1]
 {
    let inferFrom = $from->match([
-      en:platform::external::language::java::metamodel::Enumeration[1]       | $en->apiKnowledge(),
-      pt:platform::external::language::java::metamodel::ParameterizedType[1] | $pt->apiKnowledge(),
-      cl:platform::external::language::java::metamodel::Class[1]             | $cl->apiKnowledge(),
-      cl:platform::external::language::java::metamodel::Array[1]             | arrayKnowledge(),
+      en:platform::extensions::language::java::metamodel::Enumeration[1]       | $en->apiKnowledge(),
+      pt:platform::extensions::language::java::metamodel::ParameterizedType[1] | $pt->apiKnowledge(),
+      cl:platform::extensions::language::java::metamodel::Class[1]             | $cl->apiKnowledge(),
+      cl:platform::extensions::language::java::metamodel::Array[1]             | arrayKnowledge(),
       a :Any[1]                                                          | javaObject()
    ])->addObjectMethods();
 }
 
-function platform::external::language::java::factory::apiKnowledge(in:platform::external::language::java::metamodel::Enumeration[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::factory::apiKnowledge(in:platform::extensions::language::java::metamodel::Enumeration[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    $in->addMethodIfMissing(javaMethod(javaString(), 'name',    []))
       ->addMethodIfMissing(javaMethod(javaInt(),    'ordinal', []))
 }
 
-function platform::external::language::java::factory::apiKnowledge(in:platform::external::language::java::metamodel::Class[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::factory::apiKnowledge(in:platform::extensions::language::java::metamodel::Class[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    if($in.simpleName->endsWith('Exception'),
       | $in->addMethodIfMissing(javaMethod(javaString(), 'getMessage', [])),
@@ -121,10 +121,10 @@ function platform::external::language::java::factory::apiKnowledge(in:platform::
    ))))));
 }
 
-function platform::external::language::java::factory::apiKnowledge(in:platform::external::language::java::metamodel::ParameterizedType[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::factory::apiKnowledge(in:platform::extensions::language::java::metamodel::ParameterizedType[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    $in.rawType->match([
-      {cl:platform::external::language::java::metamodel::Class[1] |
+      {cl:platform::extensions::language::java::metamodel::Class[1] |
          if($cl.package == javaPackage('java.util'),
             | $in->smartJavaUtil(),
             |
@@ -136,11 +136,11 @@ function platform::external::language::java::factory::apiKnowledge(in:platform::
             | $cl->apiKnowledge()
          )))
       },
-      t:platform::external::language::java::metamodel::Type[1] | $t->apiKnowledge()
+      t:platform::extensions::language::java::metamodel::Type[1] | $t->apiKnowledge()
    ])
 }
 
-function <<access.private>> platform::external::language::java::factory::arrayKnowledge(): platform::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::extensions::language::java::factory::arrayKnowledge(): platform::extensions::language::java::metamodel::Class[1]
 {
    javaClass('java.lang._Array_')->addField(javaField([], javaInt(), 'length'));
 }
@@ -148,48 +148,48 @@ function <<access.private>> platform::external::language::java::factory::arrayKn
 
 
 
-function platform::external::language::java::factory::project::newProject(): Project[1]
+function platform::extensions::language::java::factory::project::newProject(): Project[1]
 {
    newProject('dummy', 'dummy', 'dummy');
 }
 
-function platform::external::language::java::factory::project::newProject(group:String[1], artifact:String[1], version:String[1]): Project[1]
+function platform::extensions::language::java::factory::project::newProject(group:String[1], artifact:String[1], version:String[1]): Project[1]
 {
    newProject(^MavenReference(group=$group, artifact=$artifact, version=$version));
 }
 
-function platform::external::language::java::factory::project::newProject(id: MavenReference[1]): Project[1]
+function platform::extensions::language::java::factory::project::newProject(id: MavenReference[1]): Project[1]
 {
    ^Project(id=$id, root=^ProjectDirectory(name='ROOT'));
 }
 
-function platform::external::language::java::factory::project::addClass(project: Project[1], class: platform::external::language::java::metamodel::Class[1]): Project[1]
+function platform::extensions::language::java::factory::project::addClass(project: Project[1], class: platform::extensions::language::java::metamodel::Class[1]): Project[1]
 {
    $project->addClass('src/main/java', $class);
 }
 
-function platform::external::language::java::factory::project::replaceClass(project: Project[1], class: platform::external::language::java::metamodel::Class[1]): Project[1]
+function platform::extensions::language::java::factory::project::replaceClass(project: Project[1], class: platform::extensions::language::java::metamodel::Class[1]): Project[1]
 {
    $project->replaceClass('src/main/java', $class);
 }
 
-function platform::external::language::java::factory::project::addClass(project: Project[1], path:String[1], class: platform::external::language::java::metamodel::Class[1]): Project[1]
+function platform::extensions::language::java::factory::project::addClass(project: Project[1], path:String[1], class: platform::extensions::language::java::metamodel::Class[1]): Project[1]
 {
    ^$project(root=$project.root->ensurePathAndDo($path->split('/'), {d|$d->addToProjectDirectory($class)}));
 }
 
-function platform::external::language::java::factory::project::replaceClass(project: Project[1], path:String[1], class: platform::external::language::java::metamodel::Class[1]): Project[1]
+function platform::extensions::language::java::factory::project::replaceClass(project: Project[1], path:String[1], class: platform::extensions::language::java::metamodel::Class[1]): Project[1]
 {
    ^$project(root=$project.root->ensurePathAndDo($path->split('/'), {d|$d->replaceInProjectDirectory($class)}));
 }
 
-function platform::external::language::java::factory::project::mergeProjects(projects: Project[1..*]): Project[1]
+function platform::extensions::language::java::factory::project::mergeProjects(projects: Project[1..*]): Project[1]
 {
    let base = $projects->at(0);
    $projects->tail()->fold({p, b|$b->mergeProject($p)}, $base);
 }
 
-function platform::external::language::java::factory::project::mergeProjectsNullable(projects: Project[*]): Project[0..1]
+function platform::extensions::language::java::factory::project::mergeProjectsNullable(projects: Project[*]): Project[0..1]
 {
    $projects->match([
       p : Project[0..1] | $p,
@@ -197,13 +197,13 @@ function platform::external::language::java::factory::project::mergeProjectsNull
    ]);
 }
 
-function <<access.private>> platform::external::language::java::factory::project::mergeProject(base: Project[1], addition: Project[1]): Project[1]
+function <<access.private>> platform::extensions::language::java::factory::project::mergeProject(base: Project[1], addition: Project[1]): Project[1]
 {
    let withDirsAdded = $addition->allDirectories()->fold({d, p|$p->mergeDirectory($d)}, $base);
    ^$withDirsAdded(mainDependencies=$base.mainDependencies->concatenate($addition.mainDependencies)->removeDuplicates());
 }
 
-function <<access.private>> platform::external::language::java::factory::project::mergeClass(base: Project[1], dir: ProjectDirectory[1], class: platform::external::language::java::metamodel::Class[1]): Project[1]
+function <<access.private>> platform::extensions::language::java::factory::project::mergeClass(base: Project[1], dir: ProjectDirectory[1], class: platform::extensions::language::java::metamodel::Class[1]): Project[1]
 {
    let srcDirPath = findSrcDir($dir, $class.package).fullPath();
    let classFullName = $class.package->packageToString() + '.' + $class.simpleName;
@@ -212,9 +212,9 @@ function <<access.private>> platform::external::language::java::factory::project
       {|
          let existing = $base->getClass($srcDirPath, $classFullName)->toOne();
 
-         if ($existing->instanceOf(platform::external::language::java::metamodel::Enumeration) && $class->instanceOf(platform::external::language::java::metamodel::Class),
+         if ($existing->instanceOf(platform::extensions::language::java::metamodel::Enumeration) && $class->instanceOf(platform::extensions::language::java::metamodel::Class),
           | $base,
-          | if ($existing->instanceOf(platform::external::language::java::metamodel::Class) && $class->instanceOf(platform::external::language::java::metamodel::Enumeration),
+          | if ($existing->instanceOf(platform::extensions::language::java::metamodel::Class) && $class->instanceOf(platform::extensions::language::java::metamodel::Enumeration),
             | $base->replaceClass($class),
             | let imports = $existing.additionalImports->concatenate($class.additionalImports)->removeDuplicates();
 
@@ -263,34 +263,34 @@ function <<access.private>> platform::external::language::java::factory::project
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::project::findSrcDir(dir: ProjectDirectory[1], pkg: platform::external::language::java::metamodel::Package[1]): ProjectDirectory[1]
+function <<access.private>> platform::extensions::language::java::factory::project::findSrcDir(dir: ProjectDirectory[1], pkg: platform::extensions::language::java::metamodel::Package[1]): ProjectDirectory[1]
 {
    assert($dir.name == $pkg.name);
    $pkg.parent->match([
-      p0: platform::external::language::java::metamodel::Package[0] | $dir.parent->toOne(),
-      p : platform::external::language::java::metamodel::Package[1] | findSrcDir($dir.parent->toOne(), $p)
+      p0: platform::extensions::language::java::metamodel::Package[0] | $dir.parent->toOne(),
+      p : platform::extensions::language::java::metamodel::Package[1] | findSrcDir($dir.parent->toOne(), $p)
    ]);
 }
 
-function <<access.private>> platform::external::language::java::factory::project::addToProjectDirectory(dir: ProjectDirectory[1], class: platform::external::language::java::metamodel::Class[1]): ProjectDirectory[1]
+function <<access.private>> platform::extensions::language::java::factory::project::addToProjectDirectory(dir: ProjectDirectory[1], class: platform::extensions::language::java::metamodel::Class[1]): ProjectDirectory[1]
 {
    let dirNames = $class.package->packageToDirectoryNames();
    $dir->ensurePathAndDo($dirNames, d|^$d(classes=$d.classes->concatenate($class)->sort(c|$c.simpleName, {a, b | $a->compare($b)})));
 }
 
-function <<access.private>> platform::external::language::java::factory::project::addToProjectDirectory(dir: ProjectDirectory[1], file:File[1]): ProjectDirectory[1]
+function <<access.private>> platform::extensions::language::java::factory::project::addToProjectDirectory(dir: ProjectDirectory[1], file:File[1]): ProjectDirectory[1]
 {
    assert(!$dir.files->exists(f| $f.name == $file.name), |$dir.fullPath() + ' already contains a file named ' + $file.name);
    ^$dir(files=$dir.files->concatenate($file)->sort(f|$f.name, {a, b | $a->compare($b)}));
 }
 
-function <<access.private>> platform::external::language::java::factory::project::replaceInProjectDirectory(dir: ProjectDirectory[1], class: platform::external::language::java::metamodel::Class[1]): ProjectDirectory[1]
+function <<access.private>> platform::extensions::language::java::factory::project::replaceInProjectDirectory(dir: ProjectDirectory[1], class: platform::extensions::language::java::metamodel::Class[1]): ProjectDirectory[1]
 {
    let dirNames = $class.package->packageToDirectoryNames();
    $dir->ensurePathAndDo($dirNames, d|^$d(classes=$d.classes->filter(c|$c.simpleName != $class.simpleName)->concatenate($class)->sort(c|$c.simpleName, {a, b | $a->compare($b)})));
 }
 
-function <<access.private>> platform::external::language::java::factory::project::ensurePathAndDo(dir: ProjectDirectory[1], dirNames: String[*], action: Function<{ProjectDirectory[1]->ProjectDirectory[1]}>[1]): ProjectDirectory[1]
+function <<access.private>> platform::extensions::language::java::factory::project::ensurePathAndDo(dir: ProjectDirectory[1], dirNames: String[*], action: Function<{ProjectDirectory[1]->ProjectDirectory[1]}>[1]): ProjectDirectory[1]
 {
    let nextName = $dirNames->at(0);
    let tail     = $dirNames->tail();

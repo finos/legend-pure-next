@@ -165,10 +165,13 @@
     .mod-name:hover { background: var(--hover); text-decoration: underline; }
     .mod-name.selected { color: var(--accent); }
     .mod-count { color: var(--muted); font-size: 11px; margin-left: 6px; }
-    /* A shared module, already expanded higher up — named so the sharing is visible. */
-    .mod-leaf.repeat { opacity: 0.75; }
-    .mod-leaf.repeat .mod-name::after { content: " ⟲"; color: var(--muted); font-weight: 400; }
-    .mod-leaf.missing { color: var(--error); }
+    /* What a module uses, folded under its row: one dependency per line; one not loaded is flagged. */
+    .mod-uses > summary {
+      font: 11px/1.6 var(--mono); color: var(--muted); padding: 0 8px 2px 22px; cursor: pointer;
+    }
+    .mod-uses > summary:hover { color: var(--ink); }
+    .mod-dep { font: 12px/1.6 var(--mono); padding: 1px 8px 1px 38px; }
+    .mod-dep.missing { color: var(--error); text-decoration: line-through; }
     .mod-file { display: flex; align-items: center; gap: 2px; color: var(--muted); }
     .mod-file:hover { background: var(--hover); }
     .mod-file.active { background: var(--hover); }

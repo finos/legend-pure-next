@@ -13,10 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::*;
-import platform::external::language::java::serialization::*;
-import platform::external::language::java::translation::*;
-import platform::pure::translation::shared::*;
+import platform::extensions::language::java::*;
+import platform::extensions::language::java::serialization::*;
+import platform::extensions::language::java::translation::*;
 
 // JVM-runtime bridge for the Pure->Java translator: `translation.pure`
 // produces a Java metamodel Class; this file serialises that to source,
@@ -28,7 +27,7 @@ import platform::pure::translation::shared::*;
 
 // Translate a Pure function, then compile+execute the resulting Java with
 // the supplied arguments.
-function platform::external::language::java::translation::runViaTranslation(
+function platform::extensions::language::java::translation::runViaTranslation(
    conv: Conventions[1],
    f: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1],
    args: Any[*]
@@ -50,7 +49,7 @@ function platform::external::language::java::translation::runViaTranslation(
 // captures (recompiled with each capture substituted as a literal) and the
 // original LambdaFunction when it doesn't. translateFunctionDef dispatches on
 // that shape, so both paths land in the same buildSignature back-end.
-function platform::external::language::java::translation::testAdapterForTranslatedJava<X|o>(
+function platform::extensions::language::java::translation::testAdapterForTranslatedJava<X|o>(
    f: platform::pure::metamodel::function::Function<{->X[o]}>[1]
 ): X[o]
 {
@@ -59,8 +58,8 @@ function platform::external::language::java::translation::testAdapterForTranslat
    // Localize open variables — each capture becomes a single `let name = <value>;`
    // binding at the top of the body (named once; `$name` references survive),
    // rather than inlining the value at every use site.
-   let canonical = $lambda->platform::pure::translation::shared::makeCanonical(
-                       [platform::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]);
+   let canonical = $lambda->platform::extensions::pure::translation::canonical::makeCanonical(
+                       [platform::extensions::pure::translation::canonical::CanonicalMode.LocalizeOpenVariables]);
    let sig       = $conv->translateFunctionDef($canonical, 'PCTRunner');
    let source    = $sig->renderFullSource();
    let className = $sig.class->qualifiedClassName();
@@ -72,7 +71,7 @@ function platform::external::language::java::translation::testAdapterForTranslat
 // compilation unit. classToString emits `package X;\npublic class Y { ... }`
 // for the main class; we append each helper using the same serializer but
 // strip its leading `package X;\n\n` so javac sees one package declaration.
-function platform::external::language::java::translation::renderFullSource(sig: FunctionSignature[1]): String[1]
+function platform::extensions::language::java::translation::renderFullSource(sig: FunctionSignature[1]): String[1]
 {
    let mainSrc = $sig.class->classToString();
    let helpers = $sig.extraClasses->map(h | $h->classToString()->stripPackageHeader());
@@ -83,12 +82,12 @@ function platform::external::language::java::translation::renderFullSource(sig: 
    // put a position table and nothing to read it — a function translated at run
    // time has unpositioned frames.
    if ($sig.files->isEmpty(),
-      | $unit->platform::external::language::java::serialization::withoutMarkers(),
+      | $unit->platform::extensions::language::java::serialization::withoutMarkers(),
       | ('//// FILE ' + $sig.class->qualifiedClassName()->replace('.', '/') + '.java\n' + $unit + '\n' + $sig.files->joinStrings('\n'))
-           ->platform::external::language::java::serialization::withoutMarkers());
+           ->platform::extensions::language::java::serialization::withoutMarkers());
 }
 
-function platform::external::language::java::translation::stripPackageHeader(src: String[1]): String[1]
+function platform::extensions::language::java::translation::stripPackageHeader(src: String[1]): String[1]
 {
    // Drop the leading `package X;` line plus the blank line that follows.
    let firstNewline = $src->indexOf('\n');

@@ -13,15 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::*;
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::metamodel::*;
-import platform::external::language::javascript::serialization::*;
-import platform::external::language::javascript::translation::*;
-import platform::external::language::javascript::translation::pdb::*;
+import platform::extensions::language::javascript::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::serialization::*;
+import platform::extensions::language::javascript::translation::*;
+import platform::extensions::language::javascript::translation::pdb::*;
 import platform::pure::metamodel::function::*;
 import platform::pure::metamodel::type::*;
-import platform::pure::translation::shared::*;
 
 // ============================================================================
 // Bulk PDB → JavaScript translation. Walks every PackageableElement under
@@ -54,7 +53,7 @@ import platform::pure::translation::shared::*;
 //
 // Sharing the rule with the pdb split is the point: the two halves of a package agree about what a
 // test is, whichever side you look from.
-function platform::external::language::javascript::translation::pdb::isTestStereotype(
+function platform::extensions::language::javascript::translation::pdb::isTestStereotype(
    s: platform::pure::metamodel::extension::Stereotype[1]): Boolean[1]
 {
    let profilePath = $s.profile->cast(@platform::pure::metamodel::PackageableElement)->elementToPath();
@@ -62,7 +61,7 @@ function platform::external::language::javascript::translation::pdb::isTestStere
       || ($profilePath == 'platform::pure::test::pct::PCT' && ['test', 'adapter']->contains($s.value));
 }
 
-function platform::external::language::javascript::translation::pdb::isTestElement(
+function platform::extensions::language::javascript::translation::pdb::isTestElement(
    e: platform::pure::metamodel::PackageableElement[1]): Boolean[1]
 {
    if (!$e->instanceOf(platform::pure::metamodel::extension::ElementWithStereotypes),
@@ -77,13 +76,13 @@ function platform::external::language::javascript::translation::pdb::isTestEleme
 // their own — `platform::pure::functions::collection::tests::model::CO_Person` sits inside
 // `platform::pure::functions` — so a package walk cannot help but collect them. They were 63% of
 // functions.js, shipped to every host including the browser IDE, which needs none of it.
-function platform::external::language::javascript::translation::pdb::translatePackageToJs(rootPackagePath: String[1]): String[1]
+function platform::extensions::language::javascript::translation::pdb::translatePackageToJs(rootPackagePath: String[1]): String[1]
 {
    $rootPackagePath->translatePackageHalfToJs(false);
 }
 
 // The TEST half of a package: only test material. Loaded by the test harnesses, nothing else.
-function platform::external::language::javascript::translation::pdb::translatePackageTestsToJs(rootPackagePath: String[1]): String[1]
+function platform::extensions::language::javascript::translation::pdb::translatePackageTestsToJs(rootPackagePath: String[1]): String[1]
 {
    $rootPackagePath->translatePackageHalfToJs(true);
 }
@@ -92,13 +91,13 @@ function platform::external::language::javascript::translation::pdb::translatePa
 // where a split makes no sense. Its `<<PCT.adapter>>` functions are test material by the rule above,
 // but the package exists only to run tests and only test hosts load it, so it stays whole rather than
 // being cut into `test.js` plus a companion that always travels with it.
-function platform::external::language::javascript::translation::pdb::translatePackageAllToJs(rootPackagePath: String[1]): String[1]
+function platform::extensions::language::javascript::translation::pdb::translatePackageAllToJs(rootPackagePath: String[1]): String[1]
 {
    let root = pathToElement($rootPackagePath)->cast(@platform::pure::metamodel::Package);
    $rootPackagePath->emitElements($root->collectAllElements(), '');
 }
 
-function platform::external::language::javascript::translation::pdb::translatePackageHalfToJs(
+function platform::extensions::language::javascript::translation::pdb::translatePackageHalfToJs(
    rootPackagePath: String[1], tests: Boolean[1]): String[1]
 {
    let root = pathToElement($rootPackagePath)->cast(@platform::pure::metamodel::Package);
@@ -107,7 +106,7 @@ function platform::external::language::javascript::translation::pdb::translatePa
       if($tests, | ' (TEST elements only)', | ' (library elements; tests are in the -tests companion)'));
 }
 
-function platform::external::language::javascript::translation::pdb::emitElements(
+function platform::extensions::language::javascript::translation::pdb::emitElements(
    rootPackagePath: String[1],
    elements: platform::pure::metamodel::PackageableElement[*],
    half: String[1]): String[1]
@@ -141,7 +140,7 @@ function platform::external::language::javascript::translation::pdb::emitElement
 // that function lives in core-tests, and translatePackageToJs is the translator's entry point. A
 // host that translates at run time would otherwise have to load the whole PCT corpus (5.35 MB) to
 // reach five lines, which is what kept this file's entry point tagged <<test.TestDependency>>.
-function platform::external::language::javascript::translation::pdb::resolvePackageChild(
+function platform::extensions::language::javascript::translation::pdb::resolvePackageChild(
    c: platform::pure::metamodel::PackageableElement[1]
 ): platform::pure::metamodel::PackageableElement[1]
 {
@@ -153,7 +152,7 @@ function platform::external::language::javascript::translation::pdb::resolvePack
 // Classes, Enumerations, UserDefinedFunctions. Skips functions whose body
 // is wholly built from natives the translator already covers (everything is
 // included by default; the runtime preamble carries the natives).
-function platform::external::language::javascript::translation::pdb::collectAllElements(
+function platform::extensions::language::javascript::translation::pdb::collectAllElements(
    pkg: platform::pure::metamodel::Package[1]
 ): platform::pure::metamodel::PackageableElement[*]
 {
@@ -167,7 +166,7 @@ function platform::external::language::javascript::translation::pdb::collectAllE
    concatenate($direct, $subPackages->map(p | $p->collectAllElements()));
 }
 
-function platform::external::language::javascript::translation::pdb::isTranslatableElement(
+function platform::extensions::language::javascript::translation::pdb::isTranslatableElement(
    e: platform::pure::metamodel::PackageableElement[1]
 ): Boolean[1]
 {
@@ -178,7 +177,7 @@ function platform::external::language::javascript::translation::pdb::isTranslata
 
 // Dispatch on element kind. Returns '' for elements we skip silently (e.g.
 // abstract / typemodifiers-marked classes that wouldn't translate cleanly).
-function platform::external::language::javascript::translation::pdb::translateElement(
+function platform::extensions::language::javascript::translation::pdb::translateElement(
    e: platform::pure::metamodel::PackageableElement[1]
 ): String[1]
 {
@@ -200,7 +199,7 @@ function platform::external::language::javascript::translation::pdb::translateEl
 // `static qualifiedProperties` for the ones whose bodies only the translator can render. A class the
 // translator cannot render degrades to a comment, and references to it then fall back to the
 // `__pureResolve` proxy.
-function platform::external::language::javascript::translation::pdb::translateClass(
+function platform::extensions::language::javascript::translation::pdb::translateClass(
    cls: platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>[1]
 ): String[1]
 {
@@ -221,7 +220,7 @@ function platform::external::language::javascript::translation::pdb::translateCl
 // `{ name, classifierGenericType: { type: <enum ref> } }`, so enum-value
 // reflection — `genericType()`, `type()`, `instanceOf`, equality across
 // enumerations — works on values read from the bundle, not just `$v.name`.
-function platform::external::language::javascript::translation::pdb::translateEnumeration(
+function platform::extensions::language::javascript::translation::pdb::translateEnumeration(
    en: platform::pure::metamodel::type::Enumeration<platform::pure::metamodel::type::Any>[1]
 ): String[1]
 {
@@ -236,8 +235,8 @@ function platform::external::language::javascript::translation::pdb::translateEn
    '// Enumeration ' + $en->elementToPath() + '\n' +
    jsSourceFile('translated.js', [
       jsIfStmt(jsBinary(jsTypeof(jsAccess(jsId('globalThis'), $name)), '===', jsStrLit('undefined')),
-               jsBlock([$decl->cast(@platform::external::language::javascript::metamodel::Statement),
-                        $publish->cast(@platform::external::language::javascript::metamodel::Statement)]),
+               jsBlock([$decl->cast(@platform::extensions::language::javascript::metamodel::Statement),
+                        $publish->cast(@platform::extensions::language::javascript::metamodel::Statement)]),
                [])
    ])->serialize();
 }
@@ -246,7 +245,7 @@ function platform::external::language::javascript::translation::pdb::translateEn
 // serialize the resulting SourceFile. Strip the `export function execute(...)`
 // wrapper and rename to the UDF's short name so the bundle reads like a
 // hand-written TS module.
-function platform::external::language::javascript::translation::pdb::translateUdfElement(
+function platform::extensions::language::javascript::translation::pdb::translateUdfElement(
    udf: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1]
 ): String[1]
 {
@@ -260,7 +259,7 @@ function platform::external::language::javascript::translation::pdb::translateUd
       | '// ' + $path + '\n' + $attempt.value);
 }
 
-function platform::external::language::javascript::translation::pdb::renderUdfTs(
+function platform::extensions::language::javascript::translation::pdb::renderUdfTs(
    udf: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1],
    shortName: String[1]
 ): String[1]

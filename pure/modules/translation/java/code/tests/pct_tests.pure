@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::translation::*;
+import platform::extensions::language::java::translation::*;
 
 // PCT tests for the Pure->Java translator. Each `<<test.Test>>` here just
 // invokes an upstream `<<PCT.test>>` from the math/operation specs, passing
@@ -23,22 +23,22 @@ import platform::external::language::java::translation::*;
 // constant, the translator + emitted Java + the platform's plus/minus/etc.
 // all agree with Pure semantics.
 
-function <<test.Test>> platform::external::language::java::translation::tests::pct::testSimplePlus(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::translation::tests::pct::testSimplePlus(): Boolean[1]
 {
    platform::pure::functions::math::tests::plus::testSimplePlus(testAdapterForTranslatedJava_Function_1__X_o_);
 }
 
-function <<test.Test>> platform::external::language::java::translation::tests::pct::testComplexPlus(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::translation::tests::pct::testComplexPlus(): Boolean[1]
 {
    platform::pure::functions::math::tests::plus::testComplexPlus(testAdapterForTranslatedJava_Function_1__X_o_);
 }
 
-function <<test.Test>> platform::external::language::java::translation::tests::pct::testNegativePlus(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::translation::tests::pct::testNegativePlus(): Boolean[1]
 {
    platform::pure::functions::math::tests::plus::testNegativePlus(testAdapterForTranslatedJava_Function_1__X_o_);
 }
 
-function <<test.Test>> platform::external::language::java::translation::tests::pct::testPlusMany(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::translation::tests::pct::testPlusMany(): Boolean[1]
 {
    platform::pure::functions::math::tests::plus::testPlusMany(testAdapterForTranslatedJava_Function_1__X_o_);
 }

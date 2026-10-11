@@ -17,9 +17,9 @@ import platform::pure::functions::asserts::*;
 import platform::pure::functions::printer::compiled::*;
 import platform::pure::functions::printer::protocol::*;
 import platform::pure::metamodel::function::*;
-import platform::pure::translation::shared::*;
-import platform::pure::translation::shared::tests::*;
-import platform::pure::translation::shared::tests::model::*;
+import platform::extensions::pure::translation::decompile::*;
+import platform::extensions::pure::translation::canonical::tests::*;
+import platform::extensions::pure::translation::canonical::tests::model::*;
 
 // ============================================================================
 // Canonical / decompile round-trip tests.
@@ -52,7 +52,7 @@ import platform::pure::translation::shared::tests::model::*;
 //     function calls (e.g. `platform::pure::functions::string::length`).
 // ============================================================================
 
-Class <<test.TestDependency>> platform::pure::translation::shared::tests::model::TS_Person
+Class <<test.TestDependency>> platform::extensions::pure::translation::canonical::tests::model::TS_Person
 {
    firstName : String[1];
    lastName  : String[1];
@@ -66,7 +66,7 @@ Class <<test.TestDependency>> platform::pure::translation::shared::tests::model:
 // open-variable captures substituted by their values' protocol form), then
 // render via the protocol printer. The wrapping function is synthesised
 // under `canonicalTest::fixture` so the printed source has a stable name.
-function <<test.TestDependency>> platform::pure::translation::shared::tests::decompileAndPrint(lambda: LambdaFunction<Any>[1]): String[1]
+function <<test.TestDependency>> platform::extensions::pure::translation::canonical::tests::decompileAndPrint(lambda: LambdaFunction<Any>[1]): String[1]
 {
    // Mirror `inlineOpenVariablesViaRecompile`: strip let-bound names from
    // the capture set so we don't substitute `$letVar` references with the
@@ -113,22 +113,22 @@ function <<test.TestDependency>> platform::pure::translation::shared::tests::dec
 // render the compiled result. UDF outputs go through the compiled element
 // printer; lambdas that pass through unchanged are rendered via the
 // compiled-lambda printer (`|<body>`).
-function <<test.TestDependency>> platform::pure::translation::shared::tests::canonicalAndPrint(lambda: LambdaFunction<Any>[1]): String[1]
+function <<test.TestDependency>> platform::extensions::pure::translation::canonical::tests::canonicalAndPrint(lambda: LambdaFunction<Any>[1]): String[1]
 {
-   printCanonical($lambda, $lambda->platform::pure::translation::shared::makeCanonical());
+   printCanonical($lambda, $lambda->platform::extensions::pure::translation::canonical::makeCanonical());
 }
 
 // Run `makeCanonical` with an explicit mode list and render. Same
 // dispatch as `canonicalAndPrint`.
-function <<test.TestDependency>> platform::pure::translation::shared::tests::canonicalAndPrintWithModes(
+function <<test.TestDependency>> platform::extensions::pure::translation::canonical::tests::canonicalAndPrintWithModes(
    lambda: LambdaFunction<Any>[1],
-   modes: platform::pure::translation::shared::CanonicalMode[*]
+   modes: platform::extensions::pure::translation::canonical::CanonicalMode[*]
 ): String[1]
 {
-   printCanonical($lambda, $lambda->platform::pure::translation::shared::makeCanonical($modes));
+   printCanonical($lambda, $lambda->platform::extensions::pure::translation::canonical::makeCanonical($modes));
 }
 
-function <<test.TestDependency>> platform::pure::translation::shared::tests::printCanonical(
+function <<test.TestDependency>> platform::extensions::pure::translation::canonical::tests::printCanonical(
    original: LambdaFunction<Any>[1],
    canonical: FunctionDefinition<Any>[1]
 ): String[1]
@@ -147,7 +147,7 @@ function <<test.TestDependency>> platform::pure::translation::shared::tests::pri
    ]);
 }
 
-function <<test.TestDependency>> platform::pure::translation::shared::tests::printCanonicalLambda(lf: LambdaFunction<Any>[1]): String[1]
+function <<test.TestDependency>> platform::extensions::pure::translation::canonical::tests::printCanonicalLambda(lf: LambdaFunction<Any>[1]): String[1]
 {
    let ctx = platform::pure::functions::printer::compiled::buildPrintContext(
       []->cast(@platform::pure::metamodel::PackageableElement),
@@ -161,7 +161,7 @@ function <<test.TestDependency>> platform::pure::translation::shared::tests::pri
 // ----------------------------------------------------------------------------
 
 // Scalar Integer capture: a single Integer captured by the lambda.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_scalarIntegerCapture(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_scalarIntegerCapture(): Boolean[1]
 {
    let x = 5;
    let lambda = {| $x + 1};
@@ -189,7 +189,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 }
 
 // String capture: a captured String literal.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_stringCapture(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_stringCapture(): Boolean[1]
 {
    let s = 'hello';
    let lambda = {| $s->length()};
@@ -223,7 +223,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 }
 
 // Multiple captures: two captured Integers, both substituted independently.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_multipleCaptures(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_multipleCaptures(): Boolean[1]
 {
    let a = 1;
    let b = 2;
@@ -254,7 +254,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // No captures: decompile still produces a wrapped UDF (the wrapping is
 // unconditional); canonical short-circuits and returns the LambdaFunction
 // unchanged — the compiled-lambda printer renders it as `|1 + 2`.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_noCaptures(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_noCaptures(): Boolean[1]
 {
    let lambda = {| 1 + 2};
 
@@ -282,7 +282,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // InlineOpenVariables ALONE — captures inlined but the resulting literal
 // arithmetic is left in place (`5 + 1`, not `6`). Same shape as the
 // default `makeCanonical(f)`.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_inlineOnly_keepsLiteralArithmetic(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_inlineOnly_keepsLiteralArithmetic(): Boolean[1]
 {
    let x = 5;
    let lambda = {| $x + 1};
@@ -297,7 +297,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables]
       )
    );
 }
@@ -305,7 +305,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // Inline + PartialEval applied together — captures inlined, then
 // arithmetic folded. Demonstrates additivity: `[Inline, Partial]` produces
 // a strictly smaller AST than `[Inline]` alone.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_inlineThenPartial_reducesToLiteral(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_inlineThenPartial_reducesToLiteral(): Boolean[1]
 {
    let x = 5;
    let lambda = {| $x + 1};
@@ -320,8 +320,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.PartialEvaluation]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.PartialEvaluation]
       )
    );
 }
@@ -329,7 +329,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // PartialEvaluation ALONE on a captured lambda — captures remain (no
 // inlining), so the literal-only fold rule can't fire on `$x + 1` (one
 // operand is a VariableExpression). Lambda passes through unchanged.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_partialOnly_cantFoldAcrossCaptures(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_partialOnly_cantFoldAcrossCaptures(): Boolean[1]
 {
    let x = 5;
    let lambda = {| $x + 1};
@@ -338,13 +338,13 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       '|$x + 1',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.PartialEvaluation]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.PartialEvaluation]
       )
    );
 }
 
 // Empty mode list — explicit no-op. Lambda passes through unchanged.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_emptyModes_isNoOp(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_emptyModes_isNoOp(): Boolean[1]
 {
    let lambda = {| 1 + 2};
 
@@ -363,7 +363,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // Scalar Integer capture: instead of `5 + 1` (inline), the capture stays a
 // variable and a leading `let x = 5;` binds it. Contrast with
 // testCanonical_scalarIntegerCapture / testCanonical_inlineOnly_*.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_localize_scalarCapture(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_localize_scalarCapture(): Boolean[1]
 {
    let x = 5;
    let lambda = {| $x + 1};
@@ -379,14 +379,14 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.LocalizeOpenVariables]
       )
    );
 }
 
 // String capture: the binding RHS is lowered the same way inline lowers it
 // (`'hi'`), but `$s` survives in the body as a let-bound reference.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_localize_stringCapture(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_localize_stringCapture(): Boolean[1]
 {
    let s = 'hi';
    let lambda = {| $s->length()};
@@ -402,7 +402,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.LocalizeOpenVariables]
       )
    );
 }
@@ -418,7 +418,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // ----------------------------------------------------------------------------
 
 // Comparison: `5 < 10` folds to `true` via the eval path.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_partial_evalsComparison(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_partial_evalsComparison(): Boolean[1]
 {
    let x = 5;
    let lambda = {| $x < 10};
@@ -433,14 +433,14 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.PartialEvaluation]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.PartialEvaluation]
       )
    );
 }
 
 // String predicate: `'hello'->startsWith('he')` folds to `true`.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_partial_evalsStringPredicate(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_partial_evalsStringPredicate(): Boolean[1]
 {
    let s = 'hello';
    let lambda = {| $s->startsWith('he')};
@@ -455,15 +455,15 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.PartialEvaluation]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.PartialEvaluation]
       )
    );
 }
 
 // Bottom-up walk — inner sub-expressions fold first so the outer one sees
 // literal args. `(2 + 3) * 4` folds inside-out to `5 * 4` → `20`.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_partial_foldsNestedArithmetic(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_partial_foldsNestedArithmetic(): Boolean[1]
 {
    let x = 2;
    let lambda = {| ($x + 3) * 4};
@@ -478,8 +478,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.PartialEvaluation]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.PartialEvaluation]
       )
    );
 }
@@ -488,7 +488,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // collapses the if to the taken branch. This is the chain reaction the
 // generalization unlocks — the old per-native code never folded `<`, so
 // pruning couldn't fire.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_partialThenPrune_collapsesIfWithComparedCond(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_partialThenPrune_collapsesIfWithComparedCond(): Boolean[1]
 {
    let x = 5;
    let lambda = {| if($x < 10, |'small', |'big')};
@@ -503,9 +503,9 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.PartialEvaluation,
-          platform::pure::translation::shared::CanonicalMode.IfBranchPruning]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.PartialEvaluation,
+          platform::extensions::pure::translation::canonical::CanonicalMode.IfBranchPruning]
       )
    );
 }
@@ -515,7 +515,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // runtime computes the result. Demonstrates that the predicate is "constant
 // subtree" not "primitive scalar". The bottom-up walk then folds `0 + 3`
 // to `3` as well, so the entire body collapses to a single literal.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_partial_evalsOnCollectionArg(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_partial_evalsOnCollectionArg(): Boolean[1]
 {
    let marker = 0;
    let lambda = {| $marker + [10, 20, 30]->size()};
@@ -530,8 +530,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.PartialEvaluation]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.PartialEvaluation]
       )
    );
 }
@@ -540,7 +540,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // (see `runtime/functions/io/print.pure`). Even with all-literal args,
 // PartialEvaluation must leave the call alone — folding would execute the
 // print at translation time, losing the runtime side effect.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_partial_skipsSideEffectFunction(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_partial_skipsSideEffectFunction(): Boolean[1]
 {
    let prefix = 'msg=';
    let lambda = {| $prefix + platform::pure::functions::io::print('hi')};
@@ -555,8 +555,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.PartialEvaluation]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.PartialEvaluation]
       )
    );
 }
@@ -587,7 +587,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // literals. After Inline the outer cond becomes `0 == 1`; after
 // NestedIfToMultiIf the structure flattens into a multi-if with two pairs
 // plus the deepest else as the default.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_nestedIf_twoLevels_flattensToMultiIf(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_nestedIf_twoLevels_flattensToMultiIf(): Boolean[1]
 {
    let n = 0;
    let lambda = {| if($n == 1, |'one', |if(true, |'two', |'other'))};
@@ -602,14 +602,14 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.NestedIfToMultiIf]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.NestedIfToMultiIf]
       )
    );
 }
 
 // 3-level chain peels cascades into a 3-pair multi-if + default.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_nestedIf_threeLevels_flattensFully(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_nestedIf_threeLevels_flattensFully(): Boolean[1]
 {
    let n = 0;
    let lambda = {|
@@ -628,8 +628,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.NestedIfToMultiIf]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.NestedIfToMultiIf]
       )
    );
 }
@@ -641,7 +641,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // Literal-true cond in 3-arg if → result is the then-lambda's body.
 // Capture moves the `true` into the outer cond (which Inline does
 // substitute), so the if sees a literal and prunes.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_ifPrune_literalTrue_takesThen(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_ifPrune_literalTrue_takesThen(): Boolean[1]
 {
    let n = true;
    let lambda = {| if($n, |1, |2)};
@@ -656,14 +656,14 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.IfBranchPruning]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.IfBranchPruning]
       )
    );
 }
 
 // Literal-false cond → result is the else-lambda's body.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_ifPrune_literalFalse_takesElse(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_ifPrune_literalFalse_takesElse(): Boolean[1]
 {
    let n = false;
    let lambda = {| if($n, |1, |2)};
@@ -678,8 +678,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.IfBranchPruning]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.IfBranchPruning]
       )
    );
 }
@@ -688,7 +688,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // (`$dummy +`) so Inline reaches it without poking into pair-cond
 // lambdas. After Inline: `0 + if([pair(|true,|10), pair(|false,|20)], |30)`;
 // after IfBranchPruning the multi-if collapses to `10`.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_ifPrune_multiIf_firstTrue_wins(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_ifPrune_multiIf_firstTrue_wins(): Boolean[1]
 {
    let dummy = 0;
    let lambda = {| $dummy + (if([pair(|true, |10), pair(|false, |20)], |30))};
@@ -703,14 +703,14 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.IfBranchPruning]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.IfBranchPruning]
       )
    );
 }
 
 // Multi-if with all-literal-false conds → falls through to default.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_ifPrune_multiIf_allFalse_takesDefault(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_ifPrune_multiIf_allFalse_takesDefault(): Boolean[1]
 {
    let dummy = 0;
    let lambda = {| $dummy + (if([pair(|false, |1), pair(|false, |2)], |30))};
@@ -725,8 +725,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.IfBranchPruning]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.IfBranchPruning]
       )
    );
 }
@@ -739,7 +739,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // `if([pair(|true, |10), pair(|false, |20)], |30)`. IfBranchPruning sees
 // the first literal-true and collapses to `10`.
 // ----------------------------------------------------------------------------
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_nestedThenPrune_literalTrue_collapses(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_nestedThenPrune_literalTrue_collapses(): Boolean[1]
 {
    let n = true;
    let lambda = {| if($n, |10, |if(false, |20, |30))};
@@ -754,9 +754,9 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.NestedIfToMultiIf,
-          platform::pure::translation::shared::CanonicalMode.IfBranchPruning]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.NestedIfToMultiIf,
+          platform::extensions::pure::translation::canonical::CanonicalMode.IfBranchPruning]
       )
    );
 }
@@ -770,7 +770,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // ----------------------------------------------------------------------------
 
 // Single dead let preceding a literal — drops the let, leaves the literal.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_deadLet_singleDead(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_deadLet_singleDead(): Boolean[1]
 {
    let cap = 7;
    let lambda = {| let unused = $cap; 42;};
@@ -785,15 +785,15 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.DeadLetElim]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.DeadLetElim]
       )
    );
 }
 
 // Chain of dead lets — `a` only referenced by `b`'s RHS; once `b` drops,
 // `a` becomes dead too and drops in the same pass (end-to-start walk).
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_deadLet_cascade(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_deadLet_cascade(): Boolean[1]
 {
    let cap = 7;
    let lambda = {|
@@ -812,15 +812,15 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.DeadLetElim]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.DeadLetElim]
       )
    );
 }
 
 // Referenced let is preserved. `$used` is read by the final expression so
 // the binding stays.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_deadLet_keepsReferenced(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_deadLet_keepsReferenced(): Boolean[1]
 {
    let cap = 7;
    let lambda = {|
@@ -839,8 +839,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.DeadLetElim]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.DeadLetElim]
       )
    );
 }
@@ -872,7 +872,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // presence promotes the lambda to a UDF, which is what SingleUseLetInline
 // operates on — bare lambdas pass through, see the pass's lambda-arm note).
 // The capture provides Inline with something to do so the UDF wrap fires.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_singleUseLetInline_basic(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_singleUseLetInline_basic(): Boolean[1]
 {
    let cap = 99;
    let lambda = {|
@@ -890,15 +890,15 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.SingleUseLetInline]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.SingleUseLetInline]
       )
    );
 }
 
 // Chained lets: each is single-use into the next; iterating to fixpoint
 // collapses the whole chain in one pass.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_singleUseLetInline_chain(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_singleUseLetInline_chain(): Boolean[1]
 {
    let cap = 99;
    let lambda = {|
@@ -917,8 +917,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.SingleUseLetInline]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.SingleUseLetInline]
       )
    );
 }
@@ -926,7 +926,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // Multi-use let is NOT inlined — would duplicate the RHS, change cost,
 // and (if RHS had side effects) change semantics. Rule is strict on
 // use-count regardless.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_singleUseLetInline_multiUse_keeps(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_singleUseLetInline_multiUse_keeps(): Boolean[1]
 {
    let cap = 99;
    let lambda = {|
@@ -945,8 +945,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.SingleUseLetInline]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.SingleUseLetInline]
       )
    );
 }
@@ -955,7 +955,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // literals, PartialEvaluation folds. The strict ordering puts
 // SingleUseLetInline before PartialEvaluation so this happens whichever
 // order the caller passes them.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_singleUseLetInline_thenPartialFolds(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_singleUseLetInline_thenPartialFolds(): Boolean[1]
 {
    let cap = 100;
    let lambda = {|
@@ -974,9 +974,9 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.SingleUseLetInline,
-          platform::pure::translation::shared::CanonicalMode.PartialEvaluation]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.SingleUseLetInline,
+          platform::extensions::pure::translation::canonical::CanonicalMode.PartialEvaluation]
       )
    );
 }
@@ -1003,7 +1003,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // Avoids the pre-existing printer bug that surfaces when a let lives
 // INSIDE a filter lambda body and goes through the canonical recompile
 // (see {@link letBody_filterFusionOnly_skips} for that case).
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_singleUseLetInline_unblocksFilterFusion(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_singleUseLetInline_unblocksFilterFusion(): Boolean[1]
 {
    let cap = 0;
    let lambda = {|
@@ -1021,9 +1021,9 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.SingleUseLetInline,
-          platform::pure::translation::shared::CanonicalMode.FilterFusion]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.SingleUseLetInline,
+          platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion]
       )
    );
 }
@@ -1034,7 +1034,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // ----------------------------------------------------------------------------
 
 // Basic pair: two adjacent filters fuse to one with `&&`-joined conditions.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_filterFusion_pair(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_pair(): Boolean[1]
 {
    let lambda = {| [1, 2, 3, 4, 5]->filter(x | $x > 0)->filter(x | $x < 10)};
 
@@ -1048,7 +1048,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.FilterFusion]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion]
       )
    );
 }
@@ -1056,7 +1056,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // Three-filter chain reduces to a single filter with two `&&`s — the
 // recursion is bottom-up so the inner pair fuses first, then the outer
 // pair fuses around the (now-fused) inner.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_filterFusion_chain3(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_chain3(): Boolean[1]
 {
    let lambda = {| [1, 2, 3, 4, 5]->filter(x | $x > 0)->filter(x | $x < 10)->filter(x | $x == 3)};
 
@@ -1070,14 +1070,14 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.FilterFusion]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion]
       )
    );
 }
 
 // Differently-named params: outer's param is rewritten to the inner's name
 // in the combined body. Use disjoint identifier sets so no capture conflict.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_filterFusion_renamesOuterParam(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_renamesOuterParam(): Boolean[1]
 {
    let lambda = {| [1, 2, 3, 4, 5]->filter(a | $a > 0)->filter(b | $b < 10)};
 
@@ -1091,7 +1091,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.FilterFusion]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion]
       )
    );
 }
@@ -1099,7 +1099,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // Single filter — no chain to collapse, leaves the AST alone (the
 // pre-check rejects the function as having a fusable chain, so the lambda
 // is returned unchanged — no synthetic-UDF wrap).
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_filterFusion_singleFilter_noChange(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_singleFilter_noChange(): Boolean[1]
 {
    let lambda = {| [1, 2, 3, 4, 5]->filter(x | $x > 0)};
 
@@ -1107,7 +1107,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       '|[1, 2, 3, 4, 5]->platform::pure::functions::collection::filter(x|$x > 0)',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.FilterFusion]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion]
       )
    );
 }
@@ -1125,7 +1125,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // so the captured `$cap` is substituted before fusion sees the filter body.
 // Without strict ordering this would explode at recompile because the
 // fused lambda's `&&` operand would still be `$cap`-relative.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_strictOrder_inlineRunsBeforeFusion(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_strictOrder_inlineRunsBeforeFusion(): Boolean[1]
 {
    let cap = 10;
    let lambda = {| [1, 2, 3, 4, 5]->filter(x | $x > 0)->filter(x | $x < $cap)};
@@ -1142,8 +1142,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       $expected,
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.FilterFusion,
-          platform::pure::translation::shared::CanonicalMode.InlineOpenVariables]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion,
+          platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables]
       )
    );
 
@@ -1153,8 +1153,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       $expected,
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables,
-          platform::pure::translation::shared::CanonicalMode.FilterFusion]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables,
+          platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion]
       )
    );
 }
@@ -1163,7 +1163,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // both adjacent pairs. With no captures and only FilterFusion enabled, the
 // pre-check returns false (no fusable chain) and the lambda is returned
 // unchanged — no synthetic-UDF wrap, no recompile.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_filterFusion_letBody_filterFusionOnly_skips(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_letBody_filterFusionOnly_skips(): Boolean[1]
 {
    let lambda = {|
       [1, 2, 3, 4, 5]->filter(x | $x > 0)
@@ -1175,7 +1175,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       '|[1, 2, 3, 4, 5]->platform::pure::functions::collection::filter(x|$x > 0)->platform::pure::functions::collection::filter(x|let threshold = 10; $x < $threshold)->platform::pure::functions::collection::filter(x|$x == 3)',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.FilterFusion]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion]
       )
    );
 }
@@ -1193,7 +1193,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // lambda param). That bug is independent of FilterFusion — Inline alone on
 // the same fixture trips it. See {@link letBody_filterFusionOnly_skips}
 // for the in-filter let case under FilterFusion alone.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_filterFusion_letAtOuter_withInline_fuses(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_filterFusion_letAtOuter_withInline_fuses(): Boolean[1]
 {
    let cap = 10;
    let lambda = {|
@@ -1212,8 +1212,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
       ''',
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.FilterFusion,
-          platform::pure::translation::shared::CanonicalMode.InlineOpenVariables]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion,
+          platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables]
       )
    );
 }
@@ -1240,7 +1240,7 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // FunctionExpression and return the filter lambda's first parameter's
 // multiplicity slot value. Both paths in the regression test produce this
 // same shape; the slot contents differ.
-function <<test.TestDependency>> platform::pure::translation::shared::tests::firstFilterLambdaParamMul(udf: UserDefinedFunction<Any>[1]): platform::pure::metamodel::multiplicity::Multiplicity[1]
+function <<test.TestDependency>> platform::extensions::pure::translation::canonical::tests::firstFilterLambdaParamMul(udf: UserDefinedFunction<Any>[1]): platform::pure::metamodel::multiplicity::Multiplicity[1]
 {
    let filterFE = $udf.expressionSequence->at(0)->cast(@platform::pure::metamodel::valuespecification::FunctionExpression);
    let av       = $filterFE.parametersValues->at(1)->cast(@platform::pure::metamodel::valuespecification::AtomicValue);
@@ -1248,7 +1248,7 @@ function <<test.TestDependency>> platform::pure::translation::shared::tests::fir
    $lam.parameters->at(0)->cast(@platform::pure::metamodel::valuespecification::VariableExpression).multiplicity->toOne();
 }
 
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_letInFilterBody_compilerInfersMul_canonicalLeavesSentinel(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_letInFilterBody_compilerInfersMul_canonicalLeavesSentinel(): Boolean[1]
 {
    // -- Path A: parse + compile the source directly. The standard 3-arg
    // compile (which delegates to the same 4-arg form canonical uses) should
@@ -1281,8 +1281,8 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
    let lambda = {|
       [1, 2, 3, 4, 5]->filter(x | let threshold = $cap; $x < $threshold;)
    };
-   let canonical = $lambda->platform::pure::translation::shared::makeCanonical(
-      [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables]
+   let canonical = $lambda->platform::extensions::pure::translation::canonical::makeCanonical(
+      [platform::extensions::pure::translation::canonical::CanonicalMode.InlineOpenVariables]
    );
    let canonicalUDF = $canonical->cast(@UserDefinedFunction<platform::pure::metamodel::type::Any>);
    let canonicalMul = $canonicalUDF->firstFilterLambdaParamMul();
@@ -1300,19 +1300,19 @@ function <<test.Test>> platform::pure::translation::shared::tests::testCanonical
 // passing it once. Each pass is a fixpoint, so this is structurally true,
 // but the strict-ordering layer also dedups by virtue of filtering the
 // canonical-order list against the user's set.
-function <<test.Test>> platform::pure::translation::shared::tests::testCanonical_strictOrder_dedupesModes(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::translation::canonical::tests::testCanonical_strictOrder_dedupesModes(): Boolean[1]
 {
    let lambda = {| [1, 2, 3]->filter(x | $x > 0)->filter(x | $x < 10)};
 
    assertEquals(
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.FilterFusion]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion]
       ),
       canonicalAndPrintWithModes(
          $lambda,
-         [platform::pure::translation::shared::CanonicalMode.FilterFusion,
-          platform::pure::translation::shared::CanonicalMode.FilterFusion]
+         [platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion,
+          platform::extensions::pure::translation::canonical::CanonicalMode.FilterFusion]
       )
    );
 }

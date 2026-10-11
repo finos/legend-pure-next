@@ -13,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::*;
 
-function platform::external::language::java::metamodel::javaKeywords(): String[*]
+function platform::extensions::language::java::metamodel::javaKeywords(): String[*]
 {
    [
       'abstract'  ,'continue'   ,'for'         ,'new'        ,'switch',
@@ -31,17 +31,17 @@ function platform::external::language::java::metamodel::javaKeywords(): String[*
    ];
 }
 
-function platform::external::language::java::metamodel::modelPropertyKeywords(): String[*]
+function platform::extensions::language::java::metamodel::modelPropertyKeywords(): String[*]
 {
    ['com', 'org'];
 }
 
-function platform::external::language::java::metamodel::reservedKeywords(): String[*]
+function platform::extensions::language::java::metamodel::reservedKeywords(): String[*]
 {
   javaKeywords()->concatenate(modelPropertyKeywords());
 }
 
-function platform::external::language::java::metamodel::isJavaLang(pkg: platform::external::language::java::metamodel::Package[1]):Boolean[1]
+function platform::extensions::language::java::metamodel::isJavaLang(pkg: platform::extensions::language::java::metamodel::Package[1]):Boolean[1]
 {
    $pkg.name == 'lang'
    && $pkg.parent->isNotEmpty()
@@ -49,29 +49,29 @@ function platform::external::language::java::metamodel::isJavaLang(pkg: platform
    && $pkg.parent.parent->isEmpty();
 }
 
-function platform::external::language::java::metamodel::packageNames(pkg: platform::external::language::java::metamodel::Package[1]):String[*]
+function platform::extensions::language::java::metamodel::packageNames(pkg: platform::extensions::language::java::metamodel::Package[1]):String[*]
 {
    $pkg.parent->map(p| $p->packageNames())->concatenate($pkg.name);
 }
 
-function platform::external::language::java::metamodel::isValidPackageName(name: String[1]): Boolean[1]
+function platform::extensions::language::java::metamodel::isValidPackageName(name: String[1]): Boolean[1]
 {
    // TODO Enable once matches is fully available
    $name->split('.')->forAll(nm | /*$nm->matches('[_$a-zA-Z][_$a-zA-Z0-9]*') && */ !javaKeywords()->contains($nm));
 }
 
-function platform::external::language::java::metamodel::isInPackage(type: platform::external::language::java::metamodel::Type[1], packageName: String[1]):Boolean[1]
+function platform::extensions::language::java::metamodel::isInPackage(type: platform::extensions::language::java::metamodel::Type[1], packageName: String[1]):Boolean[1]
 {
    $type->match([
-      p:platform::external::language::java::metamodel::PrimitiveType[1]     | false,
-      a:platform::external::language::java::metamodel::Array[1]             | $a.rawType->isInPackage($packageName),
-      p:platform::external::language::java::metamodel::ParameterizedType[1] | $p.rawType->isInPackage($packageName),
-      t:platform::external::language::java::metamodel::TypeVariable[1]      | false,
-      c:platform::external::language::java::metamodel::Class[1]             | $c.package->isPackage($packageName)
+      p:platform::extensions::language::java::metamodel::PrimitiveType[1]     | false,
+      a:platform::extensions::language::java::metamodel::Array[1]             | $a.rawType->isInPackage($packageName),
+      p:platform::extensions::language::java::metamodel::ParameterizedType[1] | $p.rawType->isInPackage($packageName),
+      t:platform::extensions::language::java::metamodel::TypeVariable[1]      | false,
+      c:platform::extensions::language::java::metamodel::Class[1]             | $c.package->isPackage($packageName)
    ]);
 }
 
-function platform::external::language::java::metamodel::isPackage(pkg: platform::external::language::java::metamodel::Package[1], packageName: String[1]):Boolean[1]
+function platform::extensions::language::java::metamodel::isPackage(pkg: platform::extensions::language::java::metamodel::Package[1], packageName: String[1]):Boolean[1]
 {
    let pos  = $packageName->lastIndexOf('.');
    if($pos == -1,
