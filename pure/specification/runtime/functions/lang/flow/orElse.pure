@@ -13,21 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::collection::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::collection::*;
+import platform::pure::test::pct::*;
 
-function meta::pure::functions::collection::orElse<T>(value:T[0..1], default:T[1]): T[1]
+function platform::pure::functions::collection::orElse<T>(value:T[0..1], default:T[1]): T[1]
 {
     if($value->isEmpty(), | $default, | $value->toOne());
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElseWithPresent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::orElse::testOrElseWithPresent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(5, $f->eval(|5->orElse(99)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElseWithEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::orElse::testOrElseWithEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(99, $f->eval(|
         let empty = []->cast(@Integer);
@@ -35,12 +35,12 @@ function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrEl
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElseWithStringPresent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::orElse::testOrElseWithStringPresent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('hello', $f->eval(|'hello'->orElse('default')));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElseWithStringEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::orElse::testOrElseWithStringEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('default', $f->eval(|
         let empty = []->cast(@String);
@@ -58,7 +58,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrEl
 // The input has to come from a REAL [0..1] expression — `head()` here. A literal written into the
 // call (`'present'->orElse(…)`) is already one value, so it comes back unchanged whatever the host
 // does with the shape, and would pin nothing.
-function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElsePresentResultIsOneValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::orElse::testOrElsePresentResultIsOneValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(true, $f->eval(|
         let present = ['present', 'other']->head();
@@ -67,7 +67,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrEl
 }
 
 // And the defaulted arm has to come back in the same shape as the present one.
-function <<PCT.test>> meta::pure::functions::collection::tests::orElse::testOrElseDefaultedResultIsOneValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::orElse::testOrElseDefaultedResultIsOneValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(true, $f->eval(|
         let missing = []->cast(@String)->head();

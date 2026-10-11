@@ -14,7 +14,7 @@
 
 package org.finos.legend.pure.m3.specification;
 
-import meta.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.m3.module.CompilationError;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ModuleManifest;
@@ -94,7 +94,7 @@ public class PdbGoldenGeneratorTest
         java.util.Set<String> serializablePaths = new java.util.TreeSet<>();
         for (PackageableElement elem : allModuleElements)
         {
-            if (!(elem instanceof meta.pure.metamodel.Package) && serializability.serialize(elem) != null)
+            if (!(elem instanceof platform.pure.metamodel.Package) && serializability.serialize(elem) != null)
             {
                 serializablePaths.add(
                         org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(elem));
@@ -102,7 +102,7 @@ public class PdbGoldenGeneratorTest
         }
         allModuleElements.removeIf(elem ->
         {
-            if (!(elem instanceof meta.pure.metamodel.Package))
+            if (!(elem instanceof platform.pure.metamodel.Package))
             {
                 return false;
             }

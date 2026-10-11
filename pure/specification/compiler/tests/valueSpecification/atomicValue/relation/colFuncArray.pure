@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 native function test<T>(x: FuncColSpecArray<{String[1]->Any[*]}, T>[1]): T[1];
 
@@ -10,33 +24,33 @@ function test(): Any[1]
 native function test_FuncColSpecArray_1__T_1_(x:FuncColSpecArray<{@String@[1]->@Any@[*]}, T~test_FuncColSpecArray_1__T_1_>[1]):T~test_FuncColSpecArray_1__T_1_[1]  ~NativeFunction<{FuncColSpecArray<{@String@[1]->@Any@[*]}, T~test_FuncColSpecArray_1__T_1_>[1]->T~test_FuncColSpecArray_1__T_1_[1]}>
 
 function test__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
-  FunctionInvocation test_FuncColSpecArray_1__T_1_ :#(name:@String@[1], other:@Integer@[1])##[1]#  ~@FunctionInvocation@  @6:3-6:37
+  FunctionInvocation test_FuncColSpecArray_1__T_1_ :#(name:@String@[1], other:@Integer@[1])##[1]#  ~@FunctionInvocation@  @20:3-20:37
     typeParam T -> #(name:@String@[1], other:@Integer@[1])#
-    FunctionInvocation funcColSpecArray_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_ :#FuncColSpecArray<#{#String#[1]->@Any@[*]}#, #(name:@String@[1], other:@Integer@[1])#>##[1]#  ~@FunctionInvocation@  @6:8-6:36
+    FunctionInvocation funcColSpecArray_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_ :#FuncColSpecArray<#{#String#[1]->@Any@[*]}#, #(name:@String@[1], other:@Integer@[1])#>##[1]#  ~@FunctionInvocation@  @20:8-20:36
       typeParam P -> #(name:@String@[1], other:@Integer@[1])#
       typeParam T -> #Any#
       typeParam U -> #String#
       Collection :#FuncColSpec<#{#String##[1]#->#Any##[1]#}#, #Any#>#[2]  ~@Collection@
-        FunctionInvocation funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#String#[1]->@Any@[1]}#, #(name:@String@[1])#>##[1]#  ~@FunctionInvocation@  @6:10-6:22
+        FunctionInvocation funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#String#[1]->@Any@[1]}#, #(name:@String@[1])#>##[1]#  ~@FunctionInvocation@  @20:10-20:22
           typeParam T -> #(name:@String@[1])#
           typeParam U -> #String#
-          Lambda(x:#String##[1]#) :#LambdaFunction<#{#String##[1]#->@String@[1]}#>#[1]  ~@AtomicValue@  @6:17-6:22
-            AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @6:19-6:22
-          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:10-6:13
+          Lambda(x:#String##[1]#) :#LambdaFunction<#{#String##[1]#->@String@[1]}#>#[1]  ~@AtomicValue@  @20:17-20:22
+            AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @20:19-20:22
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @20:10-20:13
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:@String@[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
-        FunctionInvocation funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#String#[1]->@Any@[1]}#, #(other:@Integer@[1])#>##[1]#  ~@FunctionInvocation@  @6:25-6:35
+        FunctionInvocation funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#String#[1]->@Any@[1]}#, #(other:@Integer@[1])#>##[1]#  ~@FunctionInvocation@  @20:25-20:35
           typeParam T -> #(other:@Integer@[1])#
           typeParam U -> #String#
-          Lambda(z:#String##[1]#) :#LambdaFunction<#{#String##[1]#->@Integer@[1]}#>#[1]  ~@AtomicValue@  @6:33-6:35
-            AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:35-6:35
-          AtomicValue  'other' :@String@[1]  ~@AtomicValue@  @6:25-6:29
+          Lambda(z:#String##[1]#) :#LambdaFunction<#{#String##[1]#->@Integer@[1]}#>#[1]  ~@AtomicValue@  @20:33-20:35
+            AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:35-20:35
+          AtomicValue  'other' :@String@[1]  ~@AtomicValue@  @20:25-20:29
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(other:@Integer@[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:@String@[1], other:@Integer@[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
 
 ###ReverseIndex
-meta::pure::functions::relation::funcColSpecArray_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_:
+platform::pure::functions::relation::funcColSpecArray_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_:
   test__Any_1_
-meta::pure::functions::relation::funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_:
+platform::pure::functions::relation::funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_:
   test__Any_1_
 test_FuncColSpecArray_1__T_1_:
   test__Any_1_

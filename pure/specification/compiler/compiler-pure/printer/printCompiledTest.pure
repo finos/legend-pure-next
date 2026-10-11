@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::*;
-import meta::pure::compiler::test::printer::*;
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::collection::*;
-import meta::pure::functions::io::*;
-import meta::pure::functions::printer::compiled::*;
-import meta::pure::functions::string::*;
-import meta::pure::protocol::*;
-import meta::pure::ui::progress::*;
+import platform::pure::compiler::*;
+import platform::pure::compiler::test::printer::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::collection::*;
+import platform::pure::functions::io::*;
+import platform::pure::functions::printer::compiled::*;
+import platform::pure::functions::string::*;
+import platform::pure::protocol::*;
+import platform::pure::ui::progress::*;
 
 // Compiler-test-driven corpus runner for the compiled-side printer. Iterates
 // `.pure` files under the given directory (skipping `_E_*` error-case files
@@ -35,20 +36,20 @@ import meta::pure::ui::progress::*;
 // access; runtime's `core` module can't depend on `compiler`. Invoked via
 // the bootstrap CLI's execute command — same pattern as runCompiledGraphTests.
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::runCompiledPrinterCorpus(testDir:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::runCompiledPrinterCorpus(testDir:String[1]):String[1]
 {
-    meta::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport($testDir, []);
+    platform::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport($testDir, []);
 }
 
 // Same, also writing the run's test report to `reportPath` (read by tools/test-dashboard).
-function <<test.TestDependency>> meta::pure::compiler::test::printer::runCompiledPrinterCorpus(testDir:String[1], reportPath:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::runCompiledPrinterCorpus(testDir:String[1], reportPath:String[1]):String[1]
 {
-    meta::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport($testDir, $reportPath);
+    platform::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport($testDir, $reportPath);
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport(testDir:String[1], reportPath:String[0..1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::runCompiledPrinterCorpusWithReport(testDir:String[1], reportPath:String[0..1]):String[1]
 {
-    let start = meta::pure::functions::date::currentTimeMillis();
+    let start = platform::pure::functions::date::currentTimeMillis();
     let files = directoryTree($testDir)->filter(f | $f->endsWith('.pure') && !$f->contains('_E_') && !$f->contains('_noRoundtrip') && !readFile($f)->contains('###' + 'Error'));
     let total = $files->size();
     startProgress('Running ' + $total->toString() + ' compiled printer corpus checks from ' + $testDir + '...');
@@ -57,7 +58,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::runCompile
     // one VISUAL line — so a wrapped path leaves the cursor on the wrong
     // line and the bar leaks downward for every subsequent tick.
     let prefixLen = $testDir->length() + 1;
-    let cases = range(0, $total)->map(i | meta::pure::compiler::test::printer::compiledPrinterCase($files->at($i), $prefixLen, $i + 1, $total));
+    let cases = range(0, $total)->map(i | platform::pure::compiler::test::printer::compiledPrinterCase($files->at($i), $prefixLen, $i + 1, $total));
     finishProgress();
     let mismatches = $cases->filter(c | $c.error->isNotEmpty());
 
@@ -65,7 +66,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::runCompile
 
     let passed = $total - $mismatches->size();
     let summary = 'Compiled printer corpus: ' + $passed->toString() + ' / ' + $total->toString() + ' byte-equal to source';
-    if ($reportPath->isEmpty(), | [], | meta::pure::test::report::writeSuiteReport($reportPath->toOne(), 'compiledPrinter', meta::pure::functions::date::currentTimeMillis() - $start, $cases));
+    if ($reportPath->isEmpty(), | [], | platform::pure::test::report::writeSuiteReport($reportPath->toOne(), 'compiledPrinter', platform::pure::functions::date::currentTimeMillis() - $start, $cases));
     // Throw on any mismatch so the CLI's exit code reflects corpus status —
     // returning just the summary lets the bootstrap CLI swallow failures.
     assert($mismatches->isEmpty(), $summary);
@@ -75,20 +76,20 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::runCompile
 // One corpus file's check as a report case: the id is the corpus path without `.pure`. Each check is
 // wrapped in withSilencedPrint so any stray output from compile() (already silenced via the 3-arg
 // overload but defence in depth) doesn't tear the progress bar's ANSI cursor invariants.
-function <<test.TestDependency>> meta::pure::compiler::test::printer::compiledPrinterCase(file:String[1], prefixLen:Integer[1], index:Integer[1], total:Integer[1]):meta::pure::test::report::TestCaseReport[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::compiledPrinterCase(file:String[1], prefixLen:Integer[1], index:Integer[1], total:Integer[1]):platform::pure::test::report::TestCaseReport[1]
 {
     let rel = if ($file->length() > $prefixLen, | $file->substring($prefixLen, $file->length()), | $file);
     tickProgress($index, $total, $rel);
-    let started = meta::pure::functions::date::currentTimeMillis();
-    let result = withSilencedPrint(| meta::pure::compiler::test::printer::checkCompiledPrinterFile($file));
-    ^meta::pure::test::report::TestCaseReport(
+    let started = platform::pure::functions::date::currentTimeMillis();
+    let result = withSilencedPrint(| platform::pure::compiler::test::printer::checkCompiledPrinterFile($file));
+    ^platform::pure::test::report::TestCaseReport(
         id = if ($rel->endsWith('.pure'), | $rel->substring(0, $rel->length() - 5), | $rel),
-        durationMs = meta::pure::functions::date::currentTimeMillis() - $started,
-        error = if ($result.failure->isEmpty(), | [], | ^meta::pure::functions::lang::Error(message = $result.failure->toOne(), stack = []))
+        durationMs = platform::pure::functions::date::currentTimeMillis() - $started,
+        error = if ($result.failure->isEmpty(), | [], | ^platform::pure::functions::lang::Error(message = $result.failure->toOne(), stack = []))
     );
 }
 
-Class <<test.TestDependency>> meta::pure::compiler::test::printer::CompiledPrinterCheckResult
+Class <<test.TestDependency>> platform::pure::compiler::test::printer::CompiledPrinterCheckResult
 {
     path: String[1];
     // Non-empty when the canonical print does not byte-equal the source
@@ -97,18 +98,18 @@ Class <<test.TestDependency>> meta::pure::compiler::test::printer::CompiledPrint
     failure: String[0..1];
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::checkCompiledPrinterFile(path:String[1]):meta::pure::compiler::test::printer::CompiledPrinterCheckResult[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::checkCompiledPrinterFile(path:String[1]):platform::pure::compiler::test::printer::CompiledPrinterCheckResult[1]
 {
     let res = tryEval(| renderCompiledFile($path));
     if ($res.failure->isNotEmpty(),
-        | ^meta::pure::compiler::test::printer::CompiledPrinterCheckResult(path = $path, failure = 'compile/print threw: ' + $res.failure->toOne().message),
+        | ^platform::pure::compiler::test::printer::CompiledPrinterCheckResult(path = $path, failure = 'compile/print threw: ' + $res.failure->toOne().message),
         | let printed = $res.value->toOne();
           let sourcePure = extractPureSection(readFile($path));
           let normSrc = normalizeCompiledSource($sourcePure);
           let normPrint = normalizeCompiledSource($printed);
           if ($normSrc == $normPrint,
-              | ^meta::pure::compiler::test::printer::CompiledPrinterCheckResult(path = $path, failure = []),
-              | ^meta::pure::compiler::test::printer::CompiledPrinterCheckResult(path = $path, failure = 'normalised print differs from source\n--- source ---\n' + $normSrc + '\n--- printed ---\n' + $normPrint);
+              | ^platform::pure::compiler::test::printer::CompiledPrinterCheckResult(path = $path, failure = []),
+              | ^platform::pure::compiler::test::printer::CompiledPrinterCheckResult(path = $path, failure = 'normalised print differs from source\n--- source ---\n' + $normSrc + '\n--- printed ---\n' + $normPrint);
           );
     );
 }
@@ -116,20 +117,20 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::checkCompi
 // parse → compile → print in ManageImports mode. ManageImports is the form
 // the on-disk corpus is written in, so this is the right baseline to compare
 // against the source.
-function <<test.TestDependency>> meta::pure::compiler::test::printer::renderCompiledFile(path:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::renderCompiledFile(path:String[1]):String[1]
 {
     let source = readFile($path);
-    let parsed = meta::pure::functions::meta::parse($path, $source);
-    let result = meta::pure::compiler::compile($parsed, false, true);
+    let parsed = platform::pure::functions::meta::parse($path, $source);
+    let result = platform::pure::compiler::compile($parsed, false, true);
     assert($result.errors->isEmpty(), | 'compile failed: ' + $result.errors->joinStrings('; '));
-    printCompiledElements($result.elements, meta::pure::functions::printer::compiled::PrintMode.ManageImports);
+    printCompiledElements($result.elements, platform::pure::functions::printer::compiled::PrintMode.ManageImports);
 }
 
 // Compiler test files have three sections: `###Pure` (source input),
 // `###CompiledGraph` (debug-format snapshot), `###ReverseIndex` (idx debug).
 // Comparison only cares about the surface-Pure section — strip the trailing
 // debug sections before normalising.
-function <<test.TestDependency>> meta::pure::compiler::test::printer::extractPureSection(content:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::extractPureSection(content:String[1]):String[1]
 {
     let cgIdx = $content->indexOf('###CompiledGraph');
     if ($cgIdx < 0, | $content, | $content->substring(0, $cgIdx));
@@ -137,22 +138,24 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::extractPur
 
 // Whitespace-tolerant comparison: trim each line, collapse internal runs of
 // spaces/tabs, drop blank lines, drop `import …;` lines (the printer emits
-// imports in canonical order which may diverge from the source's), and strip
+// imports in canonical order which may diverge from the source's), drop
+// full-line `//` comments (the printer never emits comments — license headers
+// included), and strip
 // trailing `;` (optional terminator).
-function <<test.TestDependency>> meta::pure::compiler::test::printer::normalizeCompiledSource(s:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::normalizeCompiledSource(s:String[1]):String[1]
 {
     $s->split('\n')
         ->map(l | squashSpaces(stripTrailingSemicolon($l->trim())))
-        ->filter(l | $l != '' && !$l->startsWith('import '))
+        ->filter(l | $l != '' && !$l->startsWith('import ') && !$l->startsWith('//'))
         ->joinStrings('\n');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::squashSpaces(s:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::squashSpaces(s:String[1]):String[1]
 {
     $s->replace('\t', ' ')->replace('  ', ' ')->replace('  ', ' ')->replace('  ', ' ');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::stripTrailingSemicolon(s:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::stripTrailingSemicolon(s:String[1]):String[1]
 {
     if ($s->endsWith(';'), | $s->substring(0, $s->length() - 1), | $s);
 }

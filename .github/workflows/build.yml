@@ -41,7 +41,7 @@
 #               │      │                     printers, in-memory sources; reuses the uploaded truffle jar)
 #               │      │
 #               │      ├── language-java     (GraalVM 25 — `just language::java::test-all`: runs
-#               │      │                     meta::external::language::java tests via pure-truffle.
+#               │      │                     platform::external::language::java tests via pure-truffle.
 #               │      │                     The `compileAndExecute` native is only registered in the
 #               │      │                     truffle Java extension, so this can't run on bootstrap.)
 #               │      │
@@ -601,7 +601,7 @@ jobs:
           mkdir -p ~/.m2/repository
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
 
-      # generate-pdb-reader translates meta::pure::compiler::pdb::{reader,schema}
+      # generate-pdb-reader translates platform::pure::compiler::pdb::{reader,schema}
       # into legend-pure-next-platform-truffle-pure/generated with the JAVA translator,
       # running on the bootstrap CLI — so it needs those modules' PDBs. They are
       # NOT in bootstrap-artifacts, and the jobs that publish them (translation-deps
@@ -754,7 +754,7 @@ jobs:
           mkdir -p ~/.m2/repository
           tar -xf bootstrap-mvn.tar -C ~/.m2/repository
 
-      # generate-pdb-reader translates meta::pure::compiler::pdb::{reader,schema}
+      # generate-pdb-reader translates platform::pure::compiler::pdb::{reader,schema}
       # into legend-pure-next-platform-truffle-pure/generated with the JAVA translator,
       # running on the bootstrap CLI — so it needs those modules' PDBs. They are
       # NOT in bootstrap-artifacts, and the jobs that publish them (translation-deps
@@ -895,7 +895,7 @@ jobs:
   # matrix box so the visualizer doesn't draw long arrows around standalone
   # nodes. Three targets:
   #   - language-java       : pure-bootstrap builds pure/modules/language/java/build/java.pdb, then
-  #                            pure-truffle runs `runTests meta::external::language::java`
+  #                            pure-truffle runs `runTests platform::external::language::java`
   #                            (the Java extension's JavaCompileNatives registers
   #                            `compileAndExecute`, which bootstrap doesn't have).
   #   - language-javascript : the 133 serialization tests; these need no host
@@ -1082,7 +1082,7 @@ jobs:
             gallery_file: platforms/javascript/build/javascript-translation-gallery.html
             language_pdb_artifact: language-javascript-pdb
             # build-TESTS, not build: the platform's antlr-all runs `_emit` over
-            # meta::pure::parser::mappings, and a split-built lean pdb carries refs into its -tests
+            # platform::pure::parser::mappings, and a split-built lean pdb carries refs into its -tests
             # companion, so javascript-translation-tests.pdb has to exist. `modules::build` uses
             # build-tests for this module for the same reason.
             gallery_cmd: just build-tests && just --justfile ../../../../Justfile javascript::antlr-all && just test-all gallery
@@ -1168,7 +1168,7 @@ jobs:
       # The language extensions under pure/extensions — today the `###Diagram` one. BOTH platforms
       # need it: javascript::generate-all translates it into generated/extensions/ for the browser
       # IDE's diagram editor, and the Java platform's -extensions-diagram module generates its parser
-      # and AOT-translates meta::pure::diagram from this PDB (java::spec-diagram runs its tests).
+      # and AOT-translates platform::pure::diagram from this PDB (java::spec-diagram runs its tests).
       # Built here rather than shipped as a translation-deps artifact: it depends only on core.pdb and
       # compiler.pdb (both restored above with bootstrap-artifacts) and compiles in well under a
       # second, so an artifact round trip would cost more than the build.

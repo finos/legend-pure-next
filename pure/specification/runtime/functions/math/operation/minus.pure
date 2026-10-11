@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 native function
     <<PCT.function>>
@@ -21,24 +22,24 @@ native function
         PCT.grammarDoc='1 - 2',
         PCT.grammarCharacters='-'
     }
-    meta::pure::functions::math::minus(left:Integer[1], right:Integer[1]):Integer[1];
+    platform::pure::functions::math::minus(left:Integer[1], right:Integer[1]):Integer[1];
 
-native function <<PCT.function>> meta::pure::functions::math::minus(expr:Integer[1]):Integer[1];
+native function <<PCT.function>> platform::pure::functions::math::minus(expr:Integer[1]):Integer[1];
 
-native function <<PCT.function>> meta::pure::functions::math::minus(left:Float[1], right:Float[1]):Float[1];
+native function <<PCT.function>> platform::pure::functions::math::minus(left:Float[1], right:Float[1]):Float[1];
 
-native function <<PCT.function>> meta::pure::functions::math::minus(expr:Float[1]):Float[1];
+native function <<PCT.function>> platform::pure::functions::math::minus(expr:Float[1]):Float[1];
 
-native function <<PCT.function>> meta::pure::functions::math::minus(left:Decimal[1], right:Decimal[1]):Decimal[1];
+native function <<PCT.function>> platform::pure::functions::math::minus(left:Decimal[1], right:Decimal[1]):Decimal[1];
 
-native function <<PCT.function>> meta::pure::functions::math::minus(expr:Decimal[1]):Decimal[1];
+native function <<PCT.function>> platform::pure::functions::math::minus(expr:Decimal[1]):Decimal[1];
 
-native function <<PCT.function>> meta::pure::functions::math::minus(left:Number[1], right:Number[1]):Number[1];
+native function <<PCT.function>> platform::pure::functions::math::minus(left:Number[1], right:Number[1]):Number[1];
 
-native function <<PCT.function>> meta::pure::functions::math::minus(expr:Number[1]):Number[1];
+native function <<PCT.function>> platform::pure::functions::math::minus(expr:Number[1]):Number[1];
 
 
-function <<PCT.test>> meta::pure::functions::math::tests::minus::testSimpleMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::minus::testSimpleMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(1, $f->eval(|3 - 2));
     assertEquals(1, $f->eval(|minus(3, 2)));
@@ -49,7 +50,7 @@ function <<PCT.test>> meta::pure::functions::math::tests::minus::testSimpleMinus
     assertEquals(-5, $f->eval(|-3-2));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::minus::testComplexMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::minus::testComplexMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(0, $f->eval(|6 - (4 - 5) - 7));
     assertEquals(7, $f->eval(|minus(6, minus(4, 5))));
@@ -59,7 +60,7 @@ function <<PCT.test>> meta::pure::functions::math::tests::minus::testComplexMinu
     assertEquals(-9, $f->eval(|-3-(4-5)-7));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::minus::testFloatMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::minus::testFloatMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(1.5, $f->eval(|3 - 1.5));
     assertEquals(-1.5, $f->eval(|0 - 1.5));
@@ -67,7 +68,7 @@ function <<PCT.test>> meta::pure::functions::math::tests::minus::testFloatMinus<
     assertEquals(-4.5, $f->eval(|-1.5 - 3));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::minus::testSingleMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::minus::testSingleMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(-1, $f->eval(|0 - 1));
     assertEquals(-1, $f->eval(|minus(1)));
@@ -75,13 +76,13 @@ function <<PCT.test>> meta::pure::functions::math::tests::minus::testSingleMinus
     assertEquals(-1, $f->eval(|---1));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::minus::testSingleMinusType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::minus::testSingleMinusType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertIs(Integer, $f->eval(|type(-1)->toOne()));
     assertIs(Float, $f->eval(|type(-1.0)->toOne()));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::minus::testDecimalMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::minus::testDecimalMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assertEquals(-1.0d, $f->eval(|minus(1.0d, 2.0d)));
    assertEquals(-1.0d, $f->eval(|minus(1.0d, 2)));
@@ -91,12 +92,12 @@ function <<PCT.test>> meta::pure::functions::math::tests::minus::testDecimalMinu
 // IEEE-754 subtraction loses precision the same way: 0.3 - 0.1 in Double
 // yields 0.19999999999999998. In BigDecimal it's 0.2 exactly. Fails if
 // minus_Decimal unwraps to Double for the subtract (pre-fix behaviour).
-function <<PCT.test>> meta::pure::functions::math::tests::minus::testDecimalMinusPreservesPrecision<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::minus::testDecimalMinusPreservesPrecision<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assertEquals(0.2d, $f->eval(|0.3d - 0.1d));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::minus::testSingleExpressionMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::minus::testSingleExpressionMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let val = 1;
     assertEquals(-1, $f->eval(|-$val));

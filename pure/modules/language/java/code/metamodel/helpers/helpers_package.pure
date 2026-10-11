@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::metamodel::*;
+import platform::external::language::java::metamodel::*;
 
-function meta::external::language::java::metamodel::javaKeywords(): String[*]
+function platform::external::language::java::metamodel::javaKeywords(): String[*]
 {
    [
       'abstract'  ,'continue'   ,'for'         ,'new'        ,'switch',
@@ -30,17 +31,17 @@ function meta::external::language::java::metamodel::javaKeywords(): String[*]
    ];
 }
 
-function meta::external::language::java::metamodel::modelPropertyKeywords(): String[*]
+function platform::external::language::java::metamodel::modelPropertyKeywords(): String[*]
 {
    ['com', 'org'];
 }
 
-function meta::external::language::java::metamodel::reservedKeywords(): String[*]
+function platform::external::language::java::metamodel::reservedKeywords(): String[*]
 {
   javaKeywords()->concatenate(modelPropertyKeywords());
 }
 
-function meta::external::language::java::metamodel::isJavaLang(pkg: meta::external::language::java::metamodel::Package[1]):Boolean[1]
+function platform::external::language::java::metamodel::isJavaLang(pkg: platform::external::language::java::metamodel::Package[1]):Boolean[1]
 {
    $pkg.name == 'lang'
    && $pkg.parent->isNotEmpty()
@@ -48,29 +49,29 @@ function meta::external::language::java::metamodel::isJavaLang(pkg: meta::extern
    && $pkg.parent.parent->isEmpty();
 }
 
-function meta::external::language::java::metamodel::packageNames(pkg: meta::external::language::java::metamodel::Package[1]):String[*]
+function platform::external::language::java::metamodel::packageNames(pkg: platform::external::language::java::metamodel::Package[1]):String[*]
 {
    $pkg.parent->map(p| $p->packageNames())->concatenate($pkg.name);
 }
 
-function meta::external::language::java::metamodel::isValidPackageName(name: String[1]): Boolean[1]
+function platform::external::language::java::metamodel::isValidPackageName(name: String[1]): Boolean[1]
 {
    // TODO Enable once matches is fully available
    $name->split('.')->forAll(nm | /*$nm->matches('[_$a-zA-Z][_$a-zA-Z0-9]*') && */ !javaKeywords()->contains($nm));
 }
 
-function meta::external::language::java::metamodel::isInPackage(type: meta::external::language::java::metamodel::Type[1], packageName: String[1]):Boolean[1]
+function platform::external::language::java::metamodel::isInPackage(type: platform::external::language::java::metamodel::Type[1], packageName: String[1]):Boolean[1]
 {
    $type->match([
-      p:meta::external::language::java::metamodel::PrimitiveType[1]     | false,
-      a:meta::external::language::java::metamodel::Array[1]             | $a.rawType->isInPackage($packageName),
-      p:meta::external::language::java::metamodel::ParameterizedType[1] | $p.rawType->isInPackage($packageName),
-      t:meta::external::language::java::metamodel::TypeVariable[1]      | false,
-      c:meta::external::language::java::metamodel::Class[1]             | $c.package->isPackage($packageName)
+      p:platform::external::language::java::metamodel::PrimitiveType[1]     | false,
+      a:platform::external::language::java::metamodel::Array[1]             | $a.rawType->isInPackage($packageName),
+      p:platform::external::language::java::metamodel::ParameterizedType[1] | $p.rawType->isInPackage($packageName),
+      t:platform::external::language::java::metamodel::TypeVariable[1]      | false,
+      c:platform::external::language::java::metamodel::Class[1]             | $c.package->isPackage($packageName)
    ]);
 }
 
-function meta::external::language::java::metamodel::isPackage(pkg: meta::external::language::java::metamodel::Package[1], packageName: String[1]):Boolean[1]
+function platform::external::language::java::metamodel::isPackage(pkg: platform::external::language::java::metamodel::Package[1], packageName: String[1]):Boolean[1]
 {
    let pos  = $packageName->lastIndexOf('.');
    if($pos == -1,

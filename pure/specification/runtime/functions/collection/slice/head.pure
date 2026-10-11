@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,32 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::collection::tests::model::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::collection::tests::model::*;
+import platform::pure::test::pct::*;
 
 native function
      <<PCT.function>>
      {
          doc.doc='Returns the first element of the collection, or nothing if the collection is empty. Equivalent to \'first\''
      }
-     meta::pure::functions::collection::head<T>(set:T[*]):T[0..1];
+     platform::pure::functions::collection::head<T>(set:T[*]):T[0..1];
 
-function <<PCT.test>> meta::pure::functions::collection::tests::head::testHeadSimple<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::head::testHeadSimple<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('a', $f->eval(|['a','b']->head()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::head::testHeadOnOneElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::head::testHeadOnOneElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('a', $f->eval(|'a'->head()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::head::testHeadOnEmptySet<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::head::testHeadOnEmptySet<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEmpty($f->eval(|[]->head()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::head::testHeadComplex<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::head::testHeadComplex<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let smith = ^CO_Person(firstName='Fabrice', lastName='Smith');
     let roe = ^CO_Person(firstName='David', lastName='Roe');

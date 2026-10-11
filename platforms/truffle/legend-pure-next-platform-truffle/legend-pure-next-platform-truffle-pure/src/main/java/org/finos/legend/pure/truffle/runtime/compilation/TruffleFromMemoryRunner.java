@@ -53,17 +53,17 @@ import java.util.Set;
 public final class TruffleFromMemoryRunner
 {
     private static final String PARSE_DIRS_FN_PATH =
-            "meta::pure::compiler::parseDirs_String_MANY__PureFile_MANY_";
+            "platform::pure::compiler::parseDirs_String_MANY__PureFile_MANY_";
     // 3-arg silent variant — callers pull errors/stats structurally off the
     // CompilationResult; the live progress bar + stats summary would clutter
     // CLI output where the only thing that matters is the runner verdict.
     private static final String COMPILE_FN_PATH =
-            "meta::pure::compiler::compile_PureFile_MANY__Boolean_1__Boolean_1__CompilationResult_1_";
+            "platform::pure::compiler::compile_PureFile_MANY__Boolean_1__Boolean_1__CompilationResult_1_";
 
     /** {@code <<test.X>>} for any X — Test / TestDependency / BeforePackage / AfterPackage / ToFix. */
-    private static final String TEST_PROFILE_PATH = "meta::pure::profiles::test";
+    private static final String TEST_PROFILE_PATH = "platform::pure::profiles::test";
     /** {@code <<PCT.test>>} and {@code <<PCT.adapter>>}. */
-    private static final String PCT_PROFILE_PATH = "meta::pure::test::pct::PCT";
+    private static final String PCT_PROFILE_PATH = "platform::pure::test::pct::PCT";
     private static final Set<String> PCT_TEST_STEREOTYPES = Set.of("test", "adapter");
 
     private TruffleFromMemoryRunner() {}
@@ -93,8 +93,8 @@ public final class TruffleFromMemoryRunner
         Object parseDirsFn = registry.getElement(PARSE_DIRS_FN_PATH);
         Object compileFn = registry.getElement(COMPILE_FN_PATH);
         if (parseDirsFn == null || compileFn == null
-                || !_Any.isType(parseDirsFn, "meta::pure::metamodel::function::FunctionDefinition", registry)
-                || !_Any.isType(compileFn, "meta::pure::metamodel::function::FunctionDefinition", registry))
+                || !_Any.isType(parseDirsFn, "platform::pure::metamodel::function::FunctionDefinition", registry)
+                || !_Any.isType(compileFn, "platform::pure::metamodel::function::FunctionDefinition", registry))
         {
             throw new IllegalStateException("parseDirs/compile FunctionDefinition not resolvable through registry — "
                     + "make sure compiler.pdb is loaded before calling compileAndRegister");
@@ -166,7 +166,7 @@ public final class TruffleFromMemoryRunner
         {
             Object el = elements.getBoxed(i);
             if (el == null) continue;
-            if (_Any.pureTypeIs(el, "meta::pure::metamodel::Package") || isTestElement(el, registry))
+            if (_Any.pureTypeIs(el, "platform::pure::metamodel::Package") || isTestElement(el, registry))
             {
                 kept.add(el);
             }

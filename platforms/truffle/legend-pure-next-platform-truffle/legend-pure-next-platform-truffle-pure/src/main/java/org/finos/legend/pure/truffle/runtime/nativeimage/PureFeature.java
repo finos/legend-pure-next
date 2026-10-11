@@ -38,7 +38,7 @@ import java.util.stream.Stream;
  * for the generated Pure metamodel + protocol classes.
  *
  * <p>Scanning is done at image-build time. We walk every class under
- * {@code meta.pure.*} protocol/metamodel classes and
+ * {@code platform.pure.*} protocol/metamodel classes and
  * register:</p>
  * <ul>
  *   <li>The class itself (for {@code Class.forName}).</li>
@@ -60,7 +60,7 @@ public final class PureFeature implements Feature
 {
     // Package roots to register, as they exist on THIS image's class path. Every
     // one is asserted non-empty in beforeAnalysis: when Truffle was decoupled from
-    // bootstrap the old roots ("meta/pure", "org/finos/legend/pure/next/parser",
+    // bootstrap the old roots ("platform/pure", "org/finos/legend/pure/next/parser",
     // the flatbuffers "…/pdbModule/fbs") stopped matching anything, the scan
     // quietly registered 7 classes instead of hundreds, and the image failed every
     // reflective call at run time with "Failed to invoke section on DocumentContext".

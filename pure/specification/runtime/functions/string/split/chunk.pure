@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,35 +13,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::string::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::string::*;
 
 // Splits a String into consecutive pieces of at most `chunkSize` characters
 // each. The last piece may be shorter. An empty string yields no chunks.
-native function <<PCT.function>> meta::pure::functions::string::chunk(str:String[1], chunkSize:Integer[1]):String[*];
+native function <<PCT.function>> platform::pure::functions::string::chunk(str:String[1], chunkSize:Integer[1]):String[*];
 
 
-function <<PCT.test>> meta::pure::functions::string::tests::chunk::testEvenSplit<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::chunk::testEvenSplit<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(['abcd', 'efgh'], $f->eval(|'abcdefgh'->chunk(4)));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::chunk::testUnevenSplit<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::chunk::testUnevenSplit<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(['abc', 'def', 'g'], $f->eval(|'abcdefg'->chunk(3)));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::chunk::testChunkSizeLargerThanString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::chunk::testChunkSizeLargerThanString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(['abc'], $f->eval(|'abc'->chunk(99)));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::chunk::testChunkSizeOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::chunk::testChunkSizeOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(['a', 'b', 'c'], $f->eval(|'abc'->chunk(1)));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::chunk::testEmptyString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::chunk::testEmptyString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([], $f->eval(|''->chunk(3)));
 }

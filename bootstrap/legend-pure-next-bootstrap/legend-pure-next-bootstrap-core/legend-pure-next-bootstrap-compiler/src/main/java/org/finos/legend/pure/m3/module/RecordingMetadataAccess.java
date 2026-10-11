@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,8 +15,8 @@
 
 package org.finos.legend.pure.m3.module;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.type.Type;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.type.Type;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 
@@ -45,7 +46,7 @@ public final class RecordingMetadataAccess implements MetadataAccess
 {
     /**
      * Path prefixes whose lookups are excluded from the reverse index.
-     * Everything under {@code meta::pure::metamodel::} is m3 (primitives,
+     * Everything under {@code platform::pure::metamodel::} is m3 (primitives,
      * multiplicities, metaclasses like Class/Function/Property, the Any
      * top type, GenericType optimization anchors, SourceInformation, etc.)
      * — referenced by every compiled element through its
@@ -53,7 +54,7 @@ public final class RecordingMetadataAccess implements MetadataAccess
      * Recording these creates a flood of edges with no signal: nearly
      * every element references nearly every metaclass.
      */
-    private static final String M3_PREFIX = "meta::pure::metamodel::";
+    private static final String M3_PREFIX = "platform::pure::metamodel::";
 
     private static boolean isNoise(String path)
     {

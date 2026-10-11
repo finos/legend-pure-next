@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,44 +13,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::metamodel::*;
+import platform::external::language::java::metamodel::*;
 
-Class meta::external::language::java::metamodel::Type
+Class platform::external::language::java::metamodel::Type
 {
 }
 
-Class meta::external::language::java::metamodel::ParameterizedType extends meta::external::language::java::metamodel::Type
+Class platform::external::language::java::metamodel::ParameterizedType extends platform::external::language::java::metamodel::Type
 {
-   <<equality.Key>> rawType : meta::external::language::java::metamodel::Type[1];
-   <<equality.Key>> typeArguments : meta::external::language::java::metamodel::Type[*];
+   <<equality.Key>> rawType : platform::external::language::java::metamodel::Type[1];
+   <<equality.Key>> typeArguments : platform::external::language::java::metamodel::Type[*];
 }
 
-Class meta::external::language::java::metamodel::WildcardType extends meta::external::language::java::metamodel::Type
+Class platform::external::language::java::metamodel::WildcardType extends platform::external::language::java::metamodel::Type
 {
-   <<equality.Key>> lowerBounds : meta::external::language::java::metamodel::Type[*];
-   <<equality.Key>> upperBounds : meta::external::language::java::metamodel::Type[*];
+   <<equality.Key>> lowerBounds : platform::external::language::java::metamodel::Type[*];
+   <<equality.Key>> upperBounds : platform::external::language::java::metamodel::Type[*];
 }
 
-Class meta::external::language::java::metamodel::TypeVariable extends meta::external::language::java::metamodel::Type
+Class platform::external::language::java::metamodel::TypeVariable extends platform::external::language::java::metamodel::Type
 {
-   <<equality.Key>> bounds : meta::external::language::java::metamodel::Type[*];
+   <<equality.Key>> bounds : platform::external::language::java::metamodel::Type[*];
    <<equality.Key>> name : String[1];
 }
 
-Class meta::external::language::java::metamodel::Array extends meta::external::language::java::metamodel::Type, meta::external::language::java::metamodel::AnnotatedElement
+Class platform::external::language::java::metamodel::Array extends platform::external::language::java::metamodel::Type, platform::external::language::java::metamodel::AnnotatedElement
 {
-   <<equality.Key>> rawType : meta::external::language::java::metamodel::Type[1];
+   <<equality.Key>> rawType : platform::external::language::java::metamodel::Type[1];
 }
 
-Class meta::external::language::java::metamodel::PrimitiveType extends meta::external::language::java::metamodel::Type
+Class platform::external::language::java::metamodel::PrimitiveType extends platform::external::language::java::metamodel::Type
 {
    <<equality.Key>> simpleName : String[1];
 }
 
 // Not really a type in Java but used to carry type information for lambdas during code generation
-Class meta::external::language::java::metamodel::FunctionType extends meta::external::language::java::metamodel::Type
+Class platform::external::language::java::metamodel::FunctionType extends platform::external::language::java::metamodel::Type
 {
-   <<equality.Key>> parameterTypes : meta::external::language::java::metamodel::Type[*];
-   <<equality.Key>> returnType     : meta::external::language::java::metamodel::Type[1];
+   <<equality.Key>> parameterTypes : platform::external::language::java::metamodel::Type[*];
+   <<equality.Key>> returnType     : platform::external::language::java::metamodel::Type[1];
    nullResultPossible : Boolean[0..1];
 }

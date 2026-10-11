@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,26 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::collection::*;
-import meta::pure::functions::date::*;
-import meta::pure::functions::io::*;
-import meta::pure::functions::lang::*;
-import meta::pure::functions::meta::*;
-import meta::pure::functions::string::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::pointer::*;
-import meta::pure::ui::progress::*;
+import platform::pure::functions::collection::*;
+import platform::pure::functions::date::*;
+import platform::pure::functions::io::*;
+import platform::pure::functions::lang::*;
+import platform::pure::functions::meta::*;
+import platform::pure::functions::string::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::pointer::*;
+import platform::pure::ui::progress::*;
 
 // Per-test outcome carried by runTests / runPCTTests. {@code error} is empty
 // on success; on failure it holds the (already-formatted, Pure-stack-included)
 // exception message from {@link tryEval}. Built as a class because Pure's
 // {@code pair} requires both members to be {@code [1]} and we want {@code [0..1]}
 // for the error so successes don't carry a sentinel.
-Class meta::pure::test::TestResult
+Class platform::pure::test::TestResult
 {
     name : String[1];
-    error : meta::pure::functions::lang::Error[0..1];
+    error : platform::pure::functions::lang::Error[0..1];
     durationMs : Integer[1];
 }
 
@@ -41,7 +42,7 @@ Class meta::pure::test::TestResult
 // the runtime resolver, which gives us the canonical pass-3 entry. Non-pointer
 // children (the case for PDB-load paths, which deref at load time) pass
 // through unchanged.
-function <<test.TestDependency>> meta::pure::test::resolveChild(c:meta::pure::metamodel::PackageableElement[1]):meta::pure::metamodel::PackageableElement[1]
+function <<test.TestDependency>> platform::pure::test::resolveChild(c:platform::pure::metamodel::PackageableElement[1]):platform::pure::metamodel::PackageableElement[1]
 {
     if($c->instanceOf(TempCompilerPointer),
         | pathToElement($c->cast(@TempCompilerPointer).path),
@@ -58,27 +59,27 @@ function <<test.TestDependency>> meta::pure::test::resolveChild(c:meta::pure::me
 //
 // Invocation:
 //   pure-truffle execute --pdb core.pdb --pdb compiler.pdb \
-//       --function "meta::pure::test::runTests_String_1__String_1_" \
-//       --args "meta::pure::functions"
+//       --function "platform::pure::test::runTests_String_1__String_1_" \
+//       --args "platform::pure::functions"
 //
 // Returns true iff every discovered test returns true.
 // Skips parametrized tests (e.g. PCT tests) — those go through runPCTTests.
 // ---------------------------------------------------------------------------
 
 // Recursively collect zero-arg <<test.Test>> functions under a package.
-function <<test.TestDependency>> meta::pure::test::collectFunctionTests(pkg:Package[1]):UserDefinedFunction<Any>[*]
+function <<test.TestDependency>> platform::pure::test::collectFunctionTests(pkg:Package[1]):UserDefinedFunction<Any>[*]
 {
-    let resolvedChildren = $pkg.children->map(c | meta::pure::test::resolveChild($c));
+    let resolvedChildren = $pkg.children->map(c | platform::pure::test::resolveChild($c));
     let directTests = $resolvedChildren
         ->filter(e | $e->instanceOf(UserDefinedFunction)
-                     && meta::pure::test::hasTestStereotype($e)
-                     && meta::pure::test::isZeroArg($e->cast(@UserDefinedFunction<Any>)))
+                     && platform::pure::test::hasTestStereotype($e)
+                     && platform::pure::test::isZeroArg($e->cast(@UserDefinedFunction<Any>)))
         ->cast(@UserDefinedFunction<Any>);
 
     let subPackages = $resolvedChildren
         ->filter(e | $e->instanceOf(Package))
         ->cast(@Package);
-    let subTests = $subPackages->map(p | meta::pure::test::collectFunctionTests($p));
+    let subTests = $subPackages->map(p | platform::pure::test::collectFunctionTests($p));
 
     concatenate($directTests, $subTests);
 }
@@ -87,33 +88,33 @@ function <<test.TestDependency>> meta::pure::test::collectFunctionTests(pkg:Pack
 // is available directly on any PackageableElement. We still check via a cast
 // that's always-true so the type system doesn't complain about non-inherited
 // access.
-function <<test.TestDependency>> meta::pure::test::hasTestStereotype(el:PackageableElement[1]):Boolean[1]
+function <<test.TestDependency>> platform::pure::test::hasTestStereotype(el:PackageableElement[1]):Boolean[1]
 {
     $el.stereotypes
         ->exists(s | $s.value == 'Test' && $s.profile.name == 'test');
 }
 
-function <<test.TestDependency>> meta::pure::test::isZeroArg(fn:UserDefinedFunction<Any>[1]):Boolean[1]
+function <<test.TestDependency>> platform::pure::test::isZeroArg(fn:UserDefinedFunction<Any>[1]):Boolean[1]
 {
     $fn.parameters->isEmpty();
 }
 
-function <<test.TestDependency>> meta::pure::test::runTests(rootPackagePath:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::test::runTests(rootPackagePath:String[1]):String[1]
 {
-    meta::pure::test::runTestsWithReport($rootPackagePath, []);
+    platform::pure::test::runTestsWithReport($rootPackagePath, []);
 }
 
 // Same run, and writes a JSON report (see testReport.pure) to $reportPath — before the
 // final assert, so failing runs are reported too.
-function <<test.TestDependency>> meta::pure::test::runTests(rootPackagePath:String[1], reportPath:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::test::runTests(rootPackagePath:String[1], reportPath:String[1]):String[1]
 {
-    meta::pure::test::runTestsWithReport($rootPackagePath, $reportPath);
+    platform::pure::test::runTestsWithReport($rootPackagePath, $reportPath);
 }
 
-function <<test.TestDependency>> meta::pure::test::runTestsWithReport(rootPackagePath:String[1], reportPath:String[0..1]):String[1]
+function <<test.TestDependency>> platform::pure::test::runTestsWithReport(rootPackagePath:String[1], reportPath:String[0..1]):String[1]
 {
     let root = pathToElement($rootPackagePath)->cast(@Package);
-    let tests = meta::pure::test::collectFunctionTests($root);
+    let tests = platform::pure::test::collectFunctionTests($root);
     let total = $tests->size();
     // Fail loudly on 0: a caller of runTests expects the path to contain at
     // least one <<test.Test>> function. 0 almost always means the test PDB
@@ -135,7 +136,7 @@ function <<test.TestDependency>> meta::pure::test::runTestsWithReport(rootPackag
         tickProgress($i + 1, $total, $name);
         let testStart = currentTimeMillis();
         let result = tryEval(| withSilencedPrint(| $fn->evaluate([])));
-        ^meta::pure::test::TestResult(name = $name, error = $result.failure, durationMs = currentTimeMillis() - $testStart);
+        ^platform::pure::test::TestResult(name = $name, error = $result.failure, durationMs = currentTimeMillis() - $testStart);
     );
 
     let elapsedMs = currentTimeMillis() - $start;
@@ -159,7 +160,7 @@ function <<test.TestDependency>> meta::pure::test::runTestsWithReport(rootPackag
     // returning the summary string lets the bootstrap CLI swallow failures
     // (it just prints the result), so callers like `just <host>::spec-functions`
     // never see a non-zero exit.
-    $reportPath->map(path | meta::pure::test::report::writeTestResults($path, 'testFunctions', $elapsedMs, $results));
+    $reportPath->map(path | platform::pure::test::report::writeTestResults($path, 'testFunctions', $elapsedMs, $results));
     assert($failed == 0, $summary);
     $summary;
 }

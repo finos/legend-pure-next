@@ -38,7 +38,7 @@ import java.util.function.Supplier;
 public final class PureLambda
 {
     private static final String LAMBDAS_IN_FUNCTION =
-            "meta::external::language::java::translation::lambdasInFunction_String_1__LambdaFunction_MANY_";
+            "platform::external::language::java::translation::lambdasInFunction_String_1__LambdaFunction_MANY_";
 
     /**
      * Resolved once: `of` and `ofElement` run on every Pure lambda VALUE creation,
@@ -52,7 +52,7 @@ public final class PureLambda
     {
         try
         {
-            return Class.forName("org.finos.legend.pure.m3.meta.pure.metamodel.function.LambdaFunction");
+            return Class.forName("org.finos.legend.pure.m3.platform.pure.metamodel.function.LambdaFunction");
         }
         catch (ClassNotFoundException e)
         {
@@ -232,7 +232,7 @@ public final class PureLambda
             }
             if (name.equals("_purePath"))
             {
-                return "meta::pure::metamodel::function::LambdaFunction";
+                return "platform::pure::metamodel::function::LambdaFunction";
             }
             if (name.equals("equals") && arguments.length == 1)
             {

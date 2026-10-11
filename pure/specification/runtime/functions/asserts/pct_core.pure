@@ -13,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
-Profile meta::pure::test::pct::PCT
+Profile platform::pure::test::pct::PCT
 {
     // `requiresCompiler` marks tests that dynamically compile source
     // (compileSource): they need the compiler module loaded, which some
@@ -26,7 +26,7 @@ Profile meta::pure::test::pct::PCT
     tags: [grammarDoc, grammarCharacters, adapterName];
 }
 
-Profile <<meta::pure::test::pct::PCT.testQualifierProfile>> meta::pure::test::pct::PCTCoreQualifier
+Profile <<platform::pure::test::pct::PCT.testQualifierProfile>> platform::pure::test::pct::PCTCoreQualifier
 {
     stereotypes : [variant, needsImplementation];
 
@@ -37,7 +37,7 @@ function
     {
         PCT.adapterName='In-Memory'
     }
-    meta::pure::test::pct::testAdapterForInMemoryExecution<X|o>(f:Function<{->X[o]}>[1]):X[o]
+    platform::pure::test::pct::testAdapterForInMemoryExecution<X|o>(f:Function<{->X[o]}>[1]):X[o]
 {
   $f->eval();
 }

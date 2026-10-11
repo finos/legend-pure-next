@@ -36,7 +36,7 @@ import java.util.Set;
  *       Recomputed on every {@code subtypeOf} / {@code findCommonType} call
  *       in the uncached implementation; here it's computed once per Type.</li>
  *   <li><b>equalityKeyProperties</b>: names of properties stereotyped with
- *       {@code <<meta::pure::profiles::equality.Key>>} from the Type and all
+ *       {@code <<platform::pure::profiles::equality.Key>>} from the Type and all
  *       its supertypes. Walks the same generalization chain; without caching
  *       it re-walks on every {@code equal()} call.</li>
  * </ul>
@@ -65,7 +65,7 @@ public final class TypeCache implements TruffleTypeCache
     private static final int SLOT_PROPERTIES =
             org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("properties");
 
-    private static final String EQUALITY_PROFILE_PATH = "meta::pure::profiles::equality";
+    private static final String EQUALITY_PROFILE_PATH = "platform::pure::profiles::equality";
     private static final String EQUALITY_KEY_VALUE = "Key";
     private static final int MAX_GENERALIZATION_DEPTH = 64;
 
@@ -154,7 +154,7 @@ public final class TypeCache implements TruffleTypeCache
         // active Pure execution, so the
         // resolver-aware ancestors(type, resolver) path must be used there.
         // Linearization needs the resolver to dereference {@link
-        // meta.pure.metamodel.pointer.TempCompilerPointer} subtypes that
+        // platform.pure.metamodel.pointer.TempCompilerPointer} subtypes that
         // compile-pure emits in {@code generalizations.general.type}.
         var resolver = resolverOrNull != null
                 ? resolverOrNull

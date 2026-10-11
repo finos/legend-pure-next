@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 // Returns the formatted string it just wrote (value + trailing newline) so
 // tests can assert on the exact rendering without intercepting stdout.
 // Implementation is two `print` calls — `print` returns the formatted
 // string, so println simply concatenates the two returns.
-function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::println(param:Any[*], max:Integer[1]):String[1]
+function <<PCT.function, PCT.platformOnly>> platform::pure::functions::io::println(param:Any[*], max:Integer[1]):String[1]
 {
     print($param, $max) + print('\n', $max);
 }
 
-function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::println(param:Any[*]):String[1]
+function <<PCT.function, PCT.platformOnly>> platform::pure::functions::io::println(param:Any[*]):String[1]
 {
     println($param, 1);
 }
@@ -32,22 +33,22 @@ function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::println(p
 // Tests — reuses TestPerson / TestNested classes defined in `print.pure`.
 // =============================================================================
 
-function <<PCT.test>> meta::pure::functions::io::tests::testPrintlnInteger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::io::tests::testPrintlnInteger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('42\n', $f->eval(|println(42)));
 }
 
-function <<PCT.test>> meta::pure::functions::io::tests::testPrintlnString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::io::tests::testPrintlnString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('hello\n', $f->eval(|println('hello')));
 }
 
-function <<PCT.test>> meta::pure::functions::io::tests::testPrintlnBoolean<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::io::tests::testPrintlnBoolean<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('true\n', $f->eval(|println(true)));
 }
 
-function <<PCT.test>> meta::pure::functions::io::tests::testPrintlnList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::io::tests::testPrintlnList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(
         '''
@@ -59,11 +60,11 @@ function <<PCT.test>> meta::pure::functions::io::tests::testPrintlnList<Z|y>(f:F
     );
 }
 
-function <<PCT.test>> meta::pure::functions::io::tests::testPrintlnObject<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::io::tests::testPrintlnObject<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(
         'TestPerson\n' +
         '  name: \'Carol\'\n' +
         '  age: 40\n',
-        $f->eval(|println(^meta::pure::functions::io::tests::TestPerson(name='Carol', age=40))));
+        $f->eval(|println(^platform::pure::functions::io::tests::TestPerson(name='Carol', age=40))));
 }

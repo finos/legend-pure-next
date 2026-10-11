@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Top-level dispatcher.
 //
 // `parseElements` is the entry point called from Java (after Java has run
@@ -10,15 +25,15 @@
 // There is no separate primitive dispatch; the lambda bodies are plain Pure
 // code, run by the Pure runtime.
 
-import meta::pure::parser::mappings::*;
-import meta::pure::functions::meta::antlr::*;
-import meta::pure::parser::mappings::interpreter::*;
+import platform::pure::parser::mappings::*;
+import platform::pure::functions::meta::antlr::*;
+import platform::pure::parser::mappings::interpreter::*;
 
-function meta::pure::parser::mappings::interpreter::parseElements(
+function platform::pure::parser::mappings::interpreter::parseElements(
    root: AntlrContext[1],
    rules: Rule[*],
    lineOffset: Integer[1]
-): meta::pure::protocol::grammar::PackageableElement[*]
+): platform::pure::protocol::grammar::PackageableElement[*]
 {
    // The `definition` ANTLR rule's top-level children include imports and EOF
    // alongside the element ctxs (classDefinition, functionDefinition, ...).
@@ -31,11 +46,11 @@ function meta::pure::parser::mappings::interpreter::parseElements(
         ->map(c | dispatchRule($c, $rules, $lineOffset));
 }
 
-function meta::pure::parser::mappings::interpreter::dispatchRule(
+function platform::pure::parser::mappings::interpreter::dispatchRule(
    ctx: AntlrContext[1],
    rules: Rule[*],
    lineOffset: Integer[1]
-): meta::pure::protocol::grammar::PackageableElement[1]
+): platform::pure::protocol::grammar::PackageableElement[1]
 {
    let ruleName = $ctx->grammarRuleName();
    let rule     = $rules->filter(r | $r.name == $ruleName)->toOne();

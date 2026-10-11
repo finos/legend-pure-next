@@ -47,7 +47,7 @@ import org.finos.legend.pure.truffle.execution.ast.PureNode;
 public final class RawUserFunctionCallNode extends PureNode
 {
     private static final String QUALIFIED_PROPERTY_PATH =
-            "meta::pure::metamodel::function::property::QualifiedProperty";
+            "platform::pure::metamodel::function::property::QualifiedProperty";
 
     private final Object fd;
 

@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +15,7 @@
 
 package org.finos.legend.pure.execution.natives.meta.antlr;
 
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -35,7 +36,7 @@ import java.util.function.Function;
 
 /**
  * Bridge between the Pure-side ANTLR primitives (declared in
- * {@code meta::pure::functions::meta::antlr}) and the host-side ANTLR
+ * {@code platform::pure::functions::meta::antlr}) and the host-side ANTLR
  * runtime. Registered by {@link NativeRegistry}'s {@code registerDefaults}
  * — these are core natives, not opt-in extensions.
  *
@@ -186,11 +187,10 @@ public final class AntlrNatives
             });
 
         put(natives, resolver,
-            "computeFirstNonNewlineLine_AntlrContext_$0_1$__Boolean_1__Integer_1_",
+            "computeFirstNonNewlineLine_AntlrContext_$0_1$__Integer_1_",
             args -> {
                 Object raw = args.get(0);
                 Object ctx = raw instanceof List<?> l ? (l.isEmpty() ? null : l.get(0)) : raw;
-                boolean syntheticHeader = (Boolean) args.get(1);
                 if (ctx == null) return 0L;
                 ParserRuleContext prc = (ParserRuleContext) ctx;
                 for (int i = 0; i < prc.getChildCount(); i++)
@@ -203,9 +203,7 @@ public final class AntlrNatives
                     int line = (child instanceof TerminalNode tn2)
                             ? tn2.getSymbol().getLine()
                             : ((ParserRuleContext) child).getStart().getLine();
-                    int offset = line - 1;
-                    if (syntheticHeader) offset -= 1;
-                    return (long) offset;
+                    return (long) (line - 1);
                 }
                 return 0L;
             });

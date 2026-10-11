@@ -28,13 +28,13 @@
 // hermetically on every platform — the m3.fbs tables involved are themselves
 // pinned by the writer's wire-format tests, so drift would surface there.
 
-function meta::pure::compiler::pdb::reader::tests::testSchema():meta::pure::compiler::pdb::schema::FbsSchema[1]
+function platform::pure::compiler::pdb::reader::tests::testSchema():platform::pure::compiler::pdb::schema::FbsSchema[1]
 {
    // One entry per source line, joined — a flat collection literal keeps
    // the parsed protocol tree shallow (a 60-term `+` chain nests one
    // FunctionExpression per term and trips the interpreter's
    // ProtocolToDynamicInstance depth guard on the self-host parse).
-   meta::pure::compiler::pdb::schema::parseFbs([
+   platform::pure::compiler::pdb::schema::parseFbs([
       'enum PointerKind : byte { Element, Property, QualifiedProperty, Stereotype, Tag }',
       'union ClassifierGenericTypePropertyUnion { PointerRef, AncestorRef, InferredGenericTypeDef, UserDefinedGenericTypeDef }',
       'union GenericTypePropertyUnion { PointerRef, AncestorRef, InferredGenericTypeDef, UndefinedGenericTypeDef, UserDefinedGenericTypeDef, GenericTypeOperationDef }',
@@ -103,130 +103,130 @@ function meta::pure::compiler::pdb::reader::tests::testSchema():meta::pure::comp
    ]->joinStrings('\n'));
 }
 
-function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testLeInts():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testLeInts():Boolean[1]
 {
-   assertEquals(-64, meta::pure::compiler::pdb::reader::leInt(0xC0FFFFFF, 0, 4));
-   assertEquals(4294967232, meta::pure::compiler::pdb::reader::leUInt(0xC0FFFFFF, 0, 4));
-   assertEquals(513, meta::pure::compiler::pdb::reader::leUInt(0x0102, 0, 2));
-   assertEquals(3, meta::pure::compiler::pdb::reader::leInt(0x000300000000000000, 1, 8));
+   assertEquals(-64, platform::pure::compiler::pdb::reader::leInt(0xC0FFFFFF, 0, 4));
+   assertEquals(4294967232, platform::pure::compiler::pdb::reader::leUInt(0xC0FFFFFF, 0, 4));
+   assertEquals(513, platform::pure::compiler::pdb::reader::leUInt(0x0102, 0, 2));
+   assertEquals(3, platform::pure::compiler::pdb::reader::leInt(0x000300000000000000, 1, 8));
 }
 
 // Decode the reference Package entry (probe bytes pinned in archiveTests):
 // name, PointerRef vector (children), union through the PointerRef arm,
 // absent fields' defaults.
-function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadPackageEntry():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testReadPackageEntry():Boolean[1]
 {
-   let s    = meta::pure::compiler::pdb::reader::tests::testSchema();
-   let node = meta::pure::compiler::pdb::reader::elementNode(
-                 meta::pure::compiler::pdb::archive::tests::refPackageBytes(), 'Package');
-   assertEquals('myPkg', meta::pure::compiler::pdb::reader::readField($s, $node, 'name'));
-   let children = meta::pure::compiler::pdb::reader::readField($s, $node, 'children');
+   let s    = platform::pure::compiler::pdb::reader::tests::testSchema();
+   let node = platform::pure::compiler::pdb::reader::elementNode(
+                 platform::pure::compiler::pdb::archive::tests::refPackageBytes(), 'Package');
+   assertEquals('myPkg', platform::pure::compiler::pdb::reader::readField($s, $node, 'name'));
+   let children = platform::pure::compiler::pdb::reader::readField($s, $node, 'children');
    assertEquals(1, $children->size());
-   let child = $children->at(0)->cast(@meta::pure::compiler::pdb::reader::ReadPointerRef);
+   let child = $children->at(0)->cast(@platform::pure::compiler::pdb::reader::ReadPointerRef);
    assertEquals(0, $child.kind);
    assertEquals(['myProf'], $child.segs);
-   let cgt = meta::pure::compiler::pdb::reader::readField($s, $node, 'classifier_generic_type');
-   assertEquals(['testAnchorGT'], $cgt->toOne()->cast(@meta::pure::compiler::pdb::reader::ReadPointerRef).segs);
-   assert(meta::pure::compiler::pdb::reader::readField($s, $node, 'package')->isEmpty());
-   assert(meta::pure::compiler::pdb::reader::readField($s, $node, 'source_information')->isEmpty());
-   assert(meta::pure::compiler::pdb::reader::readField($s, $node, 'tagged_values')->isEmpty());
+   let cgt = platform::pure::compiler::pdb::reader::readField($s, $node, 'classifier_generic_type');
+   assertEquals(['testAnchorGT'], $cgt->toOne()->cast(@platform::pure::compiler::pdb::reader::ReadPointerRef).segs);
+   assert(platform::pure::compiler::pdb::reader::readField($s, $node, 'package')->isEmpty());
+   assert(platform::pure::compiler::pdb::reader::readField($s, $node, 'source_information')->isEmpty());
+   assert(platform::pure::compiler::pdb::reader::readField($s, $node, 'tagged_values')->isEmpty());
 }
 
 // Decode the reference Profile entry: inline nested-table vector
 // (p_stereotypes -> StereotypeDef) and its own fields.
-function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadProfileEntry():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testReadProfileEntry():Boolean[1]
 {
-   let s    = meta::pure::compiler::pdb::reader::tests::testSchema();
-   let node = meta::pure::compiler::pdb::reader::elementNode(
-                 meta::pure::compiler::pdb::archive::tests::refProfileBytes(), 'Profile');
-   assertEquals('myProf', meta::pure::compiler::pdb::reader::readField($s, $node, 'name'));
-   assertEquals(['myPkg'], meta::pure::compiler::pdb::reader::readField($s, $node, 'package')
-                              ->toOne()->cast(@meta::pure::compiler::pdb::reader::ReadPointerRef).segs);
-   let sts = meta::pure::compiler::pdb::reader::readField($s, $node, 'p_stereotypes');
+   let s    = platform::pure::compiler::pdb::reader::tests::testSchema();
+   let node = platform::pure::compiler::pdb::reader::elementNode(
+                 platform::pure::compiler::pdb::archive::tests::refProfileBytes(), 'Profile');
+   assertEquals('myProf', platform::pure::compiler::pdb::reader::readField($s, $node, 'name'));
+   assertEquals(['myPkg'], platform::pure::compiler::pdb::reader::readField($s, $node, 'package')
+                              ->toOne()->cast(@platform::pure::compiler::pdb::reader::ReadPointerRef).segs);
+   let sts = platform::pure::compiler::pdb::reader::readField($s, $node, 'p_stereotypes');
    assertEquals(1, $sts->size());
-   let st = $sts->at(0)->cast(@meta::pure::compiler::pdb::reader::FbsNode);
+   let st = $sts->at(0)->cast(@platform::pure::compiler::pdb::reader::FbsNode);
    assertEquals('StereotypeDef', $st.type);
-   assertEquals('st1', meta::pure::compiler::pdb::reader::readField($s, $st, 'value'));
-   assertEquals(['myProf'], meta::pure::compiler::pdb::reader::readField($s, $st, 'profile')
-                               ->toOne()->cast(@meta::pure::compiler::pdb::reader::ReadPointerRef).segs);
+   assertEquals('st1', platform::pure::compiler::pdb::reader::readField($s, $st, 'value'));
+   assertEquals(['myProf'], platform::pure::compiler::pdb::reader::readField($s, $st, 'profile')
+                               ->toOne()->cast(@platform::pure::compiler::pdb::reader::ReadPointerRef).segs);
 }
 
 // Write→read round trip of the SourceInformation wire pin: long scalars in
 // non-monotonic slot order, elided defaults, a nested union table and the
 // PointerRef arm of its type_ union. The writer output is reference bytes
 // (byte-identity pinned in generatedWriterTests), so this reads the reference.
-function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadSourceInformationRoundTrip():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testReadSourceInformationRoundTrip():Boolean[1]
 {
-   let s    = meta::pure::compiler::pdb::reader::tests::testSchema();
-   let cpSI = ^meta::pure::metamodel::pointer::ClassPointer<Any>(path = 'meta::pure::metamodel::SourceInformation');
-   let upgt = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
-                 type = meta::pure::functions::meta::pathToElement('meta::pure::metamodel::type::generics::UserDefinedGenericType')->cast(@Class<Any>));
-   let udgt = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $cpSI, classifierGenericType = $upgt);
-   let si   = ^meta::pure::metamodel::SourceInformation(classifierGenericType = $udgt,
+   let s    = platform::pure::compiler::pdb::reader::tests::testSchema();
+   let cpSI = ^platform::pure::metamodel::pointer::ClassPointer<Any>(path = 'platform::pure::metamodel::SourceInformation');
+   let upgt = ^platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
+                 type = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::type::generics::UserDefinedGenericType')->cast(@Class<Any>));
+   let udgt = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = $cpSI, classifierGenericType = $upgt);
+   let si   = ^platform::pure::metamodel::SourceInformation(classifierGenericType = $udgt,
                  sourceId = 'test.pure', startLine = 1, startColumn = 2, endLine = 3, endColumn = 4);
-   let r     = meta::pure::compiler::pdb::writerHelper::evalGenWrite('writeSourceInformation_Builder_1__SourceInformation_1__Any_MANY__BuilderAndOffset_1_', meta::pure::compiler::pdb::fbb::newBuilder(), $si, []);
-   let bytes = $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset)->meta::pure::compiler::pdb::fbb::result();
-   let node  = meta::pure::compiler::pdb::reader::rootNode($bytes, 'SourceInformationDef');
-   assertEquals('test.pure', meta::pure::compiler::pdb::reader::readField($s, $node, 'source_id'));
-   assertEquals(1, meta::pure::compiler::pdb::reader::readField($s, $node, 'start_line'));
-   assertEquals(2, meta::pure::compiler::pdb::reader::readField($s, $node, 'start_column'));
-   assertEquals(3, meta::pure::compiler::pdb::reader::readField($s, $node, 'end_line'));
-   assertEquals(4, meta::pure::compiler::pdb::reader::readField($s, $node, 'end_column'));
-   let cgt = meta::pure::compiler::pdb::reader::readField($s, $node, 'classifier_generic_type')
-                ->toOne()->cast(@meta::pure::compiler::pdb::reader::FbsNode);
+   let r     = platform::pure::compiler::pdb::writerHelper::evalGenWrite('writeSourceInformation_Builder_1__SourceInformation_1__Any_MANY__BuilderAndOffset_1_', platform::pure::compiler::pdb::fbb::newBuilder(), $si, []);
+   let bytes = $r.builder->platform::pure::compiler::pdb::fbb::finish($r.offset)->platform::pure::compiler::pdb::fbb::result();
+   let node  = platform::pure::compiler::pdb::reader::rootNode($bytes, 'SourceInformationDef');
+   assertEquals('test.pure', platform::pure::compiler::pdb::reader::readField($s, $node, 'source_id'));
+   assertEquals(1, platform::pure::compiler::pdb::reader::readField($s, $node, 'start_line'));
+   assertEquals(2, platform::pure::compiler::pdb::reader::readField($s, $node, 'start_column'));
+   assertEquals(3, platform::pure::compiler::pdb::reader::readField($s, $node, 'end_line'));
+   assertEquals(4, platform::pure::compiler::pdb::reader::readField($s, $node, 'end_column'));
+   let cgt = platform::pure::compiler::pdb::reader::readField($s, $node, 'classifier_generic_type')
+                ->toOne()->cast(@platform::pure::compiler::pdb::reader::FbsNode);
    assertEquals('UserDefinedGenericTypeDef', $cgt.type);
-   assertEquals(['meta::pure::metamodel::SourceInformation'],
-                meta::pure::compiler::pdb::reader::readField($s, $cgt, 'type_')
-                   ->toOne()->cast(@meta::pure::compiler::pdb::reader::ReadPointerRef).segs);
-   assert(meta::pure::compiler::pdb::reader::readField($s, $cgt, 'type_arguments')->isEmpty());
+   assertEquals(['platform::pure::metamodel::SourceInformation'],
+                platform::pure::compiler::pdb::reader::readField($s, $cgt, 'type_')
+                   ->toOne()->cast(@platform::pure::compiler::pdb::reader::ReadPointerRef).segs);
+   assert(platform::pure::compiler::pdb::reader::readField($s, $cgt, 'type_arguments')->isEmpty());
 }
 
 // Write→read round trip of the AtomicValue Float pin: the value union's
 // FloatValueDef arm, unwrapValueDef via the leBytesToFloat native, and the
 // multiplicity/genericType unions through their PointerRef arms.
-function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadAtomicValueFloatRoundTrip():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testReadAtomicValueFloatRoundTrip():Boolean[1]
 {
-   let s     = meta::pure::compiler::pdb::reader::tests::testSchema();
-   let avCls = meta::pure::functions::meta::pathToElement('meta::pure::metamodel::valuespecification::AtomicValue')->cast(@Class<Any>);
-   let anchor  = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT', type = $avCls);
-   let pureOne = ^meta::pure::metamodel::multiplicity::UserDefinedPackageableMultiplicity(name = 'PureOne',
-                    lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = 1));
-   let floatGT = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'FloatGT', type = $avCls);
-   let av = ^meta::pure::metamodel::valuespecification::AtomicValue(classifierGenericType = $anchor,
+   let s     = platform::pure::compiler::pdb::reader::tests::testSchema();
+   let avCls = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::valuespecification::AtomicValue')->cast(@Class<Any>);
+   let anchor  = ^platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT', type = $avCls);
+   let pureOne = ^platform::pure::metamodel::multiplicity::UserDefinedPackageableMultiplicity(name = 'PureOne',
+                    lowerBound = ^platform::pure::metamodel::multiplicity::MultiplicityValue(value = 1));
+   let floatGT = ^platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'FloatGT', type = $avCls);
+   let av = ^platform::pure::metamodel::valuespecification::AtomicValue(classifierGenericType = $anchor,
                multiplicity = $pureOne, genericType = $floatGT, value = 3.14);
-   let r     = meta::pure::compiler::pdb::writerHelper::evalGenWrite('writeAtomicValue_Builder_1__AtomicValue_1__Any_MANY__BuilderAndOffset_1_', meta::pure::compiler::pdb::fbb::newBuilder(), $av, []);
-   let bytes = $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset)->meta::pure::compiler::pdb::fbb::result();
-   let node  = meta::pure::compiler::pdb::reader::rootNode($bytes, 'AtomicValueDef');
-   let value = meta::pure::compiler::pdb::reader::readField($s, $node, 'value')
-                  ->toOne()->cast(@meta::pure::compiler::pdb::reader::FbsNode);
+   let r     = platform::pure::compiler::pdb::writerHelper::evalGenWrite('writeAtomicValue_Builder_1__AtomicValue_1__Any_MANY__BuilderAndOffset_1_', platform::pure::compiler::pdb::fbb::newBuilder(), $av, []);
+   let bytes = $r.builder->platform::pure::compiler::pdb::fbb::finish($r.offset)->platform::pure::compiler::pdb::fbb::result();
+   let node  = platform::pure::compiler::pdb::reader::rootNode($bytes, 'AtomicValueDef');
+   let value = platform::pure::compiler::pdb::reader::readField($s, $node, 'value')
+                  ->toOne()->cast(@platform::pure::compiler::pdb::reader::FbsNode);
    assertEquals('FloatValueDef', $value.type);
-   assertEquals(3.14, meta::pure::compiler::pdb::reader::unwrapValueDef($value));
-   assertEquals(['PureOne'], meta::pure::compiler::pdb::reader::readField($s, $node, 'multiplicity')
-                                ->toOne()->cast(@meta::pure::compiler::pdb::reader::ReadPointerRef).segs);
-   assertEquals(['FloatGT'], meta::pure::compiler::pdb::reader::readField($s, $node, 'generic_type')
-                                ->toOne()->cast(@meta::pure::compiler::pdb::reader::ReadPointerRef).segs);
+   assertEquals(3.14, platform::pure::compiler::pdb::reader::unwrapValueDef($value));
+   assertEquals(['PureOne'], platform::pure::compiler::pdb::reader::readField($s, $node, 'multiplicity')
+                                ->toOne()->cast(@platform::pure::compiler::pdb::reader::ReadPointerRef).segs);
+   assertEquals(['FloatGT'], platform::pure::compiler::pdb::reader::readField($s, $node, 'generic_type')
+                                ->toOne()->cast(@platform::pure::compiler::pdb::reader::ReadPointerRef).segs);
 }
 
 // PointerRef kinds and AncestorRef depth decode (incl. the enum-named `kind`
 // field), from writer-encoded reference forms.
-function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadRefs():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testReadRefs():Boolean[1]
 {
-   let s  = meta::pure::compiler::pdb::reader::tests::testSchema();
-   let pr = meta::pure::compiler::pdb::writerHelper::encodePointerRef(
-               meta::pure::compiler::pdb::fbb::newBuilder(), ['a::b', 'st'], 3);
-   let prBytes = $pr.builder->meta::pure::compiler::pdb::fbb::finish($pr.offset)->meta::pure::compiler::pdb::fbb::result();
-   let prNode  = meta::pure::compiler::pdb::reader::rootNode($prBytes, 'PointerRef');
-   let ref = meta::pure::compiler::pdb::reader::decodeNode($prNode)->cast(@meta::pure::compiler::pdb::reader::ReadPointerRef);
+   let s  = platform::pure::compiler::pdb::reader::tests::testSchema();
+   let pr = platform::pure::compiler::pdb::writerHelper::encodePointerRef(
+               platform::pure::compiler::pdb::fbb::newBuilder(), ['a::b', 'st'], 3);
+   let prBytes = $pr.builder->platform::pure::compiler::pdb::fbb::finish($pr.offset)->platform::pure::compiler::pdb::fbb::result();
+   let prNode  = platform::pure::compiler::pdb::reader::rootNode($prBytes, 'PointerRef');
+   let ref = platform::pure::compiler::pdb::reader::decodeNode($prNode)->cast(@platform::pure::compiler::pdb::reader::ReadPointerRef);
    assertEquals(3, $ref.kind);
    assertEquals(['a::b', 'st'], $ref.segs);
-   assertEquals('Stereotype', meta::pure::compiler::pdb::reader::readField($s, $prNode, 'kind'));
+   assertEquals('Stereotype', platform::pure::compiler::pdb::reader::readField($s, $prNode, 'kind'));
 
-   let ar = meta::pure::compiler::pdb::writerHelper::encodeAncestorRef(
-               meta::pure::compiler::pdb::fbb::newBuilder(), 2);
-   let arBytes = $ar.builder->meta::pure::compiler::pdb::fbb::finish($ar.offset)->meta::pure::compiler::pdb::fbb::result();
-   let arNode  = meta::pure::compiler::pdb::reader::rootNode($arBytes, 'AncestorRef');
-   assertEquals(2, meta::pure::compiler::pdb::reader::decodeNode($arNode)
-                      ->cast(@meta::pure::compiler::pdb::reader::ReadAncestorRef).depth);
+   let ar = platform::pure::compiler::pdb::writerHelper::encodeAncestorRef(
+               platform::pure::compiler::pdb::fbb::newBuilder(), 2);
+   let arBytes = $ar.builder->platform::pure::compiler::pdb::fbb::finish($ar.offset)->platform::pure::compiler::pdb::fbb::result();
+   let arNode  = platform::pure::compiler::pdb::reader::rootNode($arBytes, 'AncestorRef');
+   assertEquals(2, platform::pure::compiler::pdb::reader::decodeNode($arNode)
+                      ->cast(@platform::pure::compiler::pdb::reader::ReadAncestorRef).depth);
 }
 
 // Whole-archive round trip: writeArchive → the host's archive reader
@@ -237,22 +237,22 @@ function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadRefs():
 // name and hand back its bytes, deliberately exposing neither method nor offsets
 // (see archiveRead.pure). What the writer produces is still pinned, byte for
 // byte, by the reference entries below.
-function <<test.Test>> meta::pure::compiler::pdb::reader::tests::testReadArchiveRoundTrip():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testReadArchiveRoundTrip():Boolean[1]
 {
-   let bytes   = meta::pure::compiler::pdb::archive::writeArchive(
-                    meta::pure::compiler::pdb::archive::tests::testElements(), 'test', '*', 'core');
-   let entries = meta::pure::compiler::pdb::archive::entryNames($bytes);
+   let bytes   = platform::pure::compiler::pdb::archive::writeArchive(
+                    platform::pure::compiler::pdb::archive::tests::testElements(), 'test', '*', 'core');
+   let entries = platform::pure::compiler::pdb::archive::entryNames($bytes);
    assertEquals(['elements/myPkg.Package', 'elements/myProf.Profile', 'elementIndex', 'manifest'], $entries);
-   assertEquals(meta::pure::compiler::pdb::archive::tests::refPackageBytes(),
-                meta::pure::compiler::pdb::archive::entryBytes($bytes, 'elements/myPkg.Package'));
-   assertEquals(meta::pure::compiler::pdb::archive::tests::refProfileBytes(),
-                meta::pure::compiler::pdb::archive::entryBytes($bytes, 'elements/myProf.Profile'));
-   assertEquals(meta::pure::compiler::pdb::archive::tests::refElementIndexBytes(),
-                meta::pure::compiler::pdb::archive::entryBytes($bytes, 'elementIndex'));
-   assertEquals(meta::pure::compiler::pdb::archive::tests::refManifestBytes(),
-                meta::pure::compiler::pdb::archive::entryBytes($bytes, 'manifest'));
-   let s    = meta::pure::compiler::pdb::reader::tests::testSchema();
-   let node = meta::pure::compiler::pdb::reader::elementNode(
-                 meta::pure::compiler::pdb::archive::entryBytes($bytes, 'elements/myPkg.Package'), 'Package');
-   assertEquals('myPkg', meta::pure::compiler::pdb::reader::readField($s, $node, 'name'));
+   assertEquals(platform::pure::compiler::pdb::archive::tests::refPackageBytes(),
+                platform::pure::compiler::pdb::archive::entryBytes($bytes, 'elements/myPkg.Package'));
+   assertEquals(platform::pure::compiler::pdb::archive::tests::refProfileBytes(),
+                platform::pure::compiler::pdb::archive::entryBytes($bytes, 'elements/myProf.Profile'));
+   assertEquals(platform::pure::compiler::pdb::archive::tests::refElementIndexBytes(),
+                platform::pure::compiler::pdb::archive::entryBytes($bytes, 'elementIndex'));
+   assertEquals(platform::pure::compiler::pdb::archive::tests::refManifestBytes(),
+                platform::pure::compiler::pdb::archive::entryBytes($bytes, 'manifest'));
+   let s    = platform::pure::compiler::pdb::reader::tests::testSchema();
+   let node = platform::pure::compiler::pdb::reader::elementNode(
+                 platform::pure::compiler::pdb::archive::entryBytes($bytes, 'elements/myPkg.Package'), 'Package');
+   assertEquals('myPkg', platform::pure::compiler::pdb::reader::readField($s, $node, 'name'));
 }

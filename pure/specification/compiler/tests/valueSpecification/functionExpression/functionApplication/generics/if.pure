@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::*;
 
@@ -12,19 +26,19 @@ function test::tst(): Any[*]
 native function test::xif_Boolean_1__Function_1__Function_1__T_m_(test:@Boolean@[1], valid:Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1], invalid:Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1]):T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]  ~NativeFunction<{@Boolean@[1], Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1], Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1]->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>
 
 function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @8:3-8:23
-    FunctionInvocation test::xif_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[1]#  ~@FunctionInvocation@  @8:3-8:19
+  FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @22:3-22:23
+    FunctionInvocation test::xif_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[1]#  ~@FunctionInvocation@  @22:3-22:19
       typeParam T -> #Integer#
       mulParam m -> #[1]#
-      AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @8:7-8:10
-      Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @8:13-8:14
-        AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @8:14-8:14
-      Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @8:17-8:18
-        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @8:18-8:18
-    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @8:23-8:23
+      AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @22:7-22:10
+      Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @22:13-22:14
+        AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @22:14-22:14
+      Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @22:17-22:18
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @22:18-22:18
+    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @22:23-22:23
 
 ###ReverseIndex
-meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
   test::tst__Any_MANY_
 test::xif_Boolean_1__Function_1__Function_1__T_m_:
   test::tst__Any_MANY_

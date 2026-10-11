@@ -45,7 +45,7 @@ import org.finos.legend.pure.truffle.compiler.helper._Any;
 public final class TruffleAstForNode extends PureNode
 {
     private static final String LAMBDA_FUNCTION_PATH =
-            "meta::pure::metamodel::function::LambdaFunction";
+            "platform::pure::metamodel::function::LambdaFunction";
 
     @Child
     private PureNode lambdaArg;

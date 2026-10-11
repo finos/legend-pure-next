@@ -1,3 +1,18 @@
+# Copyright 2026 Goldman Sachs
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # platforms/truffle/native.just — GraalVM native-image build + test recipes.
 #
 # Direct invocation:    just <recipe>                  (from platforms/truffle/, with `mod native "native.just"` at the parent)
@@ -59,7 +74,7 @@ build: (_step-start "truffle/native-image") _depCheck_pdbs _depCheck_graalvm
     # native::build runs Maven DIRECTLY, not through the parent's `_mvn`, so the
     # generated PDB reader is not produced for it by anything else — and
     # GenericFbDecoder imports it. On a fresh checkout (CI) that fails with
-    # "package org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader does not
+    # "package org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader does not
     # exist"; locally it only passed because an earlier `truffle::build` had left
     # generated/ behind. Generate it here, the same way `_mvn` does for the JVM build.
     just --justfile "{{truffle_root}}/Justfile" generate-pdb-reader
@@ -104,10 +119,10 @@ spec-compiler: build
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
+        --function "platform::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{test_results}}/spec/compiler/pure@cli-truffle-native.json" {{err_filter}}
 
-# Run Pure runTests over meta::pure::functions via the native binary.
+# Run Pure runTests over platform::pure::functions via the native binary.
 spec-functions: build
     @{{header}} 'spec-functions'
     @{{substep}} 'runTests'
@@ -117,10 +132,10 @@ spec-functions: build
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::functions" "{{test_results}}/spec/functions/pure@cli-truffle-native.json" {{err_filter}}
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::functions" "{{test_results}}/spec/functions/pure@cli-truffle-native.json" {{err_filter}}
 
-# Run Pure PCT tests over meta::pure::functions via the native binary.
+# Run Pure PCT tests over platform::pure::functions via the native binary.
 spec-pct: build
     @{{header}} 'spec-pct'
     @{{substep}} 'runPCTTests'
@@ -130,8 +145,8 @@ spec-pct: build
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::test::runPCTTests_String_1__String_1__String_1_" \
-        --args "meta::pure::functions" "{{test_results}}/spec/pct/pure@cli-truffle-native.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+        --function "platform::pure::test::runPCTTests_String_1__String_1__String_1_" \
+        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-truffle-native.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
 
 # Grammar corpus: parse each grammar.pure and compare the parse result with its protocol.json.
 spec-grammar: build
@@ -143,21 +158,21 @@ spec-grammar: build
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::test::grammar::runGrammarCorpus_String_1__String_1__String_1_" \
+        --function "platform::pure::test::grammar::runGrammarCorpus_String_1__String_1__String_1_" \
         --args "{{spec}}/grammar/tests" "{{test_results}}/spec/grammar/pure@cli-truffle-native.json" {{err_filter}}
 
-# Run Pure runTests over meta::pure::compiler::pdb (the self-hosted PDB reader/writer suite) via the native binary.
+# Run Pure runTests over platform::pure::compiler::pdb (the self-hosted PDB reader/writer suite) via the native binary.
 spec-pdb: build
     @{{header}} 'spec-pdb'
-    @{{substep}} 'runTests over meta::pure::compiler::pdb'
+    @{{substep}} 'runTests over platform::pure::compiler::pdb'
     {{truffle_native}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::compiler::pdb" "{{test_results}}/spec/pdb-format/pure@cli-truffle-native.json" {{err_filter}}
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::compiler::pdb" "{{test_results}}/spec/pdb-format/pure@cli-truffle-native.json" {{err_filter}}
 
 # PDB wire contract: compile each compiler fixture, write it with the Pure writer and compare the archive
 # with the Java golden in pure/specification/compiler/tests-pdb-serialization (compiler-pure test/pdbGoldenRunner.pure).
@@ -170,7 +185,7 @@ spec-pdb-golden: build
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_" \
+        --function "platform::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{spec}}/compiler/tests-pdb-serialization" "{{shared_out}}/specification/m3.fbs" "{{test_results}}/spec/pdb/pure@cli-truffle-native.json" {{err_filter}}
 
 # Compiled-printer corpus: compile each compiler-corpus file, print the compiled elements, compare with the source.
@@ -183,7 +198,7 @@ spec-printer-compiled: build
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::compiler::test::printer::runCompiledPrinterCorpus_String_1__String_1__String_1_" \
+        --function "platform::pure::compiler::test::printer::runCompiledPrinterCorpus_String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{test_results}}/pure/printer-compiled/pure@cli-truffle-native.json" {{err_filter}}
 
 # Protocol-printer corpus: parse each grammar-corpus file, print the protocol, compare with the source.
@@ -196,7 +211,7 @@ spec-printer-protocol: build
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus_String_1__String_1__String_1_" \
+        --function "platform::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus_String_1__String_1__String_1_" \
         --args "{{spec}}/grammar/tests" "{{test_results}}/pure/printer-protocol/pure@cli-truffle-native.json" {{err_filter}}
 
 # Output goes to {{truffle_out}}/native/ so it doesn't collide with the JVM-truffle self-host
@@ -219,7 +234,7 @@ spec-compiler-selfhost: build
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{truffle_out}}/native/compiler.pdb \
         --pdb {{truffle_out}}/native/compiler-tests.pdb \
-        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
+        --function "platform::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{test_results}}/spec/compiler/pure@cli-truffle-native+selfhost.json" {{err_filter}}
     @{{substep}} 'diff shared/compiler.pdb (Java compiler) ↔ {{truffle_out}}/native/compiler.pdb (native compiler)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
@@ -237,7 +252,7 @@ _depCheck_pdbs:
     if [[ ! -f "{{repo_root}}/pure/specification/compiler/compiler-pure/pdb/writer/generated/generatedWriter.pure" ]]; then
         echo "Error: <repo>/pure/specification/compiler/compiler-pure/pdb/writer/generated/generatedWriter.pure missing." >&2
         echo "It is generated (gitignored) and compiler-pure does not compile correctly without it:" >&2
-        echo "every meta::pure::compiler::pdb::gen::write* is simply absent, so the self-host" >&2
+        echo "every platform::pure::compiler::pdb::gen::write* is simply absent, so the self-host" >&2
         echo "compile quietly produces 193 fewer elements instead of failing." >&2
         echo "Run 'just bootstrap::build-compiler-pdb' first (or 'just build' from the repo root)." >&2
         exit 1

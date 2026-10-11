@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,22 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 // Return the last element of the collection, or nothing if the collection is empty
-native function <<PCT.function>> meta::pure::functions::collection::last<T>(set:T[*]):T[0..1];
+native function <<PCT.function>> platform::pure::functions::collection::last<T>(set:T[*]):T[0..1];
 
-function <<PCT.test>> meta::pure::functions::collection::tests::last::testLast<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::last::testLast<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('c', $f->eval(|['a', 'b', 'c']->last()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::last::testLastOfOneElementList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::last::testLastOfOneElementList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('a', $f->eval(|['a']->last()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::last::testLastFromEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::last::testLastFromEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([], $f->eval(|[]->last()));
 }

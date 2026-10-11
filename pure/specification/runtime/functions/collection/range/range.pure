@@ -13,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::collection::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::collection::*;
+import platform::pure::test::pct::*;
 
 // range(count) returns [0, 1, ..., count-1].
-function meta::pure::functions::collection::range(count:Integer[1]):Integer[*]
+function platform::pure::functions::collection::range(count:Integer[1]):Integer[*]
 {
     range(0, $count);
 }
@@ -26,7 +26,7 @@ function meta::pure::functions::collection::range(count:Integer[1]):Integer[*]
 // Implemented as divide-and-conquer so the recursion depth is O(log n) rather
 // than O(n) — important on a tree-walking interpreter where each Pure call
 // consumes many Java stack frames.
-function meta::pure::functions::collection::range(start:Integer[1], end:Integer[1]):Integer[*]
+function platform::pure::functions::collection::range(start:Integer[1], end:Integer[1]):Integer[*]
 {
     if($start >= $end,
         | [],
@@ -52,9 +52,9 @@ native function
         PCT.grammarDoc='[$start:$stop:$step]',
         PCT.grammarCharacters='[::]'
     }
-    meta::pure::functions::collection::range(start:Integer[1], end:Integer[1], step:Integer[1]):Integer[*];
+    platform::pure::functions::collection::range(start:Integer[1], end:Integer[1], step:Integer[1]):Integer[*];
 
-function <<PCT.test>> meta::pure::functions::collection::tests::range::testRange<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::range::testRange<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([0, 1, 2, 3, 4], $f->eval(|range(0, 5, 1)));
     assertEquals([0, 1, 2, 3, 4], $f->eval(|range(0, 5)));
@@ -65,7 +65,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::range::testRange
     assertEquals([0, 1, 2, 3, 4], $f->eval(|[:5]));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::range::testRangeWithStep<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::range::testRangeWithStep<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([1, 3, 5], $f->eval(|range(1, 6, 2)));
     assertEquals([1, 4], $f->eval(|range(1, 6, 3)));
@@ -80,7 +80,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::range::testRange
     assertEquals([1], $f->eval(|[1:6:6]));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::range::testRangeWithVariables<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::range::testRangeWithVariables<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let start = 1;
     let stop = 5;
@@ -89,7 +89,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::range::testRange
     assertEquals([1, 3], $f->eval(|[$start:$stop:$step]));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::range::testReverseRange<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::range::testReverseRange<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([5, 4, 3, 2], $f->eval(|[5:1:-1]));
     assertEquals([5, 4, 3, 2], $f->eval(|range(5, 1, -1)));
@@ -98,7 +98,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::range::testRever
     assertEquals([5, 4, 3, 2], $f->eval(|[5:1:$step]));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::range::testReverseRangeWithStep<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::range::testReverseRangeWithStep<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([5, 3], $f->eval(|[5:1:-2]));
     assertEquals([5, 2], $f->eval(|[5:1:-3]));
@@ -116,7 +116,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::range::testRever
     assertEquals([5], $f->eval(|[5:1:$step3]));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::range::testReverseRangeWithPositiveStep<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::range::testReverseRangeWithPositiveStep<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([], $f->eval(|range(5, 1, 1)));
     assertEquals([], $f->eval(|range(5, 1)));
@@ -124,13 +124,13 @@ function <<PCT.test>> meta::pure::functions::collection::tests::range::testRever
     assertEquals([], $f->eval(|[5:1]));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::range::testRangeWithStartStopEqual<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::range::testRangeWithStartStopEqual<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([], $f->eval(|range(5, 5)));
     assertEquals([], $f->eval(|[5:5]));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::range::testRangeStepError<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::range::testRangeStepError<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertError(| $f->eval(|range(0, 5, 0)), 'range step must not be 0');
 }

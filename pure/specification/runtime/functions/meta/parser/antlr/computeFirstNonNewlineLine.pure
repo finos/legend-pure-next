@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::meta::antlr::*;
+import platform::pure::functions::meta::antlr::*;
 
 // 0-based source line of the first non-NEWLINE child of {@code ctx} (the
-// {@code sectionContent} rule's first content token). Subtracts 1 when
-// {@code syntheticHeader} is true (the caller prepended {@code ###Pure\n}
-// and the header line shouldn't count toward the offset). Empty {@code ctx}
-// → 0.
+// {@code sectionContent} rule's first content token). Empty {@code ctx} → 0.
 //
 // Used by the top-level parser to compute section bodies' line offsets so
 // nested parse errors report file-relative coordinates. Host-side because
@@ -26,7 +24,6 @@ import meta::pure::functions::meta::antlr::*;
 // TerminalNode vs RuleContext at the child level. No PCT test: requires a
 // hand-constructed sectionContent context that's only producible through
 // top-level parsing.
-native function meta::pure::functions::meta::antlr::computeFirstNonNewlineLine(
-   ctx: AntlrContext[0..1],
-   syntheticHeader: Boolean[1]
+native function platform::pure::functions::meta::antlr::computeFirstNonNewlineLine(
+   ctx: AntlrContext[0..1]
 ): Integer[1];

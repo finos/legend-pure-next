@@ -14,7 +14,7 @@
 
 // PCT conformance on the JavaScript platform, fully self-hosted:
 //
-//   1. TRANSLATE meta::pure::functions IN-PROCESS — the translated translator
+//   1. TRANSLATE platform::pure::functions IN-PROCESS — the translated translator
 //      reads every element (stdlib + the <<PCT.test>> corpus from
 //      core-tests.pdb) through the PDB-backed metadata access and emits one JS
 //      source. Its size and per-element translation-failure count are
@@ -24,8 +24,8 @@
 //      JS JSON dumps), so only the failure COUNTS are comparable.
 //   2. EVAL the emitted source into this context (redefining the stdlib with
 //      the in-process output — so the tests below run what step 1 produced).
-//   3. RUN every <<PCT.test>> under meta::pure::functions. Discovery is the
-//      translated meta::pure::test::collectPCTTests walking Package children
+//   3. RUN every <<PCT.test>> under platform::pure::functions. Discovery is the
+//      translated platform::pure::test::collectPCTTests walking Package children
 //      through the metadata globals (same logic every other platform runs);
 //      each test gets the translated in-memory adapter and passes or throws.
 //
@@ -40,7 +40,7 @@ import { TestReport } from "../../tests/test-report.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const GEN = join(HERE, "../../../../generated");
-const ROOT_PACKAGE = "meta::pure::functions";
+const ROOT_PACKAGE = "platform::pure::functions";
 
 // The PCT corpus itself lives in core-tests — test content this harness runs, which is why it asks
 // for it rather than the language carrying it for everyone.
@@ -74,10 +74,10 @@ evalJs(source, "pure-runtime-functions.inprocess.js");
 // --- 3. discover and run the PCT corpus --------------------------------------
 const asArr = (v) => (v === undefined || v === null ? [] : Array.isArray(v) ? v : [v]);
 const tests = asArr(silently(() =>
-    call("meta::pure::test::collectPCTTests", globalThis.__pureResolve(ROOT_PACKAGE))));
+    call("platform::pure::test::collectPCTTests", globalThis.__pureResolve(ROOT_PACKAGE))));
 if (tests.length === 0) throw new Error(`collectPCTTests found no <<PCT.test>> under ${ROOT_PACKAGE}`);
 
-const adapter = resolveFn("meta::pure::test::pct::testAdapterForInMemoryExecution", 1);
+const adapter = resolveFn("platform::pure::test::pct::testAdapterForInMemoryExecution", 1);
 
 t0 = Date.now();
 let passed = 0;

@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,8 +15,8 @@
 
 package org.finos.legend.pure.m3.specification;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.protocol.PureFile;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.protocol.PureFile;
 import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraph;
 import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStats;
@@ -74,7 +75,7 @@ public record CompiledSpec(
         return elements;
     }
 
-    private static boolean isAssertionElement(meta.pure.protocol.grammar.PackageableElement e)
+    private static boolean isAssertionElement(platform.pure.protocol.grammar.PackageableElement e)
     {
         return e instanceof CompiledGraph
                 || e instanceof CompilerStats
@@ -83,7 +84,7 @@ public record CompiledSpec(
                 || e instanceof TestFile;
     }
 
-    private static String pathOf(meta.pure.protocol.grammar.PackageableElement e)
+    private static String pathOf(platform.pure.protocol.grammar.PackageableElement e)
     {
         String name = e._name();
         String pkg = e._package() != null ? e._package()._value() : null;

@@ -12,82 +12,82 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::javascript::factories::*;
-import meta::external::language::javascript::metamodel::*;
-import meta::external::language::javascript::serialization::*;
-import meta::external::language::javascript::serialization::tests::*;
+import platform::external::language::javascript::factories::*;
+import platform::external::language::javascript::metamodel::*;
+import platform::external::language::javascript::serialization::*;
+import platform::external::language::javascript::serialization::tests::*;
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::identifierExpr(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::identifierExpr(): Boolean[1]
 {
    testExpr('foo', jsId('foo'));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::thisExpr(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::thisExpr(): Boolean[1]
 {
    testExpr('this', jsThis());
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::stringLitExpr(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::stringLitExpr(): Boolean[1]
 {
    testExpr('\'hello\'', jsStrLit('hello'));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::numericLitExpr(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::numericLitExpr(): Boolean[1]
 {
    testExpr('42', jsNumLit('42'));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::booleanLitTrue(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::booleanLitTrue(): Boolean[1]
 {
    testExpr('true', jsBoolLit(true));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::booleanLitFalse(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::booleanLitFalse(): Boolean[1]
 {
    testExpr('false', jsBoolLit(false));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::nullLitExpr(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::nullLitExpr(): Boolean[1]
 {
    testExpr('null', jsNull());
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::propertyAccess(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::propertyAccess(): Boolean[1]
 {
    testExpr('this.name', jsAccess(jsThis(), 'name'));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::nestedPropertyAccess(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::nestedPropertyAccess(): Boolean[1]
 {
    testExpr('this.user.name', jsAccess(jsAccess(jsThis(), 'user'), 'name'));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::callNoArgs(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::callNoArgs(): Boolean[1]
 {
    testExpr('foo()', jsCall(jsId('foo'), []));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::callOneArg(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::callOneArg(): Boolean[1]
 {
    testExpr('greet(\'world\')', jsCall(jsId('greet'), [jsStrLit('world')]));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::callMultipleArgs(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::callMultipleArgs(): Boolean[1]
 {
    testExpr('add(1, 2, 3)', jsCall(jsId('add'), [jsNumLit('1'), jsNumLit('2'), jsNumLit('3')]));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::binaryPlus(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::binaryPlus(): Boolean[1]
 {
    testExpr('a + b', jsBinary(jsId('a'), '+', jsId('b')));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::binaryEquality(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::binaryEquality(): Boolean[1]
 {
    testExpr('x === 42', jsBinary(jsId('x'), '===', jsNumLit('42')));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::binaryLogicalAnd(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::binaryLogicalAnd(): Boolean[1]
 {
    testExpr('a && b', jsBinary(jsId('a'), '&&', jsId('b')));
 }

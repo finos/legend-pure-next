@@ -16,8 +16,8 @@
 package org.finos.legend.pure.m3.module;
 
 import org.finos.legend.pure.m3.LanguageExtension;
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.type.Type;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.type.Type;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 
@@ -110,8 +110,8 @@ public final class ModuleRegistry implements MetadataAccess
         }
         for (Map.Entry<String, PackageableElement> e : this.elementCache.entrySet())
         {
-            if (e.getValue() instanceof meta.pure.metamodel.Package anchor && removed.hasElement(e.getKey())
-                    && removed.getElement(e.getKey()) instanceof meta.pure.metamodel.Package contributed && contributed != anchor)
+            if (e.getValue() instanceof platform.pure.metamodel.Package anchor && removed.hasElement(e.getKey())
+                    && removed.getElement(e.getKey()) instanceof platform.pure.metamodel.Package contributed && contributed != anchor)
             {
                 removeChildrenFrom(anchor, contributed);
             }
@@ -246,7 +246,7 @@ public final class ModuleRegistry implements MetadataAccess
         this.elementCache.clear();
     }
 
-    private static void removeChildrenFrom(meta.pure.metamodel.Package anchor, meta.pure.metamodel.Package contributed)
+    private static void removeChildrenFrom(platform.pure.metamodel.Package anchor, platform.pure.metamodel.Package contributed)
     {
         synchronized (anchor)
         {
@@ -310,8 +310,8 @@ public final class ModuleRegistry implements MetadataAccess
                 {
                     found = here;
                 }
-                else if (found instanceof meta.pure.metamodel.Package anchorPkg
-                        && here instanceof meta.pure.metamodel.Package otherPkg)
+                else if (found instanceof platform.pure.metamodel.Package anchorPkg
+                        && here instanceof platform.pure.metamodel.Package otherPkg)
                 {
                     // Lazy merge: mutate the anchor's children list in place
                     // so that subsequent reads — whether via getElement or a
@@ -327,14 +327,14 @@ public final class ModuleRegistry implements MetadataAccess
                 count++;
             }
         }
-        if (count > 1 && !(found instanceof meta.pure.metamodel.Package))
+        if (count > 1 && !(found instanceof platform.pure.metamodel.Package))
         {
             throw new RuntimeException("Element '" + path + "' is defined in multiple modules");
         }
         return found;
     }
 
-    private static void addNewChildrenInto(meta.pure.metamodel.Package anchor, meta.pure.metamodel.Package other)
+    private static void addNewChildrenInto(platform.pure.metamodel.Package anchor, platform.pure.metamodel.Package other)
     {
         // Synchronize on the anchor so two threads racing on the same path
         // can't double-add or interleave List mutations. {@code MutableList}

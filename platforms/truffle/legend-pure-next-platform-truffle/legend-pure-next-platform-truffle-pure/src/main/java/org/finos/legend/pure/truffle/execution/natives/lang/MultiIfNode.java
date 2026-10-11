@@ -145,7 +145,7 @@ public final class MultiIfNode extends PureNode
         {
             Object item = CollectionHelper.at(condList, i);
             if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(item,
-                    "meta::pure::functions::collection::Pair"))
+                    "platform::pure::functions::collection::Pair"))
             {
                 continue;
             }

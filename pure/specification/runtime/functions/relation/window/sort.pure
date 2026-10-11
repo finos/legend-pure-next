@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::relation::*;
+import platform::pure::metamodel::relation::*;
 
-Enum meta::pure::functions::relation::SortType
+Enum platform::pure::functions::relation::SortType
 {
     ASC, DESC
 }
 
-Class meta::pure::functions::relation::SortInfo<T>
+Class platform::pure::functions::relation::SortInfo<T>
 {
    column : ColSpec<T>[1];
    direction : SortType[1];

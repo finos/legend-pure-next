@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +31,7 @@ public interface Compilation
     CompilationResult compile(SourceModule module);
 
     /**
-     * Compile already-parsed {@code meta::pure::protocol::PureFile} values — what the
+     * Compile already-parsed {@code platform::pure::protocol::PureFile} values — what the
      * {@code compileSource} native receives.
      *
      * @throws CompilationUnavailableException when this strategy cannot compile them

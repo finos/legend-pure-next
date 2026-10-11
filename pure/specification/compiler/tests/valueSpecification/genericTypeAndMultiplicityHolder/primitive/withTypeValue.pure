@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import prim::*;
 
@@ -9,18 +23,18 @@ function test(): String[1]
 }
 
 ###CompiledGraph
-primitive prim::Varchar  ~@PrimitiveType@  @4:1-4:53
+primitive prim::Varchar  ~@PrimitiveType@  @18:1-18:53
   typeVariable x :@Integer@[1]
 
 function test__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>
-  ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#prim::Varchar##[1]#  ~@ArrowInvocation@  @8:5-8:25
+  ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#prim::Varchar##[1]#  ~@ArrowInvocation@  @22:5-22:25
     typeParam T -> prim::Varchar(200)
     mulParam m -> [1]
-    AtomicValue  '' :@String@[1]  ~@AtomicValue@  @8:3-8:4
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<prim::Varchar(200)|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<prim::Varchar(200)|?>  @8:12-8:24
+    AtomicValue  '' :@String@[1]  ~@AtomicValue@  @22:3-22:4
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<prim::Varchar(200)|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<prim::Varchar(200)|?>  @22:12-22:24
 
 ###ReverseIndex
-meta::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
   test__String_1_
 prim::Varchar:
   test__String_1_

@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +15,16 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.extension.Profile;
-import meta.pure.metamodel.function.NativeFunction;
-import meta.pure.metamodel.function.PackageableFunction;
-import meta.pure.metamodel.function.UserDefinedFunction;
-import meta.pure.metamodel.relationship.Association;
-import meta.pure.metamodel.type.Class;
-import meta.pure.metamodel.type.Enumeration;
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.PrimitiveType;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.extension.Profile;
+import platform.pure.metamodel.function.NativeFunction;
+import platform.pure.metamodel.function.PackageableFunction;
+import platform.pure.metamodel.function.UserDefinedFunction;
+import platform.pure.metamodel.relationship.Association;
+import platform.pure.metamodel.type.Class;
+import platform.pure.metamodel.type.Enumeration;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.PrimitiveType;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.list.MutableList;
@@ -65,17 +66,17 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
     }
 
     @Override
-    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context)
+    public PackageableElement firstPass(platform.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context)
     {
         PackageableElement element = switch (grammar)
         {
-            case meta.pure.protocol.grammar.type.Class c -> ClassHandler.firstPass(c, model, context);
-            case meta.pure.protocol.grammar.type.Enumeration e -> EnumerationHandler.firstPass(e, model, context);
-            case meta.pure.protocol.grammar.function.NativeFunction f -> NativeFunctionHandler.firstPass(f, model, context);
-            case meta.pure.protocol.grammar.function.UserDefinedFunction f -> UserDefinedFunctionHandler.firstPass(f, model, context);
-            case meta.pure.protocol.grammar.extension.Profile p -> ProfileHandler.firstPass(p, model, context);
-            case meta.pure.protocol.grammar.relationship.Association a -> AssociationHandler.firstPass(a, model, context);
-            case meta.pure.protocol.grammar.type.PrimitiveType p -> PrimitiveTypeHandler.firstPass(p, model, context);
+            case platform.pure.protocol.grammar.type.Class c -> ClassHandler.firstPass(c, model, context);
+            case platform.pure.protocol.grammar.type.Enumeration e -> EnumerationHandler.firstPass(e, model, context);
+            case platform.pure.protocol.grammar.function.NativeFunction f -> NativeFunctionHandler.firstPass(f, model, context);
+            case platform.pure.protocol.grammar.function.UserDefinedFunction f -> UserDefinedFunctionHandler.firstPass(f, model, context);
+            case platform.pure.protocol.grammar.extension.Profile p -> ProfileHandler.firstPass(p, model, context);
+            case platform.pure.protocol.grammar.relationship.Association a -> AssociationHandler.firstPass(a, model, context);
+            case platform.pure.protocol.grammar.type.PrimitiveType p -> PrimitiveTypeHandler.firstPass(p, model, context);
             default -> null;
         };
         elements.add(element);
@@ -88,20 +89,20 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
         MutableList<String> imports = context.imports();
         return switch (entry.grammarElement())
         {
-            case meta.pure.protocol.grammar.type.Class c ->
-                    ClassHandler.secondPass((meta.pure.metamodel.type.ClassImpl) entry.element(), c, imports, model, context);
-            case meta.pure.protocol.grammar.type.Enumeration e ->
-                    EnumerationHandler.secondPass((meta.pure.metamodel.type.EnumerationImpl) entry.element(), e, imports, model, context);
-            case meta.pure.protocol.grammar.function.NativeFunction f ->
-                    NativeFunctionHandler.secondPass((meta.pure.metamodel.function.NativeFunctionImpl) entry.element(), f, imports, model, context);
-            case meta.pure.protocol.grammar.function.UserDefinedFunction f ->
-                    UserDefinedFunctionHandler.secondPass((meta.pure.metamodel.function.UserDefinedFunctionImpl) entry.element(), f, imports, model, context);
-            case meta.pure.protocol.grammar.extension.Profile p ->
-                    ProfileHandler.secondPass((meta.pure.metamodel.extension.ProfileImpl) entry.element(), p, model);
-            case meta.pure.protocol.grammar.relationship.Association a ->
-                    AssociationHandler.secondPass((meta.pure.metamodel.relationship.AssociationImpl) entry.element(), a, imports, model, context);
-            case meta.pure.protocol.grammar.type.PrimitiveType p ->
-                    PrimitiveTypeHandler.secondPass((meta.pure.metamodel.type.PrimitiveTypeImpl) entry.element(), p, imports, model, context);
+            case platform.pure.protocol.grammar.type.Class c ->
+                    ClassHandler.secondPass((platform.pure.metamodel.type.ClassImpl) entry.element(), c, imports, model, context);
+            case platform.pure.protocol.grammar.type.Enumeration e ->
+                    EnumerationHandler.secondPass((platform.pure.metamodel.type.EnumerationImpl) entry.element(), e, imports, model, context);
+            case platform.pure.protocol.grammar.function.NativeFunction f ->
+                    NativeFunctionHandler.secondPass((platform.pure.metamodel.function.NativeFunctionImpl) entry.element(), f, imports, model, context);
+            case platform.pure.protocol.grammar.function.UserDefinedFunction f ->
+                    UserDefinedFunctionHandler.secondPass((platform.pure.metamodel.function.UserDefinedFunctionImpl) entry.element(), f, imports, model, context);
+            case platform.pure.protocol.grammar.extension.Profile p ->
+                    ProfileHandler.secondPass((platform.pure.metamodel.extension.ProfileImpl) entry.element(), p, model);
+            case platform.pure.protocol.grammar.relationship.Association a ->
+                    AssociationHandler.secondPass((platform.pure.metamodel.relationship.AssociationImpl) entry.element(), a, imports, model, context);
+            case platform.pure.protocol.grammar.type.PrimitiveType p ->
+                    PrimitiveTypeHandler.secondPass((platform.pure.metamodel.type.PrimitiveTypeImpl) entry.element(), p, imports, model, context);
             default -> null;
         };
     }
@@ -118,10 +119,10 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
         return switch (entry.element())
         {
             case UserDefinedFunction f -> UserDefinedFunctionHandler.thirdPass(f,
-                    (meta.pure.protocol.grammar.function.UserDefinedFunction) entry.grammarElement(),
+                    (platform.pure.protocol.grammar.function.UserDefinedFunction) entry.grammarElement(),
                     context.imports(), model, context);
             case Class cls -> ClassHandler.thirdPass(cls,
-                    (meta.pure.protocol.grammar.type.Class) entry.grammarElement(),
+                    (platform.pure.protocol.grammar.type.Class) entry.grammarElement(),
                     context.imports(),
                     model,
                     context
@@ -129,9 +130,9 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
             case Association assoc -> AssociationHandler.thirdPass(assoc, model, context);
             case NativeFunction nf -> NativeFunctionHandler.thirdPass(nf, model, context);
             case Profile pr -> ProfileHandler.thirdPass(pr, model, context);
-            case Enumeration e -> EnumerationHandler.thirdPass(e, (meta.pure.protocol.grammar.type.Enumeration) entry.grammarElement(), context);
+            case Enumeration e -> EnumerationHandler.thirdPass(e, (platform.pure.protocol.grammar.type.Enumeration) entry.grammarElement(), context);
             case PrimitiveType pt -> PrimitiveTypeHandler.thirdPass(pt,
-                    (meta.pure.protocol.grammar.type.PrimitiveType) entry.grammarElement(),
+                    (platform.pure.protocol.grammar.type.PrimitiveType) entry.grammarElement(),
                     context.imports(),
                     model,
                     context
@@ -164,7 +165,7 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
                 functionIndex
                         .getIfAbsentPut(shortName, Maps.mutable::empty)
                         .getIfAbsentPut(paramCount, Lists.mutable::empty)
-                        .add(fn instanceof meta.pure.metamodel.function.NativeFunction
+                        .add(fn instanceof platform.pure.metamodel.function.NativeFunction
                                 ? new NativeFunctionIndexEntry(path, shortName, functionType, model)
                                 : new UserDefinedFunctionIndexEntry(path, shortName, functionType, model));
             }

@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::*;
 
@@ -36,40 +50,40 @@ native function _startsWith_String_1__String_1__Boolean_1_(source:@String@[1], v
 
 native function _endsWith_String_1__String_1__Boolean_1_(source:@String@[1], val:@String@[1]):@Boolean@[1]  ~NativeFunction<{@String@[1], @String@[1]->@Boolean@[1]}>
 
-class test::Class extends Any  ~Class<test::Class>  @10:1-30:1
+class test::Class extends Any  ~Class<test::Class>  @24:1-44:1
   property other :@String@[1]  ~Property<test::Class, @String@|1>
   constraint
     Lambda(this:test::Class[1])  ~#LambdaFunction<#{test::Class[1]->#Boolean##[1]#}#>#
-      ArrowInvocation _startsWith_String_1__String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @12:14-12:31
-        DotApplication test::Class.other :#String##[1]#  ~@DotApplication@  @12:8-12:13
-          Variable this :#test::Class##[1]#  ~@VariableExpression@  @12:3-12:7
-        AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @12:28-12:30
+      ArrowInvocation _startsWith_String_1__String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @26:14-26:31
+        DotApplication test::Class.other :#String##[1]#  ~@DotApplication@  @26:8-26:13
+          Variable this :#test::Class##[1]#  ~@VariableExpression@  @26:3-26:7
+        AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @26:28-26:30
   constraint id
     Lambda(this:test::Class[1])  ~#LambdaFunction<#{test::Class[1]->#Boolean##[1]#}#>#
-      ArrowInvocation _endsWith_String_1__String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @13:18-13:33
-        DotApplication test::Class.other :#String##[1]#  ~@DotApplication@  @13:12-13:17
-          Variable this :#test::Class##[1]#  ~@VariableExpression@  @13:7-13:11
-        AtomicValue  'z' :@String@[1]  ~@AtomicValue@  @13:30-13:32
+      ArrowInvocation _endsWith_String_1__String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @27:18-27:33
+        DotApplication test::Class.other :#String##[1]#  ~@DotApplication@  @27:12-27:17
+          Variable this :#test::Class##[1]#  ~@VariableExpression@  @27:7-27:11
+        AtomicValue  'z' :@String@[1]  ~@AtomicValue@  @27:30-27:32
   constraint other ~owner:theOwner ~externalId:someId ~enforcementLevel:Error
     Lambda(this:test::Class[1])  ~#LambdaFunction<#{test::Class[1]->#Boolean##[1]#}#>#
-      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @18:27-18:41
-        ArrowInvocation _length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @18:27-18:37
-          DotApplication test::Class.other :#String##[1]#  ~@DotApplication@  @18:21-18:26
-            Variable this :#test::Class##[1]#  ~@VariableExpression@  @18:16-18:20
-        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @18:41-18:41
+      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @32:27-32:41
+        ArrowInvocation _length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @32:27-32:37
+          DotApplication test::Class.other :#String##[1]#  ~@DotApplication@  @32:21-32:26
+            Variable this :#test::Class##[1]#  ~@VariableExpression@  @32:16-32:20
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @32:41-32:41
     messageFunction
       Lambda(this:test::Class[1])  ~#LambdaFunction<#{test::Class[1]->#String##[1]#}#>#
-        FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @20:20-20:41
-          DotApplication test::Class.other :#String##[1]#  ~@DotApplication@  @20:20-20:25
-            Variable this :#test::Class##[1]#  ~@VariableExpression@  @20:15-20:19
-          AtomicValue  ' has issues' :@String@[1]  ~@AtomicValue@  @20:29-20:41
+        FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @34:20-34:41
+          DotApplication test::Class.other :#String##[1]#  ~@DotApplication@  @34:20-34:25
+            Variable this :#test::Class##[1]#  ~@VariableExpression@  @34:15-34:19
+          AtomicValue  ' has issues' :@String@[1]  ~@AtomicValue@  @34:29-34:41
   constraint other2 ~externalId:ok
     Lambda(this:test::Class[1])  ~#LambdaFunction<#{test::Class[1]->#Boolean##[1]#}#>#
-      FunctionInvocation lessThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @25:27-25:41
-        ArrowInvocation _length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @25:27-25:37
-          DotApplication test::Class.other :#String##[1]#  ~@DotApplication@  @25:21-25:26
-            Variable this :#test::Class##[1]#  ~@VariableExpression@  @25:16-25:20
-        AtomicValue  4 :@Integer@[1]  ~@AtomicValue@  @25:41-25:41
+      FunctionInvocation lessThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @39:27-39:41
+        ArrowInvocation _length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @39:27-39:37
+          DotApplication test::Class.other :#String##[1]#  ~@DotApplication@  @39:21-39:26
+            Variable this :#test::Class##[1]#  ~@VariableExpression@  @39:16-39:20
+        AtomicValue  4 :@Integer@[1]  ~@AtomicValue@  @39:41-39:41
 
 ###ReverseIndex
 _endsWith_String_1__String_1__Boolean_1_:
@@ -79,11 +93,11 @@ _length_String_1__Integer_1_:
   test::Class.other2
 _startsWith_String_1__String_1__Boolean_1_:
   test::Class
-meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
+platform::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
   test::Class.other
-meta::pure::functions::boolean::lessThan_Number_1__Number_1__Boolean_1_:
+platform::pure::functions::boolean::lessThan_Number_1__Number_1__Boolean_1_:
   test::Class.other2
-meta::pure::functions::string::plus_String_1__String_1__String_1_:
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
   test::Class.other
 test::Class.other:
   test::Class

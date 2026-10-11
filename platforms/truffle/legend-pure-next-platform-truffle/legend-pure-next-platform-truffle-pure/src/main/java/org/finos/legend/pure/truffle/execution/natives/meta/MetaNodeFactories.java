@@ -162,7 +162,7 @@ public final class MetaNodeFactories
 
         // resolveAndReturnGraph — deep-copies the input element map and resolves
         // every TempCompilerPointer it contains to a live target. Invoked at
-        // the end of meta::pure::compiler::compile so every caller (Truffle
+        // the end of platform::pure::compiler::compile so every caller (Truffle
         // runtime, PDB writer, IDE, Pure recompile callers in canonical.pure)
         // receives a pointer-free graph at the compile boundary.
         registry.register("resolveAndReturnGraph_Map_1__PackageableElement_MANY_",

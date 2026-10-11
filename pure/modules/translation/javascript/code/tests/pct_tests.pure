@@ -13,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::javascript::*;
-import meta::external::language::javascript::translation::*;
-import meta::external::language::javascript::serialization::*;
-import meta::pure::translation::shared::*;
+import platform::external::language::javascript::*;
+import platform::external::language::javascript::translation::*;
+import platform::external::language::javascript::serialization::*;
+import platform::pure::translation::shared::*;
 
 // PCT tests for the Pure->JavaScript translator. Each `<<test.Test>>` here
 // invokes an upstream `<<PCT.test>>` from the math/operation specs, passing
@@ -26,14 +26,14 @@ import meta::pure::translation::shared::*;
 // the PCT's expected constant, the translator + emitted TS + the JS engine's
 // arithmetic all agree with Pure semantics.
 
-function <<test.Test>> meta::external::language::javascript::translation::tests::pct::testSimplePlus(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::translation::tests::pct::testSimplePlus(): Boolean[1]
 {
-   meta::pure::functions::math::tests::plus::testSimplePlus(testAdapterForTranslatedJavaScript_Function_1__X_o_);
+   platform::pure::functions::math::tests::plus::testSimplePlus(testAdapterForTranslatedJavaScript_Function_1__X_o_);
 }
 
-function <<test.Test>> meta::external::language::javascript::translation::tests::pct::testFilterInstance(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::translation::tests::pct::testFilterInstance(): Boolean[1]
 {
-   meta::pure::functions::collection::tests::filter::testFilterInstance(testAdapterForTranslatedJavaScript_Function_1__X_o_);
+   platform::pure::functions::collection::tests::filter::testFilterInstance(testAdapterForTranslatedJavaScript_Function_1__X_o_);
 }
 
 // Meta PCT — exercises metamodel reflection through the translator:
@@ -41,7 +41,7 @@ function <<test.Test>> meta::external::language::javascript::translation::tests:
 //   .propertiesFromAssociations / .generalizations.general traversal.
 // First test to actually hit the address-walker + __metadataRead path
 // end-to-end with real metamodel reads.
-function <<test.Test>> meta::external::language::javascript::translation::tests::pct::testMetaProperties(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::translation::tests::pct::testMetaProperties(): Boolean[1]
 {
-   meta::pure::functions::meta::tests::properties::testProperties(testAdapterForTranslatedJavaScript_Function_1__X_o_);
+   platform::pure::functions::meta::tests::properties::testProperties(testAdapterForTranslatedJavaScript_Function_1__X_o_);
 }

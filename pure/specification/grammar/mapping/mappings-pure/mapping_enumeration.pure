@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Mapping for the `Enum` top-level element.
 //
 // Grammar: enumDefinition: ENUM stereotypes? taggedValues? qualifiedName
@@ -9,17 +24,17 @@
 // This file: enumDefinition (top-level Rule) + buildEnumValue helper. Stereotype
 // / taggedValue handling is shared and lives in mapping_shared.pure (TODO).
 
-import meta::pure::parser::mappings::*;
-import meta::pure::functions::meta::antlr::*;
-import meta::pure::parser::mappings::interpreter::*;
-import meta::pure::protocol::grammar::*;
+import platform::pure::parser::mappings::*;
+import platform::pure::functions::meta::antlr::*;
+import platform::pure::parser::mappings::interpreter::*;
+import platform::pure::protocol::grammar::*;
 
-function meta::pure::parser::mappings::enumDefinition(): Rule[1]
+function platform::pure::parser::mappings::enumDefinition(): Rule[1]
 {
    ^Rule(name='enumDefinition', alts = [
       ^Alt(returnExpr = {ctx: AntlrContext[1], o: Integer[1] |
          let qn = $ctx->getChild('qualifiedName')->toOne()->getText();
-         ^meta::pure::protocol::grammar::type::Enumeration(
+         ^platform::pure::protocol::grammar::type::Enumeration(
             p_sourceInformation = buildSourceInfo($ctx, $o),
             name              = simpleNameOf($qn),
             package           = packagePtrOf($qn),
@@ -37,19 +52,19 @@ function meta::pure::parser::mappings::enumDefinition(): Rule[1]
 // cardinality 1, aggregation None). Reference Java parser does the same in
 // `PureLanguageProtocolBuilder.buildEnumValue` — kept in sync so the
 // PureParserMatchesJavaParserTest can compare every slot strictly without skips.
-function meta::pure::parser::mappings::buildEnumValue(ctx: AntlrContext[1], enumPath: String[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::function::property::Property[1]
+function platform::pure::parser::mappings::buildEnumValue(ctx: AntlrContext[1], enumPath: String[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::function::property::Property[1]
 {
-   ^meta::pure::protocol::grammar::function::property::Property(
+   ^platform::pure::protocol::grammar::function::property::Property(
       name              = $ctx->getChild('identifier')->toOne()->getText(),
       p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
-      aggregation       = ^meta::pure::protocol::grammar::Enum_Pointer(
-         value              = 'meta::pure::metamodel::function::property::AggregationKind',
-         extraPointerValues = [^meta::pure::protocol::grammar::PointerValue(value = 'None')]),
-      genericType       = ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
-         type = ^meta::pure::protocol::grammar::type::Type_Pointer(value = $enumPath)),
-      multiplicity      = ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
-         lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = 1),
-         upperBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = 1)),
+      aggregation       = ^platform::pure::protocol::grammar::Enum_Pointer(
+         value              = 'platform::pure::metamodel::function::property::AggregationKind',
+         extraPointerValues = [^platform::pure::protocol::grammar::PointerValue(value = 'None')]),
+      genericType       = ^platform::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+         type = ^platform::pure::protocol::grammar::type::Type_Pointer(value = $enumPath)),
+      multiplicity      = ^platform::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+         lowerBound = ^platform::pure::protocol::grammar::multiplicity::MultiplicityValue(value = 1),
+         upperBound = ^platform::pure::protocol::grammar::multiplicity::MultiplicityValue(value = 1)),
       stereotypes       = collectStereotypes($ctx, $lineOffset),
       taggedValues      = collectTaggedValues($ctx, $lineOffset)
    )

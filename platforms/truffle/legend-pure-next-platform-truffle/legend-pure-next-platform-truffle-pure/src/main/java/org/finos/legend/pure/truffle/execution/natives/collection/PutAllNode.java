@@ -71,7 +71,7 @@ public final class PutAllNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object populateMapCgt()
     {
-        Object cgt = getContext().cgtForType("meta::pure::functions::collection::Map");
+        Object cgt = getContext().cgtForType("platform::pure::functions::collection::Map");
         if (cgt == null)
         {
             throw new RuntimeException("[PutAllNode] Cannot resolve Map type from PDB");
@@ -101,7 +101,7 @@ public final class PutAllNode extends PureNode
             {
                 Object pair = CollectionHelper.at(other, i);
                 if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(pair,
-                        "meta::pure::functions::collection::Pair"))
+                        "platform::pure::functions::collection::Pair"))
                 {
                     newMap.put(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(pair, SLOT_FIRST),
                             org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(pair, SLOT_SECOND));

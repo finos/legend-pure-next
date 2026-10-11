@@ -21,9 +21,9 @@ import org.finos.legend.pure.execution.PureMap;
 import org.finos.legend.pure.execution.ValueSpecificationEvaluator;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.valuespecification.FunctionExpression;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.natives.boolean_.BooleanNatives;
 import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
 import org.finos.legend.pure.execution.natives.meta.CompilerNatives;
@@ -60,7 +60,7 @@ public class NativeRegistry
      * Each implementation receives the resolved return {@code genericType} and {@code multiplicity}
      * from the caller. In the normal call path these come from the call-site
      * {@link FunctionExpression}; when invoked as a first-class value they come from
-     * the {@link meta.pure.metamodel.function.NativeFunction}'s declared return type.
+     * the {@link platform.pure.metamodel.function.NativeFunction}'s declared return type.
      * The {@link #execute} method wraps raw values using these.
      * Natives that return a {@code ValueSpecification} directly will be passed through unchanged.
      */
@@ -68,8 +68,8 @@ public class NativeRegistry
     public interface NativeImpl
     {
         ValueSpecification apply(List<ValueSpecification> args, ValueSpecificationEvaluator eval,
-                                 meta.pure.metamodel.type.generics.GenericType genericType,
-                                 meta.pure.metamodel.multiplicity.Multiplicity multiplicity);
+                                 platform.pure.metamodel.type.generics.GenericType genericType,
+                                 platform.pure.metamodel.multiplicity.Multiplicity multiplicity);
     }
 
     /**
@@ -325,8 +325,8 @@ public class NativeRegistry
 
     public ValueSpecification invokeEager(Object resolved, List<ValueSpecification> args,
                                           ValueSpecificationEvaluator evaluator,
-                                          meta.pure.metamodel.type.generics.GenericType genericType,
-                                          meta.pure.metamodel.multiplicity.Multiplicity multiplicity)
+                                          platform.pure.metamodel.type.generics.GenericType genericType,
+                                          platform.pure.metamodel.multiplicity.Multiplicity multiplicity)
     {
         Binding b = (Binding) resolved;
         try
@@ -381,8 +381,8 @@ public class NativeRegistry
      */
     public ValueSpecification execute(String signature, List<ValueSpecification> args,
                                       ValueSpecificationEvaluator evaluator,
-                                      meta.pure.metamodel.type.generics.GenericType genericType,
-                                      meta.pure.metamodel.multiplicity.Multiplicity multiplicity)
+                                      platform.pure.metamodel.type.generics.GenericType genericType,
+                                      platform.pure.metamodel.multiplicity.Multiplicity multiplicity)
     {
         Binding b = binding(signature);
         if (b == null || b.impl == null)
@@ -449,11 +449,11 @@ public class NativeRegistry
     public static boolean pureEquals(Object a, Object b, MetadataAccess resolver)
     {
         // Unwrap ValueSpecification wrappers before comparison
-        if (a instanceof meta.pure.metamodel.valuespecification.ValueSpecification vsA)
+        if (a instanceof platform.pure.metamodel.valuespecification.ValueSpecification vsA)
         {
             a = _E_ValueSpecification.unwrap(vsA);
         }
-        if (b instanceof meta.pure.metamodel.valuespecification.ValueSpecification vsB)
+        if (b instanceof platform.pure.metamodel.valuespecification.ValueSpecification vsB)
         {
             b = _E_ValueSpecification.unwrap(vsB);
         }
@@ -503,18 +503,18 @@ public class NativeRegistry
 
 
         // Pure Enum values — compare by name AND owning enumeration
-        if (a instanceof meta.pure.metamodel.type.Enum enumA && b instanceof meta.pure.metamodel.type.Enum enumB)
+        if (a instanceof platform.pure.metamodel.type.Enum enumA && b instanceof platform.pure.metamodel.type.Enum enumB)
         {
             if (!Objects.equals(enumA._name(), enumB._name()))
             {
                 return false;
             }
-            meta.pure.metamodel.type.generics.GenericType gtA = enumA._classifierGenericType();
-            meta.pure.metamodel.type.generics.GenericType gtB = enumB._classifierGenericType();
+            platform.pure.metamodel.type.generics.GenericType gtA = enumA._classifierGenericType();
+            platform.pure.metamodel.type.generics.GenericType gtB = enumB._classifierGenericType();
             if (gtA != null && gtB != null)
             {
-                meta.pure.metamodel.type.Type typeA = _GenericType.type(gtA);
-                meta.pure.metamodel.type.Type typeB = _GenericType.type(gtB);
+                platform.pure.metamodel.type.Type typeA = _GenericType.type(gtA);
+                platform.pure.metamodel.type.Type typeB = _GenericType.type(gtB);
                 if (typeA instanceof PackageableElement peA && typeB instanceof PackageableElement peB)
                 {
                     return Objects.equals(
@@ -533,11 +533,11 @@ public class NativeRegistry
                 return false;
             }
             // Find equality key properties from the class's stereotypes
-            meta.pure.metamodel.type.generics.GenericType cgtA = diA.getClassifierGenericType();
+            platform.pure.metamodel.type.generics.GenericType cgtA = diA.getClassifierGenericType();
             if (cgtA != null)
             {
-                meta.pure.metamodel.type.Type type = _GenericType.type(cgtA);
-                if (type instanceof meta.pure.metamodel.SimplePropertyOwner spo)
+                platform.pure.metamodel.type.Type type = _GenericType.type(cgtA);
+                if (type instanceof platform.pure.metamodel.SimplePropertyOwner spo)
                 {
                     java.util.List<String> keyProps = collectEqualityKeyProperties(spo, type, resolver);
                     if (!keyProps.isEmpty())
@@ -597,13 +597,13 @@ public class NativeRegistry
      * re-executed on every call.
      */
     private static java.util.List<String> collectEqualityKeyProperties(
-            meta.pure.metamodel.SimplePropertyOwner owner,
-            meta.pure.metamodel.type.Type cacheKey,
+            platform.pure.metamodel.SimplePropertyOwner owner,
+            platform.pure.metamodel.type.Type cacheKey,
             MetadataAccess resolver)
     {
         if (resolver != null && cacheKey != null)
         {
-            Map<meta.pure.metamodel.type.Type, java.util.List<String>> cache = resolver.equalityKeyPropertiesCache();
+            Map<platform.pure.metamodel.type.Type, java.util.List<String>> cache = resolver.equalityKeyPropertiesCache();
             java.util.List<String> cached = cache.get(cacheKey);
             if (cached != null)
             {
@@ -622,11 +622,11 @@ public class NativeRegistry
         return keys;
     }
 
-    private static void collectEqualityKeyPropertiesRecursive(meta.pure.metamodel.SimplePropertyOwner owner, java.util.List<String> keys, java.util.Set<String> seen)
+    private static void collectEqualityKeyPropertiesRecursive(platform.pure.metamodel.SimplePropertyOwner owner, java.util.List<String> keys, java.util.Set<String> seen)
     {
         if (owner._properties() != null)
         {
-            for (meta.pure.metamodel.function.property.Property p : owner._properties())
+            for (platform.pure.metamodel.function.property.Property p : owner._properties())
             {
                 String propName = p._name();
                 if (seen.contains(propName))
@@ -637,11 +637,11 @@ public class NativeRegistry
                 seen.add(propName);
                 if (p._stereotypes() != null)
                 {
-                    for (meta.pure.metamodel.extension.Stereotype st : p._stereotypes())
+                    for (platform.pure.metamodel.extension.Stereotype st : p._stereotypes())
                     {
                         if ("Key".equals(st._value())
                                 && st._profile() instanceof PackageableElement pe
-                                && "meta::pure::profiles::equality".equals(_PackageableElement.path(pe)))
+                                && "platform::pure::profiles::equality".equals(_PackageableElement.path(pe)))
                         {
                             keys.add(propName);
                             break;
@@ -651,11 +651,11 @@ public class NativeRegistry
             }
         }
         // Traverse supertypes
-        if (owner instanceof meta.pure.metamodel.type.Type type && type._generalizations() != null)
+        if (owner instanceof platform.pure.metamodel.type.Type type && type._generalizations() != null)
         {
-            for (meta.pure.metamodel.relationship.Generalization gen : type._generalizations())
+            for (platform.pure.metamodel.relationship.Generalization gen : type._generalizations())
             {
-                if (gen._general() != null && _GenericType.type(gen._general()) instanceof meta.pure.metamodel.SimplePropertyOwner superOwner)
+                if (gen._general() != null && _GenericType.type(gen._general()) instanceof platform.pure.metamodel.SimplePropertyOwner superOwner)
                 {
                     collectEqualityKeyPropertiesRecursive(superOwner, keys, seen);
                 }
@@ -669,7 +669,7 @@ public class NativeRegistry
     public static String pureToString(Object obj)
     {
         // Unwrap ValueSpecification wrappers before rendering — symmetric with pureEquals
-        if (obj instanceof meta.pure.metamodel.valuespecification.ValueSpecification vs)
+        if (obj instanceof platform.pure.metamodel.valuespecification.ValueSpecification vs)
         {
             obj = _E_ValueSpecification.unwrap(vs);
         }
@@ -685,7 +685,7 @@ public class NativeRegistry
         {
             return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
         }
-        if (obj instanceof meta.pure.metamodel.type.Enum e)
+        if (obj instanceof platform.pure.metamodel.type.Enum e)
         {
             return e._name();
         }

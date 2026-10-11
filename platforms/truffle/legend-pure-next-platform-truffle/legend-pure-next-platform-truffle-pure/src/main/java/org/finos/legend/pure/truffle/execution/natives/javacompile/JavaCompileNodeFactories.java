@@ -19,7 +19,7 @@ import org.finos.legend.pure.truffle.execution.natives.NativeRegistry;
 
 /**
  * Registers the Truffle node for the Pure→Java translator's compile-and-execute
- * native (meta::external::language::java::compileAndExecute). A built-in area:
+ * native (platform::external::language::java::compileAndExecute). A built-in area:
  * {@link NativeRegistry#createDefault()} calls {@link #registerAll}.
  */
 public final class JavaCompileNodeFactories

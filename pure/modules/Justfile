@@ -87,7 +87,7 @@ test-all: test-all-layer0 translation_java::test-all translation_javascript::tes
 # Render every translator gallery (java + javascript + truffle). Assumes Layer 0 PDBs are built (gallery recipes call their own `build-tests`).
 gallery: translation_java::gallery translation_javascript::gallery translation_truffle::gallery
 
-# Remove every module's PDB outputs.
+# Remove every module's build/ directory.
 clean: analysis_diagram::clean protocol::clean language_java::clean language_javascript::clean translation_shared::clean translation_java::clean translation_javascript::clean translation_truffle::clean
 
 # Build time trend (tools/test-dashboard/build-step.mjs): the first dependency of a heavy recipe, whose last line runs `{{build_step}} end`.

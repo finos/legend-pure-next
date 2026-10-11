@@ -15,11 +15,11 @@
 
 package org.finos.legend.pure.m3.module;
 
-import meta.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 
-import meta.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.Type;
 
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -39,7 +39,7 @@ public final class ScopedMetadataAccess implements MetadataAccess
     private final MutableList<Module> dependencies;
     private final Map<Type, MutableList<Type>> linearizationCache = new IdentityHashMap<>();
     private final Map<Type, java.util.List<String>> equalityKeyPropertiesCache = new IdentityHashMap<>();
-    private final Map<meta.pure.metamodel.PackageableElement, String> elementPathCache = new IdentityHashMap<>();
+    private final Map<platform.pure.metamodel.PackageableElement, String> elementPathCache = new IdentityHashMap<>();
 
     // Positive-only resolution cache. JFR found ~9.5% of self-compile CPU
     // in CompressedArchiveReader.hasElement, traced to the duplicated
@@ -106,7 +106,7 @@ public final class ScopedMetadataAccess implements MetadataAccess
                 count++;
             }
         }
-        if (count > 1 && !(found instanceof meta.pure.metamodel.Package))
+        if (count > 1 && !(found instanceof platform.pure.metamodel.Package))
         {
             throw new RuntimeException("Element '" + path + "' is defined in multiple modules");
         }
@@ -162,7 +162,7 @@ public final class ScopedMetadataAccess implements MetadataAccess
     }
 
     @Override
-    public Map<meta.pure.metamodel.PackageableElement, String> elementPathCache()
+    public Map<platform.pure.metamodel.PackageableElement, String> elementPathCache()
     {
         return elementPathCache;
     }

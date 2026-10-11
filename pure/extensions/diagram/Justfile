@@ -25,7 +25,7 @@
 # adapts the extension by generating its own parser from the .g4 and translating the rules.
 #
 # `compiler` is a dependency because the extension plugs into the compiler's extension seam
-# (meta::pure::compiler::extension::CompilerExtension), not because the parser needs it: the
+# (platform::pure::compiler::extension::CompilerExtension), not because the parser needs it: the
 # ANTLR natives and AntlrContext live in core.
 
 set quiet := true
@@ -96,8 +96,8 @@ generate-protocol: _depCheck_base-pdbs
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{protocol_pdb}} \
         --pdb "{{metamodel_stage}}/build/diagram.pdb" \
-        --function "meta::pure::protocol::generation::generateProtocol_String_1__String_1__String_1_" \
-        --args "meta::pure::diagram::metamodel" "meta::pure::diagram::protocol" \
+        --function "platform::pure::protocol::generation::generateProtocol_String_1__String_1__String_1_" \
+        --args "platform::pure::diagram::metamodel" "platform::pure::diagram::protocol" \
         2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) > "{{protocol_gen}}/protocol.pure"
     rm -rf "{{metamodel_stage}}"
     echo "  wrote code/protocol/generated/protocol.pure ($(wc -c < "{{protocol_gen}}/protocol.pure" | tr -d ' ') bytes)"
@@ -141,7 +141,7 @@ build-truffle: _depCheck_base-pdbs generate-protocol
 # from language_diagram.json — so this list holds only what no language declares: test content.
 test-all: build-tests
     @{{header}} 'test-all'
-    @{{substep}} 'runTests meta::pure::diagram (Truffle)'
+    @{{substep}} 'runTests platform::pure::diagram (Truffle)'
     test -f {{shared_out}}/core-tests.pdb || (echo "ERROR: missing {{shared_out}}/core-tests.pdb (run \`just bootstrap::build\` first)" && exit 1)
     test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)
     mkdir -p {{test_results}}/pure/extensions-diagram
@@ -149,8 +149,8 @@ test-all: build-tests
         --root {{repo_root}} \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{diagram_out}}/diagram-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-truffle.json" {{err_filter}}
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-truffle.json" {{err_filter}}
 
 # Internal: fail loudly if the base PDBs aren't staged.
 _depCheck_base-pdbs:
@@ -162,8 +162,8 @@ _depCheck_base-pdbs:
         fi
     done
 
-# Remove build/diagram.pdb (and the tests PDB).
+# Remove build/ (diagram.pdb, the tests PDB, metamodel-stage/) and the generated protocol.
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove build/diagram.pdb + build/diagram-tests.pdb'
-    rm -f {{diagram_out}}/diagram.pdb {{diagram_out}}/diagram-tests.pdb
+    @{{substep}} 'remove build/ and code/protocol/generated/'
+    rm -rf {{diagram_out}} {{protocol_gen}}

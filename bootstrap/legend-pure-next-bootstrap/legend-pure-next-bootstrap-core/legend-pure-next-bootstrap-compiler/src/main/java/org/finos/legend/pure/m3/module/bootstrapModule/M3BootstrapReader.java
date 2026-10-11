@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,40 +15,40 @@
 
 package org.finos.legend.pure.m3.module.bootstrapModule;
 
-import meta.pure.metamodel.Package;
-import meta.pure.metamodel.PackageImpl;
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.SimplePropertyOwner;
-import meta.pure.metamodel.extension.ProfileImpl;
-import meta.pure.metamodel.extension.Stereotype;
-import meta.pure.metamodel.extension.StereotypeImpl;
-import meta.pure.metamodel.function.LambdaFunctionImpl;
-import meta.pure.metamodel.function.property.PropertyImpl;
-import meta.pure.metamodel.multiplicity.InferredPackageableMultiplicityImpl;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.multiplicity.MultiplicityParameter;
-import meta.pure.metamodel.multiplicity.MultiplicityValueImpl;
-import meta.pure.metamodel.multiplicity.PackageableMultiplicity;
-import meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl;
-import meta.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicityImpl;
-import meta.pure.metamodel.relationship.Generalization;
-import meta.pure.metamodel.relationship.GeneralizationImpl;
-import meta.pure.metamodel.type.ClassImpl;
-import meta.pure.metamodel.type.EnumImpl;
-import meta.pure.metamodel.type.Enumeration;
-import meta.pure.metamodel.type.EnumerationImpl;
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.FunctionTypeImpl;
-import meta.pure.metamodel.type.PrimitiveTypeImpl;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.TypeParameter;
-import meta.pure.metamodel.type.generics.TypeParameterImpl;
-import meta.pure.metamodel.type.generics.UserDefinedGenericType;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
-import meta.pure.metamodel.type.generics.UserDefinedPackageableGenericTypeImpl;
-import meta.pure.metamodel.valuespecification.AtomicValueImpl;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
+import platform.pure.metamodel.Package;
+import platform.pure.metamodel.PackageImpl;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.SimplePropertyOwner;
+import platform.pure.metamodel.extension.ProfileImpl;
+import platform.pure.metamodel.extension.Stereotype;
+import platform.pure.metamodel.extension.StereotypeImpl;
+import platform.pure.metamodel.function.LambdaFunctionImpl;
+import platform.pure.metamodel.function.property.PropertyImpl;
+import platform.pure.metamodel.multiplicity.InferredPackageableMultiplicityImpl;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.multiplicity.MultiplicityParameter;
+import platform.pure.metamodel.multiplicity.MultiplicityValueImpl;
+import platform.pure.metamodel.multiplicity.PackageableMultiplicity;
+import platform.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl;
+import platform.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicityImpl;
+import platform.pure.metamodel.relationship.Generalization;
+import platform.pure.metamodel.relationship.GeneralizationImpl;
+import platform.pure.metamodel.type.ClassImpl;
+import platform.pure.metamodel.type.EnumImpl;
+import platform.pure.metamodel.type.Enumeration;
+import platform.pure.metamodel.type.EnumerationImpl;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.FunctionTypeImpl;
+import platform.pure.metamodel.type.PrimitiveTypeImpl;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.TypeParameter;
+import platform.pure.metamodel.type.generics.TypeParameterImpl;
+import platform.pure.metamodel.type.generics.UserDefinedGenericType;
+import platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import platform.pure.metamodel.type.generics.UserDefinedPackageableGenericTypeImpl;
+import platform.pure.metamodel.valuespecification.AtomicValueImpl;
+import platform.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
@@ -213,7 +214,7 @@ public class M3BootstrapReader
                 continue;
             }
             PackageableElement element = index.get(packagePath + "::" + name);
-            if (element instanceof meta.pure.metamodel.type.Class clazz)
+            if (element instanceof platform.pure.metamodel.type.Class clazz)
             {
                 MutableList<TypeParameter> typeParams = getTypeParameters(model, res, clazz, index);
                 if (typeParams.notEmpty())
@@ -297,7 +298,7 @@ public class M3BootstrapReader
     /**
      * Bootstrap {@code UserDefinedPackageableGenericType} instances from the TTL.
      * These are pre-built GenericType wrappers for M3 types, registered at paths
-     * like {@code meta::pure::metamodel::type::generics::optimization::GenericType_SourceInformation}.
+     * like {@code platform::pure::metamodel::type::generics::optimization::GenericType_SourceInformation}.
      */
     private static void bootstrapPackageableGenericTypes(
             Model model,
@@ -365,14 +366,9 @@ public class M3BootstrapReader
             // Extract generalizations
             MutableList<Generalization> generalizations = Lists.mutable.empty();
 
-            for (Statement genStmt : listM3Statements(model, res, "generalizations"))
+            // An RDF collection in m3.ttl, so supertypes keep their declared order.
+            for (Resource genRes : extractPropertyResources(model, res, "generalizations"))
             {
-                if (!genStmt.getObject().isResource())
-                {
-                    continue;
-                }
-                Resource genRes = genStmt.getObject().asResource();
-
                 // Get the :general GenericType
                 Statement generalStmt = getM3Statement(model, genRes, "general");
                 if (generalStmt == null || !generalStmt.getObject().isResource())
@@ -433,7 +429,7 @@ public class M3BootstrapReader
             Statement cgtStmt = getM3Statement(model, res, "classifierGenericType");
             if (cgtStmt != null && cgtStmt.getObject().isResource())
             {
-                meta.pure.metamodel.type.generics.GenericTypeValue cgt = buildGenericType(model, cgtStmt.getObject().asResource(), index);
+                platform.pure.metamodel.type.generics.GenericTypeValue cgt = buildGenericType(model, cgtStmt.getObject().asResource(), index);
                 element._classifierGenericType(cgt);
             }
         }
@@ -473,7 +469,7 @@ public class M3BootstrapReader
             // Find the Profile in the index
             for (PackageableElement el : index.valuesView())
             {
-                if (el instanceof meta.pure.metamodel.extension.Profile profile && profName.equals(el._name()))
+                if (el instanceof platform.pure.metamodel.extension.Profile profile && profName.equals(el._name()))
                 {
                     StereotypeImpl st = new StereotypeImpl()._value(stName)._profile(profile);
                     Statement cgtStmt = getM3Statement(model, stRes, "classifierGenericType");
@@ -562,13 +558,13 @@ public class M3BootstrapReader
                     String uri = aggStmt.getObject().asResource().getURI();
                     aggName = uri.substring(uri.lastIndexOf('_') + 1);
                 }
-                meta.pure.metamodel.type.Enumeration aggEnum = (meta.pure.metamodel.type.Enumeration) index.get("meta::pure::metamodel::function::property::AggregationKind");
-                prop._aggregation((meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(aggEnum, aggName));
+                platform.pure.metamodel.type.Enumeration aggEnum = (platform.pure.metamodel.type.Enumeration) index.get("platform::pure::metamodel::function::property::AggregationKind");
+                prop._aggregation((platform.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(aggEnum, aggName));
             }
             else
             {
-                meta.pure.metamodel.type.Enumeration aggEnum = (meta.pure.metamodel.type.Enumeration) index.get("meta::pure::metamodel::function::property::AggregationKind");
-                prop._aggregation((meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(aggEnum, "None"));
+                platform.pure.metamodel.type.Enumeration aggEnum = (platform.pure.metamodel.type.Enumeration) index.get("platform::pure::metamodel::function::property::AggregationKind");
+                prop._aggregation((platform.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(aggEnum, "None"));
             }
 
             // Wire stereotypes (e.g., ProtocolInfo.inferred, ProtocolInfo.excluded)
@@ -622,7 +618,7 @@ public class M3BootstrapReader
                 {
                     for (PackageableElement el : index.valuesView())
                     {
-                        if (el instanceof meta.pure.metamodel.extension.Profile p && profName.equals(el._name()))
+                        if (el instanceof platform.pure.metamodel.extension.Profile p && profName.equals(el._name()))
                         {
                             return p._p_stereotypes().detect(s -> stName.equals(s._value()));
                         }
@@ -654,7 +650,7 @@ public class M3BootstrapReader
 
             String fullPath = packagePath != null ? packagePath + "::" + name : name;
             PackageableElement element = index.get(fullPath);
-            if (element instanceof meta.pure.metamodel.extension.ElementWithStereotypes ews)
+            if (element instanceof platform.pure.metamodel.extension.ElementWithStereotypes ews)
             {
                 if (stStmt.getObject().isResource())
                 {
@@ -705,14 +701,14 @@ public class M3BootstrapReader
             enumGT._classifierGenericType(buildUdgtAnchor(index));
 
             // GenericType for Enumeration<E> parameterized with this enum type
-            Type enumerationType = (Type) index.get("meta::pure::metamodel::type::Enumeration");
+            Type enumerationType = (Type) index.get("platform::pure::metamodel::type::Enumeration");
             UserDefinedGenericType enumerationOfE = new UserDefinedGenericTypeImpl()
                     ._type(enumerationType)
                     ._typeArguments(Lists.mutable.with(enumGT));
             enumerationOfE._classifierGenericType(buildUdgtAnchor(index));
 
-            Type propertyType = (Type) index.get("meta::pure::metamodel::function::property::Property");
-            Multiplicity pureOne = (Multiplicity) index.get("meta::pure::metamodel::multiplicity::PureOne");
+            Type propertyType = (Type) index.get("platform::pure::metamodel::function::property::Property");
+            Multiplicity pureOne = (Multiplicity) index.get("platform::pure::metamodel::multiplicity::PureOne");
 
             // Find all instances of this Enumeration in the RDF (e.g., :GenericTypeOperationType_Union a :GenericTypeOperationType)
             for (ResIterator valIt = model.listSubjectsWithProperty(RDF.type, enumRes); valIt.hasNext();)
@@ -734,13 +730,13 @@ public class M3BootstrapReader
                 }
 
                 // Build classifierGenericTypes for the wrapper objects
-                Type lambdaType = (Type) index.get("meta::pure::metamodel::function::LambdaFunction");
+                Type lambdaType = (Type) index.get("platform::pure::metamodel::function::LambdaFunction");
                 UserDefinedGenericType lambdaCGT = new UserDefinedGenericTypeImpl()
                         ._type(lambdaType)
                         ._typeArguments(Lists.mutable.with(enumGT));
                 lambdaCGT._classifierGenericType(buildUdgtAnchor(index));
 
-                Type atomicValueType = (Type) index.get("meta::pure::metamodel::valuespecification::AtomicValue");
+                Type atomicValueType = (Type) index.get("platform::pure::metamodel::valuespecification::AtomicValue");
                 UserDefinedGenericType avCGT = new UserDefinedGenericTypeImpl()
                         ._type(atomicValueType);
                 avCGT._classifierGenericType(buildUdgtAnchor(index));
@@ -776,15 +772,15 @@ public class M3BootstrapReader
         }
 
         // Post-pass: set aggregation on all enum value properties now that AggregationKind values exist
-        meta.pure.metamodel.type.Enumeration aggKindEnum = (meta.pure.metamodel.type.Enumeration) index.get("meta::pure::metamodel::function::property::AggregationKind");
+        platform.pure.metamodel.type.Enumeration aggKindEnum = (platform.pure.metamodel.type.Enumeration) index.get("platform::pure::metamodel::function::property::AggregationKind");
         if (aggKindEnum != null)
         {
-            meta.pure.metamodel.function.property.AggregationKind aggNone = (meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(aggKindEnum, "None");
+            platform.pure.metamodel.function.property.AggregationKind aggNone = (platform.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(aggKindEnum, "None");
             for (PackageableElement elem : index.valuesView())
             {
                 if (elem instanceof Enumeration enumeration && enumeration._properties() != null)
                 {
-                    for (meta.pure.metamodel.function.property.Property prop : enumeration._properties())
+                    for (platform.pure.metamodel.function.property.Property prop : enumeration._properties())
                     {
                         if (prop._aggregation() == null)
                         {
@@ -855,7 +851,7 @@ public class M3BootstrapReader
             return null;
         }
         // Convert underscore-separated ref to :: path
-        // e.g. "meta_pure_metamodel_type" → "meta::pure::metamodel::type"
+        // e.g. "platform_pure_metamodel_type" → "platform::pure::metamodel::type"
         return localName.replace("_", "::");
     }
 
@@ -926,7 +922,7 @@ public class M3BootstrapReader
     }
 
     private static MutableList<TypeParameter> getTypeParameters(Model model, Resource res,
-            meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner, MutableMap<String, PackageableElement> index)
+            platform.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner, MutableMap<String, PackageableElement> index)
     {
         MutableList<TypeParameter> result = Lists.mutable.empty();
         for (Resource paramRes : extractPropertyResources(model, res, "TypeAndMultiplicityParametersOwner_typeParameters"))
@@ -959,7 +955,7 @@ public class M3BootstrapReader
     }
 
     private static MutableList<MultiplicityParameter> getMultiplicityParameters(Model model, Resource res,
-            meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner, MutableMap<String, PackageableElement> index)
+            platform.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner, MutableMap<String, PackageableElement> index)
     {
         MutableList<MultiplicityParameter> result = Lists.mutable.empty();
         for (Resource paramRes : extractPropertyResources(model, res, "TypeAndMultiplicityParametersOwner_multiplicityParameters"))
@@ -1022,7 +1018,7 @@ public class M3BootstrapReader
             Statement veCgtStmt = getM3Statement(model, paramRes, "classifierGenericType");
             if (veCgtStmt != null && veCgtStmt.getObject().isResource())
             {
-                meta.pure.metamodel.type.generics.GenericTypeValue cgt = buildGenericType(model, veCgtStmt.getObject().asResource(), index);
+                platform.pure.metamodel.type.generics.GenericTypeValue cgt = buildGenericType(model, veCgtStmt.getObject().asResource(), index);
                 ve._classifierGenericType(cgt);
             }
 
@@ -1046,7 +1042,7 @@ public class M3BootstrapReader
             if (mulParamName != null)
             {
                 // Multiplicity parameter reference: [ :MultiplicityParameter_name [ :classifierGenericType ... ; :data "m" ] ]
-                meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl mp = new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()._name(mulParamName);
+                platform.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl mp = new platform.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()._name(mulParamName);
                 Statement cgtStmt = getM3Statement(model, mulRes, "classifierGenericType");
                 if (cgtStmt != null && cgtStmt.getObject().isResource())
                 {
@@ -1080,7 +1076,7 @@ public class M3BootstrapReader
      * lookup, references to named anchors materialize as duplicate self-classified
      * UDGT impls — which then get serialized inline rather than as PointerRefs.
      */
-    private static meta.pure.metamodel.type.generics.GenericTypeValue buildGenericType(
+    private static platform.pure.metamodel.type.generics.GenericTypeValue buildGenericType(
             Model model, Resource gtRes, MutableMap<String, PackageableElement> index)
     {
         String name = getName(model, gtRes);
@@ -1088,7 +1084,7 @@ public class M3BootstrapReader
         if (name != null && packagePath != null)
         {
             PackageableElement existing = index.get(packagePath + "::" + name);
-            if (existing instanceof meta.pure.metamodel.type.generics.GenericTypeValue existingGt)
+            if (existing instanceof platform.pure.metamodel.type.generics.GenericTypeValue existingGt)
             {
                 return existingGt;
             }
@@ -1313,7 +1309,7 @@ public class M3BootstrapReader
     private static UserDefinedGenericType buildUdgtAnchor(MutableMap<String, PackageableElement> index)
     {
         UserDefinedGenericTypeImpl anchor = new UserDefinedGenericTypeImpl();
-        anchor._type((Type) index.get("meta::pure::metamodel::type::generics::UserDefinedGenericType"));
+        anchor._type((Type) index.get("platform::pure::metamodel::type::generics::UserDefinedGenericType"));
         anchor._classifierGenericType(anchor);
         return anchor;
     }

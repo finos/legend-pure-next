@@ -20,7 +20,7 @@
 // produces identical PureFile ASTs.
 //
 // Contexts (ParserRuleContext, TerminalNode) flow opaquely through Pure as
-// `meta::pure::functions::meta::antlr::AntlrContext` PDOs; here they are the
+// `platform::pure::functions::meta::antlr::AntlrContext` PDOs; here they are the
 // real antlr4 objects, and `ctx[ruleName]()` reflectively reads the generated
 // rule-accessor methods (same pattern AntlrNodes uses on the Java-generated
 // context classes).
@@ -307,10 +307,9 @@ function stripUpTo(s, n) {
 // ============================================================
 // computeFirstNonNewlineLine — Section body line-offset computation.
 // Walks children, skipping EOF + whitespace-only nodes; returns the
-// 0-based line offset of the first content node (adjusted by 1 when the
-// host prepended a synthetic ###Pure header).
+// 0-based line offset of the first content node.
 // ============================================================
-export function __computeFirstNonNewlineLine(ctx, syntheticHeader) {
+export function __computeFirstNonNewlineLine(ctx) {
     if (ctx == null) return 0n;
     const childCount = ctx.getChildCount();
     for (let i = 0; i < childCount; i++) {
@@ -322,9 +321,7 @@ export function __computeFirstNonNewlineLine(ctx, syntheticHeader) {
             child instanceof TerminalNode
                 ? child.symbol.line
                 : child.start.line;
-        let offset = line - 1;
-        if (syntheticHeader) offset -= 1;
-        return BigInt(offset);
+        return BigInt(line - 1);
     }
     return 0n;
 }

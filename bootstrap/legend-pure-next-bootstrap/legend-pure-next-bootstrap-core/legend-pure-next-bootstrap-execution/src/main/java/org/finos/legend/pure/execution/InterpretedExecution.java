@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,9 +15,9 @@
 
 package org.finos.legend.pure.execution;
 
-import meta.pure.metamodel.function.FunctionWithParameters;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.function.FunctionWithParameters;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.VariableExpression;
 import org.finos.legend.pure.execution.natives.NativeRegistry;
 import org.finos.legend.pure.execution.natives.NativesExtension;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -28,7 +29,7 @@ import java.util.List;
  * The tree-walking execution strategy: a {@link ValueSpecificationEvaluator} over a
  * {@link NativeRegistry}.
  *
- * <p>Arguments are wrapped in {@link meta.pure.metamodel.valuespecification.AtomicValueImpl}
+ * <p>Arguments are wrapped in {@link platform.pure.metamodel.valuespecification.AtomicValueImpl}
  * using the function's parameter type declarations before evaluation begins.</p>
  */
 public final class InterpretedExecution implements Execution
@@ -48,8 +49,8 @@ public final class InterpretedExecution implements Execution
     }
 
     /**
-     * Execute any callable: {@link meta.pure.metamodel.function.FunctionDefinition},
-     * {@link meta.pure.metamodel.function.NativeFunction}, or other
+     * Execute any callable: {@link platform.pure.metamodel.function.FunctionDefinition},
+     * {@link platform.pure.metamodel.function.NativeFunction}, or other
      * {@link FunctionWithParameters}. Each argument is wrapped using the corresponding
      * parameter's declared {@code GenericType} and {@code Multiplicity}; dispatch is
      * {@link ValueSpecificationEvaluator#executeFunction}.

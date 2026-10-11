@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,27 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::factory::*;
-import meta::external::language::java::factory::tests::*;
-import meta::external::language::java::metamodel::*;
-import meta::external::language::java::serialization::*;
+import platform::external::language::java::factory::*;
+import platform::external::language::java::factory::tests::*;
+import platform::external::language::java::metamodel::*;
+import platform::external::language::java::serialization::*;
 
-function <<test.Test>> meta::external::language::java::factory::tests::castEmptyListIsNull():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::castEmptyListIsNull():Boolean[1]
 {
    assertCode('(String) null', javaString(), j_emptyList(javaList(javaWildcard()))->j_cast(javaString()));
 }
 
-function <<test.Test>> meta::external::language::java::factory::tests::castToExistingTypeIsANoOp():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::castToExistingTypeIsANoOp():Boolean[1]
 {
    assertCode('"Hello"', javaString(), j_string('Hello')->j_cast(javaString()));
 }
 
-function <<test.Test>> meta::external::language::java::factory::tests::castToDifferentType():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::castToDifferentType():Boolean[1]
 {
    assertCode('(CharSequence) "Hello"', javaCharSequence(), j_string('Hello')->j_cast(javaCharSequence()));
 }
 
-function <<test.Test>> meta::external::language::java::factory::tests::BigDecimalOperations():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::BigDecimalOperations():Boolean[1]
 {
   assertCode('3.14', javaBigDecimal(), j_bigDecimal(3.14d));
   assertCode('3.1415926535897', javaBigDecimal(), j_bigDecimal('3.1415926535897'));
@@ -40,7 +41,7 @@ function <<test.Test>> meta::external::language::java::factory::tests::BigDecima
   assertCode('new java.math.BigDecimal("1.5")', javaBigDecimal(), j_new(javaBigDecimal(),j_string('1.5')));
 }
 
-function <<test.Test>> meta::external::language::java::factory::tests::castUnboxedToBoxed():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::castUnboxedToBoxed():Boolean[1]
 {
    assertCode('4',    javaIntBoxed(),    j_int(4)     ->j_cast(javaIntBoxed()));
    assertCode('4L',   javaLongBoxed(),   j_long(4)    ->j_cast(javaLongBoxed()));
@@ -58,7 +59,7 @@ function <<test.Test>> meta::external::language::java::factory::tests::castUnbox
    assertCode('(Object) new Double(1.5)', javaObject(),      j_double(1.5)->j_cast(javaObject()));
 }
 
-function <<test.Test>> meta::external::language::java::factory::tests::castBoxedToUnboxedUsesValueMethods():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::castBoxedToUnboxedUsesValueMethods():Boolean[1]
 {
    let n = j_variable(javaNumber(), 'n');
 
@@ -99,14 +100,14 @@ function <<test.Test>> meta::external::language::java::factory::tests::castBoxed
    assertCode('n.doubleValue()',               javaDouble(), $n->j_cast(javaDouble()));
 }
 
-function <<test.Test>> meta::external::language::java::factory::tests::doubleCastingRecastsTheOriginal():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::doubleCastingRecastsTheOriginal():Boolean[1]
 {
    assertCode('new Integer(4).intValue()',      javaInt(),          j_int(4)->j_box()->j_cast(javaDouble())->j_cast(javaInt()));
    assertCode('new Integer(4)',                 javaIntBoxed(),     j_int(4)->j_box()->j_cast(javaDouble())->j_cast(javaIntBoxed()));
    assertCode('(java.io.Serializable) "Hello"', javaSerializable(), j_string('Hello')->j_cast(javaCharSequence())->j_cast(javaSerializable()));
 }
 
-function <<test.Test>> meta::external::language::java::factory::tests::primitiveCastsPreseveredByBoxingIfDoubleCast():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::primitiveCastsPreseveredByBoxingIfDoubleCast():Boolean[1]
 {
    let i = j_variable(javaInt(), 'i');
    

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::javascript::*;
-import meta::external::language::javascript::translation::*;
-import meta::external::language::javascript::serialization::*;
-import meta::pure::translation::shared::*;
+import platform::external::language::javascript::*;
+import platform::external::language::javascript::translation::*;
+import platform::external::language::javascript::serialization::*;
+import platform::pure::translation::shared::*;
 
 // Translation helpers for the Pure->JavaScript translator: render a function or
 // lambda to JavaScript source without executing it (translation/java keeps the
@@ -23,11 +23,11 @@ import meta::pure::translation::shared::*;
 
 // Helper: translate `tinyLambdaExample` to JavaScript source and return the
 // serialized string. Invoke via:
-//   pure-js execute --pdb …  --function meta::external::language::javascript::translation::tests::renderTinyLambdaTs_String_1_  --args ''
+//   pure-js execute --pdb …  --function platform::external::language::javascript::translation::tests::renderTinyLambdaTs_String_1_  --args ''
 function <<test.TestDependency>>
-meta::external::language::javascript::translation::tests::renderTinyLambdaTs(): String[1]
+platform::external::language::javascript::translation::tests::renderTinyLambdaTs(): String[1]
 {
-   let f  = meta::external::language::javascript::translation::tests::tinyLambdaExample__Boolean_1_;
+   let f  = platform::external::language::javascript::translation::tests::tinyLambdaExample__Boolean_1_;
    // Use conventionForRoot (same as the PCT adapter) so the lambdaIndex
    // is seeded and wrapLambdaWithAst actually emits __lambdaPtr wrappers.
    let sf = $f->translateFunctionDef(conventionForRoot($f));
@@ -35,24 +35,24 @@ meta::external::language::javascript::translation::tests::renderTinyLambdaTs(): 
 }
 
 function <<test.TestDependency>>
-meta::external::language::javascript::translation::tests::renderFilterTestTs(): String[1]
+platform::external::language::javascript::translation::tests::renderFilterTestTs(): String[1]
 {
-   let lambda = {| [^meta::pure::functions::collection::tests::model::CO_Person(firstName='Fabrice', lastName='Smith')]
+   let lambda = {| [^platform::pure::functions::collection::tests::model::CO_Person(firstName='Fabrice', lastName='Smith')]
                   ->filter(p | !$p.lastName->isEmpty() && ($p.lastName->toOne()->length() < 6))};
-   let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
-                       [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
+   let canonical = $lambda->platform::pure::translation::shared::makeCanonical(
+                       [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
    let sf = $canonical->translateFunctionDef(conventionForRoot($canonical));
    $sf->serialize();
 }
 
 function <<test.TestDependency>>
-meta::external::language::javascript::translation::tests::renderMetaPropertiesTs(): String[1]
+platform::external::language::javascript::translation::tests::renderMetaPropertiesTs(): String[1]
 {
-   let lambda = {| ^meta::pure::functions::meta::tests::model::CC_Address(name='Hoboken',
-                       type=meta::pure::functions::meta::tests::model::CC_GeographicEntityType.CITY)
-                     ->genericType()->meta::pure::functions::meta::properties()};
-   let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
-                       [meta::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
+   let lambda = {| ^platform::pure::functions::meta::tests::model::CC_Address(name='Hoboken',
+                       type=platform::pure::functions::meta::tests::model::CC_GeographicEntityType.CITY)
+                     ->genericType()->platform::pure::functions::meta::properties()};
+   let canonical = $lambda->platform::pure::translation::shared::makeCanonical(
+                       [platform::pure::translation::shared::CanonicalMode.InlineOpenVariables]);
    let sf = $canonical->translateFunctionDef(conventionForRoot($canonical));
    $sf->serialize();
 }

@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.execution.natives.date;
 
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
@@ -93,7 +108,7 @@ public class DateNatives
         {
             LocalDateTime d1 = parseDate(org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate((String) _E_ValueSpecification.unwrap(args.get(0))));
             LocalDateTime d2 = parseDate(org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate((String) _E_ValueSpecification.unwrap(args.get(1))));
-            String unitStr = ((meta.pure.metamodel.type.Enum) _E_ValueSpecification.unwrap(args.get(2)))._name();
+            String unitStr = ((platform.pure.metamodel.type.Enum) _E_ValueSpecification.unwrap(args.get(2)))._name();
             
             long absOpResult = 0;
             switch (unitStr)
@@ -161,7 +176,7 @@ public class DateNatives
             String dateStr = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(originalDateStr);
             LocalDateTime d1 = parseDate(dateStr);
             long amount = (Long) _E_ValueSpecification.unwrap(args.get(1));
-            String unitStr = ((meta.pure.metamodel.type.Enum) _E_ValueSpecification.unwrap(args.get(2)))._name();
+            String unitStr = ((platform.pure.metamodel.type.Enum) _E_ValueSpecification.unwrap(args.get(2)))._name();
             
             LocalDateTime result = switch (unitStr)
             {

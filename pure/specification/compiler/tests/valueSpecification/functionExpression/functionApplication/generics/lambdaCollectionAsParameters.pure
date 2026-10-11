@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 Class Person
 {
@@ -15,31 +29,31 @@ function a(k: FunctionExpression[1]): Any[*]
 }
 
 ###CompiledGraph
-class Person extends Any  ~Class<Person>  @2:1-5:1
+class Person extends Any  ~Class<Person>  @16:1-19:1
   property age :@Integer@[1]  ~Property<Person, @Integer@|1>
 
 function tt_T_MANY__Function_MANY__Any_MANY_(a:T~tt_T_MANY__Function_MANY__Any_MANY_[*], e:Function<{T~tt_T_MANY__Function_MANY__Any_MANY_[1]->@Integer@[1]}>[*]):@Any@[*]  ~UserDefinedFunction<{T~tt_T_MANY__Function_MANY__Any_MANY_[*], Function<{T~tt_T_MANY__Function_MANY__Any_MANY_[1]->@Integer@[1]}>[*]->@Any@[*]}>
-  AtomicValue  'aa' :@String@[1]  ~@AtomicValue@  @9:3-9:6
+  AtomicValue  'aa' :@String@[1]  ~@AtomicValue@  @23:3-23:6
 
 function a_FunctionExpression_1__Any_MANY_(k:@FunctionExpression@[1]):@Any@[*]  ~UserDefinedFunction<{@FunctionExpression@[1]->@Any@[*]}>
-  FunctionInvocation tt_T_MANY__Function_MANY__Any_MANY_ :#Any##[*]#  ~@FunctionInvocation@  @14:3-14:37
+  FunctionInvocation tt_T_MANY__Function_MANY__Any_MANY_ :#Any##[*]#  ~@FunctionInvocation@  @28:3-28:37
     typeParam T -> #Integer#
-    Collection :#Integer#[3]  ~@Collection@  @14:6-14:14
-      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @14:7-14:7
-      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @14:10-14:10
-      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @14:13-14:13
-    Collection :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[2]  ~@Collection@  @14:17-14:36
-      Lambda(f:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @14:18-14:25
-        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @14:20-14:25
-          Variable f :#Integer##[1]#  ~@VariableExpression@  @14:20-14:21
-          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @14:25-14:25
-      Lambda(f:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @14:28-14:35
-        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @14:30-14:35
-          Variable f :#Integer##[1]#  ~@VariableExpression@  @14:30-14:31
-          AtomicValue  4 :@Integer@[1]  ~@AtomicValue@  @14:35-14:35
+    Collection :#Integer#[3]  ~@Collection@  @28:6-28:14
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @28:7-28:7
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @28:10-28:10
+      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @28:13-28:13
+    Collection :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[2]  ~@Collection@  @28:17-28:36
+      Lambda(f:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @28:18-28:25
+        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @28:20-28:25
+          Variable f :#Integer##[1]#  ~@VariableExpression@  @28:20-28:21
+          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @28:25-28:25
+      Lambda(f:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @28:28-28:35
+        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @28:30-28:35
+          Variable f :#Integer##[1]#  ~@VariableExpression@  @28:30-28:31
+          AtomicValue  4 :@Integer@[1]  ~@AtomicValue@  @28:35-28:35
 
 ###ReverseIndex
-meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
   a_FunctionExpression_1__Any_MANY_
 tt_T_MANY__Function_MANY__Any_MANY_:
   a_FunctionExpression_1__Any_MANY_

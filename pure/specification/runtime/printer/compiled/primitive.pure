@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::printer::compiled::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::type::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::printer::compiled::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::type::*;
 
 // Compiled-side printer for `PrimitiveType`. `Primitive pkg::Name(typeVars) extends SuperType [constraints]`.
-function meta::pure::functions::printer::compiled::printCompiledPrimitiveType(p: PrimitiveType[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledPrimitiveType(p: PrimitiveType[1], ctx: PrintContext[1]): String[1]
 {
     'Primitive ' + printCompiledAnnotations($p.stereotypes, $p.taggedValues, $ctx) + printPackagePrefix($p.package) + $p.name->toOne() +
         if ($p.typeVariables->isEmpty(),   | '', | $p.typeVariables->map(tv | printCompiledFunctionParameter($tv, $ctx))->joinStrings('(', ', ', ')')) +

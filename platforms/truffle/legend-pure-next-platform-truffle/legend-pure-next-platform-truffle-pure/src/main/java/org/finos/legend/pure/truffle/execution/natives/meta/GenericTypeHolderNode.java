@@ -54,7 +54,7 @@ public final class GenericTypeHolderNode extends PureNode
 
         Object heldGT = MetaHelper.getRawGenericType(result, resolver);
         // Build classifier GT: GenericTypeAndMultiplicityHolder<heldGT|heldMul>
-        Object holderType = resolver.getElement("meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder");
+        Object holderType = resolver.getElement("platform::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder");
         Object classifierGT = org.finos.legend.pure.truffle.compiler.helper._GenericType.buildUserDefinedGenericType(holderType, resolver);
         if (heldGT != null)
         {
@@ -63,11 +63,11 @@ public final class GenericTypeHolderNode extends PureNode
         }
 
         Object holder = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                "meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder", resolver);
+                "platform::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder", resolver);
         org.finos.legend.pure.truffle.compiler.helper._Any.write(holder, "classifierGenericType", classifierGT);
         org.finos.legend.pure.truffle.compiler.helper._Any.write(holder, "genericType", classifierGT);
         org.finos.legend.pure.truffle.compiler.helper._Any.write(holder, "multiplicity",
-                resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"));
+                resolver.getElement("platform::pure::metamodel::multiplicity::PureOne"));
         return holder;
     }
 }

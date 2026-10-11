@@ -50,7 +50,7 @@ public final class NewGenericTypeNode extends PureNode
     {
         if (result == null
                 || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(result,
-                        "meta::pure::metamodel::type::generics::GenericTypeValue", resolver))
+                        "platform::pure::metamodel::type::generics::GenericTypeValue", resolver))
         {
             String pt = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeOf(result);
             throw new RuntimeException("new(GenericType[1]) requires a GenericType argument; got pureType=" + pt + " class=" + (result == null ? "null" : result.getClass().getName()));
@@ -68,7 +68,7 @@ public final class NewGenericTypeNode extends PureNode
             }
         }
 
-        if ("meta::pure::metamodel::type::Class".equals(classPath))
+        if ("platform::pure::metamodel::type::Class".equals(classPath))
         {
             if (org.finos.legend.pure.truffle.compiler.helper._GenericType.typeArguments(result) == null
                     || org.finos.legend.pure.truffle.compiler.helper._GenericType.typeArguments(result).isEmpty())

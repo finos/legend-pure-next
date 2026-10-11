@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,21 +26,21 @@
 // `properties[i].defaultValue.expressionSequence[0].value.name` empty.
 // ----------------------------------------------------------------------------
 
-Profile <<test.TestDependency>> meta::pure::functions::tests::metaEnum::FlavorProfile
+Profile <<test.TestDependency>> platform::pure::functions::tests::metaEnum::FlavorProfile
 {
     stereotypes : [primary, deprecated];
     tags        : [doc, sortKey];
 }
 
-Enum <<test.TestDependency>> meta::pure::functions::tests::metaEnum::Flavor
+Enum <<test.TestDependency>> platform::pure::functions::tests::metaEnum::Flavor
 {
     Vanilla,
-    <<meta::pure::functions::tests::metaEnum::FlavorProfile.primary>>
-    {meta::pure::functions::tests::metaEnum::FlavorProfile.doc = 'classic',
-     meta::pure::functions::tests::metaEnum::FlavorProfile.sortKey = '1'}
+    <<platform::pure::functions::tests::metaEnum::FlavorProfile.primary>>
+    {platform::pure::functions::tests::metaEnum::FlavorProfile.doc = 'classic',
+     platform::pure::functions::tests::metaEnum::FlavorProfile.sortKey = '1'}
     Chocolate,
-    <<meta::pure::functions::tests::metaEnum::FlavorProfile.deprecated>>
-    {meta::pure::functions::tests::metaEnum::FlavorProfile.doc = 'limited run'}
+    <<platform::pure::functions::tests::metaEnum::FlavorProfile.deprecated>>
+    {platform::pure::functions::tests::metaEnum::FlavorProfile.doc = 'limited run'}
     Pistachio
 }
 
@@ -47,9 +48,9 @@ Enum <<test.TestDependency>> meta::pure::functions::tests::metaEnum::Flavor
 // 1. Enumeration name.
 // ----------------------------------------------------------------------------
 
-function <<test.Test>> meta::pure::functions::tests::metaEnum::testEnumName():Boolean[1]
+function <<test.Test>> platform::pure::functions::tests::metaEnum::testEnumName():Boolean[1]
 {
-    let e = meta::pure::functions::tests::metaEnum::Flavor;
+    let e = platform::pure::functions::tests::metaEnum::Flavor;
     assertEquals('Flavor', $e.name->toOne());
 }
 
@@ -60,13 +61,13 @@ function <<test.Test>> meta::pure::functions::tests::metaEnum::testEnumName():Bo
 //    `.name->toLower() == 'chocolate'` (a common filter pattern).
 // ----------------------------------------------------------------------------
 
-function <<test.Test>> meta::pure::functions::tests::metaEnum::testEnumValueNames():Boolean[1]
+function <<test.Test>> platform::pure::functions::tests::metaEnum::testEnumValueNames():Boolean[1]
 {
-    let e = meta::pure::functions::tests::metaEnum::Flavor;
+    let e = platform::pure::functions::tests::metaEnum::Flavor;
     let names = $e.properties->map(p |
         $p.defaultValue->toOne().expressionSequence->at(0)
-            ->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value
-            ->toOne()->cast(@meta::pure::metamodel::type::Enum).name->toOne());
+            ->cast(@platform::pure::metamodel::valuespecification::AtomicValue).value
+            ->toOne()->cast(@platform::pure::metamodel::type::Enum).name->toOne());
     assertEquals(['Vanilla', 'Chocolate', 'Pistachio'], $names);
 }
 
@@ -75,9 +76,9 @@ function <<test.Test>> meta::pure::functions::tests::metaEnum::testEnumValueName
 //    compiler (see EnumerationHandler), so we read them off properties[].
 // ----------------------------------------------------------------------------
 
-function <<test.Test>> meta::pure::functions::tests::metaEnum::testEnumValueStereotypes():Boolean[1]
+function <<test.Test>> platform::pure::functions::tests::metaEnum::testEnumValueStereotypes():Boolean[1]
 {
-    let e = meta::pure::functions::tests::metaEnum::Flavor;
+    let e = platform::pure::functions::tests::metaEnum::Flavor;
     let chocolateProp = $e.properties->filter(p | $p.name->toOne() == 'Chocolate')->toOne();
     let stereos = $chocolateProp.stereotypes;
     assertEquals(1, $stereos->size());
@@ -95,9 +96,9 @@ function <<test.Test>> meta::pure::functions::tests::metaEnum::testEnumValueSter
 //    the tag identifier and the literal string value the author supplied.
 // ----------------------------------------------------------------------------
 
-function <<test.Test>> meta::pure::functions::tests::metaEnum::testEnumValueTaggedValues():Boolean[1]
+function <<test.Test>> platform::pure::functions::tests::metaEnum::testEnumValueTaggedValues():Boolean[1]
 {
-    let e = meta::pure::functions::tests::metaEnum::Flavor;
+    let e = platform::pure::functions::tests::metaEnum::Flavor;
     let chocolateProp = $e.properties->filter(p | $p.name->toOne() == 'Chocolate')->toOne();
     let tvs = $chocolateProp.taggedValues;
     assertEquals(2, $tvs->size());

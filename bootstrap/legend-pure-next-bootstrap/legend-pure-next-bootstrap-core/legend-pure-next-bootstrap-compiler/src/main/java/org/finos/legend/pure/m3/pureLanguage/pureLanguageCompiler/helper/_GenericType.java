@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,23 +15,23 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.Inferred;
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.relation.GenericTypeOperation;
-import meta.pure.metamodel.relation.RelationType;
-import meta.pure.metamodel.relationship.Generalization;
-import meta.pure.metamodel.type.Class;
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
-import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
-import meta.pure.metamodel.type.generics.TypeParameter;
-import meta.pure.metamodel.type.generics.UndefinedGenericType;
-import meta.pure.metamodel.type.generics.UndefinedGenericTypeImpl;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import platform.pure.metamodel.Inferred;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.relation.GenericTypeOperation;
+import platform.pure.metamodel.relation.RelationType;
+import platform.pure.metamodel.relationship.Generalization;
+import platform.pure.metamodel.type.Class;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.type.generics.InferredGenericTypeImpl;
+import platform.pure.metamodel.type.generics.TypeParameter;
+import platform.pure.metamodel.type.generics.UndefinedGenericType;
+import platform.pure.metamodel.type.generics.UndefinedGenericTypeImpl;
+import platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -64,7 +65,7 @@ public class _GenericType
         };
     }
 
-    public static UserDefinedGenericTypeImpl buildUserDefinedGenericType(meta.pure.metamodel.type.Type rawType, MetadataAccess model)
+    public static UserDefinedGenericTypeImpl buildUserDefinedGenericType(platform.pure.metamodel.type.Type rawType, MetadataAccess model)
     {
         // Always create a fresh UDGT (callers may add typeArguments). The
         // canonical anchor is set as the classifier so chain bottoms at the
@@ -73,29 +74,29 @@ public class _GenericType
         // canonical PackageableGenericType for rawType" use the platform-level
         // `^Type(...)` syntax (Pure) or `new XxxImpl(model)` ctor (Java),
         // which anchor at `GenericType_<TypeName>` UDPGT directly.
-        meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl gt = new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
+        platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl gt = new platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
         if (rawType != null)
         {
             gt._type(rawType);
         }
-        gt._classifierGenericType((meta.pure.metamodel.type.generics.GenericTypeValue)
-                model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType"));
+        gt._classifierGenericType((platform.pure.metamodel.type.generics.GenericTypeValue)
+                model.getElement("platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType"));
         return gt;
     }
 
-    public static meta.pure.metamodel.type.generics.InferredGenericTypeImpl buildInferredGenericType(meta.pure.metamodel.type.Type rawType, MetadataAccess model)
+    public static platform.pure.metamodel.type.generics.InferredGenericTypeImpl buildInferredGenericType(platform.pure.metamodel.type.Type rawType, MetadataAccess model)
     {
         // Pure auto-derives _classifierGenericType when constructing via
         // ^InferredGenericType(...); Java's `new InferredGenericTypeImpl()`
         // doesn't. Anchor on the canonical UDPGT for InferredGenericType so
         // both compilers' classifier chains bottom out the same way.
-        meta.pure.metamodel.type.generics.InferredGenericTypeImpl gt = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl();
+        platform.pure.metamodel.type.generics.InferredGenericTypeImpl gt = new platform.pure.metamodel.type.generics.InferredGenericTypeImpl();
         if (rawType != null)
         {
             gt._type(rawType);
         }
-        gt._classifierGenericType((meta.pure.metamodel.type.generics.GenericTypeValue)
-                model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_generics_InferredGenericType"));
+        gt._classifierGenericType((platform.pure.metamodel.type.generics.GenericTypeValue)
+                model.getElement("platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_type_generics_InferredGenericType"));
         return gt;
     }
 
@@ -164,7 +165,7 @@ public class _GenericType
         if (genericTypes == null || genericTypes.isEmpty())
         {
             // Empty list: return Nil (bottom of hierarchy, subtype of everything)
-            return buildInferredGenericType((Type) model.getElement("meta::pure::metamodel::type::Nil"), model);
+            return buildInferredGenericType((Type) model.getElement("platform::pure::metamodel::type::Nil"), model);
         }
 
         // If all elements are the same type parameter reference, return it directly.
@@ -191,8 +192,8 @@ public class _GenericType
         }
 
         // If all raw types are RelationType instances, use structural unification
-        MutableList<meta.pure.metamodel.relation.RelationType> rawRelationTypes = rawTypes
-                .selectInstancesOf(meta.pure.metamodel.relation.RelationType.class);
+        MutableList<platform.pure.metamodel.relation.RelationType> rawRelationTypes = rawTypes
+                .selectInstancesOf(platform.pure.metamodel.relation.RelationType.class);
         if (rawRelationTypes.size() == rawTypes.size() && rawRelationTypes.notEmpty())
         {
             return buildInferredGenericType(
@@ -344,13 +345,13 @@ public class _GenericType
 
         Type rawType = genericType._type();
 
-        if (rawType instanceof meta.pure.metamodel.type.FunctionType ft)
+        if (rawType instanceof platform.pure.metamodel.type.FunctionType ft)
         {
             sb.append(_FunctionType.print(ft, fullPath));
             return;
         }
 
-        if (rawType instanceof meta.pure.metamodel.relation.RelationType rt)
+        if (rawType instanceof platform.pure.metamodel.relation.RelationType rt)
         {
             sb.append(_RelationType.print(rt, fullPath));
             return;
@@ -361,7 +362,7 @@ public class _GenericType
             if (fullPath)
             {
                 String path = _PackageableElement.path(pe);
-                if (path != null && (path.startsWith("meta::pure::metamodel::") || path.startsWith("meta::pure::functions::")))
+                if (path != null && (path.startsWith("platform::pure::metamodel::") || path.startsWith("platform::pure::functions::")))
                 {
                     // Use simple name for well-known TTL metamodel types
                     String name = pe._name();
@@ -403,7 +404,7 @@ public class _GenericType
             }
             if (hasMulArgs)
             {
-                for (meta.pure.metamodel.multiplicity.Multiplicity mul : genericType._multiplicityArguments())
+                for (platform.pure.metamodel.multiplicity.Multiplicity mul : genericType._multiplicityArguments())
                 {
                     sb.append('|');
                     sb.append(_Multiplicity.printBare(mul));
@@ -459,7 +460,7 @@ public class _GenericType
                     }
                 }
                 // Recurse into RelationType column types
-                if (gtv._type() instanceof meta.pure.metamodel.relation.RelationType rt)
+                if (gtv._type() instanceof platform.pure.metamodel.relation.RelationType rt)
                 {
                     if (!_RelationType.isConcrete(rt))
                     {
@@ -564,7 +565,7 @@ public class _GenericType
                 {
                     names.addAll(_FunctionType.collectReferencedTypeParameterNames(ft));
                 }
-                if (gtv._type() instanceof meta.pure.metamodel.relation.RelationType rt)
+                if (gtv._type() instanceof platform.pure.metamodel.relation.RelationType rt)
                 {
                     names.addAll(_RelationType.collectReferencedTypeParameterNames(rt));
                 }
@@ -609,7 +610,7 @@ public class _GenericType
                 {
                     names.addAll(_FunctionType.collectReferencedMultiplicityParameterNames(ft));
                 }
-                if (gtv._type() instanceof meta.pure.metamodel.relation.RelationType rt)
+                if (gtv._type() instanceof platform.pure.metamodel.relation.RelationType rt)
                 {
                     names.addAll(_RelationType.collectReferencedMultiplicityParameterNames(rt));
                 }
@@ -621,7 +622,7 @@ public class _GenericType
                 {
                     gtv._multiplicityArguments().forEach(mul ->
                     {
-                        if (mul instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
+                        if (mul instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mp)
                         {
                             names.add(mp._name());
                         }
@@ -666,8 +667,8 @@ public class _GenericType
                     }
 
                     // If both sides have RelationType as rawType, match columns
-                    if (paramV._type() instanceof meta.pure.metamodel.relation.RelationType paramRT
-                            && argV._type() instanceof meta.pure.metamodel.relation.RelationType argRT)
+                    if (paramV._type() instanceof platform.pure.metamodel.relation.RelationType paramRT
+                            && argV._type() instanceof platform.pure.metamodel.relation.RelationType argRT)
                     {
                         _RelationType.collectTypeParameterBindings(paramRT, argRT, bindings);
                     }
@@ -746,7 +747,7 @@ public class _GenericType
                 }
 
                 // If rawType is a RelationType, resolve type parameters in column types
-                if (gtv._type() instanceof meta.pure.metamodel.relation.RelationType rt)
+                if (gtv._type() instanceof platform.pure.metamodel.relation.RelationType rt)
                 {
                     GenericType resolved = _RelationType.makeAsConcreteAsPossible(rt, bindings, model);
                     if (resolved != null)
@@ -931,15 +932,15 @@ public class _GenericType
                     MutableList<Multiplicity> templateMulArgs = targetCls._multiplicityParameters() != null
                             ? targetCls._multiplicityParameters().collect(mp ->
                             {
-                                meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl mul =
-                                        new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl(model);
+                                platform.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl mul =
+                                        new platform.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl(model);
                                 mul._name(mp._name());
                                 return (Multiplicity) mul;
                             })
                             : null;
 
-                    meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl templateGT =
-                            new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl(model);
+                    platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl templateGT =
+                            new platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl(model);
                     templateGT._type(targetType);
                     templateGT._typeArguments(templateTypeArgs);
                     templateGT._multiplicityArguments(templateMulArgs);
@@ -1064,8 +1065,8 @@ public class _GenericType
         }
 
         // RelationTypes are structural
-        if (declaredType instanceof meta.pure.metamodel.relation.RelationType declaredRT
-                && actualType instanceof meta.pure.metamodel.relation.RelationType actualRT)
+        if (declaredType instanceof platform.pure.metamodel.relation.RelationType declaredRT
+                && actualType instanceof platform.pure.metamodel.relation.RelationType actualRT)
         {
             return _RelationType.isCompatible(declaredRT, actualRT, contravariant, model);
         }
@@ -1225,7 +1226,7 @@ public class _GenericType
                 String typePath = _PackageableElement.path(pe);
                 if (typePath != null && !typePath.isEmpty())
                 {
-                    Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                    Object canonical = model.getElement("platform::pure::metamodel::type::generics::optimization::GenericType_"
                             + typePath.replace("::", "_"));
                     if (canonical instanceof GenericTypeValue canonicalGT && canonicalGT._type() == newType)
                     {

@@ -60,7 +60,7 @@ test
 │   ├── cd truffle && mvn clean install                            parent + codegen + runtime + 804 unit tests via surefire
 │   └── cp interfaces/cli/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
 └── body
-    └── pure-truffle execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
+    └── pure-truffle execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
 ```
 
 ```
@@ -78,7 +78,7 @@ spec-functions
 │   ├── cd truffle && mvn clean install -DskipTests
 │   └── cp interfaces/cli/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
 └── body
-    └── pure-truffle execute meta::pure::test::runTests              meta::pure::functions
+    └── pure-truffle execute platform::pure::test::runTests              platform::pure::functions
 ```
 
 ```
@@ -88,7 +88,7 @@ spec-pct
 │   ├── cd truffle && mvn clean install -DskipTests
 │   └── cp interfaces/cli/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
 └── body
-    └── pure-truffle execute meta::pure::test::runPCTTests           meta::pure::functions
+    └── pure-truffle execute platform::pure::test::runPCTTests           platform::pure::functions
 ```
 
 ```
@@ -100,21 +100,21 @@ native::spec-compiler
 │       ├── cd truffle && mvn -Pnative package -DskipTests
 │       └── cp runtime/target/pure-truffle-native → truffle/build/pure-truffle-native
 └── body
-    └── pure-truffle-native execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
+    └── pure-truffle-native execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
 ```
 
 ```
 native::spec-functions
 ├── build-native              (mvn -Pnative + cp binary; see native::spec-compiler for full chain)
 └── body
-    └── pure-truffle-native execute meta::pure::test::runTests              meta::pure::functions
+    └── pure-truffle-native execute platform::pure::test::runTests              platform::pure::functions
 ```
 
 ```
 native::spec-pct
 ├── build-native
 └── body
-    └── pure-truffle-native execute meta::pure::test::runPCTTests           meta::pure::functions
+    └── pure-truffle-native execute platform::pure::test::runPCTTests           platform::pure::functions
 ```
 
 ```
@@ -125,7 +125,7 @@ spec-compiler-selfhost
 │   └── cp interfaces/cli/target/pure-truffle-*-fat.jar → truffle/build/pure-truffle.jar
 └── body
     ├── pure-truffle compile compiler-pure → truffle/build/compiler_truffle.pdb
-    └── pure-truffle execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
+    └── pure-truffle execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
                               (using compiler_truffle.pdb instead of shared/compiler.pdb)
 ```
 
@@ -156,7 +156,7 @@ file that didn't exist in `runtime/target/`.
 
 The codegen pom already removes its generated `MapImpl` during its own
 `compile` phase, and the hand-written `ast.natives.collection.MapImpl` lives
-in a different package than codegen's `pdb.meta.pure.functions.collection`,
+in a different package than codegen's `pdb.platform.pure.functions.collection`,
 so there was never an FQN conflict to begin with. (Eventually the codegen
 pom's removal can also go away — nothing references the generated FQN.)
 

@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::serialization::*;
-import meta::external::language::java::translation::*;
-import meta::external::language::java::translation::tests::*;
+import platform::external::language::java::serialization::*;
+import platform::external::language::java::translation::*;
+import platform::external::language::java::translation::tests::*;
 
 // ----------------------------------------------------------------------------
 // Pure functions under test. Each compiles to a UserDefinedFunction whose
@@ -22,27 +23,27 @@ import meta::external::language::java::translation::tests::*;
 // translator must consume.
 // ----------------------------------------------------------------------------
 
-function meta::external::language::java::translation::tests::add(a: Integer[1], b: Integer[1]): Integer[1]
+function platform::external::language::java::translation::tests::add(a: Integer[1], b: Integer[1]): Integer[1]
 {
    $a + $b
 }
 
-function meta::external::language::java::translation::tests::sub(a: Integer[1], b: Integer[1]): Integer[1]
+function platform::external::language::java::translation::tests::sub(a: Integer[1], b: Integer[1]): Integer[1]
 {
    $a - $b
 }
 
-function meta::external::language::java::translation::tests::mul(a: Integer[1], b: Integer[1]): Integer[1]
+function platform::external::language::java::translation::tests::mul(a: Integer[1], b: Integer[1]): Integer[1]
 {
    $a * $b
 }
 
-function meta::external::language::java::translation::tests::div(a: Float[1], b: Float[1]): Float[1]
+function platform::external::language::java::translation::tests::div(a: Float[1], b: Float[1]): Float[1]
 {
    $a / $b
 }
 
-function meta::external::language::java::translation::tests::neg(a: Integer[1]): Integer[1]
+function platform::external::language::java::translation::tests::neg(a: Integer[1]): Integer[1]
 {
    -$a
 }
@@ -51,12 +52,12 @@ function meta::external::language::java::translation::tests::neg(a: Integer[1]):
 // Translator tests: assert exact Java output for each arithmetic operator.
 // ----------------------------------------------------------------------------
 
-function <<access.private>> meta::external::language::java::translation::tests::translateAndStringify(f: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]): String[1]
+function <<access.private>> platform::external::language::java::translation::tests::translateAndStringify(f: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1]): String[1]
 {
    defaultConventions('org.finos.test')->translateFunction($f).class->classToString();
 }
 
-function <<test.Test>> meta::external::language::java::translation::tests::testTranslateAdd(): Boolean[1]
+function <<test.Test>> platform::external::language::java::translation::tests::testTranslateAdd(): Boolean[1]
 {
    let expected = '''
                   package org.finos.test;
@@ -71,7 +72,7 @@ function <<test.Test>> meta::external::language::java::translation::tests::testT
    assertEquals($expected, translateAndStringify(add_Integer_1__Integer_1__Integer_1_));
 }
 
-function <<test.Test>> meta::external::language::java::translation::tests::testTranslateSub(): Boolean[1]
+function <<test.Test>> platform::external::language::java::translation::tests::testTranslateSub(): Boolean[1]
 {
    let expected = '''
                   package org.finos.test;
@@ -86,7 +87,7 @@ function <<test.Test>> meta::external::language::java::translation::tests::testT
    assertEquals($expected, translateAndStringify(sub_Integer_1__Integer_1__Integer_1_));
 }
 
-function <<test.Test>> meta::external::language::java::translation::tests::testTranslateMul(): Boolean[1]
+function <<test.Test>> platform::external::language::java::translation::tests::testTranslateMul(): Boolean[1]
 {
    let expected = '''
                   package org.finos.test;
@@ -101,7 +102,7 @@ function <<test.Test>> meta::external::language::java::translation::tests::testT
    assertEquals($expected, translateAndStringify(mul_Integer_1__Integer_1__Integer_1_));
 }
 
-function <<test.Test>> meta::external::language::java::translation::tests::testTranslateDiv(): Boolean[1]
+function <<test.Test>> platform::external::language::java::translation::tests::testTranslateDiv(): Boolean[1]
 {
    let expected = '''
                   package org.finos.test;
@@ -116,7 +117,7 @@ function <<test.Test>> meta::external::language::java::translation::tests::testT
    assertEquals($expected, translateAndStringify(div_Float_1__Float_1__Float_1_));
 }
 
-function <<test.Test>> meta::external::language::java::translation::tests::testTranslateNeg(): Boolean[1]
+function <<test.Test>> platform::external::language::java::translation::tests::testTranslateNeg(): Boolean[1]
 {
    let expected = '''
                   package org.finos.test;

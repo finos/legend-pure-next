@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,31 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::test::pct::*;
 
-function meta::pure::functions::asserts::assertEqWithinTolerance(expected:Number[1], actual:Number[1], delta:Number[1]):Boolean[1]
+function platform::pure::functions::asserts::assertEqWithinTolerance(expected:Number[1], actual:Number[1], delta:Number[1]):Boolean[1]
 {
     assertEqWithinTolerance($expected, $actual, $delta, '\nexpected: %r\nactual:   %r', [$expected, $actual]);
 }
 
-function meta::pure::functions::asserts::assertEqWithinTolerance(expected:Number[1], actual:Number[1], delta:Number[1], message:String[1]):Boolean[1]
+function platform::pure::functions::asserts::assertEqWithinTolerance(expected:Number[1], actual:Number[1], delta:Number[1], message:String[1]):Boolean[1]
 {
     assert(abs($expected - $actual) <= abs($delta), $message);
 }
 
-function meta::pure::functions::asserts::assertEqWithinTolerance(expected:Number[1], actual:Number[1], delta:Number[1], formatString:String[1], formatArgs:Any[*]):Boolean[1]
+function platform::pure::functions::asserts::assertEqWithinTolerance(expected:Number[1], actual:Number[1], delta:Number[1], formatString:String[1], formatArgs:Any[*]):Boolean[1]
 {
     assert(abs($expected - $actual) <= abs($delta), $formatString, $formatArgs);
 }
 
-function meta::pure::functions::asserts::assertEqWithinTolerance(expected:Number[1], actual:Number[1], delta:Number[1], message:Function<{->String[1]}>[1]):Boolean[1]
+function platform::pure::functions::asserts::assertEqWithinTolerance(expected:Number[1], actual:Number[1], delta:Number[1], message:Function<{->String[1]}>[1]):Boolean[1]
 {
     assert(abs($expected - $actual) <= abs($delta), $message);
 }
 
 
-function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertWithToleranceExactMatch<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::tests::testSuccessAssertWithToleranceExactMatch<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertEqWithinTolerance(1, 1, 0)));
     assert($f->eval(|assertEqWithinTolerance(1, 1, 0.0)));
@@ -62,7 +63,7 @@ function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertWi
     assert($f->eval(|assertEqWithinTolerance(-3.14159, -3.14159, 0.0)));
 }
 
-function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertWithToleranceInexactMatch<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::tests::testSuccessAssertWithToleranceInexactMatch<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertEqWithinTolerance(1, 0, 1)));
     assert($f->eval(|assertEqWithinTolerance(1, 0, 10)));

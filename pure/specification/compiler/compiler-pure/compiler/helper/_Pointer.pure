@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::pointer::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::function::property::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::metamodel::relationship::*;
-import meta::pure::compiler::*;
-import meta::pure::compiler::helper::class::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::functions::asserts::*;
+import platform::pure::metamodel::pointer::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::compiler::*;
+import platform::pure::compiler::helper::class::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::functions::asserts::*;
 
 // ---------------------------------------------------------------------------
 // Pointer construction helpers — compile-pure uses these at every cross-element
@@ -55,32 +56,32 @@ import meta::pure::functions::asserts::*;
 // `validateNewFromFI`'s required-field init check.
 // ---------------------------------------------------------------------------
 
-function meta::pure::compiler::helper::pointer::toPackageableFunctionPointer<T>(fn:PackageableFunction<T>[1]):PackageableFunctionPointer<T>[1]
+function platform::pure::compiler::helper::pointer::toPackageableFunctionPointer<T>(fn:PackageableFunction<T>[1]):PackageableFunctionPointer<T>[1]
 {
     ^PackageableFunctionPointer<T>(path = $fn->elementToPath());
 }
 
-function meta::pure::compiler::helper::pointer::toClassPointer<T>(c:Class<T>[1]):ClassPointer<T>[1]
+function platform::pure::compiler::helper::pointer::toClassPointer<T>(c:Class<T>[1]):ClassPointer<T>[1]
 {
     ^ClassPointer<T>(path = $c->elementToPath());
 }
 
-function meta::pure::compiler::helper::pointer::toPrimitiveTypePointer(pt:PrimitiveType[1]):PrimitiveTypePointer[1]
+function platform::pure::compiler::helper::pointer::toPrimitiveTypePointer(pt:PrimitiveType[1]):PrimitiveTypePointer[1]
 {
     ^PrimitiveTypePointer(path = $pt->elementToPath());
 }
 
-function meta::pure::compiler::helper::pointer::toEnumerationPointer<E>(e:Enumeration<E>[1]):EnumerationPointer<E>[1]
+function platform::pure::compiler::helper::pointer::toEnumerationPointer<E>(e:Enumeration<E>[1]):EnumerationPointer<E>[1]
 {
     ^EnumerationPointer<E>(path = $e->elementToPath());
 }
 
-function meta::pure::compiler::helper::pointer::toProfilePointer(p:Profile[1]):ProfilePointer[1]
+function platform::pure::compiler::helper::pointer::toProfilePointer(p:Profile[1]):ProfilePointer[1]
 {
     ^ProfilePointer(path = $p->elementToPath());
 }
 
-function meta::pure::compiler::helper::pointer::toAssociationPointer(a:Association[1]):AssociationPointer[1]
+function platform::pure::compiler::helper::pointer::toAssociationPointer(a:Association[1]):AssociationPointer[1]
 {
     ^AssociationPointer(path = $a->elementToPath());
 }
@@ -89,31 +90,31 @@ function meta::pure::compiler::helper::pointer::toAssociationPointer(a:Associati
 // `getOrCreatePackagePath` for empty packagePath — see `compiler.pure`).
 // Its `elementToPath` would return its name ("::"), but conventionally the
 // root contributes the empty path to a child element's full path — see
-// `meta::pure::functions::meta::tests::elementToPath::testEphemeralPackageableElements`.
+// `platform::pure::functions::meta::tests::elementToPath::testEphemeralPackageableElements`.
 // Force the pointer's `.path` to '' in that case so the wrapped root behaves
 // the same as the unwrapped one when composed into a child class's path.
-function meta::pure::compiler::helper::pointer::toPackagePointer(p:meta::pure::metamodel::Package[1]):PackagePointer[1]
+function platform::pure::compiler::helper::pointer::toPackagePointer(p:platform::pure::metamodel::Package[1]):PackagePointer[1]
 {
     ^PackagePointer(path = if($p.package->isEmpty(), | '', | $p->elementToPath()));
 }
 
-function meta::pure::compiler::helper::pointer::toPropertyPointer<U,V|m>(p:Property<U,V|m>[1]):PropertyPointer<U,V|m>[1]
+function platform::pure::compiler::helper::pointer::toPropertyPointer<U,V|m>(p:Property<U,V|m>[1]):PropertyPointer<U,V|m>[1]
 {
     ^PropertyPointer<U,V|m>(
-        path = $p.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath(),
+        path = $p.owner->toOne()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath(),
         element = $p.name->toOne()
     );
 }
 
-function meta::pure::compiler::helper::pointer::toQualifiedPropertyPointer<T>(qp:QualifiedProperty<T>[1]):QualifiedPropertyPointer<T>[1]
+function platform::pure::compiler::helper::pointer::toQualifiedPropertyPointer<T>(qp:QualifiedProperty<T>[1]):QualifiedPropertyPointer<T>[1]
 {
     ^QualifiedPropertyPointer<T>(
-        path = $qp.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath(),
+        path = $qp.owner->toOne()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath(),
         element = $qp.name->toOne()
     );
 }
 
-function meta::pure::compiler::helper::pointer::toStereotypePointer(s:Stereotype[1]):StereotypePointer[1]
+function platform::pure::compiler::helper::pointer::toStereotypePointer(s:Stereotype[1]):StereotypePointer[1]
 {
     ^StereotypePointer(
         path = $s.profile->toOne()->elementToPath(),
@@ -121,7 +122,7 @@ function meta::pure::compiler::helper::pointer::toStereotypePointer(s:Stereotype
     );
 }
 
-function meta::pure::compiler::helper::pointer::toTagPointer(t:Tag[1]):TagPointer[1]
+function platform::pure::compiler::helper::pointer::toTagPointer(t:Tag[1]):TagPointer[1]
 {
     ^TagPointer(
         path = $t.profile->toOne()->elementToPath(),
@@ -129,10 +130,10 @@ function meta::pure::compiler::helper::pointer::toTagPointer(t:Tag[1]):TagPointe
     );
 }
 
-function meta::pure::compiler::helper::pointer::toEnumPointer(e:Enum[1]):EnumPointer[1]
+function platform::pure::compiler::helper::pointer::toEnumPointer(e:Enum[1]):EnumPointer[1]
 {
     ^EnumPointer(
-        path = $e.classifierGenericType->toOne().type->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath(),
+        path = $e.classifierGenericType->toOne().type->toOne()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath(),
         element = $e.name->toOne()
     );
 }
@@ -150,18 +151,18 @@ function meta::pure::compiler::helper::pointer::toEnumPointer(e:Enum[1]):EnumPoi
 // Pointers passed in are returned unchanged. Element kinds without a
 // dedicated pointer subclass (none today, but future PackageableElement
 // additions) fall through to the catch-all and stay raw.
-function meta::pure::compiler::helper::pointer::toElementPointer(el:meta::pure::metamodel::PackageableElement[1]):meta::pure::metamodel::PackageableElement[1]
+function platform::pure::compiler::helper::pointer::toElementPointer(el:platform::pure::metamodel::PackageableElement[1]):platform::pure::metamodel::PackageableElement[1]
 {
     $el->match([
-        ptr:TempCompilerPointer[1] | $ptr->cast(@meta::pure::metamodel::PackageableElement),
-        fn:PackageableFunction<Any>[1] | $fn->toPackageableFunctionPointer()->cast(@meta::pure::metamodel::PackageableElement),
-        cls:Class<Any>[1] | $cls->toClassPointer()->cast(@meta::pure::metamodel::PackageableElement),
-        en:Enumeration<Any>[1] | $en->toEnumerationPointer()->cast(@meta::pure::metamodel::PackageableElement),
-        pt:PrimitiveType[1] | $pt->toPrimitiveTypePointer()->cast(@meta::pure::metamodel::PackageableElement),
-        a:Association[1] | $a->toAssociationPointer()->cast(@meta::pure::metamodel::PackageableElement),
-        pr:Profile[1] | $pr->toProfilePointer()->cast(@meta::pure::metamodel::PackageableElement),
-        pkg:meta::pure::metamodel::Package[1] | $pkg->toPackagePointer()->cast(@meta::pure::metamodel::PackageableElement),
-        any:meta::pure::metamodel::PackageableElement[1] | $any
+        ptr:TempCompilerPointer[1] | $ptr->cast(@platform::pure::metamodel::PackageableElement),
+        fn:PackageableFunction<Any>[1] | $fn->toPackageableFunctionPointer()->cast(@platform::pure::metamodel::PackageableElement),
+        cls:Class<Any>[1] | $cls->toClassPointer()->cast(@platform::pure::metamodel::PackageableElement),
+        en:Enumeration<Any>[1] | $en->toEnumerationPointer()->cast(@platform::pure::metamodel::PackageableElement),
+        pt:PrimitiveType[1] | $pt->toPrimitiveTypePointer()->cast(@platform::pure::metamodel::PackageableElement),
+        a:Association[1] | $a->toAssociationPointer()->cast(@platform::pure::metamodel::PackageableElement),
+        pr:Profile[1] | $pr->toProfilePointer()->cast(@platform::pure::metamodel::PackageableElement),
+        pkg:platform::pure::metamodel::Package[1] | $pkg->toPackagePointer()->cast(@platform::pure::metamodel::PackageableElement),
+        any:platform::pure::metamodel::PackageableElement[1] | $any
     ])
 }
 
@@ -173,7 +174,7 @@ function meta::pure::compiler::helper::pointer::toElementPointer(el:meta::pure::
 // elementToPath, instanceOf<parent>, and cast<parent> all keep working on
 // pointers — only direct field access (.properties, .generalizations) requires
 // the context-aware deref overload.
-function meta::pure::compiler::helper::pointer::toTypePointer(t:Type[1]):Type[1]
+function platform::pure::compiler::helper::pointer::toTypePointer(t:Type[1]):Type[1]
 {
     if($t->instanceOf(TempCompilerPointer),
         | $t,
@@ -203,7 +204,7 @@ function meta::pure::compiler::helper::pointer::toTypePointer(t:Type[1]):Type[1]
 // for func-slot use cases).
 // ---------------------------------------------------------------------------
 
-function meta::pure::compiler::helper::pointer::dereferencePointer(ptr:TempCompilerPointer[1], context:meta::pure::compiler::CompilerContext[1]):Any[1]
+function platform::pure::compiler::helper::pointer::dereferencePointer(ptr:TempCompilerPointer[1], context:platform::pure::compiler::CompilerContext[1]):Any[1]
 {
     $ptr->match([
         // Single-path pointers: path → registry lookup

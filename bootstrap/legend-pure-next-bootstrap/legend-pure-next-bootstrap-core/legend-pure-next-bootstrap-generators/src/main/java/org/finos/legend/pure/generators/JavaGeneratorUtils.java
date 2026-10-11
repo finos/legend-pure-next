@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -83,7 +84,7 @@ public final class JavaGeneratorUtils
     }
 
     /**
-     * Convert Pure package path (meta::pure::metamodel::type) to Java package.
+     * Convert Pure package path (platform::pure::metamodel::type) to Java package.
      * Escapes Java reserved keywords by appending an underscore suffix.
      */
     public static String toJavaPackage(String purePackagePath, String outputPackage)

@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::date::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::date::*;
 
-native function <<PCT.function>> meta::pure::functions::date::adjust(date:Date[1], number:Integer[1], unit:DurationUnit[1]):Date[1];
+native function <<PCT.function>> platform::pure::functions::date::adjust(date:Date[1], number:Integer[1], unit:DurationUnit[1]):Date[1];
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByYears<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByYears<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2016, $f->eval(|%2015->adjust(1, DurationUnit.YEARS)));
     assertEquals(%2027, $f->eval(|%2015->adjust(12, DurationUnit.YEARS)));
@@ -28,13 +29,13 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByYears<Z|y>
     assertEquals(%2016-02-29, $f->eval(|%2012-02-29->adjust(4, DurationUnit.YEARS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustReflectiveEvaluation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustReflectiveEvaluation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(%2016-02-28, $f->eval(|meta::pure::functions::date::adjust_Date_1__Integer_1__DurationUnit_1__Date_1_->eval(%2015-02-28, 1, DurationUnit.YEARS)));
-    assertEquals(%2016-02-28, $f->eval(|meta::pure::functions::date::adjust_Date_1__Integer_1__DurationUnit_1__Date_1_->evaluate([^List<Any>(values=%2015-02-28), ^List<Any>(values=1), ^List<Any>(values=DurationUnit.YEARS)])));
+    assertEquals(%2016-02-28, $f->eval(|platform::pure::functions::date::adjust_Date_1__Integer_1__DurationUnit_1__Date_1_->eval(%2015-02-28, 1, DurationUnit.YEARS)));
+    assertEquals(%2016-02-28, $f->eval(|platform::pure::functions::date::adjust_Date_1__Integer_1__DurationUnit_1__Date_1_->evaluate([^List<Any>(values=%2015-02-28), ^List<Any>(values=1), ^List<Any>(values=DurationUnit.YEARS)])));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMonths<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByMonths<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2015-03-01, $f->eval(|%2012-03->adjust(36, DurationUnit.MONTHS)));
     assertEquals(%2009-03-01, $f->eval(|%2012-03->adjust(-36, DurationUnit.MONTHS)));
@@ -57,13 +58,13 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMonths<Z|y
     assertEquals(%2016-03-29, $f->eval(|%2016-02-29->adjust(1, DurationUnit.MONTHS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMonthsBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByMonthsBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%800002016-02-29, $f->eval(|%2016-02-29->adjust(9600000000, DurationUnit.MONTHS)));
     assertEquals(%-799997984-02-29, $f->eval(|%2016-02-29->adjust(-9600000000, DurationUnit.MONTHS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByWeeks<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByWeeks<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2015-04-23, $f->eval(|%2015-04-16->adjust(1, DurationUnit.WEEKS)));
     assertEquals(%2015-04-09, $f->eval(|%2015-04-16->adjust(-1, DurationUnit.WEEKS)));
@@ -75,13 +76,13 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByWeeks<Z|y>
     assertEquals(%2015-06-06, $f->eval(|%2015-05-16->adjust(3, DurationUnit.WEEKS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByWeeksBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByWeeksBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%236611261-10-03, $f->eval(|%2016-02-29->adjust(12345678912, DurationUnit.WEEKS)));
     assertEquals(%-236607230-07-27, $f->eval(|%2016-02-29->adjust(-12345678912, DurationUnit.WEEKS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByDays<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByDays<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2015-04-20, $f->eval(|%2015-04-16->adjust(4, DurationUnit.DAYS)));
     assertEquals(%2015-04-12, $f->eval(|%2015-04-16->adjust(-4, DurationUnit.DAYS)));
@@ -96,13 +97,13 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByDays<Z|y>(
     assertEquals(%2013-03-30, $f->eval(|%2014-03-30->adjust(-365, DurationUnit.DAYS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByDaysBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByDaysBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%33803336-12-17, $f->eval(|%2016-02-29->adjust(12345678912, DurationUnit.DAYS)));
     assertEquals(%-33799305-05-13, $f->eval(|%2016-02-29->adjust(-12345678912, DurationUnit.DAYS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByHours<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByHours<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2015-04-15T13:12:11, $f->eval(|%2015-04-15T12:12:11->adjust(1, DurationUnit.HOURS)));
     assertEquals(%2015-04-15T11:12:11, $f->eval(|%2015-04-15T12:12:11->adjust(-1, DurationUnit.HOURS)));
@@ -114,13 +115,13 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByHours<Z|y>
     assertEquals(%2015-04-14T00:12:11, $f->eval(|%2015-04-15T12:12:11->adjust(-36, DurationUnit.HOURS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByHoursBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByHoursBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%1410404-07-12T00:00:00, $f->eval(|%2016-02-29T00:00:00->adjust(12345678912, DurationUnit.HOURS)));
     assertEquals(%-1406373-10-18T00:00:00, $f->eval(|%2016-02-29T00:00:00->adjust(-12345678912, DurationUnit.HOURS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMinutes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByMinutes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2015-04-15T13:12:11, $f->eval(|%2015-04-15T13:11:11->adjust(1, DurationUnit.MINUTES)));
     assertEquals(%2015-04-15T13:10:11, $f->eval(|%2015-04-15T13:11:11->adjust(-1, DurationUnit.MINUTES)));
@@ -132,13 +133,13 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMinutes<Z|
     assertEquals(%2015-04-14T13:10:11, $f->eval(|%2015-04-15T13:11:11->adjust(-1441, DurationUnit.MINUTES)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMinutesBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByMinutesBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%25489-04-20T03:12:00, $f->eval(|%2016-02-29T00:00:00->adjust(12345678912, DurationUnit.MINUTES)));
     assertEquals(%-21457-01-08T20:48:00, $f->eval(|%2016-02-29T00:00:00->adjust(-12345678912, DurationUnit.MINUTES)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustBySeconds<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustBySeconds<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2015-04-15T13:11:12, $f->eval(|%2015-04-15T13:11:11->adjust(1, DurationUnit.SECONDS)));
     assertEquals(%2015-04-15T13:11:10, $f->eval(|%2015-04-15T13:11:11->adjust(-1, DurationUnit.SECONDS)));
@@ -150,13 +151,13 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustBySeconds<Z|
     assertEquals(%2015-04-15T12:11:10, $f->eval(|%2015-04-15T13:11:11->adjust(-3601, DurationUnit.SECONDS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustBySecondsBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustBySecondsBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2407-05-19T19:15:12, $f->eval(|%2016-02-29T00:00:00->adjust(12345678912, DurationUnit.SECONDS)));
     assertEquals(%1624-12-10T04:44:48, $f->eval(|%2016-02-29T00:00:00->adjust(-12345678912, DurationUnit.SECONDS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMicroseconds<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByMicroseconds<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEquals(%2015-04-15T13:11:11.338001, $f->eval(|%2015-04-15T13:11:11.338000->adjust(1, DurationUnit.MICROSECONDS)));
   assertEquals(%2015-04-15T13:11:11.337999, $f->eval(|%2015-04-15T13:11:11.338000->adjust(-1, DurationUnit.MICROSECONDS)));
@@ -168,7 +169,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMicrosecon
   assertEquals(%2015-04-15T13:11:11.334399, $f->eval(|%2015-04-15T13:11:11.338000->adjust(-3601, DurationUnit.MICROSECONDS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMicrosecondsBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByMicrosecondsBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   // Test epoch calculation
   assertEquals(%2021-06-21T09:37:37.4990000+0000,
@@ -177,7 +178,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMicrosecon
                $f->eval(|%1970-01-01T00:00:00.0000000->adjust(floor(1624268257499000000/1000), DurationUnit.MICROSECONDS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMilliseconds<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByMilliseconds<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2015-04-15T13:11:11.339, $f->eval(|%2015-04-15T13:11:11.338->adjust(1, DurationUnit.MILLISECONDS)));
     assertEquals(%2015-04-15T13:11:11.337, $f->eval(|%2015-04-15T13:11:11.338->adjust(-1, DurationUnit.MILLISECONDS)));
@@ -189,7 +190,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMillisecon
     assertEquals(%2015-04-15T13:11:07.737, $f->eval(|%2015-04-15T13:11:11.338->adjust(-3601, DurationUnit.MILLISECONDS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMillisecondsBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustByMillisecondsBigNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2016-07-20T21:21:18.912, $f->eval(|%2016-02-29T00:00:00.000->adjust(12345678912, DurationUnit.MILLISECONDS)));
     assertEquals(%2015-10-09T02:38:41.088, $f->eval(|%2016-02-29T00:00:00.000->adjust(-12345678912, DurationUnit.MILLISECONDS)));
@@ -197,7 +198,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustByMillisecon
 
 // An adjusted date is a first-class date, not only something equality can
 // compare: it renders and computes exactly like the equivalent literal.
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustedDateToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustedDateToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('2016', $f->eval(|%2015->adjust(1, DurationUnit.YEARS)->toString()));
     assertEquals('2014-02-02', $f->eval(|%2014-02-01->adjust(1, DurationUnit.DAYS)->toString()));
@@ -205,7 +206,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testAdjustedDateToStri
     assertEquals('2001-09-09T01:46:40.000', $f->eval(|%1970-01-01T00:00:00.000->adjust(1000000000000, DurationUnit.MILLISECONDS)->toString()));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testAdjustedDateDateDiff<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testAdjustedDateDateDiff<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(3, $f->eval(|%2014-02-01->dateDiff(%2014-02-01->adjust(3, DurationUnit.DAYS), DurationUnit.DAYS)));
     assertEquals(20000, $f->eval(|%1970-01-01->dateDiff(%1970-01-01->adjust(20000, DurationUnit.DAYS), DurationUnit.DAYS)));

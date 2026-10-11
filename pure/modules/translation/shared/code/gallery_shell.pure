@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::translation::shared::gallery::*;
+import platform::pure::translation::shared::gallery::*;
 
 // ============================================================================
 // Shared HTML chrome for the Pure -> {Java, JavaScript, ...} translation
@@ -24,7 +24,7 @@ import meta::pure::translation::shared::gallery::*;
 // Each gallery emits its own <section class="pair ..."> cards for tests (Pure
 // source on the left of the card, translated source on the right). The shell
 // expects every section to carry these data attributes:
-//   data-path        meta::pure::functions::lang::tests::match::testMatchXxx
+//   data-path        platform::pure::functions::lang::tests::match::testMatchXxx
 //   data-source      raw sourceInformation.sourceId for the test file
 //   data-runtime     "pass" | "fail" — did the test return without throwing
 //                    when executed through the translator adapter
@@ -36,7 +36,7 @@ import meta::pure::translation::shared::gallery::*;
 // file is a single self-contained HTML document.
 // ============================================================================
 
-function meta::pure::translation::shared::gallery::renderGalleryShell(
+function platform::pure::translation::shared::gallery::renderGalleryShell(
     title: String[1],
     accentName: String[1],
     accentClass: String[1],
@@ -52,8 +52,8 @@ function meta::pure::translation::shared::gallery::renderGalleryShell(
     // When this page was rendered (UTC, Pure DateTime format). currentTimeMillis
     // is the clock every host implements, so derive the timestamp from it.
     let generatedAt = %1970-01-01T00:00:00.000+0000
-                         ->meta::pure::functions::date::adjust(meta::pure::functions::date::currentTimeMillis(),
-                                                               meta::pure::functions::date::DurationUnit.MILLISECONDS)
+                         ->platform::pure::functions::date::adjust(platform::pure::functions::date::currentTimeMillis(),
+                                                               platform::pure::functions::date::DurationUnit.MILLISECONDS)
                          ->toString();
     '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>' + $title + '</title><style>' + $css + '</style></head>' +
     '<body>' +
@@ -77,7 +77,7 @@ function meta::pure::translation::shared::gallery::renderGalleryShell(
     '</body></html>';
 }
 
-function meta::pure::translation::shared::gallery::renderGalleryShellCss(accentColor: String[1], accentClass: String[1]): String[1]
+function platform::pure::translation::shared::gallery::renderGalleryShellCss(accentColor: String[1], accentClass: String[1]): String[1]
 {
     [
         ':root{',
@@ -150,7 +150,7 @@ function meta::pure::translation::shared::gallery::renderGalleryShellCss(accentC
 
 // All JS for the tree UI. Uses only double-quoted strings + backticks so the
 // surrounding Pure single-quote string does not need character escaping.
-function meta::pure::translation::shared::gallery::renderGalleryShellJs(): String[1]
+function platform::pure::translation::shared::gallery::renderGalleryShellJs(): String[1]
 {
     [
         '(function(){',
@@ -327,13 +327,13 @@ function meta::pure::translation::shared::gallery::renderGalleryShellJs(): Strin
 }
 
 // Escape a string for use inside an HTML attribute value (double-quoted).
-function meta::pure::translation::shared::gallery::escapeAttr(s: String[1]): String[1]
+function platform::pure::translation::shared::gallery::escapeAttr(s: String[1]): String[1]
 {
     $s->replace('&', '&amp;')->replace('<', '&lt;')->replace('>', '&gt;')->replace('"', '&quot;');
 }
 
 // Escape a string for use inside HTML text content.
-function meta::pure::translation::shared::gallery::escapeHtml(s: String[1]): String[1]
+function platform::pure::translation::shared::gallery::escapeHtml(s: String[1]): String[1]
 {
     $s->replace('&', '&amp;')->replace('<', '&lt;')->replace('>', '&gt;');
 }

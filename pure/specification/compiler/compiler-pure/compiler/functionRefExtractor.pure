@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::function::property::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::constraint::*;
-import meta::pure::metamodel::relationship::*;
-import meta::pure::metamodel::pointer::*;
-import meta::pure::functions::lang::*;
+import platform::pure::compiler::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::constraint::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::metamodel::pointer::*;
+import platform::pure::functions::lang::*;
 
 // Derives the function-reference half of the reverse index by walking the
 // compiled AST. For every {@code FunctionExpression}/{@code DotApplication}/{@code
@@ -41,7 +42,7 @@ import meta::pure::functions::lang::*;
 // Other recording categories (type refs via genericTypeCompiler, stereotype/
 // tag refs via annotationCompiler, sub-element caller scoping) are immune
 // to candidate-trial pollution and stay recorded as in-flight side-effects.
-function meta::pure::compiler::extractFunctionRefsInto(context:CompilerContext[1], elements:PackageableElement[*]):CompilerContext[1]
+function platform::pure::compiler::extractFunctionRefsInto(context:CompilerContext[1], elements:PackageableElement[*]):CompilerContext[1]
 {
     $elements->fold({el, ctx |
         let elementPath = $el->elementToPath();
@@ -49,7 +50,7 @@ function meta::pure::compiler::extractFunctionRefsInto(context:CompilerContext[1
     }, $context);
 }
 
-function meta::pure::compiler::extractFromElement(element:PackageableElement[1], elementPath:String[1], context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::extractFromElement(element:PackageableElement[1], elementPath:String[1], context:CompilerContext[1]):CompilerContext[1]
 {
     $element->match([
         fn:UserDefinedFunction<Any>[1] |
@@ -113,7 +114,7 @@ function meta::pure::compiler::extractFromElement(element:PackageableElement[1],
     ])
 }
 
-function meta::pure::compiler::walkConstraint(con:Constraint[1], caller:String[1], context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::walkConstraint(con:Constraint[1], caller:String[1], context:CompilerContext[1]):CompilerContext[1]
 {
     let c1 = if($con.functionDefinition->isEmpty(),
         | $context,
@@ -129,7 +130,7 @@ function meta::pure::compiler::walkConstraint(con:Constraint[1], caller:String[1
     );
 }
 
-function meta::pure::compiler::walkVS(vs:ValueSpecification[1], caller:String[1], context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::walkVS(vs:ValueSpecification[1], caller:String[1], context:CompilerContext[1]):CompilerContext[1]
 {
     $vs->match([
         fe:FunctionExpression[1] |
@@ -167,7 +168,7 @@ function meta::pure::compiler::walkVS(vs:ValueSpecification[1], caller:String[1]
 //   Raw AbstractProperty (no pointer wrap)     → {@code OwnerPath.propName}
 //   Raw PackageableElement                     → its full path
 //   Inline lambdas / other Function subtypes   → no record
-function meta::pure::compiler::recordFuncEdge(context:CompilerContext[1], fn:Function<Any>[1], caller:String[1]):CompilerContext[1]
+function platform::pure::compiler::recordFuncEdge(context:CompilerContext[1], fn:Function<Any>[1], caller:String[1]):CompilerContext[1]
 {
     let targetPath = if($fn->instanceOf(PropertyPointer),
         | let pp = $fn->cast(@PropertyPointer<Nil, Any|*>);
@@ -177,8 +178,8 @@ function meta::pure::compiler::recordFuncEdge(context:CompilerContext[1], fn:Fun
                 $qpp.path + '.' + $qpp.element;,
               | if($fn->instanceOf(PackageableFunctionPointer),
                     | $fn->cast(@PackageableFunctionPointer<Any>).path,
-                    | if($fn->instanceOf(meta::pure::metamodel::function::property::AbstractProperty),
-                          | let prop = $fn->cast(@meta::pure::metamodel::function::property::AbstractProperty<Any>);
+                    | if($fn->instanceOf(platform::pure::metamodel::function::property::AbstractProperty),
+                          | let prop = $fn->cast(@platform::pure::metamodel::function::property::AbstractProperty<Any>);
                             if($prop.owner->isEmpty(),
                                 | []->cast(@String),
                                 | $prop.owner->toOne()->cast(@PackageableElement)->elementToPath() + '.' + $prop.name->toOne();
@@ -192,7 +193,7 @@ function meta::pure::compiler::recordFuncEdge(context:CompilerContext[1], fn:Fun
           )
     );
     if($targetPath->isEmpty()
-            || $targetPath->toOne()->startsWith('meta::pure::metamodel::')
+            || $targetPath->toOne()->startsWith('platform::pure::metamodel::')
             || $targetPath->toOne() == $caller,
         | $context,
         | let target = $targetPath->toOne();

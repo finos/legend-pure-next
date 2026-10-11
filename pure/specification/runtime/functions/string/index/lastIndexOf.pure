@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::string::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::string::*;
 
-native function <<PCT.function>> meta::pure::functions::string::lastIndexOf(str:String[1], toFind:String[1]):Integer[1];
+native function <<PCT.function>> platform::pure::functions::string::lastIndexOf(str:String[1], toFind:String[1]):Integer[1];
 
 
-function <<PCT.test>> meta::pure::functions::string::tests::lastIndexOf::testSimple<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::lastIndexOf::testSimple<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let string = 'the quick brown fox jumps over the lazy dog';
 
@@ -27,13 +28,13 @@ function <<PCT.test>> meta::pure::functions::string::tests::lastIndexOf::testSim
     assertEquals(-1, $f->eval(|$string->lastIndexOf('happy')));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::lastIndexOf::testEmptySubstring<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::lastIndexOf::testEmptySubstring<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let string = 'abc';
     assertEquals(3, $f->eval(|$string->lastIndexOf('')));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::lastIndexOf::testSingleChar<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::lastIndexOf::testSingleChar<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(6, $f->eval(|'meta::pure'->lastIndexOf('p')));
     assertEquals(5, $f->eval(|'meta::pure'->lastIndexOf(':')));

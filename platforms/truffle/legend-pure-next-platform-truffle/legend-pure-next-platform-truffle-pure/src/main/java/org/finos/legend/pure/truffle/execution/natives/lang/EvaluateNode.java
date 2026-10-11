@@ -98,7 +98,7 @@ public final class EvaluateNode extends PureNode
     {
         // ListImpl has _values() returning collection (Object / ObjectSequence / MutableList)
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(listObj,
-                "meta::pure::functions::collection::List"))
+                "platform::pure::functions::collection::List"))
         {
             Object vals = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(listObj, SLOT_VALUES);
             int sz = org.finos.legend.pure.truffle.execution.natives.collection.CollectionHelper.size(vals);

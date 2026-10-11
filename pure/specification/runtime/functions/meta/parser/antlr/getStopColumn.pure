@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::meta::antlr::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::meta::antlr::*;
+import platform::pure::test::pct::*;
 
 // End column of the context's last matched token: ANTLR's 0-based
 // {@code getCharPositionInLine() + tokenText.length()}. Pairs with
 // {@code getStartColumn} (1-based start) to give the existing parser's
 // source-info shape.
 native function <<PCT.function>>
-   meta::pure::functions::meta::antlr::getStopColumn(
+   platform::pure::functions::meta::antlr::getStopColumn(
       ctx: AntlrContext[1]
    ): Integer[1];
 
-function <<PCT.test>> meta::pure::functions::meta::antlr::tests::getStopColumn::testTrailingBrace<Z|y>(
+function <<PCT.test>> platform::pure::functions::meta::antlr::tests::getStopColumn::testTrailingBrace<Z|y>(
    f: Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]
 ): Boolean[1]
 {

@@ -8,6 +8,6 @@
   ],
   "module": "compiler-tests",
   "pure": {
-    "sectionParsers": "meta::pure::compiler::test::testSectionParsers__Pair_MANY_"
+    "sectionParsers": "platform::pure::compiler::test::testSectionParsers__Pair_MANY_"
   }
 }

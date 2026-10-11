@@ -1,15 +1,29 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
-Class meta::pure::test::classWithTypeParams<T,U>
+Class platform::pure::test::classWithTypeParams<T,U>
 {
 }
 
-Class meta::pure::test::classWithMulParams<T|m>
+Class platform::pure::test::classWithMulParams<T|m>
 {
 }
 
 ###CompiledGraph
-class meta::pure::test::classWithTypeParams extends Any  ~Class<meta::pure::test::classWithTypeParams<T~meta::pure::test::classWithTypeParams, U~meta::pure::test::classWithTypeParams>>  @2:1-4:1
+class platform::pure::test::classWithTypeParams extends Any  ~Class<platform::pure::test::classWithTypeParams<T~platform::pure::test::classWithTypeParams, U~platform::pure::test::classWithTypeParams>>  @16:1-18:1
 
-class meta::pure::test::classWithMulParams extends Any  ~Class<meta::pure::test::classWithMulParams<T~meta::pure::test::classWithMulParams|m~meta::pure::test::classWithMulParams>>  @6:1-8:1
+class platform::pure::test::classWithMulParams extends Any  ~Class<platform::pure::test::classWithMulParams<T~platform::pure::test::classWithMulParams|m~platform::pure::test::classWithMulParams>>  @20:1-22:1
 
 ###ReverseIndex

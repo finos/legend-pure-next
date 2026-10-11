@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::meta::tests::model::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::meta::tests::model::*;
+import platform::pure::test::pct::*;
 
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::genericType(any:Any[*]):GenericTypeValue[1];
+native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::meta::genericType(any:Any[*]):GenericTypeValue[1];
 
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let expected = [Class, CC_Person];
     assertEquals($expected, $f->eval(|
@@ -26,12 +27,12 @@ function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGener
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testGenericTypeInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertIs(CC_Person, $f->eval(|^CC_Person(firstName='Pierre', lastName='Doe')->genericType().type->toOne()));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeFromEnum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testGenericTypeFromEnum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let expected = [Enumeration, CC_GeographicEntityType];
     assertEquals($expected, $f->eval(|
@@ -40,12 +41,12 @@ function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGener
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeFromEnumVal<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testGenericTypeFromEnumVal<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertIs(CC_GeographicEntityType, $f->eval(|CC_GeographicEntityType.CITY->genericType().type->toOne()));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeWithGenerics<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testGenericTypeWithGenerics<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let expected = [CC_List, String];
     assertEquals($expected, $f->eval(|
@@ -54,7 +55,7 @@ function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGener
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testClassTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testClassTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // CC_List<T> has one type parameter T
     assert($f->eval(|
@@ -65,7 +66,7 @@ function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testClass
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testNewTypeParameterMatch<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testNewTypeParameterMatch<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // TypeParameter created via new should match in a match expression
     assert($f->eval(|
@@ -78,7 +79,7 @@ function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testNewTy
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testTypeParameterInGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testTypeParameterInGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // TypeParameter stored in a GenericType should still match as TypeParameter
     assert($f->eval(|
@@ -93,7 +94,7 @@ function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testTypeP
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testTypeParameterFromClassTypeParams<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testTypeParameterFromClassTypeParams<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // TypeParameter accessed from a PDB-loaded generic class should match
     assert($f->eval(|
@@ -107,7 +108,7 @@ function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testTypeP
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testCopyPreservesTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testCopyPreservesTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // Create a class with typeParameters, then copy-with to add a property.
     // The copy should preserve typeParameters.
@@ -125,7 +126,7 @@ function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testCopyP
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeArgumentsOnProperty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testGenericTypeArgumentsOnProperty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // CC_Person.locations has type CC_Location[*] — no type args
     assertIs(CC_Location, $f->eval(|CC_Person->cast(@Class<Any>).properties->filter(p | $p.name == 'locations')->toOne().genericType->toOne()->cast(@GenericTypeValue).type->toOne()));
@@ -138,9 +139,9 @@ function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGener
 // a lambda fall through to the catch-all and error with "No match branch
 // accepts value of Pure type org.finos.legend.pure.truffle.execution.
 // PureDynamicObject@..." — the bare JVM identity instead of a Pure type.
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeOnLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testGenericTypeOnLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(meta::pure::metamodel::function::LambdaFunction,
+    assertIs(platform::pure::metamodel::function::LambdaFunction,
              $f->eval(|let lambda = {| 1 + 2}; $lambda->genericType().type->toOne();));
 }
 
@@ -151,8 +152,8 @@ function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGener
 // is empty. Non-capturing lambdas (see `testGenericTypeOnLambda`) do get the
 // classifier; only the capturing path is buggy. Match-side companions live
 // in lang/flow/match.pure.
-function <<PCT.test>> meta::pure::functions::meta::tests::genericType::testGenericTypeOnCapturingLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::genericType::testGenericTypeOnCapturingLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertIs(meta::pure::metamodel::function::LambdaFunction,
+    assertIs(platform::pure::metamodel::function::LambdaFunction,
              $f->eval(|let a = 5; let lambda = {| $a + 1}; $lambda->genericType().type->toOne();));
 }

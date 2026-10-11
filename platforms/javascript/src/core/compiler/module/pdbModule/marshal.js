@@ -71,7 +71,7 @@ function rehydrateEnum(fieldName, v) {
     // value, so it has to answer `_name()` the way the generated enum consts do. No classifier is
     // synthesised here — an enum value's classifier is its ENUMERATION, and this path knows only
     // the enum type's short name.
-    return (values && values[v]) || globalThis.__newOf("meta$pure$metamodel$type$Enum", { name: v });
+    return (values && values[v]) || globalThis.__newOf("platform$pure$metamodel$type$Enum", { name: v });
 }
 
 // Enum-value LITERALS are stored as an AtomicValue whose string payload is
@@ -87,7 +87,7 @@ function rehydrateAtomicEnum(raw, genericType) {
     const typePath = t && (t.__purePath ?? t.path);
     if (typeof typePath !== "string"
             || !globalThis.__pureHost?.metadataInstanceOf
-            || !globalThis.__pureHost.metadataInstanceOf(typePath, "meta::pure::metamodel::type::Enumeration")) {
+            || !globalThis.__pureHost.metadataInstanceOf(typePath, "platform::pure::metamodel::type::Enumeration")) {
         return raw;
     }
     const name = raw.slice(raw.lastIndexOf(".") + 1);
@@ -97,7 +97,7 @@ function rehydrateAtomicEnum(raw, genericType) {
     // under the in-process translator, say), so synthesise the value. An Enum INSTANCE with a real
     // classifier, not a bare `{name}`: `$v->type()` and `$v->genericType()` read it, and so does
     // every accessor — an enum value is read like any other graph value.
-    return globalThis.__newOf("meta$pure$metamodel$type$Enum", {
+    return globalThis.__newOf("platform$pure$metamodel$type$Enum", {
         name,
         classifierGenericType: globalThis.__newCgt({ type: globalThis.__pureResolve(typePath) }),
     });
@@ -130,9 +130,9 @@ function classify(out, tableType) {
     // An ENUM VALUE cannot be typed from its classifier, because an enum value's classifier names
     // its ENUMERATION (whose global is the generated const — an object, not a class), not the class
     // it is an instance of. The writer's table name says it exactly: every enum value is an
-    // instance of meta::pure::metamodel::type::Enum.
+    // instance of platform::pure::metamodel::type::Enum.
     if (tableType === "EnumDef") {
-        const E = globalThis["meta$pure$metamodel$type$Enum"];
+        const E = globalThis["platform$pure$metamodel$type$Enum"];
         if (typeof E === "function") Object.setPrototypeOf(out, E.prototype);
         return out;
     }
@@ -147,13 +147,13 @@ function classify(out, tableType) {
     }
     // The classifier names an ENUMERATION rather than a class — a generated enumeration's global is
     // a const object of its values, not a constructor — so what we are classifying is an ENUM
-    // VALUE, and every enum value is an instance of meta::pure::metamodel::type::Enum.
+    // VALUE, and every enum value is an instance of platform::pure::metamodel::type::Enum.
     //
     // The table name cannot tell us this: an Enumeration stores its values in
     // `properties: [PropertyDef]` (see EnumerationDef in m3.fbs), so an enum value arrives here
     // looking exactly like a real property.
     if (Cls && typeof Cls === "object") {
-        const E = globalThis["meta$pure$metamodel$type$Enum"];
+        const E = globalThis["platform$pure$metamodel$type$Enum"];
         if (typeof E === "function") Object.setPrototypeOf(out, E.prototype);
     }
     return out;
@@ -168,7 +168,7 @@ export function marshal(sx, v, stack = []) {
         // Stereotype/Tag pointers aren't elements: the path is [..profile, name].
         // Synthesize the annotation with its profile + value (name).
         if (kind === "Stereotype" || kind === "Tag") {
-            const cls = kind === "Stereotype" ? "meta::pure::metamodel::extension::Stereotype" : "meta::pure::metamodel::extension::Tag";
+            const cls = kind === "Stereotype" ? "platform::pure::metamodel::extension::Stereotype" : "platform::pure::metamodel::extension::Tag";
             return classify({
                 profile: globalThis.__pureResolve(arr.slice(0, -1).join("::")),
                 value: arr[arr.length - 1],
@@ -179,7 +179,7 @@ export function marshal(sx, v, stack = []) {
         // path is [..owner segments, member]. Rebuild the pointer object so the
         // graph printer's PropertyPointer/QualifiedPropertyPointer arms match.
         if (kind === "Property" || kind === "QualifiedProperty") {
-            const cls = "meta::pure::metamodel::pointer::" + kind + "Pointer";
+            const cls = "platform::pure::metamodel::pointer::" + kind + "Pointer";
             const ownerPath = arr.slice(0, -1).join("::");
             const member = arr[arr.length - 1];
             const ptr = classify({
@@ -275,8 +275,8 @@ function marshalField(sx, node, f, stack) {
 // Optimization GenericType singletons (…optimization::GenericType_<type>) are
 // UserDefinedPackageableGenericType instances synthesised from the address —
 // most aren't stored. Mirror what the JVM resolver returns for their slots.
-const OPT_PREFIX = "meta::pure::metamodel::type::generics::optimization::GenericType_";
-const UDPGT = "meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType";
+const OPT_PREFIX = "platform::pure::metamodel::type::generics::optimization::GenericType_";
+const UDPGT = "platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType";
 function synthOptGenericType(address, prop) {
     if (prop === "type") return globalThis.__pureResolve(address.slice(OPT_PREFIX.length).replace(/_/g, "::"));
     if (prop === "classifierGenericType") return globalThis.__newCgt({ type: globalThis.__pureResolve(UDPGT) });
@@ -297,7 +297,7 @@ function synthOptGenericType(address, prop) {
 // injected graph; this is the PDB-backed analog.
 const LAMBDA_SEP = "$lambda/";
 const COLLECT_LAMBDAS =
-    "meta$external$language$javascript$translation$collectLambdasInOrder_ValueSpecification_MANY__LambdaFunction_MANY_";
+    "platform$external$language$javascript$translation$collectLambdasInOrder_ValueSpecification_MANY__LambdaFunction_MANY_";
 function resolveLambdaAst(store, address) {
     const at = address.indexOf(LAMBDA_SEP);
     const basePath = address.slice(0, at);
@@ -320,7 +320,7 @@ function synthRoot(store, prop) {
     // synthOptGenericType): a bare `{type: …}` object has no classifier, and
     // permissive __matchType would let it match ANY class arm (e.g. the
     // printer's GenericTypeOperation arm).
-    if (prop === "classifierGenericType") return globalThis.__pureResolve(OPT_PREFIX + "meta_pure_metamodel_Package");
+    if (prop === "classifierGenericType") return globalThis.__pureResolve(OPT_PREFIX + "platform_pure_metamodel_Package");
     if (prop === "children") {
         const seen = new Set();
         for (const m of store.modules ?? []) {
@@ -403,7 +403,7 @@ export function metadataHost(store, opts = {}) {
     const rec = (entry) => { if (log.length < cap) log.push(entry); };
 
     // The full generalization graph from the PDB — covers the metamodel AND the
-    // meta::pure::protocol::grammar::* nodes (they're stored elements too), so a
+    // platform::pure::protocol::grammar::* nodes (they're stored elements too), so a
     // separate protocol-grammar oracle isn't needed here (unlike the parser host,
     // which has no PDB).
     const metadataSubtypeOf = (sub, sup) => store.subtypeOf(sub, sup);

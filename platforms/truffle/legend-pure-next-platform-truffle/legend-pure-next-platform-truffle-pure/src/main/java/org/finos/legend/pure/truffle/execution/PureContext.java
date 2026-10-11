@@ -555,7 +555,7 @@ public final class PureContext
                 if (cqpParamsObj instanceof org.finos.legend.pure.truffle.execution.types.PureSequence cqpParams
                         && cqpParams.size() == argCount
                         && org.finos.legend.pure.truffle.compiler.helper._Any.isType(candidate,
-                                "meta::pure::metamodel::function::property::QualifiedProperty", resolver))
+                                "platform::pure::metamodel::function::property::QualifiedProperty", resolver))
                 {
                     return candidate;
                 }
@@ -591,7 +591,7 @@ public final class PureContext
             {
                 Object tvVal = typeVarVals.getBoxed(i);
                 if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(tvVal,
-                        "meta::pure::metamodel::valuespecification::AtomicValue"))
+                        "platform::pure::metamodel::valuespecification::AtomicValue"))
                 {
                     tvVal = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(tvVal, SLOT_VALUE);
                 }
@@ -642,7 +642,7 @@ public final class PureContext
             // top-level functions get a PureFunctionRootNode here. pureTypeIs
             // is exact-match against the leaf Pure path — class-keyed-cached.
             boolean isLambda = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(fd,
-                    "meta::pure::metamodel::function::LambdaFunction");
+                    "platform::pure::metamodel::function::LambdaFunction");
             if (!isLambda)
             {
                 String name = getFunctionName(fd);
@@ -659,7 +659,7 @@ public final class PureContext
                 }
                 catch (Exception e) { throw new RuntimeException("Failed to set source information", e); }
                 boolean mayBindTypeVars = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(fd,
-                        "meta::pure::metamodel::function::property::QualifiedProperty");
+                        "platform::pure::metamodel::function::property::QualifiedProperty");
                 // Function-level `<T>` binding plan: for each parameter whose
                 // declared type is a top-level TypeParameter, record its index
                 // and T's name. At call time, the corresponding argument's
@@ -738,7 +738,7 @@ public final class PureContext
                     Object paramType = org.finos.legend.pure.truffle.compiler.helper._GenericType.type(paramGT);
                     if (paramType != null
                             && org.finos.legend.pure.truffle.compiler.helper._Any.isType(paramType,
-                                    "meta::pure::metamodel::type::generics::TypeParameter", resolver))
+                                    "platform::pure::metamodel::type::generics::TypeParameter", resolver))
                     {
                         Object nameObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(paramType, SLOT_NAME);
                         if (nameObj instanceof String s)
@@ -752,7 +752,7 @@ public final class PureContext
                 Object paramMul = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(param, multiplicitySlot);
                 if (paramMul != null
                         && org.finos.legend.pure.truffle.compiler.helper._Any.isType(paramMul,
-                                "meta::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
+                                "platform::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
                 {
                     Object nameObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(paramMul, SLOT_NAME);
                     if (nameObj instanceof String s)
@@ -823,7 +823,7 @@ public final class PureContext
                 if (mul == null) continue;
                 // MultiplicityParameter (e.g. `m`) — bounds are parametric, skip.
                 if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(mul,
-                        "meta::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
+                        "platform::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
                 {
                     continue;
                 }

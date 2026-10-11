@@ -703,7 +703,7 @@ public final class CopyWithKeysNode extends PureNode
         // `if (copyGT == null) continue;` guard at line 782 handles the null.
         // Use pureTypeIs because post loader-flip Type instances may be PDOs.
         Object copyGT = org.finos.legend.pure.truffle.compiler.helper._Any.isType(copy,
-                "meta::pure::metamodel::type::Type", resolver)
+                "platform::pure::metamodel::type::Type", resolver)
                 ? org.finos.legend.pure.truffle.compiler.helper._GenericType.buildUserDefinedGenericType(copy, resolver)
                 : null;
 
@@ -724,7 +724,7 @@ public final class CopyWithKeysNode extends PureNode
             if (!(dvExprObj instanceof PureSequence dvExpr) || dvExpr.isEmpty()) continue;
             Object vs = dvExpr.getBoxed(0);
             if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs,
-                    "meta::pure::metamodel::valuespecification::AtomicValue")) continue;
+                    "platform::pure::metamodel::valuespecification::AtomicValue")) continue;
             Object enumVal = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_VALUE);
             // Only PDOs carry an instance-level CGT — primitive defaults like
             // {@code Integer[1] = 1} have a Long value with no CGT to rewire.

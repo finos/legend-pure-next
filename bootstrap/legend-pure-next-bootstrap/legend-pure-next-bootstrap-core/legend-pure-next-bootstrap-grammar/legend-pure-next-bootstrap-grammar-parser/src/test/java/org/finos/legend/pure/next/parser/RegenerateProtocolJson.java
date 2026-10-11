@@ -71,7 +71,7 @@ public class RegenerateProtocolJson
             String relative = root.relativize(dir).toString().replace('\\', '/');
             try
             {
-                meta.pure.protocol.PureFile parsed = TopLevelParser.parse(
+                platform.pure.protocol.PureFile parsed = TopLevelParser.parse(
                         Files.readString(dir.resolve(GRAMMAR_FILE)), "testFile", Lists.mutable.with(new PureLanguageParser()));
                 // No trailing newline: that is how the corpus is committed, and adding one would put all 59
                 // files in the diff of any change that touches one of them.

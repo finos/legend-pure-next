@@ -37,7 +37,7 @@ public final class MetaHelper
     {
         if (value == null || (value instanceof PureSequence ps && ps.isEmpty()))
         {
-            return resolver.getElement("meta::pure::metamodel::type::Nil");
+            return resolver.getElement("platform::pure::metamodel::type::Nil");
         }
         // A RawClosure is the runtime form of a capturing lambda — a Java
         // record wrapping the underlying LambdaFunction PDO plus the capture
@@ -60,27 +60,27 @@ public final class MetaHelper
         }
         if (value instanceof Long)
         {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::Integer");
+            return resolver.getElement("platform::pure::metamodel::type::primitives::Integer");
         }
         if (value instanceof Double)
         {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::Float");
+            return resolver.getElement("platform::pure::metamodel::type::primitives::Float");
         }
         if (value instanceof Boolean)
         {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::Boolean");
+            return resolver.getElement("platform::pure::metamodel::type::primitives::Boolean");
         }
         if (value instanceof PureDate.StrictDate)
         {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::StrictDate");
+            return resolver.getElement("platform::pure::metamodel::type::primitives::StrictDate");
         }
         if (value instanceof PureDate.DateTime)
         {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
+            return resolver.getElement("platform::pure::metamodel::type::primitives::DateTime");
         }
         if (value instanceof PureDate)
         {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::Date");
+            return resolver.getElement("platform::pure::metamodel::type::primitives::Date");
         }
         if (value instanceof String s)
         {
@@ -100,7 +100,7 @@ public final class MetaHelper
                 Object enumType = resolver.getElement(enumTypePath);
                 if (enumType != null
                         && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(enumType,
-                                "meta::pure::metamodel::type::Enumeration"))
+                                "platform::pure::metamodel::type::Enumeration"))
                 {
                     return enumType;
                 }
@@ -115,11 +115,11 @@ public final class MetaHelper
             // (the AtomicValue lowering at PureASTBuilder.lowerAtomicValue
             // wraps them based on the AtomicValue's genericType — see the
             // earlier branches above).
-            return resolver.getElement("meta::pure::metamodel::type::primitives::String");
+            return resolver.getElement("platform::pure::metamodel::type::primitives::String");
         }
         if (value instanceof java.math.BigDecimal)
         {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::Decimal");
+            return resolver.getElement("platform::pure::metamodel::type::primitives::Decimal");
         }
         if (value instanceof PureSequence seq)
         {
@@ -129,7 +129,7 @@ public final class MetaHelper
         {
             return getCollectionType(ml.size(), ml::get, resolver);
         }
-        return resolver.getElement("meta::pure::metamodel::type::Any");
+        return resolver.getElement("platform::pure::metamodel::type::Any");
     }
 
     /**
@@ -141,7 +141,7 @@ public final class MetaHelper
     {
         if (size == 0)
         {
-            return resolver.getElement("meta::pure::metamodel::type::Nil");
+            return resolver.getElement("platform::pure::metamodel::type::Nil");
         }
         if (size == 1)
         {
@@ -159,10 +159,10 @@ public final class MetaHelper
         }
         if (types.size() <= 1)
         {
-            return types.isEmpty() ? resolver.getElement("meta::pure::metamodel::type::Any") : types.get(0);
+            return types.isEmpty() ? resolver.getElement("platform::pure::metamodel::type::Any") : types.get(0);
         }
         Object common = org.finos.legend.pure.truffle.compiler.helper._Type.findCommonType(types, false, resolver);
-        return common != null ? common : resolver.getElement("meta::pure::metamodel::type::Any");
+        return common != null ? common : resolver.getElement("platform::pure::metamodel::type::Any");
     }
 
     /**

@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,8 +15,8 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.protocol.grammar.Package_Pointer;
-import meta.pure.protocol.grammar.PackageableElement;
+import platform.pure.protocol.grammar.Package_Pointer;
+import platform.pure.protocol.grammar.PackageableElement;
 
 /**
  * Helper methods for grammar protocol {@link PackageableElement}.

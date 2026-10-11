@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +15,7 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
-import meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner;
+import platform.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner;
 
 /**
  * Root binding store for the enclosing function or class currently being compiled.
@@ -46,8 +47,8 @@ public class EnclosingOwnerParametersBinding extends ParametersBinding
      * top-level scope that FunctionCallParametersBinding routes to.
      */
     @Override
-    public void addTypeBinding(meta.pure.metamodel.type.generics.TypeParameter typeParam,
-                               meta.pure.metamodel.type.generics.GenericType argGT)
+    public void addTypeBinding(platform.pure.metamodel.type.generics.TypeParameter typeParam,
+                               platform.pure.metamodel.type.generics.GenericType argGT)
     {
         typeBindings.computeIfAbsent(typeParam._name(),
                 k -> org.eclipse.collections.impl.factory.Lists.mutable.empty()).add(argGT);

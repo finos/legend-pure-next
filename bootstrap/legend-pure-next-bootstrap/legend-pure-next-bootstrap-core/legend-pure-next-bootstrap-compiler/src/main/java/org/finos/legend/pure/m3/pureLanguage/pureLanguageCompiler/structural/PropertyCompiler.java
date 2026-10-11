@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +15,10 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import meta.pure.metamodel.function.property.Property;
-import meta.pure.metamodel.function.property.PropertyImpl;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.function.property.PropertyImpl;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -25,7 +26,7 @@ import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
- * Compiles a grammar-level {@link meta.pure.protocol.grammar.function.property.Property}
+ * Compiles a grammar-level {@link platform.pure.protocol.grammar.function.property.Property}
  * into a metamodel-level {@link Property}, leveraging {@link GenericTypeCompiler}
  * to resolve the property's generic type.
  */
@@ -46,7 +47,7 @@ public final class PropertyCompiler
      * @param context         the compilation context for error collection
      * @return a fully resolved metamodel Property, or null if the type is unresolvable
      */
-    public static Property compile(meta.pure.protocol.grammar.function.property.Property grammarProperty, GenericType owner, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static Property compile(platform.pure.protocol.grammar.function.property.Property grammarProperty, GenericType owner, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         int errorsBefore = context.currentErrorCount();
         GenericType genericType = GenericTypeCompiler.compile(grammarProperty._genericType(), imports, model, context);
@@ -71,7 +72,7 @@ public final class PropertyCompiler
         context.enrichCurrentErrorsFrom(annotErrorsBefore, "property '" + grammarProperty._name() + "'");
         if (grammarProperty._defaultValue() != null)
         {
-            meta.pure.metamodel.function.LambdaFunction compiledDefault =
+            platform.pure.metamodel.function.LambdaFunction compiledDefault =
                     LambdaCompiler.compile(
                             grammarProperty._defaultValue(), imports, model, context);
             result._defaultValue(compiledDefault);
@@ -79,22 +80,22 @@ public final class PropertyCompiler
         if (owner != null)
         {
             result._classifierGenericType(
-                    _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::function::property::Property"), model)
+                    _GenericType.buildUserDefinedGenericType((Type) model.getElement("platform::pure::metamodel::function::property::Property"), model)
                             ._typeArguments(Lists.mutable.with(owner, genericType))
                             ._multiplicityArguments(Lists.mutable.with(result._multiplicity())));
         }
         return result;
     }
 
-    private static meta.pure.metamodel.function.property.AggregationKind resolveAggregationKind(meta.pure.protocol.grammar.function.property.Property grammarProperty, MetadataAccess model)
+    private static platform.pure.metamodel.function.property.AggregationKind resolveAggregationKind(platform.pure.protocol.grammar.function.property.Property grammarProperty, MetadataAccess model)
     {
-        meta.pure.protocol.grammar.Enum_Pointer aggPointer = grammarProperty._aggregation();
+        platform.pure.protocol.grammar.Enum_Pointer aggPointer = grammarProperty._aggregation();
         String valueName = "None";
         if (aggPointer != null && aggPointer._extraPointerValues() != null && aggPointer._extraPointerValues().notEmpty())
         {
             valueName = aggPointer._extraPointerValues().getFirst()._value();
         }
-        return (meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(
-                "meta::pure::metamodel::function::property::AggregationKind", valueName, model);
+        return (platform.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(
+                "platform::pure::metamodel::function::property::AggregationKind", valueName, model);
     }
 }

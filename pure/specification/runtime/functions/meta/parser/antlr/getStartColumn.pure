@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::meta::antlr::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::meta::antlr::*;
+import platform::pure::test::pct::*;
 
 // 1-based column of the context's first matched token (ANTLR's 0-based
 // {@code getCharPositionInLine() + 1} to match the rest of the parser).
 native function <<PCT.function>>
-   meta::pure::functions::meta::antlr::getStartColumn(
+   platform::pure::functions::meta::antlr::getStartColumn(
       ctx: AntlrContext[1]
    ): Integer[1];
 
-function <<PCT.test>> meta::pure::functions::meta::antlr::tests::getStartColumn::testOneBased<Z|y>(
+function <<PCT.test>> platform::pure::functions::meta::antlr::tests::getStartColumn::testOneBased<Z|y>(
    f: Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]
 ): Boolean[1]
 {

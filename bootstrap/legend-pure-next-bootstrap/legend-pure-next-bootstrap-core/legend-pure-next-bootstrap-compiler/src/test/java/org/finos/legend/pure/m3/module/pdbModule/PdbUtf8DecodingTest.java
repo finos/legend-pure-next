@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -69,7 +70,7 @@ class PdbUtf8DecodingTest
         assertEquals("€", readBackStringValue("€"), "three-byte character (U+20AC)");
         assertEquals("a::b", readBackStringValue("a::b"), "ascii");
         assertEquals("", readBackStringValue(""), "empty");
-        assertEquals("meta::pure – é€", readBackStringValue("meta::pure – é€"), "mixed");
+        assertEquals("platform::pure – é€", readBackStringValue("platform::pure – é€"), "mixed");
     }
 
     /** Write {@code value} into a real FlatBuffer table and read it back out. */

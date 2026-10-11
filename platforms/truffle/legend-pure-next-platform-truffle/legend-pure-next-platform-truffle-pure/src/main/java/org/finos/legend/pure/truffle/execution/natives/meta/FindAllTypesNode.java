@@ -68,7 +68,7 @@ public final class FindAllTypesNode extends PureNode
             // leaving primitive types out of buildLinearizationCache and
             // tripping the Pure-side LINEARIZE MISS assert.
             if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(element,
-                    "meta::pure::metamodel::type::Type", resolver))
+                    "platform::pure::metamodel::type::Type", resolver))
             {
                 types.add(element);
             }

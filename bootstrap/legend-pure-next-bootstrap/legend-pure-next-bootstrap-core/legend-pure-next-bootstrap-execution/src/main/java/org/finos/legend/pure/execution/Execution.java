@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +15,7 @@
 
 package org.finos.legend.pure.execution;
 
-import meta.pure.metamodel.function.FunctionWithParameters;
+import platform.pure.metamodel.function.FunctionWithParameters;
 
 /**
  * An execution strategy: runs compiled Pure functions over a registry.

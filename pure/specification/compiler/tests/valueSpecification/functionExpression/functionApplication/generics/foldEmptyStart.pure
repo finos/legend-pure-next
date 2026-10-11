@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 function test::tst(): Any[*]
 {
@@ -6,25 +20,25 @@ function test::tst(): Any[*]
 
 ###CompiledGraph
 function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation fold_T_MANY__Function_1__V_MANY__V_MANY_ :#Integer##[*]#  ~@FunctionInvocation@  @4:3-4:58
+  FunctionInvocation fold_T_MANY__Function_1__V_MANY__V_MANY_ :#Integer##[*]#  ~@FunctionInvocation@  @18:3-18:58
     typeParam T -> #Integer#
     typeParam V -> #Integer#
-    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Integer##[0]#  ~@ArrowInvocation@  @4:10-4:25
+    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Integer##[0]#  ~@ArrowInvocation@  @18:10-18:25
       typeParam T -> @Integer@
       mulParam m -> [0]
-      Collection :#Nil#[0]  ~@Collection@  @4:8-4:9
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>  @4:17-4:24
-    Lambda(val:#Integer##[1]#, acc:#Nil##[*]#) :#LambdaFunction<#{#Integer##[1]#, #Nil##[*]#->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @4:28-4:53
-      FunctionInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@FunctionInvocation@  @4:38-4:52
+      Collection :#Nil#[0]  ~@Collection@  @18:8-18:9
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@Integer@|?>  @18:17-18:24
+    Lambda(val:#Integer##[1]#, acc:#Nil##[*]#) :#LambdaFunction<#{#Integer##[1]#, #Nil##[*]#->#Integer##[1..*]#}#>#[1]  ~@AtomicValue@  @18:28-18:53
+      FunctionInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~@FunctionInvocation@  @18:38-18:52
         typeParam T -> #Integer#
-        Variable acc :#Nil##[*]#  ~@VariableExpression@  @4:42-4:45
-        Variable val :#Integer##[1]#  ~@VariableExpression@  @4:48-4:51
-    Collection :#Nil#[0]  ~@Collection@  @4:56-4:57
+        Variable acc :#Nil##[*]#  ~@VariableExpression@  @18:42-18:45
+        Variable val :#Integer##[1]#  ~@VariableExpression@  @18:48-18:51
+    Collection :#Nil#[0]  ~@Collection@  @18:56-18:57
 
 ###ReverseIndex
-meta::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
+platform::pure::functions::collection::add_T_MANY__T_1__T_$1_MANY$_:
   test::tst__Any_MANY_
-meta::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_:
+platform::pure::functions::collection::fold_T_MANY__Function_1__V_MANY__V_MANY_:
   test::tst__Any_MANY_
-meta::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
   test::tst__Any_MANY_

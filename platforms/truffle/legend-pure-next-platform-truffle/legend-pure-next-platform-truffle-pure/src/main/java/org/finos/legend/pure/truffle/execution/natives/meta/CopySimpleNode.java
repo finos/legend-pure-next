@@ -160,7 +160,7 @@ public final class CopySimpleNode extends PureNode
             org.finos.legend.pure.truffle.compiler.helper._Any.write(result, "type", copy);
         }
         else if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(type,
-                "meta::pure::metamodel::type::generics::TypeParameter")
+                "platform::pure::metamodel::type::generics::TypeParameter")
                 && org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(type, SLOT_OWNER) == original)
         {
             // Copy the TypeParameter (always PDO post-flip), then override
@@ -184,7 +184,7 @@ public final class CopySimpleNode extends PureNode
                 // deepCopyCgt now accepts Object — handles PDO and typed
                 // GenericTypeValue uniformly via _Any.read.
                 if (ta != null && org.finos.legend.pure.truffle.compiler.helper._Any.isType(ta,
-                        "meta::pure::metamodel::type::generics::GenericTypeValue",
+                        "platform::pure::metamodel::type::generics::GenericTypeValue",
                         org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver()))
                 {
                     copied[i] = deepCopyCgt(ta, original, copy, resolver);

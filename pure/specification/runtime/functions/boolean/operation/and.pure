@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 native function
     <<PCT.function>>
@@ -22,10 +22,10 @@ native function
         PCT.grammarDoc='$first && $second',
         PCT.grammarCharacters='&&'
     }
-    meta::pure::functions::boolean::and(first:Boolean[1], second:Boolean[1]):Boolean[1];
+    platform::pure::functions::boolean::and(first:Boolean[1], second:Boolean[1]):Boolean[1];
 
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::conjunctions::and::testBinaryTruthTable<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::conjunctions::and::testBinaryTruthTable<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     //Dummy commit to test if we can commit on invalid review
     assert($f->eval(|true && true));
@@ -34,13 +34,13 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::conjunctions::and::
     assertFalse($f->eval(|false && false));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::conjunctions::and::testBinaryExpressions<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::conjunctions::and::testBinaryExpressions<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|(1 == 1) && (2 != 3)));
     assertFalse($f->eval(|(1 == 2) && (2 != 3)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::conjunctions::and::testTernaryTruthTable<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::conjunctions::and::testTernaryTruthTable<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|true && true && true));
     assertFalse($f->eval(|true && true && false));
@@ -52,18 +52,18 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::conjunctions::and::
     assertFalse($f->eval(|false && false && false));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::conjunctions::and::testTernaryExpressions<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::conjunctions::and::testTernaryExpressions<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|(1 == 1) && (2 != 3) && true));
     assertFalse($f->eval(|(1 == 2) && (2 != 3) && false));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::conjunctions::and::testShortCircuitSimple<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::conjunctions::and::testShortCircuitSimple<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertFalse($f->eval(|false && (12/0 > 0)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::conjunctions::and::testShortCircuit<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::conjunctions::and::testShortCircuit<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let val1 = ^List<String>(values=['Claudius', 'Ptolemy']);

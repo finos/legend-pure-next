@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::translation::shared::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::translation::shared::*;
 
 // ============================================================================
 // collectDependencies — given a FunctionDefinition (UserDefinedFunction or
@@ -40,7 +41,7 @@ import meta::pure::translation::shared::*;
 // past the level where re-walking is cheap.
 // ============================================================================
 
-function meta::pure::translation::shared::collectDependencies(f: FunctionDefinition<Any>[1]): PackageableElement[*]
+function platform::pure::translation::shared::collectDependencies(f: FunctionDefinition<Any>[1]): PackageableElement[*]
 {
    collectDependenciesTransitive([$f], []->cast(@PackageableElement));
 }
@@ -49,7 +50,7 @@ function meta::pure::translation::shared::collectDependencies(f: FunctionDefinit
 // `seen` is the accumulated dependency set (used as both the visited filter
 // AND the return value). On each iteration we pop one definition, gather its
 // immediate deps, add the unseen ones to both `seen` and `pending`, and loop.
-function meta::pure::translation::shared::collectDependenciesTransitive(
+function platform::pure::translation::shared::collectDependenciesTransitive(
    pending: FunctionDefinition<Any>[*],
    seen: PackageableElement[*]
 ): PackageableElement[*]
@@ -77,7 +78,7 @@ function meta::pure::translation::shared::collectDependenciesTransitive(
 
 // Direct (one-hop) dependencies of a single FunctionDefinition: walk its
 // expressionSequence and pull out every function/class referenced.
-function meta::pure::translation::shared::collectDirectDependencies(f: FunctionDefinition<Any>[1]): PackageableElement[*]
+function platform::pure::translation::shared::collectDirectDependencies(f: FunctionDefinition<Any>[1]): PackageableElement[*]
 {
    $f.expressionSequence->map(e | $e->depsFromExpression())->removeDuplicates();
 }
@@ -90,7 +91,7 @@ function meta::pure::translation::shared::collectDirectDependencies(f: FunctionD
 // (`new_Class_*` or similar) — they don't need a special arm. The Class
 // itself ends up as a dep once that factory's surface lands here too, but
 // for now we follow it through the same FunctionExpression branch.
-function meta::pure::translation::shared::depsFromExpression(e: ValueSpecification[1]): PackageableElement[*]
+function platform::pure::translation::shared::depsFromExpression(e: ValueSpecification[1]): PackageableElement[*]
 {
    $e->match([
       {fe: FunctionExpression[1] |

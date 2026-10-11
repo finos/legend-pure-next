@@ -57,7 +57,7 @@ public final class RawLambdaCaptureNode extends PureNode
             Object varObj = openVars.getBoxed(i);
             String name;
             if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(varObj,
-                    "meta::pure::metamodel::valuespecification::VariableExpression"))
+                    "platform::pure::metamodel::valuespecification::VariableExpression"))
             {
                 name = (String) org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(varObj, SLOT_NAME);
             }

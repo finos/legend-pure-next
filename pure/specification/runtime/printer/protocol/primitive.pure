@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::printer::protocol::*;
-import meta::pure::protocol::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::printer::protocol::*;
+import platform::pure::protocol::*;
 
 // Protocol printer for `PrimitiveType` elements.
 //   Primitive pkg::Varchar extends String
 // PrimitiveType collides with M3, so it stays FQN inline.
-function meta::pure::functions::printer::protocol::printProtocolPrimitive(p: meta::pure::protocol::grammar::type::PrimitiveType[1]): String[1]
+function platform::pure::functions::printer::protocol::printProtocolPrimitive(p: platform::pure::protocol::grammar::type::PrimitiveType[1]): String[1]
 {
     'Primitive ' + printAnnotations($p.stereotypes, $p.taggedValues) + printPackagePointer($p.package) + $p.name +
         if ($p.typeVariables->isEmpty(),   | '', | $p.typeVariables->map(tv | printFunctionParameter($tv))->joinStrings('(', ', ', ')')) +

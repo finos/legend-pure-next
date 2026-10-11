@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,9 +17,9 @@ package org.finos.legend.pure.m3.module.bootstrapModule;
 
 import org.finos.legend.pure.m3.LanguageExtension;
 import org.finos.legend.pure.m3.module.ModuleRegistry;
-import meta.pure.metamodel.Package;
-import meta.pure.metamodel.PackageImpl;
-import meta.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.Package;
+import platform.pure.metamodel.PackageImpl;
+import platform.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.list.MutableList;
@@ -226,7 +227,7 @@ public class BootstrapModule implements Module
     @Override
     public String packagePattern()
     {
-        return "meta::*";
+        return "platform::*";
     }
 
     @Override

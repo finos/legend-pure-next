@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::metamodel::*;
+import platform::external::language::java::metamodel::*;
 
 Class
 {
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonIgnoreProperties'
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonIgnoreProperties'
 }
-meta::external::language::java::metamodel::annotations::json::JsonIgnoreProperties extends meta::external::language::java::metamodel::Annotation
+platform::external::language::java::metamodel::annotations::json::JsonIgnoreProperties extends platform::external::language::java::metamodel::Annotation
 {
    ignoreUnknown : Boolean[1];
    value: String[*];
@@ -26,46 +27,46 @@ meta::external::language::java::metamodel::annotations::json::JsonIgnoreProperti
 
 Class
 {
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonIgnore'
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonIgnore'
 }
-meta::external::language::java::metamodel::annotations::json::JsonIgnore extends meta::external::language::java::metamodel::Annotation
+platform::external::language::java::metamodel::annotations::json::JsonIgnore extends platform::external::language::java::metamodel::Annotation
 {
 }
 
 Class
 {
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonAnyGetter'
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonAnyGetter'
 }
-meta::external::language::java::metamodel::annotations::json::JsonAnyGetter extends meta::external::language::java::metamodel::Annotation
+platform::external::language::java::metamodel::annotations::json::JsonAnyGetter extends platform::external::language::java::metamodel::Annotation
 {
 }
 
 Class
 {
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonAnySetter'
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonAnySetter'
 }
-meta::external::language::java::metamodel::annotations::json::JsonAnySetter extends meta::external::language::java::metamodel::Annotation
+platform::external::language::java::metamodel::annotations::json::JsonAnySetter extends platform::external::language::java::metamodel::Annotation
 {
 
 }
 
 Class
 {
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonValue'
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonValue'
 }
-meta::external::language::java::metamodel::annotations::json::JsonValue extends meta::external::language::java::metamodel::Annotation
+platform::external::language::java::metamodel::annotations::json::JsonValue extends platform::external::language::java::metamodel::Annotation
 {
 }
 
-Class meta::external::language::java::metamodel::annotations::json::JsonCreator extends meta::external::language::java::metamodel::Annotation
+Class platform::external::language::java::metamodel::annotations::json::JsonCreator extends platform::external::language::java::metamodel::Annotation
 {
 }
 
 Class
 {
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonProperty'
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonProperty'
 }
-meta::external::language::java::metamodel::annotations::json::JsonProperty extends meta::external::language::java::metamodel::Annotation
+platform::external::language::java::metamodel::annotations::json::JsonProperty extends platform::external::language::java::metamodel::Annotation
 {
    value : String[0..1];
    required : Boolean[0..1];
@@ -73,42 +74,42 @@ meta::external::language::java::metamodel::annotations::json::JsonProperty exten
 
 Class
 {
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.databind.annotation.JsonSerialize'
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.databind.annotation.JsonSerialize'
 }
-meta::external::language::java::metamodel::annotations::json::JsonSerialize extends meta::external::language::java::metamodel::Annotation
+platform::external::language::java::metamodel::annotations::json::JsonSerialize extends platform::external::language::java::metamodel::Annotation
 {
-   as : meta::external::language::java::metamodel::Class[0..1];
-   using : meta::external::language::java::metamodel::Class[0..1];
-   nullsUsing: meta::external::language::java::metamodel::Class[0..1];
+   as : platform::external::language::java::metamodel::Class[0..1];
+   using : platform::external::language::java::metamodel::Class[0..1];
+   nullsUsing: platform::external::language::java::metamodel::Class[0..1];
 }
 
 Class
 {
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.databind.annotation.JsonDeserialize'
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.databind.annotation.JsonDeserialize'
 }
-meta::external::language::java::metamodel::annotations::json::JsonDeserialize extends meta::external::language::java::metamodel::Annotation
+platform::external::language::java::metamodel::annotations::json::JsonDeserialize extends platform::external::language::java::metamodel::Annotation
 {
-   as : meta::external::language::java::metamodel::Class[0..1];
-   using : meta::external::language::java::metamodel::Class[0..1];
-   keyUsing : meta::external::language::java::metamodel::Class[0..1];
-   contentUsing : meta::external::language::java::metamodel::Class[0..1];
+   as : platform::external::language::java::metamodel::Class[0..1];
+   using : platform::external::language::java::metamodel::Class[0..1];
+   keyUsing : platform::external::language::java::metamodel::Class[0..1];
+   contentUsing : platform::external::language::java::metamodel::Class[0..1];
 }
 
-Class meta::external::language::java::metamodel::annotations::json::EnumValue
+Class platform::external::language::java::metamodel::annotations::json::EnumValue
 {
    value: String[1];
 }
 
 Class
 {
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonSubTypes'
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonSubTypes'
 }
-meta::external::language::java::metamodel::annotations::json::JsonSubTypes extends meta::external::language::java::metamodel::Annotation
+platform::external::language::java::metamodel::annotations::json::JsonSubTypes extends platform::external::language::java::metamodel::Annotation
 {
-   subTypes : meta::external::language::java::metamodel::annotations::json::JsonSubType[*];
+   subTypes : platform::external::language::java::metamodel::annotations::json::JsonSubType[*];
 }
 
-Class meta::external::language::java::metamodel::annotations::json::JsonSubType
+Class platform::external::language::java::metamodel::annotations::json::JsonSubType
 {
    name  : String[0..1];
    value : String[1];
@@ -117,39 +118,39 @@ Class meta::external::language::java::metamodel::annotations::json::JsonSubType
 
 Class
 {
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonTypeInfo'
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonTypeInfo'
 }
-meta::external::language::java::metamodel::annotations::json::JsonTypeInfo extends meta::external::language::java::metamodel::Annotation
+platform::external::language::java::metamodel::annotations::json::JsonTypeInfo extends platform::external::language::java::metamodel::Annotation
 {
-    use        : meta::external::language::java::metamodel::annotations::json::EnumValue[1];
-    include    : meta::external::language::java::metamodel::annotations::json::EnumValue[0..1];
-    id         : meta::external::language::java::metamodel::annotations::json::EnumValue[0..1];
+    use        : platform::external::language::java::metamodel::annotations::json::EnumValue[1];
+    include    : platform::external::language::java::metamodel::annotations::json::EnumValue[0..1];
+    id         : platform::external::language::java::metamodel::annotations::json::EnumValue[0..1];
     property   : String[0..1];
     visible    : Boolean[0..1];
-    defaultImpl: meta::external::language::java::metamodel::annotations::json::EnumValue[0..1];
+    defaultImpl: platform::external::language::java::metamodel::annotations::json::EnumValue[0..1];
 }
 
-Class meta::external::language::java::metamodel::annotations::json::JsonAutoDetect extends meta::external::language::java::metamodel::Annotation
+Class platform::external::language::java::metamodel::annotations::json::JsonAutoDetect extends platform::external::language::java::metamodel::Annotation
 {
-   fieldVisibility: meta::external::language::java::metamodel::annotations::json::EnumValue[1];
-   getterVisibility: meta::external::language::java::metamodel::annotations::json::EnumValue[1];
-   setterVisibility: meta::external::language::java::metamodel::annotations::json::EnumValue[1];
-}
-
-Class
-{
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonInclude'
-}
-meta::external::language::java::metamodel::annotations::json::JsonInclude extends meta::external::language::java::metamodel::Annotation
-{
-   value : meta::external::language::java::metamodel::annotations::json::EnumValue[1];
+   fieldVisibility: platform::external::language::java::metamodel::annotations::json::EnumValue[1];
+   getterVisibility: platform::external::language::java::metamodel::annotations::json::EnumValue[1];
+   setterVisibility: platform::external::language::java::metamodel::annotations::json::EnumValue[1];
 }
 
 Class
 {
-  meta::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonTypeName'
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonInclude'
 }
-meta::external::language::java::metamodel::annotations::json::JsonTypeName extends meta::external::language::java::metamodel::Annotation
+platform::external::language::java::metamodel::annotations::json::JsonInclude extends platform::external::language::java::metamodel::Annotation
+{
+   value : platform::external::language::java::metamodel::annotations::json::EnumValue[1];
+}
+
+Class
+{
+  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'com.fasterxml.jackson.annotation.JsonTypeName'
+}
+platform::external::language::java::metamodel::annotations::json::JsonTypeName extends platform::external::language::java::metamodel::Annotation
 {
    value : String[1];
 }

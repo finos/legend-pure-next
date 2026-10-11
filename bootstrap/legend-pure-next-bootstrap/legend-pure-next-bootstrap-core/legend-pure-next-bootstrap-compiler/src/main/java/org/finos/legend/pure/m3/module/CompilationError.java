@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +15,7 @@
 
 package org.finos.legend.pure.m3.module;
 
-import meta.pure.metamodel.SourceInformation;
+import platform.pure.metamodel.SourceInformation;
 
 /**
  * A compilation error with a message and source location.

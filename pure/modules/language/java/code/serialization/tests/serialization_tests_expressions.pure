@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::factory::*;
-import meta::external::language::java::factory::project::*;
-import meta::external::language::java::metamodel::*;
-import meta::external::language::java::metamodel::annotations::java::validation::constraints::*;
-import meta::external::language::java::metamodel::annotations::json::*;
-import meta::external::language::java::metamodel::project::*;
-import meta::external::language::java::serialization::*;
-import meta::external::language::java::serialization::tests::*;
+import platform::external::language::java::factory::*;
+import platform::external::language::java::factory::project::*;
+import platform::external::language::java::metamodel::*;
+import platform::external::language::java::metamodel::annotations::java::validation::constraints::*;
+import platform::external::language::java::metamodel::annotations::json::*;
+import platform::external::language::java::metamodel::project::*;
+import platform::external::language::java::serialization::*;
+import platform::external::language::java::serialization::tests::*;
 
-function <<test.Test>> meta::external::language::java::serialization::tests::null():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::null():Boolean[1]
 {
    test('''
         package org.finos.test;
@@ -40,7 +41,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::nul
    );
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::arrayAccessAndPrefix():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::arrayAccessAndPrefix():Boolean[1]
 {
    let array = j_parameter(javaArray(javaString()), 'array');
    let index = j_parameter(javaInt(), 'index');
@@ -62,7 +63,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::arr
    );
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::cast():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::cast():Boolean[1]
 {
    let list = j_parameter(javaList(javaString()), 'list');
 
@@ -87,7 +88,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::cas
    );
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::constructorCalls():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::constructorCalls():Boolean[1]
 {
    let message = j_parameter(javaString(), 'message');
 
@@ -114,7 +115,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::con
    );
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::lambda():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::lambda():Boolean[1]
 {
    let list    = j_parameter(javaList(javaString()), 'list');
    let s       = j_parameter(javaString(), 's');
@@ -142,7 +143,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::lam
    );
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::methodReference():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::methodReference():Boolean[1]
 {
    let list    = j_parameter(javaList(javaString()), 'list');
    let s       = j_parameter(javaString(), 's');
@@ -179,7 +180,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::met
    );
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::anonymousClass():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::anonymousClass():Boolean[1]
 {
    let rtnType = javaSupplier(javaString());
 
@@ -212,7 +213,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::ano
    );
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::anonymousClassAsArgument():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::anonymousClassAsArgument():Boolean[1]
 {
    let list = j_parameter(javaList(javaString()), 'list');
    let s    = j_parameter(javaString(), 's');
@@ -245,7 +246,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::ano
    );
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::packageClassCausesLangToBeQualified():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::packageClassCausesLangToBeQualified():Boolean[1]
 {
    let myString = javaClass('org.finos.test.String');
    let class    = javaClass('org.finos.test.Test')

@@ -55,6 +55,6 @@ public interface TruffleTypeCache
         return ancestors(type);
     }
 
-    /** Names of properties stereotyped {@code <<meta::pure::profiles::equality.Key>>}. */
+    /** Names of properties stereotyped {@code <<platform::pure::profiles::equality.Key>>}. */
     Set<String> equalityKeyProperties(Object type);
 }

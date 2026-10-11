@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 native function
     <<PCT.function>>
     {
         doc.doc=''
     }
-    meta::pure::functions::lang::if<T|m>(test:Boolean[1], valid:Function<{->T[m]}>[1], invalid:Function<{->T[m]}>[1]):T[m];
+    platform::pure::functions::lang::if<T|m>(test:Boolean[1], valid:Function<{->T[m]}>[1], invalid:Function<{->T[m]}>[1]):T[m];
 
 // Native: the Truffle interpreter recognises literal pair-list patterns
 // at AST-build time and lowers them to a flat MultiIfNode chain (no
@@ -32,29 +33,29 @@ native function
     {
         doc.doc=''
     }
-    meta::pure::functions::lang::if<T|m>(condList:Pair<Function<{->Boolean[1]}>, Function<{->T[m]}>>[*], last:Function<{->T[m]}>[1]):T[m];
+    platform::pure::functions::lang::if<T|m>(condList:Pair<Function<{->Boolean[1]}>, Function<{->T[m]}>>[*], last:Function<{->T[m]}>[1]):T[m];
 
 
-function <<PCT.test>> meta::pure::functions::lang::tests::if::testSimpleIf<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::if::testSimpleIf<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('truesentence', $f->eval(|if(true, |'truesentence', |'falsesentence')));
     assertEquals('falsesentence', $f->eval(|if(false, |'truesentence', |'falsesentence')));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::if::testIfWithEvaluate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::if::testIfWithEvaluate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('truesentence', $f->eval(|if(1 == 1, |'truesentence', |'falsesentence')));
     assertEquals('falsesentence', $f->eval(|if(1 == 3, |'truesentence', |'falsesentence')));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::if::testIfWithFunctionCall<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::if::testIfWithFunctionCall<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('truesentence', $f->eval(|if(startsWith('1 == 1', '1'), |'truesentence', |'falsesentence')));
     assertEquals('falsesentence', $f->eval(|if(startsWith('3 == 1', '1'), |'truesentence', |'falsesentence')));
 }
 
 
-function <<PCT.test>> meta::pure::functions::lang::tests::if::testMultiIf<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::if::testMultiIf<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let val = 5;
     assertEquals(7, $f->eval(|if(

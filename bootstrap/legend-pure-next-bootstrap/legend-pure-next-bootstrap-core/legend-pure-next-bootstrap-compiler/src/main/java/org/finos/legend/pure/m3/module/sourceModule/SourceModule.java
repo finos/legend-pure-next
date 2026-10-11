@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,10 +16,10 @@
 package org.finos.legend.pure.m3.module.sourceModule;
 
 import org.finos.legend.pure.m3.module.ModuleRegistry;
-import meta.pure.metamodel.Package;
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.SourceInformation;
-import meta.pure.protocol.PureFile;
+import platform.pure.metamodel.Package;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.SourceInformation;
+import platform.pure.protocol.PureFile;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.impl.factory.Maps;
@@ -346,7 +347,7 @@ public class SourceModule implements Module
         // rolled back too aggressively). Walking the final {@code _func}
         // slots is structurally exact — the edges match what the PDB
         // actually serialises.
-        java.util.List<meta.pure.metamodel.PackageableElement> compiledElements =
+        java.util.List<platform.pure.metamodel.PackageableElement> compiledElements =
                 this.state.elementIndex().valuesView()
                         .collect(org.finos.legend.pure.m3.module.sourceModule.topLevel.IndexEntry::element)
                         .reject(java.util.Objects::isNull)
@@ -362,7 +363,7 @@ public class SourceModule implements Module
         // {@code (at sourceId:line c col)} suffix from the caller element).
         org.finos.legend.pure.m3.module.ScopedMetadataAccess accessForValidator =
                 new org.finos.legend.pure.m3.module.ScopedMetadataAccess(this, registry);
-        java.util.function.Function<String, meta.pure.metamodel.PackageableElement> resolveForValidator =
+        java.util.function.Function<String, platform.pure.metamodel.PackageableElement> resolveForValidator =
                 path -> accessForValidator.getElement(path);
         List<CompilationError> leanRefsViolations = org.finos.legend.pure.m3.module.LeanReferencesValidator.validate(refIndex, resolveForValidator)
                 .stream()

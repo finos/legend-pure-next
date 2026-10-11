@@ -33,9 +33,9 @@ import java.util.List;
 public final class Compilation
 {
     private static final String COMPILE =
-            "meta::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
-    private static final String NEW_CONTEXT = "meta::pure::compiler::newCompilerContext_Boolean_1__CompilerContext_1_";
-    private static final String RESULT = "meta::pure::functions::meta::CompileSourceResult";
+            "platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
+    private static final String NEW_CONTEXT = "platform::pure::compiler::newCompilerContext_Boolean_1__CompilerContext_1_";
+    private static final String RESULT = "platform::pure::functions::meta::CompileSourceResult";
 
     private Compilation()
     {
@@ -239,7 +239,7 @@ public final class Compilation
     /** A CompileSourceResult carrying what the compiler said. */
     private static Object result(List<Object> elements, List<Object> errors)
     {
-        return new org.finos.legend.pure.m3.meta.pure.functions.meta.CompileSourceResultImpl()
+        return new org.finos.legend.pure.m3.platform.pure.functions.meta.CompileSourceResultImpl()
                 ._classifierGenericType(Metadata.classifier(RESULT))
                 ._elements(elements)
                 ._errors(errors);

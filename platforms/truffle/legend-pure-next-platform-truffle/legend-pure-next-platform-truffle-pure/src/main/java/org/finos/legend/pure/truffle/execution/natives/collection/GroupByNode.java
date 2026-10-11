@@ -94,7 +94,7 @@ public final class GroupByNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object populateMapCgt()
     {
-        Object cgt = getContext().cgtForType("meta::pure::functions::collection::Map");
+        Object cgt = getContext().cgtForType("platform::pure::functions::collection::Map");
         if (cgt == null) throw new RuntimeException("[GroupByNode] Cannot resolve Map type from PDB");
         cachedMapCgt = cgt;
         return cgt;
@@ -114,7 +114,7 @@ public final class GroupByNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object populateListCgt()
     {
-        Object cgt = getContext().cgtForType("meta::pure::functions::collection::List");
+        Object cgt = getContext().cgtForType("platform::pure::functions::collection::List");
         if (cgt == null) throw new RuntimeException("[GroupByNode] Cannot resolve List type from PDB");
         cachedListCgt = cgt;
         return cgt;
@@ -128,8 +128,8 @@ public final class GroupByNode extends PureNode
                                 MetadataAccess resolver)
     {
         org.finos.legend.pure.truffle.execution.PureContext ctx = org.finos.legend.pure.truffle.execution.PureLanguage.get(null);
-        Object mapCgt = ctx.cgtForType("meta::pure::functions::collection::Map");
-        Object listCgt = ctx.cgtForType("meta::pure::functions::collection::List");
+        Object mapCgt = ctx.cgtForType("platform::pure::functions::collection::Map");
+        Object listCgt = ctx.cgtForType("platform::pure::functions::collection::List");
         if (mapCgt == null || listCgt == null)
         {
             throw new RuntimeException("[GroupByNode] Cannot resolve Map/List type from PDB");
@@ -180,7 +180,7 @@ public final class GroupByNode extends PureNode
         for (Map.Entry<Object, List<Object>> e : grouped.entrySet())
         {
             Object listInstance = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                    "meta::pure::functions::collection::List", resolver);
+                    "platform::pure::functions::collection::List", resolver);
             org.finos.legend.pure.truffle.compiler.helper._Any.write(listInstance, "classifierGenericType", listCgt);
             org.finos.legend.pure.truffle.compiler.helper._Any.write(listInstance, "values",
                     new org.finos.legend.pure.truffle.execution.types.ObjectSequence(e.getValue().toArray()));

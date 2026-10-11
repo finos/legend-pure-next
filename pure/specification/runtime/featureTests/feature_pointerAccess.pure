@@ -16,7 +16,7 @@
 // ----------------------------------------------------------------------------
 // Pointer access contract: an unresolved `TempCompilerPointer` (e.g.
 // `ClassPointer`, `PrimitiveTypePointer`, `EnumerationPointer`) must be
-// dereferenced via {@link meta::pure::compiler::helper::type::derefTypeIfPointer}
+// dereferenced via {@link platform::pure::compiler::helper::type::derefTypeIfPointer}
 // (or a runtime-specific PointerGraphResolver) before any of its inherited
 // data slots are read. Reading `.name` / `.package` / `.properties` / etc.
 // directly on a live pointer indicates the upstream resolution pass was
@@ -28,16 +28,16 @@
 // value silently. The tests below pin that contract.
 // ----------------------------------------------------------------------------
 
-import meta::pure::functions::asserts::*;
-import meta::pure::metamodel::pointer::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::metamodel::pointer::*;
 
 // 1. A freshly-constructed ClassPointer carries only its `path`; the
 //    inherited `.name` slot is empty (since `^ClassPointer(path=...)`
 //    only sets path). Reading `.name` directly should crash, not return
 //    the empty list.
-function <<test.Test>> meta::pure::functions::tests::pointerAccess::testUnresolvedClassPointerNameAccessCrashes(): Boolean[1]
+function <<test.Test>> platform::pure::functions::tests::pointerAccess::testUnresolvedClassPointerNameAccessCrashes(): Boolean[1]
 {
-    let ptr = ^ClassPointer<Any>(path = 'meta::pure::metamodel::type::Any');
+    let ptr = ^ClassPointer<Any>(path = 'platform::pure::metamodel::type::Any');
     let result = tryEval(| $ptr.name);
     assert(
         $result.failure->isNotEmpty(),
@@ -49,9 +49,9 @@ function <<test.Test>> meta::pure::functions::tests::pointerAccess::testUnresolv
 // 2. The same crash applies to other pointer subtypes — PrimitiveTypePointer,
 //    EnumerationPointer, FunctionPointer. We only spot-check ClassPointer
 //    above; the contract is on the `TempCompilerPointer` superclass.
-function <<test.Test>> meta::pure::functions::tests::pointerAccess::testUnresolvedPrimitiveTypePointerNameAccessCrashes(): Boolean[1]
+function <<test.Test>> platform::pure::functions::tests::pointerAccess::testUnresolvedPrimitiveTypePointerNameAccessCrashes(): Boolean[1]
 {
-    let ptr = ^PrimitiveTypePointer(path = 'meta::pure::metamodel::type::primitives::Integer');
+    let ptr = ^PrimitiveTypePointer(path = 'platform::pure::metamodel::type::primitives::Integer');
     let result = tryEval(| $ptr.name);
     assert(
         $result.failure->isNotEmpty(),
@@ -62,8 +62,8 @@ function <<test.Test>> meta::pure::functions::tests::pointerAccess::testUnresolv
 // 3. The escape hatch — `.path` is the one slot that's safe to read on an
 //    unresolved pointer (it's why pointers exist). Reading it must not
 //    crash; that's how dereferencers find the target.
-function <<test.Test>> meta::pure::functions::tests::pointerAccess::testUnresolvedPointerPathAccessIsSafe(): Boolean[1]
+function <<test.Test>> platform::pure::functions::tests::pointerAccess::testUnresolvedPointerPathAccessIsSafe(): Boolean[1]
 {
-    let ptr = ^ClassPointer<Any>(path = 'meta::pure::metamodel::type::Any');
-    assertEquals('meta::pure::metamodel::type::Any', $ptr.path);
+    let ptr = ^ClassPointer<Any>(path = 'platform::pure::metamodel::type::Any');
+    assertEquals('platform::pure::metamodel::type::Any', $ptr.path);
 }

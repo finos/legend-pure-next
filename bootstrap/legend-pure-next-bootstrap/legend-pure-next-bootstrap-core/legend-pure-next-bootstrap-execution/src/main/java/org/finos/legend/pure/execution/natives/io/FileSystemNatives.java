@@ -15,8 +15,8 @@
 
 package org.finos.legend.pure.execution.natives.io;
 
-import meta.pure.metamodel.valuespecification.CollectionImpl;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.CollectionImpl;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
 import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
@@ -70,7 +70,7 @@ public class FileSystemNatives
             {
                 wrapped.add(_E_ValueSpecification.wrap(p, genericType, null, resolver));
             }
-            meta.pure.metamodel.type.generics.GenericType gt = wrapped.isEmpty() ? null : wrapped.get(0)._genericType();
+            platform.pure.metamodel.type.generics.GenericType gt = wrapped.isEmpty() ? null : wrapped.get(0)._genericType();
             return new CollectionImpl(resolver)
                     ._values(org.eclipse.collections.api.factory.Lists.mutable.withAll(wrapped))
                     ._genericType(gt)

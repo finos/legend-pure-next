@@ -18,7 +18,7 @@ package org.finos.legend.pure.execution.natives.binary;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
 import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
@@ -37,7 +37,7 @@ import org.finos.legend.pure.m3.module.MetadataAccess;
  * a String and every date native re-parses it.</p>
  *
  * <p>A {@code Byte} is a constrained extension of Integer
- * ({@code meta::pure::functions::binary::Byte}), so it is a plain long here and
+ * ({@code platform::pure::functions::binary::Byte}), so it is a plain long here and
  * feeds arithmetic with no conversion. These natives produce bytes that are
  * unsigned 0..255 BY CONSTRUCTION and therefore do not evaluate the
  * constraint — only an explicit {@code cast(@Byte)} does that.</p>

@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,14 +15,14 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
-import meta.pure.metamodel.function.property.Property;
-import meta.pure.metamodel.function.property.PropertyImpl;
-import meta.pure.metamodel.function.property.QualifiedProperty;
-import meta.pure.metamodel.relationship.Association;
-import meta.pure.metamodel.relationship.AssociationImpl;
-import meta.pure.metamodel.type.Class;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.function.property.PropertyImpl;
+import platform.pure.metamodel.function.property.QualifiedProperty;
+import platform.pure.metamodel.relationship.Association;
+import platform.pure.metamodel.relationship.AssociationImpl;
+import platform.pure.metamodel.type.Class;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -45,13 +46,13 @@ public final class AssociationHandler
     {
     }
 
-    public static Association firstPass(meta.pure.protocol.grammar.relationship.Association grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
+    public static Association firstPass(platform.pure.protocol.grammar.relationship.Association grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         return new AssociationImpl(model)
                 ._name(grammar._name());
     }
 
-    public static Association secondPass(AssociationImpl result, meta.pure.protocol.grammar.relationship.Association grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static Association secondPass(AssociationImpl result, platform.pure.protocol.grammar.relationship.Association grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         if (grammar._properties().size() != 2)
         {
@@ -74,7 +75,7 @@ public final class AssociationHandler
         // Each property's owner is the other property's type
         if (compiled.size() == 2)
         {
-            Type propertyType = (Type) model.getElement("meta::pure::metamodel::function::property::Property");
+            Type propertyType = (Type) model.getElement("platform::pure::metamodel::function::property::Property");
             setPropertyClassifierGenericType((PropertyImpl) compiled.get(0), compiled.get(1)._genericType(), propertyType, model);
             setPropertyClassifierGenericType((PropertyImpl) compiled.get(1), compiled.get(0)._genericType(), propertyType, model);
         }
@@ -86,7 +87,7 @@ public final class AssociationHandler
                 .collect(qp -> context.withCallerSubElement(qp._name(),
                         () -> QualifiedPropertyCompiler.compile(qp, qpOwner, imports, model, context)))
                 .select(Objects::nonNull);
-        compiledQPs.forEach(qp -> ((meta.pure.metamodel.function.property.QualifiedPropertyImpl) qp)._owner(result));
+        compiledQPs.forEach(qp -> ((platform.pure.metamodel.function.property.QualifiedPropertyImpl) qp)._owner(result));
         result._qualifiedProperties(compiledQPs);
 
         // Register association properties on their target classes

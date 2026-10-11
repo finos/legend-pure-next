@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::collection::getIfAbsentPutWithKey<U,V>(m:Map<U,V>[1], key:U[1], func:Function<{U[1]->V[0..1]}>[1]):V[0..1];
+native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::collection::getIfAbsentPutWithKey<U,V>(m:Map<U,V>[1], key:U[1], func:Function<{U[1]->V[0..1]}>[1]):V[0..1];

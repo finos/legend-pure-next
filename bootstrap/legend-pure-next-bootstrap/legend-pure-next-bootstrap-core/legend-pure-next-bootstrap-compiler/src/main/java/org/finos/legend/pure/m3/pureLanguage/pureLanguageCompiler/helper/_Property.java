@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +15,12 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.function.property.Property;
-import meta.pure.metamodel.function.property.PropertyImpl;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.type.Class;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.function.property.PropertyImpl;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.type.Class;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 
@@ -48,7 +49,7 @@ public class _Property
         }
 
         return new PropertyImpl((GenericTypeValue) resolvedClassifierGenericType)
-                ._aggregation((meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue("meta::pure::metamodel::function::property::AggregationKind", "None", model))
+                ._aggregation((platform.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue("platform::pure::metamodel::function::property::AggregationKind", "None", model))
                 ._name(prop._name())
                 ._genericType(resolvedGenericType)
                 ._multiplicity(resolvedMultiplicity)

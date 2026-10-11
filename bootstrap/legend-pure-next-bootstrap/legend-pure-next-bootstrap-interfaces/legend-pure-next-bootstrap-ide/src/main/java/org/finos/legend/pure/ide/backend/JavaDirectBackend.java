@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -10,8 +11,8 @@ package org.finos.legend.pure.ide.backend;
 
 import org.finos.legend.pure.m3.module.ModuleRegistry;
 import org.finos.legend.pure.execution.InterpretedExecution;
-import meta.pure.metamodel.function.FunctionDefinition;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.function.FunctionDefinition;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.cli.CompilerNatives;
@@ -74,7 +75,7 @@ public final class JavaDirectBackend implements PureBackend
         try
         {
             progress.post(new ProgressEvent("Executing "
-                    + ((meta.pure.metamodel.PackageableElement) function)._name(), 0, 0, null));
+                    + ((platform.pure.metamodel.PackageableElement) function)._name(), 0, 0, null));
             result = args.length == 0
                     ? execution.execute(function)
                     : execution.execute(function, (Object[]) args);

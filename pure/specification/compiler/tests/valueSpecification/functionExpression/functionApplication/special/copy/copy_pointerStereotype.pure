@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::copy::support::*;
 
@@ -20,49 +34,49 @@ Class <<compiler.pointer>> test::copy::support::MyPointer extends MyTarget
 
 ###CompiledGraph
 function test::copy::testPointerStereotype__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @6:3-6:38
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @20:3-20:38
     typeParam T -> #test::copy::support::MyPointer#
     mulParam m -> #[1]#
-    AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @6:7-6:7
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @6:11-6:38
+    AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @20:7-20:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @20:11-20:38
       typeParam T -> test::copy::support::MyPointer
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::support::MyPointer|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::support::MyPointer|1>  @6:11-6:38
-      Collection :#KeyExpression#[1]  ~@Collection@  @6:11-6:38
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:22-6:37
-          AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @6:22-6:37
-          AtomicValue  'a::b::c' :@String@[1]  ~@AtomicValue@  @6:29-6:37
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @7:3-7:32
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::support::MyPointer|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::support::MyPointer|1>  @20:11-20:38
+      Collection :#KeyExpression#[1]  ~@Collection@  @20:11-20:38
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:22-20:37
+          AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @20:22-20:37
+          AtomicValue  'a::b::c' :@String@[1]  ~@AtomicValue@  @20:29-20:37
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @21:3-21:32
     typeParam T -> #test::copy::support::MyPointer#
     mulParam m -> #[1]#
-    AtomicValue  'p2' :@String@[1]  ~@AtomicValue@  @7:7-7:8
-    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @7:12-7:32
+    AtomicValue  'p2' :@String@[1]  ~@AtomicValue@  @21:7-21:8
+    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::support::MyPointer##[1]#  ~@FunctionInvocation@  @21:12-21:32
       typeParam T -> #test::copy::support::MyPointer#
-      Variable p :#test::copy::support::MyPointer##[1]#  ~@VariableExpression@  @7:13-7:14
-      Collection :#KeyExpression#[1]  ~@Collection@  @7:12-7:32
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @7:16-7:31
-          AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @7:16-7:31
-          AtomicValue  'd::e::f' :@String@[1]  ~@AtomicValue@  @7:23-7:31
+      Variable p :#test::copy::support::MyPointer##[1]#  ~@VariableExpression@  @21:13-21:14
+      Collection :#KeyExpression#[1]  ~@Collection@  @21:12-21:32
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:16-21:31
+          AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @21:16-21:31
+          AtomicValue  'd::e::f' :@String@[1]  ~@AtomicValue@  @21:23-21:31
 
-class test::copy::support::MyTarget extends Any  ~Class<test::copy::support::MyTarget>  @10:1-14:1
+class test::copy::support::MyTarget extends Any  ~Class<test::copy::support::MyTarget>  @24:1-28:1
   property requiredString :@String@[1]  ~Property<test::copy::support::MyTarget, @String@|1>
   property requiredInt :@Integer@[1]  ~Property<test::copy::support::MyTarget, @Integer@|1>
 
-class test::copy::support::MyPointer extends test::copy::support::MyTarget  ~Class<test::copy::support::MyPointer>  @16:1-19:1
-  <<meta::pure::profiles::compiler.pointer>>
+class test::copy::support::MyPointer extends test::copy::support::MyTarget  ~Class<test::copy::support::MyPointer>  @30:1-33:1
+  <<platform::pure::profiles::compiler.pointer>>
   property path :@String@[1]  ~Property<test::copy::support::MyPointer, @String@|1>
 
 ###ReverseIndex
-meta::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
   test::copy::testPointerStereotype__Any_MANY_
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::copy::testPointerStereotype__Any_MANY_
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test::copy::testPointerStereotype__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::copy::testPointerStereotype__Any_MANY_
-meta::pure::profiles::compiler:
+platform::pure::profiles::compiler:
   test::copy::support::MyPointer
-meta::pure::profiles::compiler.pointer:
+platform::pure::profiles::compiler.pointer:
   test::copy::support::MyPointer
 test::copy::support::MyPointer:
   test::copy::testPointerStereotype__Any_MANY_

@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,40 +13,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::relation::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::relation::*;
+import platform::pure::test::pct::*;
 
-Class meta::pure::functions::relation::Frame
+Class platform::pure::functions::relation::Frame
 {
-  offsetFrom : meta::pure::functions::relation::FrameValue[1];
-  offsetTo : meta::pure::functions::relation::FrameValue[1];
+  offsetFrom : platform::pure::functions::relation::FrameValue[1];
+  offsetTo : platform::pure::functions::relation::FrameValue[1];
 }
 
-Class meta::pure::functions::relation::FrameValue
+Class platform::pure::functions::relation::FrameValue
 {
 }
 
-Class meta::pure::functions::relation::FrameIntValue extends meta::pure::functions::relation::FrameValue
+Class platform::pure::functions::relation::FrameIntValue extends platform::pure::functions::relation::FrameValue
 {
     value : Integer[1];
 }
 
-Class meta::pure::functions::relation::FrameNumericValue extends meta::pure::functions::relation::FrameValue
+Class platform::pure::functions::relation::FrameNumericValue extends platform::pure::functions::relation::FrameValue
 {
     value : Number[1];
 }
 
-//Class meta::pure::functions::relation::FrameIntervalValue extends meta::pure::functions::relation::FrameValue
+//Class platform::pure::functions::relation::FrameIntervalValue extends platform::pure::functions::relation::FrameValue
 //{
 //    value : Integer[1];
 //    durationUnit : DurationUnit[1];
 //}
 
-Class meta::pure::functions::relation::UnboundedFrameValue extends meta::pure::functions::relation::FrameValue
+Class platform::pure::functions::relation::UnboundedFrameValue extends platform::pure::functions::relation::FrameValue
 {
 }
 
-function <<PCT.function, PCT.platformOnly>> meta::pure::functions::relation::unbounded():meta::pure::functions::relation::UnboundedFrameValue[1]
+function <<PCT.function, PCT.platformOnly>> platform::pure::functions::relation::unbounded():platform::pure::functions::relation::UnboundedFrameValue[1]
 {
-    ^meta::pure::functions::relation::UnboundedFrameValue();
+    ^platform::pure::functions::relation::UnboundedFrameValue();
 }

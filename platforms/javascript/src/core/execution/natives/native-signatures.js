@@ -28,7 +28,7 @@ export const ENTRY_BYTES = "entryBytes_Binary_1__String_1__Binary_1_";
 export const DIRECTORY_TREE = "directoryTree_String_1__String_MANY_";
 export const WRITE_FILE = "writeFile_String_1__String_1__String_1_";
 
-// meta::pure::functions::meta::antlr natives: [name, signature]. The translator emits `__<name>(...)`.
+// platform::pure::functions::meta::antlr natives: [name, signature]. The translator emits `__<name>(...)`.
 export const ANTLR_NATIVES = [
     ["parseAntlr", "parseAntlr_String_1__String_1__String_1__Integer_1__AntlrContext_1_"],
     ["getText", "getText_AntlrContext_1__String_1_"],
@@ -46,5 +46,5 @@ export const ANTLR_NATIVES = [
     ["getStopLine", "getStopLine_AntlrContext_1__Integer_1_"],
     ["getStopColumn", "getStopColumn_AntlrContext_1__Integer_1_"],
     ["stripTripleQuotesDedented", "stripTripleQuotesDedented_String_1__String_1_"],
-    ["computeFirstNonNewlineLine", "computeFirstNonNewlineLine_AntlrContext_$0_1$__Boolean_1__Integer_1_"],
+    ["computeFirstNonNewlineLine", "computeFirstNonNewlineLine_AntlrContext_$0_1$__Integer_1_"],
 ];

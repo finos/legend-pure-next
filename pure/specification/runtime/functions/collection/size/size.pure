@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 native function
     <<PCT.function>>
@@ -20,26 +21,26 @@ native function
         doc.doc='Returns the number of elements in the given collection',
         PCT.grammarDoc='size is used in the implementation of inequalities functions'
     }
-    meta::pure::functions::collection::size(p:Any[*]):Integer[1];
+    platform::pure::functions::collection::size(p:Any[*]):Integer[1];
 
 
-function <<PCT.test>> meta::pure::functions::collection::tests::size::testSize<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::size::testSize<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(3, $f->eval(|['a', 'b', 'c']->size()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::size::testSizeEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::size::testSizeEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(0, $f->eval(|[]->size()));
 }
 
-Class <<test.TestDependency>> meta::pure::functions::collection::tests::size::S_Person
+Class <<test.TestDependency>> platform::pure::functions::collection::tests::size::S_Person
 {
     firstName : String[1];
     lastName : String[1];
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::size::testSizeOnGraphObject<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::size::testSizeOnGraphObject<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(2, $f->eval(|[^meta::pure::functions::collection::tests::size::S_Person(firstName = 'Rafael', lastName = 'Bey'), ^meta::pure::functions::collection::tests::size::S_Person(firstName = 'Julio', lastName = 'Padin')]->size()));
+    assertEquals(2, $f->eval(|[^platform::pure::functions::collection::tests::size::S_Person(firstName = 'Rafael', lastName = 'Bey'), ^platform::pure::functions::collection::tests::size::S_Person(firstName = 'Julio', lastName = 'Padin')]->size()));
 }

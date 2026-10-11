@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -413,7 +414,7 @@ public class RdfJavaGenerator
                 // user modules whose simple names collide with platform types
                 // don't pick up the wrong anchor and end up classified as a
                 // platform type.
-                sb.append("            (meta.pure.metamodel.type.generics.GenericTypeValue) model.getElement(\"meta::pure::metamodel::type::generics::optimization::GenericType_")
+                sb.append("            (platform.pure.metamodel.type.generics.GenericTypeValue) model.getElement(\"platform::pure::metamodel::type::generics::optimization::GenericType_")
                         .append((classInfo.packagePath == null ? "" : classInfo.packagePath.replace("::", "_") + "_"))
                         .append(classInfo.name).append("\"));\n");
             }
@@ -421,7 +422,7 @@ public class RdfJavaGenerator
             {
                 // Parameterized types: typeArguments/multiplicityArguments are instance-specific,
                 // so the caller must provide the fully-built classifierGenericType
-                sb.append("    public ").append(classInfo.name).append("Impl(meta.pure.metamodel.type.generics.GenericTypeValue classifierGenericType)\n");
+                sb.append("    public ").append(classInfo.name).append("Impl(platform.pure.metamodel.type.generics.GenericTypeValue classifierGenericType)\n");
                 sb.append("    {\n");
                 sb.append("        this._classifierGenericType(classifierGenericType);\n");
             }
@@ -540,7 +541,7 @@ public class RdfJavaGenerator
             sb.append(" * Pure package: ").append(enumInfo.packagePath).append("\n");
         }
         sb.append(" */\n");
-        sb.append("public interface ").append(enumInfo.name).append(" extends meta.pure.metamodel.type.Enum\n{\n");
+        sb.append("public interface ").append(enumInfo.name).append(" extends platform.pure.metamodel.type.Enum\n{\n");
         sb.append("}\n");
 
         return sb.toString();
@@ -557,7 +558,7 @@ public class RdfJavaGenerator
         sb.append(" * Generated implementation for M3 enumeration: ").append(enumInfo.name).append("\n");
         sb.append(" * <p>Extends EnumImpl and implements the typed interface.</p>\n");
         sb.append(" */\n");
-        sb.append("public class ").append(enumInfo.name).append("Impl extends meta.pure.metamodel.type.EnumImpl implements ").append(enumInfo.name).append("\n{\n");
+        sb.append("public class ").append(enumInfo.name).append("Impl extends platform.pure.metamodel.type.EnumImpl implements ").append(enumInfo.name).append("\n{\n");
         sb.append("    public ").append(enumInfo.name).append("Impl() {}\n\n");
         sb.append("    public ").append(enumInfo.name).append("Impl(org.finos.legend.pure.m3.module.MetadataAccess model)\n");
         sb.append("    {\n");

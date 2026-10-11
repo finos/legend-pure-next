@@ -15,8 +15,8 @@
 
 package org.finos.legend.pure.m3.module;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.type.Type;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.type.Type;
 import org.eclipse.collections.api.list.MutableList;
 
 import java.util.IdentityHashMap;
@@ -66,7 +66,7 @@ public interface MetadataAccess
      */
     default Type any()
     {
-        PackageableElement e = getElement("meta::pure::metamodel::type::Any");
+        PackageableElement e = getElement("platform::pure::metamodel::type::Any");
         return e instanceof Type t ? t : null;
     }
 
@@ -75,7 +75,7 @@ public interface MetadataAccess
      */
     default Type nil()
     {
-        PackageableElement e = getElement("meta::pure::metamodel::type::Nil");
+        PackageableElement e = getElement("platform::pure::metamodel::type::Nil");
         return e instanceof Type t ? t : null;
     }
 
@@ -88,7 +88,7 @@ public interface MetadataAccess
 
     /**
      * Per-resolver cache for equality-key property names (the names of
-     * properties stereotyped {@code <<meta::pure::profiles::equality.Key>>}
+     * properties stereotyped {@code <<platform::pure::profiles::equality.Key>>}
      * on a Type and its supertypes). Walks the same generalization chain
      * as {@link #linearizationCache()}; without caching it re-walks on
      * every {@code pureEquals} call against a DynamicInstance. Concrete

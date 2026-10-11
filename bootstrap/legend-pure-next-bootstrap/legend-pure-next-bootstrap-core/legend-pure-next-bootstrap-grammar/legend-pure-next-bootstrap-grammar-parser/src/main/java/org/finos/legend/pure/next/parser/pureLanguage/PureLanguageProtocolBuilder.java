@@ -29,56 +29,56 @@
 // the Pure-side interpreter driven from parser-mappings.pdb (see TrufflePureParser).
 package org.finos.legend.pure.next.parser.pureLanguage;
 
-import meta.pure.protocol.grammar.Enum_PointerImpl;
-import meta.pure.protocol.grammar.Package_PointerImpl;
-import meta.pure.protocol.grammar.PackageableElement;
-import meta.pure.protocol.grammar.SourceInformation;
-import meta.pure.protocol.grammar.SourceInformationImpl;
-import meta.pure.protocol.grammar.constraint.Constraint;
-import meta.pure.protocol.grammar.constraint.ConstraintImpl;
-import meta.pure.protocol.grammar.extension.AnnotatedElement;
-import meta.pure.protocol.grammar.extension.ProfileImpl;
-import meta.pure.protocol.grammar.extension.StereotypeImpl;
-import meta.pure.protocol.grammar.extension.Stereotype_PointerImpl;
-import meta.pure.protocol.grammar.extension.TagImpl;
-import meta.pure.protocol.grammar.extension.Tag_PointerImpl;
-import meta.pure.protocol.grammar.extension.TaggedValueImpl;
-import meta.pure.protocol.grammar.function.LambdaFunctionImpl;
-import meta.pure.protocol.grammar.function.NativeFunctionImpl;
-import meta.pure.protocol.grammar.function.UserDefinedFunctionImpl;
-import meta.pure.protocol.grammar.function.property.PropertyImpl;
-import meta.pure.protocol.grammar.function.property.QualifiedPropertyImpl;
-import meta.pure.protocol.grammar.multiplicity.MultiplicityParameter;
-import meta.pure.protocol.grammar.multiplicity.MultiplicityValueImpl;
-import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
-import meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicityImpl;
-import meta.pure.protocol.grammar.multiplicity.UserDefinedAdHocMultiplicityImpl;
-import meta.pure.protocol.grammar.multiplicity.UserDefinedMultiplicityParameterImpl;
-import meta.pure.protocol.grammar.type.generics.TypeParameterImpl;
-import meta.pure.protocol.grammar.PointerValueImpl;
-import meta.pure.protocol.grammar.relation.ColumnImpl;
-import meta.pure.protocol.grammar.relation.GenericTypeOperationImpl;
-import meta.pure.protocol.grammar.relation.RelationTypeImpl;
-import meta.pure.protocol.grammar.relationship.AssociationImpl;
-import meta.pure.protocol.grammar.relationship.GeneralizationImpl;
-import meta.pure.protocol.grammar.type.ClassImpl;
-import meta.pure.protocol.grammar.type.EnumerationImpl;
-import meta.pure.protocol.grammar.type.FunctionTypeImpl;
-import meta.pure.protocol.grammar.type.PrimitiveTypeImpl;
-import meta.pure.protocol.grammar.type.Type_PointerImpl;
-import meta.pure.protocol.grammar.type.generics.GenericType;
-import meta.pure.protocol.grammar.type.generics.TypeParameter;
-import meta.pure.protocol.grammar.type.generics.UndefinedGenericTypeImpl;
-import meta.pure.protocol.grammar.type.generics.UserDefinedGenericTypeImpl;
-import meta.pure.protocol.grammar.valuespecification.ArrowInvocationImpl;
-import meta.pure.protocol.grammar.valuespecification.AtomicValueImpl;
-import meta.pure.protocol.grammar.valuespecification.CollectionImpl;
-import meta.pure.protocol.grammar.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl;
-import meta.pure.protocol.grammar.valuespecification.DotApplicationImpl;
-import meta.pure.protocol.grammar.valuespecification.FunctionInvocationImpl;
-import meta.pure.protocol.grammar.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl;
-import meta.pure.protocol.grammar.valuespecification.ValueSpecification;
-import meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl;
+import platform.pure.protocol.grammar.Enum_PointerImpl;
+import platform.pure.protocol.grammar.Package_PointerImpl;
+import platform.pure.protocol.grammar.PackageableElement;
+import platform.pure.protocol.grammar.SourceInformation;
+import platform.pure.protocol.grammar.SourceInformationImpl;
+import platform.pure.protocol.grammar.constraint.Constraint;
+import platform.pure.protocol.grammar.constraint.ConstraintImpl;
+import platform.pure.protocol.grammar.extension.AnnotatedElement;
+import platform.pure.protocol.grammar.extension.ProfileImpl;
+import platform.pure.protocol.grammar.extension.StereotypeImpl;
+import platform.pure.protocol.grammar.extension.Stereotype_PointerImpl;
+import platform.pure.protocol.grammar.extension.TagImpl;
+import platform.pure.protocol.grammar.extension.Tag_PointerImpl;
+import platform.pure.protocol.grammar.extension.TaggedValueImpl;
+import platform.pure.protocol.grammar.function.LambdaFunctionImpl;
+import platform.pure.protocol.grammar.function.NativeFunctionImpl;
+import platform.pure.protocol.grammar.function.UserDefinedFunctionImpl;
+import platform.pure.protocol.grammar.function.property.PropertyImpl;
+import platform.pure.protocol.grammar.function.property.QualifiedPropertyImpl;
+import platform.pure.protocol.grammar.multiplicity.MultiplicityParameter;
+import platform.pure.protocol.grammar.multiplicity.MultiplicityValueImpl;
+import platform.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
+import platform.pure.protocol.grammar.multiplicity.UndefinedMultiplicityImpl;
+import platform.pure.protocol.grammar.multiplicity.UserDefinedAdHocMultiplicityImpl;
+import platform.pure.protocol.grammar.multiplicity.UserDefinedMultiplicityParameterImpl;
+import platform.pure.protocol.grammar.type.generics.TypeParameterImpl;
+import platform.pure.protocol.grammar.PointerValueImpl;
+import platform.pure.protocol.grammar.relation.ColumnImpl;
+import platform.pure.protocol.grammar.relation.GenericTypeOperationImpl;
+import platform.pure.protocol.grammar.relation.RelationTypeImpl;
+import platform.pure.protocol.grammar.relationship.AssociationImpl;
+import platform.pure.protocol.grammar.relationship.GeneralizationImpl;
+import platform.pure.protocol.grammar.type.ClassImpl;
+import platform.pure.protocol.grammar.type.EnumerationImpl;
+import platform.pure.protocol.grammar.type.FunctionTypeImpl;
+import platform.pure.protocol.grammar.type.PrimitiveTypeImpl;
+import platform.pure.protocol.grammar.type.Type_PointerImpl;
+import platform.pure.protocol.grammar.type.generics.GenericType;
+import platform.pure.protocol.grammar.type.generics.TypeParameter;
+import platform.pure.protocol.grammar.type.generics.UndefinedGenericTypeImpl;
+import platform.pure.protocol.grammar.type.generics.UserDefinedGenericTypeImpl;
+import platform.pure.protocol.grammar.valuespecification.ArrowInvocationImpl;
+import platform.pure.protocol.grammar.valuespecification.AtomicValueImpl;
+import platform.pure.protocol.grammar.valuespecification.CollectionImpl;
+import platform.pure.protocol.grammar.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl;
+import platform.pure.protocol.grammar.valuespecification.DotApplicationImpl;
+import platform.pure.protocol.grammar.valuespecification.FunctionInvocationImpl;
+import platform.pure.protocol.grammar.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl;
+import platform.pure.protocol.grammar.valuespecification.ValueSpecification;
+import platform.pure.protocol.grammar.valuespecification.VariableExpressionImpl;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.eclipse.collections.api.list.MutableList;
@@ -110,7 +110,7 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
      * compares the two parsers slot-for-slot, and RegenerateProtocolJson re-mints the protocol.json corpus
      * from this one.</p>
      */
-    private static final String PRIMITIVES = "meta::pure::metamodel::type::primitives::";
+    private static final String PRIMITIVES = "platform::pure::metamodel::type::primitives::";
 
     protected final MutableList<PackageableElement> elements = Lists.mutable.empty();
 
@@ -437,9 +437,9 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
     protected GenericType buildTypeWithOperation(final M3Parser.TypeWithOperationContext ctx)
     {
         GenericType result = buildGenericType(ctx.type());
-        result = (ctx.equalType() != null ? new GenericTypeOperationImpl()._operationType(new Enum_PointerImpl()._value("meta::pure::metamodel::relation::GenericTypeOperationType")._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value("Equal"))))._left(result)._right(buildGenericType(ctx.equalType().type())) : result);
+        result = (ctx.equalType() != null ? new GenericTypeOperationImpl()._operationType(new Enum_PointerImpl()._value("platform::pure::metamodel::relation::GenericTypeOperationType")._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value("Equal"))))._left(result)._right(buildGenericType(ctx.equalType().type())) : result);
         result = ListAdapter.adapt(ctx.typeAddSubOperation()).injectInto(result, this::buildWrapAddSubOp);
-        result = (ctx.subsetType() != null ? new GenericTypeOperationImpl()._operationType(new Enum_PointerImpl()._value("meta::pure::metamodel::relation::GenericTypeOperationType")._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value("Subset"))))._left(result)._right(buildGenericType(ctx.subsetType().type())) : result);
+        result = (ctx.subsetType() != null ? new GenericTypeOperationImpl()._operationType(new Enum_PointerImpl()._value("platform::pure::metamodel::relation::GenericTypeOperationType")._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value("Subset"))))._left(result)._right(buildGenericType(ctx.subsetType().type())) : result);
         return result;
     }
 
@@ -447,9 +447,9 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
     {
         if (ctx.addType() != null)
         {
-            return new GenericTypeOperationImpl()._operationType(new Enum_PointerImpl()._value("meta::pure::metamodel::relation::GenericTypeOperationType")._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value("Union"))))._left(base)._right(buildGenericType(ctx.addType().type()));
+            return new GenericTypeOperationImpl()._operationType(new Enum_PointerImpl()._value("platform::pure::metamodel::relation::GenericTypeOperationType")._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value("Union"))))._left(base)._right(buildGenericType(ctx.addType().type()));
         }
-        return new GenericTypeOperationImpl()._operationType(new Enum_PointerImpl()._value("meta::pure::metamodel::relation::GenericTypeOperationType")._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value("Difference"))))._left(base)._right(buildGenericType(ctx.subType().type()));
+        return new GenericTypeOperationImpl()._operationType(new Enum_PointerImpl()._value("platform::pure::metamodel::relation::GenericTypeOperationType")._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value("Difference"))))._left(base)._right(buildGenericType(ctx.subType().type()));
     }
 
     protected GenericType buildTypeOrUndefined(final M3Parser.TypeOrUndefinedContext ctx)
@@ -694,7 +694,7 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
                 ._name(ctx.identifier().getText())
                 ._p_sourceInformation(buildSourceInfo(ctx))
                 ._aggregation(new Enum_PointerImpl()
-                        ._value("meta::pure::metamodel::function::property::AggregationKind")
+                        ._value("platform::pure::metamodel::function::property::AggregationKind")
                         ._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value("None"))))
                 ._genericType(new UserDefinedGenericTypeImpl()
                         ._type(new Type_PointerImpl()._value(enumPath)))
@@ -1028,7 +1028,7 @@ public class PureLanguageProtocolBuilder extends M3ParserBaseVisitor<Object>
             else kind = "None";
         }
         return new Enum_PointerImpl()
-                ._value("meta::pure::metamodel::function::property::AggregationKind")
+                ._value("platform::pure::metamodel::function::property::AggregationKind")
                 ._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value(kind)));
     }
 

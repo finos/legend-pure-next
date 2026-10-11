@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,9 +15,9 @@
 
 package org.finos.legend.pure.execution.natives.string;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.natives.NativeRegistry;
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
@@ -345,8 +346,8 @@ public class StringNatives
             }
             // String[*] — compute common type and size-based multiplicity
             int size = parts.length;
-            meta.pure.metamodel.type.generics.GenericType gt = result.isEmpty() ? null : result.get(0)._genericType();
-            return new meta.pure.metamodel.valuespecification.CollectionImpl(resolver)
+            platform.pure.metamodel.type.generics.GenericType gt = result.isEmpty() ? null : result.get(0)._genericType();
+            return new platform.pure.metamodel.valuespecification.CollectionImpl(resolver)
                     ._values(org.eclipse.collections.api.factory.Lists.mutable.withAll(result))
                     ._genericType(gt)
                     ._multiplicity(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(size, size, resolver));
@@ -413,8 +414,8 @@ public class StringNatives
                 result.add(_E_ValueSpecification.wrap(s.substring(i, Math.min(i + size, len)), genericType, null, resolver));
             }
             int count = result.size();
-            meta.pure.metamodel.type.generics.GenericType gt = result.isEmpty() ? null : result.get(0)._genericType();
-            return new meta.pure.metamodel.valuespecification.CollectionImpl(resolver)
+            platform.pure.metamodel.type.generics.GenericType gt = result.isEmpty() ? null : result.get(0)._genericType();
+            return new platform.pure.metamodel.valuespecification.CollectionImpl(resolver)
                     ._values(org.eclipse.collections.api.factory.Lists.mutable.withAll(result))
                     ._genericType(gt)
                     ._multiplicity(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(count, count, resolver));
@@ -499,7 +500,7 @@ public class StringNatives
                 if (g != null) { found.add(g); }
             }
             List<ValueSpecification> result = new ArrayList<>(found.size());
-            meta.pure.metamodel.type.generics.GenericType stringGT = null;
+            platform.pure.metamodel.type.generics.GenericType stringGT = null;
             for (String g : found)
             {
                 ValueSpecification vs = _E_ValueSpecification.wrap(g, genericType, null, resolver);
@@ -507,7 +508,7 @@ public class StringNatives
                 if (stringGT == null) { stringGT = vs._genericType(); }
             }
             int size = result.size();
-            return new meta.pure.metamodel.valuespecification.CollectionImpl(resolver)
+            return new platform.pure.metamodel.valuespecification.CollectionImpl(resolver)
                     ._values(org.eclipse.collections.api.factory.Lists.mutable.withAll(result))
                     ._genericType(stringGT)
                     ._multiplicity(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(size, size, resolver));
@@ -589,7 +590,7 @@ public class StringNatives
         for (ValueSpecification item : items)
         {
             Object v = _E_ValueSpecification.unwrap(item);
-            String name = (v instanceof meta.pure.metamodel.type.Enum e) ? e._name() : (v == null ? null : v.toString());
+            String name = (v instanceof platform.pure.metamodel.type.Enum e) ? e._name() : (v == null ? null : v.toString());
             if (name == null) continue;
             switch (name)
             {
@@ -740,15 +741,15 @@ public class StringNatives
      * handles Date and Float formatting, falls back to String.valueOf().
      */
     private static String pureToString(Object val,
-                                       meta.pure.metamodel.valuespecification.ValueSpecification vs,
+                                       platform.pure.metamodel.valuespecification.ValueSpecification vs,
                                        ValueSpecificationEvaluator eval,
                                        MetadataAccess resolver)
     {
         // DynamicInstance with class-defined toString() qualified property
         if (val instanceof DynamicInstance di && di.getClassifierGenericType() != null)
         {
-            meta.pure.metamodel.type.Type classType = _GenericType.type(di.getClassifierGenericType());
-            if (classType instanceof meta.pure.metamodel.type.Class cls && cls._qualifiedProperties() != null)
+            platform.pure.metamodel.type.Type classType = _GenericType.type(di.getClassifierGenericType());
+            if (classType instanceof platform.pure.metamodel.type.Class cls && cls._qualifiedProperties() != null)
             {
                 for (var qp : cls._qualifiedProperties())
                 {
@@ -769,11 +770,11 @@ public class StringNatives
         if (vs != null && vs._genericType() != null)
         {
             Type argType = _GenericType.type(vs._genericType());
-            if (_Type.subtypeOf(argType, (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date"), resolver))
+            if (_Type.subtypeOf(argType, (Type) resolver.getElement("platform::pure::metamodel::type::primitives::Date"), resolver))
             {
                 return normalizePureDate(val.toString());
             }
-            if (_Type.subtypeOf(argType, (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Float"), resolver))
+            if (_Type.subtypeOf(argType, (Type) resolver.getElement("platform::pure::metamodel::type::primitives::Float"), resolver))
             {
                 java.math.BigDecimal bd = java.math.BigDecimal.valueOf((Double) val);
                 String plain = bd.stripTrailingZeros().toPlainString();
@@ -785,11 +786,11 @@ public class StringNatives
             }
         }
 
-        if (val instanceof meta.pure.metamodel.type.Enum e)
+        if (val instanceof platform.pure.metamodel.type.Enum e)
         {
             return e._name();
         }
-        if (val instanceof meta.pure.metamodel.PackageableElement pe)
+        if (val instanceof platform.pure.metamodel.PackageableElement pe)
         {
             return pe._name();
         }
@@ -802,7 +803,7 @@ public class StringNatives
      * Uses Pure type system from VS to correctly identify types (esp. Date vs String).
      */
     private static String pureToRepresentation(Object val,
-                                               meta.pure.metamodel.valuespecification.ValueSpecification vs,
+                                               platform.pure.metamodel.valuespecification.ValueSpecification vs,
                                                ValueSpecificationEvaluator eval,
                                                MetadataAccess resolver)
     {
@@ -810,24 +811,24 @@ public class StringNatives
         if (vs != null && vs._genericType() != null)
         {
             Type argType = _GenericType.type(vs._genericType());
-            if (_Type.subtypeOf(argType, (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date"), resolver))
+            if (_Type.subtypeOf(argType, (Type) resolver.getElement("platform::pure::metamodel::type::primitives::Date"), resolver))
             {
                 return "%" + normalizePureDate(val.toString());
             }
-            if (_Type.subtypeOf(argType, (Type) resolver.getElement("meta::pure::metamodel::type::primitives::String"), resolver))
+            if (_Type.subtypeOf(argType, (Type) resolver.getElement("platform::pure::metamodel::type::primitives::String"), resolver))
             {
                 String s = (String) val;
                 return "'" + s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n") + "'";
             }
-            if (_Type.subtypeOf(argType, (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Boolean"), resolver))
+            if (_Type.subtypeOf(argType, (Type) resolver.getElement("platform::pure::metamodel::type::primitives::Boolean"), resolver))
             {
                 return val.toString();
             }
-            if (_Type.subtypeOf(argType, (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Integer"), resolver))
+            if (_Type.subtypeOf(argType, (Type) resolver.getElement("platform::pure::metamodel::type::primitives::Integer"), resolver))
             {
                 return val.toString();
             }
-            if (_Type.subtypeOf(argType, (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Float"), resolver))
+            if (_Type.subtypeOf(argType, (Type) resolver.getElement("platform::pure::metamodel::type::primitives::Float"), resolver))
             {
                 java.math.BigDecimal bd = java.math.BigDecimal.valueOf((Double) val);
                 String plain = bd.stripTrailingZeros().toPlainString();

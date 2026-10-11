@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +15,16 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.relation.Column;
-import meta.pure.metamodel.relation.GenericTypeOperation;
-import meta.pure.metamodel.relation.GenericTypeOperationImpl;
-import meta.pure.metamodel.relation.RelationType;
-import meta.pure.metamodel.relation.RelationTypeImpl;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
-import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import platform.pure.metamodel.relation.Column;
+import platform.pure.metamodel.relation.GenericTypeOperation;
+import platform.pure.metamodel.relation.GenericTypeOperationImpl;
+import platform.pure.metamodel.relation.RelationType;
+import platform.pure.metamodel.relation.RelationTypeImpl;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.type.generics.InferredGenericTypeImpl;
+import platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -124,7 +125,7 @@ public final class _GenericTypeOperation
             return result
                     ._columns(columns)
                     ._classifierGenericType(
-                            _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
+                            _GenericType.buildUserDefinedGenericType((Type) model.getElement("platform::pure::metamodel::relation::RelationType"), model)
                                     ._typeArguments(Lists.mutable.with(ownerGT))
                     );
         }
@@ -151,7 +152,7 @@ public final class _GenericTypeOperation
             return result
                     ._columns(columns)
                     ._classifierGenericType(
-                            _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
+                            _GenericType.buildUserDefinedGenericType((Type) model.getElement("platform::pure::metamodel::relation::RelationType"), model)
                                     ._typeArguments(Lists.mutable.with(ownerGT))
                     );
         }

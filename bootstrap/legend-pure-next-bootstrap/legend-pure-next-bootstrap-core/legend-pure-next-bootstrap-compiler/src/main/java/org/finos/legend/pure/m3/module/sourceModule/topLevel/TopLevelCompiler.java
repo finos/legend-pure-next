@@ -15,15 +15,15 @@
 
 package org.finos.legend.pure.m3.module.sourceModule.topLevel;
 
-import meta.pure.metamodel.Package;
-import meta.pure.metamodel.PackageImpl;
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.SourceInformation;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
-import meta.pure.protocol.PureFile;
-import meta.pure.protocol.Section;
+import platform.pure.metamodel.Package;
+import platform.pure.metamodel.PackageImpl;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.SourceInformation;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.protocol.PureFile;
+import platform.pure.protocol.Section;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.list.MutableList;
@@ -67,26 +67,26 @@ import java.util.regex.Pattern;
 public class TopLevelCompiler
 {
     public static final MutableList<String> DEFAULT_IMPORTS = Lists.mutable.with(
-            "meta::pure::metamodel::type::primitives",
-            "meta::pure::metamodel",
-            "meta::pure::metamodel::function::property",
-            "meta::pure::metamodel::type",
-            "meta::pure::metamodel::type::generics",
-            "meta::pure::metamodel::function",
-            "meta::pure::metamodel::multiplicity",
-            "meta::pure::metamodel::relation",
-            "meta::pure::metamodel::valuespecification",
-            "meta::pure::functions::math",
-            "meta::pure::functions::lang",
-            "meta::pure::functions::string",
-            "meta::pure::functions::collection",
-            "meta::pure::functions::boolean",
-            "meta::pure::functions::relation",
-            "meta::pure::functions::multiplicity",
-            "meta::pure::functions::asserts",
-            "meta::pure::functions::meta",
-            "meta::pure::functions::io",
-            "meta::pure::profiles"
+            "platform::pure::metamodel::type::primitives",
+            "platform::pure::metamodel",
+            "platform::pure::metamodel::function::property",
+            "platform::pure::metamodel::type",
+            "platform::pure::metamodel::type::generics",
+            "platform::pure::metamodel::function",
+            "platform::pure::metamodel::multiplicity",
+            "platform::pure::metamodel::relation",
+            "platform::pure::metamodel::valuespecification",
+            "platform::pure::functions::math",
+            "platform::pure::functions::lang",
+            "platform::pure::functions::string",
+            "platform::pure::functions::collection",
+            "platform::pure::functions::boolean",
+            "platform::pure::functions::relation",
+            "platform::pure::functions::multiplicity",
+            "platform::pure::functions::asserts",
+            "platform::pure::functions::meta",
+            "platform::pure::functions::io",
+            "platform::pure::profiles"
     );
 
     private final Package root;
@@ -267,7 +267,7 @@ public class TopLevelCompiler
                                 : name;
                         if (elementIndex.containsKey(fullPath))
                         {
-                            meta.pure.protocol.grammar.SourceInformation si = grammarElement._p_sourceInformation();
+                            platform.pure.protocol.grammar.SourceInformation si = grammarElement._p_sourceInformation();
                             throw new RuntimeException("The element '" + fullPath + "' already exists at: " + si._sourceId() + ":" + si._startLine() + "c" + si._startColumn());
                         }
                         long t0 = System.nanoTime();
@@ -280,7 +280,7 @@ public class TopLevelCompiler
     }
 
     private PackageableElement firstPassElement(
-            meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context)
+            platform.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context)
     {
         for (CompilerExtension ext : this.extensions)
         {
@@ -420,14 +420,14 @@ public class TopLevelCompiler
                         : null;
                 // Anchor sub-package classifier at canonical GenericType_Package (UDPGT) so the
                 // chain matches Pure's `^Package(...)` (platform fix in MetaNatives.new substitutes canonical).
-                meta.pure.metamodel.type.generics.GenericTypeValue packageCanonical =
-                        (meta.pure.metamodel.type.generics.GenericTypeValue) model.getElement(
-                                "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_Package");
+                platform.pure.metamodel.type.generics.GenericTypeValue packageCanonical =
+                        (platform.pure.metamodel.type.generics.GenericTypeValue) model.getElement(
+                                "platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_Package");
                 Package parent = packagePath != null
                         ? getOrCreatePackage(root, packagePath,
                                 packageCanonical != null
                                         ? packageCanonical
-                                        : _GenericType.buildUserDefinedGenericType((Type)model.getElement("meta::pure::metamodel::Package"), model),
+                                        : _GenericType.buildUserDefinedGenericType((Type)model.getElement("platform::pure::metamodel::Package"), model),
                                 model)
                         : root;
                 entry.element()._package(parent);

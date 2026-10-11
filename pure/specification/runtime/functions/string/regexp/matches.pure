@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 native function <<PCT.function>> {doc.doc = 'Returns true or false depending on whether its pattern matches the given string. It only succeeds if its pattern matches the entire string. The platform supports the full POSIX ERE (Extended Regular Expression) syntax.'}
-  meta::pure::functions::string::matches(string:String[1], regexp:String[1]):Boolean[1];
+  platform::pure::functions::string::matches(string:String[1], regexp:String[1]):Boolean[1];
 
-function <<PCT.test>> meta::pure::functions::string::tests::matches::testMatches<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::matches::testMatches<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assert($f->eval(|'hello'->matches('hello')));
   assert($f->eval(|'abc'->matches('[a-z][a-z][a-z]')));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::matches::testMatchesNoMatch<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::matches::testMatchesNoMatch<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertFalse($f->eval(|'abc'->matches('[a-z][a-z][a-z][a-z]')));
 }

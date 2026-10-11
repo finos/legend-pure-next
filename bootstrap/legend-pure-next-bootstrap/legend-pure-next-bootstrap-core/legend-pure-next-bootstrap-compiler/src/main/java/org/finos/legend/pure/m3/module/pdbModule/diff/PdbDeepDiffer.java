@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -9,7 +10,7 @@
 package org.finos.legend.pure.m3.module.pdbModule.diff;
 
 import org.finos.legend.pure.m3.module.ModuleRegistry;
-import meta.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.LanguageExtension;
@@ -57,7 +58,7 @@ import java.util.TreeSet;
  * </ul>
  *
  * <p>Output is a per-property diff path like
- * {@code meta::pure::compiler::CompilerContext.properties[0].genericType}
+ * {@code platform::pure::compiler::CompilerContext.properties[0].genericType}
  * with the two values printed compactly.</p>
  */
 public final class PdbDeepDiffer
@@ -514,7 +515,7 @@ public final class PdbDeepDiffer
             List<Method> result = new ArrayList<>();
             for (Class<?> iface : obj.getClass().getInterfaces())
             {
-                if (!iface.getName().startsWith("meta.pure.")) continue;
+                if (!iface.getName().startsWith("platform.pure.")) continue;
                 for (Method m : iface.getMethods())
                 {
                     if (m.getParameterCount() != 0) continue;

@@ -22,7 +22,7 @@ import java.util.Objects;
  * Truffle's. Behaviour is held in step by the shared PCT suite, not by a shared
  * jar. Keep in step with the bootstrap class of the same name.
  *
- * Runtime representation of a Pure {@code meta::pure::metamodel::variant::Variant}
+ * Runtime representation of a Pure {@code platform::pure::metamodel::variant::Variant}
  * value: an immutable JSON tree.
  *
  * <p>{@code toString()} is the compact JSON text — this is part of the PCT
@@ -33,7 +33,7 @@ import java.util.Objects;
  */
 public class PureVariant
 {
-    public static final String TYPE_PATH = "meta::pure::metamodel::variant::Variant";
+    public static final String TYPE_PATH = "platform::pure::metamodel::variant::Variant";
 
     private final JsonValue value;
 

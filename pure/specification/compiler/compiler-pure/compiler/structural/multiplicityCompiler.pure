@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::compiler::structural::multiplicityCompiler::*;
-import meta::pure::compiler::helper::genericType::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::compiler::structural::multiplicityCompiler::*;
+import platform::pure::compiler::helper::genericType::*;
 
-function meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(m:meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]):Multiplicity[1]
+function platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(m:platform::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]):Multiplicity[1]
 {
     $m->match([
-        mp:meta::pure::protocol::grammar::multiplicity::MultiplicityParameter[1] |
+        mp:platform::pure::protocol::grammar::multiplicity::MultiplicityParameter[1] |
             buildUserDefinedMultiplicityParameter($mp.name),
-        cm:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1] |
+        cm:platform::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1] |
             compileConcreteMultiplicity($cm),
-        um:meta::pure::protocol::grammar::multiplicity::UndefinedMultiplicity[1] |
+        um:platform::pure::protocol::grammar::multiplicity::UndefinedMultiplicity[1] |
             buildUndefinedMultiplicity(),
         u:Any[1] |
             PureOne
     ]);
 }
 
-function meta::pure::compiler::structural::multiplicityCompiler::compileConcreteMultiplicity(pMult:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]):Multiplicity[1]
+function platform::pure::compiler::structural::multiplicityCompiler::compileConcreteMultiplicity(pMult:platform::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]):Multiplicity[1]
 {
     if($pMult.upperBound->isEmpty(),
         | if($pMult.lowerBound.value == 0,

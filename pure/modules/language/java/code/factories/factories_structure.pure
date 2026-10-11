@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,366 +13,366 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::factory::packages::*;
-import meta::external::language::java::factory::*;
-import meta::external::language::java::factory::project::*;
-import meta::external::language::java::metamodel::*;
-import meta::external::language::java::metamodel::project::*;
-import meta::external::language::java::serialization::*;
+import platform::external::language::java::factory::packages::*;
+import platform::external::language::java::factory::*;
+import platform::external::language::java::factory::project::*;
+import platform::external::language::java::metamodel::*;
+import platform::external::language::java::metamodel::project::*;
+import platform::external::language::java::serialization::*;
 
-function meta::external::language::java::factory::packages::lang():meta::external::language::java::metamodel::Package[1]    {javaPackage('java.lang')}
-function meta::external::language::java::factory::packages::util():meta::external::language::java::metamodel::Package[1]    {javaPackage('java.util')}
-function meta::external::language::java::factory::packages::stream():meta::external::language::java::metamodel::Package[1]    {javaPackage('java.util.stream')}
+function platform::external::language::java::factory::packages::lang():platform::external::language::java::metamodel::Package[1]    {javaPackage('java.lang')}
+function platform::external::language::java::factory::packages::util():platform::external::language::java::metamodel::Package[1]    {javaPackage('java.util')}
+function platform::external::language::java::factory::packages::stream():platform::external::language::java::metamodel::Package[1]    {javaPackage('java.util.stream')}
 
 
 
-function meta::external::language::java::factory::javaIllegalArgumentException():      meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.IllegalArgumentException'); }
-function meta::external::language::java::factory::javaIllegalStateException():         meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.IllegalStateException'); }
-function meta::external::language::java::factory::javaIllegalAccessException():        meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.IllegalAccessException'); }
-function meta::external::language::java::factory::javaNumberFormatException():         meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.NumberFormatException'); }
-function meta::external::language::java::factory::javaRuntimeException():              meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.RuntimeException'); }
-function meta::external::language::java::factory::javaUnsupportedOperationException(): meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.UnsupportedOperationException'); }
-function meta::external::language::java::factory::javaCharSequence():                  meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.CharSequence'); }
-function meta::external::language::java::factory::javaMath():                          meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.Math'); }
-function meta::external::language::java::factory::javaStrictMath():                    meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.StrictMath'); }
-function meta::external::language::java::factory::javaSystem():                        meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.System'); }
-function meta::external::language::java::factory::javaStringBuilder():                 meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.StringBuilder'); }
-function meta::external::language::java::factory::javaAppendable():                    meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.Appendable'); }
-function meta::external::language::java::factory::javaClassType():                     meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.Class'); }
-function meta::external::language::java::factory::javaNullPointerException():          meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.NullPointerException'); }
-function meta::external::language::java::factory::javaInterruptedException():          meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.InterruptedException'); }
+function platform::external::language::java::factory::javaIllegalArgumentException():      platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.IllegalArgumentException'); }
+function platform::external::language::java::factory::javaIllegalStateException():         platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.IllegalStateException'); }
+function platform::external::language::java::factory::javaIllegalAccessException():        platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.IllegalAccessException'); }
+function platform::external::language::java::factory::javaNumberFormatException():         platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.NumberFormatException'); }
+function platform::external::language::java::factory::javaRuntimeException():              platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.RuntimeException'); }
+function platform::external::language::java::factory::javaUnsupportedOperationException(): platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.UnsupportedOperationException'); }
+function platform::external::language::java::factory::javaCharSequence():                  platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.CharSequence'); }
+function platform::external::language::java::factory::javaMath():                          platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.Math'); }
+function platform::external::language::java::factory::javaStrictMath():                    platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.StrictMath'); }
+function platform::external::language::java::factory::javaSystem():                        platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.System'); }
+function platform::external::language::java::factory::javaStringBuilder():                 platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.StringBuilder'); }
+function platform::external::language::java::factory::javaAppendable():                    platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.Appendable'); }
+function platform::external::language::java::factory::javaClassType():                     platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.Class'); }
+function platform::external::language::java::factory::javaNullPointerException():          platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.NullPointerException'); }
+function platform::external::language::java::factory::javaInterruptedException():          platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.InterruptedException'); }
 
-function meta::external::language::java::factory::javaReflectType():           meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.reflect.Type'); }
-function meta::external::language::java::factory::javaReflectMethod():         meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.reflect.Method'); }
-function meta::external::language::java::factory::javaInvocationTargetException():         meta::external::language::java::metamodel::Class[1] { javaClass('java.lang.reflect.InvocationTargetException'); }
+function platform::external::language::java::factory::javaReflectType():           platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.reflect.Type'); }
+function platform::external::language::java::factory::javaReflectMethod():         platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.reflect.Method'); }
+function platform::external::language::java::factory::javaInvocationTargetException():         platform::external::language::java::metamodel::Class[1] { javaClass('java.lang.reflect.InvocationTargetException'); }
 
-function meta::external::language::java::factory::javaMathContext():           meta::external::language::java::metamodel::Class[1] { javaClass('java.math.MathContext'); }
-function meta::external::language::java::factory::javaRoundingMode():          meta::external::language::java::metamodel::Class[1] { javaEnum([], 'java.math.RoundingMode'); }
+function platform::external::language::java::factory::javaMathContext():           platform::external::language::java::metamodel::Class[1] { javaClass('java.math.MathContext'); }
+function platform::external::language::java::factory::javaRoundingMode():          platform::external::language::java::metamodel::Class[1] { javaEnum([], 'java.math.RoundingMode'); }
 
-function meta::external::language::java::factory::javaIOException():           meta::external::language::java::metamodel::Class[1] { javaClass('java.io.IOException'); }
-function meta::external::language::java::factory::javaBufferedInputStream():   meta::external::language::java::metamodel::Class[1] { javaClass('java.io.BufferedInputStream'); }
-function meta::external::language::java::factory::javaByteArrayOutputStream(): meta::external::language::java::metamodel::Class[1] { javaClass('java.io.ByteArrayOutputStream'); }
-function meta::external::language::java::factory::javaInputStreamReader():     meta::external::language::java::metamodel::Class[1] { javaClass('java.io.InputStreamReader'); }
-function meta::external::language::java::factory::javaPrintStream():           meta::external::language::java::metamodel::Class[1] { javaClass('java.io.PrintStream'); }
-function meta::external::language::java::factory::javaStringWriter():          meta::external::language::java::metamodel::Class[1] { javaClass('java.io.StringWriter'); }
-function meta::external::language::java::factory::javaSerializable():          meta::external::language::java::metamodel::Class[1] { javaClass('java.io.Serializable'); }
+function platform::external::language::java::factory::javaIOException():           platform::external::language::java::metamodel::Class[1] { javaClass('java.io.IOException'); }
+function platform::external::language::java::factory::javaBufferedInputStream():   platform::external::language::java::metamodel::Class[1] { javaClass('java.io.BufferedInputStream'); }
+function platform::external::language::java::factory::javaByteArrayOutputStream(): platform::external::language::java::metamodel::Class[1] { javaClass('java.io.ByteArrayOutputStream'); }
+function platform::external::language::java::factory::javaInputStreamReader():     platform::external::language::java::metamodel::Class[1] { javaClass('java.io.InputStreamReader'); }
+function platform::external::language::java::factory::javaPrintStream():           platform::external::language::java::metamodel::Class[1] { javaClass('java.io.PrintStream'); }
+function platform::external::language::java::factory::javaStringWriter():          platform::external::language::java::metamodel::Class[1] { javaClass('java.io.StringWriter'); }
+function platform::external::language::java::factory::javaSerializable():          platform::external::language::java::metamodel::Class[1] { javaClass('java.io.Serializable'); }
 
-function meta::external::language::java::factory::javaURL():  meta::external::language::java::metamodel::Class[1] { javaClass('java.net.URL'); }
+function platform::external::language::java::factory::javaURL():  platform::external::language::java::metamodel::Class[1] { javaClass('java.net.URL'); }
 
-function meta::external::language::java::factory::javaTemporal():  meta::external::language::java::metamodel::Class[1] { javaClass('java.time.temporal.Temporal'); }
+function platform::external::language::java::factory::javaTemporal():  platform::external::language::java::metamodel::Class[1] { javaClass('java.time.temporal.Temporal'); }
 
-function meta::external::language::java::factory::javaNoSuchElementException(): meta::external::language::java::metamodel::Class[1] { javaClass('java.util.NoSuchElementException'); }
-function meta::external::language::java::factory::javaArrays():                 meta::external::language::java::metamodel::Class[1] { javaClass(util(),'Arrays'); }
-function meta::external::language::java::factory::javaCollections():            meta::external::language::java::metamodel::Class[1] { javaClass(util(),'Collections'); }
-function meta::external::language::java::factory::javaLocale():                 meta::external::language::java::metamodel::Class[1] { javaClass('java.util.Locale'); }
-function meta::external::language::java::factory::javaObjects():                meta::external::language::java::metamodel::Class[1] { javaClass('java.util.Objects'); }
-function meta::external::language::java::factory::javaList():                   meta::external::language::java::metamodel::Class[1] { javaClass(util(),'List'); }
-function meta::external::language::java::factory::javaArrayList():              meta::external::language::java::metamodel::Class[1] { javaClass(util(),'ArrayList'); }
-function meta::external::language::java::factory::javaLinkedList():             meta::external::language::java::metamodel::Class[1] { javaClass('java.util.LinkedList'); }
-function meta::external::language::java::factory::javaSet():                    meta::external::language::java::metamodel::Class[1] { javaClass('java.util.Set'); }
-function meta::external::language::java::factory::javaEnumSet():                meta::external::language::java::metamodel::Class[1] { javaClass('java.util.EnumSet'); }
-function meta::external::language::java::factory::javaHashMap():                meta::external::language::java::metamodel::Class[1] { javaClass(util(),'HashMap'); }
-function meta::external::language::java::factory::javaTreeMap():                meta::external::language::java::metamodel::Class[1] { javaClass('java.util.TreeMap'); }
-function meta::external::language::java::factory::javaCalendar():               meta::external::language::java::metamodel::Class[1] { javaClass(util(),'Calendar'); }
-function meta::external::language::java::factory::javaGregorianCalendar():      meta::external::language::java::metamodel::Class[1] { javaClass('java.util.GregorianCalendar'); }
-function meta::external::language::java::factory::javaSpliterator():            meta::external::language::java::metamodel::Class[1] { javaClass('java.util.Spliterator'); }
-function meta::external::language::java::factory::javaSpliterators():           meta::external::language::java::metamodel::Class[1] { javaClass('java.util.Spliterators'); }
+function platform::external::language::java::factory::javaNoSuchElementException(): platform::external::language::java::metamodel::Class[1] { javaClass('java.util.NoSuchElementException'); }
+function platform::external::language::java::factory::javaArrays():                 platform::external::language::java::metamodel::Class[1] { javaClass(util(),'Arrays'); }
+function platform::external::language::java::factory::javaCollections():            platform::external::language::java::metamodel::Class[1] { javaClass(util(),'Collections'); }
+function platform::external::language::java::factory::javaLocale():                 platform::external::language::java::metamodel::Class[1] { javaClass('java.util.Locale'); }
+function platform::external::language::java::factory::javaObjects():                platform::external::language::java::metamodel::Class[1] { javaClass('java.util.Objects'); }
+function platform::external::language::java::factory::javaList():                   platform::external::language::java::metamodel::Class[1] { javaClass(util(),'List'); }
+function platform::external::language::java::factory::javaArrayList():              platform::external::language::java::metamodel::Class[1] { javaClass(util(),'ArrayList'); }
+function platform::external::language::java::factory::javaLinkedList():             platform::external::language::java::metamodel::Class[1] { javaClass('java.util.LinkedList'); }
+function platform::external::language::java::factory::javaSet():                    platform::external::language::java::metamodel::Class[1] { javaClass('java.util.Set'); }
+function platform::external::language::java::factory::javaEnumSet():                platform::external::language::java::metamodel::Class[1] { javaClass('java.util.EnumSet'); }
+function platform::external::language::java::factory::javaHashMap():                platform::external::language::java::metamodel::Class[1] { javaClass(util(),'HashMap'); }
+function platform::external::language::java::factory::javaTreeMap():                platform::external::language::java::metamodel::Class[1] { javaClass('java.util.TreeMap'); }
+function platform::external::language::java::factory::javaCalendar():               platform::external::language::java::metamodel::Class[1] { javaClass(util(),'Calendar'); }
+function platform::external::language::java::factory::javaGregorianCalendar():      platform::external::language::java::metamodel::Class[1] { javaClass('java.util.GregorianCalendar'); }
+function platform::external::language::java::factory::javaSpliterator():            platform::external::language::java::metamodel::Class[1] { javaClass('java.util.Spliterator'); }
+function platform::external::language::java::factory::javaSpliterators():           platform::external::language::java::metamodel::Class[1] { javaClass('java.util.Spliterators'); }
 
-function meta::external::language::java::factory::javaInstant():                meta::external::language::java::metamodel::Class[1] { javaClass('java.time.Instant'); }
-function meta::external::language::java::factory::javaLocalDate():              meta::external::language::java::metamodel::Class[1] { javaClass('java.time.LocalDate'); }
+function platform::external::language::java::factory::javaInstant():                platform::external::language::java::metamodel::Class[1] { javaClass('java.time.Instant'); }
+function platform::external::language::java::factory::javaLocalDate():              platform::external::language::java::metamodel::Class[1] { javaClass('java.time.LocalDate'); }
 
-function meta::external::language::java::factory::javaCollector():              meta::external::language::java::metamodel::Class[1] { javaClass(stream(),'Collector'); }
-function meta::external::language::java::factory::javaCollectors():             meta::external::language::java::metamodel::Class[1] { javaClass(stream(),'Collectors'); }
-function meta::external::language::java::factory::javaLongStream():             meta::external::language::java::metamodel::Class[1] { javaClass(stream(),'LongStream'); }
-function meta::external::language::java::factory::javaStreamSupport():          meta::external::language::java::metamodel::Class[1] { javaClass(stream(),'StreamSupport'); }
+function platform::external::language::java::factory::javaCollector():              platform::external::language::java::metamodel::Class[1] { javaClass(stream(),'Collector'); }
+function platform::external::language::java::factory::javaCollectors():             platform::external::language::java::metamodel::Class[1] { javaClass(stream(),'Collectors'); }
+function platform::external::language::java::factory::javaLongStream():             platform::external::language::java::metamodel::Class[1] { javaClass(stream(),'LongStream'); }
+function platform::external::language::java::factory::javaStreamSupport():          platform::external::language::java::metamodel::Class[1] { javaClass(stream(),'StreamSupport'); }
 
-function meta::external::language::java::factory::javaConcurrentHashMap():      meta::external::language::java::metamodel::Class[1] { javaClass('java.util.concurrent.ConcurrentHashMap'); }
+function platform::external::language::java::factory::javaConcurrentHashMap():      platform::external::language::java::metamodel::Class[1] { javaClass('java.util.concurrent.ConcurrentHashMap'); }
 
-function meta::external::language::java::factory::javaDecimalFormat():          meta::external::language::java::metamodel::Class[1] { javaClass('java.text.DecimalFormat'); }
-function meta::external::language::java::factory::javaDecimalFormatSymbols():   meta::external::language::java::metamodel::Class[1] { javaClass('java.text.DecimalFormatSymbols'); }
+function platform::external::language::java::factory::javaDecimalFormat():          platform::external::language::java::metamodel::Class[1] { javaClass('java.text.DecimalFormat'); }
+function platform::external::language::java::factory::javaDecimalFormatSymbols():   platform::external::language::java::metamodel::Class[1] { javaClass('java.text.DecimalFormatSymbols'); }
 
-function meta::external::language::java::factory::javaResultSet():              meta::external::language::java::metamodel::Class[1] { javaClass('java.sql.ResultSet'); }
-function meta::external::language::java::factory::javaSqlDate():                meta::external::language::java::metamodel::Class[1] { javaClass('java.sql.Date'); }
-function meta::external::language::java::factory::javaSqlTimestamp():                meta::external::language::java::metamodel::Class[1] { javaClass('java.sql.Timestamp'); }
+function platform::external::language::java::factory::javaResultSet():              platform::external::language::java::metamodel::Class[1] { javaClass('java.sql.ResultSet'); }
+function platform::external::language::java::factory::javaSqlDate():                platform::external::language::java::metamodel::Class[1] { javaClass('java.sql.Date'); }
+function platform::external::language::java::factory::javaSqlTimestamp():                platform::external::language::java::metamodel::Class[1] { javaClass('java.sql.Timestamp'); }
 
-function meta::external::language::java::factory::javaUUID():                   meta::external::language::java::metamodel::Class[1] { javaClass('java.util.UUID');}
+function platform::external::language::java::factory::javaUUID():                   platform::external::language::java::metamodel::Class[1] { javaClass('java.util.UUID');}
 
-function meta::external::language::java::factory::javaCollection(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaCollection(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Collection'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Collection'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaList(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaList(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.List'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.List'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaQueue(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaQueue(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Queue'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Queue'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaArrayList(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaArrayList(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.ArrayList'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.ArrayList'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaLinkedList(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaLinkedList(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.LinkedList'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.LinkedList'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaSet(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaSet(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaSet(), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaSet(), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaEnumSet(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaEnumSet(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaEnumSet(), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaEnumSet(), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaMap(key:meta::external::language::java::metamodel::Type[1], value:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaMap(key:platform::external::language::java::metamodel::Type[1], value:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Map'), typeArguments=[$key->toBoxed(), $value->toBoxed()]);
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Map'), typeArguments=[$key->toBoxed(), $value->toBoxed()]);
 }
 
-function meta::external::language::java::factory::javaTreeMap(key:meta::external::language::java::metamodel::Type[1], value:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaTreeMap(key:platform::external::language::java::metamodel::Type[1], value:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaTreeMap(), typeArguments=[$key->toBoxed(), $value->toBoxed()]);
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaTreeMap(), typeArguments=[$key->toBoxed(), $value->toBoxed()]);
 }
 
-function meta::external::language::java::factory::javaHashMap(key:meta::external::language::java::metamodel::Type[1], value:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaHashMap(key:platform::external::language::java::metamodel::Type[1], value:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaHashMap(), typeArguments=[$key->toBoxed(), $value->toBoxed()]);
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaHashMap(), typeArguments=[$key->toBoxed(), $value->toBoxed()]);
 }
 
-function meta::external::language::java::factory::javaStack(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaStack(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Stack'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Stack'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaWildcard() : meta::external::language::java::metamodel::WildcardType[1]
+function platform::external::language::java::factory::javaWildcard() : platform::external::language::java::metamodel::WildcardType[1]
 {
    javaWildcardType([], []);
 }
 
-function meta::external::language::java::factory::javaWildcardExtends(extend:meta::external::language::java::metamodel::Type[*]) : meta::external::language::java::metamodel::WildcardType[1]
+function platform::external::language::java::factory::javaWildcardExtends(extend:platform::external::language::java::metamodel::Type[*]) : platform::external::language::java::metamodel::WildcardType[1]
 {
    javaWildcardType([], $extend);
 }
 
-function meta::external::language::java::factory::javaWildcardSuper(super:meta::external::language::java::metamodel::Type[*]) : meta::external::language::java::metamodel::WildcardType[1]
+function platform::external::language::java::factory::javaWildcardSuper(super:platform::external::language::java::metamodel::Type[*]) : platform::external::language::java::metamodel::WildcardType[1]
 {
    javaWildcardType($super, []);
 }
 
-function meta::external::language::java::factory::javaWildcardType(super:meta::external::language::java::metamodel::Type[*], extend:meta::external::language::java::metamodel::Type[*]) : meta::external::language::java::metamodel::WildcardType[1]
+function platform::external::language::java::factory::javaWildcardType(super:platform::external::language::java::metamodel::Type[*], extend:platform::external::language::java::metamodel::Type[*]) : platform::external::language::java::metamodel::WildcardType[1]
 {
-   ^meta::external::language::java::metamodel::WildcardType(lowerBounds=$super, upperBounds=$extend);
+   ^platform::external::language::java::metamodel::WildcardType(lowerBounds=$super, upperBounds=$extend);
 }
 
-function meta::external::language::java::factory::javaParameterizedType(rawType:meta::external::language::java::metamodel::Class[1], typeArguments:meta::external::language::java::metamodel::Type[*]) : meta::external::language::java::metamodel::ParameterizedType[1]
+function platform::external::language::java::factory::javaParameterizedType(rawType:platform::external::language::java::metamodel::Class[1], typeArguments:platform::external::language::java::metamodel::Type[*]) : platform::external::language::java::metamodel::ParameterizedType[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=$rawType, typeArguments=$typeArguments)
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=$rawType, typeArguments=$typeArguments)
 }
 
-function meta::external::language::java::factory::javaArray(rawType:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Array[1]
+function platform::external::language::java::factory::javaArray(rawType:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Array[1]
 {
-   ^meta::external::language::java::metamodel::Array(rawType=$rawType)
+   ^platform::external::language::java::metamodel::Array(rawType=$rawType)
 }
 
-function meta::external::language::java::factory::javaClassType(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::ParameterizedType[1]
+function platform::external::language::java::factory::javaClassType(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::ParameterizedType[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.lang.Class'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.lang.Class'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaSpliterator(t:meta::external::language::java::metamodel::Type[1]): meta::external::language::java::metamodel::ParameterizedType[1]
+function platform::external::language::java::factory::javaSpliterator(t:platform::external::language::java::metamodel::Type[1]): platform::external::language::java::metamodel::ParameterizedType[1]
 { 
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaSpliterator(), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaSpliterator(), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaStream(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::ParameterizedType[1]
+function platform::external::language::java::factory::javaStream(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::ParameterizedType[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaStream(), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaStream(), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaStream() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaStream() : platform::external::language::java::metamodel::Class[1]
 {
    javaClass('java.util.stream.Stream');
 }
 
-function meta::external::language::java::factory::javaOptional() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaOptional() : platform::external::language::java::metamodel::Class[1]
 {
    javaClass('java.util.Optional');
 }
 
-function meta::external::language::java::factory::javaOptional(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::ParameterizedType[1]
+function platform::external::language::java::factory::javaOptional(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::ParameterizedType[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Optional'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Optional'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaIterator(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaIterator(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Iterator'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Iterator'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaConsumer(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaConsumer(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.Consumer'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.Consumer'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaSupplier(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaSupplier(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.Supplier'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.Supplier'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaLongPredicate() : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaLongPredicate() : platform::external::language::java::metamodel::Type[1]
 {
    javaClass('java.util.function.LongPredicate');
 }
 
-function meta::external::language::java::factory::javaPredicate(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaPredicate(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-    ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.Predicate'), typeArguments=$t->toBoxed());
+    ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.Predicate'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaBiPredicate(t:meta::external::language::java::metamodel::Type[1],u:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaBiPredicate(t:platform::external::language::java::metamodel::Type[1],u:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-    ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.BiPredicate'), typeArguments=[$t->toBoxed(), $u->toBoxed()]);
+    ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.BiPredicate'), typeArguments=[$t->toBoxed(), $u->toBoxed()]);
 }
 
-function meta::external::language::java::factory::javaLongUnaryOperator() : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaLongUnaryOperator() : platform::external::language::java::metamodel::Type[1]
 {
    javaClass('java.util.function.LongUnaryOperator');
 }
 
-function meta::external::language::java::factory::javaObject() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaObject() : platform::external::language::java::metamodel::Class[1]
 {
-   ^meta::external::language::java::metamodel::Class(simpleName = 'Object', package = ^meta::external::language::java::metamodel::Package(name = 'lang', parent = ^meta::external::language::java::metamodel::Package(name = 'java')));
+   ^platform::external::language::java::metamodel::Class(simpleName = 'Object', package = ^platform::external::language::java::metamodel::Package(name = 'lang', parent = ^platform::external::language::java::metamodel::Package(name = 'java')));
 }
 
-function meta::external::language::java::factory::javaComparable(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaComparable(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.lang.Comparable'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.lang.Comparable'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaComparable() : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaComparable() : platform::external::language::java::metamodel::Type[1]
 {
    javaClass('java.lang.Comparable');
 }
 
-function meta::external::language::java::factory::javaComparator(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaComparator(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Comparator'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.Comparator'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaComparator() : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaComparator() : platform::external::language::java::metamodel::Type[1]
 {
    javaClass('java.util.Comparator');
 }
 
-function meta::external::language::java::factory::javaFunction(t:meta::external::language::java::metamodel::Type[1], r:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaFunction(t:platform::external::language::java::metamodel::Type[1], r:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.Function'), typeArguments=[$t->toBoxed(), $r->toBoxed()]);
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.Function'), typeArguments=[$t->toBoxed(), $r->toBoxed()]);
 }
 
-function meta::external::language::java::factory::javaBiFunction(t:meta::external::language::java::metamodel::Type[1], u:meta::external::language::java::metamodel::Type[1], r:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaBiFunction(t:platform::external::language::java::metamodel::Type[1], u:platform::external::language::java::metamodel::Type[1], r:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.BiFunction'), typeArguments=[$t->toBoxed(), $u->toBoxed(), $r->toBoxed()]);
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.BiFunction'), typeArguments=[$t->toBoxed(), $u->toBoxed(), $r->toBoxed()]);
 }
 
-function meta::external::language::java::factory::javaBinaryOperator(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaBinaryOperator(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.BinaryOperator'), typeArguments=[$t->toBoxed()]);
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.util.function.BinaryOperator'), typeArguments=[$t->toBoxed()]);
 }
 
-function meta::external::language::java::factory::javaInputStream() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaInputStream() : platform::external::language::java::metamodel::Class[1]
 {
    javaClass('java.io.InputStream');
 }
 
-function meta::external::language::java::factory::javaClass(t:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaClass(t:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
-   ^meta::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.lang.Class'), typeArguments=$t->toBoxed());
+   ^platform::external::language::java::metamodel::ParameterizedType(rawType=javaClass('java.lang.Class'), typeArguments=$t->toBoxed());
 }
 
-function meta::external::language::java::factory::javaBufferedReader() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaBufferedReader() : platform::external::language::java::metamodel::Class[1]
 {
-   ^meta::external::language::java::metamodel::Class(simpleName = 'BufferedReader', package = ^meta::external::language::java::metamodel::Package(name = 'io', parent = ^meta::external::language::java::metamodel::Package(name = 'java')));
+   ^platform::external::language::java::metamodel::Class(simpleName = 'BufferedReader', package = ^platform::external::language::java::metamodel::Package(name = 'io', parent = ^platform::external::language::java::metamodel::Package(name = 'java')));
 }
 
-function meta::external::language::java::factory::javaException() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaException() : platform::external::language::java::metamodel::Class[1]
 {
    javaClass('java.lang.Exception');
 }
 
-function meta::external::language::java::factory::javaString() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaString() : platform::external::language::java::metamodel::Class[1]
 {
-   ^meta::external::language::java::metamodel::Class(simpleName = 'String', package = ^meta::external::language::java::metamodel::Package(name = 'lang', parent = ^meta::external::language::java::metamodel::Package(name = 'java')));
+   ^platform::external::language::java::metamodel::Class(simpleName = 'String', package = ^platform::external::language::java::metamodel::Package(name = 'lang', parent = ^platform::external::language::java::metamodel::Package(name = 'java')));
 }
 
-function meta::external::language::java::factory::javaVoid() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaVoid() : platform::external::language::java::metamodel::Class[1]
 {
-   ^meta::external::language::java::metamodel::Class(simpleName = 'Void', package = ^meta::external::language::java::metamodel::Package(name = 'lang', parent = ^meta::external::language::java::metamodel::Package(name = 'java')));
+   ^platform::external::language::java::metamodel::Class(simpleName = 'Void', package = ^platform::external::language::java::metamodel::Package(name = 'lang', parent = ^platform::external::language::java::metamodel::Package(name = 'java')));
 }
 
-function meta::external::language::java::factory::javaByteClass() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaByteClass() : platform::external::language::java::metamodel::Class[1]
 {
-   ^meta::external::language::java::metamodel::Class(simpleName = 'Byte', package = ^meta::external::language::java::metamodel::Package(name = 'lang', parent = ^meta::external::language::java::metamodel::Package(name = 'java')));
+   ^platform::external::language::java::metamodel::Class(simpleName = 'Byte', package = ^platform::external::language::java::metamodel::Package(name = 'lang', parent = ^platform::external::language::java::metamodel::Package(name = 'java')));
 }
 
-function meta::external::language::java::factory::javaByte() : meta::external::language::java::metamodel::PrimitiveType[1]
+function platform::external::language::java::factory::javaByte() : platform::external::language::java::metamodel::PrimitiveType[1]
 {
-   ^meta::external::language::java::metamodel::PrimitiveType(simpleName = 'byte');
+   ^platform::external::language::java::metamodel::PrimitiveType(simpleName = 'byte');
 }
 
-function meta::external::language::java::factory::javaShort() : meta::external::language::java::metamodel::PrimitiveType[1]
+function platform::external::language::java::factory::javaShort() : platform::external::language::java::metamodel::PrimitiveType[1]
 {
-   ^meta::external::language::java::metamodel::PrimitiveType(simpleName = 'short');
+   ^platform::external::language::java::metamodel::PrimitiveType(simpleName = 'short');
 }
 
-function meta::external::language::java::factory::javaInt() : meta::external::language::java::metamodel::PrimitiveType[1]
+function platform::external::language::java::factory::javaInt() : platform::external::language::java::metamodel::PrimitiveType[1]
 {
-   ^meta::external::language::java::metamodel::PrimitiveType(simpleName = 'int');
+   ^platform::external::language::java::metamodel::PrimitiveType(simpleName = 'int');
 }
 
-function meta::external::language::java::factory::javaLong() : meta::external::language::java::metamodel::PrimitiveType[1]
+function platform::external::language::java::factory::javaLong() : platform::external::language::java::metamodel::PrimitiveType[1]
 {
-   ^meta::external::language::java::metamodel::PrimitiveType(simpleName = 'long');
+   ^platform::external::language::java::metamodel::PrimitiveType(simpleName = 'long');
 }
 
-function meta::external::language::java::factory::javaLongMax() : Code[1]
+function platform::external::language::java::factory::javaLongMax() : Code[1]
 {
     javaLongBoxed()->j_field('MAX_VALUE', javaLong());
 }
 
-function meta::external::language::java::factory::javaLongMin() : Code[1]
+function platform::external::language::java::factory::javaLongMin() : Code[1]
 {
     javaLongBoxed()->j_field('MIN_VALUE', javaLong());
 }
 
-function meta::external::language::java::factory::javaFloat() : meta::external::language::java::metamodel::PrimitiveType[1]
+function platform::external::language::java::factory::javaFloat() : platform::external::language::java::metamodel::PrimitiveType[1]
 {
-   ^meta::external::language::java::metamodel::PrimitiveType(simpleName = 'float');
+   ^platform::external::language::java::metamodel::PrimitiveType(simpleName = 'float');
 }
 
-function meta::external::language::java::factory::javaDouble() : meta::external::language::java::metamodel::PrimitiveType[1]
+function platform::external::language::java::factory::javaDouble() : platform::external::language::java::metamodel::PrimitiveType[1]
 {
-   ^meta::external::language::java::metamodel::PrimitiveType(simpleName = 'double');
+   ^platform::external::language::java::metamodel::PrimitiveType(simpleName = 'double');
 }
 
-function meta::external::language::java::factory::javaBoolean() : meta::external::language::java::metamodel::PrimitiveType[1]
+function platform::external::language::java::factory::javaBoolean() : platform::external::language::java::metamodel::PrimitiveType[1]
 {
-   ^meta::external::language::java::metamodel::PrimitiveType(simpleName = 'boolean');
+   ^platform::external::language::java::metamodel::PrimitiveType(simpleName = 'boolean');
 }
 
-function meta::external::language::java::factory::javaChar() : meta::external::language::java::metamodel::PrimitiveType[1]
+function platform::external::language::java::factory::javaChar() : platform::external::language::java::metamodel::PrimitiveType[1]
 {
-   ^meta::external::language::java::metamodel::PrimitiveType(simpleName = 'char');
+   ^platform::external::language::java::metamodel::PrimitiveType(simpleName = 'char');
 }
 
-function meta::external::language::java::factory::toBoxed(type:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::toBoxed(type:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
    if($type == javaBoolean(),
       | javaClass('java.lang.Boolean'),
@@ -400,7 +401,7 @@ function meta::external::language::java::factory::toBoxed(type:meta::external::l
    ))))))));
 }
 
-function meta::external::language::java::factory::toUnboxed(type:meta::external::language::java::metamodel::Type[1]) : meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::toUnboxed(type:platform::external::language::java::metamodel::Type[1]) : platform::external::language::java::metamodel::Type[1]
 {
    if($type == javaClass('java.lang.Boolean'),
       | javaBoolean(),
@@ -429,51 +430,51 @@ function meta::external::language::java::factory::toUnboxed(type:meta::external:
    ))))))));
 }
 
-function meta::external::language::java::factory::javaBooleanBoxed() : meta::external::language::java::metamodel::Class[1] { javaBoolean()->toBoxed()->cast(@meta::external::language::java::metamodel::Class); }
-function meta::external::language::java::factory::javaByteBoxed()    : meta::external::language::java::metamodel::Class[1] { javaByte()   ->toBoxed()->cast(@meta::external::language::java::metamodel::Class); }
-function meta::external::language::java::factory::javaCharBoxed()    : meta::external::language::java::metamodel::Class[1] { javaChar()   ->toBoxed()->cast(@meta::external::language::java::metamodel::Class); }
-function meta::external::language::java::factory::javaIntBoxed()     : meta::external::language::java::metamodel::Class[1] { javaInt()    ->toBoxed()->cast(@meta::external::language::java::metamodel::Class); }
-function meta::external::language::java::factory::javaLongBoxed()    : meta::external::language::java::metamodel::Class[1] { javaLong()   ->toBoxed()->cast(@meta::external::language::java::metamodel::Class); }
-function meta::external::language::java::factory::javaShortBoxed()   : meta::external::language::java::metamodel::Class[1] { javaShort()  ->toBoxed()->cast(@meta::external::language::java::metamodel::Class); }
-function meta::external::language::java::factory::javaFloatBoxed()   : meta::external::language::java::metamodel::Class[1] { javaFloat()  ->toBoxed()->cast(@meta::external::language::java::metamodel::Class); }
-function meta::external::language::java::factory::javaDoubleBoxed()  : meta::external::language::java::metamodel::Class[1] { javaDouble() ->toBoxed()->cast(@meta::external::language::java::metamodel::Class); }
+function platform::external::language::java::factory::javaBooleanBoxed() : platform::external::language::java::metamodel::Class[1] { javaBoolean()->toBoxed()->cast(@platform::external::language::java::metamodel::Class); }
+function platform::external::language::java::factory::javaByteBoxed()    : platform::external::language::java::metamodel::Class[1] { javaByte()   ->toBoxed()->cast(@platform::external::language::java::metamodel::Class); }
+function platform::external::language::java::factory::javaCharBoxed()    : platform::external::language::java::metamodel::Class[1] { javaChar()   ->toBoxed()->cast(@platform::external::language::java::metamodel::Class); }
+function platform::external::language::java::factory::javaIntBoxed()     : platform::external::language::java::metamodel::Class[1] { javaInt()    ->toBoxed()->cast(@platform::external::language::java::metamodel::Class); }
+function platform::external::language::java::factory::javaLongBoxed()    : platform::external::language::java::metamodel::Class[1] { javaLong()   ->toBoxed()->cast(@platform::external::language::java::metamodel::Class); }
+function platform::external::language::java::factory::javaShortBoxed()   : platform::external::language::java::metamodel::Class[1] { javaShort()  ->toBoxed()->cast(@platform::external::language::java::metamodel::Class); }
+function platform::external::language::java::factory::javaFloatBoxed()   : platform::external::language::java::metamodel::Class[1] { javaFloat()  ->toBoxed()->cast(@platform::external::language::java::metamodel::Class); }
+function platform::external::language::java::factory::javaDoubleBoxed()  : platform::external::language::java::metamodel::Class[1] { javaDouble() ->toBoxed()->cast(@platform::external::language::java::metamodel::Class); }
 
-function meta::external::language::java::factory::javaDate() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaDate() : platform::external::language::java::metamodel::Class[1]
 {
    javaClass('java.util.Date');
 }
 
-function meta::external::language::java::factory::javaNumber() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaNumber() : platform::external::language::java::metamodel::Class[1]
 {
    javaClass('java.lang.Number');
 }
 
-function meta::external::language::java::factory::javaBigInteger() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaBigInteger() : platform::external::language::java::metamodel::Class[1]
 {
    javaClass('java.math.BigInteger');
 }
 
-function meta::external::language::java::factory::javaBigDecimal() : meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaBigDecimal() : platform::external::language::java::metamodel::Class[1]
 {
    javaClass('java.math.BigDecimal');
 }
 
-function meta::external::language::java::factory::javaPackage(package:String[1]):meta::external::language::java::metamodel::Package[1]
+function platform::external::language::java::factory::javaPackage(package:String[1]):platform::external::language::java::metamodel::Package[1]
 {
    let split = $package->split('.');
    let size = $split->size();
    if($size<=1,
-       |^meta::external::language::java::metamodel::Package(name=$package,fullPath=$package),
+       |^platform::external::language::java::metamodel::Package(name=$package,fullPath=$package),
        |   $split->packageFromList($package);
      );
 }
 
-function meta::external::language::java::factory::javaEnum(pkg:meta::external::language::java::metamodel::Package[1], name:String[1]): meta::external::language::java::metamodel::Enumeration[1]
+function platform::external::language::java::factory::javaEnum(pkg:platform::external::language::java::metamodel::Package[1], name:String[1]): platform::external::language::java::metamodel::Enumeration[1]
 {
    javaEnum([], $pkg, $name);
 }
 
-function meta::external::language::java::factory::javaEnum(modifiers:String[*], qualifiedName:String[1]): meta::external::language::java::metamodel::Enumeration[1]
+function platform::external::language::java::factory::javaEnum(modifiers:String[*], qualifiedName:String[1]): platform::external::language::java::metamodel::Enumeration[1]
 {
    let split =  $qualifiedName->split('.');
    let size = $split->size();
@@ -482,57 +483,57 @@ function meta::external::language::java::factory::javaEnum(modifiers:String[*], 
    javaEnum($modifiers, $package, $name);
 }
 
-function meta::external::language::java::factory::javaEnum(modifiers:String[*], pkg:meta::external::language::java::metamodel::Package[1], name:String[1]): meta::external::language::java::metamodel::Enumeration[1]
+function platform::external::language::java::factory::javaEnum(modifiers:String[*], pkg:platform::external::language::java::metamodel::Package[1], name:String[1]): platform::external::language::java::metamodel::Enumeration[1]
 {
-   ^meta::external::language::java::metamodel::Enumeration(modifiers=$modifiers->javaModifiers(), package=$pkg, simpleName=$name);
+   ^platform::external::language::java::metamodel::Enumeration(modifiers=$modifiers->javaModifiers(), package=$pkg, simpleName=$name);
 }
 
-function meta::external::language::java::factory::addEntry(enum:meta::external::language::java::metamodel::Enumeration[1], entry:meta::external::language::java::metamodel::EnumerationEntry[1]): meta::external::language::java::metamodel::Enumeration[1]
+function platform::external::language::java::factory::addEntry(enum:platform::external::language::java::metamodel::Enumeration[1], entry:platform::external::language::java::metamodel::EnumerationEntry[1]): platform::external::language::java::metamodel::Enumeration[1]
 {
    $enum->addEntries($entry);
 }
 
-function meta::external::language::java::factory::addEntries(enum:meta::external::language::java::metamodel::Enumeration[1], entries:meta::external::language::java::metamodel::EnumerationEntry[*]): meta::external::language::java::metamodel::Enumeration[1]
+function platform::external::language::java::factory::addEntries(enum:platform::external::language::java::metamodel::Enumeration[1], entries:platform::external::language::java::metamodel::EnumerationEntry[*]): platform::external::language::java::metamodel::Enumeration[1]
 {
    ^$enum(enumeration=$enum.enumeration->concatenate($entries));
 }
 
-function meta::external::language::java::factory::javaEnumEntry(name:String[1]): meta::external::language::java::metamodel::EnumerationEntry[1]
+function platform::external::language::java::factory::javaEnumEntry(name:String[1]): platform::external::language::java::metamodel::EnumerationEntry[1]
 {
-   ^meta::external::language::java::metamodel::EnumerationEntry(name=$name);
+   ^platform::external::language::java::metamodel::EnumerationEntry(name=$name);
 }
 
-function meta::external::language::java::factory::javaEnumEntry(name:String[1], args:Code[*]): meta::external::language::java::metamodel::EnumerationEntry[1]
+function platform::external::language::java::factory::javaEnumEntry(name:String[1], args:Code[*]): platform::external::language::java::metamodel::EnumerationEntry[1]
 {
-   ^meta::external::language::java::metamodel::EnumerationEntry(name=$name, arguments=$args);
+   ^platform::external::language::java::metamodel::EnumerationEntry(name=$name, arguments=$args);
 }
 
-function meta::external::language::java::factory::javaEnumEntry(name:String[1], args:String[1]): meta::external::language::java::metamodel::EnumerationEntry[1]
+function platform::external::language::java::factory::javaEnumEntry(name:String[1], args:String[1]): platform::external::language::java::metamodel::EnumerationEntry[1]
 {
-   ^meta::external::language::java::metamodel::EnumerationEntry(name=$name, value=$args);
+   ^platform::external::language::java::metamodel::EnumerationEntry(name=$name, value=$args);
 }
 
-function meta::external::language::java::factory::javaClass(fullClassName:String[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(fullClassName:String[1]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass([], $fullClassName);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], fullClassName:String[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], fullClassName:String[1]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($modifiers, [], $fullClassName);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], proto:meta::external::language::java::metamodel::Class[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], proto:platform::external::language::java::metamodel::Class[1]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($modifiers, [], $proto->typeToString());
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], typeParams:meta::external::language::java::metamodel::TypeVariable[*], proto:meta::external::language::java::metamodel::Class[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], typeParams:platform::external::language::java::metamodel::TypeVariable[*], proto:platform::external::language::java::metamodel::Class[1]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($modifiers, $typeParams, $proto->typeToString());
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], typeParams:meta::external::language::java::metamodel::TypeVariable[*], fullClassName:String[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], typeParams:platform::external::language::java::metamodel::TypeVariable[*], fullClassName:String[1]):platform::external::language::java::metamodel::Class[1]
 {
    let split =  $fullClassName->split('.');
    let size = $split->size();
@@ -543,87 +544,87 @@ function meta::external::language::java::factory::javaClass(modifiers:String[*],
 }
 
 
-function meta::external::language::java::factory::javaClass(pkg:meta::external::language::java::metamodel::Package[1], name:String[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(pkg:platform::external::language::java::metamodel::Package[1], name:String[1]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass([], $pkg, $name);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], pkg:meta::external::language::java::metamodel::Package[1], name:String[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], pkg:platform::external::language::java::metamodel::Package[1], name:String[1]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($modifiers, [], $pkg, $name);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], typeParams:meta::external::language::java::metamodel::TypeVariable[*], pkg:meta::external::language::java::metamodel::Package[1], name:String[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], typeParams:platform::external::language::java::metamodel::TypeVariable[*], pkg:platform::external::language::java::metamodel::Package[1], name:String[1]):platform::external::language::java::metamodel::Class[1]
 {
-   ^meta::external::language::java::metamodel::Class(modifiers=$modifiers->javaModifiers(), typeParameters=$typeParams, package=$pkg, simpleName=$name);
+   ^platform::external::language::java::metamodel::Class(modifiers=$modifiers->javaModifiers(), typeParameters=$typeParams, package=$pkg, simpleName=$name);
 }
 
-function meta::external::language::java::factory::javaClass(proto:meta::external::language::java::metamodel::Class[1], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(proto:platform::external::language::java::metamodel::Class[1], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($proto, [], $methods);
 }
 
-function meta::external::language::java::factory::javaClass(proto:meta::external::language::java::metamodel::Class[1], fields:meta::external::language::java::metamodel::Field[*], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(proto:platform::external::language::java::metamodel::Class[1], fields:platform::external::language::java::metamodel::Field[*], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
-   javaClass([]->cast(@meta::external::language::java::metamodel::TypeVariable), $proto, $fields, $methods);
+   javaClass([]->cast(@platform::external::language::java::metamodel::TypeVariable), $proto, $fields, $methods);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], proto:meta::external::language::java::metamodel::Class[1], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], proto:platform::external::language::java::metamodel::Class[1], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($modifiers, $proto, [], $methods);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], proto:meta::external::language::java::metamodel::Class[1], fields:meta::external::language::java::metamodel::Field[*], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], proto:platform::external::language::java::metamodel::Class[1], fields:platform::external::language::java::metamodel::Field[*], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($modifiers, [], $proto->typeToString(), $fields, $methods);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], fullClassName:String[1], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], fullClassName:String[1], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($modifiers, [], $fullClassName, [], $methods);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], fullClassName:String[1], fields:meta::external::language::java::metamodel::Field[*], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], fullClassName:String[1], fields:platform::external::language::java::metamodel::Field[*], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($modifiers, [], $fullClassName, $fields, $methods);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], typeParams:meta::external::language::java::metamodel::TypeVariable[*], fullClassName:String[1], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], typeParams:platform::external::language::java::metamodel::TypeVariable[*], fullClassName:String[1], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($modifiers, $typeParams, $fullClassName, [], $methods);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], typeParams:meta::external::language::java::metamodel::TypeVariable[*], fullClassName:String[1], fields:meta::external::language::java::metamodel::Field[*], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], typeParams:platform::external::language::java::metamodel::TypeVariable[*], fullClassName:String[1], fields:platform::external::language::java::metamodel::Field[*], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
 
    let split =  $fullClassName->split('.');
    let size = $split->size();
-   let package =  if($size<=1,|  ^meta::external::language::java::metamodel::Package(name='',fullPath=''),| $split->take($size-1)->packageFromList([]));
+   let package =  if($size<=1,|  ^platform::external::language::java::metamodel::Package(name='',fullPath=''),| $split->take($size-1)->packageFromList([]));
    let name    = if($size==1, |$fullClassName,|$split->at($size-1));
    javaClass($modifiers, $typeParams, $package, $name, $fields, $methods);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], typeParams:meta::external::language::java::metamodel::TypeVariable[*], pkg:meta::external::language::java::metamodel::Package[1], name:String[1], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], typeParams:platform::external::language::java::metamodel::TypeVariable[*], pkg:platform::external::language::java::metamodel::Package[1], name:String[1], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($modifiers, $typeParams, $pkg, $name, [], $methods);
 }
 
-function meta::external::language::java::factory::javaClass(modifiers:String[*], typeParams:meta::external::language::java::metamodel::TypeVariable[*], pkg:meta::external::language::java::metamodel::Package[1], name:String[1], fields:meta::external::language::java::metamodel::Field[*], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(modifiers:String[*], typeParams:platform::external::language::java::metamodel::TypeVariable[*], pkg:platform::external::language::java::metamodel::Package[1], name:String[1], fields:platform::external::language::java::metamodel::Field[*], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($typeParams, javaClass($modifiers, [], $pkg, $name), $fields, $methods);
 }
 
-function meta::external::language::java::factory::javaClass(typeParams:meta::external::language::java::metamodel::TypeVariable[*], proto:meta::external::language::java::metamodel::Class[1], fields:meta::external::language::java::metamodel::Field[*], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(typeParams:platform::external::language::java::metamodel::TypeVariable[*], proto:platform::external::language::java::metamodel::Class[1], fields:platform::external::language::java::metamodel::Field[*], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass($typeParams, $proto, $fields, [], $methods);
 }
 
-function meta::external::language::java::factory::javaClass(proto:meta::external::language::java::metamodel::Class[1], fields:meta::external::language::java::metamodel::Field[*], constructors:Pair<meta::external::language::java::metamodel::Constructor,Code>[*], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(proto:platform::external::language::java::metamodel::Class[1], fields:platform::external::language::java::metamodel::Field[*], constructors:Pair<platform::external::language::java::metamodel::Constructor,Code>[*], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
    javaClass([], $proto, $fields, $constructors, $methods);
 }
 
-function meta::external::language::java::factory::javaClass(typeParams:meta::external::language::java::metamodel::TypeVariable[*], proto:meta::external::language::java::metamodel::Class[1], fields:meta::external::language::java::metamodel::Field[*], constructors:Pair<meta::external::language::java::metamodel::Constructor,Code>[*], methods:Pair<meta::external::language::java::metamodel::Method,Code>[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::javaClass(typeParams:platform::external::language::java::metamodel::TypeVariable[*], proto:platform::external::language::java::metamodel::Class[1], fields:platform::external::language::java::metamodel::Field[*], constructors:Pair<platform::external::language::java::metamodel::Constructor,Code>[*], methods:Pair<platform::external::language::java::metamodel::Method,Code>[*]):platform::external::language::java::metamodel::Class[1]
 {
    let interfaces       = $proto.interfaces->typesToClasses();
    let fieldClasses     = $fields.type->typesToClasses();
@@ -652,27 +653,27 @@ function meta::external::language::java::factory::javaClass(typeParams:meta::ext
    );
 }
 
-function meta::external::language::java::factory::javaType(name:String[1]):meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::javaType(name:String[1]):platform::external::language::java::metamodel::Type[1]
 {
    if(['boolean', 'byte', 'char', 'short', 'int', 'long', 'float', 'double', 'void']->contains($name),
-      | ^meta::external::language::java::metamodel::PrimitiveType(simpleName=$name),
+      | ^platform::external::language::java::metamodel::PrimitiveType(simpleName=$name),
       |  javaClass($name)
    );
 }
 
-function meta::external::language::java::factory::javaFunctionType(parameterTypes:meta::external::language::java::metamodel::Type[*], returnType:meta::external::language::java::metamodel::Type[1]):meta::external::language::java::metamodel::FunctionType[1]
+function platform::external::language::java::factory::javaFunctionType(parameterTypes:platform::external::language::java::metamodel::Type[*], returnType:platform::external::language::java::metamodel::Type[1]):platform::external::language::java::metamodel::FunctionType[1]
 {
    javaFunctionType($parameterTypes, $returnType, []);
 }
 
-function meta::external::language::java::factory::javaFunctionType(parameterTypes:meta::external::language::java::metamodel::Type[*], returnType:meta::external::language::java::metamodel::Type[1], nullResultPossible:Boolean[0..1]):meta::external::language::java::metamodel::FunctionType[1]
+function platform::external::language::java::factory::javaFunctionType(parameterTypes:platform::external::language::java::metamodel::Type[*], returnType:platform::external::language::java::metamodel::Type[1], nullResultPossible:Boolean[0..1]):platform::external::language::java::metamodel::FunctionType[1]
 {
-   ^meta::external::language::java::metamodel::FunctionType(parameterTypes=$parameterTypes, returnType=$returnType, nullResultPossible=$nullResultPossible);
+   ^platform::external::language::java::metamodel::FunctionType(parameterTypes=$parameterTypes, returnType=$returnType, nullResultPossible=$nullResultPossible);
 }
 
-function meta::external::language::java::factory::jextends(class:meta::external::language::java::metamodel::Class[1], t:meta::external::language::java::metamodel::Type[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::jextends(class:platform::external::language::java::metamodel::Class[1], t:platform::external::language::java::metamodel::Type[1]):platform::external::language::java::metamodel::Class[1]
 {
-   if($class.modifiers->contains(meta::external::language::java::metamodel::Modifier.Interface),
+   if($class.modifiers->contains(platform::external::language::java::metamodel::Modifier.Interface),
       | $class->implements($t),
       {|
          assert($class.superType->isEmpty(), |'All ready extended');
@@ -681,20 +682,20 @@ function meta::external::language::java::factory::jextends(class:meta::external:
    );
 }
 
-function meta::external::language::java::factory::implements(class:meta::external::language::java::metamodel::Class[1], t:meta::external::language::java::metamodel::Type[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::implements(class:platform::external::language::java::metamodel::Class[1], t:platform::external::language::java::metamodel::Type[*]):platform::external::language::java::metamodel::Class[1]
 {
    ^$class(interfaces = $class.interfaces->concatenate($t));
 }
 
-function meta::external::language::java::factory::imports(class:meta::external::language::java::metamodel::Class[1], imports:meta::external::language::java::metamodel::Importable[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::imports(class:platform::external::language::java::metamodel::Class[1], imports:platform::external::language::java::metamodel::Importable[*]):platform::external::language::java::metamodel::Class[1]
 { // TODO: this can be skipped or simplified in fast mode
-   let knownPackages = if($class->instanceOf(meta::external::language::java::factory::FactoryClass),
-                          | $class->cast(@meta::external::language::java::factory::FactoryClass).knownPackages,
-                          | meta::external::language::java::factory::knownPackage_Package_1__KnownPackage_1_
+   let knownPackages = if($class->instanceOf(platform::external::language::java::factory::FactoryClass),
+                          | $class->cast(@platform::external::language::java::factory::FactoryClass).knownPackages,
+                          | platform::external::language::java::factory::knownPackage_Package_1__KnownPackage_1_
                        );
 
-   let packages = $imports->filter(imp| $imp->instanceOf(meta::external::language::java::metamodel::Package))->cast(@meta::external::language::java::metamodel::Package)->filter(p| !$p->isJavaLang());
-   let classes  = $imports->filter(imp| $imp->instanceOf(meta::external::language::java::metamodel::Class))->cast(@meta::external::language::java::metamodel::Class)->filter(c| !$c.package->isJavaLang());
+   let packages = $imports->filter(imp| $imp->instanceOf(platform::external::language::java::metamodel::Package))->cast(@platform::external::language::java::metamodel::Package)->filter(p| !$p->isJavaLang());
+   let classes  = $imports->filter(imp| $imp->instanceOf(platform::external::language::java::metamodel::Class))->cast(@platform::external::language::java::metamodel::Class)->filter(c| !$c.package->isJavaLang());
 
    let existingImports = $class.additionalImports->map(imp| if($imp->endsWith('.*'),
                                                                |javaPackage($imp->substring(0, $imp->length()-2)),
@@ -703,14 +704,14 @@ function meta::external::language::java::factory::imports(class:meta::external::
                                                       );
    let withNewPackages = $existingImports->concatenate($packages)->removeDuplicates();
    let withoutSubsumed = $withNewPackages->filter(imp| $imp->match([
-      pkg: meta::external::language::java::metamodel::Package[1] | true,
-      cls: meta::external::language::java::metamodel::Class[1]   | !$withNewPackages->contains($cls.package)
+      pkg: platform::external::language::java::metamodel::Package[1] | true,
+      cls: platform::external::language::java::metamodel::Class[1]   | !$withNewPackages->contains($cls.package)
    ]));
 
    let importedNames = $class.simpleName
       ->concatenate($withoutSubsumed->map(imp| $imp->match([
-           pkg: meta::external::language::java::metamodel::Package[1] | $knownPackages->eval($pkg).classNames,
-           cls: meta::external::language::java::metamodel::Class[1]   | $cls.simpleName
+           pkg: platform::external::language::java::metamodel::Package[1] | $knownPackages->eval($pkg).classNames,
+           cls: platform::external::language::java::metamodel::Class[1]   | $cls.simpleName
         ])));
 
    let importableClasses = $classes->removeDuplicatesBy(c | $c.simpleName)->filter(cls| !$withoutSubsumed->contains($cls.package) && !$importedNames->contains($cls.simpleName));
@@ -719,61 +720,61 @@ function meta::external::language::java::factory::imports(class:meta::external::
    ^$class(
       additionalImports=$newImports
          ->map(imp| $imp->match([
-             pkg: meta::external::language::java::metamodel::Package[1] | $pkg->packageToString()+'.*',
-             cls: meta::external::language::java::metamodel::Class[1]   | $cls->typeToString()
+             pkg: platform::external::language::java::metamodel::Package[1] | $pkg->packageToString()+'.*',
+             cls: platform::external::language::java::metamodel::Class[1]   | $cls->typeToString()
            ]))
          ->sort()
    );
 }
 
-function meta::external::language::java::factory::annotate<T>(target:T[1], annotations:meta::external::language::java::metamodel::Annotation[*]):T[1]
+function platform::external::language::java::factory::annotate<T>(target:T[1], annotations:platform::external::language::java::metamodel::Annotation[*]):T[1]
 {
-   assert($target->instanceOf(meta::external::language::java::metamodel::AnnotatedElement), 'Cannot annotate ' + $target->type()->cast(@meta::pure::metamodel::PackageableElement).name->toOne());
-   let annotatedElement = $target->cast(@meta::external::language::java::metamodel::AnnotatedElement);
+   assert($target->instanceOf(platform::external::language::java::metamodel::AnnotatedElement), 'Cannot annotate ' + $target->type()->cast(@platform::pure::metamodel::PackageableElement).name->toOne());
+   let annotatedElement = $target->cast(@platform::external::language::java::metamodel::AnnotatedElement);
    let annotated = ^$annotatedElement(annotations=$annotatedElement.annotations->concatenate($annotations)->removeDuplicates());
    $annotated->cast(@T);
 }
 
-function meta::external::language::java::factory::javaDoc<T>(target:T[1], doc:String[1]):T[1]
+function platform::external::language::java::factory::javaDoc<T>(target:T[1], doc:String[1]):T[1]
 {
-   assert($target->instanceOf(meta::external::language::java::metamodel::AnnotatedElement), 'Cannot annotate ' + $target->type()->cast(@meta::pure::metamodel::PackageableElement).name->toOne());
-   let annotatedElement = $target->cast(@meta::external::language::java::metamodel::AnnotatedElement);
+   assert($target->instanceOf(platform::external::language::java::metamodel::AnnotatedElement), 'Cannot annotate ' + $target->type()->cast(@platform::pure::metamodel::PackageableElement).name->toOne());
+   let annotatedElement = $target->cast(@platform::external::language::java::metamodel::AnnotatedElement);
    let annotated = ^$annotatedElement(javaDoc=$doc);
    $annotated->cast(@T);
 }
 
-function meta::external::language::java::factory::addModifiers(class:meta::external::language::java::metamodel::Class[1], modifiers:String[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::addModifiers(class:platform::external::language::java::metamodel::Class[1], modifiers:String[*]):platform::external::language::java::metamodel::Class[1]
 {
    ^$class(modifiers = $class.modifiers->concatenate(javaModifiers($modifiers))->removeDuplicates());
 }
 
-function meta::external::language::java::factory::addField(class:meta::external::language::java::metamodel::Class[1], field:meta::external::language::java::metamodel::Field[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::addField(class:platform::external::language::java::metamodel::Class[1], field:platform::external::language::java::metamodel::Field[1]):platform::external::language::java::metamodel::Class[1]
 {
    ^$class(fields = $class.fields->concatenate($field));
 }
 
-function meta::external::language::java::factory::addField(class:meta::external::language::java::metamodel::Class[1], builder:Function<{meta::external::language::java::metamodel::Class[1]->meta::external::language::java::metamodel::Field[1]}>[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::addField(class:platform::external::language::java::metamodel::Class[1], builder:Function<{platform::external::language::java::metamodel::Class[1]->platform::external::language::java::metamodel::Field[1]}>[1]):platform::external::language::java::metamodel::Class[1]
 {
    ^$class(fields = $class.fields->concatenate($builder->eval($class)));
 }
 
-function meta::external::language::java::factory::addFields(class:meta::external::language::java::metamodel::Class[1], fields:meta::external::language::java::metamodel::Field[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::addFields(class:platform::external::language::java::metamodel::Class[1], fields:platform::external::language::java::metamodel::Field[*]):platform::external::language::java::metamodel::Class[1]
 {
    ^$class(fields = $class.fields->concatenate($fields));
 }
 
-function meta::external::language::java::factory::addConstructor(class:meta::external::language::java::metamodel::Class[1], constructor:meta::external::language::java::metamodel::Constructor[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::addConstructor(class:platform::external::language::java::metamodel::Class[1], constructor:platform::external::language::java::metamodel::Constructor[1]):platform::external::language::java::metamodel::Class[1]
 {
    ^$class(constructors = $class.constructors->concatenate($constructor));
 }
 
-function meta::external::language::java::factory::addConstructor(class:meta::external::language::java::metamodel::Class[1], builder:Function<{meta::external::language::java::metamodel::Class[1]->meta::external::language::java::metamodel::Constructor[1]}>[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::addConstructor(class:platform::external::language::java::metamodel::Class[1], builder:Function<{platform::external::language::java::metamodel::Class[1]->platform::external::language::java::metamodel::Constructor[1]}>[1]):platform::external::language::java::metamodel::Class[1]
 {
    ^$class(constructors = $class.constructors->concatenate($builder->eval($class)));
 }
 
 // TODO This is only needed by API knowledge so we can eliminate this if we change that to a decision instead of data structure creation (and make it more efficient)
-function meta::external::language::java::factory::addMethodIfMissing(class:meta::external::language::java::metamodel::Class[1], method:meta::external::language::java::metamodel::Method[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::addMethodIfMissing(class:platform::external::language::java::metamodel::Class[1], method:platform::external::language::java::metamodel::Method[1]):platform::external::language::java::metamodel::Class[1]
 {
    let existing = $class.methods->filter({m| $m.name == $method.name && $m.parameters.type == $method.parameters.type});
    if($existing->isEmpty(),
@@ -782,47 +783,47 @@ function meta::external::language::java::factory::addMethodIfMissing(class:meta:
    );
 }
 
-function meta::external::language::java::factory::addMethod(class:meta::external::language::java::metamodel::Class[1], method:meta::external::language::java::metamodel::Method[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::addMethod(class:platform::external::language::java::metamodel::Class[1], method:platform::external::language::java::metamodel::Method[1]):platform::external::language::java::metamodel::Class[1]
 {
    let existing = $class.methods->filter({m| $m.name == $method.name && $m.parameters.type == $method.parameters.type});
    assert($existing->isEmpty(), |$class->println(); 'Method already exists: '+$method->methodSignature(););
    ^$class(methods = $class.methods->concatenate($method->addFunctionType($class)));
 }
 
-function meta::external::language::java::factory::addMethod(class:meta::external::language::java::metamodel::Class[1], builder:Function<{meta::external::language::java::metamodel::Class[1]->meta::external::language::java::metamodel::Method[1]}>[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::addMethod(class:platform::external::language::java::metamodel::Class[1], builder:Function<{platform::external::language::java::metamodel::Class[1]->platform::external::language::java::metamodel::Method[1]}>[1]):platform::external::language::java::metamodel::Class[1]
 {
    $class->addMethod($builder->eval($class));
 }
 
-function meta::external::language::java::factory::addMethods(class:meta::external::language::java::metamodel::Class[1], methods:meta::external::language::java::metamodel::Method[*]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::addMethods(class:platform::external::language::java::metamodel::Class[1], methods:platform::external::language::java::metamodel::Method[*]):platform::external::language::java::metamodel::Class[1]
 {
    $methods->fold({m, c|$c->addMethod($m)}, $class);
 }
 
-function meta::external::language::java::factory::addMethods(class:meta::external::language::java::metamodel::Class[1], builder:Function<{meta::external::language::java::metamodel::Class[1]->meta::external::language::java::metamodel::Method[*]}>[1]):meta::external::language::java::metamodel::Class[1]
+function platform::external::language::java::factory::addMethods(class:platform::external::language::java::metamodel::Class[1], builder:Function<{platform::external::language::java::metamodel::Class[1]->platform::external::language::java::metamodel::Method[*]}>[1]):platform::external::language::java::metamodel::Class[1]
 {
    $class->addMethods($builder->eval($class));
 }
 
-function <<access.private>> meta::external::language::java::factory::addFunctionType(method:meta::external::language::java::metamodel::Method[1], onClass:meta::external::language::java::metamodel::Class[1]): meta::external::language::java::metamodel::Method[1]
+function <<access.private>> platform::external::language::java::factory::addFunctionType(method:platform::external::language::java::metamodel::Method[1], onClass:platform::external::language::java::metamodel::Class[1]): platform::external::language::java::metamodel::Method[1]
 {
-   let isStatic   = $method.modifiers->contains(meta::external::language::java::metamodel::Modifier.Static);
+   let isStatic   = $method.modifiers->contains(platform::external::language::java::metamodel::Modifier.Static);
    let paramTypes = if($isStatic, |[], |$onClass)->concatenate($method.parameters.type);
    ^$method(functionType=javaFunctionType($paramTypes, $method.returnType, $method.nullResultPossible));
 }
 
-function meta::external::language::java::factory::addAnnotation<T>(element: T[1], annotation:meta::external::language::java::metamodel::Annotation[1]):T[1]
+function platform::external::language::java::factory::addAnnotation<T>(element: T[1], annotation:platform::external::language::java::metamodel::Annotation[1]):T[1]
 {
    $element->match([
-      ae: meta::external::language::java::metamodel::AnnotatedElement[1] | ^$ae(annotations = $ae.annotations->concatenate($annotation))->cast(@T),
+      ae: platform::external::language::java::metamodel::AnnotatedElement[1] | ^$ae(annotations = $ae.annotations->concatenate($annotation))->cast(@T),
       a : Any[1] | assert(false, 'Can add annotations to only annotated elements'); $element;
    ])
 }
 
 // For Interfaces
-function meta::external::language::java::factory::javaMethod(returnType:meta::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*]) : meta::external::language::java::metamodel::Method[1]
+function platform::external::language::java::factory::javaMethod(returnType:platform::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*]) : platform::external::language::java::metamodel::Method[1]
 {
-   ^meta::external::language::java::metamodel::Method(
+   ^platform::external::language::java::metamodel::Method(
       name           = $name,
       returnType     = $returnType,
       parameters     = $parameters->cannonicalParameters()
@@ -830,9 +831,9 @@ function meta::external::language::java::factory::javaMethod(returnType:meta::ex
 }
 
 // For Interfaces
-function meta::external::language::java::factory::javaMethod(typeParameters:meta::external::language::java::metamodel::TypeVariable[1..*], returnType:meta::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*]) : meta::external::language::java::metamodel::Method[1]
+function platform::external::language::java::factory::javaMethod(typeParameters:platform::external::language::java::metamodel::TypeVariable[1..*], returnType:platform::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*]) : platform::external::language::java::metamodel::Method[1]
 {
-   ^meta::external::language::java::metamodel::Method(
+   ^platform::external::language::java::metamodel::Method(
       name           = $name,
       typeParameters = $typeParameters,
       returnType     = $returnType,
@@ -840,9 +841,9 @@ function meta::external::language::java::factory::javaMethod(typeParameters:meta
    )
 }
 
-function meta::external::language::java::factory::javaMethod(modifiers:String[*], returnType:meta::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*]) : meta::external::language::java::metamodel::Method[1]
+function platform::external::language::java::factory::javaMethod(modifiers:String[*], returnType:platform::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*]) : platform::external::language::java::metamodel::Method[1]
 {
-   ^meta::external::language::java::metamodel::Method(
+   ^platform::external::language::java::metamodel::Method(
       name           = $name,
       modifiers      = $modifiers->javaModifiers(),
       returnType     = $returnType,
@@ -850,9 +851,9 @@ function meta::external::language::java::factory::javaMethod(modifiers:String[*]
    )
 }
 
-function meta::external::language::java::factory::javaMethod(modifiers:String[*], typeParameters:meta::external::language::java::metamodel::TypeVariable[1..*], returnType:meta::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*]) : meta::external::language::java::metamodel::Method[1]
+function platform::external::language::java::factory::javaMethod(modifiers:String[*], typeParameters:platform::external::language::java::metamodel::TypeVariable[1..*], returnType:platform::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*]) : platform::external::language::java::metamodel::Method[1]
 {
-   ^meta::external::language::java::metamodel::Method(
+   ^platform::external::language::java::metamodel::Method(
       name           = $name,
       modifiers      = $modifiers->javaModifiers(),
       typeParameters = $typeParameters,
@@ -861,9 +862,9 @@ function meta::external::language::java::factory::javaMethod(modifiers:String[*]
    )
 }
 
-function meta::external::language::java::factory::javaMethod(modifiers:String[*], returnType:meta::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*], body:String[1]) : meta::external::language::java::metamodel::Method[1]
+function platform::external::language::java::factory::javaMethod(modifiers:String[*], returnType:platform::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*], body:String[1]) : platform::external::language::java::metamodel::Method[1]
 {
-   ^meta::external::language::java::metamodel::Method(
+   ^platform::external::language::java::metamodel::Method(
       name           = $name,
       modifiers      = $modifiers->javaModifiers(),
       returnType     = $returnType,
@@ -872,9 +873,9 @@ function meta::external::language::java::factory::javaMethod(modifiers:String[*]
    )
 }
 
-function meta::external::language::java::factory::javaMethod(modifiers:String[*], returnType:meta::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*], bodyCode:Code[*]) : meta::external::language::java::metamodel::Method[1]
+function platform::external::language::java::factory::javaMethod(modifiers:String[*], returnType:platform::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*], bodyCode:Code[*]) : platform::external::language::java::metamodel::Method[1]
 {
-   ^meta::external::language::java::metamodel::Method(
+   ^platform::external::language::java::metamodel::Method(
       name           = $name,
       modifiers      = $modifiers->javaModifiers(),
       returnType     = $returnType,
@@ -883,9 +884,9 @@ function meta::external::language::java::factory::javaMethod(modifiers:String[*]
    )
 }
 
-function meta::external::language::java::factory::javaMethod(modifiers:String[*], typeParameters:meta::external::language::java::metamodel::TypeVariable[1..*], returnType:meta::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*], body:String[1]) : meta::external::language::java::metamodel::Method[1]
+function platform::external::language::java::factory::javaMethod(modifiers:String[*], typeParameters:platform::external::language::java::metamodel::TypeVariable[1..*], returnType:platform::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*], body:String[1]) : platform::external::language::java::metamodel::Method[1]
 {
-   ^meta::external::language::java::metamodel::Method(
+   ^platform::external::language::java::metamodel::Method(
       name           = $name,
       modifiers      = $modifiers->javaModifiers(),
       typeParameters = $typeParameters,
@@ -895,9 +896,9 @@ function meta::external::language::java::factory::javaMethod(modifiers:String[*]
    )
 }
 
-function meta::external::language::java::factory::javaMethod(modifiers:String[*], typeParameters:meta::external::language::java::metamodel::TypeVariable[1..*], returnType:meta::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*], bodyCode:Code[*]) : meta::external::language::java::metamodel::Method[1]
+function platform::external::language::java::factory::javaMethod(modifiers:String[*], typeParameters:platform::external::language::java::metamodel::TypeVariable[1..*], returnType:platform::external::language::java::metamodel::Type[1], name:String[1], parameters:Any[*], bodyCode:Code[*]) : platform::external::language::java::metamodel::Method[1]
 {
-   ^meta::external::language::java::metamodel::Method(
+   ^platform::external::language::java::metamodel::Method(
       name           = $name,
       modifiers      = $modifiers->javaModifiers(),
       typeParameters = $typeParameters,
@@ -907,100 +908,100 @@ function meta::external::language::java::factory::javaMethod(modifiers:String[*]
    )
 }
 
-function <<access.private>> meta::external::language::java::factory::cannonicalParameters(parameters:Any[*]) : meta::external::language::java::metamodel::Parameter[*]
+function <<access.private>> platform::external::language::java::factory::cannonicalParameters(parameters:Any[*]) : platform::external::language::java::metamodel::Parameter[*]
 {
    $parameters->map(p | $p->match([
-      param: meta::external::language::java::metamodel::Parameter[1] | $param,
+      param: platform::external::language::java::metamodel::Parameter[1] | $param,
       code : Code[1]                                                 | $code->asParameters()
    ]));
 }
 
-function meta::external::language::java::factory::nonNull(method:meta::external::language::java::metamodel::Method[1]) : meta::external::language::java::metamodel::Method[1]
+function platform::external::language::java::factory::nonNull(method:platform::external::language::java::metamodel::Method[1]) : platform::external::language::java::metamodel::Method[1]
 {
    ^$method(nullResultPossible=false);
 }
 
-function meta::external::language::java::factory::nullable(method:meta::external::language::java::metamodel::Method[1]) : meta::external::language::java::metamodel::Method[1]
+function platform::external::language::java::factory::nullable(method:platform::external::language::java::metamodel::Method[1]) : platform::external::language::java::metamodel::Method[1]
 {
    ^$method(nullResultPossible=true);
 }
 
-function meta::external::language::java::factory::nonNull(type:meta::external::language::java::metamodel::FunctionType[1]) : meta::external::language::java::metamodel::FunctionType[1]
+function platform::external::language::java::factory::nonNull(type:platform::external::language::java::metamodel::FunctionType[1]) : platform::external::language::java::metamodel::FunctionType[1]
 {
    ^$type(nullResultPossible=false);
 }
 
-function meta::external::language::java::factory::nullable(type:meta::external::language::java::metamodel::FunctionType[1]) : meta::external::language::java::metamodel::FunctionType[1]
+function platform::external::language::java::factory::nullable(type:platform::external::language::java::metamodel::FunctionType[1]) : platform::external::language::java::metamodel::FunctionType[1]
 {
    ^$type(nullResultPossible=true);
 }
 
-function meta::external::language::java::factory::javaModifiers(modifiers:String[*]): meta::external::language::java::metamodel::Modifier[*]
+function platform::external::language::java::factory::javaModifiers(modifiers:String[*]): platform::external::language::java::metamodel::Modifier[*]
 {
    $modifiers->map(m| $m->javaModifier());
 }
 
-function meta::external::language::java::factory::javaModifier(modifier:String[1]): meta::external::language::java::metamodel::Modifier[1]
+function platform::external::language::java::factory::javaModifier(modifier:String[1]): platform::external::language::java::metamodel::Modifier[1]
 {
-   meta::external::language::java::metamodel::Modifier->enumValues()->filter(v|$v.name->toLower() == $modifier)->toOne()->cast(@meta::external::language::java::metamodel::Modifier);
+   platform::external::language::java::metamodel::Modifier->enumValues()->filter(v|$v.name->toLower() == $modifier)->toOne()->cast(@platform::external::language::java::metamodel::Modifier);
 }
 
-function meta::external::language::java::factory::javaTypeVar(name:String[1]): meta::external::language::java::metamodel::TypeVariable[1]
+function platform::external::language::java::factory::javaTypeVar(name:String[1]): platform::external::language::java::metamodel::TypeVariable[1]
 {
-   ^meta::external::language::java::metamodel::TypeVariable(name=$name);
+   ^platform::external::language::java::metamodel::TypeVariable(name=$name);
 }
 
-function meta::external::language::java::factory::javaTypeVar(name:String[1], bounds:meta::external::language::java::metamodel::Type[*]): meta::external::language::java::metamodel::TypeVariable[1]
+function platform::external::language::java::factory::javaTypeVar(name:String[1], bounds:platform::external::language::java::metamodel::Type[*]): platform::external::language::java::metamodel::TypeVariable[1]
 {
-   ^meta::external::language::java::metamodel::TypeVariable(name=$name, bounds=$bounds);
+   ^platform::external::language::java::metamodel::TypeVariable(name=$name, bounds=$bounds);
 }
 
-function meta::external::language::java::factory::javaParam(type:meta::external::language::java::metamodel::Type[1], name:String[1]): meta::external::language::java::metamodel::Parameter[1]
+function platform::external::language::java::factory::javaParam(type:platform::external::language::java::metamodel::Type[1], name:String[1]): platform::external::language::java::metamodel::Parameter[1]
 {
-   ^meta::external::language::java::metamodel::Parameter(name=$name, type=$type);
+   ^platform::external::language::java::metamodel::Parameter(name=$name, type=$type);
 }
 
-function meta::external::language::java::factory::javaField(modifiers:String[*], type:meta::external::language::java::metamodel::Type[1], name:String[1]): meta::external::language::java::metamodel::Field[1]
+function platform::external::language::java::factory::javaField(modifiers:String[*], type:platform::external::language::java::metamodel::Type[1], name:String[1]): platform::external::language::java::metamodel::Field[1]
 {
-   ^meta::external::language::java::metamodel::Field(
+   ^platform::external::language::java::metamodel::Field(
       modifiers = $modifiers->javaModifiers(),
       name=$name,
       type=$type
    );
 }
 
-function meta::external::language::java::factory::javaField(modifiers:String[*], type:meta::external::language::java::metamodel::Type[1], name:String[1], initialiser:String[1]): meta::external::language::java::metamodel::Field[1]
+function platform::external::language::java::factory::javaField(modifiers:String[*], type:platform::external::language::java::metamodel::Type[1], name:String[1], initialiser:String[1]): platform::external::language::java::metamodel::Field[1]
 {
    let uninited = javaField($modifiers, $type, $name);
    ^$uninited(value=$initialiser);
 }
 
-function meta::external::language::java::factory::javaField(modifiers:String[*], type:meta::external::language::java::metamodel::Type[1], name:String[1], initialiser:Code[1]): meta::external::language::java::metamodel::Field[1]
+function platform::external::language::java::factory::javaField(modifiers:String[*], type:platform::external::language::java::metamodel::Type[1], name:String[1], initialiser:Code[1]): platform::external::language::java::metamodel::Field[1]
 {
    let uninited = javaField($modifiers, $type, $name);
    ^$uninited(valueCode=$initialiser);
 }
 
-function meta::external::language::java::factory::javaConstructor(modifiers:String[*], parameters:Any[*]): meta::external::language::java::metamodel::Constructor[1]
+function platform::external::language::java::factory::javaConstructor(modifiers:String[*], parameters:Any[*]): platform::external::language::java::metamodel::Constructor[1]
 {
-   ^meta::external::language::java::metamodel::Constructor(
+   ^platform::external::language::java::metamodel::Constructor(
       modifiers  = $modifiers->javaModifiers(),
       parameters = $parameters->cannonicalParameters()
    );
 }
 
-function meta::external::language::java::factory::javaConstructor(modifiers:String[*], parameters:Any[*], body:String[1]): meta::external::language::java::metamodel::Constructor[1]
+function platform::external::language::java::factory::javaConstructor(modifiers:String[*], parameters:Any[*], body:String[1]): platform::external::language::java::metamodel::Constructor[1]
 {
-   ^meta::external::language::java::metamodel::Constructor(
+   ^platform::external::language::java::metamodel::Constructor(
       modifiers  = $modifiers->javaModifiers(),
       parameters = $parameters->cannonicalParameters(),
       body       = $body
    );
 }
 
-function meta::external::language::java::factory::javaConstructor(modifiers:String[*], parameters:Any[*], bodyCode:Code[*]): meta::external::language::java::metamodel::Constructor[1]
+function platform::external::language::java::factory::javaConstructor(modifiers:String[*], parameters:Any[*], bodyCode:Code[*]): platform::external::language::java::metamodel::Constructor[1]
 {
-   ^meta::external::language::java::metamodel::Constructor(
+   ^platform::external::language::java::metamodel::Constructor(
       modifiers  = $modifiers->javaModifiers(),
       parameters = $parameters->cannonicalParameters(),
       bodyCode   = if($bodyCode->size() == 1, |$bodyCode->toOne(), |j_block($bodyCode))
@@ -1008,7 +1009,7 @@ function meta::external::language::java::factory::javaConstructor(modifiers:Stri
 }
 
 // TODO Remove once all streaming is via j_streamOf...js_resolve
-function meta::external::language::java::factory::canOptimize(code: Code[1]):Boolean[1]
+function platform::external::language::java::factory::canOptimize(code: Code[1]):Boolean[1]
 {
    $code->instanceOf(SimpleCode);
 }
@@ -1017,7 +1018,7 @@ function meta::external::language::java::factory::canOptimize(code: Code[1]):Boo
 
 // --- To dependencies
 
-function meta::external::language::java::factory::dependencies(codes: Code[*]):CodeDependency[*]
+function platform::external::language::java::factory::dependencies(codes: Code[*]):CodeDependency[*]
 {
    $codes->map(code| $code->match([
       c:InfixExpression[1]          | $c.requires->concatenate($c.left->dependencies())->concatenate($c.right->dependencies()),
@@ -1055,29 +1056,29 @@ function meta::external::language::java::factory::dependencies(codes: Code[*]):C
    ]))->removeDuplicates();
 }
 
-function meta::external::language::java::factory::anonymousPackage():meta::external::language::java::metamodel::Package[1]
+function platform::external::language::java::factory::anonymousPackage():platform::external::language::java::metamodel::Package[1]
 {
-   ^meta::external::language::java::metamodel::Package(name='__ANON__');
+   ^platform::external::language::java::metamodel::Package(name='__ANON__');
 }
 
-function meta::external::language::java::factory::nonNull(code:Code[1]) : Code[1]
+function platform::external::language::java::factory::nonNull(code:Code[1]) : Code[1]
 {
-   assert($code.type->instanceOf(meta::external::language::java::metamodel::FunctionType), 'Expected function type');
-   ^$code(type=$code.type->cast(@meta::external::language::java::metamodel::FunctionType)->nonNull());
+   assert($code.type->instanceOf(platform::external::language::java::metamodel::FunctionType), 'Expected function type');
+   ^$code(type=$code.type->cast(@platform::external::language::java::metamodel::FunctionType)->nonNull());
 }
 
-function meta::external::language::java::factory::nullable(code:Code[1]) : Code[1]
+function platform::external::language::java::factory::nullable(code:Code[1]) : Code[1]
 {
-   assert($code.type->instanceOf(meta::external::language::java::metamodel::FunctionType), 'Expected function type');
-   ^$code(type=$code.type->cast(@meta::external::language::java::metamodel::FunctionType)->nullable());
+   assert($code.type->instanceOf(platform::external::language::java::metamodel::FunctionType), 'Expected function type');
+   ^$code(type=$code.type->cast(@platform::external::language::java::metamodel::FunctionType)->nullable());
 }
 
-function meta::external::language::java::factory::classesUsed(codes: Code[*]):meta::external::language::java::metamodel::Class[*]
+function platform::external::language::java::factory::classesUsed(codes: Code[*]):platform::external::language::java::metamodel::Class[*]
 {
    $codes->typesUsed()->typesToClasses();
 }
 
-function meta::external::language::java::factory::typesUsed(codes: Code[*]):meta::external::language::java::metamodel::Type[*]
+function platform::external::language::java::factory::typesUsed(codes: Code[*]):platform::external::language::java::metamodel::Type[*]
 {
    $codes->map(code| $code->match([
       c:InfixExpression[1]          | $c.type->concatenate($c.left->typesUsed())->concatenate($c.right->typesUsed()),
@@ -1117,16 +1118,16 @@ function meta::external::language::java::factory::typesUsed(codes: Code[*]):meta
    ]))->removeDuplicates();
 }
 
-function meta::external::language::java::factory::methodReturnType(from:meta::external::language::java::metamodel::Type[1], methodName:String[1]):meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::methodReturnType(from:platform::external::language::java::metamodel::Type[1], methodName:String[1]):platform::external::language::java::metamodel::Type[1]
 {
    let types = $from->apiKnowledge().methods->filter(m|$m.name == $methodName).returnType->removeDuplicates();
    assert($types->size() > 0,  |'Type not found for method ' + $methodName + ' from ' + $from->typeToString());
    assert($types->size() == 1, |'Type ambiguous for method ' + $methodName + ' from ' + $from->typeToString());
-   assert(!$types->at(0)->instanceOf(meta::external::language::java::metamodel::TypeVariable), |'Type unresolved for method ' + $methodName + ' from ' + $from->typeToString());
+   assert(!$types->at(0)->instanceOf(platform::external::language::java::metamodel::TypeVariable), |'Type unresolved for method ' + $methodName + ' from ' + $from->typeToString());
    $types->toOne();
 }
 
-function <<access.private>> meta::external::language::java::factory::findMethod(from:meta::external::language::java::metamodel::Type[1], methodName:String[1]):meta::external::language::java::metamodel::Method[1]
+function <<access.private>> platform::external::language::java::factory::findMethod(from:platform::external::language::java::metamodel::Type[1], methodName:String[1]):platform::external::language::java::metamodel::Method[1]
 {
    let methods = $from->apiKnowledge().methods->filter(m|$m.name == $methodName);
    assert($methods->size() > 0,  |'Method details not found for inference ' + $methodName + ' from ' + $from->typeToString());
@@ -1135,26 +1136,26 @@ function <<access.private>> meta::external::language::java::factory::findMethod(
    $methods->toOne();
 }
 
-function meta::external::language::java::factory::typeForField(from:meta::external::language::java::metamodel::Type[1], fieldName:String[1]):meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::typeForField(from:platform::external::language::java::metamodel::Type[1], fieldName:String[1]):platform::external::language::java::metamodel::Type[1]
 {
-   if($from->instanceOf(meta::external::language::java::metamodel::Enumeration),
+   if($from->instanceOf(platform::external::language::java::metamodel::Enumeration),
       | $from,
       {|
          let types = $from->apiKnowledge().fields->filter(f|$f.name == $fieldName).type->removeDuplicates();
          assert($types->size() > 0,  |'Type not found for field \'' + $fieldName + '\' from ' + $from->typeToString());
          assert($types->size() == 1, |'Type ambiguous for field \'' + $fieldName + '\' from ' + $from->typeToString());
-         assert(!$types->at(0)->instanceOf(meta::external::language::java::metamodel::TypeVariable), |'Type unresolved for field ' + $fieldName + ' from ' + $from->typeToString());
+         assert(!$types->at(0)->instanceOf(platform::external::language::java::metamodel::TypeVariable), |'Type unresolved for field ' + $fieldName + ' from ' + $from->typeToString());
          $types->toOne();
       }
    );
 }
 
-function <<access.private>> meta::external::language::java::factory::blockIfNot(code: Code[1]):Code[1]
+function <<access.private>> platform::external::language::java::factory::blockIfNot(code: Code[1]):Code[1]
 {
    if($code->instanceOf(Block), |$code, |j_block($code));
 }
 
-function meta::external::language::java::factory::expressionAssigned(c:Code[1]):Code[1]
+function platform::external::language::java::factory::expressionAssigned(c:Code[1]):Code[1]
 {
    assert($c->isAssignment() || $c->isDeclarationWithAssignment(), 'Does not contain as assigned expression');
    $c->match([
@@ -1164,19 +1165,19 @@ function meta::external::language::java::factory::expressionAssigned(c:Code[1]):
 }
 
 // Dependencies
-function meta::external::language::java::factory::dependsOn(code:Code[1], dependencies:CodeDependency[*]):Code[1]
+function platform::external::language::java::factory::dependsOn(code:Code[1], dependencies:CodeDependency[*]):Code[1]
 {
    ^$code(requires=$code.requires->concatenate($dependencies)->removeDuplicates());
 }
 
-function meta::external::language::java::factory::addDependencyVisitedFunction(state:CodeDependencyResolutionState[1], visitedFunction:String[1]):CodeDependencyResolutionState[1]
+function platform::external::language::java::factory::addDependencyVisitedFunction(state:CodeDependencyResolutionState[1], visitedFunction:String[1]):CodeDependencyResolutionState[1]
 {
    ^$state(visitedFunctions=$state.visitedFunctions->concatenate($visitedFunction));
 }
 
 
 
-function meta::external::language::java::factory::escapedString(in: String[1]):String[1]
+function platform::external::language::java::factory::escapedString(in: String[1]):String[1]
 {
    '"' +
       $in->replace('\\','\\\\')
@@ -1189,12 +1190,12 @@ function meta::external::language::java::factory::escapedString(in: String[1]):S
    '"';
 }
 
-function meta::external::language::java::factory::methodSignature(m: meta::external::language::java::metamodel::Method[1]): String[1]
+function platform::external::language::java::factory::methodSignature(m: platform::external::language::java::metamodel::Method[1]): String[1]
 {
    $m.name+'('+$m.parameters->map(p|$p.type->typeToString())->joinStrings(',')+')';
 }
 
-function meta::external::language::java::factory::isKnownPackage(pkg: meta::external::language::java::metamodel::Package[1]):Boolean[1]
+function platform::external::language::java::factory::isKnownPackage(pkg: platform::external::language::java::metamodel::Package[1]):Boolean[1]
 {
      let pkgName = $pkg->packageToString();
 
@@ -1228,7 +1229,7 @@ function meta::external::language::java::factory::isKnownPackage(pkg: meta::exte
    )))))))));
 }
 
-function <<access.private>> meta::external::language::java::factory::addNumberMethods(num:meta::external::language::java::metamodel::Class[1]): meta::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::external::language::java::factory::addNumberMethods(num:platform::external::language::java::metamodel::Class[1]): platform::external::language::java::metamodel::Class[1]
 {
    $num->addMethodIfMissing(javaMethod(javaByte(),    'byteValue',   []))
        ->addMethodIfMissing(javaMethod(javaInt(),     'intValue',    []))
@@ -1238,7 +1239,7 @@ function <<access.private>> meta::external::language::java::factory::addNumberMe
        ->addMethodIfMissing(javaMethod(javaDouble(),  'doubleValue', []));
 }
 
-function <<access.private>> meta::external::language::java::factory::addCollectionMethods(col:meta::external::language::java::metamodel::Class[1], element:meta::external::language::java::metamodel::Type[1]): meta::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::external::language::java::factory::addCollectionMethods(col:platform::external::language::java::metamodel::Class[1], element:platform::external::language::java::metamodel::Type[1]): platform::external::language::java::metamodel::Class[1]
 {
    $col->addMethodIfMissing(javaMethod(javaBoolean(),          'addAll',      javaParam(javaCollection($element), 'x')))
        ->addMethodIfMissing(javaMethod(javaBoolean(),          'contains',    javaParam($element, 'x')))
@@ -1247,7 +1248,7 @@ function <<access.private>> meta::external::language::java::factory::addCollecti
        ->addMethodIfMissing(javaMethod(javaInt(),              'size',        []));
 }
 
-function <<access.private>> meta::external::language::java::factory::addObjectMethods(in:meta::external::language::java::metamodel::Class[1]): meta::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::external::language::java::factory::addObjectMethods(in:platform::external::language::java::metamodel::Class[1]): platform::external::language::java::metamodel::Class[1]
 {
    $in->addMethodIfMissing(javaMethod(javaClass('java.lang.Class'), 'getClass', [])->nonNull())
       ->addMethodIfMissing(javaMethod(javaString(),                 'toString', [])->nonNull())
@@ -1257,52 +1258,52 @@ function <<access.private>> meta::external::language::java::factory::addObjectMe
 }
 
 
-function meta::external::language::java::factory::typesUsed(method: meta::external::language::java::metamodel::Method[*]):meta::external::language::java::metamodel::Type[*]
+function platform::external::language::java::factory::typesUsed(method: platform::external::language::java::metamodel::Method[*]):platform::external::language::java::metamodel::Type[*]
 {
    $method.returnType->concatenate($method.parameters.type)->removeDuplicates();
 }
 
-function meta::external::language::java::factory::typesToClasses(types: meta::external::language::java::metamodel::Type[*]):meta::external::language::java::metamodel::Class[*]
+function platform::external::language::java::factory::typesToClasses(types: platform::external::language::java::metamodel::Type[*]):platform::external::language::java::metamodel::Class[*]
 {
    $types->map(t |$t->typeToClasses())->removeDuplicates();
 }
 
-function meta::external::language::java::factory::typeToClasses(type: meta::external::language::java::metamodel::Type[1]):meta::external::language::java::metamodel::Class[*]
+function platform::external::language::java::factory::typeToClasses(type: platform::external::language::java::metamodel::Type[1]):platform::external::language::java::metamodel::Class[*]
 {
    $type->match([
-      c:meta::external::language::java::metamodel::Class[1]             | $c,
-      p:meta::external::language::java::metamodel::ParameterizedType[1] | $p.rawType->typeToClasses()->concatenate($p.typeArguments->map(a|$a->typeToClasses())),
-      v:meta::external::language::java::metamodel::TypeVariable[1]      | $v.bounds->map(a|$a->typeToClasses()),
-      a:meta::external::language::java::metamodel::Array[1]             | $a.rawType->typeToClasses(),
-      f:meta::external::language::java::metamodel::FunctionType[1]      | $f.returnType->typeToClasses()->concatenate($f.parameterTypes->map(p|$p->typeToClasses())),
-      t:meta::external::language::java::metamodel::Type[1]              | []
+      c:platform::external::language::java::metamodel::Class[1]             | $c,
+      p:platform::external::language::java::metamodel::ParameterizedType[1] | $p.rawType->typeToClasses()->concatenate($p.typeArguments->map(a|$a->typeToClasses())),
+      v:platform::external::language::java::metamodel::TypeVariable[1]      | $v.bounds->map(a|$a->typeToClasses()),
+      a:platform::external::language::java::metamodel::Array[1]             | $a.rawType->typeToClasses(),
+      f:platform::external::language::java::metamodel::FunctionType[1]      | $f.returnType->typeToClasses()->concatenate($f.parameterTypes->map(p|$p->typeToClasses())),
+      t:platform::external::language::java::metamodel::Type[1]              | []
    ])->removeDuplicates();
 }
 
-function meta::external::language::java::factory::elementTypeOfJavaArray(type: meta::external::language::java::metamodel::Type[1]):meta::external::language::java::metamodel::Type[1]
+function platform::external::language::java::factory::elementTypeOfJavaArray(type: platform::external::language::java::metamodel::Type[1]):platform::external::language::java::metamodel::Type[1]
 {
    assert($type->isJavaArray(), |'Cannot obtain element type as not an array');
-   $type->cast(@meta::external::language::java::metamodel::Array).rawType;
+   $type->cast(@platform::external::language::java::metamodel::Array).rawType;
 }
 
-function meta::external::language::java::factory::project::addClasses(project: Project[1], classes: meta::external::language::java::metamodel::Class[*]): Project[1]
+function platform::external::language::java::factory::project::addClasses(project: Project[1], classes: platform::external::language::java::metamodel::Class[*]): Project[1]
 {
    $classes->fold({c,p| $p->addClass($c)}, $project);
 }
 
-function meta::external::language::java::factory::project::addFile(project: Project[1], path:String[1], file:File[1]): Project[1]
+function platform::external::language::java::factory::project::addFile(project: Project[1], path:String[1], file:File[1]): Project[1]
 {
    ^$project(root=$project.root->ensurePathAndDo($path->split('/'), {d|$d->addToProjectDirectory($file)}));
 }
 
-function meta::external::language::java::factory::project::addMavenDependency(project:Project[1], group:String[1], artifact:String[1], version:String[1]): Project[1]
+function platform::external::language::java::factory::project::addMavenDependency(project:Project[1], group:String[1], artifact:String[1], version:String[1]): Project[1]
 {
    ^$project(
       mainDependencies = $project.mainDependencies->concatenate(^MavenReference(group=$group, artifact=$artifact, version=$version))->removeDuplicates()
    )
 }
 
-function <<access.private>> meta::external::language::java::factory::project::mergeDirectory(base: Project[1], dir: ProjectDirectory[1]): Project[1]
+function <<access.private>> platform::external::language::java::factory::project::mergeDirectory(base: Project[1], dir: ProjectDirectory[1]): Project[1]
 {
    $dir.classes->fold({c, p|$p->mergeClass($dir, $c)}, $base);
 }

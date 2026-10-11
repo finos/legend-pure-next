@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,26 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::compiler::resolution::functionDefinitionResolver::*;
-import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
-import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::letResolver::*;
-import meta::pure::compiler::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::compiler::resolution::functionDefinitionResolver::*;
+import platform::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
+import platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::letResolver::*;
+import platform::pure::compiler::*;
 
-Class meta::pure::compiler::resolution::functionDefinitionResolver::ResolveResult
+Class platform::pure::compiler::resolution::functionDefinitionResolver::ResolveResult
 {
     resolvedSpecs: ValueSpecification[*];
     context: CompilerContext[1];
 }
 
-Class meta::pure::compiler::resolution::functionDefinitionResolver::ResolveAccumulator
+Class platform::pure::compiler::resolution::functionDefinitionResolver::ResolveAccumulator
 {
     scope: VariableExpression[*];
     context: CompilerContext[1];
     resolvedSpecs: ValueSpecification[*];
 }
 
-function meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:ValueSpecification[*], params:VariableExpression[*], context:CompilerContext[1]):ResolveResult[1]
+function platform::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:ValueSpecification[*], params:VariableExpression[*], context:CompilerContext[1]):ResolveResult[1]
 {
     let result = $specs->fold({spec, acc |
         let r = resolveValueSpecification($spec, $acc.scope, $acc.context);

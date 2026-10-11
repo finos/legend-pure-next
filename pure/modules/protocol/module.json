@@ -1,5 +1,5 @@
 {
   "name": "protocol",
-  "packagePattern": "(meta::pure::protocol::generation)(::.*)?",
+  "packagePattern": "(platform::pure::protocol::generation)(::.*)?",
   "dependencies": ["core"]
 }

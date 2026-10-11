@@ -63,15 +63,15 @@ pure_rt := "bootstrap"
 emit_rt := if pure_rt == "truffle" { pure_truffle } else { pure_bootstrap }
 
 # Pure package -> standalone JS, emitted into generated/ (gitignored).
-translate_fn := "meta::external::language::javascript::translation::pdb::translatePackageToJs_String_1__String_1_"
+translate_fn := "platform::external::language::javascript::translation::pdb::translatePackageToJs_String_1__String_1_"
 # The TEST half of a package. Tests are not in a package of their own — a PCT test model sits
-# inside meta::pure::functions — so the emit splits them by stereotype instead, the same rule the
+# inside platform::pure::functions — so the emit splits them by stereotype instead, the same rule the
 # pdb split uses. Only the test harnesses load the companions; the browser IDE does not.
-translate_tests_fn := "meta::external::language::javascript::translation::pdb::translatePackageTestsToJs_String_1__String_1_"
-# The test FRAMEWORK package (meta::pure::test) emits whole: its adapters are test material by
+translate_tests_fn := "platform::external::language::javascript::translation::pdb::translatePackageTestsToJs_String_1__String_1_"
+# The test FRAMEWORK package (platform::pure::test) emits whole: its adapters are test material by
 # the stereotype rule, but only test hosts ever load it, so splitting it would just produce two
 # files that always travel together.
-translate_all_fn := "meta::external::language::javascript::translation::pdb::translatePackageAllToJs_String_1__String_1_"
+translate_all_fn := "platform::external::language::javascript::translation::pdb::translatePackageAllToJs_String_1__String_1_"
 
 # Everything an emission reads: the pdbs the translator runs against and the jars
 # of the runtime running it (bin/pure-truffle puts every build/*.jar on its classpath).
@@ -113,8 +113,8 @@ _emit PKG OUT FN=translate_fn:
     # `just` process re-runs its dependencies, and a CI job reaches generate-all
     # from several of them. The key is written only after the translator succeeds
     # (pipefail), so a failed or interrupted emission always reruns.
-    # Inputs are zips (pdbs, jars) whose entries carry the build time, so a rebuild
-    # with identical content still changes the file bytes: key each input by its
+    # Inputs are zips (pdbs, jars). Jar entries carry the build time (pdb entries a fixed
+    # one), so a rebuild with identical content can still change the bytes: key each input by its
     # central-directory listing (length, method, size, CRC-32, name) minus the
     # date/time columns — content-sensitive, timestamp-blind, and read without
     # decompressing anything.
@@ -135,26 +135,26 @@ _emit PKG OUT FN=translate_fn:
     && echo "  wrote generated/{{OUT}} ($(wc -c < "$out" | tr -d ' ') bytes)"
 
 # Generate the compiler.
-generate: (_emit "meta::pure::compiler" "pure/compiler/compiler.js") (_emit "meta::pure::compiler" "pure/compiler/compiler-tests.js" translate_tests_fn)
+generate: (_emit "platform::pure::compiler" "pure/compiler/compiler.js") (_emit "platform::pure::compiler" "pure/compiler/compiler-tests.js" translate_tests_fn)
     @{{header}} 'generate'
 
 # Generate the core library the compiler depends on (metamodel enums + function
 # library + UI). Classes emit nothing; metamodel enums (AggregationKind, …) emit
 # `export const`, which the compiler references.
-generate-core: (_emit "meta::pure::metamodel" "pure/compiler/metamodel.js") (_emit "meta::pure::protocol" "pure/grammar/protocol.js") (_emit "meta::pure::functions" "pure/runtime/functions.js") (_emit "meta::pure::ui" "ui.js") (_emit "meta::pure::metamodel" "pure/compiler/metamodel-tests.js" translate_tests_fn) (_emit "meta::pure::protocol" "pure/grammar/protocol-tests.js" translate_tests_fn) (_emit "meta::pure::functions" "pure/runtime/functions-tests.js" translate_tests_fn)
+generate-core: (_emit "platform::pure::metamodel" "pure/compiler/metamodel.js") (_emit "platform::pure::protocol" "pure/grammar/protocol.js") (_emit "platform::pure::functions" "pure/runtime/functions.js") (_emit "platform::pure::ui" "ui.js") (_emit "platform::pure::metamodel" "pure/compiler/metamodel-tests.js" translate_tests_fn) (_emit "platform::pure::protocol" "pure/grammar/protocol-tests.js" translate_tests_fn) (_emit "platform::pure::functions" "pure/runtime/functions-tests.js" translate_tests_fn)
     @{{header}} 'generate-core'
 
 # Generate just the PDB reader/schema package (a small subset of compiler.js).
 # The parser-only host (grammar/load-parser.js) loads this to back its metadata
 # globals with the translated Pure reader without pulling in the whole compiler.
-generate-pdb-reader: (_emit "meta::pure::compiler::pdb" "pure/compiler/pdb.js")
+generate-pdb-reader: (_emit "platform::pure::compiler::pdb" "pure/compiler/pdb.js")
     @{{header}} 'generate-pdb-reader'
 
 # Generate the in-process translator stack for the execution host
 # (src/core/execution): the Pure→JS translator itself translated to JS, its shared
 # canonicalization pipeline, the JS-language metamodel/factories it builds on,
-# and the meta::pure::test helpers (resolveChild & co.) its package walker calls.
-generate-translator: (_emit "meta::pure::test" "test.js" translate_all_fn) (_emit "meta::pure::translation::shared" "pure/runtime/translator/shared.js") (_emit "meta::external::language::javascript" "pure/runtime/translator/javascript.js") (_emit "meta::external::language::javascript::translation" "pure/runtime/translator/translation.js") (_emit "meta::pure::translation::shared" "pure/runtime/translator/shared-tests.js" translate_tests_fn) (_emit "meta::external::language::javascript" "pure/runtime/translator/javascript-tests.js" translate_tests_fn) (_emit "meta::external::language::javascript::translation" "pure/runtime/translator/translation-tests.js" translate_tests_fn)
+# and the platform::pure::test helpers (resolveChild & co.) its package walker calls.
+generate-translator: (_emit "platform::pure::test" "test.js" translate_all_fn) (_emit "platform::pure::translation::shared" "pure/runtime/translator/shared.js") (_emit "platform::external::language::javascript" "pure/runtime/translator/javascript.js") (_emit "platform::external::language::javascript::translation" "pure/runtime/translator/translation.js") (_emit "platform::pure::translation::shared" "pure/runtime/translator/shared-tests.js" translate_tests_fn) (_emit "platform::external::language::javascript" "pure/runtime/translator/javascript-tests.js" translate_tests_fn) (_emit "platform::external::language::javascript::translation" "pure/runtime/translator/translation-tests.js" translate_tests_fn)
     @{{header}} 'generate-translator'
 
 # THE PLATFORM'S EXTENSION AREA: one descriptor per extension found under pure/extensions, read
@@ -189,7 +189,7 @@ generate-extensions-code: generate-extensions
         }
     ' | while IFS=$'\t' read -r pkg out; do
         # WHOLE, not split. An extension's tests sit inside the packages it declares
-        # (meta::pure::diagram::parser::tests is part of meta::pure::diagram::parser), and its whole
+        # (platform::pure::diagram::parser::tests is part of platform::pure::diagram::parser), and its whole
         # generated output is ~80 KB — so there is nothing to save by cutting it in two, and a host
         # that registers an extension loads all of it anyway. The library/test split exists for
         # functions.js, where the test corpus was 1.2 MB.
@@ -227,7 +227,7 @@ test-compiler: generate-all
     cd {{js_root}} && pnpm run test:compiler --report {{test_results}}/javascript/core/compiler-tests.json
 
 # Run the PCT suite through the execution host (src/core/execution): translate
-# meta::pure::functions IN-PROCESS with the translated translator, eval the
+# platform::pure::functions IN-PROCESS with the translated translator, eval the
 # emitted JS, and run every <<PCT.test>> against it.
 #
 # A PCT failure FAILS THE BUILD. It used to be swallowed with `|| echo`, from when the translated
@@ -252,7 +252,7 @@ spec-grammar: generate-all
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::test::grammar::runGrammarCorpus_String_1__String_1__String_1_" \
+        --function "platform::pure::test::grammar::runGrammarCorpus_String_1__String_1__String_1_" \
         --args "{{spec}}/grammar/tests" "{{test_results}}/spec/grammar/pure@cli-javascript.json"
 
 # Compiler corpus specification: compile each fixture and compare with its ###CompiledGraph, through bin/pure-js.
@@ -268,13 +268,13 @@ spec-compiler: generate-all
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
+        --function "platform::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{test_results}}/spec/compiler/pure@cli-javascript.json"
 
-# PCT specification over meta::pure::functions, through bin/pure-js.
+# PCT specification over platform::pure::functions, through bin/pure-js.
 spec-pct: generate-all
     @{{header}} 'spec-pct'
-    @{{substep}} 'runPCTTests over meta::pure::functions (JavaScript host)'
+    @{{substep}} 'runPCTTests over platform::pure::functions (JavaScript host)'
     {{js_root}}/bin/pure-js execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
@@ -284,16 +284,16 @@ spec-pct: generate-all
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::test::runPCTTests_String_1__String_1__String_1_" \
-        --args "meta::pure::functions" "{{test_results}}/spec/pct/pure@cli-javascript.json"
+        --function "platform::pure::test::runPCTTests_String_1__String_1__String_1_" \
+        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-javascript.json"
 
-# The self-hosted PDB stack's <<test.Test>> suite (meta::pure::compiler::pdb:
+# The self-hosted PDB stack's <<test.Test>> suite (platform::pure::compiler::pdb:
 # schema, reader, writer, archive), translated: byte-exact wire format against the
 # JVM reference writer, archives, read-back round trips. Run through bin/pure-js
 # like every other Pure suite; the tests live in compiler-tests.pdb.
 test-pdb: generate-all
     @{{header}} 'test-pdb'
-    @{{substep}} 'runTests meta::pure::compiler::pdb (JavaScript host)'
+    @{{substep}} 'runTests platform::pure::compiler::pdb (JavaScript host)'
     {{js_root}}/bin/pure-js execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
@@ -303,8 +303,8 @@ test-pdb: generate-all
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::compiler::pdb" "{{test_results}}/spec/pdb-format/pure@cli-javascript.json"
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::compiler::pdb" "{{test_results}}/spec/pdb-format/pure@cli-javascript.json"
 
 # PDB wire contract: compile each compiler fixture, write it with the Pure writer and compare the archive
 # with the Java golden in pure/specification/compiler/tests-pdb-serialization (compiler-pure test/pdbGoldenRunner.pure).
@@ -320,7 +320,7 @@ spec-pdb-golden: generate-all
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_" \
+        --function "platform::pure::compiler::test::pdb::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{spec}}/compiler/tests-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{test_results}}/spec/pdb/pure@cli-javascript.json"
 
 # Compiled-printer corpus: compile each compiler-corpus file, print the compiled elements, compare with the source. Run through bin/pure-js like test-pdb.
@@ -336,7 +336,7 @@ test-printer-compiled: generate-all
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::compiler::test::printer::runCompiledPrinterCorpus_String_1__String_1__String_1_" \
+        --function "platform::pure::compiler::test::printer::runCompiledPrinterCorpus_String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{test_results}}/pure/printer-compiled/pure@cli-javascript.json"
 
 # Protocol-printer corpus: parse each grammar-corpus file, print the protocol, compare with the source. Run through bin/pure-js like test-pdb.
@@ -352,7 +352,7 @@ test-printer-protocol: generate-all
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus_String_1__String_1__String_1_" \
+        --function "platform::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus_String_1__String_1__String_1_" \
         --args "{{spec}}/grammar/tests" "{{test_results}}/pure/printer-protocol/pure@cli-javascript.json"
 
 # Host platform API conformance: module, registry, natives and runtime shapes
@@ -422,7 +422,7 @@ test-ide: web-deps generate-all
 # instance was still being emitted as an object literal.
 test-translation: generate-all
     @{{header}} 'test-translation'
-    @{{substep}} 'runTests meta::external::language::javascript::translation (the module that generated this host)'
+    @{{substep}} 'runTests platform::external::language::javascript::translation (the module that generated this host)'
     just --justfile {{repo_root}}/Justfile modules::translation_javascript::test-translation
 
 test-all: test test-compiler test-execution spec-grammar spec-compiler spec-pct test-pdb spec-pdb-golden test-printer-compiled test-printer-protocol test-host-api usage-example test-extensions test-diagram test-section-hint test-source-store test-ide test-translation
@@ -437,7 +437,7 @@ test-all: test test-compiler test-execution spec-grammar spec-compiler spec-pct 
 # that platform has not adapted the extension; see pure/extensions/diagram/Justfile.
 test-extensions: generate-all
     @{{header}} 'test-extensions'
-    @{{substep}} 'runTests meta::pure::diagram (JavaScript host)'
+    @{{substep}} 'runTests platform::pure::diagram (JavaScript host)'
     test -f {{extension_diagram_out}}/diagram.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram.pdb (run \`just extensions::build\` first)" && exit 1)
     test -f {{extension_diagram_out}}/diagram-tests.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram-tests.pdb (run \`just extensions::build-tests\` first — the lean pdb drops <<test.Test>> elements whether or not the build splits)" && exit 1)
     mkdir -p {{test_results}}/pure/extensions-diagram
@@ -447,8 +447,8 @@ test-extensions: generate-all
         --pdb {{shared}}/compiler.pdb \
         --pdb {{extension_diagram_out}}/diagram.pdb \
         --pdb {{extension_diagram_out}}/diagram-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-javascript.json"
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-javascript.json"
 
 # Generate the lexers/parsers this host parses with: the Pure language's own (Top + M3) and one
 # directory per extension. ANTLR's JavaScript target via the complete jar bundled with antlr4ng-cli
@@ -502,7 +502,7 @@ antlr-bundle: antlr-generate-parsers generate-extensions
 #
 # MAPPINGS HALF: this one needs the PDBs, because it IS translated Pure. load-parser installs a
 # throwing stub for `__pureParseTop` when the bundle is absent — only Pure's `parse` needs it.
-parser-mappings-bundle: (_emit "meta::pure::parser::mappings" "pure/grammar/parser.js") antlr-generate-parsers
+parser-mappings-bundle: (_emit "platform::pure::parser::mappings" "pure/grammar/parser.js") antlr-generate-parsers
     @{{header}} 'parser-mappings-bundle'
     @{{substep}} 'esbuild --bundle src/core/grammar/parser-mappings-entry.js -> build/parser-mappings-bundle.js'
     mkdir -p "$(dirname "{{mappings_bundle}}")"
@@ -522,7 +522,7 @@ antlr-all: antlr-bundle parser-mappings-bundle
 # column is this host's behaviour, so it is a report about the platform. `gallery.pure` itself stays
 # with the translator — it needs the translator's own API to render a card — and
 # `modules::translation_javascript::gallery` delegates here, as translation/java already does.
-gallery PACKAGE="meta::pure::functions" OUT=(js_root / "build" / "javascript-translation-gallery.html"): generate-all
+gallery PACKAGE="platform::pure::functions" OUT=(js_root / "build" / "javascript-translation-gallery.html"): generate-all
     @{{header}} 'gallery'
     @{{substep}} 'render {{PACKAGE}} -> {{OUT}}'
     test -f {{translation_javascript_out}}/javascript-translation-tests.pdb || (echo "ERROR: missing {{translation_javascript_out}}/javascript-translation-tests.pdb (run \`just modules::translation_javascript::build-tests\` first — renderGallery is <<test.TestDependency>>)" && exit 1)
@@ -535,7 +535,7 @@ gallery PACKAGE="meta::pure::functions" OUT=(js_root / "build" / "javascript-tra
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::external::language::javascript::translation::gallery::renderGallery_String_1__String_1_" \
+        --function "platform::external::language::javascript::translation::gallery::renderGallery_String_1__String_1_" \
         --args "{{PACKAGE}}" > {{OUT}}
     @echo "  wrote {{OUT}} ($(wc -c < {{OUT}} | tr -d ' ') bytes)"
 
@@ -563,8 +563,8 @@ serve: web-deps
 # Remove node_modules/ (no dist — plain JS).
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove node_modules/'
-    rm -rf {{js_root}}/node_modules
+    @{{substep}} 'remove node_modules/, build/ and generated/'
+    rm -rf {{js_root}}/node_modules {{js_root}}/build {{js_root}}/generated
 
 # Build time trend (tools/test-dashboard/build-step.mjs): the first dependency of a heavy recipe, whose last line runs `{{build_step}} end`.
 _step-start STEP:

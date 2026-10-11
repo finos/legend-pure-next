@@ -25,6 +25,6 @@
 // methods or sizes: a caller only ever wants what is in the archive and the
 // bytes of one entry.
 
-native function meta::pure::compiler::pdb::archive::entryNames(archive:Binary[1]):String[*];
+native function platform::pure::compiler::pdb::archive::entryNames(archive:Binary[1]):String[*];
 
-native function meta::pure::compiler::pdb::archive::entryBytes(archive:Binary[1], name:String[1]):Binary[1];
+native function platform::pure::compiler::pdb::archive::entryBytes(archive:Binary[1], name:String[1]):Binary[1];

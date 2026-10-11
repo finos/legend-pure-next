@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,12 +18,14 @@ package org.finos.legend.pure.specification.generation;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFList;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.vocabulary.RDF;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.factory.Sets;
@@ -142,10 +145,10 @@ public class M3ProtocolGenerator
         this.protocolInfoOptionalInProtocol =
             model.createResource(M3_NS + "ProtocolInfo_optionalInProtocol");
         this.compilerPointer =
-            model.createResource(M3_NS + "meta_pure_profiles_compiler_pointer");
+            model.createResource(M3_NS + "platform_pure_profiles_compiler_pointer");
 
         this.protocolInfoAbstract =
-            model.createResource(M3_NS + "meta_pure_profiles_typemodifiers_abstract");
+            model.createResource(M3_NS + "platform_pure_profiles_typemodifiers_abstract");
         this.taggedValuesProp = model.createProperty(M3_NS, "taggedValues");
         this.tagProp = model.createProperty(M3_NS, "tag");
         this.valueProp = model.createProperty(M3_NS, "taggedValue_value");
@@ -298,35 +301,10 @@ public class M3ProtocolGenerator
                     w.write("    :package :" + getLocalName(pkgStmt.getResource()) + " ;\n");
                 }
 
-                MutableList<String> gens = Lists.mutable.empty();
-                StmtIterator genIter = model.listStatements(r, generalizationsProp, (RDFNode) null);
-                while (genIter.hasNext())
-                {
-                    Statement genStmt = genIter.next();
-                    if (genStmt.getObject().isResource())
-                    {
-                        Resource genRes = genStmt.getObject().asResource();
-                        Statement generalStmt = model.getProperty(genRes, generalProp);
-                        if (generalStmt != null && generalStmt.getObject().isResource())
-                        {
-                            Resource generalRes = generalStmt.getObject().asResource();
-                            Statement rawStmt = model.getProperty(generalRes, rawTypeProp);
-                            if (rawStmt != null && rawStmt.getObject().isResource())
-                            {
-                                gens.add(getLocalName(rawStmt.getResource()));
-                            }
-                        }
-                    }
-                }
-
+                MutableList<String> gens = generalizationTypeNames(r);
                 if (!gens.isEmpty())
                 {
-                    w.write("    :generalizations\n");
-                    for (int i = 0; i < gens.size(); i++)
-                    {
-                        String sep = (i < gens.size() - 1) ? "," : " .";
-                        w.write("        [ :general [ :type :" + gens.get(i) + " ] ]" + sep + "\n");
-                    }
+                    writeGeneralizations(w, gens);
                 }
                 else
                 {
@@ -388,35 +366,10 @@ public class M3ProtocolGenerator
             w.write("    :package :" + getLocalName(pkgStmt.getResource()) + " ;\n");
         }
 
-        MutableList<String> gens = Lists.mutable.empty();
-        StmtIterator genIter = model.listStatements(r, generalizationsProp, (RDFNode) null);
-        while (genIter.hasNext())
-        {
-            Statement genStmt = genIter.next();
-            if (genStmt.getObject().isResource())
-            {
-                Resource genRes = genStmt.getObject().asResource();
-                Statement generalStmt = model.getProperty(genRes, generalProp);
-                if (generalStmt != null && generalStmt.getObject().isResource())
-                {
-                    Resource generalRes = generalStmt.getObject().asResource();
-                    Statement rawStmt = model.getProperty(generalRes, rawTypeProp);
-                    if (rawStmt != null && rawStmt.getObject().isResource())
-                    {
-                        gens.add(getLocalName(rawStmt.getResource()));
-                    }
-                }
-            }
-        }
-
+        MutableList<String> gens = generalizationTypeNames(r);
         if (!gens.isEmpty())
         {
-            w.write("    :generalizations\n");
-            for (int i = 0; i < gens.size(); i++)
-            {
-                String sep = (i < gens.size() - 1) ? "," : " .";
-                w.write("        [ :general [ :type :" + gens.get(i) + " ] ]" + sep + "\n");
-            }
+            writeGeneralizations(w, gens);
         }
         else
         {
@@ -702,8 +655,8 @@ public class M3ProtocolGenerator
         // SourceModule will declare a duplicate of the m3 element. Listed names
         // are matched against the RDF resource's local name.
         java.util.Set<String> skipProfiles = java.util.Set.of(
-                "meta_pure_profiles_typemodifiers",
-                "meta_pure_profiles_compiler"
+                "platform_pure_profiles_typemodifiers",
+                "platform_pure_profiles_compiler"
         );
         ResIterator profileIter = model.listSubjectsWithProperty(rdfType, m3Profile);
         while (profileIter.hasNext())
@@ -939,41 +892,61 @@ public class M3ProtocolGenerator
         return count;
     }
 
+    /**
+     * Drops generalizations to excluded types. A type's generalizations are an RDF collection
+     * (ordered), so a collection that mentions an excluded type is replaced by one holding the
+     * kept generalizations in their original order.
+     */
     private int removeGeneralizationsToExcludedTypes()
     {
         int count = 0;
         MutableList<Statement> toRemove = Lists.mutable.empty();
+        MutableList<Statement> toAdd = Lists.mutable.empty();
 
-        StmtIterator iter = model.listStatements(null, generalizationsProp, (RDFNode) null);
-        while (iter.hasNext())
+        for (Statement genStmt : model.listStatements(null, generalizationsProp, (RDFNode) null).toList())
         {
-            Statement genStmt = iter.next();
-            RDFNode genNode = genStmt.getObject();
-
-            if (genNode.isResource())
+            MutableList<Resource> gens = generalizationsOf(genStmt);
+            MutableList<Resource> kept = gens.reject(this::generalizesExcludedType);
+            if (kept.size() < gens.size())
             {
-                Resource genRes = genNode.asResource();
-                Statement generalStmt = model.getProperty(genRes, generalProp);
-                if (generalStmt != null && generalStmt.getObject().isResource())
+                count += gens.size() - kept.size();
+                toRemove.add(genStmt);
+                removeListCells(genStmt.getObject(), toRemove);
+                gens.reject(kept::contains).forEach(gen -> removeBlankNodeStatements(gen, toRemove));
+                if (kept.notEmpty())
                 {
-                    Resource generalRes = generalStmt.getObject().asResource();
-                    Statement rawStmt = model.getProperty(generalRes, rawTypeProp);
-                    if (rawStmt != null && rawStmt.getObject().isResource())
-                    {
-                        Resource rawType = rawStmt.getObject().asResource();
-                        if (excludedTypes.contains(rawType))
-                        {
-                            toRemove.add(genStmt);
-                            removeBlankNodeStatements(genRes, toRemove);
-                            count++;
-                        }
-                    }
+                    toAdd.add(model.createStatement(genStmt.getSubject(), generalizationsProp, model.createList(kept.iterator())));
                 }
             }
         }
 
         model.remove(toRemove);
+        model.add(toAdd);
         return count;
+    }
+
+    private boolean generalizesExcludedType(Resource gen)
+    {
+        Resource rawType = generalRawType(gen);
+        return rawType != null && excludedTypes.contains(rawType);
+    }
+
+    // The cells of an RDF collection (their rdf:first / rdf:rest statements), not its items.
+    private void removeListCells(RDFNode list, MutableList<Statement> toRemove)
+    {
+        RDFNode cell = list;
+        while (cell.isResource() && cell.asResource().hasProperty(RDF.first))
+        {
+            Resource res = cell.asResource();
+            toRemove.add(res.getProperty(RDF.first));
+            Statement rest = res.getProperty(RDF.rest);
+            if (rest == null)
+            {
+                return;
+            }
+            toRemove.add(rest);
+            cell = rest.getObject();
+        }
     }
 
     private int removePropertiesReferencingExcludedTypes()
@@ -1033,12 +1006,12 @@ public class M3ProtocolGenerator
                 String oldUri = oldPkg.getURI();
 
                 if (oldUri != null
-                        && oldUri.contains("meta_pure_metamodel")
-                        && !oldUri.contains("meta_pure_protocol_grammar")
-                        && !oldUri.contains("meta_pure_metamodel_type_primitives"))
+                        && oldUri.contains("platform_pure_metamodel")
+                        && !oldUri.contains("platform_pure_protocol_grammar")
+                        && !oldUri.contains("platform_pure_metamodel_type_primitives"))
                 {
                     String newUri = oldUri.replace(
-                        "meta_pure_metamodel", "meta_pure_protocol_grammar");
+                        "platform_pure_metamodel", "platform_pure_protocol_grammar");
                     Resource newPkg = model.createResource(newUri);
 
                     toRemove.add(pkgStmt);
@@ -1400,8 +1373,8 @@ public class M3ProtocolGenerator
         model.add(pointerValueClass, rdfType, m3Class);
         model.add(pointerValueClass, nameProp, className);
 
-        // Package: meta_pure_protocol_grammar (same as other protocol classes)
-        Resource protocolPkg = model.createResource(M3_NS + "meta_pure_protocol_grammar");
+        // Package: platform_pure_protocol_grammar (same as other protocol classes)
+        Resource protocolPkg = model.createResource(M3_NS + "platform_pure_protocol_grammar");
         model.add(pointerValueClass, packageProp, protocolPkg);
 
         // Generalization: PointerValue -> Any
@@ -1480,6 +1453,59 @@ public class M3ProtocolGenerator
             }
         }
         model.remove(toRemove);
+    }
+
+    /**
+     * A :generalizations value as generalization nodes, in order. m3.ttl writes the value as an
+     * RDF collection {@code ( … )} because the comma form is an unordered set whose blank nodes
+     * Jena returns in a different order on every load; a lone non-collection value is accepted.
+     */
+    private MutableList<Resource> generalizationsOf(Statement genStmt)
+    {
+        RDFNode value = genStmt.getObject();
+        if (value.isResource() && value.asResource().hasProperty(RDF.first))
+        {
+            return Lists.mutable.withAll(value.as(RDFList.class).asJavaList())
+                    .select(RDFNode::isResource)
+                    .collect(RDFNode::asResource);
+        }
+        return value.isResource() && !RDF.nil.equals(value)
+                ? Lists.mutable.with(value.asResource())
+                : Lists.mutable.empty();
+    }
+
+    // The raw type of a generalization's :general generic type, or null.
+    private Resource generalRawType(Resource gen)
+    {
+        Statement generalStmt = model.getProperty(gen, generalProp);
+        if (generalStmt == null || !generalStmt.getObject().isResource())
+        {
+            return null;
+        }
+        Statement rawStmt = model.getProperty(generalStmt.getObject().asResource(), rawTypeProp);
+        return (rawStmt != null && rawStmt.getObject().isResource()) ? rawStmt.getObject().asResource() : null;
+    }
+
+    // Local names of r's generalization raw types, in declared order.
+    private MutableList<String> generalizationTypeNames(Resource r)
+    {
+        MutableList<String> names = Lists.mutable.empty();
+        for (Statement genStmt : model.listStatements(r, generalizationsProp, (RDFNode) null).toList())
+        {
+            generalizationsOf(genStmt).collect(this::generalRawType).select(t -> t != null).collect(this::getLocalName, names);
+        }
+        return names;
+    }
+
+    // Ends the subject's statement: an RDF collection keeps the generalizations' order.
+    private void writeGeneralizations(BufferedWriter w, MutableList<String> gens) throws IOException
+    {
+        w.write("    :generalizations (\n");
+        for (String gen : gens)
+        {
+            w.write("        [ :general [ :type :" + gen + " ] ]\n");
+        }
+        w.write("    ) .\n");
     }
 
     private void removeBlankNodeStatements(Resource res, MutableList<Statement> toRemove)

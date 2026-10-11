@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,9 +15,9 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import meta.pure.metamodel.function.NativeFunction;
-import meta.pure.metamodel.function.PackageableFunction;
-import meta.pure.metamodel.type.Type;
+import platform.pure.metamodel.function.NativeFunction;
+import platform.pure.metamodel.function.PackageableFunction;
+import platform.pure.metamodel.type.Type;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -46,7 +47,7 @@ public final class PackageableFunctionCompiler
      */
     public static PackageableFunction compileShared(
             PackageableFunction result,
-            meta.pure.protocol.grammar.function.PackageableFunction grammar,
+            platform.pure.protocol.grammar.function.PackageableFunction grammar,
             MutableList<String> imports,
             MetadataAccess model,
             CompilationContext context)
@@ -55,7 +56,7 @@ public final class PackageableFunctionCompiler
                         .collect(tp -> GenericTypeCompiler.compileTypeParameter(tp, result, model))
                         .select(Objects::nonNull))
                    ._multiplicityParameters(grammar._multiplicityParameters()
-                        .<meta.pure.metamodel.multiplicity.MultiplicityParameter>collect(mp -> MultiplicityCompiler.compileMultiplicityParameter(mp, result, model))
+                        .<platform.pure.metamodel.multiplicity.MultiplicityParameter>collect(mp -> MultiplicityCompiler.compileMultiplicityParameter(mp, result, model))
                         .select(Objects::nonNull));
 
         // Register declared type/multiplicity params in scope so GenericTypeCompiler
@@ -74,8 +75,8 @@ public final class PackageableFunctionCompiler
               ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model))
               ._classifierGenericType(
                   _GenericType.buildUserDefinedGenericType((Type) model.getElement(
-                                result instanceof NativeFunction ? "meta::pure::metamodel::function::NativeFunction"
-                                        : "meta::pure::metamodel::function::UserDefinedFunction"), model)
+                                result instanceof NativeFunction ? "platform::pure::metamodel::function::NativeFunction"
+                                        : "platform::pure::metamodel::function::UserDefinedFunction"), model)
                         ._typeArguments(Lists.mutable.with(
                                 _GenericType.buildUserDefinedGenericType(
                                         _FunctionType.newFunctionType(model)
@@ -89,7 +90,7 @@ public final class PackageableFunctionCompiler
     /**
      * Compute the fully-qualified path for a grammar PackageableFunction.
      */
-    public static String fullPath(meta.pure.protocol.grammar.function.PackageableFunction grammar)
+    public static String fullPath(platform.pure.protocol.grammar.function.PackageableFunction grammar)
     {
         return _G_PackageableElement.fullPath(grammar);
     }

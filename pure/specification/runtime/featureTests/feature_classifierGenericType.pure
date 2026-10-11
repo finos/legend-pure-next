@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +17,7 @@
 // classifierGenericType (CGT) anchor lookup must be package-sensitive.
 //
 // The runtime keeps a pre-built UDPGT per Pure-platform Class at
-// {@code meta::pure::metamodel::type::generics::optimization::GenericType_<Name>}
+// {@code platform::pure::metamodel::type::generics::optimization::GenericType_<Name>}
 // so that {@code ^X(...)} construction reuses one canonical CGT instead of
 // allocating a fresh UDGT per call. The anchor lookup is keyed by simple
 // name, which means a user-defined class whose simple name collides with a
@@ -30,12 +31,12 @@
 // platform-colliding simple name keeps its OWN classifierGenericType.
 // ----------------------------------------------------------------------------
 
-Class <<test.TestDependency>> meta::pure::functions::tests::cgtCollision::Package
+Class <<test.TestDependency>> platform::pure::functions::tests::cgtCollision::Package
 {
     label : String[1];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::tests::cgtCollision::Class
+Class <<test.TestDependency>> platform::pure::functions::tests::cgtCollision::Class
 {
     label : String[1];
 }
@@ -45,34 +46,34 @@ Class <<test.TestDependency>> meta::pure::functions::tests::cgtCollision::Class
 //    user type itself, not the platform type that shares the simple name.
 // ----------------------------------------------------------------------------
 
-function <<test.Test>> meta::pure::functions::tests::cgtCollision::testCGTPointsToUserPackage():Boolean[1]
+function <<test.Test>> platform::pure::functions::tests::cgtCollision::testCGTPointsToUserPackage():Boolean[1]
 {
-    let p = ^meta::pure::functions::tests::cgtCollision::Package(label='userPackage');
+    let p = ^platform::pure::functions::tests::cgtCollision::Package(label='userPackage');
     let cgtType = $p.classifierGenericType->toOne().type->toOne();
-    assertEquals('meta::pure::functions::tests::cgtCollision::Package',
+    assertEquals('platform::pure::functions::tests::cgtCollision::Package',
                  $cgtType->elementToPath());
 }
 
-function <<test.Test>> meta::pure::functions::tests::cgtCollision::testCGTPointsToUserClass():Boolean[1]
+function <<test.Test>> platform::pure::functions::tests::cgtCollision::testCGTPointsToUserClass():Boolean[1]
 {
-    let c = ^meta::pure::functions::tests::cgtCollision::Class(label='userClass');
+    let c = ^platform::pure::functions::tests::cgtCollision::Class(label='userClass');
     let cgtType = $c.classifierGenericType->toOne().type->toOne();
-    assertEquals('meta::pure::functions::tests::cgtCollision::Class',
+    assertEquals('platform::pure::functions::tests::cgtCollision::Class',
                  $cgtType->elementToPath());
 }
 
 // ----------------------------------------------------------------------------
 // 2. instanceOf must distinguish the user type from the platform type.
 //    Without the package-sensitive anchor, a user Package PDO would
-//    instanceOf-match meta::pure::metamodel::Package — silently lying about
+//    instanceOf-match platform::pure::metamodel::Package — silently lying about
 //    its type and breaking any downstream pattern dispatch.
 // ----------------------------------------------------------------------------
 
-function <<test.Test>> meta::pure::functions::tests::cgtCollision::testInstanceOfDiscriminatesUserVsPlatform():Boolean[1]
+function <<test.Test>> platform::pure::functions::tests::cgtCollision::testInstanceOfDiscriminatesUserVsPlatform():Boolean[1]
 {
-    let userPkg = ^meta::pure::functions::tests::cgtCollision::Package(label='u');
-    assert($userPkg->instanceOf(meta::pure::functions::tests::cgtCollision::Package), |'user Package PDO should match its own type');
-    assert(!$userPkg->instanceOf(meta::pure::metamodel::Package), |'user Package PDO must NOT match the platform meta::pure::metamodel::Package');
+    let userPkg = ^platform::pure::functions::tests::cgtCollision::Package(label='u');
+    assert($userPkg->instanceOf(platform::pure::functions::tests::cgtCollision::Package), |'user Package PDO should match its own type');
+    assert(!$userPkg->instanceOf(platform::pure::metamodel::Package), |'user Package PDO must NOT match the platform platform::pure::metamodel::Package');
 }
 
 // ----------------------------------------------------------------------------
@@ -82,12 +83,12 @@ function <<test.Test>> meta::pure::functions::tests::cgtCollision::testInstanceO
 //    branch and fails with "No match function matched the value".
 // ----------------------------------------------------------------------------
 
-function <<test.Test>> meta::pure::functions::tests::cgtCollision::testMatchDispatchOnUserType():Boolean[1]
+function <<test.Test>> platform::pure::functions::tests::cgtCollision::testMatchDispatchOnUserType():Boolean[1]
 {
-    let userPkg = ^meta::pure::functions::tests::cgtCollision::Package(label='u');
+    let userPkg = ^platform::pure::functions::tests::cgtCollision::Package(label='u');
     let result = $userPkg->match([
-        p : meta::pure::functions::tests::cgtCollision::Package[1] | 'user',
-        p : meta::pure::metamodel::Package[1]                      | 'platform',
+        p : platform::pure::functions::tests::cgtCollision::Package[1] | 'user',
+        p : platform::pure::metamodel::Package[1]                      | 'platform',
         a : Any[1]                                                 | 'any'
     ]);
     assertEquals('user', $result);

@@ -1,12 +1,27 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.multiplicity.ConcreteMultiplicity;
-import meta.pure.metamodel.multiplicity.InferredAdHocMultiplicityImpl;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.multiplicity.MultiplicityParameter;
-import meta.pure.metamodel.multiplicity.MultiplicityValueImpl;
-import meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl;
-import meta.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.multiplicity.ConcreteMultiplicity;
+import platform.pure.metamodel.multiplicity.InferredAdHocMultiplicityImpl;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.multiplicity.MultiplicityParameter;
+import platform.pure.metamodel.multiplicity.MultiplicityValueImpl;
+import platform.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl;
+import platform.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -39,8 +54,8 @@ public final class _Multiplicity
     public static boolean subsumes(Multiplicity general, Multiplicity specific)
     {
         if (general == null || specific == null
-                || general instanceof meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity
-                || specific instanceof meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity)
+                || general instanceof platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicity
+                || specific instanceof platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicity)
         {
             return true; // unknown / not set — skip
         }
@@ -53,8 +68,8 @@ public final class _Multiplicity
         // overload-resolution pick a `<T|?>` cast variant when the user
         // explicitly wrote `cast(@T|m)` — and silently dropping the user's
         // multiplicity constraint.
-        boolean generalUndefined = general instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity;
-        boolean specificUndefined = specific instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity;
+        boolean generalUndefined = general instanceof platform.pure.metamodel.multiplicity.UndefinedMultiplicity;
+        boolean specificUndefined = specific instanceof platform.pure.metamodel.multiplicity.UndefinedMultiplicity;
         if (generalUndefined || specificUndefined)
         {
             return generalUndefined == specificUndefined;
@@ -166,7 +181,7 @@ public final class _Multiplicity
         {
             return "[" + mp._name() + "]";
         }
-        if (m instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity)
+        if (m instanceof platform.pure.metamodel.multiplicity.UndefinedMultiplicity)
         {
             return "[?]";
         }
@@ -196,7 +211,7 @@ public final class _Multiplicity
         {
             return mp._name();
         }
-        if (m instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity)
+        if (m instanceof platform.pure.metamodel.multiplicity.UndefinedMultiplicity)
         {
             return "?";
         }
@@ -222,7 +237,7 @@ public final class _Multiplicity
     {
         return multiplicity != null
                 && !(multiplicity instanceof MultiplicityParameter)
-                && !(multiplicity instanceof meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity);
+                && !(multiplicity instanceof platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicity);
     }
 
     /**
@@ -332,8 +347,8 @@ public final class _Multiplicity
      */
     public static Multiplicity asInferred(Multiplicity multiplicity, MetadataAccess model)
     {
-        if (multiplicity == null || multiplicity instanceof meta.pure.metamodel.Inferred
-                || multiplicity instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity)
+        if (multiplicity == null || multiplicity instanceof platform.pure.metamodel.Inferred
+                || multiplicity instanceof platform.pure.metamodel.multiplicity.UndefinedMultiplicity)
         {
             return multiplicity;
         }
@@ -341,11 +356,11 @@ public final class _Multiplicity
         // Convert multiplicity parameters to their inferred counterpart
         if (multiplicity instanceof MultiplicityParameter mp)
         {
-            if (multiplicity instanceof meta.pure.metamodel.Inferred)
+            if (multiplicity instanceof platform.pure.metamodel.Inferred)
             {
                 return multiplicity;
             }
-            return new meta.pure.metamodel.multiplicity.InferredMultiplicityParameterImpl(model)
+            return new platform.pure.metamodel.multiplicity.InferredMultiplicityParameterImpl(model)
                     ._name(mp._name())
                     ._owner(mp._owner());
         }
@@ -355,19 +370,19 @@ public final class _Multiplicity
         Long upper = upperBound(multiplicity);
         if (lower == 1 && upper != null && upper == 1)
         {
-            return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredPureOne");
+            return (Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::InferredPureOne");
         }
         if (lower == 0 && upper != null && upper == 1)
         {
-            return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredZeroOne");
+            return (Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::InferredZeroOne");
         }
         if (lower == 0 && upper == null)
         {
-            return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredZeroMany");
+            return (Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::InferredZeroMany");
         }
         if (lower == 1 && upper == null)
         {
-            return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredOneMany");
+            return (Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::InferredOneMany");
         }
 
         return copyBoundsInto(multiplicity, new InferredAdHocMultiplicityImpl(model), model);

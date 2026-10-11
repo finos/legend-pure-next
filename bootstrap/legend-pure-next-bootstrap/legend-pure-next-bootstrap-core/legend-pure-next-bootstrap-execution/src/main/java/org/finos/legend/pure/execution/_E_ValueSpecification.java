@@ -15,14 +15,14 @@
 
 package org.finos.legend.pure.execution;
 
-import meta.pure.metamodel.multiplicity.PackageableMultiplicity;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.AtomicValueImpl;
-import meta.pure.metamodel.valuespecification.Collection;
-import meta.pure.metamodel.valuespecification.CollectionImpl;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.multiplicity.PackageableMultiplicity;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.valuespecification.AtomicValue;
+import platform.pure.metamodel.valuespecification.AtomicValueImpl;
+import platform.pure.metamodel.valuespecification.Collection;
+import platform.pure.metamodel.valuespecification.CollectionImpl;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
@@ -62,19 +62,19 @@ public class _E_ValueSpecification
                     new CollectionImpl(resolver)
                             ._values(Lists.mutable.empty())
                             ._genericType(vs._genericType())
-                            ._multiplicity((PackageableMultiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureZero"))
+                            ._multiplicity((PackageableMultiplicity) resolver.getElement("platform::pure::metamodel::multiplicity::PureZero"))
                     :
                     new CollectionImpl(resolver)
                             ._values(Lists.mutable.with(vs))
                             ._genericType(vs._genericType())
-                            ._multiplicity((PackageableMultiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"));
+                            ._multiplicity((PackageableMultiplicity) resolver.getElement("platform::pure::metamodel::multiplicity::PureOne"));
         }
         else
         {
             return new CollectionImpl(resolver)
                     ._values(Lists.mutable.with(vs))
                     ._genericType(vs._genericType())
-                    ._multiplicity((PackageableMultiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"));
+                    ._multiplicity((PackageableMultiplicity) resolver.getElement("platform::pure::metamodel::multiplicity::PureOne"));
         }
     }
 
@@ -136,8 +136,8 @@ public class _E_ValueSpecification
         {
             return value;
         }
-        meta.pure.metamodel.type.Type type = _GenericType.type(gt);
-        if (type instanceof meta.pure.metamodel.PackageableElement pe && "Binary".equals(pe._name()))
+        platform.pure.metamodel.type.Type type = _GenericType.type(gt);
+        if (type instanceof platform.pure.metamodel.PackageableElement pe && "Binary".equals(pe._name()))
         {
             return org.finos.legend.pure.execution.natives.binary.BinaryNatives.decodeHex(hex);
         }
@@ -151,19 +151,19 @@ public class _E_ValueSpecification
      * - raw Java value → AtomicValue
      */
     public static ValueSpecification wrap(Object value,
-                                   meta.pure.metamodel.type.generics.GenericType genericType,
-                                   meta.pure.metamodel.multiplicity.Multiplicity multiplicity,
+                                   platform.pure.metamodel.type.generics.GenericType genericType,
+                                   platform.pure.metamodel.multiplicity.Multiplicity multiplicity,
                                    MetadataAccess resolver)
     {
         if (value == null)
         {
-            return new meta.pure.metamodel.valuespecification.CollectionImpl(resolver)
+            return new platform.pure.metamodel.valuespecification.CollectionImpl(resolver)
                     ._values(org.eclipse.collections.api.factory.Lists.mutable.empty())
                     ._genericType(genericType != null ? genericType
-                            : (meta.pure.metamodel.type.generics.GenericType) resolver.getElement(
-                                    "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_Nil"))
-                    ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity)
-                            resolver.getElement("meta::pure::metamodel::multiplicity::PureZero"));
+                            : (platform.pure.metamodel.type.generics.GenericType) resolver.getElement(
+                                    "platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_type_Nil"))
+                    ._multiplicity((platform.pure.metamodel.multiplicity.Multiplicity)
+                            resolver.getElement("platform::pure::metamodel::multiplicity::PureZero"));
         }
         if (value instanceof List<?> list)
         {
@@ -203,7 +203,7 @@ public class _E_ValueSpecification
         {
             if (col._values().isEmpty())
             {
-                return resolver != null ? (Type) resolver.getElement("meta::pure::metamodel::type::Nil") : null;
+                return resolver != null ? (Type) resolver.getElement("platform::pure::metamodel::type::Nil") : null;
             }
             org.eclipse.collections.api.list.MutableList<GenericType> elementTypes =
                     col._values().collect(ValueSpecification::_genericType).select(gt -> gt != null);
@@ -221,32 +221,32 @@ public class _E_ValueSpecification
         // TempCompilerPointer — `_classifierGenericType()` is guarded on
         // pointer impls and throws under strict mode (the slot isn't
         // populated on a pointer). Derive the type from the Java class name
-        // instead: every pointer impl in {@code meta.pure.metamodel.pointer}
+        // instead: every pointer impl in {@code platform.pure.metamodel.pointer}
         // maps 1:1 to a Pure type at the same package path. The match-arm
         // dispatcher only needs the runtime type to walk generalizations,
         // and the pointer's typed interface chain already encodes the right
         // ancestry (e.g. PackageableFunctionPointer → PackageableFunction →
         // Function → Any, and also → PackageableElement).
-        if (value instanceof meta.pure.metamodel.pointer.TempCompilerPointer && resolver != null)
+        if (value instanceof platform.pure.metamodel.pointer.TempCompilerPointer && resolver != null)
         {
             String simpleName = value.getClass().getSimpleName();
             if (simpleName.endsWith("Impl"))
             {
                 simpleName = simpleName.substring(0, simpleName.length() - 4);
             }
-            Object pointerType = resolver.getElement("meta::pure::metamodel::pointer::" + simpleName);
+            Object pointerType = resolver.getElement("platform::pure::metamodel::pointer::" + simpleName);
             if (pointerType instanceof Type t)
             {
                 return t;
             }
         }
-        if (value instanceof meta.pure.metamodel.type.Any any)
+        if (value instanceof platform.pure.metamodel.type.Any any)
         {
             GenericType cgt = any._classifierGenericType();
             if (cgt == null)
             {
                 throw new RuntimeException("classifierGenericType is null for " + value.getClass().getName()
-                        + (value instanceof meta.pure.metamodel.PackageableElement pe ? " name='" + pe._name() + "'" : "")
+                        + (value instanceof platform.pure.metamodel.PackageableElement pe ? " name='" + pe._name() + "'" : "")
                         + " — this is a constructor bug.");
             }
             return _GenericType.type(cgt);
@@ -263,7 +263,7 @@ public class _E_ValueSpecification
         // holding a String), use the narrower runtime type. When the VS type
         // is already narrower (e.g. `StrictDate` for a date literal whose Java
         // representation is a plain String), keep the VS type.
-        // Pinned by `meta::pure::functions::meta::tests::instanceOf::testInstanceOfFromAnyProperty`.
+        // Pinned by `platform::pure::functions::meta::tests::instanceOf::testInstanceOfFromAnyProperty`.
         Type vsType = vs != null && vs._genericType() != null ? _GenericType.type(vs._genericType()) : null;
         Type primitiveType = primitiveTypeForJavaValue(value, resolver);
         if (vsType != null && primitiveType != null && resolver != null)
@@ -294,23 +294,23 @@ public class _E_ValueSpecification
         String pureTypePath = null;
         if (value instanceof Long || value instanceof Integer || value instanceof Short || value instanceof Byte)
         {
-            pureTypePath = "meta::pure::metamodel::type::primitives::Integer";
+            pureTypePath = "platform::pure::metamodel::type::primitives::Integer";
         }
         else if (value instanceof Double || value instanceof Float)
         {
-            pureTypePath = "meta::pure::metamodel::type::primitives::Float";
+            pureTypePath = "platform::pure::metamodel::type::primitives::Float";
         }
         else if (value instanceof java.math.BigDecimal)
         {
-            pureTypePath = "meta::pure::metamodel::type::primitives::Decimal";
+            pureTypePath = "platform::pure::metamodel::type::primitives::Decimal";
         }
         else if (value instanceof Boolean)
         {
-            pureTypePath = "meta::pure::metamodel::type::primitives::Boolean";
+            pureTypePath = "platform::pure::metamodel::type::primitives::Boolean";
         }
         else if (value instanceof String)
         {
-            pureTypePath = "meta::pure::metamodel::type::primitives::String";
+            pureTypePath = "platform::pure::metamodel::type::primitives::String";
         }
         if (pureTypePath == null)
         {

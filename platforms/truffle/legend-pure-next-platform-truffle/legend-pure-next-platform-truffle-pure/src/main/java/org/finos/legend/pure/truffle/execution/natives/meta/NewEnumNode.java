@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.truffle.execution.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -44,7 +59,7 @@ public final class NewEnumNode extends PureNode
     private static Object doNewEnumeration(Object name, Object pkg, Object valueNames, MetadataAccess resolver)
     {
         Object enumeration = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                "meta::pure::metamodel::type::Enumeration", resolver);
+                "platform::pure::metamodel::type::Enumeration", resolver);
         org.finos.legend.pure.truffle.compiler.helper._Any.write(enumeration, "name",
                 name instanceof String s ? s : String.valueOf(name));
         if (pkg != null)
@@ -57,15 +72,15 @@ public final class NewEnumNode extends PureNode
         // typed `instanceof Type` guards would skip the CGT-write branches
         // and leave the resulting Enumeration with empty `properties`,
         // tripping the testNewEnumeration assertion.
-        Object enumTypeObj = resolver.getElement("meta::pure::metamodel::type::Enum");
+        Object enumTypeObj = resolver.getElement("platform::pure::metamodel::type::Enum");
         if (enumTypeObj != null)
         {
             Object gen = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                    "meta::pure::metamodel::relationship::Generalization", resolver);
+                    "platform::pure::metamodel::relationship::Generalization", resolver);
             org.finos.legend.pure.truffle.compiler.helper._Any.write(gen, "general",
                     _GenericType.buildUserDefinedGenericType(enumTypeObj, resolver));
             org.finos.legend.pure.truffle.compiler.helper._Any.write(gen, "specific", enumeration);
-            Object genTypeObj = resolver.getElement("meta::pure::metamodel::relationship::Generalization");
+            Object genTypeObj = resolver.getElement("platform::pure::metamodel::relationship::Generalization");
             if (genTypeObj != null)
             {
                 org.finos.legend.pure.truffle.compiler.helper._Any.write(gen, "classifierGenericType",
@@ -77,7 +92,7 @@ public final class NewEnumNode extends PureNode
 
         // Self-referencing CGT: Enumeration<self>
         var selfRef = _GenericType.buildUserDefinedGenericType(enumeration, resolver);
-        Object enumerationTypeObj = resolver.getElement("meta::pure::metamodel::type::Enumeration");
+        Object enumerationTypeObj = resolver.getElement("platform::pure::metamodel::type::Enumeration");
         var cgt = _GenericType.buildUserDefinedGenericType(enumerationTypeObj, resolver);
         org.finos.legend.pure.truffle.compiler.helper._Any.write(cgt, "typeArguments",
                 new ObjectSequence(new Object[]{selfRef}));
@@ -86,10 +101,10 @@ public final class NewEnumNode extends PureNode
         // GenericType for this enumeration (CGT for enum values)
         var enumGT = _GenericType.buildUserDefinedGenericType(enumeration, resolver);
 
-        Object pureOne = resolver.getElement("meta::pure::metamodel::multiplicity::PureOne");
-        Object propertyTypeObj = resolver.getElement("meta::pure::metamodel::function::property::Property");
-        Object lambdaFunctionTypeObj = resolver.getElement("meta::pure::metamodel::function::LambdaFunction");
-        Object functionTypeTypeObj = resolver.getElement("meta::pure::metamodel::type::FunctionType");
+        Object pureOne = resolver.getElement("platform::pure::metamodel::multiplicity::PureOne");
+        Object propertyTypeObj = resolver.getElement("platform::pure::metamodel::function::property::Property");
+        Object lambdaFunctionTypeObj = resolver.getElement("platform::pure::metamodel::function::LambdaFunction");
+        Object functionTypeTypeObj = resolver.getElement("platform::pure::metamodel::type::FunctionType");
 
         // Build properties for each value
         int count = CollectionHelper.size(valueNames);
@@ -100,13 +115,13 @@ public final class NewEnumNode extends PureNode
 
             // Create Enum instance with CGT = enumGT
             Object enumInstance = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                    "meta::pure::metamodel::type::Enum", resolver);
+                    "platform::pure::metamodel::type::Enum", resolver);
             org.finos.legend.pure.truffle.compiler.helper._Any.write(enumInstance, "name", valueName);
             org.finos.legend.pure.truffle.compiler.helper._Any.write(enumInstance, "classifierGenericType", enumGT);
 
             // Build FunctionType for the lambda: {-> EnumType[1]}
             Object ft = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                    "meta::pure::metamodel::type::FunctionType", resolver);
+                    "platform::pure::metamodel::type::FunctionType", resolver);
             if (functionTypeTypeObj != null)
             {
                 org.finos.legend.pure.truffle.compiler.helper._Any.write(ft, "classifierGenericType",
@@ -116,9 +131,9 @@ public final class NewEnumNode extends PureNode
             org.finos.legend.pure.truffle.compiler.helper._Any.write(ft, "returnMultiplicity", pureOne);
 
             // Lambda CGT: LambdaFunction<{-> EnumType[1]}>
-            Object igtType = resolver.getElement("meta::pure::metamodel::type::generics::InferredGenericType");
+            Object igtType = resolver.getElement("platform::pure::metamodel::type::generics::InferredGenericType");
             Object ftGT = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                    "meta::pure::metamodel::type::generics::InferredGenericType", resolver);
+                    "platform::pure::metamodel::type::generics::InferredGenericType", resolver);
             if (igtType != null)
             {
                 org.finos.legend.pure.truffle.compiler.helper._Any.write(ftGT, "classifierGenericType",
@@ -126,7 +141,7 @@ public final class NewEnumNode extends PureNode
             }
             org.finos.legend.pure.truffle.compiler.helper._Any.write(ftGT, "type", ft);
             Object lambdaCGT = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                    "meta::pure::metamodel::type::generics::InferredGenericType", resolver);
+                    "platform::pure::metamodel::type::generics::InferredGenericType", resolver);
             if (igtType != null)
             {
                 org.finos.legend.pure.truffle.compiler.helper._Any.write(lambdaCGT, "classifierGenericType",
@@ -138,8 +153,8 @@ public final class NewEnumNode extends PureNode
 
             // Lambda wrapping the AtomicValue
             Object atomicValue = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                    "meta::pure::metamodel::valuespecification::AtomicValue", resolver);
-            Object avType = resolver.getElement("meta::pure::metamodel::valuespecification::AtomicValue");
+                    "platform::pure::metamodel::valuespecification::AtomicValue", resolver);
+            Object avType = resolver.getElement("platform::pure::metamodel::valuespecification::AtomicValue");
             if (avType != null)
             {
                 org.finos.legend.pure.truffle.compiler.helper._Any.write(atomicValue, "classifierGenericType",
@@ -150,7 +165,7 @@ public final class NewEnumNode extends PureNode
             org.finos.legend.pure.truffle.compiler.helper._Any.write(atomicValue, "multiplicity", pureOne);
 
             Object lambda = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                    "meta::pure::metamodel::function::LambdaFunction", resolver);
+                    "platform::pure::metamodel::function::LambdaFunction", resolver);
             org.finos.legend.pure.truffle.compiler.helper._Any.write(lambda, "classifierGenericType", lambdaCGT);
             org.finos.legend.pure.truffle.compiler.helper._Any.write(lambda, "expressionSequence",
                     new ObjectSequence(new Object[]{atomicValue}));
@@ -163,7 +178,7 @@ public final class NewEnumNode extends PureNode
                     new ObjectSequence(new Object[]{pureOne}));
 
             Object prop = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                    "meta::pure::metamodel::function::property::Property", resolver);
+                    "platform::pure::metamodel::function::property::Property", resolver);
             org.finos.legend.pure.truffle.compiler.helper._Any.write(prop, "name", valueName);
             org.finos.legend.pure.truffle.compiler.helper._Any.write(prop, "classifierGenericType", propCGT);
             org.finos.legend.pure.truffle.compiler.helper._Any.write(prop, "genericType", enumGT);
@@ -171,7 +186,7 @@ public final class NewEnumNode extends PureNode
             org.finos.legend.pure.truffle.compiler.helper._Any.write(prop, "owner", enumeration);
             org.finos.legend.pure.truffle.compiler.helper._Any.write(prop, "aggregation",
                     org.finos.legend.pure.truffle.compiler.module.EnumValueSingletons.valueOf(
-                            "meta::pure::metamodel::function::property::AggregationKind", "None"));
+                            "platform::pure::metamodel::function::property::AggregationKind", "None"));
             org.finos.legend.pure.truffle.compiler.helper._Any.write(prop, "defaultValue", lambda);
 
             properties[i] = prop;

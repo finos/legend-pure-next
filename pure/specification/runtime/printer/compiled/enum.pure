@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::printer::compiled::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::metamodel::function::property::*;
-import meta::pure::metamodel::type::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::printer::compiled::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::type::*;
 
 // Compiled-side printer for `Enumeration`. Enum values live as `properties`
 // on the enumeration; each property's stereotypes/taggedValues are emitted
 // inline before the value name when present.
-function meta::pure::functions::printer::compiled::printCompiledEnum(e: Enumeration<Any>[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledEnum(e: Enumeration<Any>[1], ctx: PrintContext[1]): String[1]
 {
     let pkgPrefix = printPackagePrefix($e.package);
     let annotations = printCompiledAnnotations($e.stereotypes, $e.taggedValues, $ctx);
@@ -31,7 +32,7 @@ function meta::pure::functions::printer::compiled::printCompiledEnum(e: Enumerat
     'Enum ' + $annotations + $pkgPrefix + $e.name->toOne() + '\n{\n' + $body + '}\n';
 }
 
-function meta::pure::functions::printer::compiled::printCompiledEnumValue(p: Property<Nil, Any|*>[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledEnumValue(p: Property<Nil, Any|*>[1], ctx: PrintContext[1]): String[1]
 {
     printCompiledAnnotations($p.stereotypes, $p.taggedValues, $ctx) + $p.name->toOne();
 }

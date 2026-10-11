@@ -9,8 +9,8 @@
 
 package org.finos.legend.pure.truffle.interfaces.ide.backend;
 
-import meta.pure.metamodel.function.FunctionDefinition;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.function.FunctionDefinition;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.ide.backend.PureBackend;
 import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
@@ -40,7 +40,7 @@ import java.util.concurrent.Executors;
  * call:</p>
  * <ol>
  *   <li>Each editable module's source dir is compiled via
- *       {@code meta::pure::compiler::parseDir} + {@code meta::pure::compiler::compile}
+ *       {@code platform::pure::compiler::parseDir} + {@code platform::pure::compiler::compile}
  *       invoked through {@link PureRuntime#execute}. The runtime's resolver
  *       (preloaded with {@code core.pdb} + {@code compiler.pdb}) supplies
  *       cross-references.</li>
@@ -65,13 +65,13 @@ import java.util.concurrent.Executors;
 public final class TruffleBackend implements PureBackend
 {
     private static final String PARSE_DIR_FN_PATH =
-            "meta::pure::compiler::parseDir_String_1__PureFile_MANY_";
+            "platform::pure::compiler::parseDir_String_1__PureFile_MANY_";
     private static final String COMPILE_FN_PATH =
-            "meta::pure::compiler::compile_PureFile_MANY__Boolean_1__CompilationResult_1_";
+            "platform::pure::compiler::compile_PureFile_MANY__Boolean_1__CompilationResult_1_";
 
     /**
      * Regex matching one {@code tickProgress3} frame written to stdout by
-     * {@code meta::pure::ui::progress::tickProgress3}. The frame is:
+     * {@code platform::pure::ui::progress::tickProgress3}. The frame is:
      * <pre>
      *   \r &lt;header&gt; [K[B\r  &lt;bar&gt; [K[B\r  &lt;current&gt; [K[A[A\r
      * </pre>
@@ -226,7 +226,7 @@ public final class TruffleBackend implements PureBackend
             // The FunctionDefinition interface doesn't declare _name(), but
             // every runtime instance is also a PackageableElement (the
             // generated Impl classes implement both) — cast to access it.
-            String targetName = ((meta.pure.metamodel.PackageableElement) function)._name();
+            String targetName = ((platform.pure.metamodel.PackageableElement) function)._name();
             List<String> compileErrors = new ArrayList<>();
             // Stats from the last (typically only) editable module compile.
             // Multiple editable modules would each have their own stats; the
@@ -294,8 +294,8 @@ public final class TruffleBackend implements PureBackend
                 compileStats = readCompileStats(lastCompileResult);
             }
 
-            String targetPath = ((meta.pure.metamodel.PackageableElement) function)._package() != null
-                    ? qualifiedPath((meta.pure.metamodel.PackageableElement) function)
+            String targetPath = ((platform.pure.metamodel.PackageableElement) function)._package() != null
+                    ? qualifiedPath((platform.pure.metamodel.PackageableElement) function)
                     : targetName;
             Object truffleFn = registry.getElement(targetPath);
             if (!compileErrors.isEmpty())
@@ -467,10 +467,10 @@ public final class TruffleBackend implements PureBackend
      * compiler-pure naming convention: package chain joined by {@code ::}
      * then {@code ::} + element name.
      */
-    private static String qualifiedPath(meta.pure.metamodel.PackageableElement pe)
+    private static String qualifiedPath(platform.pure.metamodel.PackageableElement pe)
     {
         StringBuilder sb = new StringBuilder();
-        meta.pure.metamodel.Package p = pe._package();
+        platform.pure.metamodel.Package p = pe._package();
         // Walk the package chain root-first, skipping the "::" root sentinel.
         java.util.ArrayList<String> stack = new java.util.ArrayList<>();
         while (p != null)
@@ -507,7 +507,7 @@ public final class TruffleBackend implements PureBackend
 
     /**
      * {@link OutputStream} that recognises every {@code tickProgress3} frame
-     * written to its byte stream by {@code meta::pure::ui::progress::tickProgress3}
+     * written to its byte stream by {@code platform::pure::ui::progress::tickProgress3}
      * and forwards a structured {@link ProgressEvent} to the IDE.
      *
      * <p>Buffers raw bytes until each frame's terminating {@code [A[A\r}

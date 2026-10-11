@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,15 +15,15 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.SourceInformation;
-import meta.pure.metamodel.extension.Profile;
-import meta.pure.metamodel.extension.Stereotype;
-import meta.pure.metamodel.extension.Tag;
-import meta.pure.metamodel.extension.TaggedValue;
-import meta.pure.metamodel.extension.TaggedValueImpl;
-import meta.pure.protocol.grammar.extension.Stereotype_Pointer;
-import meta.pure.protocol.grammar.extension.Tag_Pointer;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.SourceInformation;
+import platform.pure.metamodel.extension.Profile;
+import platform.pure.metamodel.extension.Stereotype;
+import platform.pure.metamodel.extension.Tag;
+import platform.pure.metamodel.extension.TaggedValue;
+import platform.pure.metamodel.extension.TaggedValueImpl;
+import platform.pure.protocol.grammar.extension.Stereotype_Pointer;
+import platform.pure.protocol.grammar.extension.Tag_Pointer;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
@@ -92,7 +93,7 @@ public final class AnnotationCompiler
      *
      * @return the resolved TaggedValue, or null if resolution fails
      */
-    public static TaggedValue resolveTaggedValue(meta.pure.protocol.grammar.extension.TaggedValue grammarTV, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static TaggedValue resolveTaggedValue(platform.pure.protocol.grammar.extension.TaggedValue grammarTV, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         Tag_Pointer tagPointer = grammarTV._tag();
         String profilePath = tagPointer._value();

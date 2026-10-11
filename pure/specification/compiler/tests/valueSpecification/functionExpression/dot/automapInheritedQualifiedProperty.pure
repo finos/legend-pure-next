@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::*;
 
@@ -18,50 +32,50 @@ function test::use(): Any[*]
 }
 
 ###CompiledGraph
-class test::Animal extends Any  ~Class<test::Animal>  @4:1-7:1
+class test::Animal extends Any  ~Class<test::Animal>  @18:1-21:1
   qualifiedProperty sound() :@String@[1]
-    AtomicValue  'unknown' :@String@[1]  ~@AtomicValue@  @6:12-6:20
+    AtomicValue  'unknown' :@String@[1]  ~@AtomicValue@  @20:12-20:20
 
-class test::Dog extends test::Animal  ~Class<test::Dog>  @9:1-12:1
+class test::Dog extends test::Animal  ~Class<test::Dog>  @23:1-26:1
   property breed :@String@[1]  ~Property<test::Dog, @String@|1>
 
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Dog##[2]#  ~@FunctionInvocation@  @16:3-16:55
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Dog##[2]#  ~@FunctionInvocation@  @30:3-30:55
     typeParam T -> #test::Dog#
     mulParam m -> [2]
-    AtomicValue  'dogs' :@String@[1]  ~@AtomicValue@  @16:7-16:10
-    Collection :#test::Dog#[2]  ~@Collection@  @16:14-16:55
-      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Dog##[1]#  ~@FunctionInvocation@  @16:15-16:33
+    AtomicValue  'dogs' :@String@[1]  ~@AtomicValue@  @30:7-30:10
+    Collection :#test::Dog#[2]  ~@Collection@  @30:14-30:55
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Dog##[1]#  ~@FunctionInvocation@  @30:15-30:33
         typeParam T -> test::Dog
-        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>  @16:15-16:33
-        Collection :#KeyExpression#[1]  ~@Collection@  @16:15-16:33
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:20-16:32
-            AtomicValue  'breed' :@String@[1]  ~@AtomicValue@  @16:20-16:32
-            AtomicValue  'Lab' :@String@[1]  ~@AtomicValue@  @16:28-16:32
-      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Dog##[1]#  ~@FunctionInvocation@  @16:36-16:54
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>  @30:15-30:33
+        Collection :#KeyExpression#[1]  ~@Collection@  @30:15-30:33
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @30:20-30:32
+            AtomicValue  'breed' :@String@[1]  ~@AtomicValue@  @30:20-30:32
+            AtomicValue  'Lab' :@String@[1]  ~@AtomicValue@  @30:28-30:32
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Dog##[1]#  ~@FunctionInvocation@  @30:36-30:54
         typeParam T -> test::Dog
-        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>  @16:36-16:54
-        Collection :#KeyExpression#[1]  ~@Collection@  @16:36-16:54
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:41-16:53
-            AtomicValue  'breed' :@String@[1]  ~@AtomicValue@  @16:41-16:53
-            AtomicValue  'Pug' :@String@[1]  ~@AtomicValue@  @16:49-16:53
-  FunctionInvocation map_T_m__Function_1__V_m_ :#String##[2]#  ~@FunctionInvocation@  @17:8-17:15
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>  @30:36-30:54
+        Collection :#KeyExpression#[1]  ~@Collection@  @30:36-30:54
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @30:41-30:53
+            AtomicValue  'breed' :@String@[1]  ~@AtomicValue@  @30:41-30:53
+            AtomicValue  'Pug' :@String@[1]  ~@AtomicValue@  @30:49-30:53
+  FunctionInvocation map_T_m__Function_1__V_m_ :#String##[2]#  ~@FunctionInvocation@  @31:8-31:15
     typeParam T -> #test::Dog#
     typeParam V -> #String#
     mulParam m -> #[2]#
-    Variable dogs :#test::Dog##[2]#  ~@VariableExpression@  @17:3-17:7
+    Variable dogs :#test::Dog##[2]#  ~@VariableExpression@  @31:3-31:7
     Lambda(v_automap:#test::Dog#[1]) :#LambdaFunction<#{#test::Dog#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
-      DotApplication test::Animal.sound() :#String##[1]#  ~@DotApplication@  @17:8-17:15
+      DotApplication test::Animal.sound() :#String##[1]#  ~@DotApplication@  @31:8-31:15
         Variable v_automap :#test::Dog##[1]#  ~@VariableExpression@
 
 ###ReverseIndex
-meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
   test::use__Any_MANY_
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::use__Any_MANY_
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test::use__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::use__Any_MANY_
 test::Animal:
   test::Dog

@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,26 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::boolean::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::boolean::*;
+import platform::pure::test::pct::*;
 
-function meta::pure::functions::boolean::isTrue(b:Boolean[0..1]): Boolean[1]
+function platform::pure::functions::boolean::isTrue(b:Boolean[0..1]): Boolean[1]
 {
     !$b->isEmpty() && $b->toOne();
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::isTrue::testIsTrueOnTrue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::isTrue::testIsTrueOnTrue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|isTrue(true)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::isTrue::testIsTrueOnFalse<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::isTrue::testIsTrueOnFalse<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertFalse($f->eval(|isTrue(false)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::isTrue::testIsTrueOnEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::isTrue::testIsTrueOnEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertFalse($f->eval(|isTrue([])));
 }

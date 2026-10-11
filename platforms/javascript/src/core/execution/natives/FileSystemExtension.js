@@ -19,7 +19,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { DIRECTORY_TREE, READ_FILE_BYTES, WRITE_FILE } from "./native-signatures.js";
 
-/** Host natives for meta::pure::functions::io that need a file system. */
+/** Host natives for platform::pure::functions::io that need a file system. */
 export const fileSystemExtension = {
     registerAll(natives) {
         natives.register(READ_FILE_BYTES, () => readFileBytes);

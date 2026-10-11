@@ -14,9 +14,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 30,
-              "endLine" : 5,
+              "endLine" : 19,
               "startColumn" : 14,
-              "startLine" : 5
+              "startLine" : 19
             },
             "parametersValues" : [ {
               "_type" : "DotApplication",
@@ -24,9 +24,9 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 13,
-                "endLine" : 5,
+                "endLine" : 19,
                 "startColumn" : 8,
-                "startLine" : 5
+                "startLine" : 19
               },
               "parametersValues" : [ {
                 "_type" : "VariableExpression",
@@ -34,9 +34,9 @@
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 7,
-                  "endLine" : 5,
+                  "endLine" : 19,
                   "startColumn" : 3,
-                  "startLine" : 5
+                  "startLine" : 19
                 }
               } ]
             }, {
@@ -45,15 +45,15 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "value" : "meta::pure::metamodel::type::primitives::String"
+                  "value" : "platform::pure::metamodel::type::primitives::String"
                 }
               },
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 29,
-                "endLine" : 5,
+                "endLine" : 19,
                 "startColumn" : 27,
-                "startLine" : 5
+                "startLine" : 19
               },
               "value" : "x"
             } ]
@@ -61,17 +61,17 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 30,
-            "endLine" : 5,
+            "endLine" : 19,
             "startColumn" : 3,
-            "startLine" : 5
+            "startLine" : 19
           }
         },
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 30,
-          "endLine" : 5,
+          "endLine" : 19,
           "startColumn" : 3,
-          "startLine" : 5
+          "startLine" : 19
         }
       }, {
         "_type" : "Constraint",
@@ -83,9 +83,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 32,
-              "endLine" : 6,
+              "endLine" : 20,
               "startColumn" : 18,
-              "startLine" : 6
+              "startLine" : 20
             },
             "parametersValues" : [ {
               "_type" : "DotApplication",
@@ -93,9 +93,9 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 17,
-                "endLine" : 6,
+                "endLine" : 20,
                 "startColumn" : 12,
-                "startLine" : 6
+                "startLine" : 20
               },
               "parametersValues" : [ {
                 "_type" : "VariableExpression",
@@ -103,9 +103,9 @@
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 11,
-                  "endLine" : 6,
+                  "endLine" : 20,
                   "startColumn" : 7,
-                  "startLine" : 6
+                  "startLine" : 20
                 }
               } ]
             }, {
@@ -114,15 +114,15 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "value" : "meta::pure::metamodel::type::primitives::String"
+                  "value" : "platform::pure::metamodel::type::primitives::String"
                 }
               },
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 31,
-                "endLine" : 6,
+                "endLine" : 20,
                 "startColumn" : 29,
-                "startLine" : 6
+                "startLine" : 20
               },
               "value" : "z"
             } ]
@@ -130,18 +130,18 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 32,
-            "endLine" : 6,
+            "endLine" : 20,
             "startColumn" : 3,
-            "startLine" : 6
+            "startLine" : 20
           }
         },
         "name" : "id",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 32,
-          "endLine" : 6,
+          "endLine" : 20,
           "startColumn" : 3,
-          "startLine" : 6
+          "startLine" : 20
         }
       }, {
         "_type" : "Constraint",
@@ -155,9 +155,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 40,
-              "endLine" : 11,
+              "endLine" : 25,
               "startColumn" : 27,
-              "startLine" : 11
+              "startLine" : 25
             },
             "parametersValues" : [ {
               "_type" : "ArrowInvocation",
@@ -165,9 +165,9 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 36,
-                "endLine" : 11,
+                "endLine" : 25,
                 "startColumn" : 27,
-                "startLine" : 11
+                "startLine" : 25
               },
               "parametersValues" : [ {
                 "_type" : "DotApplication",
@@ -175,9 +175,9 @@
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 26,
-                  "endLine" : 11,
+                  "endLine" : 25,
                   "startColumn" : 21,
-                  "startLine" : 11
+                  "startLine" : 25
                 },
                 "parametersValues" : [ {
                   "_type" : "VariableExpression",
@@ -185,9 +185,9 @@
                   "p_sourceInformation" : {
                     "_type" : "SourceInformation",
                     "endColumn" : 20,
-                    "endLine" : 11,
+                    "endLine" : 25,
                     "startColumn" : 16,
-                    "startLine" : 11
+                    "startLine" : 25
                   }
                 } ]
               } ]
@@ -197,15 +197,15 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "value" : "meta::pure::metamodel::type::primitives::Integer"
+                  "value" : "platform::pure::metamodel::type::primitives::Integer"
                 }
               },
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 40,
-                "endLine" : 11,
+                "endLine" : 25,
                 "startColumn" : 40,
-                "startLine" : 11
+                "startLine" : 25
               },
               "value" : 2
             } ]
@@ -213,9 +213,9 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 40,
-            "endLine" : 11,
+            "endLine" : 25,
             "startColumn" : 5,
-            "startLine" : 11
+            "startLine" : 25
           }
         },
         "messageFunction" : {
@@ -226,9 +226,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 41,
-              "endLine" : 13,
+              "endLine" : 27,
               "startColumn" : 20,
-              "startLine" : 13
+              "startLine" : 27
             },
             "parametersValues" : [ {
               "_type" : "DotApplication",
@@ -236,9 +236,9 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 25,
-                "endLine" : 13,
+                "endLine" : 27,
                 "startColumn" : 20,
-                "startLine" : 13
+                "startLine" : 27
               },
               "parametersValues" : [ {
                 "_type" : "VariableExpression",
@@ -246,9 +246,9 @@
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 19,
-                  "endLine" : 13,
+                  "endLine" : 27,
                   "startColumn" : 15,
-                  "startLine" : 13
+                  "startLine" : 27
                 }
               } ]
             }, {
@@ -257,15 +257,15 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "value" : "meta::pure::metamodel::type::primitives::String"
+                  "value" : "platform::pure::metamodel::type::primitives::String"
                 }
               },
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 41,
-                "endLine" : 13,
+                "endLine" : 27,
                 "startColumn" : 29,
-                "startLine" : 13
+                "startLine" : 27
               },
               "value" : " has issues"
             } ]
@@ -273,9 +273,9 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 41,
-            "endLine" : 13,
+            "endLine" : 27,
             "startColumn" : 5,
-            "startLine" : 13
+            "startLine" : 27
           }
         },
         "name" : "other",
@@ -283,9 +283,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 3,
-          "endLine" : 14,
+          "endLine" : 28,
           "startColumn" : 3,
-          "startLine" : 7
+          "startLine" : 21
         }
       }, {
         "_type" : "Constraint",
@@ -298,9 +298,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 40,
-              "endLine" : 18,
+              "endLine" : 32,
               "startColumn" : 27,
-              "startLine" : 18
+              "startLine" : 32
             },
             "parametersValues" : [ {
               "_type" : "ArrowInvocation",
@@ -308,9 +308,9 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 36,
-                "endLine" : 18,
+                "endLine" : 32,
                 "startColumn" : 27,
-                "startLine" : 18
+                "startLine" : 32
               },
               "parametersValues" : [ {
                 "_type" : "DotApplication",
@@ -318,9 +318,9 @@
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 26,
-                  "endLine" : 18,
+                  "endLine" : 32,
                   "startColumn" : 21,
-                  "startLine" : 18
+                  "startLine" : 32
                 },
                 "parametersValues" : [ {
                   "_type" : "VariableExpression",
@@ -328,9 +328,9 @@
                   "p_sourceInformation" : {
                     "_type" : "SourceInformation",
                     "endColumn" : 20,
-                    "endLine" : 18,
+                    "endLine" : 32,
                     "startColumn" : 16,
-                    "startLine" : 18
+                    "startLine" : 32
                   }
                 } ]
               } ]
@@ -340,15 +340,15 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "value" : "meta::pure::metamodel::type::primitives::Integer"
+                  "value" : "platform::pure::metamodel::type::primitives::Integer"
                 }
               },
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 40,
-                "endLine" : 18,
+                "endLine" : 32,
                 "startColumn" : 40,
-                "startLine" : 18
+                "startLine" : 32
               },
               "value" : 4
             } ]
@@ -356,18 +356,18 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 40,
-            "endLine" : 18,
+            "endLine" : 32,
             "startColumn" : 5,
-            "startLine" : 18
+            "startLine" : 32
           }
         },
         "name" : "other2",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 3,
-          "endLine" : 19,
+          "endLine" : 33,
           "startColumn" : 3,
-          "startLine" : 15
+          "startLine" : 29
         }
       } ],
       "generalizations" : [ {
@@ -379,9 +379,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 181,
-              "endLine" : 3,
+              "endLine" : 17,
               "startColumn" : 153,
-              "startLine" : 3
+              "startLine" : 17
             },
             "value" : "protocol::support::SuperClass"
           }
@@ -389,9 +389,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 181,
-          "endLine" : 3,
+          "endLine" : 17,
           "startColumn" : 153,
-          "startLine" : 3
+          "startLine" : 17
         }
       }, {
         "_type" : "Generalization",
@@ -402,9 +402,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 188,
-              "endLine" : 3,
+              "endLine" : 17,
               "startColumn" : 184,
-              "startLine" : 3
+              "startLine" : 17
             },
             "value" : "Light"
           }
@@ -412,18 +412,18 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 188,
-          "endLine" : 3,
+          "endLine" : 17,
           "startColumn" : 184,
-          "startLine" : 3
+          "startLine" : 17
         }
       } ],
       "name" : "AClass",
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
-        "endLine" : 32,
+        "endLine" : 46,
         "startColumn" : 1,
-        "startLine" : 3
+        "startLine" : 17
       },
       "package" : {
         "_type" : "Package_Pointer",
@@ -437,7 +437,7 @@
             "_type" : "PointerValue",
             "value" : "Composite"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
@@ -446,9 +446,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 148,
-              "endLine" : 22,
+              "endLine" : 36,
               "startColumn" : 143,
-              "startLine" : 22
+              "startLine" : 36
             },
             "value" : "String"
           }
@@ -468,9 +468,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 152,
-          "endLine" : 22,
+          "endLine" : 36,
           "startColumn" : 3,
-          "startLine" : 22
+          "startLine" : 36
         },
         "stereotypes" : [ {
           "_type" : "Stereotype_Pointer",
@@ -479,18 +479,18 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 17,
-              "endLine" : 22,
+              "endLine" : 36,
               "startColumn" : 14,
-              "startLine" : 22
+              "startLine" : 36
             },
             "value" : "flag"
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 12,
-            "endLine" : 22,
+            "endLine" : 36,
             "startColumn" : 5,
-            "startLine" : 22
+            "startLine" : 36
           },
           "value" : "AProfile"
         }, {
@@ -500,18 +500,18 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 54,
-              "endLine" : 22,
+              "endLine" : 36,
               "startColumn" : 48,
-              "startLine" : 22
+              "startLine" : 36
             },
             "value" : "newFlag"
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 46,
-            "endLine" : 22,
+            "endLine" : 36,
             "startColumn" : 20,
-            "startLine" : 22
+            "startLine" : 36
           },
           "value" : "protocol::support::AProfile"
         } ],
@@ -524,18 +524,18 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 90,
-                "endLine" : 22,
+                "endLine" : 36,
                 "startColumn" : 87,
-                "startLine" : 22
+                "startLine" : 36
               },
               "value" : "tag1"
             } ],
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 85,
-              "endLine" : 22,
+              "endLine" : 36,
               "startColumn" : 59,
-              "startLine" : 22
+              "startLine" : 36
             },
             "value" : "protocol::support::AProfile"
           },
@@ -549,18 +549,18 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 114,
-                "endLine" : 22,
+                "endLine" : 36,
                 "startColumn" : 111,
-                "startLine" : 22
+                "startLine" : 36
               },
               "value" : "tag2"
             } ],
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 109,
-              "endLine" : 22,
+              "endLine" : 36,
               "startColumn" : 102,
-              "startLine" : 22
+              "startLine" : 36
             },
             "value" : "AProfile"
           },
@@ -574,7 +574,7 @@
             "_type" : "PointerValue",
             "value" : "Shared"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "defaultValue" : {
           "_type" : "LambdaFunction",
@@ -584,24 +584,24 @@
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "value" : "meta::pure::metamodel::type::primitives::String"
+                "value" : "platform::pure::metamodel::type::primitives::String"
               }
             },
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 46,
-              "endLine" : 23,
+              "endLine" : 37,
               "startColumn" : 38,
-              "startLine" : 23
+              "startLine" : 37
             },
             "value" : "default"
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 46,
-            "endLine" : 23,
+            "endLine" : 37,
             "startColumn" : 36,
-            "startLine" : 23
+            "startLine" : 37
           }
         },
         "genericType" : {
@@ -611,9 +611,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 31,
-              "endLine" : 23,
+              "endLine" : 37,
               "startColumn" : 26,
-              "startLine" : 23
+              "startLine" : 37
             },
             "value" : "String"
           }
@@ -633,9 +633,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 47,
-          "endLine" : 23,
+          "endLine" : 37,
           "startColumn" : 3,
-          "startLine" : 23
+          "startLine" : 37
         }
       }, {
         "_type" : "Property",
@@ -645,7 +645,7 @@
             "_type" : "PointerValue",
             "value" : "None"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "defaultValue" : {
           "_type" : "LambdaFunction",
@@ -665,9 +665,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 46,
-              "endLine" : 24,
+              "endLine" : 38,
               "startColumn" : 37,
-              "startLine" : 24
+              "startLine" : 38
             },
             "values" : [ {
               "_type" : "AtomicValue",
@@ -675,15 +675,15 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "value" : "meta::pure::metamodel::type::primitives::String"
+                  "value" : "platform::pure::metamodel::type::primitives::String"
                 }
               },
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 40,
-                "endLine" : 24,
+                "endLine" : 38,
                 "startColumn" : 38,
-                "startLine" : 24
+                "startLine" : 38
               },
               "value" : "a"
             }, {
@@ -692,15 +692,15 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "value" : "meta::pure::metamodel::type::primitives::String"
+                  "value" : "platform::pure::metamodel::type::primitives::String"
                 }
               },
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 45,
-                "endLine" : 24,
+                "endLine" : 38,
                 "startColumn" : 43,
-                "startLine" : 24
+                "startLine" : 38
               },
               "value" : "b"
             } ]
@@ -708,9 +708,9 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 46,
-            "endLine" : 24,
+            "endLine" : 38,
             "startColumn" : 35,
-            "startLine" : 24
+            "startLine" : 38
           }
         },
         "genericType" : {
@@ -720,9 +720,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 27,
-              "endLine" : 24,
+              "endLine" : 38,
               "startColumn" : 22,
-              "startLine" : 24
+              "startLine" : 38
             },
             "value" : "String"
           }
@@ -738,9 +738,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 47,
-          "endLine" : 24,
+          "endLine" : 38,
           "startColumn" : 3,
-          "startLine" : 24
+          "startLine" : 38
         }
       }, {
         "_type" : "Property",
@@ -750,7 +750,7 @@
             "_type" : "PointerValue",
             "value" : "None"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "defaultValue" : {
           "_type" : "LambdaFunction",
@@ -760,9 +760,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 43,
-              "endLine" : 25,
+              "endLine" : 39,
               "startColumn" : 28,
-              "startLine" : 25
+              "startLine" : 39
             },
             "parametersValues" : [ {
               "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
@@ -787,9 +787,9 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 43,
-                "endLine" : 25,
+                "endLine" : 39,
                 "startColumn" : 28,
-                "startLine" : 25
+                "startLine" : 39
               }
             }, {
               "_type" : "Collection",
@@ -807,9 +807,9 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 43,
-                "endLine" : 25,
+                "endLine" : 39,
                 "startColumn" : 28,
-                "startLine" : 25
+                "startLine" : 39
               },
               "values" : [ {
                 "_type" : "FunctionInvocation",
@@ -817,9 +817,9 @@
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 42,
-                  "endLine" : 25,
+                  "endLine" : 39,
                   "startColumn" : 36,
-                  "startLine" : 25
+                  "startLine" : 39
                 },
                 "parametersValues" : [ {
                   "_type" : "AtomicValue",
@@ -827,15 +827,15 @@
                     "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
-                      "value" : "meta::pure::metamodel::type::primitives::String"
+                      "value" : "platform::pure::metamodel::type::primitives::String"
                     }
                   },
                   "p_sourceInformation" : {
                     "_type" : "SourceInformation",
                     "endColumn" : 42,
-                    "endLine" : 25,
+                    "endLine" : 39,
                     "startColumn" : 36,
-                    "startLine" : 25
+                    "startLine" : 39
                   },
                   "value" : "value"
                 }, {
@@ -844,15 +844,15 @@
                     "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
-                      "value" : "meta::pure::metamodel::type::primitives::Integer"
+                      "value" : "platform::pure::metamodel::type::primitives::Integer"
                     }
                   },
                   "p_sourceInformation" : {
                     "_type" : "SourceInformation",
                     "endColumn" : 42,
-                    "endLine" : 25,
+                    "endLine" : 39,
                     "startColumn" : 42,
-                    "startLine" : 25
+                    "startLine" : 39
                   },
                   "value" : 1
                 } ]
@@ -862,9 +862,9 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 43,
-            "endLine" : 25,
+            "endLine" : 39,
             "startColumn" : 26,
-            "startLine" : 25
+            "startLine" : 39
           }
         },
         "genericType" : {
@@ -874,9 +874,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 21,
-              "endLine" : 25,
+              "endLine" : 39,
               "startColumn" : 16,
-              "startLine" : 25
+              "startLine" : 39
             },
             "value" : "LightP"
           }
@@ -896,9 +896,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 44,
-          "endLine" : 25,
+          "endLine" : 39,
           "startColumn" : 3,
-          "startLine" : 25
+          "startLine" : 39
         }
       }, {
         "_type" : "Property",
@@ -908,7 +908,7 @@
             "_type" : "PointerValue",
             "value" : "None"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "defaultValue" : {
           "_type" : "LambdaFunction",
@@ -918,18 +918,18 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 31,
-              "endLine" : 26,
+              "endLine" : 40,
               "startColumn" : 27,
-              "startLine" : 26
+              "startLine" : 40
             },
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 26,
-                "endLine" : 26,
+                "endLine" : 40,
                 "startColumn" : 22,
-                "startLine" : 26
+                "startLine" : 40
               },
               "value" : {
                 "value" : "Class"
@@ -939,9 +939,9 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 31,
-            "endLine" : 26,
+            "endLine" : 40,
             "startColumn" : 20,
-            "startLine" : 26
+            "startLine" : 40
           }
         },
         "genericType" : {
@@ -951,9 +951,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 15,
-              "endLine" : 26,
+              "endLine" : 40,
               "startColumn" : 10,
-              "startLine" : 26
+              "startLine" : 40
             },
             "value" : "String"
           }
@@ -973,9 +973,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 32,
-          "endLine" : 26,
+          "endLine" : 40,
           "startColumn" : 3,
-          "startLine" : 26
+          "startLine" : 40
         }
       }, {
         "_type" : "Property",
@@ -985,7 +985,7 @@
             "_type" : "PointerValue",
             "value" : "None"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
@@ -993,12 +993,12 @@
             "_type" : "Type_Pointer",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
-              "endColumn" : 59,
-              "endLine" : 27,
+              "endColumn" : 63,
+              "endLine" : 41,
               "startColumn" : 22,
-              "startLine" : 27
+              "startLine" : 41
             },
-            "value" : "meta::pure::precisePrimitives::Varchar"
+            "value" : "platform::pure::precisePrimitives::Varchar"
           },
           "typeVariableValues" : [ {
             "_type" : "AtomicValue",
@@ -1006,15 +1006,15 @@
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "value" : "meta::pure::metamodel::type::primitives::Integer"
+                "value" : "platform::pure::metamodel::type::primitives::Integer"
               }
             },
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
-              "endColumn" : 63,
-              "endLine" : 27,
-              "startColumn" : 61,
-              "startLine" : 27
+              "endColumn" : 67,
+              "endLine" : 41,
+              "startColumn" : 65,
+              "startLine" : 41
             },
             "value" : 200
           } ]
@@ -1033,10 +1033,10 @@
         "name" : "extendedPrimitive",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
-          "endColumn" : 68,
-          "endLine" : 27,
+          "endColumn" : 72,
+          "endLine" : 41,
           "startColumn" : 3,
-          "startLine" : 27
+          "startLine" : 41
         }
       } ],
       "qualifiedProperties" : [ {
@@ -1047,9 +1047,9 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 35,
-            "endLine" : 29,
+            "endLine" : 43,
             "startColumn" : 5,
-            "startLine" : 29
+            "startLine" : 43
           },
           "parametersValues" : [ {
             "_type" : "AtomicValue",
@@ -1057,15 +1057,15 @@
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "value" : "meta::pure::metamodel::type::primitives::String"
+                "value" : "platform::pure::metamodel::type::primitives::String"
               }
             },
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 9,
-              "endLine" : 29,
+              "endLine" : 43,
               "startColumn" : 9,
-              "startLine" : 29
+              "startLine" : 43
             },
             "value" : "x"
           }, {
@@ -1074,9 +1074,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 35,
-              "endLine" : 29,
+              "endLine" : 43,
               "startColumn" : 13,
-              "startLine" : 29
+              "startLine" : 43
             },
             "parametersValues" : [ {
               "_type" : "FunctionInvocation",
@@ -1084,9 +1084,9 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 25,
-                "endLine" : 29,
+                "endLine" : 43,
                 "startColumn" : 13,
-                "startLine" : 29
+                "startLine" : 43
               },
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
@@ -1094,15 +1094,15 @@
                   "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
-                    "value" : "meta::pure::metamodel::type::primitives::String"
+                    "value" : "platform::pure::metamodel::type::primitives::String"
                   }
                 },
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 16,
-                  "endLine" : 29,
+                  "endLine" : 43,
                   "startColumn" : 13,
-                  "startLine" : 29
+                  "startLine" : 43
                 },
                 "value" : "ok"
               }, {
@@ -1111,9 +1111,9 @@
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 25,
-                  "endLine" : 29,
+                  "endLine" : 43,
                   "startColumn" : 20,
-                  "startLine" : 29
+                  "startLine" : 43
                 }
               } ]
             }, {
@@ -1122,9 +1122,9 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 35,
-                "endLine" : 29,
+                "endLine" : 43,
                 "startColumn" : 29,
-                "startLine" : 29
+                "startLine" : 43
               }
             } ]
           } ]
@@ -1134,9 +1134,9 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 6,
-            "endLine" : 30,
+            "endLine" : 44,
             "startColumn" : 5,
-            "startLine" : 30
+            "startLine" : 44
           }
         } ],
         "genericType" : {
@@ -1146,9 +1146,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 11,
-              "endLine" : 31,
+              "endLine" : 45,
               "startColumn" : 6,
-              "startLine" : 31
+              "startLine" : 45
             },
             "value" : "String"
           }
@@ -1168,9 +1168,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 15,
-          "endLine" : 31,
+          "endLine" : 45,
           "startColumn" : 3,
-          "startLine" : 28
+          "startLine" : 42
         },
         "parameters" : [ {
           "_type" : "VariableExpression",
@@ -1181,9 +1181,9 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 154,
-                "endLine" : 28,
+                "endLine" : 42,
                 "startColumn" : 149,
-                "startLine" : 28
+                "startLine" : 42
               },
               "value" : "String"
             }
@@ -1203,9 +1203,9 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 157,
-            "endLine" : 28,
+            "endLine" : 42,
             "startColumn" : 142,
-            "startLine" : 28
+            "startLine" : 42
           }
         }, {
           "_type" : "VariableExpression",
@@ -1216,9 +1216,9 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 173,
-                "endLine" : 28,
+                "endLine" : 42,
                 "startColumn" : 168,
-                "startLine" : 28
+                "startLine" : 42
               },
               "value" : "String"
             }
@@ -1238,9 +1238,9 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 176,
-            "endLine" : 28,
+            "endLine" : 42,
             "startColumn" : 160,
-            "startLine" : 28
+            "startLine" : 42
           }
         } ],
         "stereotypes" : [ {
@@ -1250,18 +1250,18 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 17,
-              "endLine" : 28,
+              "endLine" : 42,
               "startColumn" : 14,
-              "startLine" : 28
+              "startLine" : 42
             },
             "value" : "flag"
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 12,
-            "endLine" : 28,
+            "endLine" : 42,
             "startColumn" : 5,
-            "startLine" : 28
+            "startLine" : 42
           },
           "value" : "AProfile"
         }, {
@@ -1271,18 +1271,18 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 54,
-              "endLine" : 28,
+              "endLine" : 42,
               "startColumn" : 48,
-              "startLine" : 28
+              "startLine" : 42
             },
             "value" : "newFlag"
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 46,
-            "endLine" : 28,
+            "endLine" : 42,
             "startColumn" : 20,
-            "startLine" : 28
+            "startLine" : 42
           },
           "value" : "protocol::support::AProfile"
         } ],
@@ -1295,18 +1295,18 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 90,
-                "endLine" : 28,
+                "endLine" : 42,
                 "startColumn" : 87,
-                "startLine" : 28
+                "startLine" : 42
               },
               "value" : "tag1"
             } ],
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 85,
-              "endLine" : 28,
+              "endLine" : 42,
               "startColumn" : 59,
-              "startLine" : 28
+              "startLine" : 42
             },
             "value" : "protocol::support::AProfile"
           },
@@ -1320,18 +1320,18 @@
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 114,
-                "endLine" : 28,
+                "endLine" : 42,
                 "startColumn" : 111,
-                "startLine" : 28
+                "startLine" : 42
               },
               "value" : "tag2"
             } ],
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 109,
-              "endLine" : 28,
+              "endLine" : 42,
               "startColumn" : 102,
-              "startLine" : 28
+              "startLine" : 42
             },
             "value" : "AProfile"
           },
@@ -1345,18 +1345,18 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 21,
-            "endLine" : 3,
+            "endLine" : 17,
             "startColumn" : 18,
-            "startLine" : 3
+            "startLine" : 17
           },
           "value" : "flag"
         } ],
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 16,
-          "endLine" : 3,
+          "endLine" : 17,
           "startColumn" : 9,
-          "startLine" : 3
+          "startLine" : 17
         },
         "value" : "AProfile"
       }, {
@@ -1366,18 +1366,18 @@
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 58,
-            "endLine" : 3,
+            "endLine" : 17,
             "startColumn" : 52,
-            "startLine" : 3
+            "startLine" : 17
           },
           "value" : "newFlag"
         } ],
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 50,
-          "endLine" : 3,
+          "endLine" : 17,
           "startColumn" : 24,
-          "startLine" : 3
+          "startLine" : 17
         },
         "value" : "protocol::support::AProfile"
       } ],
@@ -1390,18 +1390,18 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 94,
-              "endLine" : 3,
+              "endLine" : 17,
               "startColumn" : 91,
-              "startLine" : 3
+              "startLine" : 17
             },
             "value" : "tag1"
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 89,
-            "endLine" : 3,
+            "endLine" : 17,
             "startColumn" : 63,
-            "startLine" : 3
+            "startLine" : 17
           },
           "value" : "protocol::support::AProfile"
         },
@@ -1415,18 +1415,18 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 118,
-              "endLine" : 3,
+              "endLine" : 17,
               "startColumn" : 115,
-              "startLine" : 3
+              "startLine" : 17
             },
             "value" : "tag2"
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 113,
-            "endLine" : 3,
+            "endLine" : 17,
             "startColumn" : 106,
-            "startLine" : 3
+            "startLine" : 17
           },
           "value" : "AProfile"
         },
@@ -1438,18 +1438,18 @@
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
-        "endLine" : 38,
+        "endLine" : 52,
         "startColumn" : 1,
-        "startLine" : 34
+        "startLine" : 48
       },
       "p_stereotypes" : [ {
         "_type" : "Stereotype",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 20,
-          "endLine" : 36,
+          "endLine" : 50,
           "startColumn" : 17,
-          "startLine" : 36
+          "startLine" : 50
         },
         "value" : "flag"
       }, {
@@ -1457,9 +1457,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 29,
-          "endLine" : 36,
+          "endLine" : 50,
           "startColumn" : 23,
-          "startLine" : 36
+          "startLine" : 50
         },
         "value" : "newFlag"
       } ],
@@ -1468,9 +1468,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 13,
-          "endLine" : 37,
+          "endLine" : 51,
           "startColumn" : 10,
-          "startLine" : 37
+          "startLine" : 51
         },
         "value" : "tag1"
       }, {
@@ -1478,9 +1478,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 19,
-          "endLine" : 37,
+          "endLine" : 51,
           "startColumn" : 16,
-          "startLine" : 37
+          "startLine" : 51
         },
         "value" : "tag2"
       } ],
@@ -1494,9 +1494,9 @@
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
-        "endLine" : 42,
+        "endLine" : 56,
         "startColumn" : 1,
-        "startLine" : 40
+        "startLine" : 54
       },
       "package" : {
         "_type" : "Package_Pointer",
@@ -1508,9 +1508,9 @@
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
-        "endLine" : 47,
+        "endLine" : 61,
         "startColumn" : 1,
-        "startLine" : 44
+        "startLine" : 58
       },
       "package" : {
         "_type" : "Package_Pointer",
@@ -1524,7 +1524,7 @@
             "_type" : "PointerValue",
             "value" : "None"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
@@ -1533,9 +1533,9 @@
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 16,
-              "endLine" : 46,
+              "endLine" : 60,
               "startColumn" : 10,
-              "startLine" : 46
+              "startLine" : 60
             },
             "value" : "Integer"
           }
@@ -1555,9 +1555,9 @@
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 20,
-          "endLine" : 46,
+          "endLine" : 60,
           "startColumn" : 3,
-          "startLine" : 46
+          "startLine" : 60
         }
       } ]
     }, {
@@ -1566,9 +1566,9 @@
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
-        "endLine" : 51,
+        "endLine" : 65,
         "startColumn" : 1,
-        "startLine" : 49
+        "startLine" : 63
       },
       "package" : {
         "_type" : "Package_Pointer",

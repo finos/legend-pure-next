@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,22 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::protocol::*;
-import meta::pure::protocol::grammar::*;
+import platform::pure::protocol::*;
+import platform::pure::protocol::grammar::*;
 
-Class meta::pure::compiler::test::CompiledGraph extends meta::pure::protocol::grammar::PackageableElement
+Class platform::pure::compiler::test::CompiledGraph extends platform::pure::protocol::grammar::PackageableElement
 {
     value : String[1];
 }
 
 // Section parser for ###CompiledGraph: wraps the raw section body in a
 // CompiledGraph PDO. Consumed by the Pure-side section-dispatch table; see
-// meta::pure::compiler::test::testSectionParsers.
-function meta::pure::compiler::test::buildCompiledGraphSection(
+// platform::pure::compiler::test::testSectionParsers.
+function platform::pure::compiler::test::buildCompiledGraphSection(
    content: String[1], sourceId: String[1], lineOffset: Integer[1]
-): meta::pure::protocol::grammar::PackageableElement[*]
+): platform::pure::protocol::grammar::PackageableElement[*]
 {
-   ^meta::pure::compiler::test::CompiledGraph(
+   ^platform::pure::compiler::test::CompiledGraph(
       name    = 'CompiledGraph',
       value   = $content,
       package = ^Package_Pointer(value = $sourceId)

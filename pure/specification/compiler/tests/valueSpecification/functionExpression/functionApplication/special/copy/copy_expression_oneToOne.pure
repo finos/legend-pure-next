@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::copy::oneToOne::*;
 
@@ -18,39 +32,39 @@ Class test::copy::oneToOne::Node
 
 ###CompiledGraph
 function test::copy::oneToOne::testCopyFromFunctionCall__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @6:3-6:41
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @20:3-20:41
     typeParam T -> #test::copy::oneToOne::Node#
     mulParam m -> #[1]#
-    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @6:7-6:7
-    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @6:11-6:41
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @20:7-20:7
+    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @20:11-20:41
       typeParam T -> #test::copy::oneToOne::Node#
-      FunctionInvocation test::copy::oneToOne::buildOne__Node_1_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @6:12-6:21
-      Collection :#KeyExpression#[1]  ~@Collection@  @6:11-6:41
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:23-6:40
-          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:23-6:40
-          AtomicValue  'from-call' :@String@[1]  ~@AtomicValue@  @6:30-6:40
+      FunctionInvocation test::copy::oneToOne::buildOne__Node_1_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @20:12-20:21
+      Collection :#KeyExpression#[1]  ~@Collection@  @20:11-20:41
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:23-20:40
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @20:23-20:40
+          AtomicValue  'from-call' :@String@[1]  ~@AtomicValue@  @20:30-20:40
 
 function test::copy::oneToOne::buildOne__Node_1_():test::copy::oneToOne::Node[1]  ~UserDefinedFunction<{->test::copy::oneToOne::Node[1]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @11:3-11:22
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::oneToOne::Node##[1]#  ~@FunctionInvocation@  @25:3-25:22
     typeParam T -> test::copy::oneToOne::Node
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::oneToOne::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::oneToOne::Node|1>  @11:3-11:22
-    Collection :#KeyExpression#[1]  ~@Collection@  @11:3-11:22
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:9-11:21
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @11:9-11:21
-        AtomicValue  'seed' :@String@[1]  ~@AtomicValue@  @11:16-11:21
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::oneToOne::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::oneToOne::Node|1>  @25:3-25:22
+    Collection :#KeyExpression#[1]  ~@Collection@  @25:3-25:22
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @25:9-25:21
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @25:9-25:21
+        AtomicValue  'seed' :@String@[1]  ~@AtomicValue@  @25:16-25:21
 
-class test::copy::oneToOne::Node extends Any  ~Class<test::copy::oneToOne::Node>  @14:1-17:1
+class test::copy::oneToOne::Node extends Any  ~Class<test::copy::oneToOne::Node>  @28:1-31:1
   property name :@String@[1]  ~Property<test::copy::oneToOne::Node, @String@|1>
 
 ###ReverseIndex
-meta::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
   test::copy::oneToOne::testCopyFromFunctionCall__Any_MANY_
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::copy::oneToOne::buildOne__Node_1_
   test::copy::oneToOne::testCopyFromFunctionCall__Any_MANY_
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test::copy::oneToOne::testCopyFromFunctionCall__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::copy::oneToOne::buildOne__Node_1_
 test::copy::oneToOne::Node:
   test::copy::oneToOne::buildOne__Node_1_

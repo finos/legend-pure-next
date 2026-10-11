@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::*;
-import meta::pure::functions::collection::*;
-import meta::pure::functions::string::*;
+import platform::pure::compiler::*;
+import platform::pure::functions::collection::*;
+import platform::pure::functions::string::*;
 
 // Render the compiler's reverse reference index (target -> callers) in the
 // `###ReverseIndex` snapshot format: each target path on its own line ending
 // with ':', followed by its callers indented two spaces. Targets and callers
 // are sorted so the output is deterministic and diff-stable.
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printReverseIndex(context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printReverseIndex(context:CompilerContext[1]):String[1]
 {
     $context.referencedBy->keyValues()
         ->sort({a, b | if($a.first < $b.first, | -1, | if($a.first > $b.first, | 1, | 0))})

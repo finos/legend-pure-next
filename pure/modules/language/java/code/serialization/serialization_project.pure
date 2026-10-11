@@ -1,4 +1,5 @@
 // Copyright 2021 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::metamodel::project::*;
-import meta::external::language::java::serialization::*;
+import platform::external::language::java::metamodel::project::*;
+import platform::external::language::java::serialization::*;
 
-function meta::external::language::java::serialization::projectToString(project: Project[1]): String[1]
+function platform::external::language::java::serialization::projectToString(project: Project[1]): String[1]
 {
    let sfer = newStringifier($project);
    $project->allDirectories()->map(d|$sfer->directoryToString($d))->joinStrings('\n');
 }
 
-function <<access.private>> meta::external::language::java::serialization::directoryToString(sfer:Stringifier[1], dir: ProjectDirectory[1]): String[1]
+function <<access.private>> platform::external::language::java::serialization::directoryToString(sfer:Stringifier[1], dir: ProjectDirectory[1]): String[1]
 {
    let header = '==== ' + $dir.fullPath();
    $header->concatenate($dir.classes->map(c|$sfer->classFileToString($c, $dir.fullPath())))
@@ -29,19 +30,19 @@ function <<access.private>> meta::external::language::java::serialization::direc
           ->joinStrings('\n');
 }
 
-function <<access.private>> meta::external::language::java::serialization::classFileToString(sfer:Stringifier[1], class: meta::external::language::java::metamodel::Class[1], pathTo: String[1]): String[1]
+function <<access.private>> platform::external::language::java::serialization::classFileToString(sfer:Stringifier[1], class: platform::external::language::java::metamodel::Class[1], pathTo: String[1]): String[1]
 {
    '---- ' + $pathTo + '/' + $class.simpleName + '.java\n' + $sfer->ofClass($class)->numberedLines();
 }
 
-function <<access.private>> meta::external::language::java::serialization::projectFileToString(file: meta::external::language::java::metamodel::project::File[1], pathTo: String[1]): String[1]
+function <<access.private>> platform::external::language::java::serialization::projectFileToString(file: platform::external::language::java::metamodel::project::File[1], pathTo: String[1]): String[1]
 {
    '---- ' + $pathTo + '/' + $file.name + '\n' + $file->match([
       tf:TextFile[1] | $tf.content->numberedLines()
    ]);
 }
 
-function <<access.private>> meta::external::language::java::serialization::numberedLines(text: String[1]): String[1]
+function <<access.private>> platform::external::language::java::serialization::numberedLines(text: String[1]): String[1]
 {
    let lines = $text->replace('\n\n', '\n<<EMPTY>>\n')->split('\n');
    range($lines->size())->map(i| format('%04d %s', [$i + 1, if($lines->at($i) == '<<EMPTY>>', |'', |$lines->at($i))]))->joinStrings('\n');

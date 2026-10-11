@@ -1,9 +1,24 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
-import meta.pure.metamodel.type.PrimitiveType;
-import meta.pure.metamodel.type.PrimitiveTypeImpl;
-import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
+import platform.pure.metamodel.type.PrimitiveType;
+import platform.pure.metamodel.type.PrimitiveTypeImpl;
+import platform.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -29,7 +44,7 @@ public final class PrimitiveTypeHandler
     {
     }
 
-    public static PrimitiveType firstPass(meta.pure.protocol.grammar.type.PrimitiveType grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
+    public static PrimitiveType firstPass(platform.pure.protocol.grammar.type.PrimitiveType grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         PrimitiveTypeImpl result = new PrimitiveTypeImpl(model)._name(grammar._name());
         if (grammar._p_sourceInformation() != null)
@@ -39,7 +54,7 @@ public final class PrimitiveTypeHandler
         return result;
     }
 
-    public static PrimitiveType secondPass(PrimitiveTypeImpl result, meta.pure.protocol.grammar.type.PrimitiveType grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static PrimitiveType secondPass(PrimitiveTypeImpl result, platform.pure.protocol.grammar.type.PrimitiveType grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         result._generalizations(grammar._generalizations()
                 .collect(g -> GeneralizationCompiler.compile(g, result, imports, model, context))
@@ -78,7 +93,7 @@ public final class PrimitiveTypeHandler
      * This must happen in third pass because the constraint body references functions
      * (e.g. length(), lessThan()) that are only available after all elements are indexed.
      */
-    public static PrimitiveType thirdPass(PrimitiveType pt, meta.pure.protocol.grammar.type.PrimitiveType grammar,
+    public static PrimitiveType thirdPass(PrimitiveType pt, platform.pure.protocol.grammar.type.PrimitiveType grammar,
                                  MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         if (grammar._constraints() == null || grammar._constraints().isEmpty())
@@ -89,7 +104,7 @@ public final class PrimitiveTypeHandler
         VariableExpressionImpl thisVar = _VariableExpression.newVariableExpression(model)
                 ._name("this")
                 ._genericType(_GenericType.buildUserDefinedGenericType(pt, model))
-                ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
+                ._multiplicity((platform.pure.metamodel.multiplicity.Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::PureOne"));
 
         // Push $this and type variables into scope
         MutableList<VariableExpression> scopeVars = Lists.mutable.<VariableExpression>with(thisVar);

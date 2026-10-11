@@ -83,7 +83,7 @@ public final class AssertErrorNode extends PureNode
                 bodyCallNode.call(rc);
             }
             else if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(fn,
-                    "meta::pure::metamodel::function::LambdaFunction"))
+                    "platform::pure::metamodel::function::LambdaFunction"))
             {
                 // RawClosure accepts Object lambda — handles both typed
                 // LambdaFunction (XPDBHelper) and PureDynamicObject post-flip.

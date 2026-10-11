@@ -1,22 +1,37 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver;
 
-import meta.pure.metamodel.SourceInformation;
-import meta.pure.metamodel.function.LambdaFunction;
-import meta.pure.metamodel.function.LambdaFunctionImpl;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
-import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameterImpl;
-import meta.pure.metamodel.type.generics.ResolvedTypeParameterImpl;
-import meta.pure.metamodel.type.generics.TypeParameter;
-import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.Collection;
-import meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolder;
-import meta.pure.metamodel.valuespecification.FunctionApplication;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.SourceInformation;
+import platform.pure.metamodel.function.LambdaFunction;
+import platform.pure.metamodel.function.LambdaFunctionImpl;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.type.generics.ResolvedMultiplicityParameterImpl;
+import platform.pure.metamodel.type.generics.ResolvedTypeParameterImpl;
+import platform.pure.metamodel.type.generics.TypeParameter;
+import platform.pure.metamodel.valuespecification.AtomicValue;
+import platform.pure.metamodel.valuespecification.Collection;
+import platform.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolder;
+import platform.pure.metamodel.valuespecification.FunctionApplication;
+import platform.pure.metamodel.valuespecification.FunctionExpression;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
@@ -423,7 +438,7 @@ public class FunctionApplicationResolver
                         ._openVariables(lambda._openVariables())
                         ._sourceInformation(lambda._sourceInformation());
                 // ^$av(value = newLambda, genericType = reconciledGT)
-                return new meta.pure.metamodel.valuespecification.AtomicValueImpl(model)
+                return new platform.pure.metamodel.valuespecification.AtomicValueImpl(model)
                         ._value(newLambda)
                         ._genericType(reconciledGT)
                         ._multiplicity(av._multiplicity())
@@ -441,7 +456,7 @@ public class FunctionApplicationResolver
      */
     private static FunctionType extractReconciledFunctionType(GenericType gt)
     {
-        if (gt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+        if (gt instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv)
         {
             if (gtv._type() instanceof FunctionType ft)
             {
@@ -450,7 +465,7 @@ public class FunctionApplicationResolver
             if (gtv._typeArguments() != null && !gtv._typeArguments().isEmpty())
             {
                 GenericType firstArg = gtv._typeArguments().get(0);
-                if (firstArg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argGTV
+                if (firstArg instanceof platform.pure.metamodel.type.generics.GenericTypeValue argGTV
                         && argGTV._type() instanceof FunctionType ft)
                 {
                     return ft;

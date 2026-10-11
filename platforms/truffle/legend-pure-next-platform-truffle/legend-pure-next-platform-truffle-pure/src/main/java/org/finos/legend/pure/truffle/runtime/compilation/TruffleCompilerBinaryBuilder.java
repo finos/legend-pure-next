@@ -41,7 +41,7 @@ import java.util.function.Consumer;
  * (the self-hosted Pure writer).
  *
  * <p>Unlike the bootstrap builder which uses the Java compiler, this driver
- * runs the Pure-language compiler ({@code meta::pure::compiler::compile})
+ * runs the Pure-language compiler ({@code platform::pure::compiler::compile})
  * end-to-end through Truffle. Output is a structurally-equivalent PDB
  * consumable by any reader that understands {@code m3.fbs}.</p>
  */
@@ -54,9 +54,9 @@ public final class TruffleCompilerBinaryBuilder
     // makes the output PDBs comparable — the only platform-specific code is
     // the runtime hosting the same Pure entry points.
     private static final String PARSE_DIR_FN_PATH =
-            "meta::pure::compiler::parseDir_String_1__PureFile_MANY_";
+            "platform::pure::compiler::parseDir_String_1__PureFile_MANY_";
     private static final String COMPILE_FN_PATH =
-            "meta::pure::compiler::compile_PureFile_MANY__Boolean_1__CompilationResult_1_";
+            "platform::pure::compiler::compile_PureFile_MANY__Boolean_1__CompilationResult_1_";
 
     private TruffleCompilerBinaryBuilder()
     {
@@ -140,9 +140,9 @@ public final class TruffleCompilerBinaryBuilder
         Object compileFn = resolver.getElement(COMPILE_FN_PATH);
         if (parseDirFn == null || compileFn == null
                 || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(parseDirFn,
-                        "meta::pure::metamodel::function::FunctionDefinition", resolver)
+                        "platform::pure::metamodel::function::FunctionDefinition", resolver)
                 || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(compileFn,
-                        "meta::pure::metamodel::function::FunctionDefinition", resolver))
+                        "platform::pure::metamodel::function::FunctionDefinition", resolver))
         {
             throw new RuntimeException("parseDir/compile FunctionDefinition not resolvable: "
                     + "parseDir=" + (parseDirFn == null ? "null" : parseDirFn.getClass().getName())
@@ -213,7 +213,7 @@ public final class TruffleCompilerBinaryBuilder
 
             // Filter Package elements that already live in the anchor (first
             // base PDB) — compile-pure's `buildPackages` expands paths to all
-            // ancestors (`meta`, `meta::pure`, …) and core.pdb already owns
+            // ancestors (`platform`, `platform::pure`, …) and core.pdb already owns
             // those, so re-emitting them would diverge from bootstrap's output.
             // Non-Package elements always pass through.
             // Accepts both typed XPDBHelper (instanceof PackageableElement) and
@@ -232,7 +232,7 @@ public final class TruffleCompilerBinaryBuilder
                     if (pureType == null) continue;
                     String path = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(el, resolver);
                     boolean isPkg = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(el,
-                            "meta::pure::metamodel::Package");
+                            "platform::pure::metamodel::Package");
                     if (isPkg && anchor != null && anchor.hasElement(path))
                     {
                         continue;
@@ -461,7 +461,7 @@ public final class TruffleCompilerBinaryBuilder
     private static boolean isPackagePdo(Object e)
     {
         return e instanceof org.finos.legend.pure.truffle.execution.PureDynamicObject
-                && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(e, "meta::pure::metamodel::Package");
+                && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(e, "platform::pure::metamodel::Package");
     }
 
     /**

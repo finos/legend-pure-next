@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +15,13 @@
 
 package org.finos.legend.pure.m3.extensions.error;
 
-import meta.pure.protocol.grammar.Package_Pointer;
-import meta.pure.protocol.grammar.PackageableElement;
-import meta.pure.protocol.grammar.extension.ElementWithStereotypes;
-import meta.pure.protocol.grammar.extension.ElementWithTaggedValues;
-import meta.pure.protocol.grammar.extension.Stereotype_Pointer;
-import meta.pure.protocol.grammar.extension.TaggedValue;
-import meta.pure.protocol.grammar.type.Any;
+import platform.pure.protocol.grammar.Package_Pointer;
+import platform.pure.protocol.grammar.PackageableElement;
+import platform.pure.protocol.grammar.extension.ElementWithStereotypes;
+import platform.pure.protocol.grammar.extension.ElementWithTaggedValues;
+import platform.pure.protocol.grammar.extension.Stereotype_Pointer;
+import platform.pure.protocol.grammar.extension.TaggedValue;
+import platform.pure.protocol.grammar.type.Any;
 import org.eclipse.collections.api.list.MutableList;
 
 /**
@@ -68,13 +69,13 @@ public class Error implements PackageableElement
     }
 
     @Override
-    public meta.pure.protocol.grammar.SourceInformation _p_sourceInformation()
+    public platform.pure.protocol.grammar.SourceInformation _p_sourceInformation()
     {
         return null;
     }
 
     @Override
-    public Any _p_sourceInformation(meta.pure.protocol.grammar.SourceInformation value)
+    public Any _p_sourceInformation(platform.pure.protocol.grammar.SourceInformation value)
     {
         return this;
     }

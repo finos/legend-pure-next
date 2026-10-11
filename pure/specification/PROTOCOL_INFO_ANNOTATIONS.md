@@ -21,10 +21,10 @@ identity (a fully-qualified path, or owner + name).
 
 Currently applied to:
 
-- `meta::pure::metamodel::PackageableElement`
-- `meta::pure::metamodel::function::property::AbstractProperty`
-- `meta::pure::metamodel::extension::Stereotype`
-- `meta::pure::metamodel::extension::Tag`
+- `platform::pure::metamodel::PackageableElement`
+- `platform::pure::metamodel::function::property::AbstractProperty`
+- `platform::pure::metamodel::extension::Stereotype`
+- `platform::pure::metamodel::extension::Tag`
 
 Effect:
 

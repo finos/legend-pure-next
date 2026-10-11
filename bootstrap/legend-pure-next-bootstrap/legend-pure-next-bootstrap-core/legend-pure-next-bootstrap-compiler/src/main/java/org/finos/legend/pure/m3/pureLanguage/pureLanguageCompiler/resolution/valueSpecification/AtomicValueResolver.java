@@ -1,18 +1,33 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.function.LambdaFunction;
-import meta.pure.metamodel.function.LambdaFunctionImpl;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
-import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.AtomicValueImpl;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.protocol.grammar.Package_Pointer;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.function.LambdaFunction;
+import platform.pure.metamodel.function.LambdaFunctionImpl;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.valuespecification.AtomicValue;
+import platform.pure.metamodel.valuespecification.AtomicValueImpl;
+import platform.pure.metamodel.valuespecification.FunctionExpression;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.protocol.grammar.Package_Pointer;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Sets;
 import org.eclipse.collections.api.list.MutableList;
@@ -44,7 +59,7 @@ public class AtomicValueResolver
         {
             return processLambda(av, model, context, lambda);
         }
-        else if (value instanceof meta.pure.protocol.grammar.Package_Pointer pp)
+        else if (value instanceof platform.pure.protocol.grammar.Package_Pointer pp)
         {
             return processPackagePointer(av, model, context, pp);
         }
@@ -181,7 +196,7 @@ public class AtomicValueResolver
     private static @Nullable String buildLambdaCacheKey(AtomicValue av, MutableList<VariableExpression> params,
                                                         MutableList<VariableExpression> openVars, PureLanguageCompilerContext plcc)
     {
-        meta.pure.metamodel.SourceInformation si = av._sourceInformation();
+        platform.pure.metamodel.SourceInformation si = av._sourceInformation();
         if (si == null)
         {
             return null;
@@ -284,7 +299,7 @@ public class AtomicValueResolver
                 innerLambda._expressionSequence().forEach(inner -> collectVariableReferences(inner, innerParamNames, seenNames, result));
             }
         }
-        else if (vs instanceof meta.pure.metamodel.valuespecification.Collection col && col._values() != null)
+        else if (vs instanceof platform.pure.metamodel.valuespecification.Collection col && col._values() != null)
         {
             col._values().forEach(v -> collectVariableReferences(v, paramNames, seenNames, result));
         }

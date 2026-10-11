@@ -1,13 +1,28 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific;
 
-import meta.pure.metamodel.SourceInformation;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.SourceInformation;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.valuespecification.FunctionExpression;
+import platform.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
@@ -28,7 +43,7 @@ public class NewResolver
     public static void validateCopyProperties(FunctionExpression fe, MetadataAccess model, CompilationContext context)
     {
         GenericType returnGT = fe._genericType();
-        if (returnGT == null || !(_GenericType.type(returnGT) instanceof meta.pure.metamodel.type.Class cls))
+        if (returnGT == null || !(_GenericType.type(returnGT) instanceof platform.pure.metamodel.type.Class cls))
         {
             return;
         }
@@ -38,14 +53,14 @@ public class NewResolver
         if (params.size() >= 2)
         {
             ValueSpecification keyParam = params.get(1);
-            if (keyParam instanceof meta.pure.metamodel.valuespecification.Collection col)
+            if (keyParam instanceof platform.pure.metamodel.valuespecification.Collection col)
             {
                 col._values().forEach(v ->
                 {
                     if (v instanceof FunctionExpression keyExpr && keyExpr._parametersValues().notEmpty())
                     {
                         ValueSpecification keyNameVS = keyExpr._parametersValues().getFirst();
-                        if (keyNameVS instanceof meta.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof String name)
+                        if (keyNameVS instanceof platform.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof String name)
                         {
                             providedNames.add(name);
                         }
@@ -68,7 +83,7 @@ public class NewResolver
         // we must skip validation rather than mis-flag the carrier return type Any
         // as "abstract").
         org.eclipse.collections.api.list.ListIterable<? extends ValueSpecification> params = fe._parametersValues();
-        meta.pure.metamodel.type.Class cls = !params.isEmpty()
+        platform.pure.metamodel.type.Class cls = !params.isEmpty()
                 ? extractClassFromGTMH(params.getFirst())
                 : extractClassFromGenericType(fe._genericType());
         if (cls == null)
@@ -76,7 +91,7 @@ public class NewResolver
             return;
         }
 
-        // Class-level `<<meta::pure::profiles::compiler.pointer>>` stereotype
+        // Class-level `<<platform::pure::profiles::compiler.pointer>>` stereotype
         // declares the class an indirect-reference subtype: instances are
         // empty shells carrying only a resolution key. Skip the abstract +
         // required-property checks so `^FooPointer(path = "...")` type-checks
@@ -90,7 +105,7 @@ public class NewResolver
         if (cls._stereotypes() != null && cls._stereotypes().anySatisfy(s ->
                 "abstract".equals(s._value()) &&
                 s._profile() != null &&
-                "meta::pure::profiles::typemodifiers".equals(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(s._profile()))))
+                "platform::pure::profiles::typemodifiers".equals(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(s._profile()))))
         {
             SourceInformation srcInfo = fe._sourceInformation();
             context.addError(new CompilationError(
@@ -104,14 +119,14 @@ public class NewResolver
         if (params.size() >= 2)
         {
             ValueSpecification keyParam = params.get(1);
-            if (keyParam instanceof meta.pure.metamodel.valuespecification.Collection col)
+            if (keyParam instanceof platform.pure.metamodel.valuespecification.Collection col)
             {
                 col._values().forEach(v ->
                 {
                     if (v instanceof FunctionExpression keyExpr && keyExpr._parametersValues().notEmpty())
                     {
                         ValueSpecification keyNameVS = keyExpr._parametersValues().getFirst();
-                        if (keyNameVS instanceof meta.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof String name)
+                        if (keyNameVS instanceof platform.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof String name)
                         {
                             providedNames.add(name);
                         }
@@ -134,7 +149,7 @@ public class NewResolver
      * parameter isn't a holder (the dynamic-dispatch {@code new(GenericType):Any}
      * form — caller skips validation).
      */
-    private static meta.pure.metamodel.type.Class extractClassFromGTMH(ValueSpecification vs)
+    private static platform.pure.metamodel.type.Class extractClassFromGTMH(ValueSpecification vs)
     {
         if (!(vs instanceof GenericTypeAndMultiplicityHolder gtmh))
         {
@@ -157,17 +172,17 @@ public class NewResolver
 
     /**
      * Mirrors Pure newResolver.pure extractClassFromGenericType (line 97-113).
-     * Given a {@link GenericType}, return the underlying {@link meta.pure.metamodel.type.Class}
+     * Given a {@link GenericType}, return the underlying {@link platform.pure.metamodel.type.Class}
      * if the GT carries one, else {@code null}.
      */
-    private static meta.pure.metamodel.type.Class extractClassFromGenericType(GenericType gt)
+    private static platform.pure.metamodel.type.Class extractClassFromGenericType(GenericType gt)
     {
         if (gt == null || !(gt instanceof GenericTypeValue gtv))
         {
             return null;
         }
         Type t = gtv._type();
-        return t instanceof meta.pure.metamodel.type.Class cls ? cls : null;
+        return t instanceof platform.pure.metamodel.type.Class cls ? cls : null;
     }
 
     /**
@@ -175,7 +190,7 @@ public class NewResolver
      * Uses _Multiplicity.subsumes for multiplicity and _GenericType.isCompatible for types.
      */
     private static void checkKeyExpressions(
-            meta.pure.metamodel.type.Class cls,
+            platform.pure.metamodel.type.Class cls,
             org.eclipse.collections.api.set.MutableSet<String> providedNames,
             FunctionExpression fe,
             MetadataAccess model,
@@ -184,7 +199,7 @@ public class NewResolver
         // Build class type parameter bindings from the new/copy expression's return type
         // e.g., MyClass<String> → {Z → String}, so we can resolve property types
         org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding classBindings =
-                (fe._genericType() != null && !(fe._genericType() instanceof meta.pure.metamodel.type.generics.UndefinedGenericType) && !(fe._genericType() instanceof meta.pure.metamodel.type.generics.CompilerNotSetGenericType))
+                (fe._genericType() != null && !(fe._genericType() instanceof platform.pure.metamodel.type.generics.UndefinedGenericType) && !(fe._genericType() instanceof platform.pure.metamodel.type.generics.CompilerNotSetGenericType))
                         ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class.buildBindingsFromGenericType(cls, fe._genericType())
                         : org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
 
@@ -212,7 +227,7 @@ public class NewResolver
             return;
         }
         ValueSpecification keyParam = params.get(1);
-        if (!(keyParam instanceof meta.pure.metamodel.valuespecification.Collection col))
+        if (!(keyParam instanceof platform.pure.metamodel.valuespecification.Collection col))
         {
             return;
         }
@@ -222,9 +237,9 @@ public class NewResolver
             {
                 ValueSpecification keyNameVS = keyExpr._parametersValues().getFirst();
                 ValueSpecification keyValueVS = keyExpr._parametersValues().get(1);
-                if (keyNameVS instanceof meta.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof String propName)
+                if (keyNameVS instanceof platform.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof String propName)
                 {
-                    meta.pure.metamodel.function.property.Property prop = _Class.findProperty(cls, propName);
+                    platform.pure.metamodel.function.property.Property prop = _Class.findProperty(cls, propName);
                     if (prop == null)
                     {
                         return; // unknown property — already reported above
@@ -245,15 +260,15 @@ public class NewResolver
                     if (prop._genericType() != null && keyValueVS._genericType() != null)
                     {
                         GenericType resolvedPropGT = _GenericType.makeAsConcreteAsPossible(prop._genericType(), classBindings, model);
-                        meta.pure.metamodel.type.Type propRawType = _GenericType.type(resolvedPropGT);
-                        meta.pure.metamodel.type.Type valRawType = _GenericType.type(keyValueVS._genericType());
-                        String pName = propRawType instanceof meta.pure.metamodel.PackageableElement pe ? pe._name() : null;
-                        String vName = valRawType instanceof meta.pure.metamodel.PackageableElement pe ? pe._name() : null;
+                        platform.pure.metamodel.type.Type propRawType = _GenericType.type(resolvedPropGT);
+                        platform.pure.metamodel.type.Type valRawType = _GenericType.type(keyValueVS._genericType());
+                        String pName = propRawType instanceof platform.pure.metamodel.PackageableElement pe ? pe._name() : null;
+                        String vName = valRawType instanceof platform.pure.metamodel.PackageableElement pe ? pe._name() : null;
                         // Skip check for unresolved/abstract types, type parameters, and
                         // meta-level types (ValueSpecification subtypes used in meta construction)
-                        String valPath = valRawType instanceof meta.pure.metamodel.PackageableElement vpe
+                        String valPath = valRawType instanceof platform.pure.metamodel.PackageableElement vpe
                                 ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(vpe) : "";
-                        String pPath = propRawType instanceof meta.pure.metamodel.PackageableElement ppe
+                        String pPath = propRawType instanceof platform.pure.metamodel.PackageableElement ppe
                                 ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(ppe) : "";
                         boolean sameRawType = (pName != null && pName.equals(vName)) || (!pPath.isEmpty() && pPath.equals(valPath));
                         // Skip when the value type is a subtype of the property type (linearization check)
@@ -264,7 +279,7 @@ public class NewResolver
                                 || sameRawType || isSubtype
                                 || "Any".equals(pName) || "Any".equals(vName)
                                 || "Nil".equals(vName) || "Unknown".equals(pName) || "Unknown".equals(vName)
-                                || valRawType instanceof meta.pure.metamodel.type.generics.TypeParameter;
+                                || valRawType instanceof platform.pure.metamodel.type.generics.TypeParameter;
                         if (!skip && !_GenericType.isCompatible(resolvedPropGT, keyValueVS._genericType(), model))
                         {
                             context.addError(new CompilationError(
@@ -282,14 +297,14 @@ public class NewResolver
      * For "address.city" on Person: find "address" on Person → get its type (Address) → find "city" on Address.
      */
     private static void validateDeepPropertyPath(
-            meta.pure.metamodel.type.Class cls,
+            platform.pure.metamodel.type.Class cls,
             String fullPath,
             FunctionExpression fe,
             MetadataAccess model,
             CompilationContext context)
     {
         String[] segments = fullPath.split("\\.");
-        meta.pure.metamodel.type.Type currentType = cls;
+        platform.pure.metamodel.type.Type currentType = cls;
         for (int i = 0; i < segments.length; i++)
         {
             String segment = segments[i];
@@ -298,13 +313,13 @@ public class NewResolver
             // which may be a non-SimplePropertyOwner Type (PrimitiveType,
             // FunctionType). Those have no properties; treat as "not found"
             // and surface the deep-path error below.
-            meta.pure.metamodel.function.property.Property prop =
-                    currentType instanceof meta.pure.metamodel.SimplePropertyOwner owner
+            platform.pure.metamodel.function.property.Property prop =
+                    currentType instanceof platform.pure.metamodel.SimplePropertyOwner owner
                             ? _Class.findProperty(owner, segment)
                             : null;
             if (prop == null)
             {
-                String currentTypeName = currentType instanceof meta.pure.metamodel.PackageableElement pe
+                String currentTypeName = currentType instanceof platform.pure.metamodel.PackageableElement pe
                         ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe)
                         : "Unknown";
                 context.addError(new CompilationError(
@@ -326,7 +341,7 @@ public class NewResolver
         }
     }
 
-    private static String formatMultiplicity(meta.pure.metamodel.multiplicity.Multiplicity m)
+    private static String formatMultiplicity(platform.pure.metamodel.multiplicity.Multiplicity m)
     {
         long lower = _Multiplicity.lowerBound(m);
         Long upper = _Multiplicity.upperBound(m);
@@ -338,12 +353,12 @@ public class NewResolver
     }
 
     private static void checkMissingProperties(
-            meta.pure.metamodel.type.Type type,
+            platform.pure.metamodel.type.Type type,
             org.eclipse.collections.api.set.MutableSet<String> providedNames,
             FunctionExpression fe,
             CompilationContext context)
     {
-        if (type instanceof meta.pure.metamodel.SimplePropertyOwner po && po._properties() != null)
+        if (type instanceof platform.pure.metamodel.SimplePropertyOwner po && po._properties() != null)
         {
             po._properties().forEach(prop ->
             {
@@ -379,17 +394,17 @@ public class NewResolver
     }
 
     /**
-     * True iff the class carries the {@code <<meta::pure::profiles::compiler.pointer>>}
+     * True iff the class carries the {@code <<platform::pure::profiles::compiler.pointer>>}
      * stereotype — meaning instances are indirect-reference shells whose only real
      * field is the resolution key. The compiler skips required-property validation
      * for {@code ^X(...)} expressions of such classes.
      */
-    private static boolean isCompilerPointer(meta.pure.metamodel.type.Class cls)
+    private static boolean isCompilerPointer(platform.pure.metamodel.type.Class cls)
     {
         return cls._stereotypes() != null && cls._stereotypes().anySatisfy(s ->
                 "pointer".equals(s._value()) &&
                 s._profile() != null &&
-                "meta::pure::profiles::compiler".equals(
+                "platform::pure::profiles::compiler".equals(
                         org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(s._profile())));
     }
 }

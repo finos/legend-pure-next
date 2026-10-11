@@ -174,7 +174,7 @@
             "_type" : "PointerValue",
             "value" : "None"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
@@ -210,7 +210,7 @@
             "_type" : "PointerValue",
             "value" : "None"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "genericType" : {
           "_type" : "UserDefinedGenericType",

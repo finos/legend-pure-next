@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,9 +15,9 @@
 
 package org.finos.legend.pure.m3.helper;
 
-import meta.pure.metamodel.relation.RelationType;
-import meta.pure.metamodel.relation.RelationTypeImpl;
-import meta.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.relation.RelationType;
+import platform.pure.metamodel.relation.RelationTypeImpl;
+import platform.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.JavaCompiler;
@@ -58,27 +59,27 @@ public class _GenericTypeOperationTest
         ScopedMetadataAccess metadataAccess = new ScopedMetadataAccess(model.registry().module("test"), model.registry());
         
         RelationType rt1 = new RelationTypeImpl();
-        GenericType gt1 = _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) metadataAccess.getElement("meta::pure::metamodel::relation::RelationType"), metadataAccess);
+        GenericType gt1 = _GenericType.buildUserDefinedGenericType((platform.pure.metamodel.type.Type) metadataAccess.getElement("platform::pure::metamodel::relation::RelationType"), metadataAccess);
         rt1._columns(Lists.mutable.with(
-            _Column.build("age", gt1, _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) metadataAccess.getElement("Integer"), metadataAccess), (meta.pure.metamodel.multiplicity.Multiplicity) metadataAccess.getElement("meta::pure::metamodel::multiplicity::PureOne"), false, metadataAccess)
+            _Column.build("age", gt1, _GenericType.buildUserDefinedGenericType((platform.pure.metamodel.type.Type) metadataAccess.getElement("Integer"), metadataAccess), (platform.pure.metamodel.multiplicity.Multiplicity) metadataAccess.getElement("platform::pure::metamodel::multiplicity::PureOne"), false, metadataAccess)
         ));
 
         RelationType rt2 = new RelationTypeImpl();
-        GenericType gt2 = _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) metadataAccess.getElement("meta::pure::metamodel::relation::RelationType"), metadataAccess);
+        GenericType gt2 = _GenericType.buildUserDefinedGenericType((platform.pure.metamodel.type.Type) metadataAccess.getElement("platform::pure::metamodel::relation::RelationType"), metadataAccess);
         rt2._columns(Lists.mutable.with(
-            _Column.build("name", gt2, _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) metadataAccess.getElement("String"), metadataAccess), (meta.pure.metamodel.multiplicity.Multiplicity) metadataAccess.getElement("meta::pure::metamodel::multiplicity::PureOne"), false, metadataAccess)
+            _Column.build("name", gt2, _GenericType.buildUserDefinedGenericType((platform.pure.metamodel.type.Type) metadataAccess.getElement("String"), metadataAccess), (platform.pure.metamodel.multiplicity.Multiplicity) metadataAccess.getElement("platform::pure::metamodel::multiplicity::PureOne"), false, metadataAccess)
         ));
 
         RelationType unionResult = _GenericTypeOperation.evaluateRelationTypeOperation(rt1, rt2, "Union", metadataAccess);
         assertNotNull(unionResult);
-        MutableList<? extends meta.pure.metamodel.relation.Column> unionCols = unionResult._columns().toList();
+        MutableList<? extends platform.pure.metamodel.relation.Column> unionCols = unionResult._columns().toList();
         assertEquals(2, unionCols.size());
         assertEquals("age", unionCols.get(0)._name());
         assertEquals("name", unionCols.get(1)._name());
 
         RelationType diffResult = _GenericTypeOperation.evaluateRelationTypeOperation(unionResult, rt2, "Difference", metadataAccess);
         assertNotNull(diffResult);
-        MutableList<? extends meta.pure.metamodel.relation.Column> diffCols = diffResult._columns().toList();
+        MutableList<? extends platform.pure.metamodel.relation.Column> diffCols = diffResult._columns().toList();
         assertEquals(1, diffCols.size());
         assertEquals("age", diffCols.get(0)._name());
     }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Host implementation of the three meta::external::language::javascript natives:
+// Host implementation of the three platform::external::language::javascript natives:
 // `compile`, `execute` and `drainCompiledSources`.
 //
 // The native decl calls itself "an eval pipe plus a resolver" — the resolver half
@@ -31,7 +31,7 @@
 import { EVALUATE, JS_COMPILE_MODULE, JS_DRAIN_COMPILED_SOURCES, JS_EXECUTE } from "./native-signatures.js";
 
 /**
- * Host natives of the javascript language module (meta::external::language::javascript):
+ * Host natives of the javascript language module (platform::external::language::javascript):
  * compileModule, execute and drainCompiledSources, plus evaluate of a function
  * definition built at run time.
  */
@@ -98,10 +98,10 @@ function createHostJsNatives(evalJs, memModule = null) {
     // has no open variables) and minus the classifier's function type, which a
     // `^LambdaFunction<{->T[m]}>` instance does not carry: the return type and
     // multiplicity come from the last expression instead.
-    const TRANSLATION = "meta::external::language::javascript::translation::";
+    const TRANSLATION = "platform::external::language::javascript::translation::";
     const CONVENTION = TRANSLATION + "conventionForRoot_FunctionDefinition_1__Convention_1_";
     const TRANSLATE = TRANSLATION + "translateFunctionDef_FunctionDefinition_1__Convention_1__SourceFile_1_";
-    const SERIALIZE = "meta::external::language::javascript::serialization::serialize_SourceFile_1__String_1_";
+    const SERIALIZE = "platform::external::language::javascript::serialization::serialize_SourceFile_1__String_1_";
     const evaluateFunctionDefinition = (fn, args) => {
         if (args.length !== 0) {
             throw new Error(`evaluate: a function definition built at run time takes no arguments on this host (got ${args.length})`);

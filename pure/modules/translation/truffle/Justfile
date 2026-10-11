@@ -120,9 +120,8 @@ _depCheck_runtime-pdbs:
         exit 1
     fi
 
-# Remove build/truffle-translation-gallery.pdb (and the tests PDB).
+# Remove build/ — the PDBs and anything else this module writes there.
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove build/truffle-translation-gallery.pdb + -tests.pdb'
-    rm -f {{translation_truffle_out}}/truffle-translation-gallery.pdb {{translation_truffle_out}}/truffle-translation-gallery-tests.pdb
-    rm -f {{translation_truffle_out}}/truffle-translation-gallery.html
+    @{{substep}} 'remove build/'
+    rm -rf {{translation_truffle_out}}

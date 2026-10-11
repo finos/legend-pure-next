@@ -1,9 +1,24 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.helper;
 
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.relation.Column;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.relation.Column;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
@@ -44,7 +59,7 @@ public class _ColumnTest
         
         GenericType ownerGT = _GenericType.buildUserDefinedGenericType((Type) metadataAccess.getElement("String"), metadataAccess);
         GenericType valueGT = _GenericType.buildUserDefinedGenericType((Type) metadataAccess.getElement("Integer"), metadataAccess);
-        Multiplicity pureOne = (Multiplicity) metadataAccess.getElement("meta::pure::metamodel::multiplicity::PureOne");
+        Multiplicity pureOne = (Multiplicity) metadataAccess.getElement("platform::pure::metamodel::multiplicity::PureOne");
 
         Column col = _Column.build("age", ownerGT, valueGT, pureOne, false, metadataAccess);
 
@@ -55,7 +70,7 @@ public class _ColumnTest
         assertEquals(pureOne, col._multiplicity());
         
         GenericType cgt = col._classifierGenericType();
-        assertEquals("Column", ((meta.pure.metamodel.PackageableElement) _GenericType.type(cgt))._name());
+        assertEquals("Column", ((platform.pure.metamodel.PackageableElement) _GenericType.type(cgt))._name());
         assertEquals(2, _GenericType.typeArguments(cgt).size());
         assertEquals(ownerGT, _GenericType.typeArguments(cgt).getFirst());
         assertEquals(valueGT, _GenericType.typeArguments(cgt).getLast());

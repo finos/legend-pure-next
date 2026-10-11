@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +26,7 @@ import tools.jackson.databind.jsontype.impl.StdTypeResolverBuilder;
 
 /**
  * Synthesizes Jackson polymorphism, type-id, and ignore behavior for the
- * generated Pure protocol classes (under {@code meta.pure.protocol.*}) without
+ * generated Pure protocol classes (under {@code platform.pure.protocol.*}) without
  * requiring those classes to carry Jackson annotations.
  *
  * <p>For any class in the protocol package this introspector emits, on
@@ -39,7 +40,7 @@ import tools.jackson.databind.jsontype.impl.StdTypeResolverBuilder;
  */
 final class PureProtocolAnnotationIntrospector extends JacksonAnnotationIntrospector
 {
-    private static final String PROTOCOL_PACKAGE_PREFIX = "meta.pure.protocol.";
+    private static final String PROTOCOL_PACKAGE_PREFIX = "platform.pure.protocol.";
     private static final String IMPL_SUFFIX = "Impl";
 
     @Override

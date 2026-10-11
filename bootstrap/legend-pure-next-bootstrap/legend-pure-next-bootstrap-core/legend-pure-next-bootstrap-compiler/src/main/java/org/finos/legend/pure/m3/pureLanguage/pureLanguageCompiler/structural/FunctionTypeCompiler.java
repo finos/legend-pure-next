@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,15 +15,15 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.FunctionTypeImpl;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.FunctionTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 
 /**
- * Compiles a grammar-level {@link meta.pure.protocol.grammar.type.FunctionType}
+ * Compiles a grammar-level {@link platform.pure.protocol.grammar.type.FunctionType}
  * into a metamodel-level {@link FunctionType}.
  */
 public final class FunctionTypeCompiler
@@ -32,10 +33,10 @@ public final class FunctionTypeCompiler
     }
 
     /**
-     * Compile a grammar-level {@link meta.pure.protocol.grammar.type.FunctionType}
+     * Compile a grammar-level {@link platform.pure.protocol.grammar.type.FunctionType}
      * into a metamodel-level {@link FunctionType}.
      */
-    public static FunctionType compile(meta.pure.protocol.grammar.type.FunctionType ft, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static FunctionType compile(platform.pure.protocol.grammar.type.FunctionType ft, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         FunctionTypeImpl result = _FunctionType.newFunctionType(model);
         if (ft._returnType() != null)

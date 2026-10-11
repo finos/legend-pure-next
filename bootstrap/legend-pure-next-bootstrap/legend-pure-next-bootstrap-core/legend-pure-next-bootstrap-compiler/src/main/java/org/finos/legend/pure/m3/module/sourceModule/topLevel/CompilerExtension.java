@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +15,7 @@
 
 package org.finos.legend.pure.m3.module.sourceModule.topLevel;
 
-import meta.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
@@ -37,7 +38,7 @@ public interface CompilerExtension
      * @return a new metamodel element, or {@code null} if this
      *         extension does not handle the given element type
      */
-    PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context);
+    PackageableElement firstPass(platform.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context);
 
     /**
      * Second pass: resolve cross-references on a previously created element.

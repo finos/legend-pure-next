@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::structural::sourceInformationCompiler::*;
-import meta::pure::compiler::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::functions::lang::*;
+import platform::pure::compiler::structural::sourceInformationCompiler::*;
+import platform::pure::compiler::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::functions::lang::*;
 
-function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::protocol::grammar::extension::Profile[1], ctx:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::elements::compileProfilePass1(pr:platform::pure::protocol::grammar::extension::Profile[1], ctx:CompilerContext[1]):CompilerContext[1]
 {
     let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().value);
     let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
     let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
     let profileSkeletonInt = ^Profile(
         name = $pr.name,
-        package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package),
+        package = $pkgRes.value->toOne()->toPackagePointer()->cast(@platform::pure::metamodel::Package),
         p_stereotypes = $pr.p_stereotypes->map(s |
             ^Stereotype(value = $s.value, profile = ~.~);
         ),

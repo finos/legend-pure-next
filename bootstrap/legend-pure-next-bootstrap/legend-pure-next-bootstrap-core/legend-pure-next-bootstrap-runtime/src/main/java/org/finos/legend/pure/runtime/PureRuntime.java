@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,10 +22,10 @@ import java.util.Map;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import org.finos.legend.pure.m3.module.Module;
-import meta.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.m3.module.inMemoryModule.InMemoryModule;
 import org.finos.legend.pure.m3.module.ModuleRegistry;
-import meta.pure.metamodel.function.FunctionWithParameters;
+import platform.pure.metamodel.function.FunctionWithParameters;
 import org.finos.legend.pure.execution.Execution;
 import org.finos.legend.pure.execution.ExecutionContext;
 import org.finos.legend.pure.execution.InterpretedExecution;

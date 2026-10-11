@@ -100,7 +100,7 @@ public final class EvalNode extends PureNode
             throw new RuntimeException("Cannot compile lambda CallTarget");
         }
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(fn,
-                "meta::pure::metamodel::function::LambdaFunction"))
+                "platform::pure::metamodel::function::LambdaFunction"))
         {
             com.oracle.truffle.api.RootCallTarget ct = evaluator.callTargetForLambda(fn);
             if (ct != null)
@@ -116,7 +116,7 @@ public final class EvalNode extends PureNode
         // Property is a leaf — pureTypeIs is enough (QualifiedProperty routes
         // to the FunctionDefinition branch below since it extends both).
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(fn,
-                "meta::pure::metamodel::function::property::Property"))
+                "platform::pure::metamodel::function::property::Property"))
         {
             if (args.length > 0)
             {
@@ -127,13 +127,13 @@ public final class EvalNode extends PureNode
         }
         MetadataAccess resolver = evaluator.resolver();
         if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(fn,
-                "meta::pure::metamodel::function::FunctionDefinition", resolver))
+                "platform::pure::metamodel::function::FunctionDefinition", resolver))
         {
             return evaluator.executeFunction(fn, args);
         }
         // NativeFunction (leaf concrete type) — match via Pure path.
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(fn,
-                "meta::pure::metamodel::function::NativeFunction"))
+                "platform::pure::metamodel::function::NativeFunction"))
         {
             return executeNativeViaRegistry(evaluator, fn, args);
         }

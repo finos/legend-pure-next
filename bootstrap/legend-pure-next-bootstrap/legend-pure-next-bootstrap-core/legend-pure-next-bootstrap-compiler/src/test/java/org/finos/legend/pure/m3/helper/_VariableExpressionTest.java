@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +15,7 @@
 
 package org.finos.legend.pure.m3.helper;
 
-import meta.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
@@ -55,6 +56,6 @@ public class _VariableExpressionTest
         
         assertNotNull(varExpr);
         assertNotNull(varExpr._classifierGenericType());
-        assertEquals("VariableExpression", ((meta.pure.metamodel.PackageableElement) _GenericType.type(varExpr._classifierGenericType()))._name());
+        assertEquals("VariableExpression", ((platform.pure.metamodel.PackageableElement) _GenericType.type(varExpr._classifierGenericType()))._name());
     }
 }

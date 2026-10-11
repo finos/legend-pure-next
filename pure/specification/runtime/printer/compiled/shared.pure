@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::printer::compiled::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::metamodel::function::property::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::metamodel::relationship::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::printer::compiled::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
 
 // Helpers shared across the compiled-side printers. Mirrors
 // printer/protocol/shared.pure but operates on the compiled metamodel
-// (meta::pure::metamodel::*) rather than the Protocol model
-// (meta::pure::protocol::grammar::*).
+// (platform::pure::metamodel::*) rather than the Protocol model
+// (platform::pure::protocol::grammar::*).
 
 // Render a Package as the textual prefix that precedes a class / function
 // name. Top-level (Root) → ''; nested → e.g. 'pkg::'.
-function meta::pure::functions::printer::compiled::printPackagePrefix(pkg: Package[0..1]): String[1]
+function platform::pure::functions::printer::compiled::printPackagePrefix(pkg: Package[0..1]): String[1]
 {
     if ($pkg->isEmpty(),
         | '',
@@ -44,19 +45,19 @@ function meta::pure::functions::printer::compiled::printPackagePrefix(pkg: Packa
 // (FullFQN mode) OR short name when the import set covers it (ManageImports).
 // TypeParameter renders as its bare name (no package). RelationType renders
 // inline `(col1:T1[m1], col2:T2[m2])` since it is not a PackageableElement.
-function meta::pure::functions::printer::compiled::printType(t: Type[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printType(t: Type[1], ctx: PrintContext[1]): String[1]
 {
     $t->match([
         tp: TypeParameter[1] | $tp.name,
         rt: RelationType<Any>[1] | printRelationTypeShape($rt, $ctx),
-        ft: meta::pure::metamodel::type::FunctionType[1] | printCompiledFunctionType($ft, $ctx),
+        ft: platform::pure::metamodel::type::FunctionType[1] | printCompiledFunctionType($ft, $ctx),
         any: Type[1] | printPackageableTypePath(ctxShortenIfPossible($any->cast(@PackageableElement)->elementToPath(), $ctx))
     ]);
 }
 
 // `{P1[m1], P2[m2] -> R[mret]}` — function type literal. Used by `Function<{...}>`
 // and standalone in arrow-positions of generic-type arguments.
-function meta::pure::functions::printer::compiled::printCompiledFunctionType(ft: meta::pure::metamodel::type::FunctionType[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledFunctionType(ft: platform::pure::metamodel::type::FunctionType[1], ctx: PrintContext[1]): String[1]
 {
     let params = $ft.parameters->map(p | printGenericType($p.genericType->toOne(), $ctx) + if ($p.multiplicity->isEmpty(), | '', | printMultiplicity($p.multiplicity->toOne())))->joinStrings(',');
     let ret = if ($ft.returnType->isEmpty(), | '', | printGenericType($ft.returnType->toOne(), $ctx));
@@ -66,12 +67,12 @@ function meta::pure::functions::printer::compiled::printCompiledFunctionType(ft:
 
 // `(col1:T1[m1], col2:T2[m2])`. Each column is a metamodel Column whose
 // classifierGenericType's typeArguments encode its FunctionType return type.
-function meta::pure::functions::printer::compiled::printRelationTypeShape(rt: RelationType<Any>[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printRelationTypeShape(rt: RelationType<Any>[1], ctx: PrintContext[1]): String[1]
 {
     $rt.columns->map(c | printRelationColumn($c, $ctx))->joinStrings('(', ', ', ')');
 }
 
-function meta::pure::functions::printer::compiled::printRelationColumn(c: Column<Nil, Any|*>[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printRelationColumn(c: Column<Nil, Any|*>[1], ctx: PrintContext[1]): String[1]
 {
     // Column<U,V|m>: CGT typeArguments[1] = V (data type), multiplicityArguments[0] = m.
     // Wildcard columns (`?:T`) carry nameWildCard=true with name unset. The
@@ -84,12 +85,12 @@ function meta::pure::functions::printer::compiled::printRelationColumn(c: Column
     $n + ':' + printGenericType($cgt.typeArguments->at(1), $ctx) + $mulSuffix;
 }
 
-function meta::pure::functions::printer::compiled::printPackageableTypePath(path: String[1]): String[1]
+function platform::pure::functions::printer::compiled::printPackageableTypePath(path: String[1]): String[1]
 {
-    if([pair(| $path->startsWith('meta::pure::metamodel::type::primitives::'),
-             | $path->substring('meta::pure::metamodel::type::primitives::'->length(), $path->length())),
-        pair(| $path->startsWith('meta::pure::metamodel::type::'),
-             | $path->substring('meta::pure::metamodel::type::'->length(), $path->length()))],
+    if([pair(| $path->startsWith('platform::pure::metamodel::type::primitives::'),
+             | $path->substring('platform::pure::metamodel::type::primitives::'->length(), $path->length())),
+        pair(| $path->startsWith('platform::pure::metamodel::type::'),
+             | $path->substring('platform::pure::metamodel::type::'->length(), $path->length()))],
        | $path);
 }
 
@@ -97,7 +98,7 @@ function meta::pure::functions::printer::compiled::printPackageableTypePath(path
 // arguments (`Foo<T1, T2>`) and multiplicity arguments (`Foo<T|m>`) when
 // present. UndefinedGenericType / CompilerNotSet render as empty so callers
 // can elide them.
-function meta::pure::functions::printer::compiled::printGenericType(g: GenericType[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printGenericType(g: GenericType[1], ctx: PrintContext[1]): String[1]
 {
     $g->match([
         // UndefinedGenericType renders empty in most contexts; callers that
@@ -105,14 +106,14 @@ function meta::pure::functions::printer::compiled::printGenericType(g: GenericTy
         // printCompiledTypeArg below to emit it.
         undef: UndefinedGenericType[1] | '',
         gtv: GenericTypeValue[1] | printType($gtv.type->toOne('compiled printer: GenericTypeValue.type is empty'), $ctx) + printCompiledTypeAndMulArgs($gtv.typeArguments, $gtv.multiplicityArguments, $ctx) + printCompiledTypeVariableValues($gtv.typeVariableValues, $ctx),
-        gto: meta::pure::metamodel::relation::GenericTypeOperation[1] | printCompiledGenericTypeOperation($gto, $ctx),
+        gto: platform::pure::metamodel::relation::GenericTypeOperation[1] | printCompiledGenericTypeOperation($gto, $ctx),
         any: GenericType[1] | ''
     ]);
 }
 
 // Inside `<>` typeArguments, an UndefinedGenericType renders as `?` (the
 // `typeOrUndefined` grammar slot accepts `QUESTION | typeWithOperation`).
-function meta::pure::functions::printer::compiled::printCompiledTypeArg(g: GenericType[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledTypeArg(g: GenericType[1], ctx: PrintContext[1]): String[1]
 {
     if ($g->instanceOf(UndefinedGenericType),
         | '?',
@@ -124,11 +125,11 @@ function meta::pure::functions::printer::compiled::printCompiledTypeArg(g: Gener
 // variables (e.g. `Varchar(200)` for a `Varchar(x:Integer)` declaration).
 // Each value is a ValueSpecification; render via the VS printer so literals,
 // variables, and arithmetic all work.
-function meta::pure::functions::printer::compiled::printCompiledTypeVariableValues(tvs: meta::pure::metamodel::valuespecification::ValueSpecification[*], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledTypeVariableValues(tvs: platform::pure::metamodel::valuespecification::ValueSpecification[*], ctx: PrintContext[1]): String[1]
 {
     if ($tvs->isEmpty(),
         | '',
-        | $tvs->map(v | meta::pure::functions::printer::compiled::printCompiledValueSpec($v, $ctx))->joinStrings('(', ', ', ')')
+        | $tvs->map(v | platform::pure::functions::printer::compiled::printCompiledValueSpec($v, $ctx))->joinStrings('(', ', ', ')')
     );
 }
 
@@ -136,7 +137,7 @@ function meta::pure::functions::printer::compiled::printCompiledTypeVariableValu
 // operation enum is on the M3 GenericTypeOperation directly (not a pointer
 // like the protocol version), so we read it via the metamodel-anchor enum
 // constants.
-function meta::pure::functions::printer::compiled::printCompiledGenericTypeOperation(gto: meta::pure::metamodel::relation::GenericTypeOperation[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledGenericTypeOperation(gto: platform::pure::metamodel::relation::GenericTypeOperation[1], ctx: PrintContext[1]): String[1]
 {
     let left = if ($gto.left->isEmpty(), | '', | printGenericType($gto.left->toOne(), $ctx));
     let right = if ($gto.right->isEmpty(), | '', | printGenericType($gto.right->toOne(), $ctx));
@@ -144,12 +145,12 @@ function meta::pure::functions::printer::compiled::printCompiledGenericTypeOpera
     $left + $op + $right;
 }
 
-function meta::pure::functions::printer::compiled::compiledGenericTypeOperationSymbol(t: meta::pure::metamodel::relation::GenericTypeOperationType[1]): String[1]
+function platform::pure::functions::printer::compiled::compiledGenericTypeOperationSymbol(t: platform::pure::metamodel::relation::GenericTypeOperationType[1]): String[1]
 {
-    if([pair(| $t == meta::pure::metamodel::relation::GenericTypeOperationType.Union,      | '+'),
-        pair(| $t == meta::pure::metamodel::relation::GenericTypeOperationType.Difference, | '-'),
-        pair(| $t == meta::pure::metamodel::relation::GenericTypeOperationType.Subset,     | '⊆'),
-        pair(| $t == meta::pure::metamodel::relation::GenericTypeOperationType.Equal,      | '=')],
+    if([pair(| $t == platform::pure::metamodel::relation::GenericTypeOperationType.Union,      | '+'),
+        pair(| $t == platform::pure::metamodel::relation::GenericTypeOperationType.Difference, | '-'),
+        pair(| $t == platform::pure::metamodel::relation::GenericTypeOperationType.Subset,     | '⊆'),
+        pair(| $t == platform::pure::metamodel::relation::GenericTypeOperationType.Equal,      | '=')],
        | '?');
 }
 
@@ -157,7 +158,7 @@ function meta::pure::functions::printer::compiled::compiledGenericTypeOperationS
 // one type or multiplicity arg is present. UndefinedGenericType renders
 // as `?` and UndefinedMultiplicity as `?` — both are semantically distinct
 // from an empty slot (which omits the arg entirely).
-function meta::pure::functions::printer::compiled::printCompiledTypeAndMulArgs(typeArgs: GenericType[*], mulArgs: Multiplicity[*], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledTypeAndMulArgs(typeArgs: GenericType[*], mulArgs: Multiplicity[*], ctx: PrintContext[1]): String[1]
 {
     if ($typeArgs->isEmpty() && $mulArgs->isEmpty(),
         | '',
@@ -173,7 +174,7 @@ function meta::pure::functions::printer::compiled::printCompiledTypeAndMulArgs(t
 // grammar's wildcard for unset multiplicity) — semantically distinct from
 // having NO mul-args at all, which the caller signals by passing an empty
 // mulArgs list.
-function meta::pure::functions::printer::compiled::printCompiledMultiplicityArg(m: Multiplicity[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledMultiplicityArg(m: Multiplicity[1]): String[1]
 {
     if ($m->instanceOf(UndefinedMultiplicity),
         | '?',
@@ -189,15 +190,15 @@ function meta::pure::functions::printer::compiled::printCompiledMultiplicityArg(
 // (PureOne, ZeroOne, ZeroMany, OneMany, PureZero) render to short forms;
 // ConcreteMultiplicity uses lower..upper bounds; MultiplicityParameter
 // renders as `[name]`; UndefinedMultiplicity renders empty.
-function meta::pure::functions::printer::compiled::printMultiplicity(m: Multiplicity[1]): String[1]
+function platform::pure::functions::printer::compiled::printMultiplicity(m: Multiplicity[1]): String[1]
 {
     $m->match([
         u:  UndefinedMultiplicity[1]   | '',
         mp: MultiplicityParameter[1]   | '[' + $mp.name + ']',
         c:  ConcreteMultiplicity[1]    | if ($c->instanceOf(PackageableElement),
                                             | let path = $c->cast(@PackageableElement)->elementToPath();
-                                              let name = if ($path->startsWith('meta::pure::metamodel::multiplicity::'),
-                                                             | $path->substring('meta::pure::metamodel::multiplicity::'->length(), $path->length()),
+                                              let name = if ($path->startsWith('platform::pure::metamodel::multiplicity::'),
+                                                             | $path->substring('platform::pure::metamodel::multiplicity::'->length(), $path->length()),
                                                              | $path);
                                               canonicalMulNameToBracket($name);,
                                             | concreteMulToBracket($c)
@@ -205,7 +206,7 @@ function meta::pure::functions::printer::compiled::printMultiplicity(m: Multipli
     ]);
 }
 
-function meta::pure::functions::printer::compiled::canonicalMulNameToBracket(name: String[1]): String[1]
+function platform::pure::functions::printer::compiled::canonicalMulNameToBracket(name: String[1]): String[1]
 {
     // The InferredPackageableMultiplicity subtree mirrors PackageableMultiplicity
     // (`InferredPureOne`, `InferredZeroMany`, …) — same canonical bounds, just
@@ -219,7 +220,7 @@ function meta::pure::functions::printer::compiled::canonicalMulNameToBracket(nam
        | '[' + $name + ']');
 }
 
-function meta::pure::functions::printer::compiled::concreteMulToBracket(c: ConcreteMultiplicity[1]): String[1]
+function platform::pure::functions::printer::compiled::concreteMulToBracket(c: ConcreteMultiplicity[1]): String[1]
 {
     let lower = $c.lowerBound.value->toOne()->toString();
     let upperVS = $c.upperBound;
@@ -237,7 +238,7 @@ function meta::pure::functions::printer::compiled::concreteMulToBracket(c: Concr
 // `<<stereos>> {tags} ` for M3 Stereotype / TaggedValue collections.
 // Returns empty when both are empty; trailing space included so callers
 // concatenate before the element name without an extra check.
-function meta::pure::functions::printer::compiled::printCompiledAnnotations(stereotypes: Stereotype[*], taggedValues: TaggedValue[*], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledAnnotations(stereotypes: Stereotype[*], taggedValues: TaggedValue[*], ctx: PrintContext[1]): String[1]
 {
     let stereoPart = if ($stereotypes->isEmpty(),
                          | '',
@@ -251,14 +252,14 @@ function meta::pure::functions::printer::compiled::printCompiledAnnotations(ster
 }
 
 // `Profile.stereotypeName` from a M3 Stereotype (carries owning profile + name).
-function meta::pure::functions::printer::compiled::printCompiledStereotype(s: Stereotype[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledStereotype(s: Stereotype[1], ctx: PrintContext[1]): String[1]
 {
     let profilePath = if ($s.profile->isEmpty(), | '', | ctxShortenIfPossible($s.profile->toOne()->elementToPath(), $ctx));
     $profilePath + '.' + $s.value;
 }
 
 // `Profile.tag = 'val'` from a M3 TaggedValue.
-function meta::pure::functions::printer::compiled::printCompiledTag(tv: TaggedValue[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledTag(tv: TaggedValue[1], ctx: PrintContext[1]): String[1]
 {
     let tag = $tv.tag->toOne();
     let profilePath = if ($tag.profile->isEmpty(), | '', | ctxShortenIfPossible($tag.profile->toOne()->elementToPath(), $ctx));

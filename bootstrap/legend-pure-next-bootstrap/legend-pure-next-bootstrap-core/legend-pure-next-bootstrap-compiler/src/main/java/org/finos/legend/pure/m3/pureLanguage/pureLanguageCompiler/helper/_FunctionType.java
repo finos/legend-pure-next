@@ -15,13 +15,13 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.Inferred;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.FunctionTypeImpl;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
+import platform.pure.metamodel.Inferred;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.FunctionTypeImpl;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -358,7 +358,7 @@ public final class _FunctionType
             }
             newFT._returnType(resolvedReturnType);
             newFT._returnMultiplicity(resolvedReturnMul);
-            return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(newFT)._typeArguments(_GenericType.typeArguments(genericType));
+            return new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(newFT)._typeArguments(_GenericType.typeArguments(genericType));
         }
         return null;
     }
@@ -389,7 +389,7 @@ public final class _FunctionType
             {
                 if (p != null)
                 {
-                    if (p._multiplicity() instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
+                    if (p._multiplicity() instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mp)
                     {
                         names.add(mp._name());
                     }
@@ -397,7 +397,7 @@ public final class _FunctionType
                 }
             });
         }
-        if (ft._returnMultiplicity() instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter retMp)
+        if (ft._returnMultiplicity() instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter retMp)
         {
             names.add(retMp._name());
         }

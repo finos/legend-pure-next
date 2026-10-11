@@ -66,7 +66,7 @@ public final class NewSimpleNode extends PureNode
     {
         if (result == null
                 || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(result,
-                        "meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder", resolver))
+                        "platform::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder", resolver))
         {
             throw new RuntimeException("new(GenericTypeAndMultiplicityHolder[1]) requires a GenericTypeAndMultiplicityHolder argument, got: "
                     + (result == null ? "null" : result.getClass().getName()));

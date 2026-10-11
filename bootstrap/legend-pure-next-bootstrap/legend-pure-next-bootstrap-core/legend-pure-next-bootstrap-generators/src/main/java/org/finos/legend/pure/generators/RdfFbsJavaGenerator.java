@@ -216,7 +216,7 @@ public class RdfFbsJavaGenerator
             String prefix = priorBranch ? "            else if" : "            if";
             if ("PointerRef".equals(member))
             {
-                sb.append(prefix).append(" (obj._").append(prop.name).append("() instanceof meta.pure.metamodel.PackageableElement || obj._").append(prop.name).append("() instanceof AbstractProperty || obj._").append(prop.name).append("() instanceof Stereotype || obj._").append(prop.name).append("() instanceof Tag)\n");
+                sb.append(prefix).append(" (obj._").append(prop.name).append("() instanceof platform.pure.metamodel.PackageableElement || obj._").append(prop.name).append("() instanceof AbstractProperty || obj._").append(prop.name).append("() instanceof Stereotype || obj._").append(prop.name).append("() instanceof Tag)\n");
                 sb.append("            {\n");
                 sb.append("                ").append(fbField).append("Offset = writePointerRef(obj._").append(prop.name).append("());\n");
                 sb.append("                ").append(fbField).append("UnionType = ").append(byteVal).append(";\n");
@@ -233,9 +233,9 @@ public class RdfFbsJavaGenerator
                 // it loudly instead of silently round-tripping a corrupt
                 // classifier through the PDB.
                 sb.append("                if (obj._").append(prop.name).append("() == obj\n");
-                sb.append("                        && obj instanceof meta.pure.metamodel.type.generics.GenericTypeValue _gtv\n");
-                sb.append("                        && _gtv._type() instanceof meta.pure.metamodel.PackageableElement _pe\n");
-                sb.append("                        && !\"meta::pure::metamodel::type::generics::UserDefinedGenericType\".equals(_PackageableElement.path(_pe)))\n");
+                sb.append("                        && obj instanceof platform.pure.metamodel.type.generics.GenericTypeValue _gtv\n");
+                sb.append("                        && _gtv._type() instanceof platform.pure.metamodel.PackageableElement _pe\n");
+                sb.append("                        && !\"platform::pure::metamodel::type::generics::UserDefinedGenericType\".equals(_PackageableElement.path(_pe)))\n");
                 sb.append("                {\n");
                 sb.append("                    throw new IllegalStateException(\"Self-classified GenericTypeValue is only valid as the canonical UDGT anchor (_type=UserDefinedGenericType). Got _type=\" + _PackageableElement.path(_pe) + \" obj=\" + obj.getClass().getName());\n");
                 sb.append("                }\n");
@@ -304,7 +304,7 @@ public class RdfFbsJavaGenerator
             String prefix = priorBranch ? "                else if" : "                if";
             if ("PointerRef".equals(member))
             {
-                sb.append(prefix).append(" (_item instanceof meta.pure.metamodel.PackageableElement || _item instanceof AbstractProperty || _item instanceof Stereotype || _item instanceof Tag)\n");
+                sb.append(prefix).append(" (_item instanceof platform.pure.metamodel.PackageableElement || _item instanceof AbstractProperty || _item instanceof Stereotype || _item instanceof Tag)\n");
                 sb.append("                {\n");
                 sb.append("                    ").append(fbField).append("Offsets[i] = writePointerRef(_item);\n");
                 sb.append("                    ").append(fbField).append("Types[i] = ").append(byteVal).append(";\n");
@@ -665,7 +665,7 @@ public class RdfFbsJavaGenerator
                 sb.append("        if (vType == ").append(rByteLambda).append(")\n");
                 sb.append("        {\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef ld = (org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef());\n");
-                sb.append("            cached_value = ld != null ? new meta.pure.metamodel.function.LambdaFunctionFlatBufferWrapper(ld, resolver, this) : null;\n");
+                sb.append("            cached_value = ld != null ? new platform.pure.metamodel.function.LambdaFunctionFlatBufferWrapper(ld, resolver, this) : null;\n");
                 sb.append("            return cached_value;\n");
                 sb.append("        }\n");
                 sb.append("        if (vType == ").append(rBytePtr).append(")\n");
@@ -710,10 +710,10 @@ public class RdfFbsJavaGenerator
                 sb.append("            String raw = pv.val();\n");
                 sb.append("            if (raw == null) { return null; }\n");
                 sb.append("            // Use genericType to interpret the primitive value\n");
-                sb.append("            meta.pure.metamodel.type.generics.GenericType gt = _genericType();\n");
-                sb.append("            if (gt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv && gtv._type() != null)\n");
+                sb.append("            platform.pure.metamodel.type.generics.GenericType gt = _genericType();\n");
+                sb.append("            if (gt instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv && gtv._type() != null)\n");
                 sb.append("            {\n");
-                sb.append("                String typeName = (gtv._type() instanceof meta.pure.metamodel.PackageableElement pe) ? pe._name() : null;\n");
+                sb.append("                String typeName = (gtv._type() instanceof platform.pure.metamodel.PackageableElement pe) ? pe._name() : null;\n");
                 sb.append("                if (typeName != null");
                 for (String pType : m3Model.primitiveTypes())
                 {
@@ -725,7 +725,7 @@ public class RdfFbsJavaGenerator
                 sb.append(")\n");
                 sb.append("                {\n");
                 sb.append("                    // Non-primitive type — resolve as element pointer\n");
-                sb.append("                    meta.pure.metamodel.PackageableElement resolved = resolver.getElement(raw);\n");
+                sb.append("                    platform.pure.metamodel.PackageableElement resolved = resolver.getElement(raw);\n");
                 sb.append("                    if (resolved != null) { cached_value = resolved; return cached_value; }\n");
                 sb.append("                    // Try enum value: format is enumerationPath.enumValueName\n");
                 sb.append("                    int dotIdx = raw.lastIndexOf('.');\n");
@@ -733,21 +733,21 @@ public class RdfFbsJavaGenerator
                 sb.append("                    {\n");
                 sb.append("                        String enumOwnerPath = raw.substring(0, dotIdx);\n");
                 sb.append("                        String enumValueName = raw.substring(dotIdx + 1);\n");
-                sb.append("                        meta.pure.metamodel.PackageableElement enumOwner = resolver.getElement(enumOwnerPath);\n");
-                sb.append("                        if (enumOwner instanceof meta.pure.metamodel.type.Enumeration enumeration)\n");
+                sb.append("                        platform.pure.metamodel.PackageableElement enumOwner = resolver.getElement(enumOwnerPath);\n");
+                sb.append("                        if (enumOwner instanceof platform.pure.metamodel.type.Enumeration enumeration)\n");
                 sb.append("                        {\n");
                 sb.append("                            // Find the property matching this enum value name\n");
-                sb.append("                            for (meta.pure.metamodel.function.property.Property p : enumeration._properties())\n");
+                sb.append("                            for (platform.pure.metamodel.function.property.Property p : enumeration._properties())\n");
                 sb.append("                            {\n");
                 sb.append("                                if (enumValueName.equals(p._name()))\n");
                 sb.append("                                {\n");
                 sb.append("                                    // Create typed Enum instance via reflection\n");
                 sb.append("                                    String implClass = enumOwnerPath.replace(\"::\", \".\") + \"Impl\";\n");
-                sb.append("                                    meta.pure.metamodel.type.EnumImpl ei;\n");
-                sb.append("                                    try { ei = (meta.pure.metamodel.type.EnumImpl) java.lang.Class.forName(implClass).getDeclaredConstructor().newInstance(); }\n");
-                sb.append("                                    catch (Exception _ex) { ei = new meta.pure.metamodel.type.EnumImpl(); }\n");
+                sb.append("                                    platform.pure.metamodel.type.EnumImpl ei;\n");
+                sb.append("                                    try { ei = (platform.pure.metamodel.type.EnumImpl) java.lang.Class.forName(implClass).getDeclaredConstructor().newInstance(); }\n");
+                sb.append("                                    catch (Exception _ex) { ei = new platform.pure.metamodel.type.EnumImpl(); }\n");
                 sb.append("                                    cached_value = ei._name(enumValueName)\n");
-                sb.append("                                            ._classifierGenericType(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) enumeration, resolver));\n");
+                sb.append("                                            ._classifierGenericType(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType((platform.pure.metamodel.type.Type) enumeration, resolver));\n");
                 sb.append("                                    return cached_value;\n");
                 sb.append("                                }\n");
                 sb.append("                            }\n");
@@ -1232,7 +1232,7 @@ public class RdfFbsJavaGenerator
         sb.append("    private static String pointerPath(Object obj)\n");
         sb.append("    {\n");
         sb.append("        if (obj instanceof PackageableElement pe) { return _PackageableElement.path(pe); }\n");
-        sb.append("        if (obj instanceof meta.pure.metamodel.function.property.QualifiedProperty qp && qp._owner() instanceof PackageableElement owner) { return _PackageableElement.path(owner) + \".qp:\" + qp._name(); }\n");
+        sb.append("        if (obj instanceof platform.pure.metamodel.function.property.QualifiedProperty qp && qp._owner() instanceof PackageableElement owner) { return _PackageableElement.path(owner) + \".qp:\" + qp._name(); }\n");
         sb.append("        if (obj instanceof AbstractProperty ap && ap._owner() instanceof PackageableElement owner) { return _PackageableElement.path(owner) + \".\" + ap._name(); }\n");
         sb.append("        if (obj instanceof Stereotype s && s._profile() != null) { return _PackageableElement.path(s._profile()) + \".\" + s._value(); }\n");
         sb.append("        if (obj instanceof Tag t && t._profile() != null) { return _PackageableElement.path(t._profile()) + \"#\" + t._value(); }\n");
@@ -1268,42 +1268,42 @@ public class RdfFbsJavaGenerator
         sb.append("    {\n");
         sb.append("        byte kind;\n");
         sb.append("        String[] segments;\n");
-        sb.append("        if (obj instanceof meta.pure.metamodel.pointer.QualifiedPropertyPointer qpp)\n");
+        sb.append("        if (obj instanceof platform.pure.metamodel.pointer.QualifiedPropertyPointer qpp)\n");
         sb.append("        {\n");
         sb.append("            kind = 2; // QualifiedProperty\n");
         sb.append("            segments = new String[]{qpp._path(), qpp._element()};\n");
         sb.append("        }\n");
-        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.PropertyPointer pp)\n");
+        sb.append("        else if (obj instanceof platform.pure.metamodel.pointer.PropertyPointer pp)\n");
         sb.append("        {\n");
         sb.append("            kind = 1; // Property\n");
         sb.append("            segments = new String[]{pp._path(), pp._element()};\n");
         sb.append("        }\n");
-        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.ColumnPointer cp)\n");
+        sb.append("        else if (obj instanceof platform.pure.metamodel.pointer.ColumnPointer cp)\n");
         sb.append("        {\n");
         sb.append("            kind = 1; // Column round-trips as Property kind today\n");
         sb.append("            segments = new String[]{cp._path(), cp._element()};\n");
         sb.append("        }\n");
-        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.StereotypePointer sp)\n");
+        sb.append("        else if (obj instanceof platform.pure.metamodel.pointer.StereotypePointer sp)\n");
         sb.append("        {\n");
         sb.append("            kind = 3; // Stereotype\n");
         sb.append("            segments = new String[]{sp._path(), sp._element()};\n");
         sb.append("        }\n");
-        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.TagPointer tp)\n");
+        sb.append("        else if (obj instanceof platform.pure.metamodel.pointer.TagPointer tp)\n");
         sb.append("        {\n");
         sb.append("            kind = 4; // Tag\n");
         sb.append("            segments = new String[]{tp._path(), tp._element()};\n");
         sb.append("        }\n");
-        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.EnumPointer ep)\n");
+        sb.append("        else if (obj instanceof platform.pure.metamodel.pointer.EnumPointer ep)\n");
         sb.append("        {\n");
         sb.append("            kind = 1; // Enum value round-trips as Property kind today\n");
         sb.append("            segments = new String[]{ep._path(), ep._element()};\n");
         sb.append("        }\n");
-        sb.append("        else if (obj instanceof meta.pure.metamodel.pointer.TempCompilerPointer tcp)\n");
+        sb.append("        else if (obj instanceof platform.pure.metamodel.pointer.TempCompilerPointer tcp)\n");
         sb.append("        {\n");
         sb.append("            kind = 0; // PackageableElement-style pointer (path only)\n");
         sb.append("            segments = new String[]{tcp._path()};\n");
         sb.append("        }\n");
-        sb.append("        else if (obj instanceof meta.pure.metamodel.function.property.QualifiedProperty qp && qp._owner() instanceof PackageableElement owner)\n");
+        sb.append("        else if (obj instanceof platform.pure.metamodel.function.property.QualifiedProperty qp && qp._owner() instanceof PackageableElement owner)\n");
         sb.append("        {\n");
         sb.append("            kind = 2; // QualifiedProperty\n");
         sb.append("            segments = new String[]{_PackageableElement.path(owner), qp._name()};\n");
@@ -1328,7 +1328,7 @@ public class RdfFbsJavaGenerator
         sb.append("            kind = 0; // Element\n");
         sb.append("            segments = new String[]{_PackageableElement.path(pe)};\n");
         sb.append("        }\n");
-        sb.append("        else if (obj instanceof meta.pure.metamodel.relation.Column col && col._name() != null)\n");
+        sb.append("        else if (obj instanceof platform.pure.metamodel.relation.Column col && col._name() != null)\n");
         sb.append("        {\n");
         sb.append("            // Live relation column whose owner is a RelationType (not a\n");
         sb.append("            // packageable element): the ref is unresolvable either way, but\n");
@@ -1354,7 +1354,7 @@ public class RdfFbsJavaGenerator
         sb.append("    {\n");
         sb.append("        if (obj instanceof Any a && a._sourceInformation() != null)\n");
         sb.append("        {\n");
-        sb.append("            meta.pure.metamodel.SourceInformation si = a._sourceInformation();\n");
+        sb.append("            platform.pure.metamodel.SourceInformation si = a._sourceInformation();\n");
         sb.append("            return \" at \" + si._sourceId() + \":\" + si._startLine() + \"c\" + si._startColumn();\n");
         sb.append("        }\n");
         sb.append("        return \"\";\n");
@@ -1454,7 +1454,7 @@ public class RdfFbsJavaGenerator
                         sb.append("            ").append(fbField).append("Offsets = new int[").append(fbField).append("List.size()];\n");
                         sb.append("            for (int i = 0; i < ").append(fbField).append("List.size(); i++)\n");
                         sb.append("            {\n");
-                        sb.append("                ").append(fbField).append("Offsets[i] = builder.createSharedString(((meta.pure.metamodel.type.Enum) ").append(fbField).append("List.get(i))._name());\n");
+                        sb.append("                ").append(fbField).append("Offsets[i] = builder.createSharedString(((platform.pure.metamodel.type.Enum) ").append(fbField).append("List.get(i))._name());\n");
                         sb.append("            }\n");
                         sb.append("        }\n");
                     }
@@ -1515,7 +1515,7 @@ public class RdfFbsJavaGenerator
                         }
                         else if (isEnumType)
                         {
-                            sb.append("        if (obj._").append(prop.name).append("() != null) { ").append(fbField).append("Offset = builder.createSharedString(((meta.pure.metamodel.type.Enum) obj._").append(prop.name).append("())._name()); }\n");
+                            sb.append("        if (obj._").append(prop.name).append("() != null) { ").append(fbField).append("Offset = builder.createSharedString(((platform.pure.metamodel.type.Enum) obj._").append(prop.name).append("())._name()); }\n");
                         }
                         else
                         {
@@ -1554,20 +1554,20 @@ public class RdfFbsJavaGenerator
                 sb.append("        // AtomicValue.value is a union (bytes from m3.fbs)\n");
                 sb.append("        int valueUnionOffset = 0;\n");
                 sb.append("        byte valueUnionType = 0;\n");
-                sb.append("        if (obj._value() instanceof meta.pure.metamodel.function.LambdaFunction lambdaVal)\n");
+                sb.append("        if (obj._value() instanceof platform.pure.metamodel.function.LambdaFunction lambdaVal)\n");
                 sb.append("        {\n");
                 sb.append("            valueUnionOffset = writeLambdaFunction(lambdaVal);\n");
                 sb.append("            valueUnionType = ").append(byteLambda).append(";\n");
                 sb.append("        }\n");
-                sb.append("        else if (obj._value() instanceof meta.pure.metamodel.PackageableElement pe)\n");
+                sb.append("        else if (obj._value() instanceof platform.pure.metamodel.PackageableElement pe)\n");
                 sb.append("        {\n");
                 sb.append("            valueUnionOffset = writePointerRef(pe);\n");
                 sb.append("            valueUnionType = ").append(bytePtr).append(";\n");
                 sb.append("        }\n");
-                sb.append("        else if (obj._value() instanceof meta.pure.metamodel.type.Enum ev)\n");
+                sb.append("        else if (obj._value() instanceof platform.pure.metamodel.type.Enum ev)\n");
                 sb.append("        {\n");
-                sb.append("            meta.pure.metamodel.type.Type enumType = (obj._genericType() instanceof meta.pure.metamodel.type.generics.GenericTypeValue _gtv) ? _gtv._type() : null;\n");
-                sb.append("            String enumPath = (enumType instanceof meta.pure.metamodel.PackageableElement enumPe)\n");
+                sb.append("            platform.pure.metamodel.type.Type enumType = (obj._genericType() instanceof platform.pure.metamodel.type.generics.GenericTypeValue _gtv) ? _gtv._type() : null;\n");
+                sb.append("            String enumPath = (enumType instanceof platform.pure.metamodel.PackageableElement enumPe)\n");
                 sb.append("                ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(enumPe) + \".\" + ev._name()\n");
                 sb.append("                : ev._name();\n");
                 sb.append("            int primStrOff = builder.createSharedString(enumPath);\n");
@@ -1594,7 +1594,7 @@ public class RdfFbsJavaGenerator
                 sb.append("        else if (obj._value() instanceof Double v)\n");
                 sb.append("        {\n");
                 sb.append("            boolean isDecimal = false;\n");
-                sb.append("            if (obj._genericType() instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv && gtv._type() instanceof meta.pure.metamodel.PackageableElement tpe)\n");
+                sb.append("            if (obj._genericType() instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv && gtv._type() instanceof platform.pure.metamodel.PackageableElement tpe)\n");
                 sb.append("            {\n");
                 sb.append("                isDecimal = \"Decimal\".equals(tpe._name());\n");
                 sb.append("            }\n");

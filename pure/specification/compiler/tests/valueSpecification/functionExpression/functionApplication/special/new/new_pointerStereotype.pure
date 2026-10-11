@@ -1,9 +1,23 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::new::support::*;
 
 function test::new::testPointerStereotype(): Any[*]
 {
-  ^MyPointer(path = 'meta::pure::test::Foo')
+  ^MyPointer(path = 'platform::pure::test::Foo')
 }
 
 Class test::new::support::MyTarget
@@ -19,30 +33,30 @@ Class <<compiler.pointer>> test::new::support::MyPointer extends MyTarget
 
 ###CompiledGraph
 function test::new::testPointerStereotype__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyPointer##[1]#  ~@FunctionInvocation@  @6:3-6:44
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyPointer##[1]#  ~@FunctionInvocation@  @20:3-20:48
     typeParam T -> test::new::support::MyPointer
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyPointer|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyPointer|1>  @6:3-6:44
-    Collection :#KeyExpression#[1]  ~@Collection@  @6:3-6:44
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:14-6:43
-        AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @6:14-6:43
-        AtomicValue  'meta::pure::test::Foo' :@String@[1]  ~@AtomicValue@  @6:21-6:43
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyPointer|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyPointer|1>  @20:3-20:48
+    Collection :#KeyExpression#[1]  ~@Collection@  @20:3-20:48
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:14-20:47
+        AtomicValue  'path' :@String@[1]  ~@AtomicValue@  @20:14-20:47
+        AtomicValue  'platform::pure::test::Foo' :@String@[1]  ~@AtomicValue@  @20:21-20:47
 
-class test::new::support::MyTarget extends Any  ~Class<test::new::support::MyTarget>  @9:1-13:1
+class test::new::support::MyTarget extends Any  ~Class<test::new::support::MyTarget>  @23:1-27:1
   property requiredString :@String@[1]  ~Property<test::new::support::MyTarget, @String@|1>
   property requiredInt :@Integer@[1]  ~Property<test::new::support::MyTarget, @Integer@|1>
 
-class test::new::support::MyPointer extends test::new::support::MyTarget  ~Class<test::new::support::MyPointer>  @15:1-18:1
-  <<meta::pure::profiles::compiler.pointer>>
+class test::new::support::MyPointer extends test::new::support::MyTarget  ~Class<test::new::support::MyPointer>  @29:1-32:1
+  <<platform::pure::profiles::compiler.pointer>>
   property path :@String@[1]  ~Property<test::new::support::MyPointer, @String@|1>
 
 ###ReverseIndex
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::new::testPointerStereotype__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::new::testPointerStereotype__Any_MANY_
-meta::pure::profiles::compiler:
+platform::pure::profiles::compiler:
   test::new::support::MyPointer
-meta::pure::profiles::compiler.pointer:
+platform::pure::profiles::compiler.pointer:
   test::new::support::MyPointer
 test::new::support::MyPointer:
   test::new::testPointerStereotype__Any_MANY_

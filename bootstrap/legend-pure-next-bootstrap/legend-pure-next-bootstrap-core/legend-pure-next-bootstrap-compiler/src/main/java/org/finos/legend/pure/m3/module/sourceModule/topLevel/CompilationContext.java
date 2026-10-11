@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,9 +15,9 @@
 
 package org.finos.legend.pure.m3.module.sourceModule.topLevel;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.function.Function;
-import meta.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.function.Function;
+import platform.pure.metamodel.function.property.Property;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.list.MutableList;
@@ -58,7 +59,7 @@ public class CompilationContext
      * is supplied separately because the element's {@code _package} slot
      * is null before {@code updatePackageTree} runs in pass 3.
      */
-    private meta.pure.metamodel.PackageableElement currentElement;
+    private platform.pure.metamodel.PackageableElement currentElement;
     private String currentElementPath;
 
     /**
@@ -79,7 +80,7 @@ public class CompilationContext
      * when {@code _package} is still null and
      * {@code _PackageableElement.path} would return just the name).
      */
-    private final java.util.IdentityHashMap<meta.pure.metamodel.PackageableElement, String> resolvedPaths = new java.util.IdentityHashMap<>();
+    private final java.util.IdentityHashMap<platform.pure.metamodel.PackageableElement, String> resolvedPaths = new java.util.IdentityHashMap<>();
 
     private final MutableList<CompilerContextExtension> compilerContextExtensions;
 
@@ -360,13 +361,13 @@ public class CompilationContext
      * Set the element currently being processed alongside its full path.
      * Pass {@code (null, null)} to clear between elements.
      */
-    public void setCurrentElement(meta.pure.metamodel.PackageableElement element, String fullPath)
+    public void setCurrentElement(platform.pure.metamodel.PackageableElement element, String fullPath)
     {
         this.currentElement = element;
         this.currentElementPath = fullPath;
     }
 
-    public meta.pure.metamodel.PackageableElement getCurrentElement()
+    public platform.pure.metamodel.PackageableElement getCurrentElement()
     {
         return this.currentElement;
     }
@@ -419,7 +420,7 @@ public class CompilationContext
     {
         if (targetPath == null || currentElementPath == null
                 || targetPath.equals(currentElementPath)
-                || targetPath.startsWith("meta::pure::metamodel::"))
+                || targetPath.startsWith("platform::pure::metamodel::"))
         {
             return;
         }
@@ -439,7 +440,7 @@ public class CompilationContext
      * {@code owner_path.property_name} — sub-element notation. Same applies
      * to enum values (represented as Properties on an Enumeration).</p>
      */
-    public void recordFunctionReference(meta.pure.metamodel.function.Function fn)
+    public void recordFunctionReference(platform.pure.metamodel.function.Function fn)
     {
         if (fn == null) return;
         String path;
@@ -447,7 +448,7 @@ public class CompilationContext
         {
             path = fie.fullPath();
         }
-        else if (fn instanceof meta.pure.metamodel.function.property.AbstractProperty prop)
+        else if (fn instanceof platform.pure.metamodel.function.property.AbstractProperty prop)
         {
             // Property / QualifiedProperty: owner is the Class or Enumeration
             // that declares it. Both implement SimplePropertyOwner; in practice
@@ -457,7 +458,7 @@ public class CompilationContext
             // {@code _package} is null and {@code _PackageableElement.path}
             // would return just the bare name.
             Object owner = prop._owner();
-            if (!(owner instanceof meta.pure.metamodel.PackageableElement ownerPe) || prop._name() == null)
+            if (!(owner instanceof platform.pure.metamodel.PackageableElement ownerPe) || prop._name() == null)
             {
                 return;
             }
@@ -469,7 +470,7 @@ public class CompilationContext
             if (ownerPath == null) return;
             path = ownerPath + "." + prop._name();
         }
-        else if (fn instanceof meta.pure.metamodel.PackageableElement pe)
+        else if (fn instanceof platform.pure.metamodel.PackageableElement pe)
         {
             path = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
         }
@@ -494,7 +495,7 @@ public class CompilationContext
      * Remember the path used to resolve {@code element}. Called from the
      * recording wrapper after every successful {@code getElement(path)}.
      */
-    public void rememberResolvedPath(meta.pure.metamodel.PackageableElement element, String path)
+    public void rememberResolvedPath(platform.pure.metamodel.PackageableElement element, String path)
     {
         if (element != null && path != null)
         {
@@ -509,7 +510,7 @@ public class CompilationContext
      *         need the canonical full path BEFORE the package tree is
      *         built (e.g. stereotype / tag sub-element recording).
      */
-    public String getResolvedPath(meta.pure.metamodel.PackageableElement element)
+    public String getResolvedPath(platform.pure.metamodel.PackageableElement element)
     {
         return element == null ? null : resolvedPaths.get(element);
     }

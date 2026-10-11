@@ -28,7 +28,7 @@
 // boot. Each function value is tagged with __purePath so evaluate/eval
 // dispatch to the freshly eval'd translated global via __metadataInvoke.
 
-const TRANSLATE_ELEMENT = "meta$external$language$javascript$translation$pdb$translateElement_PackageableElement_1__String_1_";
+const TRANSLATE_ELEMENT = "platform$external$language$javascript$translation$pdb$translateElement_PackageableElement_1__String_1_";
 
 /**
  * Translate every translatable element kind from a compile result and eval
@@ -50,7 +50,7 @@ const TRANSLATE_ELEMENT = "meta$external$language$javascript$translation$pdb$tra
  *   RUNTIME (this function) — `compileSource` called FROM Pure code. Isolated:
  *     translate and eval so the code is invocable, but leave the graph alone.
  *     PCT pins it:
- *     meta::pure::functions::meta::tests::compileSource::testCompileSourceDoesNotMutatePlatformGraph
+ *     platform::pure::functions::meta::tests::compileSource::testCompileSourceDoesNotMutatePlatformGraph
  *     asserts pathToElement on a compiled path still fails afterwards.
  *
  *   PLATFORM (translateProgramElements below) — a host compiling the program

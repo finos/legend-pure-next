@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::lang::tests::model::*;
-import meta::pure::functions::lang::tests::new::*;
-import meta::pure::functions::lang::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::lang::tests::model::*;
+import platform::pure::functions::lang::tests::new::*;
+import platform::pure::functions::lang::*;
 
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::new<T>(generic:GenericTypeAndMultiplicityHolder<T|1>[1]):T[1];
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::new(generic:GenericType[1]):Any[1];
+native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::lang::new<T>(generic:GenericTypeAndMultiplicityHolder<T|1>[1]):T[1];
+native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::lang::new(generic:GenericType[1]):Any[1];
 native function
     <<PCT.function, PCT.platformOnly>>
     {
@@ -26,10 +27,10 @@ native function
         PCT.grammarDoc='^AClass(prop=4)',
         PCT.grammarCharacters='^'
     }
-    meta::pure::functions::lang::new<T>(generic:GenericTypeAndMultiplicityHolder<T|1>[1], keyExpressions:KeyExpression[*]):T[1];
+    platform::pure::functions::lang::new<T>(generic:GenericTypeAndMultiplicityHolder<T|1>[1], keyExpressions:KeyExpression[*]):T[1];
 
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testDynamicInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testDynamicInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let p = ^LA_Person(firstName='first', lastName='last');
@@ -42,7 +43,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testDynamicInstan
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testFunctionExecutionInConstructor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testFunctionExecutionInConstructor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let p = ^LA_Person(firstName='Pierre', lastName=['_', 'Doe']->joinStrings(' '));
@@ -50,7 +51,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testFunctionExecu
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testWithToManyProperty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testWithToManyProperty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let p = ^LA_Person(firstName='John', lastName='Doe', otherNames=['Johny', 'Jon', 'Jo']);
@@ -60,7 +61,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testWithToManyPro
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewGeneric<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewGeneric<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let l = ^LA_List<String>(values=['a', 'b', 'c']);
@@ -70,7 +71,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewGeneric<Z|
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewGenericFunc<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewGenericFunc<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let l1 = ^LA_List<String>(values=['a', 'b', 'c']);
@@ -98,7 +99,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewGenericFun
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewWithIdVariable<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewWithIdVariable<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let id = '1234';
@@ -107,7 +108,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewWithIdVari
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewWithAssociation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewWithAssociation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // new() applies the same immutability rule as copy: an association-property
     // value passed in keys must itself have been instantiated within this
@@ -127,7 +128,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewWithAssoci
         // Sharing $firmX between pierre and bob via `firm=$firmX` is rejected.
         assertError(
             |^LA_Person(firstName='Bob', lastName='Roe', firm=$firmX),
-            'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
+            'Immutability violation: association property \'firm\' on \'platform::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
         );
 
         // Bob with a fresh inline firm works. Each Person has its own firm, and
@@ -142,7 +143,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewWithAssoci
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testFoldInsideNewBuildsAssociationChain<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testFoldInsideNewBuildsAssociationChain<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // A fold (or any higher-order) is transparent to fresh-scope: when it runs
     // INSIDE an outer new/copy, every ^...() in its lambda registers into the
@@ -183,7 +184,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testFoldInsideNew
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testMapInsideNewBuildsChildrenList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testMapInsideNewBuildsChildrenList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // map inside new — every ^LA_Organization created in the lambda registers
     // into the outer ^LA_Organization's scope, so the children list assignment
@@ -205,7 +206,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testMapInsideNewB
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewRejectsValueFromAlreadyClosedScope<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewRejectsValueFromAlreadyClosedScope<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // A value constructed in a SEPARATE top-level expression isn't in any
     // active scope by the time the next expression runs — must still be
@@ -216,13 +217,13 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewRejectsVal
         let firmZ = ^LA_Firm(legalName='Z');
         assertError(
             |^LA_Person(firstName='Z', lastName='Z', firm=$firmZ),
-            'Immutability violation: association property \'firm\' on \'meta::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
+            'Immutability violation: association property \'firm\' on \'platform::pure::functions::lang::tests::model::LA_Person\' must be instantiated within the new/copy expression. Use `firm = ^Type(...)`, `firm = ^$x()`, or `firm = []`.'
         );
     ));
 }
 
 
-Class <<test.TestDependency>> meta::pure::functions::lang::tests::new::MyClassWithTypeVariables(x:Integer[1])
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::new::MyClassWithTypeVariables(x:Integer[1])
 [
    wx(~function:$this.text->size() < $x ~message:'Error '+$this.text->size()->toString()+' >= '+$x->toString())
 ]
@@ -233,7 +234,7 @@ Class <<test.TestDependency>> meta::pure::functions::lang::tests::new::MyClassWi
    text : String[*];
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewWithTypeVariables<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewWithTypeVariables<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
        assertEquals('110', ^MyClassWithTypeVariables(10)(text = ['a', 'b']).res());
@@ -245,30 +246,30 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewWithTypeVa
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewClassFailsWithoutTypeArgs<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewClassFailsWithoutTypeArgs<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
-        assertError(|meta::pure::functions::lang::new(
-                        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Class)
+        assertError(|platform::pure::functions::lang::new(
+                        ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = platform::pure::metamodel::type::Class)
                     ), 'Cannot instantiate Class<Class<T>> because the typeArgs are not set for the typeParam');
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewPdbLoadedClass<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewPdbLoadedClass<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
-        let v = ^meta::pure::metamodel::valuespecification::VariableExpression(
+        let v = ^platform::pure::metamodel::valuespecification::VariableExpression(
             name = 'a',
-            genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(
-                type = meta::pure::metamodel::type::primitives::String
+            genericType = ^platform::pure::metamodel::type::generics::InferredGenericType(
+                type = platform::pure::metamodel::type::primitives::String
             ),
-            multiplicity = meta::pure::metamodel::multiplicity::PureOne
+            multiplicity = platform::pure::metamodel::multiplicity::PureOne
         );
         assert($v->isNotEmpty());
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testClassifierGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testClassifierGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let x = ^LA_Person(firstName='Pierre', lastName='Doe');
@@ -276,7 +277,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testClassifierGen
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testCantSetClassifierGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testCantSetClassifierGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // The classifier's *raw type* is system-managed (it identifies the
     // metaclass — `LA_Person` here). User-supplied classifierGenericType
@@ -285,11 +286,11 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testCantSetClassi
     // Wrapping `Any` instead of `LA_Person` is rejected.
     assert($f->eval(|
         assertError(|^LA_Person(classifierGenericType = ^UserDefinedGenericType(type=Any), firstName='Pierre', lastName='Doe')
-                    , 'Cannot change classifierGenericType.type from \'meta::pure::functions::lang::tests::model::LA_Person\' to \'meta::pure::metamodel::type::Any\'. The classifier\'s raw type is system-managed (derived from the instance\'s metaclass) — only typeArguments, multiplicityArguments and typeVariableValues are user-customizable. Use meta::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.');
+                    , 'Cannot change classifierGenericType.type from \'platform::pure::functions::lang::tests::model::LA_Person\' to \'platform::pure::metamodel::type::Any\'. The classifier\'s raw type is system-managed (derived from the instance\'s metaclass) — only typeArguments, multiplicityArguments and typeVariableValues are user-customizable. Use platform::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.');
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewSelfReferenceLoop<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewSelfReferenceLoop<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let n = ^LA_Node(value=1, next=~);
@@ -298,7 +299,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewSelfRefere
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewNestedBackReference<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewNestedBackReference<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // Outer node's next is an inner node whose next points back to the outer via ~.~
     assert($f->eval(|
@@ -314,45 +315,45 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewNestedBack
 // instance's classifierGenericType at the canonical GenericType_<TypeName>
 // UDPGT-PE from core.pdb (when one exists). This keeps PDB output byte-equivalent
 // across Java direct, Truffle, and compile-via-pure platforms.
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewAnchorsAtCanonicalUDPGT<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewAnchorsAtCanonicalUDPGT<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
-        let ft = ^meta::pure::metamodel::type::FunctionType(
-            returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = meta::pure::metamodel::type::Any),
-            returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne
+        let ft = ^platform::pure::metamodel::type::FunctionType(
+            returnType = ^platform::pure::metamodel::type::generics::InferredGenericType(type = platform::pure::metamodel::type::Any),
+            returnMultiplicity = platform::pure::metamodel::multiplicity::PureOne
         );
         let cgt = $ft.classifierGenericType->toOne();
         // The classifier must be a PackageableElement (canonical UDPGT-PE),
         // not a fresh inline UDGT.
-        assert($cgt->instanceOf(meta::pure::metamodel::PackageableElement),
-            'Expected classifierGenericType to be a canonical UDPGT-PE but got ' + $cgt->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
+        assert($cgt->instanceOf(platform::pure::metamodel::PackageableElement),
+            'Expected classifierGenericType to be a canonical UDPGT-PE but got ' + $cgt->cast(@platform::pure::metamodel::type::generics::GenericTypeValue).type->toOne()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath()
         );
         // The path must be GenericType_<TypeName>
         assertEquals(
-            'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_FunctionType',
-            $cgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
+            'platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_type_FunctionType',
+            $cgt->cast(@platform::pure::metamodel::PackageableElement)->elementToPath()
         );
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewGenericTypeAnchorsAtCanonical<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewGenericTypeAnchorsAtCanonical<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // new(buildUserDefinedGenericType(SomeType)) should also anchor at canonical
     // UDPGT-PE — mirrors the ^Type(...) syntax behavior. Tests the
     // new(GenericType[1]) native specifically.
     assert($f->eval(|
-        let varExpr = meta::pure::functions::lang::new(
-            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-                type = meta::pure::metamodel::valuespecification::VariableExpression
+        let varExpr = platform::pure::functions::lang::new(
+            ^platform::pure::metamodel::type::generics::UserDefinedGenericType(
+                type = platform::pure::metamodel::valuespecification::VariableExpression
             )
         );
-        let cgt = $varExpr->cast(@meta::pure::metamodel::type::Any).classifierGenericType->toOne();
-        assert($cgt->instanceOf(meta::pure::metamodel::PackageableElement),
+        let cgt = $varExpr->cast(@platform::pure::metamodel::type::Any).classifierGenericType->toOne();
+        assert($cgt->instanceOf(platform::pure::metamodel::PackageableElement),
             'Expected new(GenericType) result classifier to be canonical UDPGT-PE'
         );
         assertEquals(
-            'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_valuespecification_VariableExpression',
-            $cgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
+            'platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_valuespecification_VariableExpression',
+            $cgt->cast(@platform::pure::metamodel::PackageableElement)->elementToPath()
         );
     ));
 }
@@ -365,7 +366,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewGenericTyp
 // preserves canonical UDPGT-PE here, but Java direct's `_GenericType.reconcileInferred`
 // converts the canonical reference to a fresh inline UDGT during type
 // reconciliation. This test pins down the canonical-preservation expectation.
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNilLambdaPreservesCanonicalAnchor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNilLambdaPreservesCanonicalAnchor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let nilLambda = {|Nil};
@@ -384,14 +385,14 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testNilLambdaPres
             'Expected | Nil lambda inner Nil_GT to be canonical UDPGT-PE'
         );
         assertEquals(
-            'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_Nil',
+            'platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_type_Nil',
             $nilGT->cast(@PackageableElement)->elementToPath()
         );
     ));
 }
 
 // Same invariant as testNilLambdaPreservesCanonicalAnchor but for `| Any`.
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testAnyLambdaPreservesCanonicalAnchor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testAnyLambdaPreservesCanonicalAnchor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let anyLambda = {|Any};
@@ -404,23 +405,23 @@ function <<PCT.test>> meta::pure::functions::lang::tests::new::testAnyLambdaPres
             'Expected | Any lambda inner Any_GT to be canonical UDPGT-PE'
         );
         assertEquals(
-            'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_Any',
+            'platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_type_Any',
             $anyGT->cast(@PackageableElement)->elementToPath()
         );
     ));
 }
 
 // new(holder) (no keys) — same canonical-anchor invariant as ^Type(...).
-function <<PCT.test>> meta::pure::functions::lang::tests::new::testNewHolderNoKeysAnchor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::new::testNewHolderNoKeysAnchor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
-        let inst = meta::pure::functions::lang::new(@meta::pure::metamodel::valuespecification::VariableExpression|1);
-        let cgt = $inst->cast(@meta::pure::metamodel::type::Any).classifierGenericType->toOne();
+        let inst = platform::pure::functions::lang::new(@platform::pure::metamodel::valuespecification::VariableExpression|1);
+        let cgt = $inst->cast(@platform::pure::metamodel::type::Any).classifierGenericType->toOne();
         assert($cgt->instanceOf(PackageableElement),
             'Expected new(holder) result classifier to be canonical UDPGT-PE'
         );
         assertEquals(
-            'meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_valuespecification_VariableExpression',
+            'platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_valuespecification_VariableExpression',
             $cgt->cast(@PackageableElement)->elementToPath()
         );
     ));

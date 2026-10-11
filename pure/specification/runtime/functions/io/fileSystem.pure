@@ -13,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 // Returns all regular file paths (recursively) under the given directory, sorted.
-native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::io::directoryTree(path:String[1]):String[*];
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> platform::pure::functions::io::directoryTree(path:String[1]):String[*];
 
 // Reads a file's contents as a string.
 //
@@ -27,15 +27,15 @@ native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnl
 // One behaviour change from the native `Files.readString`: malformed UTF-8 is
 // replaced with U+FFFD rather than raising. A file that is not valid UTF-8 now
 // reads as replacement characters instead of failing.
-function <<functionType.SideEffectFunction>> meta::pure::functions::io::readFile(path:String[1]):String[1]
+function <<functionType.SideEffectFunction>> platform::pure::functions::io::readFile(path:String[1]):String[1]
 {
-   $path->meta::pure::functions::io::readFileBytes()->meta::pure::functions::binary::utf8BytesToString();
+   $path->platform::pure::functions::io::readFileBytes()->platform::pure::functions::binary::utf8BytesToString();
 }
 
 // Reads a file's raw bytes, for binary files such as PDB archives. Returns a
 // Binary so the bytes stay a host array: as Integer[*] a multi-megabyte .pdb
 // became millions of boxed values at the native boundary.
-native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::io::readFileBytes(path:String[1]):Binary[1];
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> platform::pure::functions::io::readFileBytes(path:String[1]):Binary[1];
 
 // Writes content to a file, creating parent directories and replacing any existing file. Returns the path.
-native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::io::writeFile(path:String[1], content:String[1]):String[1];
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> platform::pure::functions::io::writeFile(path:String[1], content:String[1]):String[1];

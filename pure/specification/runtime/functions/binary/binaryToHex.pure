@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::binary::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::binary::*;
 
 // Uppercase hex text of a Binary, with no `0x` prefix — the inverse of the
 // binary literal's payload. Exists for assertions and diagnostics: it is the
 // readable form of a value that is otherwise opaque.
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::binaryToHex(b:Binary[1]):String[1];
+native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::binary::binaryToHex(b:Binary[1]):String[1];
 
-function <<PCT.test>> meta::pure::functions::binary::tests::binaryToHex::testRoundTripsLiteral<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::binary::tests::binaryToHex::testRoundTripsLiteral<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('1F8B08', $f->eval(|0x1F8B08->binaryToHex()));
     assertEquals('FF', $f->eval(|0xFF->binaryToHex()));
@@ -29,7 +29,7 @@ function <<PCT.test>> meta::pure::functions::binary::tests::binaryToHex::testRou
 
 // Low bytes keep their leading zero — hex is fixed-width per byte, so a
 // 3-byte Binary is always 6 characters.
-function <<PCT.test>> meta::pure::functions::binary::tests::binaryToHex::testPadsLowBytes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::binary::tests::binaryToHex::testPadsLowBytes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('000108', $f->eval(|0x000108->binaryToHex()));
 }

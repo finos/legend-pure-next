@@ -35,7 +35,7 @@ import java.util.Map;
  */
 public final class PointerGraph
 {
-    private static final String POINTER_PACKAGE = "meta::pure::metamodel::pointer::";
+    private static final String POINTER_PACKAGE = "platform::pure::metamodel::pointer::";
 
     private PointerGraph()
     {

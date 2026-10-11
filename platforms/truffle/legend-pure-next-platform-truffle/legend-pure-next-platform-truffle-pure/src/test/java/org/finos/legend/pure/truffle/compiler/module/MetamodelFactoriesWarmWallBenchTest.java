@@ -84,7 +84,7 @@ public class MetamodelFactoriesWarmWallBenchTest
         }
         runtime = runtimeBuilder.build();
 
-        compileFn = resolver.getElement("meta::pure::compiler::compile_PureFile_1__CompilationResult_1_");
+        compileFn = resolver.getElement("platform::pure::compiler::compile_PureFile_1__CompilationResult_1_");
         pureParser = PureLanguage.get(null).pureParser();
 
         // Locate metamodel_factories.pure

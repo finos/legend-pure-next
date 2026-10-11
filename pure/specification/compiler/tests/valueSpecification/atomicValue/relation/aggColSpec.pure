@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 native function test<Z,V,K>(z: Relation<Z>[1], x: AggColSpec<{Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]): Any[1];
 
@@ -14,34 +28,34 @@ native function test_Relation_1__AggColSpec_1__Any_1_(z:Relation<Z~test_Relation
 native function _sum_Integer_MANY__Integer_1_(x:@Integer@[*]):@Integer@[1]  ~NativeFunction<{@Integer@[*]->@Integer@[1]}>
 
 function test__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
-  FunctionInvocation test_Relation_1__AggColSpec_1__Any_1_ :#Any##[1]#  ~@FunctionInvocation@  @8:3-8:68
+  FunctionInvocation test_Relation_1__AggColSpec_1__Any_1_ :#Any##[1]#  ~@FunctionInvocation@  @22:3-22:68
     typeParam K -> #Integer#
     typeParam V -> #Integer#
     typeParam Z -> #(ok:#String##[1]#)#
-    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Relation<(ok:@String@[1])>##[1]#  ~@ArrowInvocation@  @8:10-8:39
+    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Relation<(ok:@String@[1])>##[1]#  ~@ArrowInvocation@  @22:10-22:39
       typeParam T -> Relation<(ok:@String@[1])>
       mulParam m -> [1]
-      AtomicValue  '' :@String@[1]  ~@AtomicValue@  @8:8-8:9
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>  @8:17-8:38
-    FunctionInvocation aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#(ok:#String##[1]#)#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  ~@FunctionInvocation@  @8:43-8:67
+      AtomicValue  '' :@String@[1]  ~@AtomicValue@  @22:8-22:9
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:@String@[1])>|?>  @22:17-22:38
+    FunctionInvocation aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#(ok:#String##[1]#)#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  ~@FunctionInvocation@  @22:43-22:67
       typeParam K -> #Integer#
       typeParam T -> #(name:#Integer##[1]#)#
       typeParam U -> #(ok:#String##[1]#)#
       typeParam V -> #Integer#
-      Lambda(x:#(ok:@String@[1])##[1]#) :#LambdaFunction<#{#(ok:@String@[1])##[1]#->@Integer@[1]}#>#[1]  ~@AtomicValue@  @8:50-8:52
-        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @8:52-8:52
-      Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @8:56-8:67
-        ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @8:60-8:67
-          Variable y :#Integer##[*]#  ~@VariableExpression@  @8:58-8:59
-      AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @8:43-8:46
+      Lambda(x:#(ok:@String@[1])##[1]#) :#LambdaFunction<#{#(ok:@String@[1])##[1]#->@Integer@[1]}#>#[1]  ~@AtomicValue@  @22:50-22:52
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @22:52-22:52
+      Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @22:56-22:67
+        ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @22:60-22:67
+          Variable y :#Integer##[*]#  ~@VariableExpression@  @22:58-22:59
+      AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @22:43-22:46
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
 
 ###ReverseIndex
 _sum_Integer_MANY__Integer_1_:
   test__Any_1_
-meta::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
+platform::pure::functions::lang::cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_:
   test__Any_1_
-meta::pure::functions::relation::aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_:
+platform::pure::functions::relation::aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_:
   test__Any_1_
 test_Relation_1__AggColSpec_1__Any_1_:
   test__Any_1_

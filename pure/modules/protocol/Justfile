@@ -89,17 +89,17 @@ build-tests:
 # testCompileAndExecute* tests fail there with "No native implementation
 # for: compileAndExecute".
 
-# Run all Pure tests under meta::pure::protocol::generation via pure-truffle.
+# Run all Pure tests under platform::pure::protocol::generation via pure-truffle.
 test-all: build-tests _depCheck_runtime-pdbs
     @{{header}} 'test-all'
-    @{{substep}} 'runTests meta::pure::protocol::generation (Truffle)'
+    @{{substep}} 'runTests platform::pure::protocol::generation (Truffle)'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{protocol_out}}/protocol.pdb \
         --pdb {{protocol_out}}/protocol-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::protocol::generation" "{{test_results}}/pure/protocol/pure@cli-truffle.json" {{err_filter}}
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::protocol::generation" "{{test_results}}/pure/protocol/pure@cli-truffle.json" {{err_filter}}
 
 # Internal: fail loudly if PDBs / pure-truffle aren't staged.
 _depCheck_runtime-pdbs:
@@ -113,8 +113,8 @@ _depCheck_runtime-pdbs:
         exit 1
     fi
 
-# Remove build/protocol.pdb (and the tests PDB).
+# Remove build/ — the PDBs and anything else this module writes there.
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove build/protocol.pdb + build/protocol-tests.pdb'
-    rm -f {{protocol_out}}/protocol.pdb {{protocol_out}}/protocol-tests.pdb
+    @{{substep}} 'remove build/'
+    rm -rf {{protocol_out}}

@@ -20,46 +20,46 @@
 // Class for each, which is enough to prove the delegation reaches pass 1 and that the result
 // lands in the graph.
 
-import meta::pure::compiler::*;
-import meta::pure::compiler::extension::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::compiler::test::*;
-import meta::pure::metamodel::*;
+import platform::pure::compiler::*;
+import platform::pure::compiler::extension::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::compiler::test::*;
+import platform::pure::metamodel::*;
 
 // Claims the carried-text elements that `###CompiledGraph` produces.
-function meta::pure::compiler::test::extensionTestHandles(e: meta::pure::protocol::grammar::PackageableElement[1]): Boolean[1]
+function platform::pure::compiler::test::extensionTestHandles(e: platform::pure::protocol::grammar::PackageableElement[1]): Boolean[1]
 {
-   $e->instanceOf(meta::pure::compiler::test::CompiledGraph);
+   $e->instanceOf(platform::pure::compiler::test::CompiledGraph);
 }
 
 // Registers one Class per claimed element, named after the section it came from.
-function meta::pure::compiler::test::extensionTestPass1(
-   e: meta::pure::protocol::grammar::PackageableElement[1], ctx: CompilerContext[1]): CompilerContext[1]
+function platform::pure::compiler::test::extensionTestPass1(
+   e: platform::pure::protocol::grammar::PackageableElement[1], ctx: CompilerContext[1]): CompilerContext[1]
 {
    let path = 'extensionTest::Claimed';
    let pkgRes = getOrCreatePackagePath($ctx, 'extensionTest');
-   let shell = ^meta::pure::metamodel::type::Class<Any>(
+   let shell = ^platform::pure::metamodel::type::Class<Any>(
       name = 'Claimed',
-      package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package)
+      package = $pkgRes.value->toOne()->toPackagePointer()->cast(@platform::pure::metamodel::Package)
    );
    putElementUnderPackage($pkgRes.context, $path, 'extensionTest', $shell);
 }
 
-function meta::pure::compiler::test::extensionTestExtension(): CompilerExtension[1]
+function platform::pure::compiler::test::extensionTestExtension(): CompilerExtension[1]
 {
    ^CompilerExtension(
       name    = 'extensionTest',
-      handles = e: meta::pure::protocol::grammar::PackageableElement[1] | extensionTestHandles($e),
-      pass1   = {e: meta::pure::protocol::grammar::PackageableElement[1], ctx: CompilerContext[1] |
+      handles = e: platform::pure::protocol::grammar::PackageableElement[1] | extensionTestHandles($e),
+      pass1   = {e: platform::pure::protocol::grammar::PackageableElement[1], ctx: CompilerContext[1] |
                    extensionTestPass1($e, $ctx)}
    );
 }
 
-function <<test.Test>> meta::pure::compiler::test::testExtensionCompilesAnUnknownSection(): Boolean[1]
+function <<test.Test>> platform::pure::compiler::test::testExtensionCompilesAnUnknownSection(): Boolean[1]
 {
-   let file = meta::pure::functions::meta::parse('extTest',
+   let file = platform::pure::functions::meta::parse('extTest',
       '###Pure\nClass a::B {}\n\n###CompiledGraph\nanything at all\n');
-   let withExt = meta::pure::compiler::compile($file, extensionTestExtension(), true);
+   let withExt = platform::pure::compiler::compile($file, extensionTestExtension(), true);
    let paths = $withExt.elements->map(e | $e->elementToPath());
    assert($paths->contains('a::B'), | 'the ordinary class still compiles: ' + $paths->joinStrings(', '));
    assert($paths->contains('extensionTest::Claimed'),
@@ -67,13 +67,13 @@ function <<test.Test>> meta::pure::compiler::test::testExtensionCompilesAnUnknow
    true;
 }
 
-function <<test.Test>> meta::pure::compiler::test::testWithoutExtensionTheSectionIsIgnored(): Boolean[1]
+function <<test.Test>> platform::pure::compiler::test::testWithoutExtensionTheSectionIsIgnored(): Boolean[1]
 {
    // The behaviour that was there before the seam existed, and must still be there: with no
    // extension registered, the carried-text element contributes nothing at all.
-   let file = meta::pure::functions::meta::parse('extTest',
+   let file = platform::pure::functions::meta::parse('extTest',
       '###Pure\nClass a::B {}\n\n###CompiledGraph\nanything at all\n');
-   let plain = meta::pure::compiler::compile($file, [], true);
+   let plain = platform::pure::compiler::compile($file, [], true);
    let paths = $plain.elements->map(e | $e->elementToPath());
    assert($paths->contains('a::B'), | 'the ordinary class compiles');
    assert(!$paths->contains('extensionTest::Claimed'), | 'nothing was claimed');

@@ -15,45 +15,45 @@
 
 package org.finos.legend.pure.next.parser.pureLanguage;
 
-import meta.pure.protocol.grammar.Package_Pointer;
-import meta.pure.protocol.grammar.constraint.Constraint;
-import meta.pure.protocol.grammar.extension.Profile;
-import meta.pure.protocol.grammar.extension.Stereotype_Pointer;
-import meta.pure.protocol.grammar.extension.TaggedValue;
-import meta.pure.protocol.grammar.function.FunctionDefinition_Protocol;
-import meta.pure.protocol.grammar.function.LambdaFunction;
-import meta.pure.protocol.grammar.function.NativeFunction;
-import meta.pure.protocol.grammar.function.PackageableFunction;
-import meta.pure.protocol.grammar.function.UserDefinedFunction;
+import platform.pure.protocol.grammar.Package_Pointer;
+import platform.pure.protocol.grammar.constraint.Constraint;
+import platform.pure.protocol.grammar.extension.Profile;
+import platform.pure.protocol.grammar.extension.Stereotype_Pointer;
+import platform.pure.protocol.grammar.extension.TaggedValue;
+import platform.pure.protocol.grammar.function.FunctionDefinition_Protocol;
+import platform.pure.protocol.grammar.function.LambdaFunction;
+import platform.pure.protocol.grammar.function.NativeFunction;
+import platform.pure.protocol.grammar.function.PackageableFunction;
+import platform.pure.protocol.grammar.function.UserDefinedFunction;
 // AggregationKind Java enum replaced by Enum_Pointer
-import meta.pure.protocol.grammar.function.property.Property;
-import meta.pure.protocol.grammar.function.property.QualifiedProperty;
-import meta.pure.protocol.grammar.multiplicity.ConcreteMultiplicity;
-import meta.pure.protocol.grammar.multiplicity.Multiplicity;
-import meta.pure.protocol.grammar.multiplicity.MultiplicityParameter;
-import meta.pure.protocol.grammar.multiplicity.Multiplicity_Pointer;
-import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
-import meta.pure.protocol.grammar.relation.Column;
-import meta.pure.protocol.grammar.relation.GenericTypeOperation;
-import meta.pure.protocol.grammar.relation.RelationType;
-import meta.pure.protocol.grammar.relationship.Association;
-import meta.pure.protocol.grammar.relationship.Generalization;
-import meta.pure.protocol.grammar.type.Enumeration;
-import meta.pure.protocol.grammar.type.FunctionType;
-import meta.pure.protocol.grammar.type.PrimitiveType;
-import meta.pure.protocol.grammar.type.Type_Pointer;
-import meta.pure.protocol.grammar.type.Type_Protocol;
-import meta.pure.protocol.grammar.type.generics.GenericType;
-import meta.pure.protocol.grammar.type.generics.GenericTypeValue;
-import meta.pure.protocol.grammar.type.generics.TypeParameter;
-import meta.pure.protocol.grammar.valuespecification.ArrowInvocation;
-import meta.pure.protocol.grammar.valuespecification.AtomicValue;
-import meta.pure.protocol.grammar.valuespecification.Collection;
-import meta.pure.protocol.grammar.valuespecification.DotApplication;
-import meta.pure.protocol.grammar.valuespecification.FunctionExpression;
-import meta.pure.protocol.grammar.valuespecification.GenericTypeAndMultiplicityHolder;
-import meta.pure.protocol.grammar.valuespecification.ValueSpecification;
-import meta.pure.protocol.grammar.valuespecification.VariableExpression;
+import platform.pure.protocol.grammar.function.property.Property;
+import platform.pure.protocol.grammar.function.property.QualifiedProperty;
+import platform.pure.protocol.grammar.multiplicity.ConcreteMultiplicity;
+import platform.pure.protocol.grammar.multiplicity.Multiplicity;
+import platform.pure.protocol.grammar.multiplicity.MultiplicityParameter;
+import platform.pure.protocol.grammar.multiplicity.Multiplicity_Pointer;
+import platform.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
+import platform.pure.protocol.grammar.relation.Column;
+import platform.pure.protocol.grammar.relation.GenericTypeOperation;
+import platform.pure.protocol.grammar.relation.RelationType;
+import platform.pure.protocol.grammar.relationship.Association;
+import platform.pure.protocol.grammar.relationship.Generalization;
+import platform.pure.protocol.grammar.type.Enumeration;
+import platform.pure.protocol.grammar.type.FunctionType;
+import platform.pure.protocol.grammar.type.PrimitiveType;
+import platform.pure.protocol.grammar.type.Type_Pointer;
+import platform.pure.protocol.grammar.type.Type_Protocol;
+import platform.pure.protocol.grammar.type.generics.GenericType;
+import platform.pure.protocol.grammar.type.generics.GenericTypeValue;
+import platform.pure.protocol.grammar.type.generics.TypeParameter;
+import platform.pure.protocol.grammar.valuespecification.ArrowInvocation;
+import platform.pure.protocol.grammar.valuespecification.AtomicValue;
+import platform.pure.protocol.grammar.valuespecification.Collection;
+import platform.pure.protocol.grammar.valuespecification.DotApplication;
+import platform.pure.protocol.grammar.valuespecification.FunctionExpression;
+import platform.pure.protocol.grammar.valuespecification.GenericTypeAndMultiplicityHolder;
+import platform.pure.protocol.grammar.valuespecification.ValueSpecification;
+import platform.pure.protocol.grammar.valuespecification.VariableExpression;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Sets;
 import org.eclipse.collections.api.list.MutableList;
@@ -125,7 +125,7 @@ public class PureLanguageSerializer
      * @param classDef class definition
      * @return Pure code string
      */
-    public String serializeClass(final meta.pure.protocol.grammar.type.Class classDef)
+    public String serializeClass(final platform.pure.protocol.grammar.type.Class classDef)
     {
         StringBuilder sb = new StringBuilder();
 
@@ -267,7 +267,7 @@ public class PureLanguageSerializer
     private void serializeFunctionBody(final StringBuilder sb,
             final FunctionDefinition_Protocol fdp)
     {
-        if (fdp instanceof meta.pure.protocol.grammar.function.FunctionDefinition fd
+        if (fdp instanceof platform.pure.protocol.grammar.function.FunctionDefinition fd
                 && fd._expressionSequence() != null)
         {
             for (ValueSpecification vs : fd._expressionSequence())
@@ -538,14 +538,14 @@ public class PureLanguageSerializer
      * E.g., "Function", {@code "Function<Any>"}, {@code "Property<String, Integer>"}
      */
     private void serializeGenericType(final StringBuilder sb,
-                                       final meta.pure.protocol.grammar.type.generics.GenericType_Protocol gt)
+                                       final platform.pure.protocol.grammar.type.generics.GenericType_Protocol gt)
     {
         if (gt == null)
         {
             sb.append("Any");
             return;
         }
-        if (gt instanceof meta.pure.protocol.grammar.type.generics.GenericType_Pointer ptr)
+        if (gt instanceof platform.pure.protocol.grammar.type.generics.GenericType_Pointer ptr)
         {
             sb.append(ptr._value());
             return;
@@ -553,7 +553,7 @@ public class PureLanguageSerializer
         GenericType inline = (GenericType) gt;
         switch (inline)
         {
-            case meta.pure.protocol.grammar.type.generics.UndefinedGenericType ignored ->
+            case platform.pure.protocol.grammar.type.generics.UndefinedGenericType ignored ->
             {
                 sb.append("?");
             }
@@ -573,7 +573,7 @@ public class PureLanguageSerializer
                                             final GenericTypeValue gtv)
     {
         // Handle type parameter references (e.g., T, Z, K, V)
-        if (gtv._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter tp)
+        if (gtv._type() instanceof platform.pure.protocol.grammar.type.generics.TypeParameter tp)
         {
             sb.append(tp._name().toString());
             return;
@@ -601,9 +601,9 @@ public class PureLanguageSerializer
         }
 
         // Add type arguments if present
-        MutableList<meta.pure.protocol.grammar.type.generics.GenericType_Protocol> typeArgs = gtv._typeArguments();
+        MutableList<platform.pure.protocol.grammar.type.generics.GenericType_Protocol> typeArgs = gtv._typeArguments();
         boolean hasTypeArgs = typeArgs != null && !typeArgs.isEmpty();
-        MutableList<meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol> multArgs = gtv._multiplicityArguments();
+        MutableList<platform.pure.protocol.grammar.multiplicity.Multiplicity_Protocol> multArgs = gtv._multiplicityArguments();
         boolean hasMultArgs = multArgs != null && !multArgs.isEmpty();
 
         if (hasTypeArgs || hasMultArgs)
@@ -617,7 +617,7 @@ public class PureLanguageSerializer
             // e.g. Property<Nil, String|*>
             if (hasMultArgs)
             {
-                for (meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol mult : multArgs)
+                for (platform.pure.protocol.grammar.multiplicity.Multiplicity_Protocol mult : multArgs)
                 {
                     sb.append("|");
                     sb.append(serializeMultiplicityParts((Multiplicity) mult));
@@ -656,12 +656,12 @@ public class PureLanguageSerializer
                     ValueSpecification cp = colParams.get(i);
                     if (cp instanceof GenericTypeAndMultiplicityHolder holder)
                     {
-                        meta.pure.protocol.grammar.type.generics.GenericType_Protocol gt = holder._genericType();
-                        if (gt instanceof GenericTypeValue gtv2 && gtv2._type() instanceof meta.pure.protocol.grammar.relation.RelationType rt
+                        platform.pure.protocol.grammar.type.generics.GenericType_Protocol gt = holder._genericType();
+                        if (gt instanceof GenericTypeValue gtv2 && gtv2._type() instanceof platform.pure.protocol.grammar.relation.RelationType rt
                                 && rt._columns() != null && rt._columns().notEmpty())
                         {
                             // Extract type and multiplicity from the RelationType's column
-                            meta.pure.protocol.grammar.relation.Column col = rt._columns().getFirst();
+                            platform.pure.protocol.grammar.relation.Column col = rt._columns().getFirst();
                             if (col._genericType() != null)
                             {
                                 sb.append(" : ");
@@ -697,15 +697,15 @@ public class PureLanguageSerializer
      * (the &lt;args|multArgs&gt; portion, without the base type name).
      */
     private void serializeGenericTypeArgs(final StringBuilder sb,
-            final meta.pure.protocol.grammar.type.generics.GenericType_Protocol gt)
+            final platform.pure.protocol.grammar.type.generics.GenericType_Protocol gt)
     {
         if (!(gt instanceof GenericTypeValue gtv))
         {
             throw new IllegalArgumentException("Expected GenericTypeValue, got: " + gt.getClass());
         }
-        MutableList<meta.pure.protocol.grammar.type.generics.GenericType_Protocol> typeArgs = gtv._typeArguments();
+        MutableList<platform.pure.protocol.grammar.type.generics.GenericType_Protocol> typeArgs = gtv._typeArguments();
         boolean hasTypeArgs = typeArgs != null && !typeArgs.isEmpty();
-        MutableList<meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol> multArgs = gtv._multiplicityArguments();
+        MutableList<platform.pure.protocol.grammar.multiplicity.Multiplicity_Protocol> multArgs = gtv._multiplicityArguments();
         boolean hasMultArgs = multArgs != null && !multArgs.isEmpty();
         if (hasTypeArgs || hasMultArgs)
         {
@@ -716,7 +716,7 @@ public class PureLanguageSerializer
             }
             if (hasMultArgs)
             {
-                for (meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol mult : multArgs)
+                for (platform.pure.protocol.grammar.multiplicity.Multiplicity_Protocol mult : multArgs)
                 {
                     sb.append("|");
                     sb.append(serializeMultiplicityParts((Multiplicity) mult));
@@ -737,7 +737,7 @@ public class PureLanguageSerializer
         {
             return "*";
         }
-        if (mult instanceof meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicity)
+        if (mult instanceof platform.pure.protocol.grammar.multiplicity.UndefinedMultiplicity)
         {
             return "?";
         }
@@ -775,9 +775,9 @@ public class PureLanguageSerializer
     {
         sb.append("@");
         boolean hasType = gth._genericType() != null
-                && !(gth._genericType() instanceof meta.pure.protocol.grammar.type.generics.UndefinedGenericType);
+                && !(gth._genericType() instanceof platform.pure.protocol.grammar.type.generics.UndefinedGenericType);
         boolean hasMul = gth._multiplicity() != null
-                && !(gth._multiplicity() instanceof meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicity);
+                && !(gth._multiplicity() instanceof platform.pure.protocol.grammar.multiplicity.UndefinedMultiplicity);
         if (hasType)
         {
             serializeGenericType(sb, gth._genericType());
@@ -828,7 +828,7 @@ public class PureLanguageSerializer
      *
      * <p>Simple, because rendering depends on WHICH primitive it is, not where it lives: a Binary prints
      * as {@code 0x..}, a Decimal gains a {@code d}, a date gains a {@code %}. Literal types are emitted
-     * fully qualified ({@code meta::pure::metamodel::type::primitives::Binary}, see PRIMITIVES in
+     * fully qualified ({@code platform::pure::metamodel::type::primitives::Binary}, see PRIMITIVES in
      * PureLanguageProtocolBuilder), so comparing the raw pointer value against {@code "Binary"} silently
      * fell through to the default rendering and the Pure round-trip lost the {@code 0x} and {@code %}
      * sigils. The Pure-side printer never had the bug: its {@code atomicValueTypeName} already took the
@@ -995,7 +995,7 @@ public class PureLanguageSerializer
      * {@code <T, -U>} or {@code <T|m>}
      */
     private void serializeTypeParametersWithContravariance(final StringBuilder sb,
-            final MutableList<TypeParameter> params, final meta.pure.protocol.grammar.type.Class classDef)
+            final MutableList<TypeParameter> params, final platform.pure.protocol.grammar.type.Class classDef)
     {
         // Collect multiplicity param names from class properties
         MutableSet<String> mulParamNames = collectMultiplicityParamNamesFromClass(classDef);
@@ -1052,7 +1052,7 @@ public class PureLanguageSerializer
     /**
      * Collect multiplicity parameter names from a class's properties.
      */
-    private MutableSet<String> collectMultiplicityParamNamesFromClass(final meta.pure.protocol.grammar.type.Class classDef)
+    private MutableSet<String> collectMultiplicityParamNamesFromClass(final platform.pure.protocol.grammar.type.Class classDef)
     {
         MutableSet<String> names = Sets.mutable.empty();
         if (classDef._properties() != null)
@@ -1309,20 +1309,20 @@ public class PureLanguageSerializer
         {
             sb.append("~[");
             // New structure: colSpecArray(Collection["name","id"], TypeHolder((name:String, id:Integer)))
-            if (params.size() >= 1 && params.get(0) instanceof meta.pure.protocol.grammar.valuespecification.Collection nameCol)
+            if (params.size() >= 1 && params.get(0) instanceof platform.pure.protocol.grammar.valuespecification.Collection nameCol)
             {
                 // Extract names from Collection and types from RelationType TypeHolder
                 MutableList<ValueSpecification> names = nameCol._values();
                 // Build column-to-type map from RelationType if present
-                java.util.Map<String, meta.pure.protocol.grammar.type.generics.GenericType_Protocol> typeMap = new java.util.LinkedHashMap<>();
+                java.util.Map<String, platform.pure.protocol.grammar.type.generics.GenericType_Protocol> typeMap = new java.util.LinkedHashMap<>();
                 java.util.Map<String, Multiplicity_Protocol> mulMap = new java.util.LinkedHashMap<>();
                 if (params.size() >= 2 && params.get(1) instanceof GenericTypeAndMultiplicityHolder holder
                         && holder._genericType() != null
                         && holder._genericType() instanceof GenericTypeValue gtvColSpec
-                        && gtvColSpec._type() instanceof meta.pure.protocol.grammar.relation.RelationType rt
+                        && gtvColSpec._type() instanceof platform.pure.protocol.grammar.relation.RelationType rt
                         && rt._columns() != null)
                 {
-                    for (meta.pure.protocol.grammar.relation.Column col : rt._columns())
+                    for (platform.pure.protocol.grammar.relation.Column col : rt._columns())
                     {
                         if (col._genericType() != null)
                         {
@@ -1365,7 +1365,7 @@ public class PureLanguageSerializer
         // Handle funcColSpecArray / funcColSpecArray2: ~[col1 : lambda, col2 : lambda]
         if (("funcColSpecArray".equals(funcName) || "funcColSpecArray2".equals(funcName))
                 && params != null && params.size() >= 1
-                && params.get(0) instanceof meta.pure.protocol.grammar.valuespecification.Collection col)
+                && params.get(0) instanceof platform.pure.protocol.grammar.valuespecification.Collection col)
         {
             sb.append("~[");
             MutableList<ValueSpecification> elements = col._values();
@@ -1392,7 +1392,7 @@ public class PureLanguageSerializer
         // Handle aggColSpecArray / aggColSpecArray2: ~[col1 : mapLambda : reduceLambda, col2 : mapLambda : reduceLambda]
         if (("aggColSpecArray".equals(funcName) || "aggColSpecArray2".equals(funcName))
                 && params != null && params.size() >= 1
-                && params.get(0) instanceof meta.pure.protocol.grammar.valuespecification.Collection col)
+                && params.get(0) instanceof platform.pure.protocol.grammar.valuespecification.Collection col)
         {
             sb.append("~[");
             MutableList<ValueSpecification> elements = col._values();
@@ -1479,7 +1479,7 @@ public class PureLanguageSerializer
                 && typeHolder._genericType() != null)
         {
             // First param: GenericTypeAndMultiplicityHolder with type name and optional type/mult args
-            meta.pure.protocol.grammar.type.generics.GenericType_Protocol gt = typeHolder._genericType();
+            platform.pure.protocol.grammar.type.generics.GenericType_Protocol gt = typeHolder._genericType();
             if (!(gt instanceof GenericTypeValue gtvNew))
             {
                 throw new IllegalArgumentException("Expected GenericTypeValue for new expression, got: " + gt.getClass());
@@ -2224,7 +2224,7 @@ private void serializeQualifiedProperty(
         }
     }
 
-    private String getFullQualifiedName(final meta.pure.protocol.grammar.PackageableElement element)
+    private String getFullQualifiedName(final platform.pure.protocol.grammar.PackageableElement element)
     {
         StringBuilder sb = new StringBuilder();
         if (element._package() != null && element._package()._value() != null)
@@ -2312,7 +2312,7 @@ private void serializeQualifiedProperty(
 
     /**
      * Convert a named multiplicity path to its Pure notation.
-     * e.g. "meta::pure::metamodel::multiplicity::OneMany" → "[1..*]"
+     * e.g. "platform::pure::metamodel::multiplicity::OneMany" → "[1..*]"
      */
     private static String multiplicityPathToNotation(final String path)
     {
@@ -2457,15 +2457,15 @@ private void serializeQualifiedProperty(
      * @return Pure code string
      */
     public String serializeElements(
-            final java.util.List<meta.pure.protocol.grammar.PackageableElement> elements)
+            final java.util.List<platform.pure.protocol.grammar.PackageableElement> elements)
     {
         StringBuilder sb = new StringBuilder();
 
-        for (meta.pure.protocol.grammar.PackageableElement element : elements)
+        for (platform.pure.protocol.grammar.PackageableElement element : elements)
         {
             switch (element)
             {
-                case meta.pure.protocol.grammar.type.Class cls -> sb.append(serializeClass(cls));
+                case platform.pure.protocol.grammar.type.Class cls -> sb.append(serializeClass(cls));
                 case Enumeration enumDef -> sb.append(serializeEnum(enumDef));
                 case Association assoc -> sb.append(serializeAssociation(assoc));
                 case Profile prof -> sb.append(serializeProfile(prof));

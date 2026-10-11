@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::test::pct::*;
 
-function meta::pure::functions::asserts::assertFalse(condition:Boolean[1]):Boolean[1]
+function platform::pure::functions::asserts::assertFalse(condition:Boolean[1]):Boolean[1]
 {
     assert(!$condition);
 }
 
-function meta::pure::functions::asserts::assertFalse(condition:Boolean[1], message:String[1]):Boolean[1]
+function platform::pure::functions::asserts::assertFalse(condition:Boolean[1], message:String[1]):Boolean[1]
 {
     assert(!$condition, $message);
 }
 
-function meta::pure::functions::asserts::assertFalse(condition:Boolean[1], formatString:String[1], formatArgs:Any[*]):Boolean[1]
+function platform::pure::functions::asserts::assertFalse(condition:Boolean[1], formatString:String[1], formatArgs:Any[*]):Boolean[1]
 {
     assert(!$condition, $formatString, $formatArgs);
 }
 
-function meta::pure::functions::asserts::assertFalse(condition:Boolean[1], message:Function<{->String[1]}>[1]):Boolean[1]
+function platform::pure::functions::asserts::assertFalse(condition:Boolean[1], message:Function<{->String[1]}>[1]):Boolean[1]
 {
     assert(!$condition, $message);
 }
@@ -38,28 +39,28 @@ function meta::pure::functions::asserts::assertFalse(condition:Boolean[1], messa
 
 
 
-function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertFalse<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::tests::testSuccessAssertFalse<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertFalse(false)));
     assert($f->eval(|assertFalse(2 == 3)));
     assert($f->eval(|assertFalse((1 + 2) == 4)));
 }
 
-function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertFalseWithMessage<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::tests::testSuccessAssertFalseWithMessage<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertFalse(false, 'Test message')));
     assert($f->eval(|assertFalse(2 == 3, 'Test message')));
     assert($f->eval(|assertFalse((1 + 2) == 4, 'Test message')));
 }
 
-function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertFalseWithFormat<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::tests::testSuccessAssertFalseWithFormat<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertFalse(false, 'Test message: %s', [true])));
     assert($f->eval(|assertFalse(2 == 3, 'Test message: %s', [true])));
     assert($f->eval(|assertFalse((1 + 2) == 4, 'Test message: %s', [true])));
 }
 
-function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertFalseWithLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::tests::testSuccessAssertFalseWithLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertFalse(false, | 'Test message')));
     assert($f->eval(|assertFalse(2 == 3, | format('Test message %s', [true]))));

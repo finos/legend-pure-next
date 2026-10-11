@@ -24,7 +24,7 @@
 import { openZip } from "../../compiler/module/pdbModule/zip/zip.js";
 import { ENTRY_BYTES, ENTRY_NAMES } from "./native-signatures.js";
 
-/** Host natives for meta::pure::compiler::pdb::archive. */
+/** Host natives for platform::pure::compiler::pdb::archive. */
 export const archiveExtension = {
     registerAll(natives) {
         natives.register(ENTRY_NAMES, () => entryNames);

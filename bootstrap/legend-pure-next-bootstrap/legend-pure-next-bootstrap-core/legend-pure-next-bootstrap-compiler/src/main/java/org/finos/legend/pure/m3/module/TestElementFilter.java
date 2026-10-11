@@ -15,8 +15,8 @@
 
 package org.finos.legend.pure.m3.module;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.extension.ElementWithStereotypes;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.extension.ElementWithStereotypes;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
 import java.nio.file.Path;
@@ -24,7 +24,7 @@ import java.util.List;
 
 /**
  * Selects which compiled elements end up in which output PDB based on whether
- * they carry a stereotype from {@code meta::pure::profiles::test}.
+ * they carry a stereotype from {@code platform::pure::profiles::test}.
  *
  * <p>The four modes drive both element selection and output filename(s):</p>
  * <ul>
@@ -41,7 +41,7 @@ import java.util.List;
  *
  * <p>"Test-annotated" means the element implements {@link ElementWithStereotypes}
  * and at least one of its stereotypes resolves to profile
- * {@code meta::pure::profiles::test}. The {@code test} profile element itself
+ * {@code platform::pure::profiles::test}. The {@code test} profile element itself
  * is always treated as non-test so the lean PDB carries it.</p>
  */
 public final class TestElementFilter
@@ -51,13 +51,13 @@ public final class TestElementFilter
      * element annotated by any stereotype here is filtered from lean.
      * (Members: Test, TestDependency, BeforePackage, AfterPackage, ToFix.)
      */
-    public static final String TEST_PROFILE_PATH = "meta::pure::profiles::test";
+    public static final String TEST_PROFILE_PATH = "platform::pure::profiles::test";
 
     /**
      * PCT profile path. Only a <em>subset</em> of its stereotypes is
      * test-only — see {@link #PCT_TEST_STEREOTYPES}.
      */
-    public static final String PCT_PROFILE_PATH = "meta::pure::test::pct::PCT";
+    public static final String PCT_PROFILE_PATH = "platform::pure::test::pct::PCT";
 
     /**
      * Stereotypes on {@link #PCT_PROFILE_PATH} that mark test infrastructure
@@ -124,7 +124,7 @@ public final class TestElementFilter
      *         any stereotype on the test profile, or {@code test}/{@code adapter}
      *         on the PCT profile.
      */
-    private static boolean isTestStereotype(meta.pure.metamodel.extension.Stereotype s)
+    private static boolean isTestStereotype(platform.pure.metamodel.extension.Stereotype s)
     {
         if (s == null || s._profile() == null) return false;
         String profilePath = _PackageableElement.path(s._profile());

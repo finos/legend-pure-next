@@ -16,10 +16,10 @@
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
 import org.finos.legend.pure.m3.PdbTypes;
-import org.finos.legend.pure.m3.meta.pure.metamodel.function.property.Property;
-import org.finos.legend.pure.m3.meta.pure.metamodel.function.property.PropertyImpl;
-import org.finos.legend.pure.m3.meta.pure.metamodel.type.Class;
-import org.finos.legend.pure.m3.meta.pure.metamodel.type.ClassImpl;
+import org.finos.legend.pure.m3.platform.pure.metamodel.function.property.Property;
+import org.finos.legend.pure.m3.platform.pure.metamodel.function.property.PropertyImpl;
+import org.finos.legend.pure.m3.platform.pure.metamodel.type.Class;
+import org.finos.legend.pure.m3.platform.pure.metamodel.type.ClassImpl;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -37,7 +37,7 @@ public final class ModelSpike
     public static void main(String[] args) throws Exception
     {
         PdbRuntime runtime = PdbRuntime.open(Path.of(args[0]), PdbTypes::create, Path.of(args[1]));
-        Class pdbClass = (Class) runtime.element("meta::pure::metamodel::type::Class");
+        Class pdbClass = (Class) runtime.element("platform::pure::metamodel::type::Class");
         Property pdbProperty = pdbClass.properties().get(1);
 
         // A class built at run time, whose property reuses a type and multiplicity read from the PDB.

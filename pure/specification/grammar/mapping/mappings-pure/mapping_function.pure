@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Mapping for `function` (UserDefinedFunction) and `native function`
 // (NativeFunction) top-level elements.
 //
@@ -14,12 +29,12 @@
 // machinery; for the spike fixture function/definition/concrete, the body
 // is `[]` — an empty Collection — handled by the minimal buildCodeBlock).
 
-import meta::pure::parser::mappings::*;
-import meta::pure::functions::meta::antlr::*;
-import meta::pure::parser::mappings::interpreter::*;
-import meta::pure::protocol::grammar::*;
+import platform::pure::parser::mappings::*;
+import platform::pure::functions::meta::antlr::*;
+import platform::pure::parser::mappings::interpreter::*;
+import platform::pure::protocol::grammar::*;
 
-function meta::pure::parser::mappings::functionDefinition(): Rule[1]
+function platform::pure::parser::mappings::functionDefinition(): Rule[1]
 {
    ^Rule(name='functionDefinition', alts = [
       ^Alt(returnExpr = {ctx: AntlrContext[1], o: Integer[1] |
@@ -29,7 +44,7 @@ function meta::pure::parser::mappings::functionDefinition(): Rule[1]
          let constraintsCtxs = $ctx->getChild('constraints')
                                     ->map(c | $c->getChildren('constraint'))
                                     ->concatenate([]);
-         ^meta::pure::protocol::grammar::function::UserDefinedFunction(
+         ^platform::pure::protocol::grammar::function::UserDefinedFunction(
             p_sourceInformation = buildSourceInfo($ctx, $o),
             name                = functionId($ctx),
             package             = packagePtrOf($qn),
@@ -53,14 +68,14 @@ function meta::pure::parser::mappings::functionDefinition(): Rule[1]
    ])
 }
 
-function meta::pure::parser::mappings::nativeFunction(): Rule[1]
+function platform::pure::parser::mappings::nativeFunction(): Rule[1]
 {
    ^Rule(name='nativeFunction', alts = [
       ^Alt(returnExpr = {ctx: AntlrContext[1], o: Integer[1] |
          let qn  = $ctx->getChild('qualifiedName')->toOne()->getText();
          let sig = $ctx->getChild('functionTypeSignature')->toOne();
          let tmp = $ctx->getChild('typeAndMultiplicityParameters');
-         ^meta::pure::protocol::grammar::function::NativeFunction(
+         ^platform::pure::protocol::grammar::function::NativeFunction(
             p_sourceInformation = buildSourceInfo($ctx, $o),
             name                = nativeFunctionId($ctx),
             package             = packagePtrOf($qn),
@@ -83,9 +98,9 @@ function meta::pure::parser::mappings::nativeFunction(): Rule[1]
 // Function variable expressions (parameter slots): `name: Type[mult]`.
 // -----------------------------------------------------------------------
 
-function meta::pure::parser::mappings::buildFunctionVariableExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::VariableExpression[1]
+function platform::pure::parser::mappings::buildFunctionVariableExpression(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::valuespecification::VariableExpression[1]
 {
-   ^meta::pure::protocol::grammar::valuespecification::VariableExpression(
+   ^platform::pure::protocol::grammar::valuespecification::VariableExpression(
       p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
       name                = $ctx->getChild('identifier')->toOne()->getText(),
       genericType         = buildGenericType($ctx->getChild('type')->toOne(), $lineOffset),
@@ -102,7 +117,7 @@ function meta::pure::parser::mappings::buildFunctionVariableExpression(ctx: Antl
 //              + "__" + returnTypeSig + "_" + returnMultSig + "_"
 // -----------------------------------------------------------------------
 
-function meta::pure::parser::mappings::functionId(ctx: AntlrContext[1]): String[1]
+function platform::pure::parser::mappings::functionId(ctx: AntlrContext[1]): String[1]
 {
    let qn  = $ctx->getChild('qualifiedName')->toOne()->getText();
    let sig = $ctx->getChild('functionTypeSignature')->toOne();
@@ -112,12 +127,12 @@ function meta::pure::parser::mappings::functionId(ctx: AntlrContext[1]): String[
       + '_' + buildMultSig($sig->getChild('multiplicity')->toOne()) + '_';
 }
 
-function meta::pure::parser::mappings::nativeFunctionId(ctx: AntlrContext[1]): String[1]
+function platform::pure::parser::mappings::nativeFunctionId(ctx: AntlrContext[1]): String[1]
 {
    functionId($ctx)
 }
 
-function meta::pure::parser::mappings::buildParamListSig(sigCtx: AntlrContext[1]): String[1]
+function platform::pure::parser::mappings::buildParamListSig(sigCtx: AntlrContext[1]): String[1]
 {
    let params = $sigCtx->getChildren('functionVariableExpression');
    if($params->size() > 0,
@@ -125,19 +140,19 @@ function meta::pure::parser::mappings::buildParamListSig(sigCtx: AntlrContext[1]
       | '');
 }
 
-function meta::pure::parser::mappings::buildParamSig(paramCtx: AntlrContext[1]): String[1]
+function platform::pure::parser::mappings::buildParamSig(paramCtx: AntlrContext[1]): String[1]
 {
    buildTypeSig($paramCtx->getChild('type')->toOne())
       + '_' + buildMultSig($paramCtx->getChild('multiplicity')->toOne())
 }
 
-function meta::pure::parser::mappings::buildTypeSig(typeCtx: AntlrContext[1]): String[1]
+function platform::pure::parser::mappings::buildTypeSig(typeCtx: AntlrContext[1]): String[1]
 {
    let qn = $typeCtx->getChild('qualifiedName');
    if($qn->isNotEmpty(), | simpleNameOf($qn->toOne()->getText()), | 'UNKNOWN');
 }
 
-function meta::pure::parser::mappings::buildMultSig(mulCtx: AntlrContext[1]): String[1]
+function platform::pure::parser::mappings::buildMultSig(mulCtx: AntlrContext[1]): String[1]
 {
    let arg     = $mulCtx->getChild('multiplicityArgument')->toOne();
    let fromMul = $arg->getChild('fromMultiplicity');

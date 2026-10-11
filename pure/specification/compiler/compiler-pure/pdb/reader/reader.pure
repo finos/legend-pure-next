@@ -28,8 +28,8 @@
 // the parsed m3.fbs (pdb/schema/parser.pure) — reading has no add-order concerns,
 // so a generic schema-driven reader replaces the writer's generated code.
 
-import meta::pure::functions::binary::*;
-import meta::pure::compiler::pdb::schema::*;
+import platform::pure::functions::binary::*;
+import platform::pure::compiler::pdb::schema::*;
 
 // --- little-endian integer decoding ------------------------------------------
 //
@@ -39,14 +39,14 @@ import meta::pure::compiler::pdb::schema::*;
 // rather than compiling it ahead of time that dominated decoding.
 
 // Unsigned little-endian integer of `width` bytes at absolute `pos`.
-function meta::pure::compiler::pdb::reader::leUInt(bytes:Binary[1], pos:Integer[1], width:Integer[1]):Integer[1]
+function platform::pure::compiler::pdb::reader::leUInt(bytes:Binary[1], pos:Integer[1], width:Integer[1]):Integer[1]
 {
    $bytes->binaryLeUInt($pos, $width);
 }
 
 // Signed (two's-complement) little-endian integer of `width` bytes: the top
 // byte is applied signed so the magnitude never exceeds the value itself.
-function meta::pure::compiler::pdb::reader::leInt(bytes:Binary[1], pos:Integer[1], width:Integer[1]):Integer[1]
+function platform::pure::compiler::pdb::reader::leInt(bytes:Binary[1], pos:Integer[1], width:Integer[1]):Integer[1]
 {
    $bytes->binaryLeInt($pos, $width);
 }
@@ -54,7 +54,7 @@ function meta::pure::compiler::pdb::reader::leInt(bytes:Binary[1], pos:Integer[1
 // --- FlatBuffer node handles ---------------------------------------------------
 
 // A table position in a finished FlatBuffer, tagged with its schema table name.
-Class meta::pure::compiler::pdb::reader::FbsNode
+Class platform::pure::compiler::pdb::reader::FbsNode
 {
    bytes : Binary[1];
    pos   : Integer[1];
@@ -62,11 +62,11 @@ Class meta::pure::compiler::pdb::reader::FbsNode
 }
 
 // The root table of a finished buffer (uoffset at position 0).
-function meta::pure::compiler::pdb::reader::rootNode(bytes:Binary[1], rootType:String[1]):meta::pure::compiler::pdb::reader::FbsNode[1]
+function platform::pure::compiler::pdb::reader::rootNode(bytes:Binary[1], rootType:String[1]):platform::pure::compiler::pdb::reader::FbsNode[1]
 {
-   ^meta::pure::compiler::pdb::reader::FbsNode(
+   ^platform::pure::compiler::pdb::reader::FbsNode(
       bytes = $bytes,
-      pos   = meta::pure::compiler::pdb::reader::leUInt($bytes, 0, 4),
+      pos   = platform::pure::compiler::pdb::reader::leUInt($bytes, 0, 4),
       type  = $rootType);
 }
 
@@ -74,91 +74,91 @@ function meta::pure::compiler::pdb::reader::rootNode(bytes:Binary[1], rootType:S
 // (table pos holds a SIGNED soffset to the vtable; vtable = [len, tableSize,
 // field slots...] of u16s; a 0 slot — or an id beyond the trimmed vtable —
 // means the field was elided.)
-function meta::pure::compiler::pdb::reader::fieldPos(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):Integer[1]
+function platform::pure::compiler::pdb::reader::fieldPos(node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):Integer[1]
 {
    let bytes = $node.bytes;
-   let vtPos = $node.pos - meta::pure::compiler::pdb::reader::leInt($bytes, $node.pos, 4);
-   let vtLen = meta::pure::compiler::pdb::reader::leUInt($bytes, $vtPos, 2);
+   let vtPos = $node.pos - platform::pure::compiler::pdb::reader::leInt($bytes, $node.pos, 4);
+   let vtLen = platform::pure::compiler::pdb::reader::leUInt($bytes, $vtPos, 2);
    let slot  = 4 + (2 * $id);
    if($slot >= $vtLen,
       | -1,
-      | let off = meta::pure::compiler::pdb::reader::leUInt($bytes, $vtPos + $slot, 2);
+      | let off = platform::pure::compiler::pdb::reader::leUInt($bytes, $vtPos + $slot, 2);
         if($off == 0, | -1, | $node.pos + $off););
 }
 
 // Integer scalar field (present-or-default). `signed` selects two's-complement.
-function meta::pure::compiler::pdb::reader::readIntField(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], width:Integer[1], signed:Boolean[1], default:Integer[1]):Integer[1]
+function platform::pure::compiler::pdb::reader::readIntField(node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], width:Integer[1], signed:Boolean[1], default:Integer[1]):Integer[1]
 {
-   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   let fp = platform::pure::compiler::pdb::reader::fieldPos($node, $id);
    if($fp == -1,
       | $default,
       | if($signed,
-           | meta::pure::compiler::pdb::reader::leInt($node.bytes, $fp, $width),
-           | meta::pure::compiler::pdb::reader::leUInt($node.bytes, $fp, $width)));
+           | platform::pure::compiler::pdb::reader::leInt($node.bytes, $fp, $width),
+           | platform::pure::compiler::pdb::reader::leUInt($node.bytes, $fp, $width)));
 }
 
-function meta::pure::compiler::pdb::reader::readBoolField(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], default:Boolean[1]):Boolean[1]
+function platform::pure::compiler::pdb::reader::readBoolField(node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], default:Boolean[1]):Boolean[1]
 {
-   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   let fp = platform::pure::compiler::pdb::reader::fieldPos($node, $id);
    if($fp == -1, | $default, | $node.bytes->binaryAt($fp) != 0);
 }
 
 // fbs `double` field (present-or-0.0), via the leBytesToFloat native.
-function meta::pure::compiler::pdb::reader::readFloatField(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):Float[1]
+function platform::pure::compiler::pdb::reader::readFloatField(node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):Float[1]
 {
-   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   let fp = platform::pure::compiler::pdb::reader::fieldPos($node, $id);
    if($fp == -1, | 0.0, | leBytesToFloat($node.bytes->binarySlice($fp, $fp + 8)));
 }
 
 // Decode the string whose uoffset lives at absolute position `p`.
-function meta::pure::compiler::pdb::reader::stringAt(bytes:Binary[1], p:Integer[1]):String[1]
+function platform::pure::compiler::pdb::reader::stringAt(bytes:Binary[1], p:Integer[1]):String[1]
 {
-   let sPos = $p + meta::pure::compiler::pdb::reader::leUInt($bytes, $p, 4);
-   let len  = meta::pure::compiler::pdb::reader::leUInt($bytes, $sPos, 4);
+   let sPos = $p + platform::pure::compiler::pdb::reader::leUInt($bytes, $p, 4);
+   let len  = platform::pure::compiler::pdb::reader::leUInt($bytes, $sPos, 4);
    $bytes->binaryUtf8($sPos + 4, $len);
 }
 
-function meta::pure::compiler::pdb::reader::readStringField(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):String[0..1]
+function platform::pure::compiler::pdb::reader::readStringField(node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):String[0..1]
 {
-   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
-   if($fp == -1, | [], | meta::pure::compiler::pdb::reader::stringAt($node.bytes, $fp));
+   let fp = platform::pure::compiler::pdb::reader::fieldPos($node, $id);
+   if($fp == -1, | [], | platform::pure::compiler::pdb::reader::stringAt($node.bytes, $fp));
 }
 
 // Nested table field: follow the uoffset indirection.
-function meta::pure::compiler::pdb::reader::readTableField(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], typeName:String[1]):meta::pure::compiler::pdb::reader::FbsNode[0..1]
+function platform::pure::compiler::pdb::reader::readTableField(node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], typeName:String[1]):platform::pure::compiler::pdb::reader::FbsNode[0..1]
 {
-   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   let fp = platform::pure::compiler::pdb::reader::fieldPos($node, $id);
    if($fp == -1,
       | [],
-      | ^meta::pure::compiler::pdb::reader::FbsNode(
+      | ^platform::pure::compiler::pdb::reader::FbsNode(
            bytes = $node.bytes,
-           pos   = $fp + meta::pure::compiler::pdb::reader::leUInt($node.bytes, $fp, 4),
+           pos   = $fp + platform::pure::compiler::pdb::reader::leUInt($node.bytes, $fp, 4),
            type  = $typeName));
 }
 
 // Vector plumbing: a vector field's data is [u32 count, elements...].
-function meta::pure::compiler::pdb::reader::vectorPositions(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], elemSize:Integer[1]):Integer[*]
+function platform::pure::compiler::pdb::reader::vectorPositions(node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], elemSize:Integer[1]):Integer[*]
 {
-   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   let fp = platform::pure::compiler::pdb::reader::fieldPos($node, $id);
    if($fp == -1,
       | [],
-      | let vecPos = $fp + meta::pure::compiler::pdb::reader::leUInt($node.bytes, $fp, 4);
-        let count  = meta::pure::compiler::pdb::reader::leUInt($node.bytes, $vecPos, 4);
+      | let vecPos = $fp + platform::pure::compiler::pdb::reader::leUInt($node.bytes, $fp, 4);
+        let count  = platform::pure::compiler::pdb::reader::leUInt($node.bytes, $vecPos, 4);
         range(0, $count)->map(i | $vecPos + 4 + ($i * $elemSize)););
 }
 
-function meta::pure::compiler::pdb::reader::readStringVector(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):String[*]
+function platform::pure::compiler::pdb::reader::readStringVector(node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):String[*]
 {
-   meta::pure::compiler::pdb::reader::vectorPositions($node, $id, 4)
-      ->map(p | meta::pure::compiler::pdb::reader::stringAt($node.bytes, $p));
+   platform::pure::compiler::pdb::reader::vectorPositions($node, $id, 4)
+      ->map(p | platform::pure::compiler::pdb::reader::stringAt($node.bytes, $p));
 }
 
-function meta::pure::compiler::pdb::reader::readTableVector(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], typeName:String[1]):meta::pure::compiler::pdb::reader::FbsNode[*]
+function platform::pure::compiler::pdb::reader::readTableVector(node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], typeName:String[1]):platform::pure::compiler::pdb::reader::FbsNode[*]
 {
-   meta::pure::compiler::pdb::reader::vectorPositions($node, $id, 4)
-      ->map(p | ^meta::pure::compiler::pdb::reader::FbsNode(
+   platform::pure::compiler::pdb::reader::vectorPositions($node, $id, 4)
+      ->map(p | ^platform::pure::compiler::pdb::reader::FbsNode(
                    bytes = $node.bytes,
-                   pos   = $p + meta::pure::compiler::pdb::reader::leUInt($node.bytes, $p, 4),
+                   pos   = $p + platform::pure::compiler::pdb::reader::leUInt($node.bytes, $p, 4),
                    type  = $typeName));
 }
 
@@ -169,37 +169,37 @@ function meta::pure::compiler::pdb::reader::readTableVector(node:meta::pure::com
 // but empty one. `0x` is a value, so returning it for an absent field would
 // make readField report a missing vector as present — which is what an
 // `isEmpty()` check on an unwritten field relies on.
-function meta::pure::compiler::pdb::reader::readByteVector(node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):Binary[0..1]
+function platform::pure::compiler::pdb::reader::readByteVector(node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):Binary[0..1]
 {
-   let fp = meta::pure::compiler::pdb::reader::fieldPos($node, $id);
+   let fp = platform::pure::compiler::pdb::reader::fieldPos($node, $id);
    if($fp == -1,
       | [],
-      | let vecPos = $fp + meta::pure::compiler::pdb::reader::leUInt($node.bytes, $fp, 4);
-        let count  = meta::pure::compiler::pdb::reader::leUInt($node.bytes, $vecPos, 4);
+      | let vecPos = $fp + platform::pure::compiler::pdb::reader::leUInt($node.bytes, $fp, 4);
+        let count  = platform::pure::compiler::pdb::reader::leUInt($node.bytes, $vecPos, 4);
         $node.bytes->binarySlice($vecPos + 4, $vecPos + 4 + $count););
 }
 
 // Single union field: the discriminant byte lives in the implicit `<field>_type`
 // slot at id-1 (1-based member index, 0 = absent); the value table at `id`.
-function meta::pure::compiler::pdb::reader::readUnionField(s:meta::pure::compiler::pdb::schema::FbsSchema[1], node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], unionName:String[1]):meta::pure::compiler::pdb::reader::FbsNode[0..1]
+function platform::pure::compiler::pdb::reader::readUnionField(s:platform::pure::compiler::pdb::schema::FbsSchema[1], node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], unionName:String[1]):platform::pure::compiler::pdb::reader::FbsNode[0..1]
 {
-   let typeByte = meta::pure::compiler::pdb::reader::readIntField($node, $id - 1, 1, false, 0);
+   let typeByte = platform::pure::compiler::pdb::reader::readIntField($node, $id - 1, 1, false, 0);
    if($typeByte == 0,
       | [],
-      | meta::pure::compiler::pdb::reader::readTableField($node, $id,
-           meta::pure::compiler::pdb::schema::unionMembers($s, $unionName)->at($typeByte - 1)));
+      | platform::pure::compiler::pdb::reader::readTableField($node, $id,
+           platform::pure::compiler::pdb::schema::unionMembers($s, $unionName)->at($typeByte - 1)));
 }
 
 // Union vector: parallel [ubyte] discriminants at id-1 and value tables at id.
-function meta::pure::compiler::pdb::reader::readUnionVector(s:meta::pure::compiler::pdb::schema::FbsSchema[1], node:meta::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], unionName:String[1]):meta::pure::compiler::pdb::reader::FbsNode[*]
+function platform::pure::compiler::pdb::reader::readUnionVector(s:platform::pure::compiler::pdb::schema::FbsSchema[1], node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1], unionName:String[1]):platform::pure::compiler::pdb::reader::FbsNode[*]
 {
-   let types   = meta::pure::compiler::pdb::reader::readByteVector($node, $id - 1);
-   let members = meta::pure::compiler::pdb::schema::unionMembers($s, $unionName);
-   let values  = meta::pure::compiler::pdb::reader::vectorPositions($node, $id, 4);
+   let types   = platform::pure::compiler::pdb::reader::readByteVector($node, $id - 1);
+   let members = platform::pure::compiler::pdb::schema::unionMembers($s, $unionName);
+   let values  = platform::pure::compiler::pdb::reader::vectorPositions($node, $id, 4);
    range(0, $values->size())->map(i |
-      ^meta::pure::compiler::pdb::reader::FbsNode(
+      ^platform::pure::compiler::pdb::reader::FbsNode(
          bytes = $node.bytes,
-         pos   = $values->at($i) + meta::pure::compiler::pdb::reader::leUInt($node.bytes, $values->at($i), 4),
+         pos   = $values->at($i) + platform::pure::compiler::pdb::reader::leUInt($node.bytes, $values->at($i), 4),
          type  = $members->at($types->toOne()->binaryAt($i) - 1)));
 }
 
@@ -207,7 +207,7 @@ function meta::pure::compiler::pdb::reader::readUnionVector(s:meta::pure::compil
 
 // A decoded PointerRef: kind discriminant (m3.fbs PointerKind, 0 = Element)
 // and UNSPLIT path segments. Resolution against an element registry is wiring.
-Class meta::pure::compiler::pdb::reader::ReadPointerRef
+Class platform::pure::compiler::pdb::reader::ReadPointerRef
 {
    kind : Integer[1];
    segs : String[*];
@@ -218,21 +218,21 @@ Class meta::pure::compiler::pdb::reader::ReadPointerRef
 // wiring — the host resolves it against its parent chain, as the JVM wrapper
 // walks _fbParent; an immutable Pure reader cannot (and must not) materialize
 // cyclic instances.
-Class meta::pure::compiler::pdb::reader::ReadAncestorRef
+Class platform::pure::compiler::pdb::reader::ReadAncestorRef
 {
    depth : Integer[1];
 }
 
 // PointerRef/AncestorRef nodes become descriptions; everything else stays a node.
-function meta::pure::compiler::pdb::reader::decodeNode(node:meta::pure::compiler::pdb::reader::FbsNode[1]):Any[1]
+function platform::pure::compiler::pdb::reader::decodeNode(node:platform::pure::compiler::pdb::reader::FbsNode[1]):Any[1]
 {
    if($node.type == 'PointerRef',
-      | ^meta::pure::compiler::pdb::reader::ReadPointerRef(
-           kind = meta::pure::compiler::pdb::reader::readIntField($node, 0, 1, false, 0),
-           segs = meta::pure::compiler::pdb::reader::readStringVector($node, 1)),
+      | ^platform::pure::compiler::pdb::reader::ReadPointerRef(
+           kind = platform::pure::compiler::pdb::reader::readIntField($node, 0, 1, false, 0),
+           segs = platform::pure::compiler::pdb::reader::readStringVector($node, 1)),
       | if($node.type == 'AncestorRef',
-           | ^meta::pure::compiler::pdb::reader::ReadAncestorRef(
-                depth = meta::pure::compiler::pdb::reader::readIntField($node, 0, 4, true, 0)),
+           | ^platform::pure::compiler::pdb::reader::ReadAncestorRef(
+                depth = platform::pure::compiler::pdb::reader::readIntField($node, 0, 4, true, 0)),
            | $node));
 }
 
@@ -244,43 +244,43 @@ function meta::pure::compiler::pdb::reader::decodeNode(node:meta::pure::compiler
 // Table and union results pass through decodeNode, so PointerRef/AncestorRef
 // surface as descriptions. (Pure-property→fbs-field naming — toFbsFieldName +
 // the p_tags quirk — lives with the generator; wiring composes the two.)
-function meta::pure::compiler::pdb::reader::readField(s:meta::pure::compiler::pdb::schema::FbsSchema[1], node:meta::pure::compiler::pdb::reader::FbsNode[1], fbsFieldName:String[1]):Any[*]
+function platform::pure::compiler::pdb::reader::readField(s:platform::pure::compiler::pdb::schema::FbsSchema[1], node:platform::pure::compiler::pdb::reader::FbsNode[1], fbsFieldName:String[1]):Any[*]
 {
-   let tdef  = meta::pure::compiler::pdb::schema::table($s, $node.type);
+   let tdef  = platform::pure::compiler::pdb::schema::table($s, $node.type);
    if($tdef->isEmpty(), | fail('unknown table: ' + $node.type), | true);
    let field = $tdef->toOne().fields->filter(f | $f.name == $fbsFieldName)->head();
    if($field->isEmpty(), | fail('unknown field ' + $fbsFieldName + ' on ' + $node.type), | true);
    let f   = $field->toOne();
-   let cat = meta::pure::compiler::pdb::schema::categorize($s, $f.type);
-   if([pair(| $f.vector && ($cat == 'union'),     | meta::pure::compiler::pdb::reader::readUnionVector($s, $node, $f.id, $f.type)->map(n | meta::pure::compiler::pdb::reader::decodeNode($n))),
-       pair(| $f.vector && ($cat == 'table'),     | meta::pure::compiler::pdb::reader::readTableVector($node, $f.id, $f.type)->map(n | meta::pure::compiler::pdb::reader::decodeNode($n))),
-       pair(| $f.vector && ($f.type == 'string'), | meta::pure::compiler::pdb::reader::readStringVector($node, $f.id)),
-       pair(| $f.vector,                          | meta::pure::compiler::pdb::reader::readByteVector($node, $f.id)),
-       pair(| $cat == 'union',                    | meta::pure::compiler::pdb::reader::readUnionField($s, $node, $f.id, $f.type)->map(n | meta::pure::compiler::pdb::reader::decodeNode($n))),
-       pair(| $cat == 'table',                    | meta::pure::compiler::pdb::reader::readTableField($node, $f.id, $f.type)->map(n | meta::pure::compiler::pdb::reader::decodeNode($n))),
-       pair(| $cat == 'enum',                     | meta::pure::compiler::pdb::schema::enumValues($s, $f.type)->at(meta::pure::compiler::pdb::reader::readIntField($node, $f.id, 1, false, 0))),
-       pair(| $f.type == 'string',                | meta::pure::compiler::pdb::reader::readStringField($node, $f.id)),
-       pair(| $f.type == 'bool',                  | meta::pure::compiler::pdb::reader::readBoolField($node, $f.id, false)),
-       pair(| $f.type == 'double',                | meta::pure::compiler::pdb::reader::readFloatField($node, $f.id))],
-      | meta::pure::compiler::pdb::reader::readIntField($node, $f.id, meta::pure::compiler::pdb::schema::scalarWidth($f.type), true, 0)
+   let cat = platform::pure::compiler::pdb::schema::categorize($s, $f.type);
+   if([pair(| $f.vector && ($cat == 'union'),     | platform::pure::compiler::pdb::reader::readUnionVector($s, $node, $f.id, $f.type)->map(n | platform::pure::compiler::pdb::reader::decodeNode($n))),
+       pair(| $f.vector && ($cat == 'table'),     | platform::pure::compiler::pdb::reader::readTableVector($node, $f.id, $f.type)->map(n | platform::pure::compiler::pdb::reader::decodeNode($n))),
+       pair(| $f.vector && ($f.type == 'string'), | platform::pure::compiler::pdb::reader::readStringVector($node, $f.id)),
+       pair(| $f.vector,                          | platform::pure::compiler::pdb::reader::readByteVector($node, $f.id)),
+       pair(| $cat == 'union',                    | platform::pure::compiler::pdb::reader::readUnionField($s, $node, $f.id, $f.type)->map(n | platform::pure::compiler::pdb::reader::decodeNode($n))),
+       pair(| $cat == 'table',                    | platform::pure::compiler::pdb::reader::readTableField($node, $f.id, $f.type)->map(n | platform::pure::compiler::pdb::reader::decodeNode($n))),
+       pair(| $cat == 'enum',                     | platform::pure::compiler::pdb::schema::enumValues($s, $f.type)->at(platform::pure::compiler::pdb::reader::readIntField($node, $f.id, 1, false, 0))),
+       pair(| $f.type == 'string',                | platform::pure::compiler::pdb::reader::readStringField($node, $f.id)),
+       pair(| $f.type == 'bool',                  | platform::pure::compiler::pdb::reader::readBoolField($node, $f.id, false)),
+       pair(| $f.type == 'double',                | platform::pure::compiler::pdb::reader::readFloatField($node, $f.id))],
+      | platform::pure::compiler::pdb::reader::readIntField($node, $f.id, platform::pure::compiler::pdb::schema::scalarWidth($f.type), true, 0)
    );
 }
 
 // The root Def node of one `elements/<path>.<TypeName>` entry's bytes.
-function meta::pure::compiler::pdb::reader::elementNode(bytes:Binary[1], typeName:String[1]):meta::pure::compiler::pdb::reader::FbsNode[1]
+function platform::pure::compiler::pdb::reader::elementNode(bytes:Binary[1], typeName:String[1]):platform::pure::compiler::pdb::reader::FbsNode[1]
 {
-   meta::pure::compiler::pdb::reader::rootNode($bytes, $typeName + 'Def');
+   platform::pure::compiler::pdb::reader::rootNode($bytes, $typeName + 'Def');
 }
 
 // Unwrap a scalar `*ValueDef` (the FlatBuffer encoding of an AtomicValue's raw
 // payload) back to the bare value; `val` is field id 0 in all five.
-function meta::pure::compiler::pdb::reader::unwrapValueDef(node:meta::pure::compiler::pdb::reader::FbsNode[1]):Any[1]
+function platform::pure::compiler::pdb::reader::unwrapValueDef(node:platform::pure::compiler::pdb::reader::FbsNode[1]):Any[1]
 {
-   if([pair(| $node.type == 'IntegerValueDef', | meta::pure::compiler::pdb::reader::readIntField($node, 0, 8, true, 0)),
-       pair(| $node.type == 'FloatValueDef',   | meta::pure::compiler::pdb::reader::readFloatField($node, 0)),
-       pair(| $node.type == 'BooleanValueDef', | meta::pure::compiler::pdb::reader::readBoolField($node, 0, false)),
+   if([pair(| $node.type == 'IntegerValueDef', | platform::pure::compiler::pdb::reader::readIntField($node, 0, 8, true, 0)),
+       pair(| $node.type == 'FloatValueDef',   | platform::pure::compiler::pdb::reader::readFloatField($node, 0)),
+       pair(| $node.type == 'BooleanValueDef', | platform::pure::compiler::pdb::reader::readBoolField($node, 0, false)),
        pair(| ($node.type == 'StringValueDef') || ($node.type == 'DecimalValueDef'),
-            | let s = meta::pure::compiler::pdb::reader::readStringField($node, 0);
+            | let s = platform::pure::compiler::pdb::reader::readStringField($node, 0);
               if($s->isEmpty(), | '', | $s->toOne());)],
       | fail('not a ValueDef: ' + $node.type); 0;
    );

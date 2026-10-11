@@ -13,43 +13,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::collection::*;
-import meta::pure::functions::date::*;
-import meta::pure::functions::lang::*;
-import meta::pure::functions::meta::*;
-import meta::pure::functions::string::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::test::pct::*;
-import meta::pure::ui::progress::*;
+import platform::pure::functions::collection::*;
+import platform::pure::functions::date::*;
+import platform::pure::functions::lang::*;
+import platform::pure::functions::meta::*;
+import platform::pure::functions::string::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::test::pct::*;
+import platform::pure::ui::progress::*;
 
 // ---------------------------------------------------------------------------
 // <<PCT.test>> runner — Platform Conformance Tests, parametrized by an
 // adapter function. Uses the in-memory adapter already defined in the stdlib
-// at meta::pure::test::pct::testAdapterForInMemoryExecution: it simply
+// at platform::pure::test::pct::testAdapterForInMemoryExecution: it simply
 // evaluates the passed-in closure in the current runtime.
 // ---------------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::test::hasPctTestStereotype(el:PackageableElement[1]):Boolean[1]
+function <<test.TestDependency>> platform::pure::test::hasPctTestStereotype(el:PackageableElement[1]):Boolean[1]
 {
     $el.stereotypes
         ->exists(s | $s.value == 'test' && $s.profile.name == 'PCT');
 }
 
-function <<test.TestDependency>> meta::pure::test::collectPCTTests(pkg:Package[1]):UserDefinedFunction<Any>[*]
+function <<test.TestDependency>> platform::pure::test::collectPCTTests(pkg:Package[1]):UserDefinedFunction<Any>[*]
 {
-    // See {@link meta::pure::test::resolveChild} — derefs in-memory pointer
+    // See {@link platform::pure::test::resolveChild} — derefs in-memory pointer
     // children to canonical elements; non-pointer children pass through.
-    let resolvedChildren = $pkg.children->map(c | meta::pure::test::resolveChild($c));
+    let resolvedChildren = $pkg.children->map(c | platform::pure::test::resolveChild($c));
     let directTests = $resolvedChildren
         ->filter(e | $e->instanceOf(UserDefinedFunction)
-                     && meta::pure::test::hasPctTestStereotype($e))
+                     && platform::pure::test::hasPctTestStereotype($e))
         ->cast(@UserDefinedFunction<Any>);
 
     let subPackages = $resolvedChildren
         ->filter(e | $e->instanceOf(Package))
         ->cast(@Package);
-    let subTests = $subPackages->map(p | meta::pure::test::collectPCTTests($p));
+    let subTests = $subPackages->map(p | platform::pure::test::collectPCTTests($p));
 
     concatenate($directTests, $subTests);
 }
@@ -57,11 +57,11 @@ function <<test.TestDependency>> meta::pure::test::collectPCTTests(pkg:Package[1
 // Single-arg overload: runs every PCT test under the given package through
 // the stdlib in-memory adapter (`$f->eval()` — interpret directly on the
 // current runtime). Back-compat shim around the 2-arg form below.
-function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::test::runPCTTests(rootPackagePath:String[1]):String[1]
 {
-    meta::pure::test::runPCTTests(
+    platform::pure::test::runPCTTests(
         $rootPackagePath,
-        meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_
+        platform::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_
     );
 }
 
@@ -70,31 +70,31 @@ function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:S
 // returns the result. Each backend (Truffle in-memory, java translator,
 // future sql/javascript translators) provides its own adapter; the runner
 // itself only knows how to hand the adapter to each PCT closure.
-function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1], adapter:Function<Any>[1]):String[1]
+function <<test.TestDependency>> platform::pure::test::runPCTTests(rootPackagePath:String[1], adapter:Function<Any>[1]):String[1]
 {
-    meta::pure::test::runPCTTestsWithReport($rootPackagePath, $adapter, []);
+    platform::pure::test::runPCTTestsWithReport($rootPackagePath, $adapter, []);
 }
 
 // Same runs, and write a JSON report (see testReport.pure) to $reportPath — before the
 // final assert, so failing runs are reported too.
-function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1], reportPath:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::test::runPCTTests(rootPackagePath:String[1], reportPath:String[1]):String[1]
 {
-    meta::pure::test::runPCTTestsWithReport(
+    platform::pure::test::runPCTTestsWithReport(
         $rootPackagePath,
-        meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_,
+        platform::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_,
         $reportPath
     );
 }
 
-function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1], adapter:Function<Any>[1], reportPath:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::test::runPCTTests(rootPackagePath:String[1], adapter:Function<Any>[1], reportPath:String[1]):String[1]
 {
-    meta::pure::test::runPCTTestsWithReport($rootPackagePath, $adapter, $reportPath);
+    platform::pure::test::runPCTTestsWithReport($rootPackagePath, $adapter, $reportPath);
 }
 
-function <<test.TestDependency>> meta::pure::test::runPCTTestsWithReport(rootPackagePath:String[1], adapter:Function<Any>[1], reportPath:String[0..1]):String[1]
+function <<test.TestDependency>> platform::pure::test::runPCTTestsWithReport(rootPackagePath:String[1], adapter:Function<Any>[1], reportPath:String[0..1]):String[1]
 {
     let root = pathToElement($rootPackagePath)->cast(@Package);
-    let tests = meta::pure::test::collectPCTTests($root);
+    let tests = platform::pure::test::collectPCTTests($root);
     let total = $tests->size();
     // Fail loudly on 0: same rationale as runTests above — 0 PCT tests under
     // a real path almost always means the test PDB isn't loaded or the
@@ -117,18 +117,18 @@ function <<test.TestDependency>> meta::pure::test::runPCTTestsWithReport(rootPac
         let name = $fn->elementToPath();
         tickProgress($i + 1, $total, $name);
         let testStart = currentTimeMillis();
-        let result = tryEval(| withSilencedPrint(| meta::pure::functions::lang::evaluate($fn, meta::pure::functions::collection::list($adapter))));
-        ^meta::pure::test::TestResult(name = $name, error = $result.failure, durationMs = currentTimeMillis() - $testStart);
+        let result = tryEval(| withSilencedPrint(| platform::pure::functions::lang::evaluate($fn, platform::pure::functions::collection::list($adapter))));
+        ^platform::pure::test::TestResult(name = $name, error = $result.failure, durationMs = currentTimeMillis() - $testStart);
     );
 
     let elapsedMs = currentTimeMillis() - $start;
     finishProgress();
 
-    let failures = $results->filter(r:meta::pure::test::TestResult[1] | $r.error->isNotEmpty());
+    let failures = $results->filter(r:platform::pure::test::TestResult[1] | $r.error->isNotEmpty());
     let failed = $failures->size();
     let passed = $total - $failed;
 
-    $failures->map(r:meta::pure::test::TestResult[1] |
+    $failures->map(r:platform::pure::test::TestResult[1] |
         let err = $r.error->toOne();
         println('  FAIL: ' + $r.name);
         println('    ' + $err.message);
@@ -141,7 +141,7 @@ function <<test.TestDependency>> meta::pure::test::runPCTTestsWithReport(rootPac
     // Throw on any failure so the CLI's exit code reflects test status —
     // returning the summary string lets the bootstrap CLI swallow failures
     // (it just prints the result), so callers never see a non-zero exit.
-    $reportPath->map(path | meta::pure::test::report::writeTestResults($path, 'pct', $elapsedMs, $results));
+    $reportPath->map(path | platform::pure::test::report::writeTestResults($path, 'pct', $elapsedMs, $results));
     assert($failed == 0, $summary);
     $summary;
 }

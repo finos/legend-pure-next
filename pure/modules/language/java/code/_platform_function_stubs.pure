@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,24 +19,24 @@
 // library (or are inlined into call sites), delete this file.
 // ----------------------------------------------------------------------------
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::collection::*;
-import meta::pure::functions::lang::*;
-import meta::pure::functions::string::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::valuespecification::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::collection::*;
+import platform::pure::functions::lang::*;
+import platform::pure::functions::string::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::valuespecification::*;
 
-Profile meta::pure::profiles::access
+Profile platform::pure::profiles::access
 {
    stereotypes: [public, protected, private, externalizable];
 }
 
 // sum — Integer sum.
-function meta::pure::functions::math::sum(values:Integer[*]): Integer[1]
+function platform::pure::functions::math::sum(values:Integer[*]): Integer[1]
 {
     $values->fold({v:Integer[1], acc:Integer[1] | $acc + $v}, 0);
 }
@@ -46,7 +47,7 @@ function meta::pure::functions::math::sum(values:Integer[*]): Integer[1]
 // ----------------------------------------------------------------------------
 
 // min — pairwise integer minimum.
-function meta::pure::functions::math::min(a:Integer[1], b:Integer[1]): Integer[1]
+function platform::pure::functions::math::min(a:Integer[1], b:Integer[1]): Integer[1]
 {
     if($a < $b, | $a, | $b);
 }

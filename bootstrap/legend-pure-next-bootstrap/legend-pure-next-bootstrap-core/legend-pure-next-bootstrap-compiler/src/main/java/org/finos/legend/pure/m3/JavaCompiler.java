@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,9 +15,9 @@
 
 package org.finos.legend.pure.m3;
 
-import meta.pure.metamodel.Package;
-import meta.pure.metamodel.PackageImpl;
-import meta.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.Package;
+import platform.pure.metamodel.PackageImpl;
+import platform.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
@@ -227,12 +228,12 @@ public class JavaCompiler
     private void setPackageClassifierGenericType()
     {
         // Look up the Package type and a MetadataAccess from any module
-        meta.pure.metamodel.type.Type packageType = null;
+        platform.pure.metamodel.type.Type packageType = null;
         MetadataAccess model = null;
         for (Module m : registry.modules())
         {
-            PackageableElement pe = m.getElement("meta::pure::metamodel::Package");
-            if (pe instanceof meta.pure.metamodel.type.Type t)
+            PackageableElement pe = m.getElement("platform::pure::metamodel::Package");
+            if (pe instanceof platform.pure.metamodel.type.Type t)
             {
                 packageType = t;
                 model = m;
@@ -245,15 +246,15 @@ public class JavaCompiler
         }
     }
 
-    private static void setClassifierOnPackage(Package pkg, meta.pure.metamodel.type.Type packageType, MetadataAccess model)
+    private static void setClassifierOnPackage(Package pkg, platform.pure.metamodel.type.Type packageType, MetadataAccess model)
     {
         if (pkg instanceof PackageImpl pi && pi._classifierGenericType() == null)
         {
             // Anchor at canonical GenericType_<fullPath> (UDPGT) so the chain
             // matches Pure's `^Package(...)` (platform fix in MetaNatives.new
             // substitutes canonical). Full path encoded with `::` -> `_`.
-            Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_Package");
-            if (canonical instanceof meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT)
+            Object canonical = model.getElement("platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_Package");
+            if (canonical instanceof platform.pure.metamodel.type.generics.GenericTypeValue canonicalGT)
             {
                 pi._classifierGenericType(canonicalGT);
             }

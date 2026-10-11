@@ -1,8 +1,23 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.helper;
 
-import meta.pure.metamodel.type.Class;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.type.Class;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.function.property.Property;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
@@ -28,7 +43,7 @@ public class _ClassTest
             "\n" +
             "Class test::Target\n" +
             "{\n" +
-            "   prop2 : meta::pure::metamodel::relation::Column<test::Wrapper<String>, Integer|1..*>[1];\n" +
+            "   prop2 : platform::pure::metamodel::relation::Column<test::Wrapper<String>, Integer|1..*>[1];\n" +
             "}\n";
 
         JavaCompiler model = JavaCompiler.withModules(
@@ -40,7 +55,7 @@ public class _ClassTest
         CompilationResult result = model.compile();
         assertTrue(result.errors().isEmpty(), "Compilation errors should be empty: " + result.errors());
 
-        Class ownerClass = (Class) model.registry().module("m3").getElement("meta::pure::metamodel::relation::Column");
+        Class ownerClass = (Class) model.registry().module("m3").getElement("platform::pure::metamodel::relation::Column");
         Class targetClass = (Class) model.registry().module("test").getElement("test::Target");
         
         Property prop2 = targetClass._properties().getFirst();

@@ -48,7 +48,7 @@ const GEN = join(HERE, "../../../generated");              // -> platforms/javas
 // and, transitively, core-tests: 5.35 MB of PCT corpus for five lines of package walking. The entry
 // point now lives in the lean pdb where it belongs, so neither is needed.
 // Generated JS loaded into the shared global scope: the core library the
-// emitted code calls into, the meta::pure::test helpers (package walking,
+// emitted code calls into, the platform::pure::test helpers (package walking,
 // PCT discovery, the in-memory adapter), and the translator stack.
 const GEN_MODULES = [
     "pure/compiler/metamodel.js", "pure/grammar/protocol.js", "pure/runtime/functions.js", "ui.js",

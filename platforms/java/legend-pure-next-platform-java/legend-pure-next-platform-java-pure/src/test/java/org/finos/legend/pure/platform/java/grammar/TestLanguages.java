@@ -58,7 +58,7 @@ class TestLanguages
         // `bundled` is why its section parser is never guarded into silence: ###Pure is not optional.
         assertTrue(pure.bundled(), "the Pure language is bundled");
         assertNull(pure.module(), "it has no module to be guarded on");
-        assertEquals("meta::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_", pure.sectionParsers());
+        assertEquals("platform::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_", pure.sectionParsers());
         assertNull(pure.compilerExtension(), "the built-in passes compile ###Pure");
         assertNotNull(pure.grammar(), "M3 comes from the manifest, not from a literal in the host");
         assertEquals("M3Parser", pure.grammar().grammarName());

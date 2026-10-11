@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,27 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 native function
     <<PCT.function>>
     {
         doc.doc='Return the tail of the collection, which is everything but the first element'
     }
-    meta::pure::functions::collection::tail<T>(set:T[*]):T[*];
+    platform::pure::functions::collection::tail<T>(set:T[*]):T[*];
 
 
-function <<PCT.test>> meta::pure::functions::collection::tests::tail::testTail<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::tail::testTail<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(['b', 'c'], $f->eval(|['a', 'b', 'c']->tail()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::tail::testTailOneElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::tail::testTailOneElement<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([], $f->eval(|['a']->tail()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::tail::testTailOnEmptySet<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::tail::testTailOnEmptySet<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([], $f->eval(|[]->tail()));
 }

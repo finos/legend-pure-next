@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,9 +15,9 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.function.NativeFunction;
-import meta.pure.metamodel.function.NativeFunctionImpl;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.function.NativeFunction;
+import platform.pure.metamodel.function.NativeFunctionImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
@@ -34,14 +35,14 @@ public final class NativeFunctionHandler
     {
     }
 
-    public static NativeFunction firstPass(meta.pure.protocol.grammar.function.NativeFunction grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
+    public static NativeFunction firstPass(platform.pure.protocol.grammar.function.NativeFunction grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         return new NativeFunctionImpl()
                 ._name(grammar._name())
                 ._functionName(grammar._functionName());
     }
 
-    public static NativeFunction secondPass(NativeFunctionImpl result, meta.pure.protocol.grammar.function.NativeFunction grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static NativeFunction secondPass(NativeFunctionImpl result, platform.pure.protocol.grammar.function.NativeFunction grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         result = (NativeFunctionImpl) PackageableFunctionCompiler.compileShared(result, grammar, imports, model, context);
 

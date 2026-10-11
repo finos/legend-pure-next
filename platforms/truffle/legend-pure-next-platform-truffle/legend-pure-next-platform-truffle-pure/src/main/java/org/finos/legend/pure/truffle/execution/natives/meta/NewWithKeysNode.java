@@ -232,7 +232,7 @@ public final class NewWithKeysNode extends PureNode
             {
                 Object firstArg = typeArgs.getBoxed(0);
                 if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(firstArg,
-                        "meta::pure::metamodel::type::generics::GenericTypeValue", eval.resolver()))
+                        "platform::pure::metamodel::type::generics::GenericTypeValue", eval.resolver()))
                 {
                     Object resolved = preferCanonicalAnchor(firstArg, eval.resolver());
                     org.finos.legend.pure.truffle.compiler.helper._Any.write(instance, "classifierGenericType", resolved);
@@ -313,7 +313,7 @@ public final class NewWithKeysNode extends PureNode
         {
             Object item = org.finos.legend.pure.truffle.execution.natives.collection.CollectionHelper.at(keys, i);
             if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(item,
-                    "meta::pure::functions::lang::KeyExpression"))
+                    "platform::pure::functions::lang::KeyExpression"))
             {
                 throw new RuntimeException(
                         "new(...) expected KeyExpression in keys list at index " + i
@@ -434,7 +434,7 @@ public final class NewWithKeysNode extends PureNode
         throw new RuntimeException("Cannot change classifierGenericType.type from '" + expectedName + "' to '" + proposedName
                 + "'. The classifier's raw type is system-managed (derived from the instance's metaclass)"
                 + " — only typeArguments, multiplicityArguments and typeVariableValues are user-customizable."
-                + " Use meta::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
+                + " Use platform::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
     }
 
     private static boolean samePackageableElement(Object a, Object b, MetadataAccess resolver)
@@ -536,7 +536,7 @@ public final class NewWithKeysNode extends PureNode
         // module declaring its own `Package` class) don't pick up the wrong
         // anchor and end up classified as the platform type. The pre-built
         // anchors in core.pdb live at
-        //   meta::pure::metamodel::type::generics::optimization::GenericType_<path>
+        //   platform::pure::metamodel::type::generics::optimization::GenericType_<path>
         // with `::` in `<path>` replaced by `_`. Only types that have such
         // an anchor (most Pure-platform classes; none from user modules) ever
         // resolve to a non-null canonical here.
@@ -546,7 +546,7 @@ public final class NewWithKeysNode extends PureNode
             CANONICAL_ANCHOR_CACHE.put(rawType, ABSENT_GTV);
             return gtv;
         }
-        String canonicalKey = "meta::pure::metamodel::type::generics::optimization::GenericType_"
+        String canonicalKey = "platform::pure::metamodel::type::generics::optimization::GenericType_"
                 + typePath.replace("::", "_");
         Object canonical = resolver.getElement(canonicalKey);
         // Treat any non-null resolved element as the canonical anchor — the

@@ -55,8 +55,8 @@ import org.finos.legend.pure.truffle.compiler.module.MetadataAccess;
  */
 public final class AtomicValueEnumReconstructor
 {
-    private static final String ENUMERATION_PURE_PATH = "meta::pure::metamodel::type::Enumeration";
-    private static final String ENUM_PURE_PATH = "meta::pure::metamodel::type::Enum";
+    private static final String ENUMERATION_PURE_PATH = "platform::pure::metamodel::type::Enumeration";
+    private static final String ENUM_PURE_PATH = "platform::pure::metamodel::type::Enum";
 
     private AtomicValueEnumReconstructor() {}
 

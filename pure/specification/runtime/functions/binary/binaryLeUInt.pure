@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::binary::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::binary::*;
 
 // Unsigned little-endian integer of `width` bytes at `pos`.
 //
@@ -22,16 +22,16 @@ import meta::pure::functions::binary::*;
 // `range(0, $width)->reverse()->fold(...)`, which allocates a list per byte
 // read — on a backend that interprets the reader rather than compiling it
 // ahead of time, that dominated decoding.
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::binaryLeUInt(b:Binary[1], pos:Integer[1], width:Integer[1]):Integer[1];
+native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::binary::binaryLeUInt(b:Binary[1], pos:Integer[1], width:Integer[1]):Integer[1];
 
-function <<PCT.test>> meta::pure::functions::binary::tests::binaryLeUInt::testWidths<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::binary::tests::binaryLeUInt::testWidths<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(513, $f->eval(|0x0102->binaryLeUInt(0, 2)));
     assertEquals(4294967232, $f->eval(|0xC0FFFFFF->binaryLeUInt(0, 4)));
     assertEquals(255, $f->eval(|0xFF->binaryLeUInt(0, 1)));
 }
 
-function <<PCT.test>> meta::pure::functions::binary::tests::binaryLeUInt::testOffset<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::binary::tests::binaryLeUInt::testOffset<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(3, $f->eval(|0x000300000000000000->binaryLeUInt(1, 1)));
     assertEquals(0, $f->eval(|0x1F8B08->binaryLeUInt(0, 0)));

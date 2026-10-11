@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Shared helpers used by all mapping_<packageableElement>.pure files.
 //
 // `buildSourceInfo` mirrors the offsets the .dsl's `buildSourceInfo($ctx)` computes:
@@ -8,15 +23,15 @@
 // file-relative instead of section-relative. Both pipelines must agree on
 // these or the validator will diff every test case.
 
-import meta::pure::parser::mappings::*;
-import meta::pure::functions::meta::antlr::*;
-import meta::pure::parser::mappings::interpreter::*;
-import meta::pure::protocol::grammar::*;
-import meta::pure::protocol::grammar::extension::*;
+import platform::pure::parser::mappings::*;
+import platform::pure::functions::meta::antlr::*;
+import platform::pure::parser::mappings::interpreter::*;
+import platform::pure::protocol::grammar::*;
+import platform::pure::protocol::grammar::extension::*;
 
-function meta::pure::parser::mappings::buildSourceInfo(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::SourceInformation[1]
+function platform::pure::parser::mappings::buildSourceInfo(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::SourceInformation[1]
 {
-   ^meta::pure::protocol::grammar::SourceInformation(
+   ^platform::pure::protocol::grammar::SourceInformation(
       startLine   = $ctx->getStartLine() + $lineOffset,
       startColumn = $ctx->getStartColumn(),
       endLine     = $ctx->getStopLine() + $lineOffset,
@@ -25,14 +40,14 @@ function meta::pure::parser::mappings::buildSourceInfo(ctx: AntlrContext[1], lin
 }
 
 // `foo::bar::Baz` → simple name `Baz`. Bare `Baz` → `Baz`.
-function meta::pure::parser::mappings::simpleNameOf(qualifiedName: String[1]): String[1]
+function platform::pure::parser::mappings::simpleNameOf(qualifiedName: String[1]): String[1]
 {
    $qualifiedName->split('::')->last()->toOne()
 }
 
 // `foo::bar::Baz` → `^Package_Pointer(value='foo::bar')`; bare `Baz` → empty.
 // Mirrors `ifPresent(hasPackagePrefix(qn), newImpl(Package_Pointer, value=packagePrefix(qn)))`.
-function meta::pure::parser::mappings::packagePtrOf(qualifiedName: String[1]): Package_Pointer[0..1]
+function platform::pure::parser::mappings::packagePtrOf(qualifiedName: String[1]): Package_Pointer[0..1]
 {
    let parts = $qualifiedName->split('::');
    if($parts->size() > 1,
@@ -41,7 +56,7 @@ function meta::pure::parser::mappings::packagePtrOf(qualifiedName: String[1]): P
 }
 
 // Mirrors the `.dsl`'s stripQuotes: removes the leading + trailing `'`.
-function meta::pure::parser::mappings::stripQuotes(text: String[1]): String[1]
+function platform::pure::parser::mappings::stripQuotes(text: String[1]): String[1]
 {
    $text->substring(1, $text->length() - 1)
 }
@@ -57,29 +72,29 @@ function meta::pure::parser::mappings::stripQuotes(text: String[1]): String[1]
 //   taggedValue:  qualifiedName DOT identifier EQUAL STRING (PLUS STRING)*
 // -----------------------------------------------------------------------
 
-function meta::pure::parser::mappings::buildStereotypeApp(ctx: meta::pure::functions::meta::antlr::AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::extension::Stereotype_Pointer[1]
+function platform::pure::parser::mappings::buildStereotypeApp(ctx: platform::pure::functions::meta::antlr::AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::extension::Stereotype_Pointer[1]
 {
    let qn = $ctx->getChild('qualifiedName')->toOne();
    let id = $ctx->getChild('identifier')->toOne();
-   ^meta::pure::protocol::grammar::extension::Stereotype_Pointer(
+   ^platform::pure::protocol::grammar::extension::Stereotype_Pointer(
       p_sourceInformation = buildSourceInfo($qn, $lineOffset),
       value              = $qn->getText(),
-      extraPointerValues = [^meta::pure::protocol::grammar::PointerValue(
+      extraPointerValues = [^platform::pure::protocol::grammar::PointerValue(
          p_sourceInformation = buildSourceInfo($id, $lineOffset),
          value             = $id->getText()
       )]
    );
 }
 
-function meta::pure::parser::mappings::buildTaggedValueApp(ctx: meta::pure::functions::meta::antlr::AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::extension::TaggedValue[1]
+function platform::pure::parser::mappings::buildTaggedValueApp(ctx: platform::pure::functions::meta::antlr::AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::extension::TaggedValue[1]
 {
    let qn = $ctx->getChild('qualifiedName')->toOne();
    let id = $ctx->getChild('identifier')->toOne();
-   ^meta::pure::protocol::grammar::extension::TaggedValue(
-      tag = ^meta::pure::protocol::grammar::extension::Tag_Pointer(
+   ^platform::pure::protocol::grammar::extension::TaggedValue(
+      tag = ^platform::pure::protocol::grammar::extension::Tag_Pointer(
          p_sourceInformation = buildSourceInfo($qn, $lineOffset),
          value              = $qn->getText(),
-         extraPointerValues = [^meta::pure::protocol::grammar::PointerValue(
+         extraPointerValues = [^platform::pure::protocol::grammar::PointerValue(
             p_sourceInformation = buildSourceInfo($id, $lineOffset),
             value             = $id->getText()
          )]
@@ -90,13 +105,13 @@ function meta::pure::parser::mappings::buildTaggedValueApp(ctx: meta::pure::func
 
 // `getChild('stereotypes')` returns the optional `<<…>>` wrapper context, which
 // itself contains a list of `stereotype` ctxs. Helper collapses the lookup.
-function meta::pure::parser::mappings::collectStereotypes(ctx: meta::pure::functions::meta::antlr::AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::extension::Stereotype_Pointer[*]
+function platform::pure::parser::mappings::collectStereotypes(ctx: platform::pure::functions::meta::antlr::AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::extension::Stereotype_Pointer[*]
 {
    $ctx->getChild('stereotypes')
         ->map(s | $s->getChildren('stereotype')->map(c | buildStereotypeApp($c, $lineOffset)))
 }
 
-function meta::pure::parser::mappings::collectTaggedValues(ctx: meta::pure::functions::meta::antlr::AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::extension::TaggedValue[*]
+function platform::pure::parser::mappings::collectTaggedValues(ctx: platform::pure::functions::meta::antlr::AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::extension::TaggedValue[*]
 {
    $ctx->getChild('taggedValues')
         ->map(t | $t->getChildren('taggedValue')->map(c | buildTaggedValueApp($c, $lineOffset)))

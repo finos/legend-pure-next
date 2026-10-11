@@ -1,5 +1,5 @@
 {
   "name": "compiler",
-  "packagePattern": "(meta::pure::compiler)(::.*)?",
+  "packagePattern": "(platform::pure::compiler)(::.*)?",
   "dependencies": ["core"]
 }

@@ -1,10 +1,25 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.helper;
 
-import meta.pure.metamodel.function.FunctionDefinition;
-import meta.pure.metamodel.function.LambdaFunction;
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.function.FunctionDefinition;
+import platform.pure.metamodel.function.LambdaFunction;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
@@ -47,7 +62,7 @@ public class _LambdaTest
     private LambdaFunction getLambda()
     {
         FunctionDefinition fd = (FunctionDefinition) model.registry().module("test").getElement("test::testFn__Any_MANY_");
-        meta.pure.metamodel.valuespecification.AtomicValue letExpr = (meta.pure.metamodel.valuespecification.AtomicValue) fd._expressionSequence().getFirst();
+        platform.pure.metamodel.valuespecification.AtomicValue letExpr = (platform.pure.metamodel.valuespecification.AtomicValue) fd._expressionSequence().getFirst();
         return (LambdaFunction) letExpr._value();
     }
 
@@ -60,7 +75,7 @@ public class _LambdaTest
         assertNotNull(ft);
         assertEquals(1, ft._parameters().size());
         assertEquals("a", ft._parameters().getFirst()._name());
-        assertEquals("String", ((meta.pure.metamodel.PackageableElement) _GenericType.type(ft._parameters().getFirst()._genericType()))._name());
+        assertEquals("String", ((platform.pure.metamodel.PackageableElement) _GenericType.type(ft._parameters().getFirst()._genericType()))._name());
         
         ValueSpecification lastExpr = lambda._expressionSequence().getLast();
         assertEquals(lastExpr._genericType(), ft._returnType());
@@ -73,7 +88,7 @@ public class _LambdaTest
         LambdaFunction lambda = getLambda();
         GenericType gto = _Lambda.getLambdaClassifierGenericType(new ScopedMetadataAccess(model.registry().module("test"), model.registry()), lambda);
         
-        assertEquals("LambdaFunction", ((meta.pure.metamodel.PackageableElement) _GenericType.type(gto))._name());
+        assertEquals("LambdaFunction", ((platform.pure.metamodel.PackageableElement) _GenericType.type(gto))._name());
         assertEquals(1, _GenericType.typeArguments(gto).size());
         assertTrue(_GenericType.type(_GenericType.typeArguments(gto).getFirst()) instanceof FunctionType);
     }

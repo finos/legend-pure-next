@@ -14,22 +14,22 @@
 
 package org.finos.legend.pure.truffle.compiler.module.pdbModule;
 
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.decodeNode_FbsNode_1__Any_1_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readBoolField_FbsNode_1__Integer_1__Boolean_1__Boolean_1_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readFloatField_FbsNode_1__Integer_1__Float_1_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readIntField_FbsNode_1__Integer_1__Integer_1__Boolean_1__Integer_1__Integer_1_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readStringField_FbsNode_1__Integer_1__String_$0_1$_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readStringVector_FbsNode_1__Integer_1__String_MANY_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readTableField_FbsNode_1__Integer_1__String_1__FbsNode_$0_1$_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readTableVector_FbsNode_1__Integer_1__String_1__FbsNode_MANY_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readUnionField_FbsSchema_1__FbsNode_1__Integer_1__String_1__FbsNode_$0_1$_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readUnionVector_FbsSchema_1__FbsNode_1__Integer_1__String_1__FbsNode_MANY_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.scalarWidth_String_1__Integer_1_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.table_FbsSchema_1__String_1__FbsTable_$0_1$_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.FbsNode;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.ReadPointerRef;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.unwrapValueDef_FbsNode_1__Any_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.decodeNode_FbsNode_1__Any_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readBoolField_FbsNode_1__Integer_1__Boolean_1__Boolean_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readFloatField_FbsNode_1__Integer_1__Float_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readIntField_FbsNode_1__Integer_1__Integer_1__Boolean_1__Integer_1__Integer_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readStringField_FbsNode_1__Integer_1__String_$0_1$_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readStringVector_FbsNode_1__Integer_1__String_MANY_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readTableField_FbsNode_1__Integer_1__String_1__FbsNode_$0_1$_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readTableVector_FbsNode_1__Integer_1__String_1__FbsNode_MANY_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readUnionField_FbsSchema_1__FbsNode_1__Integer_1__String_1__FbsNode_$0_1$_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readUnionVector_FbsSchema_1__FbsNode_1__Integer_1__String_1__FbsNode_MANY_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.scalarWidth_String_1__Integer_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.table_FbsSchema_1__String_1__FbsTable_$0_1$_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.FbsNode;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.ReadPointerRef;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.unwrapValueDef_FbsNode_1__Any_1_;
 import org.finos.legend.pure.truffle.execution.PureDynamicObject;
 import org.finos.legend.pure.truffle.compiler.module.PureClassRegistry;
 import org.finos.legend.pure.truffle.compiler.module.EnumValueSingletons;
@@ -91,7 +91,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class GenericFbDecoder
 {
     private static final String SCHEMA_RESOURCE = "generated-specification/m3.fbs";
-    private static final String ENUMERATION_PATH = "meta::pure::metamodel::type::Enumeration";
+    private static final String ENUMERATION_PATH = "platform::pure::metamodel::type::Enumeration";
     private static final String ATOMIC_VALUE_CONTENT_UNION = "AtomicValueContentUnion";
 
     private GenericFbDecoder() {}
@@ -185,7 +185,7 @@ public final class GenericFbDecoder
         // the resolver happens to hold — a bare user archive contains no
         // metamodel elements to scan. Anything NOT seeded (schema growth)
         // still resolves via the elementPaths suffix scan below.
-        String p = "meta::pure::metamodel::";
+        String p = "platform::pure::metamodel::";
         String vs = p + "valuespecification::";
         String gt = p + "type::generics::";
         String mu = p + "multiplicity::";
@@ -292,11 +292,11 @@ public final class GenericFbDecoder
     /** Metamodel classes win over same-named user classes deterministically. */
     private static int rank(String path)
     {
-        if (path.startsWith("meta::pure::metamodel::"))
+        if (path.startsWith("platform::pure::metamodel::"))
         {
             return 0;
         }
-        return path.startsWith("meta::pure::") ? 1 : 2;
+        return path.startsWith("platform::pure::") ? 1 : 2;
     }
 
     // =========================================================================
@@ -318,11 +318,11 @@ public final class GenericFbDecoder
 
     /**
      * The schema the TRANSLATED reader reads against — parsed from the same
-     * m3.fbs, by `meta::pure::compiler::pdb::schema::parseFbs`.
+     * m3.fbs, by `platform::pure::compiler::pdb::schema::parseFbs`.
      */
-    private static volatile org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsSchema pureSchema;
+    private static volatile org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.FbsSchema pureSchema;
 
-    static org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsSchema pureSchema()
+    static org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.FbsSchema pureSchema()
     {
         var s = pureSchema;
         if (s == null)
@@ -338,7 +338,7 @@ public final class GenericFbDecoder
                         {
                             throw new IllegalStateException("Schema resource not on classpath: " + SCHEMA_RESOURCE);
                         }
-                        pureSchema = s = org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.parseFbs_String_1__FbsSchema_1_
+                        pureSchema = s = org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.parseFbs_String_1__FbsSchema_1_
                                 .execute(new String(in.readAllBytes(), StandardCharsets.UTF_8));
                     }
                     catch (java.io.IOException e)
@@ -467,7 +467,7 @@ public final class GenericFbDecoder
 
         /**
          * Read this field off the node, through the TRANSLATED reader
-         * ({@code meta::pure::compiler::pdb::reader::readField}).
+         * ({@code platform::pure::compiler::pdb::reader::readField}).
          *
          * <p>readField is schema-driven and already resolves unions and
          * categorises by fbs type, so the shapes below only marshal its result
@@ -529,17 +529,17 @@ public final class GenericFbDecoder
 
 
         /** The Pure schema's field metadata, for its fbs id and exact type. */
-        private static org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsField pureFieldOf(
+        private static org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.FbsField pureFieldOf(
                 String tableName, String fieldName)
         {
             Object t = one(table_FbsSchema_1__String_1__FbsTable_$0_1$_.execute(pureSchema(), tableName));
-            if (!(t instanceof org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsTable tbl))
+            if (!(t instanceof org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.FbsTable tbl))
             {
                 return null;
             }
             for (Object f : list(tbl.fields()))
             {
-                var pf = (org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsField) f;
+                var pf = (org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.FbsField) f;
                 if (fieldName.equals(pf.name()))
                 {
                     return pf;

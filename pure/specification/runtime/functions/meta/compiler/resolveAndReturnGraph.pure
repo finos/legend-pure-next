@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 // Deep-copies every PackageableElement in {@code elements} and resolves every
 // TempCompilerPointer it encounters to a live element — by-path lookup in
@@ -25,23 +25,23 @@ import meta::pure::test::pct::*;
 // equivalent invoked at InMemoryModule construction). This function
 // gives compile-pure a way to materialize a resolved graph without mutating
 // the compilation result.
-native function meta::pure::functions::meta::resolveAndReturnGraph(elements:Map<String, meta::pure::metamodel::PackageableElement>[1]):meta::pure::metamodel::PackageableElement[*];
+native function platform::pure::functions::meta::resolveAndReturnGraph(elements:Map<String, platform::pure::metamodel::PackageableElement>[1]):platform::pure::metamodel::PackageableElement[*];
 
-function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::testResolveAndReturnGraphEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let result = $f->eval(|meta::pure::functions::meta::resolveAndReturnGraph(newMap([]->cast(@Pair<String, meta::pure::metamodel::PackageableElement>))));
+    let result = $f->eval(|platform::pure::functions::meta::resolveAndReturnGraph(newMap([]->cast(@Pair<String, platform::pure::metamodel::PackageableElement>))));
     assertEquals(0, $result->size());
 }
 
-function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphPassthrough<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::testResolveAndReturnGraphPassthrough<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // No pointers in the graph — resolveAndReturnGraph still produces a
     // fresh deep copy with the same shape. Use a live element (Class)
     // looked up via pathToElement so the input has no TempCompilerPointers.
     let result = $f->eval(|
-        let cls = pathToElement('meta::pure::metamodel::type::Class', '::')->cast(@meta::pure::metamodel::PackageableElement);
-        let map = newMap([pair('meta::pure::metamodel::type::Class', $cls)]);
-        meta::pure::functions::meta::resolveAndReturnGraph($map);
+        let cls = pathToElement('platform::pure::metamodel::type::Class', '::')->cast(@platform::pure::metamodel::PackageableElement);
+        let map = newMap([pair('platform::pure::metamodel::type::Class', $cls)]);
+        platform::pure::functions::meta::resolveAndReturnGraph($map);
     );
     assertEquals(1, $result->size());
     assertEquals('Class', $result->at(0).name);
@@ -51,19 +51,19 @@ function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphPass
 // TempCompilerPointer subtype) whose `.path` slot names a real PE, drop it
 // into the input map as the sole value, and verify resolveAndReturnGraph
 // replaces the pointer in the output list with the live target element
-// (looked up via the resolver since 'meta::pure::metamodel::type::primitives::String'
+// (looked up via the resolver since 'platform::pure::metamodel::type::primitives::String'
 // isn't itself a key in the map). PrimitiveTypePointer is non-parameterized,
 // which sidesteps a TS-translator bug in parameterized-class construction
 // (^ClassPointer<T>(...) emits a bogus classifierGenericType path) while
 // still exercising the same pointer-detection + resolution path.
-function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphRewritesPrimitiveTypePointer<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::testResolveAndReturnGraphRewritesPrimitiveTypePointer<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let result = $f->eval(|
-        let ptr = ^meta::pure::metamodel::pointer::PrimitiveTypePointer(
-            path = 'meta::pure::metamodel::type::primitives::String'
-        )->cast(@meta::pure::metamodel::PackageableElement);
+        let ptr = ^platform::pure::metamodel::pointer::PrimitiveTypePointer(
+            path = 'platform::pure::metamodel::type::primitives::String'
+        )->cast(@platform::pure::metamodel::PackageableElement);
         let map = newMap([pair('myPtr', $ptr)]);
-        meta::pure::functions::meta::resolveAndReturnGraph($map);
+        platform::pure::functions::meta::resolveAndReturnGraph($map);
     );
     assertEquals(1, $result->size());
     // Rewriting succeeded if the entry's `.name` is 'String' — the pointer
@@ -75,19 +75,19 @@ function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphRewr
 // enum-valued slots hold the same values, so they still carry their enumeration
 // type and compare equal to the literal. (A host that types enum singletons by
 // identity loses both if it copies the value instead.)
-function <<PCT.test>> meta::pure::functions::meta::testResolveAndReturnGraphPreservesEnumValues<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::testResolveAndReturnGraphPreservesEnumValues<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let aggregation = $f->eval(|
-        let property = ^meta::pure::metamodel::function::property::Property<Nil,Any|*>(
+        let property = ^platform::pure::metamodel::function::property::Property<Nil,Any|*>(
             name = 'p',
-            aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
-            genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = String),
-            multiplicity = meta::pure::metamodel::multiplicity::PureOne
+            aggregation = platform::pure::metamodel::function::property::AggregationKind.None,
+            genericType = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = String),
+            multiplicity = platform::pure::metamodel::multiplicity::PureOne
         );
-        let cls = ^meta::pure::metamodel::type::Class<Any>(name = 'B', properties = $property);
-        let resolved = meta::pure::functions::meta::resolveAndReturnGraph(newMap([pair('B', $cls->cast(@meta::pure::metamodel::PackageableElement))]));
-        $resolved->at(0)->cast(@meta::pure::metamodel::type::Class<Any>).properties->toOne().aggregation->toOne();
+        let cls = ^platform::pure::metamodel::type::Class<Any>(name = 'B', properties = $property);
+        let resolved = platform::pure::functions::meta::resolveAndReturnGraph(newMap([pair('B', $cls->cast(@platform::pure::metamodel::PackageableElement))]));
+        $resolved->at(0)->cast(@platform::pure::metamodel::type::Class<Any>).properties->toOne().aggregation->toOne();
     );
-    assertEquals(meta::pure::metamodel::function::property::AggregationKind, $aggregation->genericType().type);
-    assert($aggregation == meta::pure::metamodel::function::property::AggregationKind.None);
+    assertEquals(platform::pure::metamodel::function::property::AggregationKind, $aggregation->genericType().type);
+    assert($aggregation == platform::pure::metamodel::function::property::AggregationKind.None);
 }

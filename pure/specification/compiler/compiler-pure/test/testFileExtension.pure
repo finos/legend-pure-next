@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::protocol::*;
-import meta::pure::protocol::grammar::*;
+import platform::pure::protocol::*;
+import platform::pure::protocol::grammar::*;
 
 // Pure-side type for the ###File test section. Each ###File chunk in a
 // compiler-test source declares an additional in-memory file the test
@@ -21,20 +22,20 @@ import meta::pure::protocol::grammar::*;
 // reproduce cross-file ordering bugs in {@code compile(PureFile[*])}. The
 // first non-empty line of the section body is the file's sourceId; the
 // rest is raw ###Pure-grammar content compiled under that sourceId.
-Class meta::pure::compiler::test::TestFile extends meta::pure::protocol::grammar::PackageableElement
+Class platform::pure::compiler::test::TestFile extends platform::pure::protocol::grammar::PackageableElement
 {
     value : String[1];
 }
 
 // Section parser for ###File: wraps the raw section body in a TestFile PDO.
 // Consumed by the Pure-side section-dispatch table; see
-// meta::pure::compiler::test::testSectionParsers. The split-into-files
+// platform::pure::compiler::test::testSectionParsers. The split-into-files
 // machinery (manageFileSections) runs later, against the typed Section model.
-function meta::pure::compiler::test::buildTestFileSection(
+function platform::pure::compiler::test::buildTestFileSection(
    content: String[1], sourceId: String[1], lineOffset: Integer[1]
-): meta::pure::protocol::grammar::PackageableElement[*]
+): platform::pure::protocol::grammar::PackageableElement[*]
 {
-   ^meta::pure::compiler::test::TestFile(
+   ^platform::pure::compiler::test::TestFile(
       name    = 'TestFile',
       value   = $content,
       package = ^Package_Pointer(value = $sourceId)
@@ -57,7 +58,7 @@ function meta::pure::compiler::test::buildTestFileSection(
 // Assertion-only sections (###CompiledGraph, ###CompilerStats, ###Error)
 // of the test source are NOT included in the output — the harness extracts
 // expected values from the original parsed source separately.
-function meta::pure::compiler::test::manageFileSections(parsedFile:meta::pure::protocol::PureFile[1]):meta::pure::protocol::PureFile[*]
+function platform::pure::compiler::test::manageFileSections(parsedFile:platform::pure::protocol::PureFile[1]):platform::pure::protocol::PureFile[*]
 {
     // Keep ALL ###Pure sections as the primary file's sections. The parser
     // prepends a synthetic `###Pure` header when the source doesn't start
@@ -66,29 +67,29 @@ function meta::pure::compiler::test::manageFileSections(parsedFile:meta::pure::p
     // real). Both need to flow through compile() so the real elements are
     // seen.
     let primarySections = $parsedFile.sections->filter(s | $s.parserName == 'Pure');
-    let primaryFile = ^meta::pure::protocol::PureFile(
+    let primaryFile = ^platform::pure::protocol::PureFile(
         sourceId = $parsedFile.sourceId,
         sections = $primarySections
     );
     let extraFiles = $parsedFile.sections
         ->filter(s | $s.parserName == 'File')
-        ->map(s | meta::pure::compiler::test::parseTestFileChunk($s));
+        ->map(s | platform::pure::compiler::test::parseTestFileChunk($s));
     $primaryFile->concatenate($extraFiles);
 }
 
 // Parses one ###File section's TestFile body into a standalone PureFile.
 // The first non-empty line is the synthetic sourceId; the rest is the
 // ###Pure-grammar body.
-function meta::pure::compiler::test::parseTestFileChunk(section:meta::pure::protocol::Section[1]):meta::pure::protocol::PureFile[1]
+function platform::pure::compiler::test::parseTestFileChunk(section:platform::pure::protocol::Section[1]):platform::pure::protocol::PureFile[1]
 {
     let testFile = $section.elements
-        ->filter(e | $e->instanceOf(meta::pure::compiler::test::TestFile))
+        ->filter(e | $e->instanceOf(platform::pure::compiler::test::TestFile))
         ->head()
         ->toOne()
-        ->cast(@meta::pure::compiler::test::TestFile);
+        ->cast(@platform::pure::compiler::test::TestFile);
     let raw = $testFile.value->trim();
     let nlIdx = $raw->indexOf('\n');
     let name = if($nlIdx < 0, | $raw, | $raw->substring(0, $nlIdx)->trim());
     let body = if($nlIdx < 0, | '', | $raw->substring($nlIdx + 1, $raw->length()));
-    meta::pure::functions::meta::parse($name, '###Pure\n' + $body);
+    platform::pure::functions::meta::parse($name, '###Pure\n' + $body);
 }

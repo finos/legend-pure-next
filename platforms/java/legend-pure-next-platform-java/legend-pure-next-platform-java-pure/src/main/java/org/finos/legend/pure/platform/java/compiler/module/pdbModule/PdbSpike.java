@@ -15,12 +15,12 @@
 
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.FbsNode;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.FbsNode;
 import org.finos.legend.pure.platform.java.compiler.module.pdbModule.archive.Zip;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.elementNode_Binary_1__String_1__FbsNode_1_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsSchema;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.parseFbs_String_1__FbsSchema_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.elementNode_Binary_1__String_1__FbsNode_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.FbsSchema;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.parseFbs_String_1__FbsSchema_1_;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * Spike host for the Java platform: reads one Class element out of a PDB with
  * the self-hosted Pure PDB reader translated to Java (generated/PdbReader.java,
- * package {@code meta::pure::compiler::pdb}). JDK only.
+ * package {@code platform::pure::compiler::pdb}). JDK only.
  *
  * <p>{@code java PdbSpike <pdb> <m3.fbs> <class path>} prints the class name
  * and its declared property names.</p>

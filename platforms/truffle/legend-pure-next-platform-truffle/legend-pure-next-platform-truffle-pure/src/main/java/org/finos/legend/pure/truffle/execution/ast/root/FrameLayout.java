@@ -22,7 +22,7 @@ import java.util.Map;
 
 /**
  * Static mapping of variable names to Truffle {@link FrameDescriptor} slots
- * for one Pure {@code meta::pure::metamodel::function::FunctionDefinition}.
+ * for one Pure {@code platform::pure::metamodel::function::FunctionDefinition}.
  *
  * <p>Built once per FD (by {@link org.finos.legend.pure.truffle.execution.FrameDescriptorBuilder}) and shared across
  * all invocations; the FrameDescriptor itself must be immutable after the

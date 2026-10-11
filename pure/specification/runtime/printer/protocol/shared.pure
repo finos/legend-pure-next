@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::printer::protocol::*;
-import meta::pure::protocol::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::printer::protocol::*;
+import platform::pure::protocol::*;
 // Wildcard import of protocol-grammar covers only the Pointer types (Package_Pointer,
 // Enum_Pointer, etc.) that have no M3 namesake. Deeper subpackages (`valuespecification`,
 // `type`, `multiplicity`, ...) collide with auto-imported M3 metamodel, so the
 // rest of this file uses FQN inline at every M3-conflicting reference.
-import meta::pure::protocol::grammar::*;
+import platform::pure::protocol::grammar::*;
 
 // Helpers shared across the protocol-side printers (class.pure, enum.pure,
 // association.pure, ...). Kept in one file because each helper is small and
@@ -27,7 +28,7 @@ import meta::pure::protocol::grammar::*;
 
 // Render a Package_Pointer as the textual prefix that precedes a class /
 // function name (e.g. `pkg::`). Empty package → empty prefix.
-function meta::pure::functions::printer::protocol::printPackagePointer(pkg: Package_Pointer[0..1]): String[1]
+function platform::pure::functions::printer::protocol::printPackagePointer(pkg: Package_Pointer[0..1]): String[1]
 {
     if ($pkg->isEmpty(), | '', | $pkg->toOne().value + '::');
 }
@@ -38,13 +39,13 @@ function meta::pure::functions::printer::protocol::printPackagePointer(pkg: Pack
 // (used when the whole generic-type is already a pointer to a PE). Type
 // arguments (`Class<T>`), multiplicity arguments, type-variable values, and
 // other GenericType variants are TODO and need additional arms.
-function meta::pure::functions::printer::protocol::printGenericType(g: meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1]): String[1]
+function platform::pure::functions::printer::protocol::printGenericType(g: platform::pure::protocol::grammar::type::generics::GenericType_Protocol[1]): String[1]
 {
     $g->match([
-        p:   meta::pure::protocol::grammar::type::generics::GenericType_Pointer[1] | $p.value,
-        gtv: meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] | printGenericTypeValueType($gtv),
-        u:   meta::pure::protocol::grammar::type::generics::UndefinedGenericType[1] | '',
-        gto: meta::pure::protocol::grammar::relation::GenericTypeOperation[1] | printGenericTypeOperation($gto)
+        p:   platform::pure::protocol::grammar::type::generics::GenericType_Pointer[1] | $p.value,
+        gtv: platform::pure::protocol::grammar::type::generics::GenericTypeValue[1] | printGenericTypeValueType($gtv),
+        u:   platform::pure::protocol::grammar::type::generics::UndefinedGenericType[1] | '',
+        gto: platform::pure::protocol::grammar::relation::GenericTypeOperation[1] | printGenericTypeOperation($gto)
     ]);
 }
 
@@ -52,27 +53,27 @@ function meta::pure::functions::printer::protocol::printGenericType(g: meta::pur
 // (`{A[m]->B[n]}`), or a RelationType (`(col:T[m], ...)`). All three appear in
 // the grammar corpus; without these arms, simple `cast` calls and any
 // `function` with a function-type parameter throw at print time.
-function meta::pure::functions::printer::protocol::printGenericTypeValueType(gtv: meta::pure::protocol::grammar::type::generics::GenericTypeValue[1]): String[1]
+function platform::pure::functions::printer::protocol::printGenericTypeValueType(gtv: platform::pure::protocol::grammar::type::generics::GenericTypeValue[1]): String[1]
 {
     let head = $gtv.type->toOne()->match([
-        p:  meta::pure::protocol::grammar::type::Type_Pointer[1] | $p.value,
-        ft: meta::pure::protocol::grammar::type::FunctionType[1] | printFunctionType($ft),
-        rt: meta::pure::protocol::grammar::relation::RelationType[1] | printRelationType($rt)
+        p:  platform::pure::protocol::grammar::type::Type_Pointer[1] | $p.value,
+        ft: platform::pure::protocol::grammar::type::FunctionType[1] | printFunctionType($ft),
+        rt: platform::pure::protocol::grammar::relation::RelationType[1] | printRelationType($rt)
     ]);
     $head + printTypeAndMulArgs($gtv.typeArguments, $gtv.multiplicityArguments) + printTypeVariableValues($gtv.typeVariableValues);
 }
 
 // Post-process a printed protocol string to drop auto-imported package
-// prefixes — `meta::pure::metamodel::type::primitives::Integer` becomes
-// `Integer`, `meta::pure::metamodel::relation::Relation` becomes `Relation`,
+// prefixes — `platform::pure::metamodel::type::primitives::Integer` becomes
+// `Integer`, `platform::pure::metamodel::relation::Relation` becomes `Relation`,
 // etc. The base printer keeps FQN intact because the grammar corpus +
 // Java JSON-roundtrip tests assert byte-equality against source (which may
 // use FQN explicitly). This helper is opt-in for consumers that want the
 // shortened human-readable form (test fixtures, diagnostic renders).
 //
 // Strips `<pkg>::` for each auto-import package, longest-first so
-// `meta::pure::metamodel` doesn't shadow `meta::pure::metamodel::type::primitives`.
-function meta::pure::functions::printer::protocol::shortenAutoImportedTypesInString(s: String[1]): String[1]
+// `platform::pure::metamodel` doesn't shadow `platform::pure::metamodel::type::primitives`.
+function platform::pure::functions::printer::protocol::shortenAutoImportedTypesInString(s: String[1]): String[1]
 {
     protocolAutoImports()
         ->sort({a: String[1], b: String[1] | $b->length() - $a->length()})
@@ -82,36 +83,36 @@ function meta::pure::functions::printer::protocol::shortenAutoImportedTypesInStr
 // Mirror of the parser's default-imports list (and the compiled printer's
 // {@code defaultImports}). Types whose package is in this list parse from
 // their short name alone, so the protocol printer can elide the prefix.
-function meta::pure::functions::printer::protocol::protocolAutoImports(): String[*]
+function platform::pure::functions::printer::protocol::protocolAutoImports(): String[*]
 {
     [
-        'meta::pure::metamodel::type::primitives',
-        'meta::pure::metamodel',
-        'meta::pure::metamodel::function::property',
-        'meta::pure::metamodel::type',
-        'meta::pure::metamodel::type::generics',
-        'meta::pure::metamodel::function',
-        'meta::pure::metamodel::multiplicity',
-        'meta::pure::metamodel::relation',
-        'meta::pure::metamodel::valuespecification',
-        'meta::pure::functions::math',
-        'meta::pure::functions::lang',
-        'meta::pure::functions::string',
-        'meta::pure::functions::collection',
-        'meta::pure::functions::boolean',
-        'meta::pure::functions::relation',
-        'meta::pure::functions::multiplicity',
-        'meta::pure::functions::asserts',
-        'meta::pure::functions::meta',
-        'meta::pure::functions::io',
-        'meta::pure::profiles'
+        'platform::pure::metamodel::type::primitives',
+        'platform::pure::metamodel',
+        'platform::pure::metamodel::function::property',
+        'platform::pure::metamodel::type',
+        'platform::pure::metamodel::type::generics',
+        'platform::pure::metamodel::function',
+        'platform::pure::metamodel::multiplicity',
+        'platform::pure::metamodel::relation',
+        'platform::pure::metamodel::valuespecification',
+        'platform::pure::functions::math',
+        'platform::pure::functions::lang',
+        'platform::pure::functions::string',
+        'platform::pure::functions::collection',
+        'platform::pure::functions::boolean',
+        'platform::pure::functions::relation',
+        'platform::pure::functions::multiplicity',
+        'platform::pure::functions::asserts',
+        'platform::pure::functions::meta',
+        'platform::pure::functions::io',
+        'platform::pure::profiles'
     ];
 }
 
 // `<T1, T2|m1, m2>` for parameterised types — emitted only when type or
 // multiplicity arguments are present. The `|m1` is dropped when there are no
 // multiplicity args; the leading `T1, T2,` is dropped when there are none.
-function meta::pure::functions::printer::protocol::printTypeAndMulArgs(typeArgs: meta::pure::protocol::grammar::type::generics::GenericType_Protocol[*], mulArgs: meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[*]): String[1]
+function platform::pure::functions::printer::protocol::printTypeAndMulArgs(typeArgs: platform::pure::protocol::grammar::type::generics::GenericType_Protocol[*], mulArgs: platform::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[*]): String[1]
 {
     if ($typeArgs->isEmpty() && $mulArgs->isEmpty(),
         | '',
@@ -124,7 +125,7 @@ function meta::pure::functions::printer::protocol::printTypeAndMulArgs(typeArgs:
 
 // Multiplicity argument inside `<T|m>` is rendered without surrounding
 // brackets — `1`, `*`, `0..1`, `1..*` — which is what the parser expects.
-function meta::pure::functions::printer::protocol::printMultiplicityArg(m: meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]): String[1]
+function platform::pure::functions::printer::protocol::printMultiplicityArg(m: platform::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]): String[1]
 {
     let bracketed = printMultiplicity($m);
     if ($bracketed->startsWith('[') && $bracketed->endsWith(']'),
@@ -135,7 +136,7 @@ function meta::pure::functions::printer::protocol::printMultiplicityArg(m: meta:
 
 // `(v1, v2)` for parameterised primitives — `Varchar(200)` shape. Only
 // emitted when typeVariableValues is non-empty.
-function meta::pure::functions::printer::protocol::printTypeVariableValues(values: meta::pure::protocol::grammar::valuespecification::ValueSpecification[*]): String[1]
+function platform::pure::functions::printer::protocol::printTypeVariableValues(values: platform::pure::protocol::grammar::valuespecification::ValueSpecification[*]): String[1]
 {
     if ($values->isEmpty(),
         | '',
@@ -145,7 +146,7 @@ function meta::pure::functions::printer::protocol::printTypeVariableValues(value
 
 // `{P1[m1], P2[m2] -> R[mret]}` — anonymous parameter types separated by
 // commas; arrow then return type.
-function meta::pure::functions::printer::protocol::printFunctionType(ft: meta::pure::protocol::grammar::type::FunctionType[1]): String[1]
+function platform::pure::functions::printer::protocol::printFunctionType(ft: platform::pure::protocol::grammar::type::FunctionType[1]): String[1]
 {
     // FunctionType parameters use `,` (no space) — matches the parser's
     // emission and the grammar corpus convention.
@@ -157,7 +158,7 @@ function meta::pure::functions::printer::protocol::printFunctionType(ft: meta::p
 
 // `(col1:T1[m1], col2:T2[m2], ...)` — RelationType prints as a comma-separated
 // column list with parens, matching the `Relation<(...)>` body form.
-function meta::pure::functions::printer::protocol::printRelationType(rt: meta::pure::protocol::grammar::relation::RelationType[1]): String[1]
+function platform::pure::functions::printer::protocol::printRelationType(rt: platform::pure::protocol::grammar::relation::RelationType[1]): String[1]
 {
     // Source convention is `(col1, col2, col3)` with no space after commas —
     // matches the parser's emission and is what the grammar corpus expects.
@@ -168,7 +169,7 @@ function meta::pure::functions::printer::protocol::printRelationType(rt: meta::p
 // → a typeOperation that says "pick column `name` of the inferred relation").
 // First-cut sentinel-free render: bracket the operation text. Per-shape
 // fidelity TBD.
-function meta::pure::functions::printer::protocol::printGenericTypeOperation(gto: meta::pure::protocol::grammar::relation::GenericTypeOperation[1]): String[1]
+function platform::pure::functions::printer::protocol::printGenericTypeOperation(gto: platform::pure::protocol::grammar::relation::GenericTypeOperation[1]): String[1]
 {
     let left = if ($gto.left->isEmpty(), | '', | printGenericType($gto.left->toOne()));
     let right = if ($gto.right->isEmpty(), | '', | printGenericType($gto.right->toOne()));
@@ -186,7 +187,7 @@ function meta::pure::functions::printer::protocol::printGenericTypeOperation(gto
     $left + $op + $right;
 }
 
-function meta::pure::functions::printer::protocol::printRelationColumn(col: meta::pure::protocol::grammar::relation::Column[1]): String[1]
+function platform::pure::functions::printer::protocol::printRelationColumn(col: platform::pure::protocol::grammar::relation::Column[1]): String[1]
 {
     // Column names that contain non-identifier characters (spaces, etc.) are
     // emitted in single quotes — `'with space':String[1]` — matching the
@@ -207,32 +208,32 @@ function meta::pure::functions::printer::protocol::printRelationColumn(col: meta
 // canonical PE-pointer multiplicities (PureOne → [1], ZeroMany → [*], ...) and
 // concrete adhoc multiplicities (lower..upper bounds). MultiplicityParameter
 // and other shapes are TODO.
-function meta::pure::functions::printer::protocol::printMultiplicity(m: meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]): String[1]
+function platform::pure::functions::printer::protocol::printMultiplicity(m: platform::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]): String[1]
 {
     $m->match([
-        p:   meta::pure::protocol::grammar::multiplicity::Multiplicity_Pointer[1] | mulPointerToBracket($p.value),
-        c:   meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1] | concreteMulToBracket($c),
-        mp:  meta::pure::protocol::grammar::multiplicity::MultiplicityParameter[1] | '[' + $mp.name + ']',
-        u:   meta::pure::protocol::grammar::multiplicity::UndefinedMultiplicity[1] | ''
+        p:   platform::pure::protocol::grammar::multiplicity::Multiplicity_Pointer[1] | mulPointerToBracket($p.value),
+        c:   platform::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1] | concreteMulToBracket($c),
+        mp:  platform::pure::protocol::grammar::multiplicity::MultiplicityParameter[1] | '[' + $mp.name + ']',
+        u:   platform::pure::protocol::grammar::multiplicity::UndefinedMultiplicity[1] | ''
     ]);
 }
 
 // Render a Stereotype_Pointer as `Profile.Stereotype` — the value holds the
 // profile path; the first extraPointerValue holds the stereotype name.
-function meta::pure::functions::printer::protocol::printStereotypePointer(s: meta::pure::protocol::grammar::extension::Stereotype_Pointer[1]): String[1]
+function platform::pure::functions::printer::protocol::printStereotypePointer(s: platform::pure::protocol::grammar::extension::Stereotype_Pointer[1]): String[1]
 {
     $s.value + '.' + $s.extraPointerValues->at(0).value;
 }
 
 // Render a Tag_Pointer as `Profile.tag` — same shape as stereotype.
-function meta::pure::functions::printer::protocol::printTagPointer(t: meta::pure::protocol::grammar::extension::Tag_Pointer[1]): String[1]
+function platform::pure::functions::printer::protocol::printTagPointer(t: platform::pure::protocol::grammar::extension::Tag_Pointer[1]): String[1]
 {
     $t.value + '.' + $t.extraPointerValues->at(0).value;
 }
 
 // Render an annotation block — `<<stereo>> {tag='val'} ` if any, else empty.
 // Trailing space included so callers can concatenate directly before the name.
-function meta::pure::functions::printer::protocol::printAnnotations(stereotypes: meta::pure::protocol::grammar::extension::Stereotype_Pointer[*], taggedValues: meta::pure::protocol::grammar::extension::TaggedValue[*]): String[1]
+function platform::pure::functions::printer::protocol::printAnnotations(stereotypes: platform::pure::protocol::grammar::extension::Stereotype_Pointer[*], taggedValues: platform::pure::protocol::grammar::extension::TaggedValue[*]): String[1]
 {
     let stereoPart = if ($stereotypes->isEmpty(),
                          | '',
@@ -246,14 +247,14 @@ function meta::pure::functions::printer::protocol::printAnnotations(stereotypes:
 }
 
 // PE-pointer multiplicity name → bracket form. Mirrors the well-known
-// canonical multiplicity PEs in meta::pure::metamodel::multiplicity AND the
+// canonical multiplicity PEs in platform::pure::metamodel::multiplicity AND the
 // `Inferred*` variants the compile pass produces for inferred multiplicities
 // — those round-trip to the same source sugar (`[1]`, `[*]`, ...). The
 // pointer's `value` slot may be a bare name (parser output) or a fully
 // qualified path (decompile output), so strip any package prefix before
 // matching. Anything not in this list falls through to `[<name>]` so
 // user-defined packageable multiplicities still print readably.
-function meta::pure::functions::printer::protocol::mulPointerToBracket(rawName: String[1]): String[1]
+function platform::pure::functions::printer::protocol::mulPointerToBracket(rawName: String[1]): String[1]
 {
     let idx = $rawName->lastIndexOf('::');
     let name = if ($idx < 0, | $rawName, | $rawName->substring($idx + 2, $rawName->length()));
@@ -268,7 +269,7 @@ function meta::pure::functions::printer::protocol::mulPointerToBracket(rawName: 
 // Concrete adhoc multiplicity → bracket form. Collapses [n..n] to [n] and
 // renders missing upperBound (or upperBound with null value) as the unbounded
 // `*` suffix.
-function meta::pure::functions::printer::protocol::concreteMulToBracket(c: meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]): String[1]
+function platform::pure::functions::printer::protocol::concreteMulToBracket(c: platform::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]): String[1]
 {
     let lower = $c.lowerBound.value->toOne()->toString();
     let upperVS = $c.upperBound;

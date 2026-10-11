@@ -1,11 +1,26 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.SimplePropertyOwner;
-import meta.pure.metamodel.function.property.Property;
-import meta.pure.metamodel.function.property.QualifiedProperty;
-import meta.pure.metamodel.type.Class;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.SimplePropertyOwner;
+import platform.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.function.property.QualifiedProperty;
+import platform.pure.metamodel.type.Class;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
@@ -76,7 +91,7 @@ public final class _Class
         // Inherited properties via generalizations
         if (owner instanceof Type type && type._generalizations() != null)
         {
-            for (meta.pure.metamodel.relationship.Generalization gen : type._generalizations())
+            for (platform.pure.metamodel.relationship.Generalization gen : type._generalizations())
             {
                 if (gen._general() != null && _GenericType.type(gen._general()) instanceof SimplePropertyOwner superOwner)
                 {
@@ -112,7 +127,7 @@ public final class _Class
         // Inherited qualified properties via generalizations
         if (cls._generalizations() != null)
         {
-            for (meta.pure.metamodel.relationship.Generalization gen : cls._generalizations())
+            for (platform.pure.metamodel.relationship.Generalization gen : cls._generalizations())
             {
                 if (gen._general() != null && _GenericType.type(gen._general()) instanceof Class superClass)
                 {

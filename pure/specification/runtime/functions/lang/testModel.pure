@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::lang::tests::model::*;
+import platform::pure::functions::lang::tests::model::*;
 
-Class <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_GeographicEntity
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_GeographicEntity
 {
     type : LA_GeographicEntityType[1];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_Location extends LA_GeographicEntity
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_Location extends LA_GeographicEntity
 {
     place : String[1];
     censusdate: Date[0..1];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_Address extends LA_GeographicEntity
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_Address extends LA_GeographicEntity
 {
     name : String[1];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_Person
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_Person
 {
     firstName : String[1];
     lastName: String[1];
@@ -51,56 +52,56 @@ Class <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_Pers
     }:String[1];
 }
 
-Association <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_Person_Firm
+Association <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_Person_Firm
 {
     firm : LA_Firm[0..1];
     employees : LA_Person[*];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_List<T>
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_List<T>
 {
     values : T[*];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_Firm
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_Firm
 {
     legalName : String[1];
     address : LA_Address[0..1];
 }
 
-Enum <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_GeographicEntityType
+Enum <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_GeographicEntityType
 {
     {doc.doc = 'A city, town, village, or other urban area.'} CITY,
     <<doc.deprecated>> COUNTRY,
     {doc.doc = 'Any geographic entity other than a city or country.'} REGION
 }
 
-Class <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_Organization
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_Organization
 {
     name : String[1];
 }
 
-Association <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_SubOrganization
+Association <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_SubOrganization
 {
     parent : LA_Organization[0..1];
     children : LA_Organization[*];
 }
 
-Association <<test.TestDependency>> meta::pure::functions::tests::model::LA_FirmOrganizations
+Association <<test.TestDependency>> platform::pure::functions::tests::model::LA_FirmOrganizations
 {
     firm : LA_Firm[1];
     organizations : LA_Organization[*];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_Division extends LA_Organization
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_Division extends LA_Organization
 {
 }
 
-Class <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_Department extends LA_Organization
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_Department extends LA_Organization
 {
 }
 
-Class <<test.TestDependency>> meta::pure::functions::lang::tests::model::LA_Node
+Class <<test.TestDependency>> platform::pure::functions::lang::tests::model::LA_Node
 {
     value : Integer[1];
     next  : LA_Node[0..1];

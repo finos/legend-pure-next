@@ -24,7 +24,7 @@
             "_type" : "PointerValue",
             "value" : "None"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
@@ -67,7 +67,7 @@
             "_type" : "PointerValue",
             "value" : "Shared"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "defaultValue" : {
           "_type" : "LambdaFunction",
@@ -312,7 +312,7 @@
                   "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
-                    "value" : "meta::pure::metamodel::type::primitives::Boolean"
+                    "value" : "platform::pure::metamodel::type::primitives::Boolean"
                   }
                 },
                 "p_sourceInformation" : {

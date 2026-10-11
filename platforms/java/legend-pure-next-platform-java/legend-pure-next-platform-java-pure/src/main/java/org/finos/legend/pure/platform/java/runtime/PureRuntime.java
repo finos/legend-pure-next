@@ -398,6 +398,6 @@ public final class PureRuntime
     // The overload that takes the LANGUAGES' compiler passes. The CompilerContext overload compiles the
     // built-in element kinds only, so an extension's section would parse and then be dropped.
     private static final String COMPILE =
-            "meta::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
-    private static final String NEW_CONTEXT = "meta::pure::compiler::newCompilerContext_Boolean_1__CompilerContext_1_";
+            "platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
+    private static final String NEW_CONTEXT = "platform::pure::compiler::newCompilerContext_Boolean_1__CompilerContext_1_";
 }

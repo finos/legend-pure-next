@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionTypeCompiler::*;
-import meta::pure::compiler::structural::packageableFunctionCompiler::*;
-import meta::pure::compiler::structural::variableCompiler::*;
-import meta::pure::compiler::structural::sourceInformationCompiler::*;
-import meta::pure::compiler::structural::annotationCompiler::*;
-import meta::pure::compiler::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::functions::lang::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::compiler::structural::genericTypeCompiler::*;
+import platform::pure::compiler::structural::functionTypeCompiler::*;
+import platform::pure::compiler::structural::packageableFunctionCompiler::*;
+import platform::pure::compiler::structural::variableCompiler::*;
+import platform::pure::compiler::structural::sourceInformationCompiler::*;
+import platform::pure::compiler::structural::annotationCompiler::*;
+import platform::pure::compiler::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::functions::lang::*;
 
-function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::elements::compileNativeFunctionPass1(fn:platform::pure::protocol::grammar::function::NativeFunction[1], ctx:CompilerContext[1]):CompilerContext[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().value);
 
@@ -42,21 +43,21 @@ function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pur
     let skeleton = ^$emptyFunc(
         name = $mangledName,
         functionName = if($fn.functionName->isEmpty(), | $fn.name, | $fn.functionName->toOne()),
-        package = $pkgRes.value->toOne()->toPackagePointer()->cast(@meta::pure::metamodel::Package),
+        package = $pkgRes.value->toOne()->toPackagePointer()->cast(@platform::pure::metamodel::Package),
         sourceInformation = compileSourceInformation($fn.p_sourceInformation, $ctx)
     );
 
     putElementUnderPackage($pkgRes.context, $fName, $packagePath, $skeleton);
 }
 
-function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:CompilerContext[1]):CompilerResult<NativeFunction<Any>>[1]
+function platform::pure::compiler::elements::compileNativeFunctionPass2(fn:platform::pure::protocol::grammar::function::NativeFunction[1], ctx:CompilerContext[1]):CompilerResult<NativeFunction<Any>>[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().value);
     let mangledName = $fn.name;
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
     let skeleton = $ctx.elementMap->get($fName)->toOne()->cast(@NativeFunction<Any>);
     let ownerCtx = 'native function \'' + $fName + '\'';
-    let siCtx = if($fn.p_sourceInformation->isNotEmpty(), | formatSourceInfo($fn.p_sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
+    let siCtx = if($fn.p_sourceInformation->isNotEmpty(), | formatSourceInfo($fn.p_sourceInformation->toOne()->cast(@platform::pure::protocol::grammar::SourceInformation), $ctx), | '');
 
     // Check for duplicate parameter names
     let ctx1 = validateDuplicateParameters($fn.parameters, $ctx, $ownerCtx, $siCtx);
@@ -65,7 +66,7 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
     // {@link PackageableFunctionPointer} — see userDefinedFunctionHandler for
     // the full rationale (pass-2 returns a fresh PDO via {@code ^$skeleton(...)},
     // so a direct ref would be stale at PointerGraphResolver time).
-    let fnOwnerPtr = $skeleton->toPackageableFunctionPointer()->cast(@meta::pure::metamodel::type::generics::TypeAndMultiplicityParametersOwner);
+    let fnOwnerPtr = $skeleton->toPackageableFunctionPointer()->cast(@platform::pure::metamodel::type::generics::TypeAndMultiplicityParametersOwner);
     let fnTypeParams = compileTypeParameters($fn.typeParameters)->map(tp | ^$tp(owner = $fnOwnerPtr));
 
     // Compile multiplicity parameters — set owner to the same pointer (mirrors Java PackageableFunctionCompiler.compileShared line 57-59)
@@ -80,12 +81,12 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
     let ctx2 = $paramAccum.context;
 
     // Compile return type
-    let rTypeStr = $fn.returnGenericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+    let rTypeStr = $fn.returnGenericType->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue);
     let rResult = $rTypeStr->compileGenericType($ctx2, $packagePath, $fnTypeParams, '', $ownerCtx);
     let rMGenType = $rResult.value->toOne();
     let ctx3 = $rResult.context;
 
-    let rMMult = $fn.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+    let rMMult = $fn.returnMultiplicity->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
 
     let classifierGT = compileFunctionClassifierGenericType(NativeFunction, $compiledParams, $rMGenType, $rMMult);
 

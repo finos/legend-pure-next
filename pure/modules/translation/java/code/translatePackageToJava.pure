@@ -14,11 +14,11 @@
 // limitations under the License.
 
 
-import meta::external::language::java::factory::*;
-import meta::external::language::java::serialization::*;
-import meta::external::language::java::translation::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::type::*;
+import platform::external::language::java::factory::*;
+import platform::external::language::java::serialization::*;
+import platform::external::language::java::translation::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::type::*;
 
 // ============================================================================
 // Package → Java. Translates every function, class and enumeration under the
@@ -37,28 +37,28 @@ import meta::pure::metamodel::type::*;
 //
 // `tests` sub-packages are skipped: their elements live in -tests PDBs a
 // platform build doesn't load. <<test.TestDependency>> like translatePackageToJs,
-// since the package walk uses meta::pure::test::resolveChild.
+// since the package walk uses platform::pure::test::resolveChild.
 // ============================================================================
 
 // Entry point for the CLI, which passes each argument as one String:
 // `rootPackagePaths` is comma-separated.
-function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJava(rootPackagePaths: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::translatePackagesToJava(rootPackagePaths: String[1]): String[1]
 {
-   meta::external::language::java::translation::translatePackagesToJava($rootPackagePaths->split(','));
+   platform::external::language::java::translation::translatePackagesToJava($rootPackagePaths->split(','));
 }
 
-function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJava(rootPackagePaths: String[*]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::translatePackagesToJava(rootPackagePaths: String[*]): String[1]
 {
-   meta::external::language::java::translation::translatePackagesToJavaFor($rootPackagePaths,
-      meta::external::language::java::translation::platform::platformRoot(),
-      meta::external::language::java::translation::defaultPlatformPackage());
+   platform::external::language::java::translation::translatePackagesToJavaFor($rootPackagePaths,
+      platform::external::language::java::translation::platform::platformRoot(),
+      platform::external::language::java::translation::defaultPlatformPackage());
 }
 
 // Comma-separated form, for the CLI — mirrors the single-argument
 // translatePackagesToJava above.
-function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJavaFor(rootPackagePaths: String[1], basePackage: String[1], platformPackage: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::translatePackagesToJavaFor(rootPackagePaths: String[1], basePackage: String[1], platformPackage: String[1]): String[1]
 {
-   meta::external::language::java::translation::translatePackagesToJavaFor($rootPackagePaths->split(','), $basePackage, $platformPackage);
+   platform::external::language::java::translation::translatePackagesToJavaFor($rootPackagePaths->split(','), $basePackage, $platformPackage);
 }
 
 // The same, for a host that keeps its support classes in ONE package instead of the
@@ -66,9 +66,9 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
 // looks for BOTH groups. Truffle passes the package its PDB reader's only consumer
 // lives in, so the four hooks sit beside it rather than under two sub-packages of their
 // own (see truffle::generate-pdb-reader).
-function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJavaFor(rootPackagePaths: String[1], basePackage: String[1], platformPackage: String[1], hooksPackage: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::translatePackagesToJavaFor(rootPackagePaths: String[1], basePackage: String[1], platformPackage: String[1], hooksPackage: String[1]): String[1]
 {
-   meta::external::language::java::translation::translatePackagesToJavaForHost($rootPackagePaths->split(','), $basePackage, $platformPackage, $hooksPackage, $hooksPackage);
+   platform::external::language::java::translation::translatePackagesToJavaForHost($rootPackagePaths->split(','), $basePackage, $platformPackage, $hooksPackage, $hooksPackage);
 }
 
 // The same translation, emitted for a NAMED host: `basePackage` roots the
@@ -76,19 +76,19 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
 // they call into. Truffle generates its own copy of the PDB reader this way, so
 // nothing it compiles reaches into the Java platform's packages — the two hosts
 // share `reader.pure`, not a jar.
-function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJavaFor(rootPackagePaths: String[*], basePackage: String[1], platformPackage: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::translatePackagesToJavaFor(rootPackagePaths: String[*], basePackage: String[1], platformPackage: String[1]): String[1]
 {
-   meta::external::language::java::translation::translatePackagesToJavaForHost($rootPackagePaths, $basePackage, $platformPackage, meta::external::language::java::translation::defaultPdbPackage($platformPackage), meta::external::language::java::translation::defaultRuntimePackage($platformPackage));
+   platform::external::language::java::translation::translatePackagesToJavaForHost($rootPackagePaths, $basePackage, $platformPackage, platform::external::language::java::translation::defaultPdbPackage($platformPackage), platform::external::language::java::translation::defaultRuntimePackage($platformPackage));
 }
 
 // Where the generated code looks for the metadata hooks and for the runtime helpers, as
 // two separate packages: the three-argument forms pass the Java platform's `.pdb` and
 // `.runtime`, while a host that keeps both groups together passes the same package twice.
-function <<test.TestDependency>> meta::external::language::java::translation::translatePackagesToJavaForHost(rootPackagePaths: String[*], basePackage: String[1], platformPackage: String[1], hooksPackage: String[1], runtimePackage: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::translatePackagesToJavaForHost(rootPackagePaths: String[*], basePackage: String[1], platformPackage: String[1], hooksPackage: String[1], runtimePackage: String[1]): String[1]
 {
-   let base     = ^(meta::external::language::java::translation::conventionsFor($basePackage, $platformPackage))(pdbPackage = $hooksPackage, runtimePkg = $runtimePackage);
+   let base     = ^(platform::external::language::java::translation::conventionsFor($basePackage, $platformPackage))(pdbPackage = $hooksPackage, runtimePkg = $runtimePackage);
    let conv     = ^$base(metadataElements = true);
-   let elements = $rootPackagePaths->map(p | $p->pathToElement()->cast(@meta::pure::metamodel::Package)->translatableElements());
+   let elements = $rootPackagePaths->map(p | $p->pathToElement()->cast(@platform::pure::metamodel::Package)->translatableElements());
    let seeds    = $elements->filter(e | $e->instanceOf(UserDefinedFunction))->cast(@UserDefinedFunction<Any>);
    let udfs     = $conv->collectReferencedUdfs($seeds->map(u | $u.expressionSequence), $seeds);
    let types    = $elements->filter(e | $e->instanceOf(Class) || $e->instanceOf(Enumeration))->cast(@Type);
@@ -98,7 +98,7 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
                      [],
                      $types);
    $udfs->map(u | $conv->udfFileOrStub($u))->concatenate($support.files)->joinStrings('\n')
-      ->meta::external::language::java::translation::withPositionTable();
+      ->platform::external::language::java::translation::withPositionTable();
 }
 
 // Every element under `pkg`, INCLUDING its `tests` packages.
@@ -108,20 +108,20 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
 // has no class for is translated and javac'd at run time — a profile of
 // `java::pct` put 52% of samples inside javac. Pre-generating the test wrappers
 // is the same fix that took spec-pdb from hours to seconds.
-function <<test.TestDependency>> meta::external::language::java::translation::translatableElementsWithTests(pkg: meta::pure::metamodel::Package[1]): meta::pure::metamodel::PackageableElement[*]
+function <<test.TestDependency>> platform::external::language::java::translation::translatableElementsWithTests(pkg: platform::pure::metamodel::Package[1]): platform::pure::metamodel::PackageableElement[*]
 {
-   let children = $pkg.children->map(c | meta::pure::test::resolveChild($c));
+   let children = $pkg.children->map(c | platform::pure::test::resolveChild($c));
    $children->filter(e | $e->instanceOf(UserDefinedFunction) || $e->instanceOf(Class) || $e->instanceOf(Enumeration))
-      ->concatenate($children->filter(e | $e->instanceOf(meta::pure::metamodel::Package))->cast(@meta::pure::metamodel::Package)
-                             ->map(p | meta::external::language::java::translation::translatableElementsWithTests($p)));
+      ->concatenate($children->filter(e | $e->instanceOf(platform::pure::metamodel::Package))->cast(@platform::pure::metamodel::Package)
+                             ->map(p | platform::external::language::java::translation::translatableElementsWithTests($p)));
 }
 
 // The package walk of translatePackagesToJava, but keeping `tests` — what the
 // Java platform prebuilds so the PCT corpus does not translate at run time.
-function <<test.TestDependency>> meta::external::language::java::translation::translateTestPackagesToJava(rootPackagePaths: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::translateTestPackagesToJava(rootPackagePaths: String[1]): String[1]
 {
-   let conv     = ^(meta::external::language::java::translation::defaultConventions(meta::external::language::java::translation::platform::platformRoot()))(metadataElements = true);
-   let elements = $rootPackagePaths->split(',')->map(p | $p->pathToElement()->cast(@meta::pure::metamodel::Package)->translatableElementsWithTests());
+   let conv     = ^(platform::external::language::java::translation::defaultConventions(platform::external::language::java::translation::platform::platformRoot()))(metadataElements = true);
+   let elements = $rootPackagePaths->split(',')->map(p | $p->pathToElement()->cast(@platform::pure::metamodel::Package)->translatableElementsWithTests());
    let seeds    = $elements->filter(e | $e->instanceOf(UserDefinedFunction))->cast(@UserDefinedFunction<Any>);
    let udfs     = $conv->collectReferencedUdfs($seeds->map(u | $u.expressionSequence), $seeds);
    let types    = $elements->filter(e | $e->instanceOf(Class) || $e->instanceOf(Enumeration))->cast(@Type);
@@ -131,14 +131,14 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
                      [],
                      $types);
    $udfs->map(u | $conv->udfFileOrStub($u))->concatenate($support.files)->joinStrings('\n')
-      ->meta::external::language::java::translation::withPositionTable();
+      ->platform::external::language::java::translation::withPositionTable();
 }
 
 // One function and everything it needs, as `//// FILE` blocks: the function's
 // class, every function it reaches, and the platform types they name. The Java
 // platform translates a function this way when it has no class for it yet
 // (a PCT test, which lives in a `tests` package the platform doesn't prebuild).
-function <<test.TestDependency>> meta::external::language::java::translation::translateFunctionProgram(functionPath: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::translateFunctionProgram(functionPath: String[1]): String[1]
 {
    $functionPath->pathToElement()->cast(@UserDefinedFunction<Any>)->translateFunctionValueProgram();
 }
@@ -156,33 +156,33 @@ function <<test.TestDependency>> meta::external::language::java::translation::tr
 // Either way the emitted source is compiled against the platform's own classes
 // (JavaSource leaves javac's class path alone), so anything already generated is
 // referenced rather than re-translated.
-function <<test.TestDependency>> meta::external::language::java::translation::translateFunctionValueProgram(seed: UserDefinedFunction<Any>[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::translateFunctionValueProgram(seed: UserDefinedFunction<Any>[1]): String[1]
 {
-   let base = defaultConventions(meta::external::language::java::translation::platform::platformRoot());
+   let base = defaultConventions(platform::external::language::java::translation::platform::platformRoot());
    let conv = ^$base(metadataElements = true);
-   if ($seed->instanceOf(meta::pure::metamodel::function::PackageableFunction),
-      | $conv->meta::external::language::java::translation::namedValueProgram($seed),
-      | $conv->meta::external::language::java::translation::lambdaValueProgram($seed));
+   if ($seed->instanceOf(platform::pure::metamodel::function::PackageableFunction),
+      | $conv->platform::external::language::java::translation::namedValueProgram($seed),
+      | $conv->platform::external::language::java::translation::lambdaValueProgram($seed));
 }
 
 // The simple name a pathless lambda value is emitted under. Must agree with
 // Metadata.LAMBDA_VALUE_CLASS, which is what invokeTranslated looks up when the
 // value has no path of its own.
-function meta::external::language::java::translation::lambdaValueClassName(): String[1]
+function platform::external::language::java::translation::lambdaValueClassName(): String[1]
 {
    'PureLambdaValue'
 }
 
-function <<test.TestDependency>> meta::external::language::java::translation::lambdaValueProgram(conv: Conventions[1], seed: UserDefinedFunction<Any>[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::lambdaValueProgram(conv: Conventions[1], seed: UserDefinedFunction<Any>[1]): String[1]
 {
-   let canonical = $seed->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
-                        ->meta::pure::translation::shared::makeCanonical(
-                             [meta::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]);
-   let sig = $conv->translateFunctionDef($canonical, meta::external::language::java::translation::lambdaValueClassName());
+   let canonical = $seed->cast(@platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>)
+                        ->platform::pure::translation::shared::makeCanonical(
+                             [platform::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]);
+   let sig = $conv->translateFunctionDef($canonical, platform::external::language::java::translation::lambdaValueClassName());
    $sig->renderFullSource();
 }
 
-function <<test.TestDependency>> meta::external::language::java::translation::namedValueProgram(conv: Conventions[1], seed: UserDefinedFunction<Any>[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::namedValueProgram(conv: Conventions[1], seed: UserDefinedFunction<Any>[1]): String[1]
 {
    let udfs     = $conv->collectReferencedUdfs($seed.expressionSequence, $seed);
    let support  = $conv->supportClasses(
@@ -195,24 +195,24 @@ function <<test.TestDependency>> meta::external::language::java::translation::na
    // compilation unit, so a .tsv section would be handed to javac. A function
    // translated at run time has no position table — its frames are unpositioned.
    $udfs->map(u | $conv->udfFileOrStub($u))->concatenate($support.files)->joinStrings('\n')
-      ->meta::external::language::java::serialization::withoutMarkers();
+      ->platform::external::language::java::serialization::withoutMarkers();
 }
 
 // One function's Java class, without the stub fallback: the failure of a
 // translation, with its stack, rather than a stub.
-function <<test.TestDependency>> meta::external::language::java::translation::translateFunctionToJava(functionPath: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::translateFunctionToJava(functionPath: String[1]): String[1]
 {
-   let base = defaultConventions(meta::external::language::java::translation::platform::platformRoot());
+   let base = defaultConventions(platform::external::language::java::translation::platform::platformRoot());
    let conv = ^$base(metadataElements = true);
    let udf  = $functionPath->pathToElement()->cast(@UserDefinedFunction<Any>);
    $conv->translateUdf($udf)->classToString();
 }
 
 // The `//// FILE` block of a function's class, or of its stub when it doesn't translate.
-function <<test.TestDependency>> meta::external::language::java::translation::udfFileOrStub(conv: Conventions[1], udf: UserDefinedFunction<Any>[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::udfFileOrStub(conv: Conventions[1], udf: UserDefinedFunction<Any>[1]): String[1]
 {
    let className = $conv->udfClassName($udf);
-   let attempt   = tryEval(| $conv->translateUdf($udf)->meta::external::language::java::serialization::classToStringWithPositions());
+   let attempt   = tryEval(| $conv->translateUdf($udf)->platform::external::language::java::serialization::classToStringWithPositions());
    let source    = if ($attempt.failure->isEmpty(),
                       | $attempt.value->toOne(),
                       | $className->untranslatedStub($udf->elementToPath() + ': ' + $attempt.failure->toOne().message));
@@ -240,12 +240,12 @@ function <<test.TestDependency>> meta::external::language::java::translation::ud
 //
 // Only the FIRST marker on a physical line is kept: a frame reports one
 // position, and the leftmost marker is the outermost call on that line.
-function meta::external::language::java::translation::positionFileSuffix(): String[1]
+function platform::external::language::java::translation::positionFileSuffix(): String[1]
 {
    '.pos'
 }
 
-function <<test.TestDependency>> meta::external::language::java::translation::withPositionTable(files: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::withPositionTable(files: String[1]): String[1]
 {
    // Split on a NEWLINE followed by the marker, exactly as the emitter's awk
    // anchors it to the start of a line. Plain '//// FILE ' would also match the
@@ -253,8 +253,8 @@ function <<test.TestDependency>> meta::external::language::java::translation::wi
    // this module generates Java for code that writes `//// FILE` lines — and
    // would cut a class in half there.
    let sections = ('\n' + $files)->split('\n//// FILE ')->filter(s | $s->contains('.java\n'));
-   let stripped = $sections->map(s | '//// FILE ' + $s->meta::external::language::java::serialization::withoutMarkers())->joinStrings('\n');
-   let tables   = $sections->map(s | $s->meta::external::language::java::translation::positionBlockOf())->filter(b | $b != '');
+   let stripped = $sections->map(s | '//// FILE ' + $s->platform::external::language::java::serialization::withoutMarkers())->joinStrings('\n');
+   let tables   = $sections->map(s | $s->platform::external::language::java::translation::positionBlockOf())->filter(b | $b != '');
    // The leading newline matters: the emitter anchors `//// FILE` to the start of
    // a line, and the last class's text has no trailing newline, so without it the
    // marker glues onto that class's closing brace and the table is appended INTO
@@ -263,11 +263,11 @@ function <<test.TestDependency>> meta::external::language::java::translation::wi
 }
 
 // One class's table as a `//// FILE` block, or '' when it has no positions.
-function <<access.private>> meta::external::language::java::translation::positionBlockOf(section: String[1]): String[1]
+function <<access.private>> platform::external::language::java::translation::positionBlockOf(section: String[1]): String[1]
 {
    let lines   = $section->split('\n');
    let content = $lines->tail();
-   let open    = meta::external::language::java::serialization::markerOpen();
+   let open    = platform::external::language::java::serialization::markerOpen();
    // The `//// FILE` line is consumed by the emitter, so the first content line
    // is Java line 1 — the same numbering a StackTraceElement reports.
    let rows = range($content->size())
@@ -276,11 +276,11 @@ function <<access.private>> meta::external::language::java::translation::positio
       ->joinStrings('');
    if ($rows == '',
       | '',
-      | '//// FILE ' + $lines->at(0)->trim() + meta::external::language::java::translation::positionFileSuffix() + '\n' + $rows);
+      | '//// FILE ' + $lines->at(0)->trim() + platform::external::language::java::translation::positionFileSuffix() + '\n' + $rows);
 }
 
 // A class `className` whose `execute` accepts any arguments and throws "not translated: <reason>".
-function <<test.TestDependency>> meta::external::language::java::translation::untranslatedStub(className: String[1], reason: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::java::translation::untranslatedStub(className: String[1], reason: String[1]): String[1]
 {
    let simpleName  = $className->split('.')->last()->toOne();
    let packageName = $className->substring(0, $className->length() - $simpleName->length() - 1);
@@ -294,9 +294,9 @@ function <<test.TestDependency>> meta::external::language::java::translation::un
 
 // Functions, classes and enumerations under `pkg`, sub-packages included,
 // `tests` sub-packages excluded.
-function <<test.TestDependency>> meta::external::language::java::translation::translatableElements(pkg: meta::pure::metamodel::Package[1]): meta::pure::metamodel::PackageableElement[*]
+function <<test.TestDependency>> platform::external::language::java::translation::translatableElements(pkg: platform::pure::metamodel::Package[1]): platform::pure::metamodel::PackageableElement[*]
 {
-   let children = $pkg.children->filter(c | $c.name != ['tests'])->map(c | meta::pure::test::resolveChild($c));
+   let children = $pkg.children->filter(c | $c.name != ['tests'])->map(c | platform::pure::test::resolveChild($c));
    $children->filter(e | $e->instanceOf(UserDefinedFunction) || $e->instanceOf(Class) || $e->instanceOf(Enumeration))
-      ->concatenate($children->filter(e | $e->instanceOf(meta::pure::metamodel::Package))->cast(@meta::pure::metamodel::Package)->map(p | $p->translatableElements()));
+      ->concatenate($children->filter(e | $e->instanceOf(platform::pure::metamodel::Package))->cast(@platform::pure::metamodel::Package)->map(p | $p->translatableElements()));
 }

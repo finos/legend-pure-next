@@ -15,13 +15,13 @@
 
 package org.finos.legend.pure.execution.natives.meta;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.type.Any;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
-import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.type.Any;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
 import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
@@ -53,9 +53,9 @@ public class MetaNatives
 
             // Get the target type from the second arg via its genericType
             ValueSpecification targetVs = args.get(1);
-            meta.pure.metamodel.type.Type targetType = null;
+            platform.pure.metamodel.type.Type targetType = null;
             Object targetValue = _E_ValueSpecification.unwrap(targetVs);
-            if (targetValue instanceof meta.pure.metamodel.type.Type t)
+            if (targetValue instanceof platform.pure.metamodel.type.Type t)
             {
                 targetType = t;
             }
@@ -69,7 +69,7 @@ public class MetaNatives
             }
 
             // Get the value's type from VS genericType
-            meta.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0), resolver);
+            platform.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0), resolver);
 
             // Check type hierarchy
             if (valueType == null)
@@ -85,7 +85,7 @@ public class MetaNatives
             Type type = _E_ValueSpecification.getValueOriginalType(args.getFirst());
             // If the resolved type is itself a TypeParameter (unresolved generic like T),
             // fall back to the VS's genericType which has the concrete binding from the compiler
-            if (type instanceof meta.pure.metamodel.type.generics.TypeParameter
+            if (type instanceof platform.pure.metamodel.type.generics.TypeParameter
                     && args.getFirst()._genericType() != null)
             {
                 type = _GenericType.type(args.getFirst()._genericType());
@@ -115,11 +115,11 @@ public class MetaNatives
         natives.put("genericTypeHolder_T_m__GenericTypeAndMultiplicityHolder_1_", (args, eval, genericType, multiplicity) ->
         {
             ValueSpecification vs = args.get(0);
-            meta.pure.metamodel.type.generics.GenericType heldGT = vs._genericType();
-            meta.pure.metamodel.multiplicity.Multiplicity heldMul = vs._multiplicity();
+            platform.pure.metamodel.type.generics.GenericType heldGT = vs._genericType();
+            platform.pure.metamodel.multiplicity.Multiplicity heldMul = vs._multiplicity();
             // Build classifier GT: GenericTypeAndMultiplicityHolder<heldGT|heldMul>
-            meta.pure.metamodel.type.Type holderType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder");
-            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl classifierGT = _GenericType.buildUserDefinedGenericType(holderType, resolver);
+            platform.pure.metamodel.type.Type holderType = (platform.pure.metamodel.type.Type) resolver.getElement("platform::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder");
+            platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl classifierGT = _GenericType.buildUserDefinedGenericType(holderType, resolver);
             if (heldGT != null)
             {
                 classifierGT._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(heldGT));
@@ -128,11 +128,11 @@ public class MetaNatives
             {
                 classifierGT._multiplicityArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(heldMul));
             }
-            meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl holder =
-                    new meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl()
+            platform.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl holder =
+                    new platform.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl()
                             ._classifierGenericType(classifierGT)
                             ._genericType(classifierGT)
-                            ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"));
+                            ._multiplicity((platform.pure.metamodel.multiplicity.Multiplicity) resolver.getElement("platform::pure::metamodel::multiplicity::PureOne"));
             return _E_ValueSpecification.wrap(holder, genericType, multiplicity, resolver);
         });
 
@@ -150,8 +150,8 @@ public class MetaNatives
                     && _GenericType.typeArguments(gtmh._genericType()) != null
                     && _GenericType.typeArguments(gtmh._genericType()).notEmpty())
             {
-                meta.pure.metamodel.type.generics.GenericType heldGT = _GenericType.typeArguments(gtmh._genericType()).getFirst();
-                if (_GenericType.type(heldGT) instanceof meta.pure.metamodel.PackageableElement pe)
+                platform.pure.metamodel.type.generics.GenericType heldGT = _GenericType.typeArguments(gtmh._genericType()).getFirst();
+                if (_GenericType.type(heldGT) instanceof platform.pure.metamodel.PackageableElement pe)
                 {
                     classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
                     if (classPath.isEmpty())
@@ -178,8 +178,8 @@ public class MetaNatives
                     di.setClassifierGenericType((GenericTypeValue) cgt);
                 }
 
-                meta.pure.metamodel.type.Type targetType = _GenericType.type(_GenericType.typeArguments(gtmh._genericType()).getFirst());
-                if (targetType instanceof meta.pure.metamodel.extension.ElementWithConstraints)
+                platform.pure.metamodel.type.Type targetType = _GenericType.type(_GenericType.typeArguments(gtmh._genericType()).getFirst());
+                if (targetType instanceof platform.pure.metamodel.extension.ElementWithConstraints)
                 {
                     validateConstraints(targetType, _GenericType.typeArguments(gtmh._genericType()).getFirst(), instance, eval, resolver);
                 }
@@ -194,9 +194,9 @@ public class MetaNatives
                 // pick up the wrong anchor). Falls through to a fresh UDGT
                 // wrapping the class when no canonical anchor exists.
                 Object typeElement = resolver.getElement(classPath);
-                if (typeElement instanceof meta.pure.metamodel.type.Type t && t instanceof meta.pure.metamodel.PackageableElement pe)
+                if (typeElement instanceof platform.pure.metamodel.type.Type t && t instanceof platform.pure.metamodel.PackageableElement pe)
                 {
-                    Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                    Object canonical = resolver.getElement("platform::pure::metamodel::type::generics::optimization::GenericType_"
                             + classPath.replace("::", "_"));
                     if (canonical instanceof GenericTypeValue canonicalGT)
                     {
@@ -214,14 +214,14 @@ public class MetaNatives
         natives.put("new_GenericType_1__Any_1_", (args, eval, genericType, multiplicity) ->
         {
             Object rawArg = _E_ValueSpecification.unwrap(args.get(0));
-            if (!(rawArg instanceof meta.pure.metamodel.type.generics.GenericTypeValue gt))
+            if (!(rawArg instanceof platform.pure.metamodel.type.generics.GenericTypeValue gt))
             {
                 throw new RuntimeException("new(GenericType[1]) requires a GenericType argument");
             }
 
-            meta.pure.metamodel.type.Type rawType = _GenericType.type(gt);
+            platform.pure.metamodel.type.Type rawType = _GenericType.type(gt);
             String classPath = "Unknown";
-            if (rawType instanceof meta.pure.metamodel.PackageableElement pe)
+            if (rawType instanceof platform.pure.metamodel.PackageableElement pe)
             {
                 classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
                 if (classPath.isEmpty())
@@ -230,7 +230,7 @@ public class MetaNatives
                 }
             }
 
-            if ("meta::pure::metamodel::type::Class".equals(classPath))
+            if ("platform::pure::metamodel::type::Class".equals(classPath))
             {
                 if (_GenericType.typeArguments(gt) == null || _GenericType.typeArguments(gt).isEmpty())
                 {
@@ -247,7 +247,7 @@ public class MetaNatives
             // UDGT, while Java direct's `new FunctionTypeImpl(model)` ctor anchors at
             // the canonical UDPGT. Aligning the platform-level new() native here keeps
             // compile-via-pure output byte-equivalent to Java direct + Truffle.
-            meta.pure.metamodel.type.generics.GenericType anchoredGt = preferCanonicalAnchor(gt, resolver);
+            platform.pure.metamodel.type.generics.GenericType anchoredGt = preferCanonicalAnchor(gt, resolver);
             if (instance instanceof Any any)
             {
                 any._classifierGenericType((GenericTypeValue) anchoredGt);
@@ -286,8 +286,8 @@ public class MetaNatives
                     && _GenericType.typeArguments(gtmh._genericType()) != null
                     && _GenericType.typeArguments(gtmh._genericType()).notEmpty())
             {
-                meta.pure.metamodel.type.generics.GenericType heldGT = _GenericType.typeArguments(gtmh._genericType()).getFirst();
-                if (_GenericType.type(heldGT) instanceof meta.pure.metamodel.PackageableElement pe)
+                platform.pure.metamodel.type.generics.GenericType heldGT = _GenericType.typeArguments(gtmh._genericType()).getFirst();
+                if (_GenericType.type(heldGT) instanceof platform.pure.metamodel.PackageableElement pe)
                 {
                     classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
                     if (classPath.isEmpty())
@@ -304,7 +304,7 @@ public class MetaNatives
                         && _GenericType.typeArguments(gtmh2._genericType()) != null
                         && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
                 {
-                    meta.pure.metamodel.type.generics.GenericType cgt = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
+                    platform.pure.metamodel.type.generics.GenericType cgt = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
                     // Platform-level canonical anchor: when ^Type(...) has no type/mult args,
                     // prefer the canonical GenericType_<TypeName> UDPGT element from core.pdb
                     // (matches Java's `new XxxImpl(model)` ctor pattern). Falls through to the
@@ -325,10 +325,10 @@ public class MetaNatives
                     // Same as the simple-new-helper above: prefer canonical
                     // GenericType_<fullPath> UDPGT-PE when one exists.
                     Object typeElement = resolver.getElement(classPath);
-                    if (typeElement instanceof meta.pure.metamodel.type.Type t && t instanceof meta.pure.metamodel.PackageableElement pe)
+                    if (typeElement instanceof platform.pure.metamodel.type.Type t && t instanceof platform.pure.metamodel.PackageableElement pe)
                     {
                         boolean setClassifier = false;
-                        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                        Object canonical = resolver.getElement("platform::pure::metamodel::type::generics::optimization::GenericType_"
                                 + classPath.replace("::", "_"));
                         if (canonical instanceof GenericTypeValue canonicalGT)
                         {
@@ -353,7 +353,7 @@ public class MetaNatives
                 {
                     List<Map.Entry<String, Object>> keyValues = new ArrayList<>();
                     ValueSpecification keyExprsParam = paramSpecs.get(1);
-                    if (keyExprsParam instanceof meta.pure.metamodel.valuespecification.Collection col)
+                    if (keyExprsParam instanceof platform.pure.metamodel.valuespecification.Collection col)
                     {
                         // Inline `^X(slot=value, slot=value)` form: items are
                         // unevaluated keyExpression FunctionInvocations.
@@ -407,9 +407,9 @@ public class MetaNatives
                         && _GenericType.typeArguments(gtmh2._genericType()) != null
                         && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
                 {
-                    meta.pure.metamodel.type.generics.GenericType heldGT = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
-                    meta.pure.metamodel.type.Type targetType = _GenericType.type(heldGT);
-                    if (targetType instanceof meta.pure.metamodel.extension.ElementWithConstraints)
+                    platform.pure.metamodel.type.generics.GenericType heldGT = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
+                    platform.pure.metamodel.type.Type targetType = _GenericType.type(heldGT);
+                    if (targetType instanceof platform.pure.metamodel.extension.ElementWithConstraints)
                     {
                         validateConstraints(targetType, heldGT, instance, eval, resolver);
                     }
@@ -433,7 +433,7 @@ public class MetaNatives
             ValueSpecification keyVS = args.get(0); // already a VS from evaluateArgs
             // Store the expression value as-is (already a VS)
             ValueSpecification valueVS = args.get(1);
-            DynamicInstance keyExpr = new DynamicInstance("meta::pure::functions::lang::KeyExpression");
+            DynamicInstance keyExpr = new DynamicInstance("platform::pure::functions::lang::KeyExpression");
             keyExpr.put("name", keyVS);
             keyExpr.put("expression", valueVS);
             if (args.size() > 2)
@@ -704,9 +704,9 @@ public class MetaNatives
             ValueSpecification targetVs = args.get(1);
 
             // Resolve the target GenericType from the GenericTypeAndMultiplicityHolder
-            meta.pure.metamodel.type.generics.GenericType targetGT = null;
-            meta.pure.metamodel.type.Type targetType = null;
-            meta.pure.metamodel.multiplicity.Multiplicity targetMul = null;
+            platform.pure.metamodel.type.generics.GenericType targetGT = null;
+            platform.pure.metamodel.type.Type targetType = null;
+            platform.pure.metamodel.multiplicity.Multiplicity targetMul = null;
             if (targetVs instanceof GenericTypeAndMultiplicityHolder gtmh
                     && gtmh._genericType() != null
                     && _GenericType.typeArguments(gtmh._genericType()) != null
@@ -714,7 +714,7 @@ public class MetaNatives
             {
                 targetGT = _GenericType.typeArguments(gtmh._genericType()).getFirst();
                 targetType = _GenericType.type(targetGT);
-                if (gtmh._genericType() instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv
+                if (gtmh._genericType() instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv
                         && gtv._multiplicityArguments() != null
                         && gtv._multiplicityArguments().notEmpty())
                 {
@@ -735,8 +735,8 @@ public class MetaNatives
             // The `?` markers materialize as UndefinedGenericType (at the GT
             // level) and UndefinedMultiplicity in the metamodel — explicit
             // "this side is unconstrained" signals.
-            boolean targetTypeUndefined = targetGT instanceof meta.pure.metamodel.type.generics.UndefinedGenericType;
-            boolean targetMulUndefined = targetMul instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity;
+            boolean targetTypeUndefined = targetGT instanceof platform.pure.metamodel.type.generics.UndefinedGenericType;
+            boolean targetMulUndefined = targetMul instanceof platform.pure.metamodel.multiplicity.UndefinedMultiplicity;
 
             // If the target is a TypeParameter (e.g. `cast(@T)` inside `f<T>(...)`),
             // resolve T from the enclosing function's recorded `<T>`-bindings
@@ -745,7 +745,7 @@ public class MetaNatives
             // normal subtype check runs against it. If unbound, throw — a
             // `cast(@T)` whose T can't be resolved at runtime is a real
             // runtime error, not a silent pass-through.
-            if (!targetTypeUndefined && targetType instanceof meta.pure.metamodel.type.generics.TypeParameter tp)
+            if (!targetTypeUndefined && targetType instanceof platform.pure.metamodel.type.generics.TypeParameter tp)
             {
                 String tvName = tp._name();
                 Object bound = tvName != null ? eval.lookupFunctionTypeVarBinding(tvName) : null;
@@ -755,14 +755,14 @@ public class MetaNatives
                             + "' could not be resolved at runtime. The enclosing generic function did"
                             + " not bind it from any scalar T[1] argument or non-empty T[*] sequence.");
                 }
-                targetType = (meta.pure.metamodel.type.Type) bound;
+                targetType = (platform.pure.metamodel.type.Type) bound;
             }
 
             // Symmetric resolution for `<T|m>`: if the target multiplicity is
             // a MultiplicityParameter, resolve m from the recorded `<T|m>`
             // bindings and validate the input value's count against m's
             // bounds. Throw on unresolved m (same rule as T).
-            if (!targetMulUndefined && targetMul instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
+            if (!targetMulUndefined && targetMul instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mp)
             {
                 String mvName = mp._name();
                 Object boundMul = mvName != null ? eval.lookupFunctionMulVarBinding(mvName) : null;
@@ -772,9 +772,9 @@ public class MetaNatives
                             + "' could not be resolved at runtime. The enclosing generic function did"
                             + " not bind it from any argument's actual multiplicity.");
                 }
-                targetMul = (meta.pure.metamodel.multiplicity.Multiplicity) boundMul;
+                targetMul = (platform.pure.metamodel.multiplicity.Multiplicity) boundMul;
             }
-            if (!targetMulUndefined && targetMul instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
+            if (!targetMulUndefined && targetMul instanceof platform.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
             {
                 int count = inputCount(inputVs);
                 long lower = cm._lowerBound() != null && cm._lowerBound()._value() != null ? cm._lowerBound()._value() : 0;
@@ -793,7 +793,7 @@ public class MetaNatives
             Object value = _E_ValueSpecification.unwrap(inputVs);
             if (!targetTypeUndefined
                     && value != null
-                    && !(inputVs instanceof meta.pure.metamodel.valuespecification.Collection)
+                    && !(inputVs instanceof platform.pure.metamodel.valuespecification.Collection)
                     && targetType instanceof PackageableElement targetPe)
                     // A value that IS a type symbol used to be exempt from the check
                     // here and on Truffle; the compiled hosts (JavaScript, the Java
@@ -803,13 +803,13 @@ public class MetaNatives
                     // asks for the name by shape (helper::type::typeName).
             {
                 String targetPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(targetPe);
-                if (!"meta::pure::metamodel::type::Any".equals(targetPath))
+                if (!"platform::pure::metamodel::type::Any".equals(targetPath))
                 {
-                    meta.pure.metamodel.type.Type sourceType = _E_ValueSpecification.getValueOriginalType(inputVs, resolver);
+                    platform.pure.metamodel.type.Type sourceType = _E_ValueSpecification.getValueOriginalType(inputVs, resolver);
                     if (sourceType instanceof PackageableElement sourcePe)
                     {
                         String sourcePath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(sourcePe);
-                        if (!"meta::pure::metamodel::type::Nil".equals(sourcePath))
+                        if (!"platform::pure::metamodel::type::Nil".equals(sourcePath))
                         {
                             boolean related = _Type.subtypeOf(sourceType, targetType, resolver)
                                     || _Type.subtypeOf(targetType, sourceType, resolver);
@@ -823,7 +823,7 @@ public class MetaNatives
             }
 
             // Validate constraints on the target type
-            if (value != null && targetType instanceof meta.pure.metamodel.extension.ElementWithConstraints)
+            if (value != null && targetType instanceof platform.pure.metamodel.extension.ElementWithConstraints)
             {
                 validateConstraints(targetType, targetGT, value, eval, resolver);
             }
@@ -833,9 +833,9 @@ public class MetaNatives
             {
                 return inputVs;
             }
-            if (inputVs instanceof meta.pure.metamodel.valuespecification.CollectionImpl col)
+            if (inputVs instanceof platform.pure.metamodel.valuespecification.CollectionImpl col)
             {
-                meta.pure.metamodel.valuespecification.CollectionImpl result = col._copy();
+                platform.pure.metamodel.valuespecification.CollectionImpl result = col._copy();
                 result._genericType(targetGT);
                 return result;
             }
@@ -860,11 +860,11 @@ public class MetaNatives
         // newClass(TypeParameter[*], MultiplicityParameter[*]) : Class<Any>[1]
         natives.put("newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.type.ClassImpl newClass = new meta.pure.metamodel.type.ClassImpl();
+            platform.pure.metamodel.type.ClassImpl newClass = new platform.pure.metamodel.type.ClassImpl();
 
             // Build classifierGenericType = Class<self> where the typeArgument points to this class.
-            meta.pure.metamodel.type.Type classType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Class");
-            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef = _GenericType.buildUserDefinedGenericType(newClass, resolver);
+            platform.pure.metamodel.type.Type classType = (platform.pure.metamodel.type.Type) resolver.getElement("platform::pure::metamodel::type::Class");
+            platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef = _GenericType.buildUserDefinedGenericType(newClass, resolver);
 
             // Build typeArguments from the provided typeParameters
             Object typeParamsRaw = _E_ValueSpecification.unwrap(args.get(0));
@@ -883,16 +883,16 @@ public class MetaNatives
             }
             if (typeParams != null && !typeParams.isEmpty())
             {
-                org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> innerTypeArgs = org.eclipse.collections.impl.factory.Lists.mutable.empty();
-                org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.TypeParameter> tpList = org.eclipse.collections.impl.factory.Lists.mutable.empty();
+                org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.type.generics.GenericType> innerTypeArgs = org.eclipse.collections.impl.factory.Lists.mutable.empty();
+                org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.type.generics.TypeParameter> tpList = org.eclipse.collections.impl.factory.Lists.mutable.empty();
                 for (Object tp : typeParams)
                 {
-                    if (tp instanceof meta.pure.metamodel.type.generics.TypeParameter tpObj)
+                    if (tp instanceof platform.pure.metamodel.type.generics.TypeParameter tpObj)
                     {
                         tpObj._owner(newClass);
                         tpList.add(tpObj);
                     }
-                    meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl tpArg = _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) tp, resolver);
+                    platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl tpArg = _GenericType.buildUserDefinedGenericType((platform.pure.metamodel.type.Type) tp, resolver);
                     innerTypeArgs.add(tpArg);
                 }
                 selfRef._typeArguments(innerTypeArgs);
@@ -915,22 +915,22 @@ public class MetaNatives
             }
             if (mulParams != null && !mulParams.isEmpty())
             {
-                org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.multiplicity.Multiplicity> innerMulArgs = org.eclipse.collections.impl.factory.Lists.mutable.empty();
-                org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.multiplicity.MultiplicityParameter> mpList = org.eclipse.collections.impl.factory.Lists.mutable.empty();
+                org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.multiplicity.Multiplicity> innerMulArgs = org.eclipse.collections.impl.factory.Lists.mutable.empty();
+                org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> mpList = org.eclipse.collections.impl.factory.Lists.mutable.empty();
                 for (Object mp : mulParams)
                 {
-                    if (mp instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mpObj)
+                    if (mp instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mpObj)
                     {
                         mpObj._owner(newClass);
                         mpList.add(mpObj);
                     }
-                    innerMulArgs.add((meta.pure.metamodel.multiplicity.Multiplicity) mp);
+                    innerMulArgs.add((platform.pure.metamodel.multiplicity.Multiplicity) mp);
                 }
                 selfRef._multiplicityArguments(innerMulArgs);
                 newClass._multiplicityParameters(mpList);
             }
 
-            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = _GenericType.buildUserDefinedGenericType(classType, resolver);
+            platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = _GenericType.buildUserDefinedGenericType(classType, resolver);
             cgt._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(selfRef));
             newClass._classifierGenericType(cgt);
 
@@ -951,18 +951,18 @@ public class MetaNatives
             if (lambdaObj instanceof org.finos.legend.pure.execution.Closure closure)
             {
                 org.finos.legend.pure.execution.Scope scope = closure.capturedScope();
-                meta.pure.metamodel.type.generics.GenericType stringGT =
-                        (meta.pure.metamodel.type.generics.GenericType) resolver.getElement(
-                                "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_primitives_String");
+                platform.pure.metamodel.type.generics.GenericType stringGT =
+                        (platform.pure.metamodel.type.generics.GenericType) resolver.getElement(
+                                "platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_type_primitives_String");
                 for (int i = 0; i < scope.localSize(); i++)
                 {
                     String name = scope.localNameAt(i);
                     ValueSpecification valueVS = scope.localValueAt(i);
-                    ValueSpecification valuesSlot = valueVS instanceof meta.pure.metamodel.valuespecification.Collection
+                    ValueSpecification valuesSlot = valueVS instanceof platform.pure.metamodel.valuespecification.Collection
                             ? valueVS
                             : org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(
                                     java.util.List.of(valueVS), resolver);
-                    DynamicInstance listInstance = new DynamicInstance("meta::pure::functions::collection::List");
+                    DynamicInstance listInstance = new DynamicInstance("platform::pure::functions::collection::List");
                     listInstance.put("values", valuesSlot);
                     ValueSpecification keyVS = _E_ValueSpecification.wrap(name, stringGT, null, resolver);
                     ValueSpecification listVS = _E_ValueSpecification.wrap(listInstance, null, null, resolver);
@@ -985,11 +985,11 @@ public class MetaNatives
      */
     private static void fixTypeParameterOwners(Object original, Object copy)
     {
-        if (copy instanceof meta.pure.metamodel.type.Class cls)
+        if (copy instanceof platform.pure.metamodel.type.Class cls)
         {
             if (cls._typeParameters() != null)
             {
-                for (meta.pure.metamodel.type.generics.TypeParameter tp : cls._typeParameters())
+                for (platform.pure.metamodel.type.generics.TypeParameter tp : cls._typeParameters())
                 {
                     if (tp._owner() == original)
                     {
@@ -999,7 +999,7 @@ public class MetaNatives
             }
             if (cls._multiplicityParameters() != null)
             {
-                for (meta.pure.metamodel.multiplicity.MultiplicityParameter mp : cls._multiplicityParameters())
+                for (platform.pure.metamodel.multiplicity.MultiplicityParameter mp : cls._multiplicityParameters())
                 {
                     if (mp._owner() == original)
                     {
@@ -1012,7 +1012,7 @@ public class MetaNatives
 
     private static void fixPropertyOwners(Object original, Object copy, MetadataAccess resolver)
     {
-        if (!(copy instanceof meta.pure.metamodel.SimplePropertyOwner spo))
+        if (!(copy instanceof platform.pure.metamodel.SimplePropertyOwner spo))
         {
             return;
         }
@@ -1020,12 +1020,12 @@ public class MetaNatives
         {
             return;
         }
-        meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl copyGT = null;
-        if (copy instanceof meta.pure.metamodel.type.Type copyType)
+        platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl copyGT = null;
+        if (copy instanceof platform.pure.metamodel.type.Type copyType)
         {
             copyGT = _GenericType.buildUserDefinedGenericType(copyType, resolver);
         }
-        for (meta.pure.metamodel.function.property.Property prop : spo._properties())
+        for (platform.pure.metamodel.function.property.Property prop : spo._properties())
         {
             if (prop._owner() == original)
             {
@@ -1036,7 +1036,7 @@ public class MetaNatives
                     && !prop._defaultValue()._expressionSequence().isEmpty())
             {
                 Object vs = prop._defaultValue()._expressionSequence().getFirst();
-                if (vs instanceof meta.pure.metamodel.valuespecification.AtomicValue av
+                if (vs instanceof platform.pure.metamodel.valuespecification.AtomicValue av
                         && av._value() instanceof Any enumVal)
                 {
                     var enumCgt = enumVal._classifierGenericType();
@@ -1065,13 +1065,13 @@ public class MetaNatives
             return null;
         }
 
-        org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> typeArgs = cgt._typeArguments();
+        org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.type.generics.GenericType> typeArgs = cgt._typeArguments();
         if (typeArgs != null && typeArgs.notEmpty())
         {
             boolean hasSelfRef = false;
-            for (meta.pure.metamodel.type.generics.GenericType arg : typeArgs)
+            for (platform.pure.metamodel.type.generics.GenericType arg : typeArgs)
             {
-                if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV)
+                if (arg instanceof platform.pure.metamodel.type.generics.GenericTypeValue argV)
                 {
                     var argType = argV._type();
                     if (argType == original || org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(argType, original, resolver))
@@ -1081,27 +1081,27 @@ public class MetaNatives
                     }
                 }
             }
-            if (hasSelfRef && copy instanceof meta.pure.metamodel.type.Type copyType)
+            if (hasSelfRef && copy instanceof platform.pure.metamodel.type.Type copyType)
             {
                 // Build a new CGT with updated self-references
-                org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> newArgs =
+                org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.type.generics.GenericType> newArgs =
                         typeArgs.collect(arg ->
                         {
-                            if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
+                            if (arg instanceof platform.pure.metamodel.type.generics.GenericTypeValue argV
                                     && (argV._type() == original || org.finos.legend.pure.execution.natives.NativeRegistry.pureEquals(argV._type(), original, resolver)))
                             {
-                                meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef =
+                                platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef =
                                         _GenericType.buildUserDefinedGenericType(copyType, resolver);
                                 // Copy inner typeArguments (e.g., TypeParameters like T)
                                 // and fix their owners to point to the copy
                                 if (argV._typeArguments() != null && argV._typeArguments().notEmpty())
                                 {
-                                    org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> innerArgs =
+                                    org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.type.generics.GenericType> innerArgs =
                                             argV._typeArguments().collect(innerArg ->
                                             {
-                                                if (innerArg instanceof meta.pure.metamodel.type.generics.GenericTypeValue innerV
-                                                        && innerV._type() instanceof meta.pure.metamodel.type.generics.TypeParameter tp
-                                                        && copyType instanceof meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
+                                                if (innerArg instanceof platform.pure.metamodel.type.generics.GenericTypeValue innerV
+                                                        && innerV._type() instanceof platform.pure.metamodel.type.generics.TypeParameter tp
+                                                        && copyType instanceof platform.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
                                                 {
                                                     tp._owner(owner);
                                                 }
@@ -1112,21 +1112,21 @@ public class MetaNatives
                                 if (argV._multiplicityArguments() != null && argV._multiplicityArguments().notEmpty())
                                 {
                                     // Fix MultiplicityParameter owners too
-                                    for (meta.pure.metamodel.multiplicity.Multiplicity mp : argV._multiplicityArguments())
+                                    for (platform.pure.metamodel.multiplicity.Multiplicity mp : argV._multiplicityArguments())
                                     {
-                                        if (mp instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mulParam
-                                                && copyType instanceof meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
+                                        if (mp instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mulParam
+                                                && copyType instanceof platform.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
                                         {
                                             mulParam._owner(owner);
                                         }
                                     }
                                     selfRef._multiplicityArguments(argV._multiplicityArguments());
                                 }
-                                return (meta.pure.metamodel.type.generics.GenericType) selfRef;
+                                return (platform.pure.metamodel.type.generics.GenericType) selfRef;
                             }
                             return arg;
                         });
-                meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl newCgt =
+                platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl newCgt =
                         _GenericType.buildUserDefinedGenericType(cgt._type(), resolver);
                 newCgt._typeArguments(newArgs);
                 if (cgt._multiplicityArguments() != null)
@@ -1139,8 +1139,8 @@ public class MetaNatives
         return cgt;
     }
 
-    public static void validateConstraints(meta.pure.metamodel.type.Type type,
-                                    meta.pure.metamodel.type.generics.GenericType targetGT,
+    public static void validateConstraints(platform.pure.metamodel.type.Type type,
+                                    platform.pure.metamodel.type.generics.GenericType targetGT,
                                     Object value, ValueSpecificationEvaluator eval,
                                     MetadataAccess resolver)
     {
@@ -1156,7 +1156,7 @@ public class MetaNatives
         // validated when something actually casts to it via the canonical
         // element. Skip — the alternative is reading `._generalizations()`
         // on the pointer, which trips {@link PointerAccessGuard}.
-        if (type instanceof meta.pure.metamodel.pointer.TempCompilerPointer)
+        if (type instanceof platform.pure.metamodel.pointer.TempCompilerPointer)
         {
             return;
         }
@@ -1167,23 +1167,23 @@ public class MetaNatives
             {
                 if (gen._general() != null && _GenericType.type(gen._general()) != null)
                 {
-                    meta.pure.metamodel.type.Type superType = _GenericType.type(gen._general());
+                    platform.pure.metamodel.type.Type superType = _GenericType.type(gen._general());
                     validateConstraints(superType, gen._general(), value, eval, resolver);
                 }
             }
         }
     }
 
-    private static void validateConstraintsOnType(meta.pure.metamodel.type.Type type,
-                                                  meta.pure.metamodel.type.generics.GenericType targetGT,
+    private static void validateConstraintsOnType(platform.pure.metamodel.type.Type type,
+                                                  platform.pure.metamodel.type.generics.GenericType targetGT,
                                                   Object value, ValueSpecificationEvaluator eval,
                                                   MetadataAccess resolver)
     {
-        if (!(type instanceof meta.pure.metamodel.extension.ElementWithConstraints ewc))
+        if (!(type instanceof platform.pure.metamodel.extension.ElementWithConstraints ewc))
         {
             return;
         }
-        org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.constraint.Constraint> constraints = ewc._constraints();
+        org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.constraint.Constraint> constraints = ewc._constraints();
         if (constraints == null || constraints.isEmpty())
         {
             return;
@@ -1192,15 +1192,15 @@ public class MetaNatives
         String typeName = (type instanceof PackageableElement pe) ? pe._name() : "Unknown";
 
         Map<String, ValueSpecification> typeVarBindings = new HashMap<>();
-        if (targetGT instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv
+        if (targetGT instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv
                 && gtv._typeVariableValues() != null && gtv._typeVariableValues().notEmpty())
         {
-            org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.valuespecification.VariableExpression> typeVars = null;
-            if (type instanceof meta.pure.metamodel.type.PrimitiveType pt)
+            org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.valuespecification.VariableExpression> typeVars = null;
+            if (type instanceof platform.pure.metamodel.type.PrimitiveType pt)
             {
                 typeVars = pt._typeVariables();
             }
-            else if (type instanceof meta.pure.metamodel.type.Class cls)
+            else if (type instanceof platform.pure.metamodel.type.Class cls)
             {
                 typeVars = cls._typeVariables();
             }
@@ -1224,8 +1224,8 @@ public class MetaNatives
         {
             for (int idx = 0; idx < constraints.size(); idx++)
             {
-                meta.pure.metamodel.constraint.Constraint c = constraints.get(idx);
-                meta.pure.metamodel.function.FunctionDefinition funcDef = c._functionDefinition();
+                platform.pure.metamodel.constraint.Constraint c = constraints.get(idx);
+                platform.pure.metamodel.function.FunctionDefinition funcDef = c._functionDefinition();
                 if (funcDef == null)
                 {
                     continue;
@@ -1338,18 +1338,18 @@ public class MetaNatives
      * Falls through to the original {@code cgt} when no canonical exists or args
      * are present (e.g. {@code ^Class<T>(...)}).
      */
-    public static meta.pure.metamodel.type.generics.GenericType preferCanonicalAnchorPublic(
-            meta.pure.metamodel.type.generics.GenericType cgt,
+    public static platform.pure.metamodel.type.generics.GenericType preferCanonicalAnchorPublic(
+            platform.pure.metamodel.type.generics.GenericType cgt,
             MetadataAccess resolver)
     {
         return preferCanonicalAnchor(cgt, resolver);
     }
 
-    private static meta.pure.metamodel.type.generics.GenericType preferCanonicalAnchor(
-            meta.pure.metamodel.type.generics.GenericType cgt,
+    private static platform.pure.metamodel.type.generics.GenericType preferCanonicalAnchor(
+            platform.pure.metamodel.type.generics.GenericType cgt,
             MetadataAccess resolver)
     {
-        if (!(cgt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv))
+        if (!(cgt instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv))
         {
             return cgt;
         }
@@ -1361,8 +1361,8 @@ public class MetaNatives
         {
             return cgt;
         }
-        meta.pure.metamodel.type.Type rawType = gtv._type();
-        if (!(rawType instanceof meta.pure.metamodel.PackageableElement pe))
+        platform.pure.metamodel.type.Type rawType = gtv._type();
+        if (!(rawType instanceof platform.pure.metamodel.PackageableElement pe))
         {
             return cgt;
         }
@@ -1375,9 +1375,9 @@ public class MetaNatives
         {
             return cgt;
         }
-        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+        Object canonical = resolver.getElement("platform::pure::metamodel::type::generics::optimization::GenericType_"
                 + typePath.replace("::", "_"));
-        if (canonical instanceof meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT)
+        if (canonical instanceof platform.pure.metamodel.type.generics.GenericTypeValue canonicalGT)
         {
             return canonicalGT;
         }
@@ -1389,10 +1389,10 @@ public class MetaNatives
      * Derive the class path from a classifierGenericType.
      * Used as fallback when the instance has no name/package yet (freshly created via new(GenericType)).
      */
-    public static String resolveClassPathFromCGT(meta.pure.metamodel.type.generics.GenericType cgt)
+    public static String resolveClassPathFromCGT(platform.pure.metamodel.type.generics.GenericType cgt)
     {
-        meta.pure.metamodel.type.Type rawType = _GenericType.type(cgt);
-        if (rawType instanceof meta.pure.metamodel.PackageableElement pe)
+        platform.pure.metamodel.type.Type rawType = _GenericType.type(cgt);
+        if (rawType instanceof platform.pure.metamodel.PackageableElement pe)
         {
             String path = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
             if (path != null && !path.isEmpty())
@@ -1409,7 +1409,7 @@ public class MetaNatives
      * For Java class sources, uses metamodel-driven reflection.
      */
     public static void shallowCopyProperties(Object source, Object target,
-                                      meta.pure.metamodel.type.generics.GenericType cgt,
+                                      platform.pure.metamodel.type.generics.GenericType cgt,
                                       MetadataAccess resolver)
     {
         if (source instanceof DynamicInstance diSource)
@@ -1440,7 +1440,7 @@ public class MetaNatives
         }
         else
         {
-            meta.pure.metamodel.type.Type sourceType = cgt != null ? _GenericType.type(cgt) : null;
+            platform.pure.metamodel.type.Type sourceType = cgt != null ? _GenericType.type(cgt) : null;
             if (sourceType == null)
             {
                 return;
@@ -1499,7 +1499,7 @@ public class MetaNatives
     /**
      * Collect all property names from a type and its supertypes.
      */
-    private static List<String> collectAllPropertyNames(meta.pure.metamodel.type.Type type)
+    private static List<String> collectAllPropertyNames(platform.pure.metamodel.type.Type type)
     {
         List<String> names = new ArrayList<>();
         java.util.Set<String> seen = new java.util.LinkedHashSet<>();
@@ -1508,7 +1508,7 @@ public class MetaNatives
         return names;
     }
 
-    private static void collectPropertyNamesRecursive(meta.pure.metamodel.type.Type type,
+    private static void collectPropertyNamesRecursive(platform.pure.metamodel.type.Type type,
                                                       List<String> names,
                                                       java.util.Set<String> seen,
                                                       java.util.Set<String> visited)
@@ -1520,7 +1520,7 @@ public class MetaNatives
         {
             return;
         }
-        if (type instanceof meta.pure.metamodel.type.Class cls)
+        if (type instanceof platform.pure.metamodel.type.Class cls)
         {
             if (cls._properties() != null)
             {
@@ -1602,7 +1602,7 @@ public class MetaNatives
      * Get all property entries from any instance type.
      */
     private static List<Map.Entry<String, Object>> getAllPropertyEntries(
-            Object instance, meta.pure.metamodel.type.generics.GenericType cgt, MetadataAccess resolver)
+            Object instance, platform.pure.metamodel.type.generics.GenericType cgt, MetadataAccess resolver)
     {
         List<Map.Entry<String, Object>> entries = new ArrayList<>();
         if (instance instanceof DynamicInstance di)
@@ -1617,7 +1617,7 @@ public class MetaNatives
         }
         else
         {
-            meta.pure.metamodel.type.Type type = cgt != null ? _GenericType.type(cgt) : null;
+            platform.pure.metamodel.type.Type type = cgt != null ? _GenericType.type(cgt) : null;
             if (type != null)
             {
                 for (String propName : collectAllPropertyNames(type))
@@ -1646,8 +1646,8 @@ public class MetaNatives
      */
     static void validateClassifierOverride(Object proposed, Object instance)
     {
-        meta.pure.metamodel.type.generics.GenericType currentCgt = null;
-        if (instance instanceof meta.pure.metamodel.type.Any any)
+        platform.pure.metamodel.type.generics.GenericType currentCgt = null;
+        if (instance instanceof platform.pure.metamodel.type.Any any)
         {
             currentCgt = any._classifierGenericType();
         }
@@ -1655,8 +1655,8 @@ public class MetaNatives
         {
             currentCgt = di.getClassifierGenericType();
         }
-        meta.pure.metamodel.type.Type expected = currentCgt != null ? _GenericType.type(currentCgt) : null;
-        meta.pure.metamodel.type.Type proposedType = proposed instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv ? _GenericType.type(gtv) : null;
+        platform.pure.metamodel.type.Type expected = currentCgt != null ? _GenericType.type(currentCgt) : null;
+        platform.pure.metamodel.type.Type proposedType = proposed instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv ? _GenericType.type(gtv) : null;
         if (expected != null && proposedType != null && samePackageableElement(expected, proposedType))
         {
             return;
@@ -1670,7 +1670,7 @@ public class MetaNatives
         // a user-supplied raw type swap. Must run before the generalization
         // walk: pointers carry only `path`, so reading `._generalizations()`
         // on one trips {@link PointerAccessGuard}.
-        if (proposedType instanceof meta.pure.metamodel.pointer.TempCompilerPointer)
+        if (proposedType instanceof platform.pure.metamodel.pointer.TempCompilerPointer)
         {
             return;
         }
@@ -1684,23 +1684,23 @@ public class MetaNatives
         {
             return;
         }
-        String expectedName = expected instanceof meta.pure.metamodel.PackageableElement peE
+        String expectedName = expected instanceof platform.pure.metamodel.PackageableElement peE
                 ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peE) : "<unknown>";
-        String proposedName = proposedType instanceof meta.pure.metamodel.PackageableElement peP
+        String proposedName = proposedType instanceof platform.pure.metamodel.PackageableElement peP
                 ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peP) : "<unknown>";
         throw new RuntimeException("Cannot change classifierGenericType.type from '" + expectedName + "' to '" + proposedName
                 + "'. The classifier's raw type is system-managed (derived from the instance's metaclass)"
                 + " — only typeArguments, multiplicityArguments and typeVariableValues are user-customizable."
-                + " Use meta::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
+                + " Use platform::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
     }
 
-    private static boolean samePackageableElement(meta.pure.metamodel.type.Type a, meta.pure.metamodel.type.Type b)
+    private static boolean samePackageableElement(platform.pure.metamodel.type.Type a, platform.pure.metamodel.type.Type b)
     {
         if (a == b)
         {
             return true;
         }
-        if (a instanceof meta.pure.metamodel.PackageableElement peA && b instanceof meta.pure.metamodel.PackageableElement peB)
+        if (a instanceof platform.pure.metamodel.PackageableElement peA && b instanceof platform.pure.metamodel.PackageableElement peB)
         {
             return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peA).equals(
                     org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peB));
@@ -1714,19 +1714,19 @@ public class MetaNatives
      * {@link #validateClassifierOverride} to allow {@code ^Enum(...)} to be
      * re-classified as a specific user enumeration (subtype of Enum).
      */
-    private static boolean isSubtypeViaGeneralizations(meta.pure.metamodel.type.Type sub, meta.pure.metamodel.type.Type sup)
+    private static boolean isSubtypeViaGeneralizations(platform.pure.metamodel.type.Type sub, platform.pure.metamodel.type.Type sup)
     {
         if (samePackageableElement(sub, sup)) return true;
-        meta.pure.metamodel.type.Type current = sub;
+        platform.pure.metamodel.type.Type current = sub;
         for (int depth = 0; depth < 32 && current != null; depth++)
         {
-            org.eclipse.collections.api.RichIterable<? extends meta.pure.metamodel.relationship.Generalization> gens = current._generalizations();
+            org.eclipse.collections.api.RichIterable<? extends platform.pure.metamodel.relationship.Generalization> gens = current._generalizations();
             if (gens == null || gens.isEmpty()) return false;
-            meta.pure.metamodel.type.Type next = null;
-            for (meta.pure.metamodel.relationship.Generalization g : gens)
+            platform.pure.metamodel.type.Type next = null;
+            for (platform.pure.metamodel.relationship.Generalization g : gens)
             {
-                meta.pure.metamodel.type.generics.GenericType generalGT = g._general();
-                meta.pure.metamodel.type.Type parent = generalGT != null ? _GenericType.type(generalGT) : null;
+                platform.pure.metamodel.type.generics.GenericType generalGT = g._general();
+                platform.pure.metamodel.type.Type parent = generalGT != null ? _GenericType.type(generalGT) : null;
                 if (parent == null) continue;
                 if (samePackageableElement(parent, sup)) return true;
                 if (next == null) next = parent;
@@ -1761,9 +1761,9 @@ public class MetaNatives
                     // `RelationType.classifierGenericType.typeArguments[0]` to
                     // `~` so it points back at the instance).
                     validateClassifierOverride(rawExpr, instance);
-                    if (rawExpr instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+                    if (rawExpr instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv)
                     {
-                        if (instance instanceof meta.pure.metamodel.type.Any any)
+                        if (instance instanceof platform.pure.metamodel.type.Any any)
                         {
                             any._classifierGenericType(gtv);
                         }
@@ -1903,18 +1903,18 @@ public class MetaNatives
             return;
         }
         PackageableElement classElement = resolver.getElement(classPath);
-        if (!(classElement instanceof meta.pure.metamodel.type.Class cls))
+        if (!(classElement instanceof platform.pure.metamodel.type.Class cls))
         {
             return;
         }
-        List<meta.pure.metamodel.function.property.Property> allAssocProps = new ArrayList<>();
+        List<platform.pure.metamodel.function.property.Property> allAssocProps = new ArrayList<>();
         collectAssocPropsFromHierarchy(cls, allAssocProps, new java.util.HashSet<>());
         if (allAssocProps.isEmpty())
         {
             return;
         }
         java.util.Set<String> assocPropNames = new java.util.HashSet<>();
-        for (meta.pure.metamodel.function.property.Property p : allAssocProps)
+        for (platform.pure.metamodel.function.property.Property p : allAssocProps)
         {
             if (p != null && p._name() != null)
             {
@@ -1977,12 +1977,12 @@ public class MetaNatives
         }
 
         PackageableElement classElement = resolver.getElement(classPath);
-        if (!(classElement instanceof meta.pure.metamodel.type.Class cls))
+        if (!(classElement instanceof platform.pure.metamodel.type.Class cls))
         {
             return;
         }
 
-        List<meta.pure.metamodel.function.property.Property> allAssocProps = new ArrayList<>();
+        List<platform.pure.metamodel.function.property.Property> allAssocProps = new ArrayList<>();
         collectAssocPropsFromHierarchy(cls, allAssocProps, new java.util.HashSet<>());
         if (allAssocProps.isEmpty())
         {
@@ -2003,14 +2003,14 @@ public class MetaNatives
                 continue;
             }
 
-            for (meta.pure.metamodel.function.property.Property assocProp : allAssocProps)
+            for (platform.pure.metamodel.function.property.Property assocProp : allAssocProps)
             {
                 if (assocProp != null && propName.equals(assocProp._name()))
                 {
-                    meta.pure.metamodel.SimplePropertyOwner owner = assocProp._owner();
+                    platform.pure.metamodel.SimplePropertyOwner owner = assocProp._owner();
                     if (owner != null && owner._properties() != null)
                     {
-                        for (meta.pure.metamodel.function.property.Property otherProp : owner._properties())
+                        for (platform.pure.metamodel.function.property.Property otherProp : owner._properties())
                         {
                             if (otherProp != null && !propName.equals(otherProp._name()))
                             {
@@ -2027,15 +2027,15 @@ public class MetaNatives
         }
     }
 
-    private static void collectAssocPropsFromHierarchy(meta.pure.metamodel.type.Class cls,
-                                                       List<meta.pure.metamodel.function.property.Property> result,
+    private static void collectAssocPropsFromHierarchy(platform.pure.metamodel.type.Class cls,
+                                                       List<platform.pure.metamodel.function.property.Property> result,
                                                        java.util.Set<String> visited)
     {
         collectAssocPropsFromHierarchyInner(cls, result, visited, new java.util.HashSet<>());
     }
 
-    private static void collectAssocPropsFromHierarchyInner(meta.pure.metamodel.type.Class cls,
-                                                            List<meta.pure.metamodel.function.property.Property> result,
+    private static void collectAssocPropsFromHierarchyInner(platform.pure.metamodel.type.Class cls,
+                                                            List<platform.pure.metamodel.function.property.Property> result,
                                                             java.util.Set<String> visited,
                                                             java.util.Set<String> seenPropNames)
     {
@@ -2053,11 +2053,11 @@ public class MetaNatives
             return;
         }
 
-        org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.function.property.Property> assocProps =
+        org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.function.property.Property> assocProps =
                 cls._propertiesFromAssociations();
         if (assocProps != null)
         {
-            for (meta.pure.metamodel.function.property.Property p : assocProps)
+            for (platform.pure.metamodel.function.property.Property p : assocProps)
             {
                 if (p != null && p._name() != null && seenPropNames.add(p._name()))
                 {
@@ -2068,12 +2068,12 @@ public class MetaNatives
 
         if (cls._generalizations() != null)
         {
-            for (meta.pure.metamodel.relationship.Generalization gen : cls._generalizations())
+            for (platform.pure.metamodel.relationship.Generalization gen : cls._generalizations())
             {
                 if (gen != null && gen._general() != null)
                 {
-                    meta.pure.metamodel.type.Type superType = _GenericType.type(gen._general());
-                    if (superType instanceof meta.pure.metamodel.type.Class superCls)
+                    platform.pure.metamodel.type.Type superType = _GenericType.type(gen._general());
+                    if (superType instanceof platform.pure.metamodel.type.Class superCls)
                     {
                         collectAssocPropsFromHierarchyInner(superCls, result, visited, seenPropNames);
                     }
@@ -2145,7 +2145,7 @@ public class MetaNatives
         }
 
         // Compiled Java targets: unwrap and set via reflection
-        if (value instanceof meta.pure.metamodel.valuespecification.Collection col)
+        if (value instanceof platform.pure.metamodel.valuespecification.Collection col)
         {
             if (col._values().isEmpty())
             {
@@ -2246,7 +2246,7 @@ public class MetaNatives
     private static int inputCount(ValueSpecification vs)
     {
         if (vs == null) return 0;
-        if (vs instanceof meta.pure.metamodel.valuespecification.Collection col)
+        if (vs instanceof platform.pure.metamodel.valuespecification.Collection col)
         {
             return col._values() != null ? col._values().size() : 0;
         }

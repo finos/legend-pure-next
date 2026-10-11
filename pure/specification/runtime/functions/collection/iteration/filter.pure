@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::collection::tests::model::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::collection::tests::model::*;
 
 native function
     <<PCT.function>>
@@ -21,27 +22,27 @@ native function
         doc.doc='Applies the given function to each elements and filters out the ones where the applied function returns false.',
         PCT.grammarDoc='filter is leveraged in milestoning generated derived properties'
     }
-    meta::pure::functions::collection::filter<T>(value:T[*], func:Function<{T[1]->Boolean[1]}>[1]):T[*];
+    platform::pure::functions::collection::filter<T>(value:T[*], func:Function<{T[1]->Boolean[1]}>[1]):T[*];
 
 
-function <<PCT.test>> meta::pure::functions::collection::tests::filter::testFilterLiteral<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::filter::testFilterLiteral<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(['Doe'], $f->eval(|['Smith', 'Doe', 'Branche']->filter(s | equal($s->length(), 3))));
     assertEquals(['Branche', 'Doe'], $f->eval(|['Smith', 'Branche', 'Doe']->filter(s | $s != 'Smith')));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::filter::testFilterLiteralFromVar<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::filter::testFilterLiteralFromVar<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let set = ['Smith', 'Branche', 'Doe'];
     assertEquals(['Smith', 'Doe'], $f->eval(|$set->filter(s | $s->length() < 6)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::filter::testLambdaAsFunctionParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::filter::testLambdaAsFunctionParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(['Doe'], $f->eval(|filter(['Smith', 'Doe', 'Branche'], s | equal($s->length(), 3))));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::filter::testFilterInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::filter::testFilterInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let smith = ^CO_Person(firstName='Fabrice', lastName='Smith');
     let doe = ^CO_Person(firstName='Pierre', lastName='Doe');
@@ -49,7 +50,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::filter::testFilt
     assertEquals([$smith, $doe], $f->eval(|[$smith, $branche, $doe]->filter(p | !$p.lastName->isEmpty() && ($p.lastName->toOne()->length() < 6))));
 }
 
-function <<test.Test>> meta::pure::functions::collection::tests::filter::testFilterUsingVarForFunction():Boolean[1]
+function <<test.Test>> platform::pure::functions::collection::tests::filter::testFilterUsingVarForFunction():Boolean[1]
 {
     let smith = ^CO_Person(firstName='Fabrice', lastName='Smith');
     let doe = ^CO_Person(firstName='Pierre', lastName='Doe');

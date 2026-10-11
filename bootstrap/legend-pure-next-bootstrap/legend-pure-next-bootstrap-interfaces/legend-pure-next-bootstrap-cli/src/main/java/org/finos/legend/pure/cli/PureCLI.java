@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +16,7 @@
 package org.finos.legend.pure.cli;
 
 import org.finos.legend.pure.execution.InterpretedExecution;
-import meta.pure.metamodel.function.FunctionDefinition;
+import platform.pure.metamodel.function.FunctionDefinition;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.runtime.PureRuntime;
 import org.finos.legend.pure.m3.SpecificationBinaryBuilder;
@@ -161,11 +162,11 @@ public class PureCLI
         }
         new ModuleRegistry(modules).attach(List.of(new PureLanguageExtension()));
 
-        meta.pure.metamodel.PackageableElement element = null;
+        platform.pure.metamodel.PackageableElement element = null;
         String foundIn = null;
         for (PdbModule mod : modules)
         {
-            meta.pure.metamodel.PackageableElement candidate = mod.getElement(elementPath);
+            platform.pure.metamodel.PackageableElement candidate = mod.getElement(elementPath);
             if (candidate != null)
             {
                 element = candidate;
@@ -183,11 +184,11 @@ public class PureCLI
         System.out.println("  Found in module: " + foundIn);
         System.out.println("  Java class:      " + element.getClass().getName());
 
-        if (element instanceof meta.pure.metamodel.type.Class cls)
+        if (element instanceof platform.pure.metamodel.type.Class cls)
         {
             dumpClass(cls);
         }
-        else if (element instanceof meta.pure.metamodel.relationship.Association assoc)
+        else if (element instanceof platform.pure.metamodel.relationship.Association assoc)
         {
             dumpAssociation(assoc);
         }
@@ -197,36 +198,36 @@ public class PureCLI
         }
     }
 
-    private static void dumpClass(meta.pure.metamodel.type.Class cls)
+    private static void dumpClass(platform.pure.metamodel.type.Class cls)
     {
-        org.eclipse.collections.api.list.MutableList<? extends meta.pure.metamodel.function.property.Property> props = cls._properties();
+        org.eclipse.collections.api.list.MutableList<? extends platform.pure.metamodel.function.property.Property> props = cls._properties();
         System.out.println("  properties (" + (props == null ? "null slot" : props.size() + " entries") + "):");
         if (props != null)
         {
-            for (meta.pure.metamodel.function.property.Property p : props)
+            for (platform.pure.metamodel.function.property.Property p : props)
             {
                 System.out.println("    - " + p._name() + " : " + typeOfProperty(p));
             }
         }
 
-        org.eclipse.collections.api.list.MutableList<? extends meta.pure.metamodel.function.property.Property> pfa = cls._propertiesFromAssociations();
+        org.eclipse.collections.api.list.MutableList<? extends platform.pure.metamodel.function.property.Property> pfa = cls._propertiesFromAssociations();
         System.out.println("  propertiesFromAssociations (" + (pfa == null ? "null slot" : pfa.size() + " entries") + "):");
         if (pfa != null)
         {
-            for (meta.pure.metamodel.function.property.Property p : pfa)
+            for (platform.pure.metamodel.function.property.Property p : pfa)
             {
                 System.out.println("    - " + p._name() + " : " + typeOfProperty(p) + "   (owner: " + ownerPath(p) + ")");
             }
         }
 
-        org.eclipse.collections.api.list.MutableList<? extends meta.pure.metamodel.relationship.Generalization> gens = cls._generalizations();
+        org.eclipse.collections.api.list.MutableList<? extends platform.pure.metamodel.relationship.Generalization> gens = cls._generalizations();
         System.out.println("  generalizations (" + (gens == null ? "null slot" : gens.size() + " entries") + "):");
         if (gens != null)
         {
-            for (meta.pure.metamodel.relationship.Generalization g : gens)
+            for (platform.pure.metamodel.relationship.Generalization g : gens)
             {
-                meta.pure.metamodel.type.Type t = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(g._general());
-                String supertype = t instanceof meta.pure.metamodel.PackageableElement pe
+                platform.pure.metamodel.type.Type t = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(g._general());
+                String supertype = t instanceof platform.pure.metamodel.PackageableElement pe
                         ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe)
                         : (t == null ? "null" : t.getClass().getName());
                 System.out.println("    -> " + supertype);
@@ -234,35 +235,35 @@ public class PureCLI
         }
     }
 
-    private static void dumpAssociation(meta.pure.metamodel.relationship.Association assoc)
+    private static void dumpAssociation(platform.pure.metamodel.relationship.Association assoc)
     {
-        org.eclipse.collections.api.list.MutableList<? extends meta.pure.metamodel.function.property.Property> props = assoc._properties();
+        org.eclipse.collections.api.list.MutableList<? extends platform.pure.metamodel.function.property.Property> props = assoc._properties();
         System.out.println("  properties (" + (props == null ? "null slot" : props.size() + " entries") + "):");
         if (props != null)
         {
-            for (meta.pure.metamodel.function.property.Property p : props)
+            for (platform.pure.metamodel.function.property.Property p : props)
             {
                 System.out.println("    - " + p._name() + " : " + typeOfProperty(p));
             }
         }
     }
 
-    private static String typeOfProperty(meta.pure.metamodel.function.property.Property p)
+    private static String typeOfProperty(platform.pure.metamodel.function.property.Property p)
     {
-        meta.pure.metamodel.type.generics.GenericType gt = p._genericType();
+        platform.pure.metamodel.type.generics.GenericType gt = p._genericType();
         if (gt == null) return "null genericType";
-        meta.pure.metamodel.type.Type t = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(gt);
-        if (t instanceof meta.pure.metamodel.PackageableElement pe)
+        platform.pure.metamodel.type.Type t = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(gt);
+        if (t instanceof platform.pure.metamodel.PackageableElement pe)
         {
             return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
         }
         return t == null ? "null type" : t.getClass().getName();
     }
 
-    private static String ownerPath(meta.pure.metamodel.function.property.Property p)
+    private static String ownerPath(platform.pure.metamodel.function.property.Property p)
     {
-        meta.pure.metamodel.SimplePropertyOwner owner = p._owner();
-        if (owner instanceof meta.pure.metamodel.PackageableElement pe)
+        platform.pure.metamodel.SimplePropertyOwner owner = p._owner();
+        if (owner instanceof platform.pure.metamodel.PackageableElement pe)
         {
             return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
         }

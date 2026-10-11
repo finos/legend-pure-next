@@ -15,8 +15,8 @@
 
 package org.finos.legend.pure.m3.module;
 
-import meta.pure.metamodel.Package;
-import meta.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.Package;
+import platform.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
@@ -63,7 +63,7 @@ public final class PackageSplitFilter
         // can be COMPLETED and not merely narrowed. Narrowing alone was not enough: a child added to a
         // package by a source file other than the one that first defined it could be absent from every
         // copy of that Package, leaving the element in the archive with nothing pointing at it — a
-        // package-tree walk then could not reach it, which is how `meta::pure::metamodel::relation`
+        // package-tree walk then could not reach it, which is how `platform::pure::metamodel::relation`
         // came to list 6 children while 12 of its classes were written.
         Map<String, List<PackageableElement>> byParent = new LinkedHashMap<>();
         for (PackageableElement e : partition)

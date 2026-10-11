@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 native function over<T>(): Window<T>[1];
 
@@ -18,31 +32,31 @@ native function extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_(r:Relati
 native function lag_Relation_1__T_1__T_$0_1$_(w:Relation<T~lag_Relation_1__T_1__T_$0_1$_>[1], r:T~lag_Relation_1__T_1__T_$0_1$_[1]):T~lag_Relation_1__T_1__T_$0_1$_[0..1]  ~NativeFunction<{Relation<T~lag_Relation_1__T_1__T_$0_1$_>[1], T~lag_Relation_1__T_1__T_$0_1$_[1]->T~lag_Relation_1__T_1__T_$0_1$_[0..1]}>
 
 function f_Relation_1__Any_MANY_(x:Relation<(legal:@String@[1], other:@Integer@[0..1])>[1]):@Any@[*]  ~UserDefinedFunction<{Relation<(legal:@String@[1], other:@Integer@[0..1])>[1]->@Any@[*]}>
-  ArrowInvocation extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_ :#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#, new:#String##[1]#)#>##[1]#  ~@ArrowInvocation@  @10:5-10:71
+  ArrowInvocation extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_ :#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#, new:#String##[1]#)#>##[1]#  ~@ArrowInvocation@  @24:5-24:71
     typeParam R -> #(new:#String##[1]#)#
     typeParam T -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
-    Variable x :#Relation<(legal:@String@[1], other:@Integer@[0..1])>##[1]#  ~@VariableExpression@  @10:3-10:4
-    FunctionInvocation over__Window_1_ :#Window<#(legal:@String@[1], other:@Integer@[0..1])#>##[1]#  ~@FunctionInvocation@  @10:14-10:19
+    Variable x :#Relation<(legal:@String@[1], other:@Integer@[0..1])>##[1]#  ~@VariableExpression@  @24:3-24:4
+    FunctionInvocation over__Window_1_ :#Window<#(legal:@String@[1], other:@Integer@[0..1])#>##[1]#  ~@FunctionInvocation@  @24:14-24:19
       typeParam T -> #(legal:@String@[1], other:@Integer@[0..1])#
-    FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->@Any@[1]}#, #(new:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @10:23-10:70
+    FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->@Any@[1]}#, #(new:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @24:23-24:70
       typeParam T -> #(new:#String##[1]#)#
       typeParam U -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
-      Lambda(p:#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, w:#Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, r:#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#) :#LambdaFunction<#{#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, #Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, #(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @10:29-10:70
-        FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @10:55-10:69
-          ArrowInvocation toOne_T_MANY__T_1_ :#String##[1]#  ~@ArrowInvocation@  @10:55-10:63
+      Lambda(p:#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, w:#Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, r:#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#) :#LambdaFunction<#{#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, #Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, #(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @24:29-24:70
+        FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @24:55-24:69
+          ArrowInvocation toOne_T_MANY__T_1_ :#String##[1]#  ~@ArrowInvocation@  @24:55-24:63
             typeParam T -> #String#
-            FunctionInvocation map_T_$0_1$__Function_1__V_$0_1$_ :#String##[0..1]#  ~@FunctionInvocation@  @10:49-10:54
+            FunctionInvocation map_T_$0_1$__Function_1__V_$0_1$_ :#String##[0..1]#  ~@FunctionInvocation@  @24:49-24:54
               typeParam T -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
               typeParam V -> #String#
-              ArrowInvocation lag_Relation_1__T_1__T_$0_1$_ :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[0..1]#  ~@ArrowInvocation@  @10:40-10:48
+              ArrowInvocation lag_Relation_1__T_1__T_$0_1$_ :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[0..1]#  ~@ArrowInvocation@  @24:40-24:48
                 typeParam T -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
-                Variable p :#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#  ~@VariableExpression@  @10:38-10:39
-                Variable r :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#  ~@VariableExpression@  @10:46-10:47
+                Variable p :#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#  ~@VariableExpression@  @24:38-24:39
+                Variable r :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#  ~@VariableExpression@  @24:46-24:47
               Lambda(v_automap:#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]) :#LambdaFunction<#{#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->#String##[1]#}#>#[1]  ~@AtomicValue@
-                DotApplication legal :#String##[1]#  ~@DotApplication@  @10:49-10:54
+                DotApplication legal :#String##[1]#  ~@DotApplication@  @24:49-24:54
                   Variable v_automap :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#  ~@VariableExpression@
-          AtomicValue  'w' :@String@[1]  ~@AtomicValue@  @10:67-10:69
-      AtomicValue  'new' :@String@[1]  ~@AtomicValue@  @10:23-10:25
+          AtomicValue  'w' :@String@[1]  ~@AtomicValue@  @24:67-24:69
+      AtomicValue  'new' :@String@[1]  ~@AtomicValue@  @24:23-24:25
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(new:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
 
 ###ReverseIndex
@@ -50,16 +64,16 @@ extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_:
   f_Relation_1__Any_MANY_
 lag_Relation_1__T_1__T_$0_1$_:
   f_Relation_1__Any_MANY_
-meta::pure::functions::collection::map_T_$0_1$__Function_1__V_$0_1$_:
+over__Window_1_:
   f_Relation_1__Any_MANY_
-meta::pure::functions::lang::toOne_T_MANY__T_1_:
+platform::pure::functions::collection::map_T_$0_1$__Function_1__V_$0_1$_:
   f_Relation_1__Any_MANY_
-meta::pure::functions::relation::Window:
+platform::pure::functions::lang::toOne_T_MANY__T_1_:
+  f_Relation_1__Any_MANY_
+platform::pure::functions::relation::Window:
   extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_
   over__Window_1_
-meta::pure::functions::relation::funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_:
+platform::pure::functions::relation::funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_:
   f_Relation_1__Any_MANY_
-meta::pure::functions::string::plus_String_1__String_1__String_1_:
-  f_Relation_1__Any_MANY_
-over__Window_1_:
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
   f_Relation_1__Any_MANY_

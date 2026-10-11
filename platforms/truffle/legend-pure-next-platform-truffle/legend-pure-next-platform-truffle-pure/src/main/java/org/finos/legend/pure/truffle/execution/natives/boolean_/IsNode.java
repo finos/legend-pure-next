@@ -72,9 +72,9 @@ public final class IsNode extends PureNode
         // PE cost. Earlier the uncached pureTypeIs blew Graal's inlining
         // budget here; the cache fixes that. Validated on TrufflePureTestRunner.
         boolean aIsEnum = _Any.pureTypeIs(rawA,
-                "meta::pure::metamodel::type::Enum");
+                "platform::pure::metamodel::type::Enum");
         boolean bIsEnum = _Any.pureTypeIs(rawB,
-                "meta::pure::metamodel::type::Enum");
+                "platform::pure::metamodel::type::Enum");
         if (aIsEnum && bIsEnum)
         {
             Object nameA = _Any.readBySlot(rawA, SLOT_NAME);

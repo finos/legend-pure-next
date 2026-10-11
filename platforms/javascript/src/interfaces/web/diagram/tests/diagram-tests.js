@@ -384,7 +384,7 @@ check("formats multiplicities the way Pure writes them", () => {
 });
 
 check("builds a qualified name from a package chain, and trusts a pointer's own path", () => {
-    assert.equal(qualifiedName({ __purePath: "meta::pure::x::Y" }), "meta::pure::x::Y");
+    assert.equal(qualifiedName({ __purePath: "platform::pure::x::Y" }), "platform::pure::x::Y");
     assert.equal(qualifiedName({ name: "Person", package: { name: "m", package: { name: "Root" } } }), "m::Person");
     assert.equal(qualifiedName(undefined), "");
     // Values cross from Pure as one-element arrays just as often as bare values.
@@ -675,7 +675,7 @@ const fakeCtx = (perChar = 7) => ({
 const DEF_WIDE = {
     "m::Person": { properties: [
         { name: "firstName", type: "String", multiplicity: "1" },
-        { name: "aVeryLongPropertyNameIndeed", type: "meta::pure::SomeLongType", multiplicity: "0..1" },
+        { name: "aVeryLongPropertyNameIndeed", type: "platform::pure::SomeLongType", multiplicity: "0..1" },
     ], generalizations: [] },
 };
 const emptyDiagram = () => ({ typeViews: [], generalizationViews: [], associationViews: [], propertyViews: [] });

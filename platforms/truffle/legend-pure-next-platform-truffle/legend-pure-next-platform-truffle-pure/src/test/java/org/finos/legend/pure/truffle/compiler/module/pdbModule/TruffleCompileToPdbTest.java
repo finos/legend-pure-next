@@ -114,18 +114,18 @@ public class TruffleCompileToPdbTest
 
         // 3-arg silent variant — tests pull errors/stats structurally off the
         // result; the live progress bar + stats summary would flood surefire output.
-        compileFn = resolver.getElement("meta::pure::compiler::compile_PureFile_MANY__Boolean_1__Boolean_1__CompilationResult_1_");
+        compileFn = resolver.getElement("platform::pure::compiler::compile_PureFile_MANY__Boolean_1__Boolean_1__CompilationResult_1_");
         if (compileFn == null
                 || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(compileFn,
-                "meta::pure::metamodel::function::FunctionDefinition", resolver))
+                "platform::pure::metamodel::function::FunctionDefinition", resolver))
         {
             throw new RuntimeException("compile FunctionDefinition not resolvable: "
                     + (compileFn == null ? "null" : compileFn.getClass().getName()));
         }
-        manageFileSectionsFn = resolver.getElement("meta::pure::compiler::test::manageFileSections_PureFile_1__PureFile_MANY_");
+        manageFileSectionsFn = resolver.getElement("platform::pure::compiler::test::manageFileSections_PureFile_1__PureFile_MANY_");
         if (manageFileSectionsFn == null
                 || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(manageFileSectionsFn,
-                "meta::pure::metamodel::function::FunctionDefinition", resolver))
+                "platform::pure::metamodel::function::FunctionDefinition", resolver))
         {
             throw new RuntimeException("manageFileSections FunctionDefinition not resolvable: "
                     + (manageFileSectionsFn == null ? "null" : manageFileSectionsFn.getClass().getName()));
@@ -300,7 +300,7 @@ public class TruffleCompileToPdbTest
                     Object el = elementsSeq.getBoxed(i);
                     // Accept both typed XPDBHelper and PureDynamicObject elements.
                     if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(el,
-                            "meta::pure::metamodel::PackageableElement", resolver))
+                            "platform::pure::metamodel::PackageableElement", resolver))
                     {
                         elements.add(el);
                     }

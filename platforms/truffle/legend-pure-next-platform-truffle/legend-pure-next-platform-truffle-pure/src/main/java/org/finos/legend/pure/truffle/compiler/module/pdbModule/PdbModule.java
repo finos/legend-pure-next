@@ -231,11 +231,11 @@ public final class PdbModule implements Module
         String purePath = GenericFbDecoder.purePathForDef(typeName + "Def", resolver);
         try
         {
-            // The TRANSLATED reader (meta::pure::compiler::pdb::reader) roots the
+            // The TRANSLATED reader (platform::pure::compiler::pdb::reader) roots the
             // buffer; no flatc class, so no bootstrap-compiler jar. The node is a
             // position in the bytes, so this stays lazy: the PDO decodes one
             // property at a time, exactly as the flatc wrapper did.
-            Object node = org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader
+            Object node = org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader
                     .elementNode_Binary_1__String_1__FbsNode_1_.execute(data, typeName);
             return new org.finos.legend.pure.truffle.execution.PureDynamicObject(
                     org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.classInfoFor(purePath, resolver),

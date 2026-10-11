@@ -26,7 +26,7 @@
 //                             PureRuntime's parse drives them
 //                             (runtime-lib's `__pureParseTop` forwards to it).
 //
-// The parser-mappings run `cast(@meta::pure::protocol::grammar::…)` checks while
+// The parser-mappings run `cast(@platform::pure::protocol::grammar::…)` checks while
 // building the AST; those resolve through `__metadataSubtypeOf`. On the JVM the
 // metamodel answers them — here we back the same metadata globals with the PDB
 // reader (src/core/compiler/module), reading the protocol-grammar types from core.pdb. So JS
@@ -61,11 +61,11 @@ const PDB_READER = join(HERE, "../../../generated/pure/compiler/pdb.js");
 // The CLASSES the translated parser constructs. A Pure class is emitted as a JavaScript class and
 // `^X(...)` as `new X()._a(1)`, so the module that DEFINES a class has to be loaded in every host
 // that runs code constructing it — this one builds 44 protocol classes plus Pair. Without them the
-// parser dies on `meta$pure$protocol$grammar$Class is not defined`, which the parser bundle hid for
+// parser dies on `platform$pure$protocol$grammar$Class is not defined`, which the parser bundle hid for
 // a while by being stale (it predated class emission and still built plain object literals).
 // ORDER MATTERS: metamodel.js defines the classes the other two build with at LOAD time —
 // functions.js evaluates its enumeration consts immediately, and each member is an
-// `meta::pure::metamodel::type::Enum` whose classifier is a GenericTypeValue. Loading functions.js
+// `platform::pure::metamodel::type::Enum` whose classifier is a GenericTypeValue. Loading functions.js
 // first left every enum value and classifier as the plain-object fallback, and because a generated
 // const only builds once (the `typeof globalThis.X === 'undefined'` guard), re-loading it later
 // could not repair them.
@@ -104,9 +104,9 @@ export function loadBundle() {
     // declared"). A host that brought these in already — the compiler host imports them as ES
     // modules — must not have them loaded twice.
     for (const [path, filename, sentinel] of [
-        [METAMODEL, "pure/compiler/metamodel.js", "meta$pure$metamodel$type$Enum"],
-        [PROTOCOL, "pure/grammar/protocol.js", "meta$pure$protocol$PureFile"],
-        [FUNCTIONS, "pure/runtime/functions.js", "meta$pure$functions$collection$Pair"],
+        [METAMODEL, "pure/compiler/metamodel.js", "platform$pure$metamodel$type$Enum"],
+        [PROTOCOL, "pure/grammar/protocol.js", "platform$pure$protocol$PureFile"],
+        [FUNCTIONS, "pure/runtime/functions.js", "platform$pure$functions$collection$Pair"],
     ]) {
         if (typeof globalThis[sentinel] === "function") continue;
         vm.runInThisContext(readBundleFile(path, "just javascript::generate-all").replace(/^export /gm, ""),
@@ -119,7 +119,7 @@ export function loadBundle() {
     // top-level declarations bind to globalThis, which is how the bundle's bare class references
     // resolve. (A `class X {}` would bind only lexically, hence the explicit `globalThis.X = X`
     // each generated class carries.)
-    if (typeof globalThis.meta$pure$parser$mappings$interpreter$parseDocument_AntlrContext_1__String_1__Boolean_1__Pair_MANY__PureFile_1_ !== "function") {
+    if (typeof globalThis.platform$pure$parser$mappings$interpreter$parseDocument_AntlrContext_1__String_1__Pair_MANY__PureFile_1_ !== "function") {
         throw new Error("parseDocument was not defined after loading the parser-mappings bundle");
     }
     bundleLoaded = true;
@@ -134,7 +134,7 @@ export function loadBundle() {
 // its PDB-backed metadata access without the whole generated compiler.
 let pdbReaderLoaded = false;
 export function loadPdbReader() {
-    if (pdbReaderLoaded || typeof globalThis.meta$pure$compiler$pdb$schema$parseFbs_String_1__FbsSchema_1_ === "function") return;
+    if (pdbReaderLoaded || typeof globalThis.platform$pure$compiler$pdb$schema$parseFbs_String_1__FbsSchema_1_ === "function") return;
     vm.runInThisContext(
         readBundleFile(PDB_READER, "just javascript::generate-pdb-reader").replace(/^export /gm, ""),
         { filename: "pure/compiler/pdb.js" },

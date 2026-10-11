@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,32 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::test::pct::*;
 
-native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> meta::pure::functions::asserts::assertError(f:Function<{->Any[*]}>[1], message:String[1], line:Integer[0..1], column:Integer[0..1]):Boolean[1];
+native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>> platform::pure::functions::asserts::assertError(f:Function<{->Any[*]}>[1], message:String[1], line:Integer[0..1], column:Integer[0..1]):Boolean[1];
 
-function <<PCT.function, PCT.platformOnly>> meta::pure::functions::asserts::assertError(f:Function<{->Any[*]}>[1], message:String[1]):Boolean[1]
+function <<PCT.function, PCT.platformOnly>> platform::pure::functions::asserts::assertError(f:Function<{->Any[*]}>[1], message:String[1]):Boolean[1]
 {
     assertError($f, $message, [], []);
 }
 
-function <<PCT.test>> meta::pure::functions::asserts::testSimpleAssertError<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::testSimpleAssertError<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2')));
 }
 
-function <<PCT.test>> meta::pure::functions::asserts::testSimpleAssertErrorLine<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::testSimpleAssertErrorLine<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2', 36, [])));
 }
 
-function <<PCT.test>> meta::pure::functions::asserts::testSimpleAssertErrorLineColumn<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::testSimpleAssertErrorLineColumn<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2', 44, 29)));
 }
 
-function <<PCT.test>> meta::pure::functions::asserts::testSimpleAssertErrorColumn<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::testSimpleAssertErrorColumn<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertError(|[1,2]->at(3),'The system is trying to get an element at offset 3 where the collection is of size 2', [], 29)));
 }
@@ -56,19 +57,19 @@ function <<PCT.test>> meta::pure::functions::asserts::testSimpleAssertErrorColum
 // only the header + frame syntax is pinned.
 // ----------------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::functions::asserts::tests::stackTrace::inner():String[1]
+function <<test.TestDependency>> platform::pure::functions::asserts::tests::stackTrace::inner():String[1]
 {
     []->cast(@String)->toOne();
 }
 
-function <<test.TestDependency>> meta::pure::functions::asserts::tests::stackTrace::middle():String[1]
+function <<test.TestDependency>> platform::pure::functions::asserts::tests::stackTrace::middle():String[1]
 {
-    meta::pure::functions::asserts::tests::stackTrace::inner();
+    platform::pure::functions::asserts::tests::stackTrace::inner();
 }
 
-function <<test.TestDependency>> meta::pure::functions::asserts::tests::stackTrace::outer():String[1]
+function <<test.TestDependency>> platform::pure::functions::asserts::tests::stackTrace::outer():String[1]
 {
-    meta::pure::functions::asserts::tests::stackTrace::middle();
+    platform::pure::functions::asserts::tests::stackTrace::middle();
 }
 
 // Full-stack assertion — both engines must emit byte-identical text from the
@@ -79,7 +80,7 @@ function <<test.TestDependency>> meta::pure::functions::asserts::tests::stackTra
 //      each with exact line:col in the unified `(at <sid>:<line>c<col>)` form
 //
 // We stop at the lambda frame because the immediate caller — the 2-arg
-// `meta::pure::functions::asserts::assertError` overload — has its source
+// `platform::pure::functions::asserts::assertError` overload — has its source
 // location stripped on Truffle: AssertErrorNode is annotated
 // `@TruffleBoundary`, and Truffle drops `frame.getLocation()` for any Pure
 // function whose body is mid-evaluation through a Java boundary. Bootstrap
@@ -103,17 +104,17 @@ function <<test.TestDependency>> meta::pure::functions::asserts::tests::stackTra
 // specific. PCT tests must be backend-agnostic; this one validates the
 // in-process Pure stack-trace format itself, which is inherently bound to
 // the in-memory adapter.
-function <<test.Test>> meta::pure::functions::asserts::tests::stackTrace::testFullPureStackTrace():Boolean[1]
+function <<test.Test>> platform::pure::functions::asserts::tests::stackTrace::testFullPureStackTrace():Boolean[1]
 {
     assertError(
-        | meta::pure::functions::asserts::tests::stackTrace::outer(),
+        | platform::pure::functions::asserts::tests::stackTrace::outer(),
         '''
         toOne expected exactly 1 element, got 0
         Pure stack trace:
-            at meta::pure::functions::asserts::tests::stackTrace::inner (asserts/assertError.pure:61c7)
-            at meta::pure::functions::asserts::tests::stackTrace::middle (asserts/assertError.pure:66c5)
-            at meta::pure::functions::asserts::tests::stackTrace::outer (asserts/assertError.pure:71c5)
-            at lambda (asserts/assertError.pure:109c11)'''
+            at platform::pure::functions::asserts::tests::stackTrace::inner (asserts/assertError.pure:62c7)
+            at platform::pure::functions::asserts::tests::stackTrace::middle (asserts/assertError.pure:67c5)
+            at platform::pure::functions::asserts::tests::stackTrace::outer (asserts/assertError.pure:72c5)
+            at lambda (asserts/assertError.pure:110c11)'''
     );
 }
 

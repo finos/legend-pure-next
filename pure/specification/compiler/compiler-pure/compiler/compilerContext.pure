@@ -13,20 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::multiplicity::*;
+import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::compiler::helper::parametersBinding::*;
+import platform::pure::compiler::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::multiplicity::*;
 
-Class meta::pure::compiler::DebugState
+Class platform::pure::compiler::DebugState
 {
     debug : Boolean[1];
     space : String[1];
 }
 
-function meta::pure::compiler::debug(context:CompilerContext[1], fn:FunctionDefinition<{->String[1]}>[1]):Any[*]
+function platform::pure::compiler::debug(context:CompilerContext[1], fn:FunctionDefinition<{->String[1]}>[1]):Any[*]
 {
     if($context.debugState.debug,
         | println($context.debugState.space + $fn->eval()),
@@ -38,7 +38,7 @@ function meta::pure::compiler::debug(context:CompilerContext[1], fn:FunctionDefi
 // per self-host even when debug was disabled, costing 0.7s of profiler self-time
 // for an unused string concat. Returning $context unchanged keeps the nesting
 // chain a no-op for non-debug runs.
-function meta::pure::compiler::debugSpaceInc(context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::debugSpaceInc(context:CompilerContext[1]):CompilerContext[1]
 {
     if(!$context.debugState.debug,
         | $context,
@@ -48,7 +48,7 @@ function meta::pure::compiler::debugSpaceInc(context:CompilerContext[1]):Compile
     );
 }
 
-function meta::pure::compiler::debugSpaceDec(context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::debugSpaceDec(context:CompilerContext[1]):CompilerContext[1]
 {
     if(!$context.debugState.debug,
         | $context,
@@ -58,7 +58,7 @@ function meta::pure::compiler::debugSpaceDec(context:CompilerContext[1]):Compile
     );
 }
 
-Class meta::pure::compiler::CompilerContext
+Class platform::pure::compiler::CompilerContext
 {
     debugState : DebugState[1];
     sourceId : String[0..1];
@@ -81,7 +81,7 @@ Class meta::pure::compiler::CompilerContext
     // case every pass behaves exactly as it did before extensions existed. Handed in by the
     // host (see compile(files, extensions)) and read only by the catch-all arms, so
     // compiler-pure never depends on an extension module.
-    extensions : meta::pure::compiler::extension::CompilerExtension[*];
+    extensions : platform::pure::compiler::extension::CompilerExtension[*];
     errors : String[*];
     scopeTypeParams : String[*];
     scopeMulParams : String[*];
@@ -145,12 +145,12 @@ Class meta::pure::compiler::CompilerContext
     // (`~`, `~.~`, …) to assign the construction's type to that variable
     // — mirrors {@code PureLanguageCompilerContext.constructionTypeStack} in
     // the Java compiler. Top-of-stack = innermost construction (depth 0).
-    constructionTypeStack : meta::pure::metamodel::type::generics::GenericType[*];
+    constructionTypeStack : platform::pure::metamodel::type::generics::GenericType[*];
 }
 
-Class meta::pure::compiler::CachedLambdaOutcome
+Class platform::pure::compiler::CachedLambdaOutcome
 {
-    av : meta::pure::metamodel::valuespecification::AtomicValue[1];
+    av : platform::pure::metamodel::valuespecification::AtomicValue[1];
     errorsFired : String[*];
     // Reverse-index edges added during the lambda body's resolution.
     // Replayed when the cache hits so cache-hit lambdas contribute the
@@ -164,7 +164,7 @@ Class meta::pure::compiler::CachedLambdaOutcome
 // Build a minimal CompilerContext with no source state — used by helper-module
 // unit tests that don't run a real compile but still need a context to thread
 // through ctx-taking helpers like {@code subtypeOf} / {@code linearize}.
-function meta::pure::compiler::newPlainCompilerContext():CompilerContext[1]
+function platform::pure::compiler::newPlainCompilerContext():CompilerContext[1]
 {
     let plain = ^CompilerContext(
         debugState = ^DebugState(debug=false, space=''),
@@ -185,12 +185,12 @@ function meta::pure::compiler::newPlainCompilerContext():CompilerContext[1]
     $plain->buildLinearizationCache();
 }
 
-function meta::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integer[1]
+function platform::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integer[1]
 {
     $context.errors->size();
 }
 
-function meta::pure::compiler::rollbackErrors(context:CompilerContext[1], checkpoint:Integer[1], site:String[1]):CompilerContext[1]
+function platform::pure::compiler::rollbackErrors(context:CompilerContext[1], checkpoint:Integer[1], site:String[1]):CompilerContext[1]
 {
     // Mirrors Java CompilationContext.rollbackErrorsTo: bump inferenceRollbacks
     // alongside the error-stack truncation so the Pure compiler's telemetry
@@ -209,7 +209,7 @@ function meta::pure::compiler::rollbackErrors(context:CompilerContext[1], checkp
 // Bump-only variant for the two direct-bump sites in resolveFunctionApplication
 // (multi-candidate pre-resolve, candidate-failed) where the error stack is
 // either separately rolled back or doesn't need truncation.
-function meta::pure::compiler::bumpRollbackSite(context:CompilerContext[1], site:String[1]):CompilerContext[1]
+function platform::pure::compiler::bumpRollbackSite(context:CompilerContext[1], site:String[1]):CompilerContext[1]
 {
     let prev = $context.rollbackSites->get($site);
     let newCount = if($prev->isEmpty(), | 1, | $prev->toOne() + 1);
@@ -228,23 +228,23 @@ function meta::pure::compiler::bumpRollbackSite(context:CompilerContext[1], site
 // the top of pass 2 and pass 3 dispatch. Returns the context with
 // {@code currentElementPath} set; callers should restore the prior path on
 // completion (mirrors Java's try/finally).
-function meta::pure::compiler::setCurrentElement(context:CompilerContext[1], path:String[1]):CompilerContext[1]
+function platform::pure::compiler::setCurrentElement(context:CompilerContext[1], path:String[1]):CompilerContext[1]
 {
     ^$context(currentElementPath = $path);
 }
 
 // Clear the current element path. Pair with {@code setCurrentElement} after
 // each element finishes its pass 2 / pass 3 work.
-function meta::pure::compiler::clearCurrentElement(context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::clearCurrentElement(context:CompilerContext[1]):CompilerContext[1]
 {
     ^$context(currentElementPath = []);
 }
 
 // Record a reference: target_path -> currentElementPath. Filters out
 // self-loops, callers with no path set, and noise (anything under
-// {@code meta::pure::metamodel::}). Mirrors Java
+// {@code platform::pure::metamodel::}). Mirrors Java
 // {@link CompilationContext#recordReference}.
-function meta::pure::compiler::recordReference(context:CompilerContext[1], rawTargetPath:String[1]):CompilerContext[1]
+function platform::pure::compiler::recordReference(context:CompilerContext[1], rawTargetPath:String[1]):CompilerContext[1]
 {
     // The root package's elementToPath is '' (a deliberate contract — see
     // testRootElementToPath); its canonical written/printed reference is '::'.
@@ -254,7 +254,7 @@ function meta::pure::compiler::recordReference(context:CompilerContext[1], rawTa
     let targetPath = if($rawTargetPath == '', | '::', | $rawTargetPath);
     if($context.currentElementPath->isEmpty()
             || $targetPath == $context.currentElementPath->toOne()
-            || $targetPath->startsWith('meta::pure::metamodel::'),
+            || $targetPath->startsWith('platform::pure::metamodel::'),
         | $context,
         | let caller = $context.currentElementPath->toOne();
           let existing = $context.referencedBy->get($targetPath);
@@ -273,10 +273,10 @@ function meta::pure::compiler::recordReference(context:CompilerContext[1], rawTa
 // the appropriate target path — property-functions use {@code Owner.name},
 // and packageable functions use {@code elementToPath}. Mirrors Java
 // {@link CompilationContext#recordFunctionReference}.
-function meta::pure::compiler::recordFunctionReference(context:CompilerContext[1], fn:Function<Any>[1]):CompilerContext[1]
+function platform::pure::compiler::recordFunctionReference(context:CompilerContext[1], fn:Function<Any>[1]):CompilerContext[1]
 {
-    if($fn->instanceOf(meta::pure::metamodel::function::property::AbstractProperty),
-        | let prop = $fn->cast(@meta::pure::metamodel::function::property::AbstractProperty<Any>);
+    if($fn->instanceOf(platform::pure::metamodel::function::property::AbstractProperty),
+        | let prop = $fn->cast(@platform::pure::metamodel::function::property::AbstractProperty<Any>);
           let owner = $prop.owner;
           if($owner->isEmpty(),
               | $context,
@@ -300,7 +300,7 @@ function meta::pure::compiler::recordFunctionReference(context:CompilerContext[1
 // {@code Foo.bar} when descending into property/QP/constraint/enum-value
 // compilation. Mirrors Java
 // {@link CompilationContext#withCallerSubElement}.
-function meta::pure::compiler::withCallerSubElement<T>(context:CompilerContext[1], subName:String[1], action:Function<{CompilerContext[1] -> CompilerResult<T>[1]}>[1]):CompilerResult<T>[1]
+function platform::pure::compiler::withCallerSubElement<T>(context:CompilerContext[1], subName:String[1], action:Function<{CompilerContext[1] -> CompilerResult<T>[1]}>[1]):CompilerResult<T>[1]
 {
     let saved = $context.currentElementPath;
     let pushed = if($saved->isEmpty(),
@@ -313,12 +313,12 @@ function meta::pure::compiler::withCallerSubElement<T>(context:CompilerContext[1
     ^$result(context = $restoredCtx);
 }
 
-function meta::pure::compiler::snapshotErrors(context:CompilerContext[1], checkpoint:Integer[1]):String[*]
+function platform::pure::compiler::snapshotErrors(context:CompilerContext[1], checkpoint:Integer[1]):String[*]
 {
     $context.errors->drop($checkpoint);
 }
 
-Class meta::pure::compiler::ElementStatistics
+Class platform::pure::compiler::ElementStatistics
 {
     elementPath : String[1];
     elementType : String[1];
@@ -327,7 +327,7 @@ Class meta::pure::compiler::ElementStatistics
     candidateEvaluations : Integer[1];
 }
 
-Class meta::pure::compiler::CompilationStatistics
+Class platform::pure::compiler::CompilationStatistics
 {
     totalMillis : Integer[1];
     parsingMillis : Integer[1];
@@ -342,32 +342,32 @@ Class meta::pure::compiler::CompilationStatistics
     rollbackSites : Map<String, Integer>[1];
 }
 
-Class meta::pure::compiler::CompilationResult
+Class platform::pure::compiler::CompilationResult
 {
     elements : PackageableElement[*];
     // Language extensions this compile runs with. Empty for an ordinary compile, in which
     // case every pass behaves exactly as it did before extensions existed. Handed in by the
     // host (see compile(files, extensions)) and read only by the catch-all arms, so
     // compiler-pure never depends on an extension module.
-    extensions : meta::pure::compiler::extension::CompilerExtension[*];
+    extensions : platform::pure::compiler::extension::CompilerExtension[*];
     errors : String[*];
     statistics : CompilationStatistics[0..1];
     context : CompilerContext[0..1];
 }
 
-Class meta::pure::compiler::CompilerResult<T>
+Class platform::pure::compiler::CompilerResult<T>
 {
     value : T[0..1];
     context : CompilerContext[1];
 }
 
-Class meta::pure::compiler::CompilerListResult<T>
+Class platform::pure::compiler::CompilerListResult<T>
 {
     values : T[*];
     context : CompilerContext[1];
 }
 
-native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):PackageableFunction<Any>[*];
+native function platform::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):PackageableFunction<Any>[*];
 
 // Enumerates every Type-typed PackageableElement across all loaded modules.
 // Backed by a native that walks {@code MetadataAccess.elementPaths()},
@@ -375,9 +375,9 @@ native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1]
 // to populate the universe-side of the cache without relying on package-tree
 // traversal (which is split per module — walking {@code Package.children}
 // from a single Root only reaches one module's contributions).
-native function meta::pure::compiler::findAllTypes():Type[*];
+native function platform::pure::compiler::findAllTypes():Type[*];
 
-function meta::pure::compiler::isElementVisible(context:CompilerContext[1], elementPath:String[1]):Boolean[1]
+function platform::pure::compiler::isElementVisible(context:CompilerContext[1], elementPath:String[1]):Boolean[1]
 {
     if(!$elementPath->contains('::'),
         | true,
@@ -388,7 +388,7 @@ function meta::pure::compiler::isElementVisible(context:CompilerContext[1], elem
     );
 }
 
-function meta::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerContext[1], name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
+function platform::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerContext[1], name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
 {
     // Handle qualified names like 'test::if' — strip package for lookup, filter by prefix (like Java findCandidates)
     let isQualified = $name->contains('::');
@@ -423,7 +423,7 @@ function meta::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerCo
  * walking up from a source type. We anchor the universe walk via
  * {@code lenientPathToElement} on a known canonical element.
  */
-function meta::pure::compiler::buildLinearizationCache(context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::buildLinearizationCache(context:CompilerContext[1]):CompilerContext[1]
 {
     let sourceTypes = $context.elementMap->values()
         ->filter(e | $e->instanceOf(Type))
@@ -445,13 +445,13 @@ function meta::pure::compiler::buildLinearizationCache(context:CompilerContext[1
     //   this map.
     let entries = $allTypes->map(t |
         let path = $t->cast(@PackageableElement)->elementToPath();
-        let lin = $t->meta::pure::compiler::helper::type::linearizeWalk($context);
+        let lin = $t->platform::pure::compiler::helper::type::linearizeWalk($context);
         pair($path, ^List<String>(values = $lin));
     );
     ^$context(linearizationCache = newMap($entries));
 }
 
-function meta::pure::compiler::buildLocalFunctionIndex(context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::buildLocalFunctionIndex(context:CompilerContext[1]):CompilerContext[1]
 {
     let funcs = $context.elementMap->values()
         ->filter(e | $e->instanceOf(PackageableFunction))
@@ -473,7 +473,7 @@ function meta::pure::compiler::buildLocalFunctionIndex(context:CompilerContext[1
     ^$context(localFunctionIndex = $index);
 }
 
-function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:CompilerContext[1], name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
+function platform::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:CompilerContext[1], name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
 {
     // Union: native index (base PDB functions, indexed by short name in
     //   {@code ModuleRegistry.pathsByFunctionName}) + locally-defined
@@ -505,7 +505,7 @@ function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:
 // update elementMap, not Package.children). So *always* check elementMap
 // first; only fall through to the package-tree walk for elements that were
 // never put into elementMap (i.e. base PDB universe types).
-function meta::pure::compiler::pathToElementInContext(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
+function platform::pure::compiler::pathToElementInContext(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
 {
     firstNonEmpty([
         | $context.elementMap->get($path),
@@ -524,7 +524,7 @@ function meta::pure::compiler::pathToElementInContext(context:CompilerContext[1]
 //     bypassed scoping (returned a Java-metamodel `Class` even when the file
 //     didn't import it) and tie-broke arbitrarily on map iteration order.
 //     The correct lookup goes through imports.
-//   * Hard-coded `meta::pure::metamodel::type::` fallback — already handled
+//   * Hard-coded `platform::pure::metamodel::type::` fallback — already handled
 //     by the imports loop since `defaultFileImports()` includes that package.
 // Look up an element by short or fully-qualified path. Returns
 // {@link PackageableElement} when found, empty when not.
@@ -532,7 +532,7 @@ function meta::pure::compiler::pathToElementInContext(context:CompilerContext[1]
 // Does NOT record into the reverse index — for callsites that need recording
 // (the vast majority during compilation), prefer {@code resolveElementR},
 // which mirrors Java's {@code RecordingMetadataAccess.getElement} behaviour.
-function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
+function platform::pure::compiler::resolveElement(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
 {
     firstNonEmpty([
         | $context->pathToElementInContext($path),
@@ -546,7 +546,7 @@ function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:S
 // Recording variant of {@link resolveElement}: returns a {@link CompilerResult}
 // whose {@code context} has the lookup recorded in the reverse reference
 // index (filtered through the same noise rules as
-// {@link recordReference} — {@code meta::pure::metamodel::} entries are
+// {@link recordReference} — {@code platform::pure::metamodel::} entries are
 // skipped, self-references collapsed). Mirrors Java's
 // {@code RecordingMetadataAccess.getElement}: every cross-element lookup
 // during compilation becomes a {@code (target -> caller)} edge.
@@ -554,7 +554,7 @@ function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:S
 // Call this from compile-time call sites (handlers, resolvers, helpers
 // that thread context). Use {@link resolveElement} when context cannot
 // be threaded (e.g. pure read-only helpers invoked at runtime).
-function meta::pure::compiler::resolveElementR(context:CompilerContext[1], path:String[1]):CompilerResult<PackageableElement>[1]
+function platform::pure::compiler::resolveElementR(context:CompilerContext[1], path:String[1]):CompilerResult<PackageableElement>[1]
 {
     let element = $context->resolveElement($path);
     let recordedCtx = if($element->isEmpty(),
@@ -564,15 +564,15 @@ function meta::pure::compiler::resolveElementR(context:CompilerContext[1], path:
     ^CompilerResult<PackageableElement>(value = $element, context = $recordedCtx);
 }
 
-function meta::pure::compiler::resolveAllElements(context:CompilerContext[1], path:String[1]):String[*]
+function platform::pure::compiler::resolveAllElements(context:CompilerContext[1], path:String[1]):String[*]
 {
     // Mirrors Java _PackageableElement.findElementOrReportError (lines 95-98):
     // ambiguity is reported only when MULTIPLE IMPORTED packages define the
     // same short name. We must NOT include arbitrary same-short-name elements
     // from elsewhere in the source tree — that would falsely flag e.g.
-    // `Enumeration` as ambiguous between `meta::pure::metamodel::type::Enumeration`
+    // `Enumeration` as ambiguous between `platform::pure::metamodel::type::Enumeration`
     // (the only one in scope via imports) and
-    // `meta::external::language::java::metamodel::Enumeration` (a peer package
+    // `platform::external::language::java::metamodel::Enumeration` (a peer package
     // present in the source tree but not imported by the file under
     // compilation).
     if($context.elementMap->get($path)->isNotEmpty(),

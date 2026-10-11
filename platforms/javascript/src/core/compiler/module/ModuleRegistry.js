@@ -140,7 +140,7 @@ function createRegistryState(schemaSrc) {
 
     // --- graph queries (over the merged view) ------------------------------
     const refToPath = (v) => (isPointerRef(v) ? [v.segs].flat().join("::") : null);
-    const OPT_PREFIX = "meta::pure::metamodel::type::generics::optimization::GenericType_";
+    const OPT_PREFIX = "platform::pure::metamodel::type::generics::optimization::GenericType_";
     const decodeOpt = (p) => (p && p.startsWith(OPT_PREFIX) ? p.slice(OPT_PREFIX.length).replace(/_/g, "::") : null);
 
     // The Type path a GenericType denotes. `gt` may be: a PointerRef to a
@@ -191,8 +191,8 @@ function createRegistryState(schemaSrc) {
         return res;
     }
 
-    const UDPGT = "meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType";
-    const LAMBDA = "meta::pure::metamodel::function::LambdaFunction";
+    const UDPGT = "platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType";
+    const LAMBDA = "platform::pure::metamodel::function::LambdaFunction";
     function classifierPath(path) {
         if (classifierMemo.has(path)) return classifierMemo.get(path);
         // See directSupers: live nodes are not fbs-readable, so they fall through
@@ -207,7 +207,7 @@ function createRegistryState(schemaSrc) {
             ? genericTypePath(readField(schema(), node, "classifier_generic_type")[0])
             : (path.startsWith(OPT_PREFIX) ? UDPGT
                 : (path.includes("$lambda/") ? LAMBDA
-                    : (path === "::" ? "meta::pure::metamodel::Package" : null)));
+                    : (path === "::" ? "platform::pure::metamodel::Package" : null)));
         classifierMemo.set(path, res);
         return res;
     }
@@ -218,7 +218,7 @@ function createRegistryState(schemaSrc) {
 
     // findAllTypes(): every element whose classifier is a (subtype of) Type —
     // Class, Enumeration, PrimitiveType, etc. across all registered modules.
-    const TYPE = "meta::pure::metamodel::type::Type";
+    const TYPE = "platform::pure::metamodel::type::Type";
     function allPaths() {
         const seen = new Set();
         for (const m of mods) for (const p of m.elementPaths()) seen.add(p);

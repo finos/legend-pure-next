@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,30 +13,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::function::property::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::metamodel::relation::*;
-import meta::pure::metamodel::*;
-import meta::pure::functions::meta::*;
-import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
-import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::*;
-import meta::pure::compiler::structural::sourceInformationCompiler::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::class::*;
-import meta::pure::compiler::helper::property::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::metamodel::pointer::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::relation::*;
+import platform::pure::metamodel::*;
+import platform::pure::functions::meta::*;
+import platform::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
+import platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::*;
+import platform::pure::compiler::structural::sourceInformationCompiler::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::multiplicity::*;
+import platform::pure::compiler::helper::relationType::*;
+import platform::pure::compiler::helper::class::*;
+import platform::pure::compiler::helper::property::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::compiler::helper::type::*;
+import platform::pure::metamodel::pointer::*;
+import platform::pure::compiler::helper::parametersBinding::*;
+import platform::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplication(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplication(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     let functionName = $dot.functionName->toOne();
     let siCtx = formatMetamodelSourceInfo($dot.sourceInformation, $context);
@@ -47,14 +48,14 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     // chain to compute total parent depth, look up the construction-type
     // stack, stamp the typed copy. Multiplicity is always [1] (single value).
     if($functionName == '~',
-        | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStep($dot, $scope, $context),
-        | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplicationInternal($dot, $scope, $context, $functionName, $siCtx)
+        | platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStep($dot, $scope, $context),
+        | platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplicationInternal($dot, $scope, $context, $functionName, $siCtx)
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStep(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStep(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
-    let depth = meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::countParentReferenceDepth($dot);
+    let depth = platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::countParentReferenceDepth($dot);
     let stack = $context.constructionTypeStack;
     let stackSize = $stack->size();
     if($depth < 0,
@@ -66,11 +67,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               value = $dot,
               context = ^$context(errors += 'Parent reference \'~\' must appear at the start of a chain; mid-chain `~` (e.g. `~.foo.~`) is not supported.' + $siCtxMid)
           );,
-        | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStepAtDepth($dot, $scope, $context, $depth, $stack, $stackSize)
+        | platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStepAtDepth($dot, $scope, $context, $depth, $stack, $stackSize)
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStepAtDepth(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1], depth:Integer[1], stack:meta::pure::metamodel::type::generics::GenericType[*], stackSize:Integer[1]):CompilerResult<ValueSpecification>[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveParentReferenceStepAtDepth(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1], depth:Integer[1], stack:platform::pure::metamodel::type::generics::GenericType[*], stackSize:Integer[1]):CompilerResult<ValueSpecification>[1]
 {
     if($depth <= $stackSize,
         | // Top of stack = innermost construction = depth 0; index from end.
@@ -98,7 +99,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::countParentReferenceDepth(dot:DotApplication[1]):Integer[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::countParentReferenceDepth(dot:DotApplication[1]):Integer[1]
 {
     // Returns total parent depth, or -1 for an invalid chain (a `~` step
     // whose receiver is not another `~` step nor the base `Variable("~")` —
@@ -107,7 +108,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let innerDepth = $inner->match([
         d: DotApplication[1] |
             if($d.functionName->toOne() == '~',
-                | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::countParentReferenceDepth($d),
+                | platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::countParentReferenceDepth($d),
                 | -1
             ),
         v: VariableExpression[1] | if($v.name->toOne() == '~', | 1, | -1),
@@ -116,7 +117,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     if($innerDepth < 0, | -1, | 1 + $innerDepth);
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplicationInternal(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1], functionName:String[1], siCtx:String[1]):CompilerResult<ValueSpecification>[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplicationInternal(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1], functionName:String[1], siCtx:String[1]):CompilerResult<ValueSpecification>[1]
 {
     // Resolve receiver parameters — use resolved types for property lookup
     let resolvedParamResults = $dot.parametersValues->map(p | resolveValueSpecification($p, $scope, $context));
@@ -292,7 +293,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             if($foundFunc->isEmpty(),
                                 | // Match Java's `_GenericType.print(receiver.genericType)` rendering
                                   // (short name, e.g. `Function<Any>`) instead of the full path
-                                  // (`meta::pure::metamodel::function::Function`). The two compilers
+                                  // (`platform::pure::metamodel::function::Function`). The two compilers
                                   // produced identical error counts but slightly different
                                   // class-name output before this change.
                                   let errorMsg = if($qps->size() > 1,
@@ -392,7 +393,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Matches Java DotApplicationResolver lines 106-113: apply class type bindings to property type and multiplicity
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolvePropertyReturnTypeAndMultiplicity(prop:AbstractProperty<Any>[1], ownerGT:GenericType[1], resolvedOwnerClass:Class<Any>[0..1], context:CompilerContext[1]):Pair<GenericType, Multiplicity>[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolvePropertyReturnTypeAndMultiplicity(prop:AbstractProperty<Any>[1], ownerGT:GenericType[1], resolvedOwnerClass:Class<Any>[0..1], context:CompilerContext[1]):Pair<GenericType, Multiplicity>[1]
 {
     let rawGT = $prop.genericType->toOne();
     let rawMul = $prop.multiplicity->toOne();
@@ -415,7 +416,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::buildAutomap(dot:DotApplication[1], receiver:ValueSpecification[1], functionName:String[1], propGT:GenericType[1], propMul:Multiplicity[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::buildAutomap(dot:DotApplication[1], receiver:ValueSpecification[1], functionName:String[1], propGT:GenericType[1], propMul:Multiplicity[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     // Build lambda parameter: v_automap:ReceiverElementType[1]
     let lambdaParam = ^VariableExpression(
@@ -431,7 +432,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         multiplicity = ^CompilerNotSetMultiplicity()
     );
     // Skeleton dot — multiplicity/genericType filled by later resolution.
-    let innerDot = meta::pure::functions::lang::new(
+    let innerDot = platform::pure::functions::lang::new(
         ^UserDefinedGenericType(type = DotApplication)
     )->cast(@DotApplication);
     let dotBody = ^$innerDot(
@@ -441,7 +442,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 
     // Build lambda function — skeleton, classifierGenericType filled by later inference.
-    let emptyLambda = meta::pure::functions::lang::new(
+    let emptyLambda = platform::pure::functions::lang::new(
         ^UserDefinedGenericType(type = LambdaFunction)
     )->cast(@LambdaFunction<Any>);
     let lambda = ^$emptyLambda(

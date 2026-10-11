@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,31 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::test::pct::*;
 
-function meta::pure::functions::asserts::assertSameElements(expected:Any[*], actual:Any[*]):Boolean[1]
+function platform::pure::functions::asserts::assertSameElements(expected:Any[*], actual:Any[*]):Boolean[1]
 {
     assertSameElements($expected, $actual, | $expected->sort()->map(e | $e->toRepresentation())->joinStrings('\nexpected: [', ', ', ']') + $actual->sort()->map(a | $a->toRepresentation())->joinStrings('\nactual:   [', ', ', ']'));
 }
 
-function meta::pure::functions::asserts::assertSameElements(expected:Any[*], actual:Any[*], message:String[1]):Boolean[1]
+function platform::pure::functions::asserts::assertSameElements(expected:Any[*], actual:Any[*], message:String[1]):Boolean[1]
 {
     assertEquals($expected->sort(), $actual->sort(), $message);
 }
 
-function meta::pure::functions::asserts::assertSameElements(expected:Any[*], actual:Any[*], formatString:String[1], formatArgs:Any[*]):Boolean[1]
+function platform::pure::functions::asserts::assertSameElements(expected:Any[*], actual:Any[*], formatString:String[1], formatArgs:Any[*]):Boolean[1]
 {
     assertEquals($expected->sort(), $actual->sort(), $formatString, $formatArgs);
 }
 
-function meta::pure::functions::asserts::assertSameElements(expected:Any[*], actual:Any[*], message:Function<{->String[1]}>[1]):Boolean[1]
+function platform::pure::functions::asserts::assertSameElements(expected:Any[*], actual:Any[*], message:Function<{->String[1]}>[1]):Boolean[1]
 {
     assertEquals($expected->sort(), $actual->sort(), $message);
 }
 
 
-function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertSameElements<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::tests::testSuccessAssertSameElements<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertSameElements([1, 2], [1, 2])));
     assert($f->eval(|assertSameElements([1, 2], [2, 1])));

@@ -22,9 +22,9 @@
 // sorted (externals first, then locals), and prepended to the file's
 // statement list.
 
-import meta::external::language::javascript::imports::*;
-import meta::external::language::javascript::factories::*;
-import meta::external::language::javascript::metamodel::*;
+import platform::external::language::javascript::imports::*;
+import platform::external::language::javascript::factories::*;
+import platform::external::language::javascript::metamodel::*;
 
 // =============================================================================
 // ImportNeed — internal record carried through the walker.
@@ -33,14 +33,14 @@ import meta::external::language::javascript::metamodel::*;
 //                  when there is no aliasing
 // =============================================================================
 
-Class meta::external::language::javascript::imports::ImportNeed
+Class platform::external::language::javascript::imports::ImportNeed
 {
    <<equality.Key>> localName    : String[1];
    <<equality.Key>> originalName : String[1];
    <<equality.Key>> source       : ImportSource[1];
 }
 
-function meta::external::language::javascript::imports::needValue(localName: String[1], originalName: String[1], source: ImportSource[1]): ImportNeed[1]
+function platform::external::language::javascript::imports::needValue(localName: String[1], originalName: String[1], source: ImportSource[1]): ImportNeed[1]
 {
    ^ImportNeed(localName=$localName, originalName=$originalName, source=$source);
 }
@@ -54,13 +54,13 @@ function meta::external::language::javascript::imports::needValue(localName: Str
 // Multiple aliases are tried in order; first match wins.
 // =============================================================================
 
-Class meta::external::language::javascript::imports::PathAlias
+Class platform::external::language::javascript::imports::PathAlias
 {
    <<equality.Key>> prefix       : String[1];
    <<equality.Key>> targetPrefix : String[1];
 }
 
-function meta::external::language::javascript::imports::pathAlias(prefix: String[1], targetPrefix: String[1]): PathAlias[1]
+function platform::external::language::javascript::imports::pathAlias(prefix: String[1], targetPrefix: String[1]): PathAlias[1]
 {
    ^PathAlias(prefix=$prefix, targetPrefix=$targetPrefix);
 }
@@ -72,7 +72,7 @@ function meta::external::language::javascript::imports::pathAlias(prefix: String
 //   relativeModuleSpecifier('a.ts',               'b.ts')              -> './b.js'
 // =============================================================================
 
-function meta::external::language::javascript::imports::relativeModuleSpecifier(fromPath: String[1], toPath: String[1]): String[1]
+function platform::external::language::javascript::imports::relativeModuleSpecifier(fromPath: String[1], toPath: String[1]): String[1]
 {
    let fromSegs = $fromPath->split('/');
    let toSegs   = $toPath->split('/');
@@ -108,14 +108,14 @@ function meta::external::language::javascript::imports::relativeModuleSpecifier(
 // ImportSource → module specifier (as it appears in `from '...'`).
 // =============================================================================
 
-function meta::external::language::javascript::imports::moduleSpecifierFor(thisFile: SourceFile[1], source: ImportSource[1]): String[1]
+function platform::external::language::javascript::imports::moduleSpecifierFor(thisFile: SourceFile[1], source: ImportSource[1]): String[1]
 {
    moduleSpecifierForWithAliases($thisFile, $source, []);
 }
 
 // `pathAliases` are tried in order; first match wins. Empty list falls back
 // to relative paths (the original behavior).
-function meta::external::language::javascript::imports::moduleSpecifierForWithAliases(thisFile: SourceFile[1], source: ImportSource[1], pathAliases: PathAlias[*]): String[1]
+function platform::external::language::javascript::imports::moduleSpecifierForWithAliases(thisFile: SourceFile[1], source: ImportSource[1], pathAliases: PathAlias[*]): String[1]
 {
    $source->match([
       {l: LocalSource[1] |
@@ -128,7 +128,7 @@ function meta::external::language::javascript::imports::moduleSpecifierForWithAl
    ]);
 }
 
-function meta::external::language::javascript::imports::aliasedModuleSpecifier(alias: PathAlias[1], targetPath: String[1]): String[1]
+function platform::external::language::javascript::imports::aliasedModuleSpecifier(alias: PathAlias[1], targetPath: String[1]): String[1]
 {
    let remainder = $targetPath->substring($alias.targetPrefix->length(), $targetPath->length());
    // Same .ts → .js rewrite as relativeModuleSpecifier — ESM resolution
@@ -147,12 +147,12 @@ function meta::external::language::javascript::imports::aliasedModuleSpecifier(a
 //   - Externals first (no leading '.'), then locals (alphabetic within each).
 // =============================================================================
 
-function meta::external::language::javascript::imports::importsFor(thisFile: SourceFile[1], needs: ImportNeed[*]): ImportDeclaration[*]
+function platform::external::language::javascript::imports::importsFor(thisFile: SourceFile[1], needs: ImportNeed[*]): ImportDeclaration[*]
 {
    importsForWithAliases($thisFile, $needs, []);
 }
 
-function meta::external::language::javascript::imports::importsForWithAliases(thisFile: SourceFile[1], needs: ImportNeed[*], pathAliases: PathAlias[*]): ImportDeclaration[*]
+function platform::external::language::javascript::imports::importsForWithAliases(thisFile: SourceFile[1], needs: ImportNeed[*], pathAliases: PathAlias[*]): ImportDeclaration[*]
 {
    let nonSelf = $needs->filter(n |
       $n.source->match([
@@ -197,19 +197,19 @@ function meta::external::language::javascript::imports::importsForWithAliases(th
 // resolveImports — end-to-end.
 // =============================================================================
 
-function meta::external::language::javascript::imports::resolveImports(sf: SourceFile[1]): SourceFile[1]
+function platform::external::language::javascript::imports::resolveImports(sf: SourceFile[1]): SourceFile[1]
 {
    resolveImportsWithAliases($sf, []);
 }
 
-function meta::external::language::javascript::imports::resolveImportsWithAliases(sf: SourceFile[1], pathAliases: PathAlias[*]): SourceFile[1]
+function platform::external::language::javascript::imports::resolveImportsWithAliases(sf: SourceFile[1], pathAliases: PathAlias[*]): SourceFile[1]
 {
    let needs = $sf.statements->map(s | $s->collectNeedsFromStmt());
    let imports = importsForWithAliases($sf, $needs, $pathAliases);
    ^$sf(statements=$imports->concatenate($sf.statements));
 }
 
-function meta::external::language::javascript::imports::collectNeedsFromStmt(s: Statement[1]): ImportNeed[*]
+function platform::external::language::javascript::imports::collectNeedsFromStmt(s: Statement[1]): ImportNeed[*]
 {
    $s->match([
       {c: ClassDeclaration[1] |
@@ -248,7 +248,7 @@ function meta::external::language::javascript::imports::collectNeedsFromStmt(s: 
    ]);
 }
 
-function meta::external::language::javascript::imports::collectNeedsFromClassMember(m: ClassMember[1]): ImportNeed[*]
+function platform::external::language::javascript::imports::collectNeedsFromClassMember(m: ClassMember[1]): ImportNeed[*]
 {
    $m->match([
       {method: MethodDeclaration[1] |
@@ -283,12 +283,12 @@ function meta::external::language::javascript::imports::collectNeedsFromClassMem
    ]);
 }
 
-function meta::external::language::javascript::imports::collectNeedsFromParameter(p: ParameterDeclaration[1]): ImportNeed[*]
+function platform::external::language::javascript::imports::collectNeedsFromParameter(p: ParameterDeclaration[1]): ImportNeed[*]
 {
    if($p.initializer->isEmpty(), | []->cast(@ImportNeed), | $p.initializer->toOne()->collectNeedsFromExpr());
 }
 
-function meta::external::language::javascript::imports::collectNeedsFromExpr(e: Expression[1]): ImportNeed[*]
+function platform::external::language::javascript::imports::collectNeedsFromExpr(e: Expression[1]): ImportNeed[*]
 {
    $e->match([
       {i: Identifier[1] |
@@ -335,7 +335,7 @@ function meta::external::language::javascript::imports::collectNeedsFromExpr(e: 
    ]);
 }
 
-function meta::external::language::javascript::imports::collectNeedsFromObjectLitElement(e: ObjectLiteralElement[1]): ImportNeed[*]
+function platform::external::language::javascript::imports::collectNeedsFromObjectLitElement(e: ObjectLiteralElement[1]): ImportNeed[*]
 {
    $e->match([
       pa: PropertyAssignment[1]          | $pa.initializer->collectNeedsFromExpr(),

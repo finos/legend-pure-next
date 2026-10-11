@@ -1,28 +1,43 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver;
 
-import meta.pure.metamodel.function.Function;
-import meta.pure.metamodel.function.property.AbstractProperty;
-import meta.pure.metamodel.function.property.Property;
-import meta.pure.metamodel.function.property.QualifiedProperty;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.relation.Column;
-import meta.pure.metamodel.type.Enumeration;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.DotApplication;
-import meta.pure.metamodel.valuespecification.DotApplicationImpl;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.function.Function;
+import platform.pure.metamodel.function.property.AbstractProperty;
+import platform.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.function.property.QualifiedProperty;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.relation.Column;
+import platform.pure.metamodel.type.Enumeration;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.valuespecification.AtomicValue;
+import platform.pure.metamodel.valuespecification.DotApplication;
+import platform.pure.metamodel.valuespecification.DotApplicationImpl;
+import platform.pure.metamodel.valuespecification.FunctionExpression;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
-import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
-import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
+import platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
+import platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
@@ -134,7 +149,7 @@ public final class DotApplicationResolver
         {
             resolvedGT = qp._genericType();
             resolvedMul = qp._multiplicity();
-            if (_GenericType.type(receiver._genericType()) instanceof meta.pure.metamodel.type.Class ownerClass)
+            if (_GenericType.type(receiver._genericType()) instanceof platform.pure.metamodel.type.Class ownerClass)
             {
                 ParametersBinding bindings = _Class.buildBindingsFromGenericType(ownerClass, receiver._genericType());
                 if (!bindings.typeBindings().isEmpty() || !bindings.multiplicityBindings().isEmpty())
@@ -223,7 +238,7 @@ public final class DotApplicationResolver
         return ((DotApplicationImpl) expr._copy())
                 ._parametersValues(processParameters)
                 ._genericType(_GenericType.asInferred(ctorGT, model))
-                ._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredPureOne"));
+                ._multiplicity((Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::InferredPureOne"));
     }
 
     /**
@@ -283,7 +298,7 @@ public final class DotApplicationResolver
         }
 
         // Property/qualified-property access on a PropertyOwner (Class, Association, etc.)
-        if (ownerType instanceof meta.pure.metamodel.SimplePropertyOwner po)
+        if (ownerType instanceof platform.pure.metamodel.SimplePropertyOwner po)
         {
             // Simple property: only match when no additional params (just the receiver)
             if (paramCount == 1)
@@ -296,7 +311,7 @@ public final class DotApplicationResolver
                     return resolved;
                 }
             }
-            if (po instanceof meta.pure.metamodel.type.Class cls)
+            if (po instanceof platform.pure.metamodel.type.Class cls)
             {
                 // Find all QPs by name, then filter by arity and argument compatibility
                 MutableList<QualifiedProperty> allQPs = _Class.findQualifiedProperties(cls, functionName);
@@ -404,7 +419,7 @@ public final class DotApplicationResolver
         }
 
         // Column access on a RelationType
-        if (ownerType instanceof meta.pure.metamodel.relation.RelationType relationType)
+        if (ownerType instanceof platform.pure.metamodel.relation.RelationType relationType)
         {
             Function col = relationType._columns().detect(c -> functionName.equals(c._name()));
             context.debug("  column lookup: %s %s", functionName, col != null ? "found" : "NOT FOUND");
@@ -440,7 +455,7 @@ public final class DotApplicationResolver
             MetadataAccess model,
             CompilationContext context)
     {
-        Multiplicity pureOne = (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne");
+        Multiplicity pureOne = (Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::PureOne");
 
         // Build lambda param: v_automap:ReceiverElementType[1]
         VariableExpression lambdaParam = _VariableExpression.newVariableExpression(model)
@@ -456,27 +471,27 @@ public final class DotApplicationResolver
         MutableList<ValueSpecification> dotBodyParams = Lists.mutable.with(varRef);
         dotBodyParams.addAll(processParameters.subList(1, processParameters.size()));
 
-        meta.pure.metamodel.valuespecification.DotApplicationImpl dotBody =
-                new meta.pure.metamodel.valuespecification.DotApplicationImpl(model);
+        platform.pure.metamodel.valuespecification.DotApplicationImpl dotBody =
+                new platform.pure.metamodel.valuespecification.DotApplicationImpl(model);
         dotBody._functionName(accessName);
         dotBody._parametersValues(dotBodyParams);
         dotBody._sourceInformation(expr._sourceInformation());
 
         // Build the lambda (no genericType — Phase 2 will resolve it)
-        meta.pure.metamodel.function.LambdaFunctionImpl lambda = new meta.pure.metamodel.function.LambdaFunctionImpl();
-        lambda._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"), model));
+        platform.pure.metamodel.function.LambdaFunctionImpl lambda = new platform.pure.metamodel.function.LambdaFunctionImpl();
+        lambda._classifierGenericType(_GenericType.buildUserDefinedGenericType((platform.pure.metamodel.type.Type) model.getElement("platform::pure::metamodel::function::LambdaFunction"), model));
         lambda._parameters(Lists.mutable.with(lambdaParam));
         lambda._expressionSequence(Lists.mutable.with(dotBody));
 
         // Wrap in an AtomicValue (no genericType — treated as unresolved lambda)
-        meta.pure.metamodel.valuespecification.AtomicValueImpl lambdaAV =
-                new meta.pure.metamodel.valuespecification.AtomicValueImpl(model);
+        platform.pure.metamodel.valuespecification.AtomicValueImpl lambdaAV =
+                new platform.pure.metamodel.valuespecification.AtomicValueImpl(model);
         lambdaAV._value(lambda);
         lambdaAV._multiplicity(pureOne);
 
         // Create a new FunctionApplication for 'map' wrapping the DotApplication
-        meta.pure.metamodel.valuespecification.FunctionInvocationImpl mapExpr =
-                new meta.pure.metamodel.valuespecification.FunctionInvocationImpl(model);
+        platform.pure.metamodel.valuespecification.FunctionInvocationImpl mapExpr =
+                new platform.pure.metamodel.valuespecification.FunctionInvocationImpl(model);
         mapExpr._functionName("map");
         mapExpr._parametersValues(Lists.mutable.with(receiver, lambdaAV));
         mapExpr._sourceInformation(expr._sourceInformation());

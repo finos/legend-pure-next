@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import shadow::mm::*;
 
@@ -11,16 +25,16 @@ function shadow::countOf(xs: String[*]): Boolean[1]
 }
 
 ###CompiledGraph
-class shadow::mm::Integer extends Any  ~Class<shadow::mm::Integer>  @4:1-6:1
+class shadow::mm::Integer extends Any  ~Class<shadow::mm::Integer>  @18:1-20:1
 
 function shadow::countOf_String_MANY__Boolean_1_(xs:@String@[*]):@Boolean@[1]  ~UserDefinedFunction<{@String@[*]->@Boolean@[1]}>
-  FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @10:7-10:18
-    ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @10:7-10:14
-      Variable xs :#String##[*]#  ~@VariableExpression@  @10:4-10:6
-    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @10:18-10:18
+  FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @24:7-24:18
+    ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @24:7-24:14
+      Variable xs :#String##[*]#  ~@VariableExpression@  @24:4-24:6
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @24:18-24:18
 
 ###ReverseIndex
-meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
+platform::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
   shadow::countOf_String_MANY__Boolean_1_
-meta::pure::functions::collection::size_Any_MANY__Integer_1_:
+platform::pure::functions::collection::size_Any_MANY__Integer_1_:
   shadow::countOf_String_MANY__Boolean_1_

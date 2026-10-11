@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,8 +15,8 @@
 
 package org.finos.legend.pure.execution.natives.math;
 
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
 import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
@@ -85,7 +86,7 @@ public class MathNatives
         natives.put("abs_Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
         {
             Number n = (Number) _E_ValueSpecification.unwrap(args.get(0));
-            if (_Type.subtypeOf(_GenericType.type(args.get(0)._genericType()), (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Integer"), resolver))
+            if (_Type.subtypeOf(_GenericType.type(args.get(0)._genericType()), (Type) resolver.getElement("platform::pure::metamodel::type::primitives::Integer"), resolver))
             {
                 return _E_ValueSpecification.wrap(Math.abs(n.longValue()), genericType, multiplicity, resolver);
             }
@@ -114,7 +115,7 @@ public class MathNatives
         natives.put("minus_Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
         {
             Number n = (Number) _E_ValueSpecification.unwrap(args.get(0));
-            if (_Type.subtypeOf(_GenericType.type(args.get(0)._genericType()), (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Integer"), resolver))
+            if (_Type.subtypeOf(_GenericType.type(args.get(0)._genericType()), (Type) resolver.getElement("platform::pure::metamodel::type::primitives::Integer"), resolver))
             {
                 return _E_ValueSpecification.wrap(-n.longValue(), genericType, multiplicity, resolver);
             }

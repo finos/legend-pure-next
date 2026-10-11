@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::multiplicityCompiler::*;
-import meta::pure::compiler::structural::variableCompiler::*;
-import meta::pure::compiler::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::compiler::structural::genericTypeCompiler::*;
+import platform::pure::compiler::structural::multiplicityCompiler::*;
+import platform::pure::compiler::structural::variableCompiler::*;
+import platform::pure::compiler::*;
 
-function meta::pure::compiler::structural::variableCompiler::compileParameter(p:meta::pure::protocol::grammar::valuespecification::VariableExpression[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<VariableExpression>[1]
+function platform::pure::compiler::structural::variableCompiler::compileParameter(p:platform::pure::protocol::grammar::valuespecification::VariableExpression[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<VariableExpression>[1]
 {
-    let pType = $p.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+    let pType = $p.genericType->toOne()->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue);
     // Anonymous params (inner FunctionType slots like `{X[1]->Y[1]}`) carry no
     // name — skip the `parameter '<name>'` clause for them so the type-not-found
     // error doesn't end up with a bogus `in parameter ''` segment.
@@ -42,7 +43,7 @@ function meta::pure::compiler::structural::variableCompiler::compileParameter(p:
     );
 }
 
-function meta::pure::compiler::structural::variableCompiler::compileParameters(parameters:meta::pure::protocol::grammar::valuespecification::VariableExpression[*], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerListResult<VariableExpression>[1]
+function platform::pure::compiler::structural::variableCompiler::compileParameters(parameters:platform::pure::protocol::grammar::valuespecification::VariableExpression[*], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerListResult<VariableExpression>[1]
 {
     $parameters->fold({p, acc |
         let result = compileParameter($p, $acc.context, $packagePath, $typeParameters, $ownerContext);

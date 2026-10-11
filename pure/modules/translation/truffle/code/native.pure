@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::function::*;
+import platform::pure::metamodel::function::*;
 
 // Lowers a Pure lambda to a Truffle RootNode (via the same path the runtime
 // uses on first invocation — PureContext.callTargetForLambda) and returns
@@ -25,6 +26,6 @@ import meta::pure::metamodel::function::*;
 // Bootstrap (java-direct) has no implementation; calling this from anywhere
 // other than `--backend truffle` will fall through to the bridged-native
 // path and throw "no implementation".
-native function meta::external::language::truffle::truffleAstFor(
-    lambda: LambdaFunction<meta::pure::metamodel::type::Any>[1]
+native function platform::external::language::truffle::truffleAstFor(
+    lambda: LambdaFunction<platform::pure::metamodel::type::Any>[1]
 ): String[1];

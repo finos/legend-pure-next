@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::meta::antlr::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::meta::antlr::*;
+import platform::pure::test::pct::*;
 
 // The grammar rule name this context represents (e.g. {@code 'classDefinition'}).
 // Resolved by walking up to the context's enclosing parser class and reading
 // its {@code public static final String[] ruleNames} field.
 native function <<PCT.function>>
-   meta::pure::functions::meta::antlr::grammarRuleName(
+   platform::pure::functions::meta::antlr::grammarRuleName(
       ctx: AntlrContext[1]
    ): String[1];
 
-function <<PCT.test>> meta::pure::functions::meta::antlr::tests::grammarRuleName::testRoot<Z|y>(
+function <<PCT.test>> platform::pure::functions::meta::antlr::tests::grammarRuleName::testRoot<Z|y>(
    f: Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]
 ): Boolean[1]
 {

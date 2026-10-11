@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * generated {@code XEnum} classes (AggregationKindEnum,
  * GenericTypeOperationTypeEnum): same construction — a name-bearing
  * {@link PureDynamicObject} of class
- * {@code meta::pure::metamodel::type::Enum} — but built on demand for ANY
+ * {@code platform::pure::metamodel::type::Enum} — but built on demand for ANY
  * enumeration instead of two compile-time-known ones.
  *
  * <p>{@code PureContext#classifierGenericType} consults

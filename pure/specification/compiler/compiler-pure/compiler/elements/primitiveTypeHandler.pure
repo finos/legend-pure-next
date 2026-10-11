@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::structural::generalizationCompiler::*;
-import meta::pure::compiler::structural::constraintCompiler::*;
-import meta::pure::compiler::structural::annotationCompiler::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::compiler::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::extension::*;
+import platform::pure::compiler::structural::generalizationCompiler::*;
+import platform::pure::compiler::structural::constraintCompiler::*;
+import platform::pure::compiler::structural::annotationCompiler::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::compiler::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::extension::*;
 
-function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta::pure::protocol::grammar::type::PrimitiveType[1], context:CompilerContext[1]):CompilerResult<PrimitiveType>[1]
+function platform::pure::compiler::elements::compilePrimitive(protocolPrimitive:platform::pure::protocol::grammar::type::PrimitiveType[1], context:CompilerContext[1]):CompilerResult<PrimitiveType>[1]
 {
     let packagePath = if($protocolPrimitive.package->isEmpty(), | '', | $protocolPrimitive.package->toOne().value);
     let primitiveName = if($packagePath == '', | $protocolPrimitive.name, | $packagePath + '::' + $protocolPrimitive.name);
@@ -35,8 +36,8 @@ function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta
 
     let typeVariables = if($protocolPrimitive.typeVariables->isEmpty(), | [],
         | $protocolPrimitive.typeVariables->map(tv |
-            let genType = $tv.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::protocol::grammar::type::Type_Pointer).value;
-            let mMult = $tv.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+            let genType = $tv.genericType->toOne()->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne()->cast(@platform::pure::protocol::grammar::type::Type_Pointer).value;
+            let mMult = $tv.multiplicity->toOne()->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
             ^VariableExpression(
                 name = $tv.name,
                 // Cross-element ref into a type being compiled — wrap as pointer.

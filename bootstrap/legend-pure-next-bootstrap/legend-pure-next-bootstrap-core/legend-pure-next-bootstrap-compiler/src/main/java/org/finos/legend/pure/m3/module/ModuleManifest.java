@@ -45,7 +45,7 @@ import java.util.Objects;
  * <p>Because of this, {@link #toJson} emits only the three archive fields and NEVER
  * {@code testDependencies} — the archive format is unchanged, so every other reader of a
  * {@code manifest} section (the JavaScript and Truffle hosts, and the self-hosted Pure
- * writer in {@code meta::pure::compiler::pdb::archive::manifestJson}) is untouched and the
+ * writer in {@code platform::pure::compiler::pdb::archive::manifestJson}) is untouched and the
  * PDB goldens cannot move. {@link #parse} accepts the field so {@code module.json} can
  * carry it; a manifest round-tripped through {@code toJson} therefore loses it, which is
  * correct for an archive and is pinned by {@code ModuleManifestTest}.</p>

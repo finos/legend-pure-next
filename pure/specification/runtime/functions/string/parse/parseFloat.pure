@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
-native function <<PCT.function>> meta::pure::functions::string::parseFloat(string:String[1]):Float[1];
+native function <<PCT.function>> platform::pure::functions::string::parseFloat(string:String[1]):Float[1];
 
-function <<PCT.test>> meta::pure::functions::string::tests::parseFloat::testParseFloat<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::parseFloat::testParseFloat<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(3.14159, $f->eval(|parseFloat('3.14159')));
     assertEquals(3.14159, $f->eval(|parseFloat('+0000003.1415900000')));
     assertEquals(-3.14159, $f->eval(|parseFloat('-0000003.1415900000')));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::parseFloat::testParseZero<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::parseFloat::testParseZero<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(0.0, $f->eval(|parseFloat('0.0')));
     assertEquals(-0.0, $f->eval(|parseFloat('-000.000')));

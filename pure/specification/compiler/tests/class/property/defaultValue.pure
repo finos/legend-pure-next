@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import pack::*;
 
@@ -9,22 +23,22 @@ Class pack::MyClass
 }
 
 ###CompiledGraph
-class pack::MyClass extends Any  ~Class<pack::MyClass>  @4:1-9:1
+class pack::MyClass extends Any  ~Class<pack::MyClass>  @18:1-23:1
   property value :@Integer@[1]  ~Property<pack::MyClass, @Integer@|1>
     defaultValue Lambda()  ~#LambdaFunction<#{->@Integer@[1]}#>#
-      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:23-6:23
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:23-20:23
   property str :@String@[1]  ~Property<pack::MyClass, @String@|1>
     defaultValue Lambda()  ~#LambdaFunction<#{->@String@[1]}#>#
-      AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @7:20-7:23
+      AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @21:20-21:23
   property advanced :@String@[1]  ~Property<pack::MyClass, @String@|1>
     defaultValue Lambda()  ~#LambdaFunction<#{->#String##[1]#}#>#
-      FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @8:30-8:41
-        DotApplication pack::MyClass.str :#String##[1]#  ~@DotApplication@  @8:30-8:33
-          Variable this :#pack::MyClass##[1]#  ~@VariableExpression@  @8:25-8:29
-        AtomicValue  'bla' :@String@[1]  ~@AtomicValue@  @8:37-8:41
+      FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @22:30-22:41
+        DotApplication pack::MyClass.str :#String##[1]#  ~@DotApplication@  @22:30-22:33
+          Variable this :#pack::MyClass##[1]#  ~@VariableExpression@  @22:25-22:29
+        AtomicValue  'bla' :@String@[1]  ~@AtomicValue@  @22:37-22:41
 
 ###ReverseIndex
-meta::pure::functions::string::plus_String_1__String_1__String_1_:
-  pack::MyClass.advanced
 pack::MyClass.str:
+  pack::MyClass.advanced
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
   pack::MyClass.advanced
