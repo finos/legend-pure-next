@@ -15,19 +15,19 @@
 
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.FbsNode;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.FbsNode;
 import org.finos.legend.pure.platform.java.compiler.module.pdbModule.archive.Zip;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.ReadAncestorRef;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.ReadPointerRef;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.unwrapValueDef_FbsNode_1__Any_1_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.elementNode_Binary_1__String_1__FbsNode_1_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.rootNode_Binary_1__String_1__FbsNode_1_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsField;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsSchema;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.parseFbs_String_1__FbsSchema_1_;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.FbsTable;
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.schema.table_FbsSchema_1__String_1__FbsTable_$0_1$_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.ReadAncestorRef;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.ReadPointerRef;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.unwrapValueDef_FbsNode_1__Any_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.elementNode_Binary_1__String_1__FbsNode_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.rootNode_Binary_1__String_1__FbsNode_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.FbsField;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.FbsSchema;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.parseFbs_String_1__FbsSchema_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.FbsTable;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.table_FbsSchema_1__String_1__FbsTable_$0_1$_;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -265,7 +265,7 @@ public final class PdbRuntime
             // type name plus "Def" (as `elementNode` spells it when decoding).
             LazyObject prototype = types.apply(k + "Def");
             Object type = prototype == null ? null : element(prototype._purePath());
-            Object typeClass = element("meta::pure::metamodel::type::Type");
+            Object typeClass = element("platform::pure::metamodel::type::Type");
             return type != null && typeClass != null && Metadata.isOrSpecializes(type, typeClass);
         });
     }

@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,28 +13,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::protocol::*;
-import meta::pure::test::pct::*;
+import platform::pure::protocol::*;
+import platform::pure::test::pct::*;
 
-native function meta::pure::functions::meta::parse(sourceId:String[1], content:String[1]):PureFile[1];
+native function platform::pure::functions::meta::parse(sourceId:String[1], content:String[1]):PureFile[1];
 
-function <<PCT.test>> meta::pure::functions::meta::testParseNativeIntegration<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::testParseNativeIntegration<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let file = $f->eval(|meta::pure::functions::meta::parse('testSource', 'Class pkg::MyClass { name:String[1]; }'));
-    let cls = $file.sections->at(0).elements->at(0)->cast(@meta::pure::protocol::grammar::type::Class);
+    let file = $f->eval(|platform::pure::functions::meta::parse('testSource', 'Class pkg::MyClass { name:String[1]; }'));
+    let cls = $file.sections->at(0).elements->at(0)->cast(@platform::pure::protocol::grammar::type::Class);
     assertEquals('testSource', $file.sourceId);
     assertEquals(1, $file.sections->size());
     assertEquals(1, $file.sections->at(0).elements->size());
     assertEquals('MyClass', $cls.name);
-    assertEquals('pkg', $cls.package->cast(@meta::pure::protocol::grammar::Package_Pointer).value);
+    assertEquals('pkg', $cls.package->cast(@platform::pure::protocol::grammar::Package_Pointer).value);
     assertEquals(1, $cls.properties->size());
     assertEquals('name', $cls.properties->at(0).name);
 }
 
-function <<PCT.test>> meta::pure::functions::meta::testParseUnknownSectionThrows<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::testParseUnknownSectionThrows<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertError(
-        | $f->eval(|meta::pure::functions::meta::parse(
+        | $f->eval(|platform::pure::functions::meta::parse(
             'test',
             '''
             ###Pure
@@ -47,11 +48,11 @@ function <<PCT.test>> meta::pure::functions::meta::testParseUnknownSectionThrows
     );
 }
 
-function <<PCT.test>> meta::pure::functions::meta::testParseEnumPropertyValues<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::testParseEnumPropertyValues<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // The composite property's aggregation should be an Enum_Pointer referencing the metamodel enum
-    let enumPtr = $f->eval(|meta::pure::functions::meta::parse('testSource', 'Class pkg::MyClass { (composite) child:String[*]; name:String[1]; }').sections->at(0).elements->at(0)->cast(@meta::pure::protocol::grammar::type::Class).properties->filter(p | $p.name == 'child')->at(0).aggregation->cast(@meta::pure::protocol::grammar::Enum_Pointer));
-    assertEquals('meta::pure::metamodel::function::property::AggregationKind', $enumPtr.value);
+    let enumPtr = $f->eval(|platform::pure::functions::meta::parse('testSource', 'Class pkg::MyClass { (composite) child:String[*]; name:String[1]; }').sections->at(0).elements->at(0)->cast(@platform::pure::protocol::grammar::type::Class).properties->filter(p | $p.name == 'child')->at(0).aggregation->cast(@platform::pure::protocol::grammar::Enum_Pointer));
+    assertEquals('platform::pure::metamodel::function::property::AggregationKind', $enumPtr.value);
     assertEquals('Composite', $enumPtr.extraPointerValues->at(0).value);
 }
 
@@ -62,14 +63,41 @@ function <<PCT.test>> meta::pure::functions::meta::testParseEnumPropertyValues<Z
 // form to source — DI source → DI target — instead of promoting to a typed
 // Impl (which would then reject the DI-valued nested slots and throw
 // "Failed to set property X value type: DynamicInstance").
-function <<PCT.test>> meta::pure::functions::meta::testCopyParsedFunctionInvocation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::testCopyParsedFunctionInvocation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
-        let file = meta::pure::functions::meta::parse('testSource', '###Pure\nfunction test::f(): Integer[1]\n{\n  1 + 2\n}\n');
-        let udf = $file.sections->at(0).elements->at(0)->cast(@meta::pure::protocol::grammar::function::UserDefinedFunction);
-        let fi = $udf.expressionSequence->at(0)->cast(@meta::pure::protocol::grammar::valuespecification::FunctionInvocation);
+        let file = platform::pure::functions::meta::parse('testSource', '###Pure\nfunction test::f(): Integer[1]\n{\n  1 + 2\n}\n');
+        let udf = $file.sections->at(0).elements->at(0)->cast(@platform::pure::protocol::grammar::function::UserDefinedFunction);
+        let fi = $udf.expressionSequence->at(0)->cast(@platform::pure::protocol::grammar::valuespecification::FunctionInvocation);
         let copy = ^$fi(functionName = 'renamed');
         assertEquals('renamed', $copy.functionName);
         assertEquals('plus', $fi.functionName);
     ));
+}
+
+// Text before the first `###` header is the file's implicit section. When it holds only comments and
+// blank lines (a licence header above `###Pure`) it is not a section at all, and positions are the
+// file's own line numbers.
+function <<PCT.test>> platform::pure::functions::meta::testParseCommentsBeforeFirstSection<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let file = $f->eval(|platform::pure::functions::meta::parse('testSource', '// a header\n/* and a block\n   comment */\n\n###Pure\nClass pkg::MyClass {}\n'));
+    assertEquals(['Pure'], $file.sections.parserName);
+    assertEquals(6, $file.sections->at(0).elements->at(0).p_sourceInformation.startLine);
+}
+
+// Source with no `###` header at all is one Pure section, imports included, at its own line numbers.
+function <<PCT.test>> platform::pure::functions::meta::testParseWithoutSectionHeader<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let file = $f->eval(|platform::pure::functions::meta::parse('testSource', '// a header\nimport pkg::*;\n\nClass pkg::MyClass {}\n'));
+    assertEquals(['Pure'], $file.sections.parserName);
+    assertEquals(['pkg::*'], $file.sections->at(0).imports);
+    assertEquals(4, $file.sections->at(0).elements->at(0).p_sourceInformation.startLine);
+}
+
+// A file with nothing but comments is still one (empty) Pure section.
+function <<PCT.test>> platform::pure::functions::meta::testParseCommentOnlySource<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let file = $f->eval(|platform::pure::functions::meta::parse('testSource', '// nothing here\n'));
+    assertEquals(['Pure'], $file.sections.parserName);
+    assertEquals(0, $file.sections->at(0).elements->size());
 }

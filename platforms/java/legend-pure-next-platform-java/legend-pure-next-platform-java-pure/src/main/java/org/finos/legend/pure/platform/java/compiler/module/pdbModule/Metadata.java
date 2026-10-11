@@ -19,20 +19,20 @@ import java.util.List;
 
 /**
  * The metadata translated code reads: a Pure element named in the source
- * (`NativeFunction`, `PureOne`, `meta::pure::functions::collection::List`) is
+ * (`NativeFunction`, `PureOne`, `platform::pure::functions::collection::List`) is
  * the metamodel object of the PDBs the host opened, not its name. The host
  * installs the runtime once, before running translated code.
  */
 public final class Metadata
 {
-    private static final String CANONICAL_GENERIC_TYPES = "meta::pure::metamodel::type::generics::optimization::";
-    private static final String POINTER_PACKAGE = "meta::pure::metamodel::pointer::";
-    private static final String HOLDER = "meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder";
-    private static final String VALUE_SPECIFICATION = "meta::pure::metamodel::valuespecification::";
+    private static final String CANONICAL_GENERIC_TYPES = "platform::pure::metamodel::type::generics::optimization::";
+    private static final String POINTER_PACKAGE = "platform::pure::metamodel::pointer::";
+    private static final String HOLDER = "platform::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder";
+    private static final String VALUE_SPECIFICATION = "platform::pure::metamodel::valuespecification::";
     private static final String TRANSLATE_PATH =
-            "meta::external::language::java::translation::translateFunctionProgram_String_1__String_1_";
+            "platform::external::language::java::translation::translateFunctionProgram_String_1__String_1_";
     private static final String TRANSLATE_VALUE =
-            "meta::external::language::java::translation::translateFunctionValueProgram_UserDefinedFunction_1__String_1_";
+            "platform::external::language::java::translation::translateFunctionValueProgram_UserDefinedFunction_1__String_1_";
     /** The Java of each dynamically compiled function, by identity. */
     private static final java.util.Map<Object, String> TRANSLATED = java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
 
@@ -99,7 +99,7 @@ public final class Metadata
         Object element = installed.element(path);
         return element == null
                 ? null
-                : new org.finos.legend.pure.m3.meta.pure.metamodel.type.generics.GenericTypeValueImpl()._type(element);
+                : new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTypeValueImpl()._type(element);
     }
 
     /**
@@ -122,9 +122,9 @@ public final class Metadata
         for (Object typeArgument : typeArguments)
         {
             Object argument = installed.element((String) typeArgument);
-            arguments.add(new org.finos.legend.pure.m3.meta.pure.metamodel.type.generics.GenericTypeValueImpl()._type(argument));
+            arguments.add(new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTypeValueImpl()._type(argument));
         }
-        return new org.finos.legend.pure.m3.meta.pure.metamodel.type.generics.GenericTypeValueImpl()
+        return new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTypeValueImpl()
                 ._type(element)
                 ._typeArguments(arguments);
     }
@@ -137,19 +137,19 @@ public final class Metadata
     public static Object genericTypeHolder(Object value)
     {
         boolean many = value instanceof List;
-        Object classifier = new org.finos.legend.pure.m3.meta.pure.metamodel.type.generics.GenericTypeValueImpl()
+        Object classifier = new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTypeValueImpl()
                 ._type(element(HOLDER))
                 ._typeArguments(List.of(genericType(value)))
-                ._multiplicityArguments(List.of(element("meta::pure::metamodel::multiplicity::"
+                ._multiplicityArguments(List.of(element("platform::pure::metamodel::multiplicity::"
                         + (many ? "ZeroMany" : "PureOne"))));
-        return new org.finos.legend.pure.m3.meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolderImpl()
+        return new org.finos.legend.pure.m3.platform.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolderImpl()
                 ._classifierGenericType(classifier);
     }
 
     /** `@Type` written in the source: the same holder, over a type named there. */
     public static Object genericTypeHolderOf(String typePath)
     {
-        return new org.finos.legend.pure.m3.meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolderImpl()
+        return new org.finos.legend.pure.m3.platform.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolderImpl()
                 ._classifierGenericType(classifier(HOLDER, List.of(typePath)));
     }
 
@@ -165,7 +165,7 @@ public final class Metadata
         if (classifier instanceof LazyObject && !typeVariableValues.isEmpty())
         {
             // A canonical classifier is shared: give the values their own.
-            LazyObject own = new org.finos.legend.pure.m3.meta.pure.metamodel.type.generics.GenericTypeValueImpl()
+            LazyObject own = new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTypeValueImpl()
                     ._type(typeOf(classifier))
                     ._typeArguments(values(classifier, "typeArguments"))
                     ._typeVariableValues(typeVariableValues);
@@ -339,7 +339,7 @@ public final class Metadata
             {
                 if (!java.util.Objects.equals(type(value1), type(values.get(0))))
                 {
-                    return new org.finos.legend.pure.m3.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()
+                    return new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()
                             ._type(commonType(values));
                 }
             }
@@ -356,7 +356,7 @@ public final class Metadata
                 return classifier.get(0);
             }
         }
-        return new org.finos.legend.pure.m3.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._type(type(value));
+        return new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._type(type(value));
     }
 
     /** `type(value)`: the type element a Java value stands for. */
@@ -380,7 +380,7 @@ public final class Metadata
         if (PureLambda.isPureLambda(value))
         {
             // A lambda value's classifier is the LambdaFunction class.
-            return element("meta::pure::metamodel::function::LambdaFunction");
+            return element("platform::pure::metamodel::function::LambdaFunction");
         }
         if (value instanceof PureEnumValue)
         {
@@ -392,7 +392,7 @@ public final class Metadata
             // A date's type is its precision: %2015-03-14 is a StrictDate, and
             // only a year or year-month date is a plain Date. `instanceOf` walks
             // up from here, so the coarser types still answer true.
-            return element("meta::pure::metamodel::type::primitives::"
+            return element("platform::pure::metamodel::type::primitives::"
                     + ((org.finos.legend.pure.platform.java.runtime.PureDate) value).kind);
         }
         String primitive = PRIMITIVES.get(value == null ? null : value.getClass());
@@ -400,7 +400,7 @@ public final class Metadata
         {
             throw new UnsupportedOperationException("No Pure type for " + (value == null ? "null" : value.getClass().getName()));
         }
-        return element("meta::pure::metamodel::type::primitives::" + primitive);
+        return element("platform::pure::metamodel::type::primitives::" + primitive);
     }
 
     /**
@@ -437,7 +437,7 @@ public final class Metadata
             if (enumValue instanceof LazyObject && ((LazyObject) enumValue).__values("classifierGenericType").isEmpty())
             {
                 ((LazyObject) enumValue).set("classifierGenericType",
-                        new org.finos.legend.pure.m3.meta.pure.metamodel.type.generics.GenericTypeValueImpl()._type(enumeration));
+                        new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTypeValueImpl()._type(enumeration));
             }
             enums.add(enumValue);
         }
@@ -563,7 +563,7 @@ public final class Metadata
                 return candidate;
             }
         }
-        return element("meta::pure::metamodel::type::Any");
+        return element("platform::pure::metamodel::type::Any");
     }
 
     /** `type` and its generalizations, nearest first. */
@@ -754,7 +754,7 @@ public final class Metadata
         }
         // Everything is an Any — the TARGET being Any is what makes this true,
         // whatever the type walked from.
-        return target == lenientElement("meta::pure::metamodel::type::Any");
+        return target == lenientElement("platform::pure::metamodel::type::Any");
     }
 
     /**
@@ -773,7 +773,7 @@ public final class Metadata
         String path = path(raw.get(0), "::");
         // `new(^UserDefinedGenericType(type = Class))` — a metaclass says nothing
         // about what it would be a class OF without its type argument.
-        if ("meta::pure::metamodel::type::Class".equals(path) && type.__values("typeArguments").isEmpty())
+        if ("platform::pure::metamodel::type::Class".equals(path) && type.__values("typeArguments").isEmpty())
         {
             throw new RuntimeException("Cannot instantiate Class<Class<T>> because the typeArgs are not set for the typeParam");
         }
@@ -823,7 +823,7 @@ public final class Metadata
                     }
                 }
             }
-            return new org.finos.legend.pure.m3.meta.pure.metamodel.type.AnyImpl();
+            return new org.finos.legend.pure.m3.platform.pure.metamodel.type.AnyImpl();
         }
     }
 
@@ -863,7 +863,7 @@ public final class Metadata
         throw new RuntimeException("Cannot change classifierGenericType.type from '" + instance._purePath()
                 + "' to '" + path(proposed, "::") + "'. The classifier's raw type is system-managed (derived from the"
                 + " instance's metaclass) — only typeArguments, multiplicityArguments and typeVariableValues are"
-                + " user-customizable. Use meta::pure::functions::lang::new(GenericType[1]) to construct an instance"
+                + " user-customizable. Use platform::pure::functions::lang::new(GenericType[1]) to construct an instance"
                 + " with a different metaclass.");
     }
 
@@ -957,7 +957,7 @@ public final class Metadata
 
     private static boolean isProperty(LazyObject function)
     {
-        return function._purePath().startsWith("meta::pure::metamodel::function::property::");
+        return function._purePath().startsWith("platform::pure::metamodel::function::property::");
     }
 
     private static List<Object> unwrapArguments(List<Object> args)
@@ -965,7 +965,7 @@ public final class Metadata
         List<Object> unwrapped = new java.util.ArrayList<>(args.size());
         for (Object arg : args)
         {
-            boolean wrapper = arg instanceof LazyObject && "meta::pure::functions::collection::List".equals(((LazyObject) arg)._purePath());
+            boolean wrapper = arg instanceof LazyObject && "platform::pure::functions::collection::List".equals(((LazyObject) arg)._purePath());
             List<Object> values = wrapper ? ((LazyObject) arg).__values("values") : null;
             unwrapped.add(!wrapper ? arg : values.size() == 1 ? values.get(0) : values);
         }
@@ -1072,7 +1072,7 @@ public final class Metadata
             return value;
         }
         String text = (String) value;
-        return new org.finos.legend.pure.m3.meta.pure.metamodel.type.EnumImpl()._name(text.substring(text.lastIndexOf('.') + 1));
+        return new org.finos.legend.pure.m3.platform.pure.metamodel.type.EnumImpl()._name(text.substring(text.lastIndexOf('.') + 1));
     }
 
     private static final java.util.Map<Class<?>, String> PRIMITIVES = java.util.Map.of(

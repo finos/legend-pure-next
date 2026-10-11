@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,58 +15,58 @@
 
 // Model for equality tests
 
-import meta::pure::functions::boolean::tests::equalitymodel::*;
+import platform::pure::functions::boolean::tests::equalitymodel::*;
 
-Enum <<test.TestDependency>> meta::pure::functions::boolean::tests::equalitymodel::TestEnum1
+Enum <<test.TestDependency>> platform::pure::functions::boolean::tests::equalitymodel::TestEnum1
 {
     FIRST,
     SECOND
 }
 
-Enum <<test.TestDependency>> meta::pure::functions::boolean::tests::equalitymodel::TestEnum2
+Enum <<test.TestDependency>> platform::pure::functions::boolean::tests::equalitymodel::TestEnum2
 {
     FIRST,
     SECOND
 }
 
-Class <<test.TestDependency>> meta::pure::functions::boolean::tests::equalitymodel::SideClass
+Class <<test.TestDependency>> platform::pure::functions::boolean::tests::equalitymodel::SideClass
 {
     <<equality.Key>> stringId : String[1];
     <<equality.Key>> intId : Integer[1];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::boolean::tests::equalitymodel::TopClass
+Class <<test.TestDependency>> platform::pure::functions::boolean::tests::equalitymodel::TopClass
 {
     <<equality.Key>> name : String[1];
     <<equality.Key>> sides : SideClass[*];
     nickName : String[0..1];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::boolean::tests::equalitymodel::LeftClass extends TopClass
+Class <<test.TestDependency>> platform::pure::functions::boolean::tests::equalitymodel::LeftClass extends TopClass
 {
     <<equality.Key>> left : Integer[1];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::boolean::tests::equalitymodel::RightClass extends TopClass
+Class <<test.TestDependency>> platform::pure::functions::boolean::tests::equalitymodel::RightClass extends TopClass
 {
     right : Integer[1];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::boolean::tests::equalitymodel::BottomClass extends LeftClass, RightClass
+Class <<test.TestDependency>> platform::pure::functions::boolean::tests::equalitymodel::BottomClass extends LeftClass, RightClass
 {
 }
 
-Class <<test.TestDependency>> meta::pure::functions::boolean::tests::equalitymodel::OtherBottomClass extends LeftClass, RightClass
+Class <<test.TestDependency>> platform::pure::functions::boolean::tests::equalitymodel::OtherBottomClass extends LeftClass, RightClass
 {
     sides : SideClass[*];
     <<equality.Key>> right : Integer[1];
 }
 
-Class <<test.TestDependency>> meta::pure::functions::boolean::tests::equalitymodel::NoKeyClass
+Class <<test.TestDependency>> platform::pure::functions::boolean::tests::equalitymodel::NoKeyClass
 {
     name : String[1];
     value : Integer[1];
 }
 
-Primitive meta::pure::functions::boolean::tests::equalitymodel::ExtendedInteger extends Integer
+Primitive platform::pure::functions::boolean::tests::equalitymodel::ExtendedInteger extends Integer
 

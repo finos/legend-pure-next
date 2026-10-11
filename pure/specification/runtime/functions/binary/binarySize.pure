@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::binary::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::binary::*;
 
 // Number of bytes in a Binary. O(1) — this is the write cursor of the
 // FlatBuffers builder, so it is called once per prepended scalar.
@@ -21,15 +21,15 @@ import meta::pure::functions::binary::*;
 // Named `binarySize` rather than `size`: the Java and JavaScript translators
 // match coders by SHORT name, so a `size` overload would collide with the
 // collection `size` (see the `copy` collision recorded in the JS translator).
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::binarySize(b:Binary[1]):Integer[1];
+native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::binary::binarySize(b:Binary[1]):Integer[1];
 
-function <<PCT.test>> meta::pure::functions::binary::tests::binarySize::testLiteral<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::binary::tests::binarySize::testLiteral<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(3, $f->eval(|0x1F8B08->binarySize()));
     assertEquals(1, $f->eval(|0xFF->binarySize()));
 }
 
-function <<PCT.test>> meta::pure::functions::binary::tests::binarySize::testEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::binary::tests::binarySize::testEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(0, $f->eval(|0x->binarySize()));
 }

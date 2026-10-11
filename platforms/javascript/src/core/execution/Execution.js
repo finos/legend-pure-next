@@ -31,7 +31,7 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
 const TRANSLATE_PACKAGE =
-    "meta$external$language$javascript$translation$pdb$translatePackageToJs_String_1__String_1_";
+    "platform$external$language$javascript$translation$pdb$translatePackageToJs_String_1__String_1_";
 
 export class Execution {
     #runtimeModule;

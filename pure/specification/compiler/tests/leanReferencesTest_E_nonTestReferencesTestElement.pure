@@ -1,28 +1,42 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Error
-Non-test element 'meta::pure::compiler::test::leanRefsTest::anotherNonTest_Any_1__String_1_' references test-only element 'meta::pure::compiler::test::leanRefsTest::TestCallerClass' (at leanReferencesTest_E_nonTestReferencesTestElement:33c1-38c1)
-Non-test element 'meta::pure::compiler::test::leanRefsTest::anotherNonTest_Any_1__String_1_' references test-only element 'meta::pure::compiler::test::leanRefsTest::TestCallerClass.name' (at leanReferencesTest_E_nonTestReferencesTestElement:33c1-38c1)
-Non-test element 'meta::pure::compiler::test::leanRefsTest::anotherNonTest_Any_1__String_1_' references test-only element 'meta::pure::compiler::test::leanRefsTest::testHelper_Any_1__Boolean_1_' (at leanReferencesTest_E_nonTestReferencesTestElement:33c1-38c1)
-Non-test element 'meta::pure::compiler::test::leanRefsTest::nonTestUsesTest_Any_1__Boolean_1_' references test-only element 'meta::pure::compiler::test::leanRefsTest::testHelper_Any_1__Boolean_1_' (at leanReferencesTest_E_nonTestReferencesTestElement:25c1-28c1)
+Non-test element 'platform::pure::compiler::test::leanRefsTest::anotherNonTest_Any_1__String_1_' references test-only element 'platform::pure::compiler::test::leanRefsTest::TestCallerClass' (at leanReferencesTest_E_nonTestReferencesTestElement:47c1-52c1)
+Non-test element 'platform::pure::compiler::test::leanRefsTest::anotherNonTest_Any_1__String_1_' references test-only element 'platform::pure::compiler::test::leanRefsTest::TestCallerClass.name' (at leanReferencesTest_E_nonTestReferencesTestElement:47c1-52c1)
+Non-test element 'platform::pure::compiler::test::leanRefsTest::anotherNonTest_Any_1__String_1_' references test-only element 'platform::pure::compiler::test::leanRefsTest::testHelper_Any_1__Boolean_1_' (at leanReferencesTest_E_nonTestReferencesTestElement:47c1-52c1)
+Non-test element 'platform::pure::compiler::test::leanRefsTest::nonTestUsesTest_Any_1__Boolean_1_' references test-only element 'platform::pure::compiler::test::leanRefsTest::testHelper_Any_1__Boolean_1_' (at leanReferencesTest_E_nonTestReferencesTestElement:39c1-42c1)
 
 ###Pure
-import meta::pure::compiler::test::leanRefsTest::*;
+import platform::pure::compiler::test::leanRefsTest::*;
 
 // Test element: a helper function marked <<test.TestDependency>>.
 // Lean (non-test) elements must NOT reference it.
-function <<test.TestDependency>> meta::pure::compiler::test::leanRefsTest::testHelper(a:Any[1]):Boolean[1]
+function <<test.TestDependency>> platform::pure::compiler::test::leanRefsTest::testHelper(a:Any[1]):Boolean[1]
 {
    true;
 }
 
 // Test element: a model class marked <<test.TestDependency>>.
 // Lean (non-test) elements must NOT reference it.
-Class <<test.TestDependency>> meta::pure::compiler::test::leanRefsTest::TestCallerClass
+Class <<test.TestDependency>> platform::pure::compiler::test::leanRefsTest::TestCallerClass
 {
    name: String[1];
 }
 
 // Violation 1: a non-test function references the test helper directly.
-function meta::pure::compiler::test::leanRefsTest::nonTestUsesTest(a:Any[1]):Boolean[1]
+function platform::pure::compiler::test::leanRefsTest::nonTestUsesTest(a:Any[1]):Boolean[1]
 {
    testHelper($a);
 }
@@ -30,7 +44,7 @@ function meta::pure::compiler::test::leanRefsTest::nonTestUsesTest(a:Any[1]):Boo
 // Violations 2 + 3 + 4: another non-test function references the test helper,
 // the test class (via construction), and the test class's sub-element `.name`
 // property (via property access).
-function meta::pure::compiler::test::leanRefsTest::anotherNonTest(a:Any[1]):String[1]
+function platform::pure::compiler::test::leanRefsTest::anotherNonTest(a:Any[1]):String[1]
 {
    testHelper($a);
    let x = ^TestCallerClass(name='foo');

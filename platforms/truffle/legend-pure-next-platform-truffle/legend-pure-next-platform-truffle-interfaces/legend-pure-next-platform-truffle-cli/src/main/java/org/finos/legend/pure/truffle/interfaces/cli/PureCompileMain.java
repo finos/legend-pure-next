@@ -37,7 +37,7 @@ import java.util.Map;
  * <p>Mirrors the {@code execute} subcommand of {@code pure-bootstrap}:</p>
  * <pre>
  *   pure-truffle execute --pdb core.pdb --pdb compiler.pdb \
- *       --function meta::pure::some::fn_... \
+ *       --function platform::pure::some::fn_... \
  *       [--args arg1 arg2 ...]
  * </pre>
  *

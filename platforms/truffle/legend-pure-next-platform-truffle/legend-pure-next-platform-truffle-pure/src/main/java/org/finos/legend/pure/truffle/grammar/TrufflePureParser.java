@@ -64,7 +64,7 @@ public final class TrufflePureParser
     {
         this.resolver = resolver;
         this.parseDocumentFn = resolver == null ? null : resolver.getElement(
-                "meta::pure::parser::mappings::interpreter::parseDocument_AntlrContext_1__String_1__Boolean_1__Pair_MANY__PureFile_1_");
+                "platform::pure::parser::mappings::interpreter::parseDocument_AntlrContext_1__String_1__Pair_MANY__PureFile_1_");
         this.pureSectionRegistry = resolver == null
                 ? new java.util.ArrayList<>()
                 : buildPureSectionRegistry(resolver, languages);
@@ -90,8 +90,8 @@ public final class TrufflePureParser
         org.eclipse.collections.api.list.ListIterable<String> paths = languages.notEmpty()
                 ? languages.collect(Language::sectionParsers).select((path) -> path != null)
                 : org.eclipse.collections.api.factory.Lists.immutable.of(
-                        "meta::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_",
-                        "meta::pure::compiler::test::testSectionParsers__Pair_MANY_");
+                        "platform::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_",
+                        "platform::pure::compiler::test::testSectionParsers__Pair_MANY_");
         paths.forEach((path) ->
         {
             // GUARDED on the element being present: a language whose Pure module is not registered
@@ -128,11 +128,8 @@ public final class TrufflePureParser
 
     public Object parse(String sourceId, String content)
     {
-        // If the source has no ### header, treat it as implicit ###Pure (matches bootstrap TopLevelParser).
-        boolean syntheticHeader = !content.startsWith("###");
-        String effectiveSource = syntheticHeader ? "###Pure\n" + content : content;
-
-        TopLexer lexer = new TopLexer(CharStreams.fromString(effectiveSource));
+        // Text before the first header is the grammar's implicit section, read as Pure.
+        TopLexer lexer = new TopLexer(CharStreams.fromString(content));
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         TopParser parser = new TopParser(tokens);
         parser.removeErrorListeners();
@@ -159,7 +156,7 @@ public final class TrufflePureParser
                             + "Register a PdbModule for shared/parser-mappings.pdb.");
         }
         return PureLanguage.get(null).executeFunction(parseDocumentFn,
-                new Object[] {document, sourceId, syntheticHeader, pureSectionRegistry});
+                new Object[] {document, sourceId, pureSectionRegistry});
     }
 
     public static final class Builder

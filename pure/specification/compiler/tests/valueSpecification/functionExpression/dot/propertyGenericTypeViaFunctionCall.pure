@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::*;
 
@@ -14,37 +28,37 @@ function test::use(): Any[*]
 }
 
 ###CompiledGraph
-class test::Box extends Any  ~Class<test::Box<T~test::Box>>  @4:1-8:1
+class test::Box extends Any  ~Class<test::Box<T~test::Box>>  @18:1-22:1
   property value :T~test::Box[1]  ~Property<test::Box<T~test::Box>, T~test::Box|1>
   qualifiedProperty get() :T~test::Box[1]
-    DotApplication test::Box.value :#T~test::Box##[1]#  ~@DotApplication@  @7:15-7:20
-      Variable this :#test::Box<T~test::Box>##[1]#  ~@VariableExpression@  @7:10-7:14
+    DotApplication test::Box.value :#T~test::Box##[1]#  ~@DotApplication@  @21:15-21:20
+      Variable this :#test::Box<T~test::Box>##[1]#  ~@VariableExpression@  @21:10-21:14
 
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Box<@String@>##[1]#  ~@FunctionInvocation@  @12:3-12:39
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Box<@String@>##[1]#  ~@FunctionInvocation@  @26:3-26:39
     typeParam T -> #test::Box<@String@>#
     mulParam m -> #[1]#
-    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @12:7-12:7
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Box<@String@>##[1]#  ~@FunctionInvocation@  @12:11-12:39
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @26:7-26:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Box<@String@>##[1]#  ~@FunctionInvocation@  @26:11-26:39
       typeParam T -> test::Box<@String@>
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Box<@String@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Box<@String@>|1>  @12:11-12:39
-      Collection :#KeyExpression#[1]  ~@Collection@  @12:11-12:39
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:24-12:38
-          AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @12:24-12:38
-          AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @12:32-12:38
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @13:5-13:21
-    DotApplication test::Box.get() :#String##[1]#  ~@DotApplication@  @13:5-13:10
-      Variable b :#test::Box<@String@>##[1]#  ~@VariableExpression@  @13:3-13:4
-    AtomicValue  ' world' :@String@[1]  ~@AtomicValue@  @13:14-13:21
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Box<@String@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Box<@String@>|1>  @26:11-26:39
+      Collection :#KeyExpression#[1]  ~@Collection@  @26:11-26:39
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @26:24-26:38
+          AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @26:24-26:38
+          AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @26:32-26:38
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @27:5-27:21
+    DotApplication test::Box.get() :#String##[1]#  ~@DotApplication@  @27:5-27:10
+      Variable b :#test::Box<@String@>##[1]#  ~@VariableExpression@  @27:3-27:4
+    AtomicValue  ' world' :@String@[1]  ~@AtomicValue@  @27:14-27:21
 
 ###ReverseIndex
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::use__Any_MANY_
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test::use__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::use__Any_MANY_
-meta::pure::functions::string::plus_String_1__String_1__String_1_:
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
   test::use__Any_MANY_
 test::Box:
   test::use__Any_MANY_

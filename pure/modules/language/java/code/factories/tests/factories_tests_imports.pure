@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::factory::*;
-import meta::external::language::java::factory::tests::*;
-import meta::external::language::java::metamodel::*;
-import meta::external::language::java::serialization::*;
+import platform::external::language::java::factory::*;
+import platform::external::language::java::factory::tests::*;
+import platform::external::language::java::metamodel::*;
+import platform::external::language::java::serialization::*;
 
-function <<test.Test>> meta::external::language::java::factory::tests::inferredImports():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::inferredImports():Boolean[1]
 {
    let cls = javaClass('test.pkg.TestClass')
                 ->addField(javaField('private', javaString(), 'aString'))
@@ -29,32 +30,32 @@ function <<test.Test>> meta::external::language::java::factory::tests::inferredI
    assertEquals(['java.util.List'], $cls.additionalImports);
 }
 
-function <<test.Test>> meta::external::language::java::factory::tests::inferredImportsOnEnum():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::inferredImportsOnEnum():Boolean[1]
 {
    let cls = javaEnum('public', 'org.finos.Things')
       ->addEntries([
-           javaEnumEntry('Alpha')->annotate(^meta::external::language::java::metamodel::annotations::generated::Generated(value='a', comments='In the beginning'))->javaDoc('The first one')
+           javaEnumEntry('Alpha')->annotate(^platform::external::language::java::metamodel::annotations::generated::Generated(value='a', comments='In the beginning'))->javaDoc('The first one')
         ])
       ->inferImports();
    
    assertEquals(['javax.annotation.Generated'], $cls.additionalImports);
 }
 
-function <<test.Test>> meta::external::language::java::factory::tests::inferredImportsEnum():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::inferredImportsEnum():Boolean[1]
 {
    let cls = javaClass('test.pkg.TestClass')
                 ->addField(javaField('private', javaString(), 'aString'))
                 ->addField(javaField('private', javaList(javaString()), 'aList'))
                 ->addField(javaField('private', javaClass('test.pkg.TestOther'), 'samePackage'))
                 ->addField(javaField('private', javaClass('test.pkg..other.TestOther'), 'sameNameAsClassInPackage'))
-                ->meta::external::language::java::factory::annotate(^meta::external::language::java::metamodel::annotations::json::JsonTypeInfo(
-                      use = ^meta::external::language::java::metamodel::annotations::json::EnumValue(value='JsonTypeInfo.Id.NAME'),
+                ->platform::external::language::java::factory::annotate(^platform::external::language::java::metamodel::annotations::json::JsonTypeInfo(
+                      use = ^platform::external::language::java::metamodel::annotations::json::EnumValue(value='JsonTypeInfo.Id.NAME'),
                       property = '_type'
                     )
                 )
-                ->meta::external::language::java::factory::annotate(^meta::external::language::java::metamodel::annotations::json::JsonSubTypes(
+                ->platform::external::language::java::factory::annotate(^platform::external::language::java::metamodel::annotations::json::JsonSubTypes(
                           subTypes=[
-                                  ^meta::external::language::java::metamodel::annotations::json::JsonSubType(
+                                  ^platform::external::language::java::metamodel::annotations::json::JsonSubType(
                                       value='test.pkg.TestClassOther',
                                       name='test'
                                   )

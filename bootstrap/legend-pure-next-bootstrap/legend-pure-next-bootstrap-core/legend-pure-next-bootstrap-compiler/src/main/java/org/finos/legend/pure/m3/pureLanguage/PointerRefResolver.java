@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,8 +47,8 @@ public final class PointerRefResolver
                     resolver.getElement(ref.path(0));
             case 1 -> // Property
             {
-                meta.pure.metamodel.PackageableElement owner = resolver.getElement(ref.path(0));
-                if (owner instanceof meta.pure.metamodel.SimplePropertyOwner spo && ref.pathLength() > 1)
+                platform.pure.metamodel.PackageableElement owner = resolver.getElement(ref.path(0));
+                if (owner instanceof platform.pure.metamodel.SimplePropertyOwner spo && ref.pathLength() > 1)
                 {
                     String propName = ref.path(1);
                     yield spo._properties().detect(p -> propName.equals(p._name()));
@@ -56,8 +57,8 @@ public final class PointerRefResolver
             }
             case 2 -> // QualifiedProperty
             {
-                meta.pure.metamodel.PackageableElement owner = resolver.getElement(ref.path(0));
-                if (owner instanceof meta.pure.metamodel.PropertyOwner po && ref.pathLength() > 1)
+                platform.pure.metamodel.PackageableElement owner = resolver.getElement(ref.path(0));
+                if (owner instanceof platform.pure.metamodel.PropertyOwner po && ref.pathLength() > 1)
                 {
                     String qpName = ref.path(1);
                     yield po._qualifiedProperties().detect(p -> qpName.equals(p._name()));
@@ -66,8 +67,8 @@ public final class PointerRefResolver
             }
             case 3 -> // Stereotype
             {
-                meta.pure.metamodel.PackageableElement owner = resolver.getElement(ref.path(0));
-                if (owner instanceof meta.pure.metamodel.extension.Profile p && ref.pathLength() > 1)
+                platform.pure.metamodel.PackageableElement owner = resolver.getElement(ref.path(0));
+                if (owner instanceof platform.pure.metamodel.extension.Profile p && ref.pathLength() > 1)
                 {
                     String stName = ref.path(1);
                     yield p._p_stereotypes().detect(s -> stName.equals(s._value()));
@@ -76,8 +77,8 @@ public final class PointerRefResolver
             }
             case 4 -> // Tag
             {
-                meta.pure.metamodel.PackageableElement owner = resolver.getElement(ref.path(0));
-                if (owner instanceof meta.pure.metamodel.extension.Profile p && ref.pathLength() > 1)
+                platform.pure.metamodel.PackageableElement owner = resolver.getElement(ref.path(0));
+                if (owner instanceof platform.pure.metamodel.extension.Profile p && ref.pathLength() > 1)
                 {
                     String tagName = ref.path(1);
                     yield p._p_tags().detect(s -> tagName.equals(s._value()));

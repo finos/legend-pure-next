@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The ANTLR natives (meta::pure::functions::meta::antlr::*) as a NativesExtension:
+// The ANTLR natives (platform::pure::functions::meta::antlr::*) as a NativesExtension:
 // parse with a named grammar and walk the resulting parse tree. They are implemented
 // by the ANTLR bundle (platforms/javascript/build/antlr-bundle.js),
 // a classic script exposing them as the `PureAntlr` namespace. Hosts load that script
@@ -26,7 +26,7 @@ function antlrBundle() {
     return bundle;
 }
 
-/** Host natives for meta::pure::functions::meta::antlr. */
+/** Host natives for platform::pure::functions::meta::antlr. */
 export const antlrExtension = {
     registerAll(natives) {
         for (const [name, signature] of ANTLR_NATIVES) {

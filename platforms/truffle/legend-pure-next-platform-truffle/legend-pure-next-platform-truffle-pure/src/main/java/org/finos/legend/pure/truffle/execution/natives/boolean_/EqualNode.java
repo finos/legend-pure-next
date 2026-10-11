@@ -250,9 +250,9 @@ public final class EqualNode extends PureNode
         // that originally tripped IsNode is gone (single CHM.get(Class) per
         // call after warmup).
         boolean aIsEnum = _Any.pureTypeIs(a,
-                "meta::pure::metamodel::type::Enum");
+                "platform::pure::metamodel::type::Enum");
         boolean bIsEnum = _Any.pureTypeIs(b,
-                "meta::pure::metamodel::type::Enum");
+                "platform::pure::metamodel::type::Enum");
         if (aIsEnum)
         {
             Object ea = a;
@@ -344,7 +344,7 @@ public final class EqualNode extends PureNode
                 // This replaced a depth cap of 10, which could not tell a cycle
                 // from a legitimately deep acyclic structure and fell back to
                 // `a == b` beyond it. A Java package chain 11 segments deep
-                // (org.finos.legend.pure.m3.meta.pure.protocol.grammar.function.property)
+                // (org.finos.legend.pure.m3.platform.pure.protocol.grammar.function.property)
                 // compares by <<equality.Key>> all the way down, so two equal
                 // types silently came out unequal here while bootstrap said equal
                 // — which made the Java translator emit a doubled cast when it ran
@@ -472,7 +472,7 @@ public final class EqualNode extends PureNode
         // within the model; two PE instances with the same path are
         // logically the same element. This handles the in-memory module
         // case where compile-pure creates fresh Package instances for paths
-        // that also exist in core.pdb (e.g. {@code meta::pure::test}) —
+        // that also exist in core.pdb (e.g. {@code platform::pure::test}) —
         // identity differs but they're the same logical element.
         // Restricted to PackageableElement subtypes — user-class instances
         // (e.g. {@code ^NoKeyClass(name='x')}) have a {@code name} property
@@ -481,7 +481,7 @@ public final class EqualNode extends PureNode
         if (a instanceof PureDynamicObject
                 && b instanceof PureDynamicObject
                 && _Any.isType(a,
-                        "meta::pure::metamodel::PackageableElement", resolver))
+                        "platform::pure::metamodel::PackageableElement", resolver))
         {
             String pathA = _PackageableElement.path(a, resolver);
             String pathB = _PackageableElement.path(b, resolver);
@@ -550,7 +550,7 @@ public final class EqualNode extends PureNode
         while (true)
         {
             if (_Any.pureTypeIs(v,
-                    "meta::pure::metamodel::valuespecification::AtomicValue"))
+                    "platform::pure::metamodel::valuespecification::AtomicValue"))
             {
                 Object inner = _Any.readBySlot(v, SLOT_VALUE);
                 if (inner != null)

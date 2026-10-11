@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -72,7 +73,7 @@ public class BooleanNatives
             {
                 result = true;
             }
-            else if (a instanceof Number && b instanceof Number || a instanceof String && b instanceof String || a instanceof Boolean && b instanceof Boolean || a instanceof meta.pure.metamodel.type.Enum && b instanceof meta.pure.metamodel.type.Enum)
+            else if (a instanceof Number && b instanceof Number || a instanceof String && b instanceof String || a instanceof Boolean && b instanceof Boolean || a instanceof platform.pure.metamodel.type.Enum && b instanceof platform.pure.metamodel.type.Enum)
             {
                 result = NativeRegistry.pureEquals(a, b, resolver);
             }
@@ -90,11 +91,11 @@ public class BooleanNatives
             Object b = _E_ValueSpecification.unwrap(args.get(1));
             int cmp;
 
-            meta.pure.metamodel.type.Type typeA = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(args.get(0)._genericType());
-            meta.pure.metamodel.type.Type typeB = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(args.get(1)._genericType());
+            platform.pure.metamodel.type.Type typeA = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(args.get(0)._genericType());
+            platform.pure.metamodel.type.Type typeB = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(args.get(1)._genericType());
 
-            meta.pure.metamodel.type.Type pureNumber = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::Number");
-            meta.pure.metamodel.type.Type pureDate = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date");
+            platform.pure.metamodel.type.Type pureNumber = (platform.pure.metamodel.type.Type) resolver.getElement("platform::pure::metamodel::type::primitives::Number");
+            platform.pure.metamodel.type.Type pureDate = (platform.pure.metamodel.type.Type) resolver.getElement("platform::pure::metamodel::type::primitives::Date");
 
             boolean isNumA = typeA != null && org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.subtypeOf(typeA, pureNumber, resolver);
             boolean isNumB = typeB != null && org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.subtypeOf(typeB, pureNumber, resolver);
@@ -116,8 +117,8 @@ public class BooleanNatives
                 }
                 else if (typeA != typeB && !java.util.Objects.equals(typeA, typeB))
                 {
-                    String pathA = (typeA instanceof meta.pure.metamodel.PackageableElement peA) ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peA) : "Unknown";
-                    String pathB = (typeB instanceof meta.pure.metamodel.PackageableElement peB) ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peB) : "Unknown";
+                    String pathA = (typeA instanceof platform.pure.metamodel.PackageableElement peA) ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peA) : "Unknown";
+                    String pathB = (typeB instanceof platform.pure.metamodel.PackageableElement peB) ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peB) : "Unknown";
                     cmp = pathA.compareTo(pathB);
                     if (cmp == 0)
                     {

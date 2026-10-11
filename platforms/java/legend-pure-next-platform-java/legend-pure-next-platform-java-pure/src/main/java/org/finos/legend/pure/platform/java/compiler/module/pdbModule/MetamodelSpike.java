@@ -16,13 +16,13 @@
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
 import org.finos.legend.pure.m3.PdbTypes;
-import org.finos.legend.pure.m3.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.m3.meta.pure.metamodel.function.property.Property;
-import org.finos.legend.pure.m3.meta.pure.metamodel.multiplicity.ConcreteMultiplicity;
-import org.finos.legend.pure.m3.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.m3.meta.pure.metamodel.type.Class;
-import org.finos.legend.pure.m3.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.m3.meta.pure.metamodel.type.generics.GenericTypeValue;
+import org.finos.legend.pure.m3.platform.pure.metamodel.PackageableElement;
+import org.finos.legend.pure.m3.platform.pure.metamodel.function.property.Property;
+import org.finos.legend.pure.m3.platform.pure.metamodel.multiplicity.ConcreteMultiplicity;
+import org.finos.legend.pure.m3.platform.pure.metamodel.multiplicity.Multiplicity;
+import org.finos.legend.pure.m3.platform.pure.metamodel.type.Class;
+import org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericType;
+import org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTypeValue;
 
 import java.nio.file.Path;
 import java.util.Arrays;

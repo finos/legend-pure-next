@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,9 +15,9 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.TypeParameter;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.TypeParameter;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.list.MutableList;
@@ -93,7 +94,7 @@ public abstract class ParametersBinding
             }
             first = false;
             sb.append(e.getKey()).append("=");
-            sb.append(e.getValue().collect(gt -> gt instanceof meta.pure.metamodel.Inferred ? "#" + _GenericType.print(gt) + "#" : _GenericType.print(gt)).makeString("/"));
+            sb.append(e.getValue().collect(gt -> gt instanceof platform.pure.metamodel.Inferred ? "#" + _GenericType.print(gt) + "#" : _GenericType.print(gt)).makeString("/"));
         }
         if (!multiplicityBindings.isEmpty())
         {
@@ -110,7 +111,7 @@ public abstract class ParametersBinding
                 }
                 firstMul = false;
                 sb.append(e.getKey()).append("=");
-                sb.append(e.getValue().collect(m -> m instanceof meta.pure.metamodel.Inferred ? "#" + _Multiplicity.print(m) + "#" : _Multiplicity.print(m)).makeString("/"));
+                sb.append(e.getValue().collect(m -> m instanceof platform.pure.metamodel.Inferred ? "#" + _Multiplicity.print(m) + "#" : _Multiplicity.print(m)).makeString("/"));
             }
         }
         sb.append("}");

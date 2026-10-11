@@ -14,9 +14,9 @@
 
 package org.finos.legend.pure.execution.natives.variant;
 
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.JsonValue;
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
@@ -40,7 +40,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Natives for {@code meta::pure::functions::variant::convert}: fromJson,
+ * Natives for {@code platform::pure::functions::variant::convert}: fromJson,
  * toJson, toVariant, to, toMany.
  *
  * <p>The {@code to}/{@code toMany} target type is the call-site resolved
@@ -52,9 +52,9 @@ import java.util.TreeMap;
  */
 public class VariantNatives
 {
-    private static final String LIST_PATH = "meta::pure::functions::collection::List";
-    private static final String MAP_PATH = "meta::pure::functions::collection::Map";
-    private static final String PRIMITIVES = "meta::pure::metamodel::type::primitives::";
+    private static final String LIST_PATH = "platform::pure::functions::collection::List";
+    private static final String MAP_PATH = "platform::pure::functions::collection::Map";
+    private static final String PRIMITIVES = "platform::pure::metamodel::type::primitives::";
 
     public static void register(Map<String, NativeImpl> natives,
                                 Map<String, LazyNativeImpl> lazyNatives,
@@ -393,8 +393,8 @@ public class VariantNatives
         {
             return null;
         }
-        meta.pure.metamodel.type.Type rawType = _GenericType.type(genericType);
-        return rawType instanceof meta.pure.metamodel.PackageableElement pe ? _PackageableElement.path(pe) : null;
+        platform.pure.metamodel.type.Type rawType = _GenericType.type(genericType);
+        return rawType instanceof platform.pure.metamodel.PackageableElement pe ? _PackageableElement.path(pe) : null;
     }
 
     private static GenericType typeArgument(GenericType genericType, int index)

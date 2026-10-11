@@ -13,19 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::factory::*;
-import meta::external::language::java::metamodel::*;
-import meta::external::language::java::metamodel::annotations::json::*;
-import meta::external::language::java::metamodel::project::*;
-import meta::external::language::java::serialization::*;
+import platform::external::language::java::factory::*;
+import platform::external::language::java::metamodel::*;
+import platform::external::language::java::metamodel::annotations::json::*;
+import platform::external::language::java::metamodel::project::*;
+import platform::external::language::java::serialization::*;
 
-Class meta::external::language::java::serialization::Stringifier
+Class platform::external::language::java::serialization::Stringifier
 {
-   imports          : meta::external::language::java::metamodel::Importable[*];
-   classesInPackage : meta::external::language::java::metamodel::Class[*];
-   project          : meta::external::language::java::metamodel::project::Project[0..1];
+   imports          : platform::external::language::java::metamodel::Importable[*];
+   classesInPackage : platform::external::language::java::metamodel::Class[*];
+   project          : platform::external::language::java::metamodel::project::Project[0..1];
 
-   stack            : meta::external::language::java::metamodel::Class[*];
+   stack            : platform::external::language::java::metamodel::Class[*];
    tab              : String[1];
    tabDepth         : Integer[1];
    scope            : Scope[1];
@@ -40,44 +40,44 @@ Class meta::external::language::java::serialization::Stringifier
    inForHead()    { $this.scope == Scope.IN_FOR_HEAD   }: Boolean[1];
 }
 
-Enum meta::external::language::java::serialization::Scope
+Enum platform::external::language::java::serialization::Scope
 {
    DEFAULT, IN_PARAMETERS, IN_FOR_HEAD
 }
 
-function meta::external::language::java::serialization::newStringifier(project:meta::external::language::java::metamodel::project::Project[1]): Stringifier[1]
+function platform::external::language::java::serialization::newStringifier(project:platform::external::language::java::metamodel::project::Project[1]): Stringifier[1]
 {
    ^Stringifier(foldLevel=0, wipLine='', pending='', completeLines='', scope=Scope.DEFAULT, tab='    ', tabDepth=0, project=$project)
 }
 
-function meta::external::language::java::serialization::newStringifier(): Stringifier[1]
+function platform::external::language::java::serialization::newStringifier(): Stringifier[1]
 {
    ^Stringifier(foldLevel=0, wipLine='', pending='', completeLines='', scope=Scope.DEFAULT, tab='    ', tabDepth=0)
 }
 
 // --- Entry Points
 
-function <<access.private>> meta::external::language::java::serialization::startParameters(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::startParameters(sfer:Stringifier[1]): Stringifier[1]
 {
    ^$sfer(scope=Scope.IN_PARAMETERS);
 }
 
-function <<access.private>> meta::external::language::java::serialization::endParameters(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::endParameters(sfer:Stringifier[1]): Stringifier[1]
 {
    ^$sfer(scope=Scope.DEFAULT);
 }
 
-function <<access.private>> meta::external::language::java::serialization::startForHead(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::startForHead(sfer:Stringifier[1]): Stringifier[1]
 {
    ^$sfer(scope=Scope.IN_FOR_HEAD);
 }
 
-function <<access.private>> meta::external::language::java::serialization::endForHead(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::endForHead(sfer:Stringifier[1]): Stringifier[1]
 {
    ^$sfer(scope=Scope.DEFAULT);
 }
 
-function <<access.private>> meta::external::language::java::serialization::startAnonymousInnerClass(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::startAnonymousInnerClass(sfer:Stringifier[1]): Stringifier[1]
 {
    let level  = if($sfer.stack->isEmpty(),
                    | 1,
@@ -92,12 +92,12 @@ function <<access.private>> meta::external::language::java::serialization::start
    $sfer->push($anon)->openBrace();
 }
 
-function <<access.private>> meta::external::language::java::serialization::endAnonymousInnerClass(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::endAnonymousInnerClass(sfer:Stringifier[1]): Stringifier[1]
 {
    $sfer->closeBrace()->pop();
 }
 
-function <<access.private>> meta::external::language::java::serialization::debug(sfer:Stringifier[1], message:String[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::debug(sfer:Stringifier[1], message:String[1]): Stringifier[1]
 {
    println($message);
    println('scope         = ' + $sfer.scope->toString());
@@ -109,7 +109,7 @@ function <<access.private>> meta::external::language::java::serialization::debug
    $sfer;
 }
 
-function <<access.private>> meta::external::language::java::serialization::addText(sfer:Stringifier[1], s:String[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::addText(sfer:Stringifier[1], s:String[1]): Stringifier[1]
 {
   if($s == '',
     | $sfer,
@@ -127,7 +127,7 @@ function <<access.private>> meta::external::language::java::serialization::addTe
   ))
 }
 
-function <<access.private>> meta::external::language::java::serialization::finishLine(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::finishLine(sfer:Stringifier[1]): Stringifier[1]
 {
   ^$sfer(
       completeLines += $sfer.wipLine->joinStrings('')->applyFolds(0, 100),
@@ -136,67 +136,67 @@ function <<access.private>> meta::external::language::java::serialization::finis
   )
 }
 
-function <<access.private>> meta::external::language::java::serialization::openBrace(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::openBrace(sfer:Stringifier[1]): Stringifier[1]
 {
    $sfer->pending('\n')->addText('{')->pending('\n')->indent();
 }
 
-function <<access.private>> meta::external::language::java::serialization::closeBrace(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::closeBrace(sfer:Stringifier[1]): Stringifier[1]
 {
    $sfer->outdent()->pending('\n')->addText('}')->pending('\n');
 }
 
-function <<access.private>> meta::external::language::java::serialization::push(sfer:Stringifier[1], class:meta::external::language::java::metamodel::Class[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::push(sfer:Stringifier[1], class:platform::external::language::java::metamodel::Class[1]): Stringifier[1]
 {
    ^$sfer(stack += $class);
 }
 
-function <<access.private>> meta::external::language::java::serialization::pop(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::pop(sfer:Stringifier[1]): Stringifier[1]
 {
    ^$sfer(stack = $sfer.stack->init());
 }
 
-function <<access.private>> meta::external::language::java::serialization::indent(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::indent(sfer:Stringifier[1]): Stringifier[1]
 {
    ^$sfer(tabDepth=$sfer.tabDepth+1);
 }
 
-function <<access.private>> meta::external::language::java::serialization::outdent(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::outdent(sfer:Stringifier[1]): Stringifier[1]
 {
    ^$sfer(tabDepth=$sfer.tabDepth+-1);
 }
 
-function <<access.private>> meta::external::language::java::serialization::addWord(sfer:Stringifier[1], s:String[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::addWord(sfer:Stringifier[1], s:String[1]): Stringifier[1]
 {
    $sfer->addText($s)->space();
 }
 
-function <<access.private>> meta::external::language::java::serialization::addLine(sfer:Stringifier[1], s:String[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::addLine(sfer:Stringifier[1], s:String[1]): Stringifier[1]
 {
    $sfer->addText($s)->newLine();
 }
 
-function <<access.private>> meta::external::language::java::serialization::pending(sfer:Stringifier[1], s:String[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::pending(sfer:Stringifier[1], s:String[1]): Stringifier[1]
 {
    ^$sfer(pending=$s);
 }
 
-function <<access.private>> meta::external::language::java::serialization::semicolon(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::semicolon(sfer:Stringifier[1]): Stringifier[1]
 {
    ^$sfer(wipLine += ';', pending='');
 }
 
-function <<access.private>> meta::external::language::java::serialization::openParentheses(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::openParentheses(sfer:Stringifier[1]): Stringifier[1]
 {
    $sfer->addText('(');
 }
 
-function <<access.private>> meta::external::language::java::serialization::closeParentheses(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::closeParentheses(sfer:Stringifier[1]): Stringifier[1]
 {
    ^$sfer(wipLine += ')', pending='');
 }
 
-function <<access.private>> meta::external::language::java::serialization::space(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::space(sfer:Stringifier[1]): Stringifier[1]
 {
     if( $sfer.pending->startsWith(' '),   //TODO: Extra spaces are ok so this can be dropped
       | $sfer,
@@ -204,7 +204,7 @@ function <<access.private>> meta::external::language::java::serialization::space
    );
 }
 
-function <<access.private>> meta::external::language::java::serialization::newLine(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::newLine(sfer:Stringifier[1]): Stringifier[1]
 {
    if($sfer.pending->endsWith('\n'), //  TODO: Extra new lines  are ok so this can be dropped
       | $sfer,
@@ -212,7 +212,7 @@ function <<access.private>> meta::external::language::java::serialization::newLi
    );
 }
 
-function <<access.private>> meta::external::language::java::serialization::blankLine(sfer:Stringifier[1], condition:Boolean[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::blankLine(sfer:Stringifier[1], condition:Boolean[1]): Stringifier[1]
 {
    if($condition,
       | $sfer->blankLine(),
@@ -220,7 +220,7 @@ function <<access.private>> meta::external::language::java::serialization::blank
    );
 }
 
-function <<access.private>> meta::external::language::java::serialization::blankLine(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::blankLine(sfer:Stringifier[1]): Stringifier[1]
 {
    if($sfer.pending->endsWith('\n\n') || $sfer.wipLine->joinStrings('')->matches(' *\\{'),  //  TODO: Extra new lines  are ok so this can be dropped
           | $sfer,
@@ -231,7 +231,7 @@ function <<access.private>> meta::external::language::java::serialization::blank
    ));
 }
 
-function <<access.private>> meta::external::language::java::serialization::foldable(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::foldable(sfer:Stringifier[1]): Stringifier[1]
 {
    if($sfer.foldLevel <= 99,   //  TODO: function folding can be skipped unless in pretty mode
       | $sfer->addText(format('|FOLD%02d|', $sfer.foldLevel)),
@@ -239,22 +239,22 @@ function <<access.private>> meta::external::language::java::serialization::folda
    );
 }
 
-function <<access.private>> meta::external::language::java::serialization::subFoldingStart(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::subFoldingStart(sfer:Stringifier[1]): Stringifier[1]
 {
    ^$sfer(foldLevel = $sfer.foldLevel + 1);
 }
 
-function <<access.private>> meta::external::language::java::serialization::subFoldingEnd(sfer:Stringifier[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::subFoldingEnd(sfer:Stringifier[1]): Stringifier[1]
 {
    ^$sfer(foldLevel = $sfer.foldLevel - 1);
 }
 
-function <<access.private>> meta::external::language::java::serialization::forEach<T>(sfer:Stringifier[1], collection:T[*], apply:Function<{Stringifier[1],T[1]->Stringifier[1]}>[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::forEach<T>(sfer:Stringifier[1], collection:T[*], apply:Function<{Stringifier[1],T[1]->Stringifier[1]}>[1]): Stringifier[1]
 {
    $sfer->joining($collection, $apply, '', '', '');
 }
 
-function <<access.private>> meta::external::language::java::serialization::ifNotEmpty<T|m>(sfer:Stringifier[1], collection:T[m], apply:Function<{Stringifier[1],T[m]->Stringifier[1]}>[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::ifNotEmpty<T|m>(sfer:Stringifier[1], collection:T[m], apply:Function<{Stringifier[1],T[m]->Stringifier[1]}>[1]): Stringifier[1]
 {
    if($collection->isEmpty(),
       | $sfer,
@@ -262,7 +262,7 @@ function <<access.private>> meta::external::language::java::serialization::ifNot
    );
 }
 
-function <<access.private>> meta::external::language::java::serialization::ifNotEmpty<T|m>(sfer:Stringifier[1], collection:T[m], apply:Function<{Stringifier[1],T[m]->Stringifier[1]}>[1], whenEmpty:Function<{Stringifier[1]->Stringifier[1]}>[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::ifNotEmpty<T|m>(sfer:Stringifier[1], collection:T[m], apply:Function<{Stringifier[1],T[m]->Stringifier[1]}>[1], whenEmpty:Function<{Stringifier[1]->Stringifier[1]}>[1]): Stringifier[1]
 {
    if($collection->isEmpty(),
       | $whenEmpty->eval($sfer),
@@ -270,12 +270,12 @@ function <<access.private>> meta::external::language::java::serialization::ifNot
    );
 }
 
-function <<access.private>> meta::external::language::java::serialization::apply(sfer:Stringifier[1], apply:Function<{Stringifier[1]->Stringifier[1]}>[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::apply(sfer:Stringifier[1], apply:Function<{Stringifier[1]->Stringifier[1]}>[1]): Stringifier[1]
 {
    $apply->eval($sfer);
 }
 
-function <<access.private>> meta::external::language::java::serialization::when(sfer:Stringifier[1], condition:Boolean[1], apply:Function<{Stringifier[1]->Stringifier[1]}>[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::when(sfer:Stringifier[1], condition:Boolean[1], apply:Function<{Stringifier[1]->Stringifier[1]}>[1]): Stringifier[1]
 {
    if($condition,
       | $apply->eval($sfer),
@@ -283,12 +283,12 @@ function <<access.private>> meta::external::language::java::serialization::when(
    );
 }
 
-function <<access.private>> meta::external::language::java::serialization::joining<T>(sfer:Stringifier[1], collection:T[*], apply:Function<{Stringifier[1],T[1]->Stringifier[1]}>[1], separator:String[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::joining<T>(sfer:Stringifier[1], collection:T[*], apply:Function<{Stringifier[1],T[1]->Stringifier[1]}>[1], separator:String[1]): Stringifier[1]
 {
    $sfer->joining($collection, $apply, '', $separator, '');
 }
 
-function <<access.private>> meta::external::language::java::serialization::joining<T>(sfer:Stringifier[1], collection:T[*], apply:Function<{Stringifier[1],T[1]->Stringifier[1]}>[1], prefix:String[1], separator:String[1], suffix:String[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::joining<T>(sfer:Stringifier[1], collection:T[*], apply:Function<{Stringifier[1],T[1]->Stringifier[1]}>[1], prefix:String[1], separator:String[1], suffix:String[1]): Stringifier[1]
 {
    let prefixed = if($prefix == '(', |$sfer->openParentheses(), |$sfer->addText($prefix));
 
@@ -303,7 +303,7 @@ function <<access.private>> meta::external::language::java::serialization::joini
    if($suffix == ')', |$middled->closeParentheses(), |$middled->addText($suffix));
 }
 
-function <<access.private>> meta::external::language::java::serialization::joiningFoldable<T>(sfer:Stringifier[1], collection:T[*], apply:Function<{Stringifier[1],T[1]->Stringifier[1]}>[1], prefix:String[1], separator:String[1], suffix:String[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::joiningFoldable<T>(sfer:Stringifier[1], collection:T[*], apply:Function<{Stringifier[1],T[1]->Stringifier[1]}>[1], prefix:String[1], separator:String[1], suffix:String[1]): Stringifier[1]
 {
    let prefixed = $sfer->subFoldingStart()->apply(sf| if($prefix == '(', |$sf->openParentheses(), |$sf->addText($prefix)))->foldable();
 
@@ -318,12 +318,12 @@ function <<access.private>> meta::external::language::java::serialization::joini
    $middled->subFoldingEnd()->apply(sf| if($suffix == ')', |$sf->closeParentheses(), |$sf->addText($suffix)));
 }
 
-function <<access.private>> meta::external::language::java::serialization::initialize(sfer:Stringifier[1], j:meta::external::language::java::metamodel::Class[1]): Stringifier[1]
+function <<access.private>> platform::external::language::java::serialization::initialize(sfer:Stringifier[1], j:platform::external::language::java::metamodel::Class[1]): Stringifier[1]
 {
    ^$sfer(stack=$j, wipLine='', pending='', completeLines='');
 }
 
-function meta::external::language::java::serialization::getResult(sfer:Stringifier[1]): String[1]
+function platform::external::language::java::serialization::getResult(sfer:Stringifier[1]): String[1]
 {
    $sfer->finishLine().completeLines->joinStrings('');
 }
@@ -340,22 +340,22 @@ function meta::external::language::java::serialization::getResult(sfer:Stringifi
 // literal in the generated code, which the stripper below would then mistake for
 // a real marker and strip from — corrupting its own translation. The existing
 // note on '|FOLD' in applyFolds records the same hazard.
-function meta::external::language::java::serialization::markerOpen(): String[1]
+function platform::external::language::java::serialization::markerOpen(): String[1]
 {
    '/*' + '@'
 }
 
-function meta::external::language::java::serialization::withoutMarkers(s:String[1]): String[1]
+function platform::external::language::java::serialization::withoutMarkers(s:String[1]): String[1]
 {
-   if (!$s->contains(meta::external::language::java::serialization::markerOpen()),
+   if (!$s->contains(platform::external::language::java::serialization::markerOpen()),
       | $s,
-      | $s->split(meta::external::language::java::serialization::markerOpen())->fold({part, acc |
+      | $s->split(platform::external::language::java::serialization::markerOpen())->fold({part, acc |
            let rest = if ($acc->isEmpty(), | $part, | $part->split('*/')->tail()->joinStrings('*/'));
            $acc->concatenate($rest);
         }, []->cast(@String))->joinStrings(''));
 }
 
-function <<access.private>> meta::external::language::java::serialization::applyFolds(s:String[1], level:Integer[1], maxLength:Integer[1]): String[1]
+function <<access.private>> platform::external::language::java::serialization::applyFolds(s:String[1], level:Integer[1], maxLength:Integer[1]): String[1]
 {
    let levelSplit = format('|FOLD%02d|', $level); //TODO: Skip when not on pretty mode
 
@@ -391,7 +391,7 @@ function <<access.private>> meta::external::language::java::serialization::apply
    )));
 }
 
-function <<access.private>> meta::external::language::java::serialization::trimTrailing(s:String[1]): String[1]
+function <<access.private>> platform::external::language::java::serialization::trimTrailing(s:String[1]): String[1]
 {
    if($s->endsWith(' '),
       | $s->substring(0, $s->length()-1)->trimTrailing(),

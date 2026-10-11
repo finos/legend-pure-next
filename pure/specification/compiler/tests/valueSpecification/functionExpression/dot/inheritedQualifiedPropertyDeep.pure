@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::*;
 
@@ -23,40 +37,40 @@ function test::use(): Any[*]
 }
 
 ###CompiledGraph
-class test::GrandParent extends Any  ~Class<test::GrandParent>  @4:1-7:1
+class test::GrandParent extends Any  ~Class<test::GrandParent>  @18:1-21:1
   qualifiedProperty tag() :@String@[1]
-    AtomicValue  'gp' :@String@[1]  ~@AtomicValue@  @6:10-6:13
+    AtomicValue  'gp' :@String@[1]  ~@AtomicValue@  @20:10-20:13
 
-class test::Parent extends test::GrandParent  ~Class<test::Parent>  @9:1-12:1
+class test::Parent extends test::GrandParent  ~Class<test::Parent>  @23:1-26:1
   property name :@String@[1]  ~Property<test::Parent, @String@|1>
 
-class test::Child extends test::Parent  ~Class<test::Child>  @14:1-17:1
+class test::Child extends test::Parent  ~Class<test::Child>  @28:1-31:1
   property age :@Integer@[1]  ~Property<test::Child, @Integer@|1>
 
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Child##[1]#  ~@FunctionInvocation@  @21:3-21:42
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Child##[1]#  ~@FunctionInvocation@  @35:3-35:42
     typeParam T -> #test::Child#
     mulParam m -> #[1]#
-    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @21:7-21:7
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Child##[1]#  ~@FunctionInvocation@  @21:11-21:42
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @35:7-35:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Child##[1]#  ~@FunctionInvocation@  @35:11-35:42
       typeParam T -> test::Child
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>  @21:11-21:42
-      Collection :#KeyExpression#[2]  ~@Collection@  @21:11-21:42
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:18-21:31
-          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @21:18-21:31
-          AtomicValue  'Alice' :@String@[1]  ~@AtomicValue@  @21:25-21:31
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:34-21:41
-          AtomicValue  'age' :@String@[1]  ~@AtomicValue@  @21:34-21:41
-          AtomicValue  10 :@Integer@[1]  ~@AtomicValue@  @21:40-21:41
-  DotApplication test::GrandParent.tag() :#String##[1]#  ~@DotApplication@  @22:5-22:10
-    Variable c :#test::Child##[1]#  ~@VariableExpression@  @22:3-22:4
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>  @35:11-35:42
+      Collection :#KeyExpression#[2]  ~@Collection@  @35:11-35:42
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @35:18-35:31
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @35:18-35:31
+          AtomicValue  'Alice' :@String@[1]  ~@AtomicValue@  @35:25-35:31
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @35:34-35:41
+          AtomicValue  'age' :@String@[1]  ~@AtomicValue@  @35:34-35:41
+          AtomicValue  10 :@Integer@[1]  ~@AtomicValue@  @35:40-35:41
+  DotApplication test::GrandParent.tag() :#String##[1]#  ~@DotApplication@  @36:5-36:10
+    Variable c :#test::Child##[1]#  ~@VariableExpression@  @36:3-36:4
 
 ###ReverseIndex
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::use__Any_MANY_
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test::use__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::use__Any_MANY_
 test::Child:
   test::use__Any_MANY_

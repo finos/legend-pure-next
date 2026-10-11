@@ -144,16 +144,16 @@ public final class DateDiffNode extends PureNode
             return null;
         }
         // Post enum-to-PDO migration: every enum value is a PDO typed as
-        // {@code meta::pure::metamodel::type::Enum} with a {@code name} slot.
+        // {@code platform::pure::metamodel::type::Enum} with a {@code name} slot.
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(unit,
-                "meta::pure::metamodel::type::Enum"))
+                "platform::pure::metamodel::type::Enum"))
         {
             Object name = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(unit, SLOT_NAME);
             return name instanceof String s ? s : null;
         }
         if (unit instanceof String s)
         {
-            // Enum values may arrive as paths: "meta::...::DurationUnit.YEARS"
+            // Enum values may arrive as paths: "platform::...::DurationUnit.YEARS"
             int dot = s.lastIndexOf('.');
             return dot >= 0 ? s.substring(dot + 1) : s;
         }

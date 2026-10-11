@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::printer::compiled::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::relationship::*;
-import meta::pure::metamodel::type::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::printer::compiled::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::metamodel::type::*;
 
 // Top-level entry point for the compiled-side printer. Two modes:
 //   FullFQN       — every PE reference uses its full path.
 //   ManageImports — auto-detect unambiguous short names, emit `import pkg::*;`
 //                   statements, shorten references in the body. Ambiguous
 //                   short names (same name in multiple packages) stay FQN.
-function meta::pure::functions::printer::compiled::printCompiledElements(elements: PackageableElement[*], mode: PrintMode[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledElements(elements: PackageableElement[*], mode: PrintMode[1]): String[1]
 {
     let ctx = buildPrintContext($elements, $mode);
     let importsBlock = if ($ctx.imports->isEmpty(),
@@ -40,12 +41,12 @@ function meta::pure::functions::printer::compiled::printCompiledElements(element
 }
 
 // Back-compat shim — pre-existing callers default to full-FQN.
-function meta::pure::functions::printer::compiled::printCompiledElements(elements: PackageableElement[*]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledElements(elements: PackageableElement[*]): String[1]
 {
     printCompiledElements($elements, PrintMode.FullFQN);
 }
 
-function meta::pure::functions::printer::compiled::printCompiledElement(elem: PackageableElement[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledElement(elem: PackageableElement[1], ctx: PrintContext[1]): String[1]
 {
     $elem->match([
         c:   Class<Any>[1] | printCompiledClass($c, $ctx),
@@ -60,8 +61,8 @@ function meta::pure::functions::printer::compiled::printCompiledElement(elem: Pa
         // for canonical references. None of those round-trip to surface Pure
         // (they're implementation detail), so they print as nothing.
         pkg: Package[1] | '',
-        igt: meta::pure::metamodel::type::generics::InferredPackageableGenericType[1] | '',
-        imu: meta::pure::metamodel::multiplicity::InferredPackageableMultiplicity[1] | '',
+        igt: platform::pure::metamodel::type::generics::InferredPackageableGenericType[1] | '',
+        imu: platform::pure::metamodel::multiplicity::InferredPackageableMultiplicity[1] | '',
         any: PackageableElement[1] | '/* UNSUPPORTED ELEMENT KIND: ' + $any->genericType().type->toOne()->elementToPath() + ' name=' + $any.name->toOne() + ' */\n'
     ]);
 }

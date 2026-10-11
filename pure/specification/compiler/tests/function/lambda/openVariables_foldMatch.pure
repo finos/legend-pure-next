@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 function test::foldMatchOpenVar(): Any[*]
 {
@@ -6,31 +20,31 @@ function test::foldMatchOpenVar(): Any[*]
 
 ###CompiledGraph
 function test::foldMatchOpenVar__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  ArrowInvocation fold_T_MANY__Function_1__V_1__V_1_ :#Integer##[1]#  ~@ArrowInvocation@  @4:12-4:66
+  ArrowInvocation fold_T_MANY__Function_1__V_1__V_1_ :#Integer##[1]#  ~@ArrowInvocation@  @18:12-18:66
     typeParam T -> #Integer#
     typeParam V -> #Integer#
-    Collection :#Integer#[3]  ~@Collection@  @4:3-4:11
-      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @4:4-4:4
-      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @4:7-4:7
-      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @4:10-4:10
-    Lambda(e:#Integer##[1]#, acc:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#, #Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @4:19-4:62
-      ArrowInvocation match_Any_MANY__Function_$1_MANY$__T_m_ :#Integer##[1]#  ~@ArrowInvocation@  @4:29-4:61
+    Collection :#Integer#[3]  ~@Collection@  @18:3-18:11
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @18:4-18:4
+      AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @18:7-18:7
+      AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @18:10-18:10
+    Lambda(e:#Integer##[1]#, acc:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#, #Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @18:19-18:62
+      ArrowInvocation match_Any_MANY__Function_$1_MANY$__T_m_ :#Integer##[1]#  ~@ArrowInvocation@  @18:29-18:61
         typeParam T -> #Integer#
         mulParam m -> #[1]#
         mulParam n -> [1]
-        Variable e :#Integer##[1]#  ~@VariableExpression@  @4:27-4:28
-        Collection :#LambdaFunction<#{@Integer@[1]->#Integer##[1]#}#>#[1]  ~@Collection@  @4:37-4:60
-          Lambda(i:@Integer@[1]) :#LambdaFunction<#{@Integer@[1]->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @4:38-4:59
+        Variable e :#Integer##[1]#  ~@VariableExpression@  @18:27-18:28
+        Collection :#LambdaFunction<#{@Integer@[1]->#Integer##[1]#}#>#[1]  ~@Collection@  @18:37-18:60
+          Lambda(i:@Integer@[1]) :#LambdaFunction<#{@Integer@[1]->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @18:38-18:59
             openVar acc :#Integer##[1]#
-            FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @4:51-4:59
-              Variable acc :#Integer##[1]#  ~@VariableExpression@  @4:51-4:54
-              Variable i :#Integer##[1]#  ~@VariableExpression@  @4:58-4:59
-    AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @4:65-4:65
+            FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @18:51-18:59
+              Variable acc :#Integer##[1]#  ~@VariableExpression@  @18:51-18:54
+              Variable i :#Integer##[1]#  ~@VariableExpression@  @18:58-18:59
+    AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @18:65-18:65
 
 ###ReverseIndex
-meta::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_:
+platform::pure::functions::collection::fold_T_MANY__Function_1__V_1__V_1_:
   test::foldMatchOpenVar__Any_MANY_
-meta::pure::functions::lang::match_Any_MANY__Function_$1_MANY$__T_m_:
+platform::pure::functions::lang::match_Any_MANY__Function_$1_MANY$__T_m_:
   test::foldMatchOpenVar__Any_MANY_
-meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
   test::foldMatchOpenVar__Any_MANY_

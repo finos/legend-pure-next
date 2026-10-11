@@ -14,7 +14,7 @@
 
 package org.finos.legend.pure.m3.module;
 
-import meta.pure.metamodel.SourceInformation;
+import platform.pure.metamodel.SourceInformation;
 
 import java.util.ArrayList;
 import java.util.Collection;

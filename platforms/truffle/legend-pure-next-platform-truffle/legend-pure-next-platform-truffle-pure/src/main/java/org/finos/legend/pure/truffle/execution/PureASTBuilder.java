@@ -156,27 +156,27 @@ public final class PureASTBuilder
         MetadataAccess resolver =
                 org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver();
         if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(vs,
-                "meta::pure::metamodel::valuespecification::AtomicValue", resolver))
+                "platform::pure::metamodel::valuespecification::AtomicValue", resolver))
         {
             return lowerAtomicValue(vs);
         }
         if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(vs,
-                "meta::pure::metamodel::valuespecification::VariableExpression", resolver))
+                "platform::pure::metamodel::valuespecification::VariableExpression", resolver))
         {
             return lowerVariableRead(vs);
         }
         if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(vs,
-                "meta::pure::metamodel::valuespecification::Collection", resolver))
+                "platform::pure::metamodel::valuespecification::Collection", resolver))
         {
             return lowerCollection(vs);
         }
         if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(vs,
-                "meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder", resolver))
+                "platform::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder", resolver))
         {
             return new AtomicValueNode(vs);
         }
         if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(vs,
-                "meta::pure::metamodel::valuespecification::FunctionExpression", resolver))
+                "platform::pure::metamodel::valuespecification::FunctionExpression", resolver))
         {
             return lowerFunctionExpression(vs);
         }
@@ -214,7 +214,7 @@ public final class PureASTBuilder
         PureNode[] args = lowerArgs(fe);
         Object propName = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(prop, SLOT_NAME);
         boolean isQp = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(prop,
-                "meta::pure::metamodel::function::property::QualifiedProperty");
+                "platform::pure::metamodel::function::property::QualifiedProperty");
         if (args.length == 1
                 && !isQp
                 && propName instanceof String name
@@ -240,7 +240,7 @@ public final class PureASTBuilder
         // owning class, so the direct path catches the vast majority.
         if (owner == null) return true;
         return org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(owner,
-                "meta::pure::metamodel::type::Enumeration");
+                "platform::pure::metamodel::type::Enumeration");
     }
 
     private PureNode lowerFunctionExpression(Object fe)
@@ -251,7 +251,7 @@ public final class PureASTBuilder
         // ParentReferenceReadNode as the bare-`~` VariableExpression path
         // (which already peeks the construction stack at runtime).
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(fe,
-                "meta::pure::metamodel::valuespecification::DotApplication"))
+                "platform::pure::metamodel::valuespecification::DotApplication"))
         {
             Object fnNameObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_FUNCTION_NAME);
             if ("~".equals(fnNameObj))
@@ -345,7 +345,7 @@ public final class PureASTBuilder
             {
                 MetadataAccess r =
                         org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver();
-                Object regField = r.getElement("meta::external::language::java::metamodel::Field");
+                Object regField = r.getElement("platform::external::language::java::metamodel::Field");
                 if (regField != null)
                 {
                     registryView.append("\n  registry Field@").append(System.identityHashCode(regField));
@@ -391,7 +391,7 @@ public final class PureASTBuilder
         // overload when multiple QPs share the same simple name (e.g. res() vs res(z)).
         // Fix by matching the QP's param count against the call's arg count.
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(func,
-                "meta::pure::metamodel::function::property::QualifiedProperty"))
+                "platform::pure::metamodel::function::property::QualifiedProperty"))
         {
             Object feParamsObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_PARAMETERS_VALUES);
             int callArgCount = feParamsObj instanceof PureSequence feps ? feps.size() : 0;
@@ -419,19 +419,19 @@ public final class PureASTBuilder
         // RawUserFunctionCallNode (which has the polymorphic-dispatch
         // logic). lowerPropertyAccess only handles plain Property reads.
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(resolvedFunc,
-                "meta::pure::metamodel::function::NativeFunction"))
+                "platform::pure::metamodel::function::NativeFunction"))
         {
             return lowerNativeCall(resolvedFunc, fe);
         }
         MetadataAccess resolver =
                 org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver();
         if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(resolvedFunc,
-                "meta::pure::metamodel::function::FunctionDefinition", resolver))
+                "platform::pure::metamodel::function::FunctionDefinition", resolver))
         {
             return new RawUserFunctionCallNode(resolvedFunc, lowerArgs(fe));
         }
         if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(resolvedFunc,
-                "meta::pure::metamodel::function::property::AbstractProperty", resolver))
+                "platform::pure::metamodel::function::property::AbstractProperty", resolver))
         {
             return lowerPropertyAccess(resolvedFunc, fe);
         }
@@ -463,7 +463,7 @@ public final class PureASTBuilder
         }
         Object pairsArg = params.getBoxed(0);
         if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(pairsArg,
-                "meta::pure::metamodel::valuespecification::Collection"))
+                "platform::pure::metamodel::valuespecification::Collection"))
         {
             return null;
         }
@@ -485,14 +485,14 @@ public final class PureASTBuilder
             // the runtime mode (35/35 → pair allocs per call) for the entire
             // pre-fix history of this code.
             if (!org.finos.legend.pure.truffle.compiler.helper._Any.isType(pairFe,
-                    "meta::pure::metamodel::valuespecification::FunctionExpression",
+                    "platform::pure::metamodel::valuespecification::FunctionExpression",
                     org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver()))
             {
                 return null;
             }
             Object pairFunc = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(pairFe, SLOT_FUNC);
             if (!org.finos.legend.pure.truffle.compiler.helper._Any.isType(pairFunc,
-                    "meta::pure::metamodel::function::FunctionDefinition",
+                    "platform::pure::metamodel::function::FunctionDefinition",
                     org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver())
                     || !PAIR_SIGNATURE.equals(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(pairFunc, SLOT_NAME)))
             {
@@ -574,7 +574,7 @@ public final class PureASTBuilder
         }
         Object branchListVs = params.getBoxed(1);
         if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(branchListVs,
-                "meta::pure::metamodel::valuespecification::Collection"))
+                "platform::pure::metamodel::valuespecification::Collection"))
         {
             return null;
         }
@@ -590,13 +590,13 @@ public final class PureASTBuilder
             Object branchVs = branchValues.getBoxed(i);
             // Each branch must be an AtomicValue wrapping a LambdaFunction.
             if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(branchVs,
-                    "meta::pure::metamodel::valuespecification::AtomicValue"))
+                    "platform::pure::metamodel::valuespecification::AtomicValue"))
             {
                 return null;
             }
             Object lambda = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(branchVs, SLOT_VALUE);
             if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(lambda,
-                    "meta::pure::metamodel::function::LambdaFunction"))
+                    "platform::pure::metamodel::function::LambdaFunction"))
             {
                 return null;
             }
@@ -675,12 +675,12 @@ public final class PureASTBuilder
     private PureNode lambdaArgAsBranch(Object vs)
     {
         Object inner = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs,
-                "meta::pure::metamodel::valuespecification::AtomicValue")
+                "platform::pure::metamodel::valuespecification::AtomicValue")
                 ? org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_VALUE) : null;
         // Widened from `instanceof LambdaFunction` so PDO lambdas
         // (post-loader-flip resolver returns) take the same fast path.
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(inner,
-                "meta::pure::metamodel::function::LambdaFunction"))
+                "platform::pure::metamodel::function::LambdaFunction"))
         {
             Object lfParamsObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(inner, SLOT_PARAMETERS);
             if (!(lfParamsObj instanceof PureSequence lfParams) || lfParams.isEmpty())
@@ -712,11 +712,11 @@ public final class PureASTBuilder
     private static boolean isLetCall(Object vs)
     {
         if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs,
-                "meta::pure::metamodel::valuespecification::FunctionInvocation")
+                "platform::pure::metamodel::valuespecification::FunctionInvocation")
                 && !org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs,
-                        "meta::pure::metamodel::valuespecification::DotApplication")
+                        "platform::pure::metamodel::valuespecification::DotApplication")
                 && !org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs,
-                        "meta::pure::metamodel::valuespecification::ArrowInvocation"))
+                        "platform::pure::metamodel::valuespecification::ArrowInvocation"))
         {
             return false;
         }
@@ -748,7 +748,7 @@ public final class PureASTBuilder
             if (cqpParamsObj instanceof PureSequence cqpParams
                     && cqpParams.size() == expectedParamCount
                     && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(candidate,
-                            "meta::pure::metamodel::function::property::QualifiedProperty"))
+                            "platform::pure::metamodel::function::property::QualifiedProperty"))
             {
                 return candidate;
             }
@@ -849,10 +849,10 @@ public final class PureASTBuilder
         if (!(argsObj instanceof PureSequence args) || args.size() <= lambdaArgIdx) return null;
         Object lambdaArg = args.getBoxed(lambdaArgIdx);
         if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(lambdaArg,
-                "meta::pure::metamodel::valuespecification::AtomicValue")) return null;
+                "platform::pure::metamodel::valuespecification::AtomicValue")) return null;
         Object lambda = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(lambdaArg, SLOT_VALUE);
         if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(lambda,
-                "meta::pure::metamodel::function::LambdaFunction")) return null;
+                "platform::pure::metamodel::function::LambdaFunction")) return null;
 
         org.finos.legend.pure.truffle.execution.ast.root.CompiledFunction cf =
                 org.finos.legend.pure.truffle.execution.PureLanguage.get(null).compileLambdaFunction(lambda);
@@ -928,10 +928,10 @@ public final class PureASTBuilder
 
         Object lambdaArg = args.getBoxed(1);
         if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(lambdaArg,
-                "meta::pure::metamodel::valuespecification::AtomicValue")) return null;
+                "platform::pure::metamodel::valuespecification::AtomicValue")) return null;
         Object lambda = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(lambdaArg, SLOT_VALUE);
         if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(lambda,
-                "meta::pure::metamodel::function::LambdaFunction")) return null;
+                "platform::pure::metamodel::function::LambdaFunction")) return null;
 
         // Compile the lambda (idempotent; populates cache) and pull its
         // body + FrameLayout. We reuse the already-lowered body PureNodes
@@ -1005,10 +1005,10 @@ public final class PureASTBuilder
         if (!(argsObj instanceof PureSequence args) || args.size() < 2) return null;
         Object lambdaArg = args.getBoxed(1);
         if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(lambdaArg,
-                "meta::pure::metamodel::valuespecification::AtomicValue")) return null;
+                "platform::pure::metamodel::valuespecification::AtomicValue")) return null;
         Object lambda = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(lambdaArg, SLOT_VALUE);
         if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(lambda,
-                "meta::pure::metamodel::function::LambdaFunction")) return null;
+                "platform::pure::metamodel::function::LambdaFunction")) return null;
         org.finos.legend.pure.truffle.execution.ast.root.CompiledFunction cf =
                 org.finos.legend.pure.truffle.execution.PureLanguage.get(null).compileLambdaFunction(lambda);
         if (cf == null) return null;
@@ -1137,7 +1137,7 @@ public final class PureASTBuilder
         Object cur = root;
         while (cur != null
                 && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(cur,
-                        "meta::pure::metamodel::valuespecification::DotApplication")
+                        "platform::pure::metamodel::valuespecification::DotApplication")
                 && "~".equals(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(cur, SLOT_FUNCTION_NAME)))
         {
             depth++;
@@ -1146,7 +1146,7 @@ public final class PureASTBuilder
         }
         if (cur != null
                 && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(cur,
-                        "meta::pure::metamodel::valuespecification::VariableExpression")
+                        "platform::pure::metamodel::valuespecification::VariableExpression")
                 && "~".equals(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(cur, SLOT_NAME)))
         {
             return depth + 1;
@@ -1189,7 +1189,7 @@ public final class PureASTBuilder
         }
         Object nameArg = args.getBoxed(0);
         Object nameInner = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(nameArg,
-                "meta::pure::metamodel::valuespecification::AtomicValue")
+                "platform::pure::metamodel::valuespecification::AtomicValue")
                 ? org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(nameArg, SLOT_VALUE) : null;
         if (!(nameInner instanceof String name))
         {
@@ -1228,7 +1228,7 @@ public final class PureASTBuilder
         // Widened from `instanceof LambdaFunction` so PDO lambdas
         // (post-loader-flip resolver returns) take the same path.
         if (value != null && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(value,
-                "meta::pure::metamodel::function::LambdaFunction"))
+                "platform::pure::metamodel::function::LambdaFunction"))
         {
             Object openVarsObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(value, SLOT_OPEN_VARIABLES);
             if (openVarsObj instanceof PureSequence openVars && !openVars.isEmpty())

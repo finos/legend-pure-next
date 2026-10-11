@@ -12,26 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::javascript::factories::*;
-import meta::external::language::javascript::metamodel::*;
-import meta::external::language::javascript::serialization::*;
-import meta::external::language::javascript::serialization::tests::*;
+import platform::external::language::javascript::factories::*;
+import platform::external::language::javascript::metamodel::*;
+import platform::external::language::javascript::serialization::*;
+import platform::external::language::javascript::serialization::tests::*;
 
 // =============================================================================
 // Template literals — no substitution
 // =============================================================================
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::templatePlain(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::templatePlain(): Boolean[1]
 {
    testExpr('`hello`', jsTemplate('hello'));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::templateEmpty(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::templateEmpty(): Boolean[1]
 {
    testExpr('``', jsTemplate(''));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::templateMultiline(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::templateMultiline(): Boolean[1]
 {
    // Note: real newlines in source preserved verbatim.
    testExpr('`line1\nline2`', jsTemplate('line1\nline2'));
@@ -41,13 +41,13 @@ function <<test.Test>> meta::external::language::javascript::serialization::test
 // Template literals — interpolated
 // =============================================================================
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::templateOneSpan(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::templateOneSpan(): Boolean[1]
 {
    testExpr('`Hello, ${name}!`',
             jsTemplateExpr('Hello, ', [jsTemplateSpan(jsId('name'), '!')]));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::templateMultipleSpans(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::templateMultipleSpans(): Boolean[1]
 {
    testExpr('`${greeting}, ${name}! You are ${age}.`',
             jsTemplateExpr('',
@@ -58,7 +58,7 @@ function <<test.Test>> meta::external::language::javascript::serialization::test
                ]));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::templateWithExpression(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::templateWithExpression(): Boolean[1]
 {
    testExpr('`Total: ${price * qty}`',
             jsTemplateExpr('Total: ',

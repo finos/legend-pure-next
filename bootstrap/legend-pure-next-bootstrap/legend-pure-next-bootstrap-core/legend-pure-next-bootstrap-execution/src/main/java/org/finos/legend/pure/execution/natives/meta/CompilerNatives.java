@@ -22,7 +22,7 @@ import org.finos.legend.pure.m3.compilation.CompilationUnavailableException;
 import org.finos.legend.pure.m3.compilation.Compilation;
 import org.finos.legend.pure.execution.natives.NativeRegistry;
 
-import meta.pure.protocol.PureFile;
+import platform.pure.protocol.PureFile;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.natives.NativesExtension;
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
@@ -61,7 +61,7 @@ public class CompilerNatives implements NativesExtension
     public void registerAll(NativeRegistry registry)
     {
         MetadataAccess resolver = registry.resolver();
-        // meta::pure::functions::meta::parse(sourceId:String[1], content:String[1]):PureFile[1]
+        // platform::pure::functions::meta::parse(sourceId:String[1], content:String[1]):PureFile[1]
         List<ParserExtension> extensions = new ArrayList<>();
         extensions.add(new PureLanguageParser());
         extensions.addAll(this.extraExtensions);
@@ -93,7 +93,7 @@ public class CompilerNatives implements NativesExtension
             return _E_ValueSpecification.wrap(resultValue, genericType, multiplicity, resolver);
         });
 
-        // meta::pure::functions::meta::compileSource(file:PureFile[1], dependencies:String[*]):CompileSourceResult[1]
+        // platform::pure::functions::meta::compileSource(file:PureFile[1], dependencies:String[*]):CompileSourceResult[1]
         // THE dynamic-evaluation primitive: compiles through the RUNTIME's
         // compilation strategy (by default the Pure compiler, compiler.pdb) and returns the compiled
         // elements as SELF-CONTAINED VALUES — mutates no global state (the
@@ -103,7 +103,7 @@ public class CompilerNatives implements NativesExtension
         // by the PCT contract tests).
         registry.register("compileSource_PureFile_1__String_MANY__CompileSourceResult_1_", (args, eval, genericType, multiplicity) ->
         {
-            for (meta.pure.metamodel.valuespecification.ValueSpecification depVS
+            for (platform.pure.metamodel.valuespecification.ValueSpecification depVS
                     : _E_ValueSpecification.toCollection(args.get(1), resolver)._values())
             {
                 String dep = String.valueOf(_E_ValueSpecification.unwrap(depVS));
@@ -118,7 +118,7 @@ public class CompilerNatives implements NativesExtension
             }
             Object file = _E_ValueSpecification.unwrap(args.get(0));
 
-            DynamicInstance out = new DynamicInstance("meta::pure::functions::meta::CompileSourceResult");
+            DynamicInstance out = new DynamicInstance("platform::pure::functions::meta::CompileSourceResult");
             try
             {
                 CompilationResult result = this.compilation.get().compileParsed(List.of(file));
@@ -138,7 +138,7 @@ public class CompilerNatives implements NativesExtension
             return _E_ValueSpecification.wrap(out, genericType, multiplicity, resolver);
         });
 
-        // meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
+        // platform::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
         registry.register("findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_", (args, eval, genericType, multiplicity) ->
         {
             String name = (String) _E_ValueSpecification.unwrap(args.get(0));
@@ -146,7 +146,7 @@ public class CompilerNatives implements NativesExtension
             CompositePureLanguageMetadata fnMetadata = new CompositePureLanguageMetadata(
                     resolver.getMetadataAccessExtension(PureLanguageMetadata.class), resolver);
             org.eclipse.collections.api.list.MutableList<FunctionIndexEntry> entries = fnMetadata.findFunctionHeadersByNameAndArity(name, (int) arity);
-            List<meta.pure.metamodel.valuespecification.ValueSpecification> wrapped = new ArrayList<>();
+            List<platform.pure.metamodel.valuespecification.ValueSpecification> wrapped = new ArrayList<>();
             for (FunctionIndexEntry entry : entries)
             {
                 wrapped.add(_E_ValueSpecification.wrap(entry, null, null, resolver));
@@ -154,17 +154,17 @@ public class CompilerNatives implements NativesExtension
             return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrapped, resolver);
         });
 
-        // meta::pure::compiler::findAllTypes():Type[*]
+        // platform::pure::compiler::findAllTypes():Type[*]
         // Enumerates every Type-typed PackageableElement across all loaded
         // modules. Used by buildLinearizationCache to seed the cache without
         // relying on package-tree traversal (which is split per module).
         registry.register("findAllTypes__Type_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            List<meta.pure.metamodel.valuespecification.ValueSpecification> wrapped = new ArrayList<>();
+            List<platform.pure.metamodel.valuespecification.ValueSpecification> wrapped = new ArrayList<>();
             for (String path : resolver.elementPaths())
             {
-                meta.pure.metamodel.PackageableElement element = resolver.getElement(path);
-                if (element instanceof meta.pure.metamodel.type.Type)
+                platform.pure.metamodel.PackageableElement element = resolver.getElement(path);
+                if (element instanceof platform.pure.metamodel.type.Type)
                 {
                     wrapped.add(_E_ValueSpecification.wrap(element, null, null, resolver));
                 }
@@ -172,7 +172,7 @@ public class CompilerNatives implements NativesExtension
             return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrapped, resolver);
         });
 
-        // meta::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString(dateStr:String[1]):String[1]
+        // platform::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString(dateStr:String[1]):String[1]
         // Normalizes date literals: zero-pads components and converts timezone offsets to UTC.
         registry.register("normalizeDateString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
@@ -181,7 +181,7 @@ public class CompilerNatives implements NativesExtension
             return _E_ValueSpecification.wrap(result != null ? result : dateStr, genericType, multiplicity, resolver);
         });
 
-        // meta::pure::functions::meta::resolveAndReturnGraph(elements:Map<String, PackageableElement>[1]):PackageableElement[*]
+        // platform::pure::functions::meta::resolveAndReturnGraph(elements:Map<String, PackageableElement>[1]):PackageableElement[*]
         //
         // Deep-copies every input PE and recursively rewrites every
         // TempCompilerPointer (top-level or nested in any slot) to the live
@@ -196,32 +196,32 @@ public class CompilerNatives implements NativesExtension
             org.finos.legend.pure.execution.PureMap pureMap =
                     (org.finos.legend.pure.execution.PureMap) _E_ValueSpecification.unwrap(args.get(0));
             java.util.Map<String, Object> byPath = new java.util.HashMap<>();
-            for (java.util.Map.Entry<meta.pure.metamodel.valuespecification.ValueSpecification,
-                                     meta.pure.metamodel.valuespecification.ValueSpecification> e :
+            for (java.util.Map.Entry<platform.pure.metamodel.valuespecification.ValueSpecification,
+                                     platform.pure.metamodel.valuespecification.ValueSpecification> e :
                     pureMap.getMap().entrySet())
             {
                 Object key = _E_ValueSpecification.unwrap(e.getKey());
                 Object val = _E_ValueSpecification.unwrap(e.getValue());
-                if (key instanceof String && !(val instanceof meta.pure.metamodel.pointer.TempCompilerPointer))
+                if (key instanceof String && !(val instanceof platform.pure.metamodel.pointer.TempCompilerPointer))
                 {
                     byPath.put((String) key, val);
                 }
             }
             java.util.IdentityHashMap<Object, Object> copies = new java.util.IdentityHashMap<>();
-            org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.valuespecification.ValueSpecification> wrapped =
+            org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.valuespecification.ValueSpecification> wrapped =
                     org.eclipse.collections.api.factory.Lists.mutable.empty();
-            for (java.util.Map.Entry<meta.pure.metamodel.valuespecification.ValueSpecification,
-                                     meta.pure.metamodel.valuespecification.ValueSpecification> e :
+            for (java.util.Map.Entry<platform.pure.metamodel.valuespecification.ValueSpecification,
+                                     platform.pure.metamodel.valuespecification.ValueSpecification> e :
                     pureMap.getMap().entrySet())
             {
-                meta.pure.metamodel.valuespecification.ValueSpecification value = e.getValue();
+                platform.pure.metamodel.valuespecification.ValueSpecification value = e.getValue();
                 Object unwrapped = _E_ValueSpecification.unwrap(value);
                 Object rewritten = deepCopyAndRewritePointers(unwrapped, byPath, resolver, copies);
                 if (rewritten != unwrapped)
                 {
                     value = _E_ValueSpecification.wrap(rewritten, null,
-                            (meta.pure.metamodel.multiplicity.Multiplicity)
-                                    resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"),
+                            (platform.pure.metamodel.multiplicity.Multiplicity)
+                                    resolver.getElement("platform::pure::metamodel::multiplicity::PureOne"),
                             resolver);
                 }
                 wrapped.add(value);
@@ -232,7 +232,7 @@ public class CompilerNatives implements NativesExtension
 
     /**
      * Deep-copy {@code value} and recursively rewrite every
-     * {@link meta.pure.metamodel.pointer.TempCompilerPointer} encountered to
+     * {@link platform.pure.metamodel.pointer.TempCompilerPointer} encountered to
      * the live element resolved via {@code byPath} (in-map first) or
      * {@code resolver} (cross-module).
      *
@@ -253,7 +253,7 @@ public class CompilerNatives implements NativesExtension
         {
             return null;
         }
-        if (value instanceof meta.pure.metamodel.pointer.TempCompilerPointer p)
+        if (value instanceof platform.pure.metamodel.pointer.TempCompilerPointer p)
         {
             String path = p._path();
             Object live = byPath.get(path);
@@ -261,7 +261,7 @@ public class CompilerNatives implements NativesExtension
             {
                 live = resolver.getElement(path);
             }
-            return (live != null && !(live instanceof meta.pure.metamodel.pointer.TempCompilerPointer))
+            return (live != null && !(live instanceof platform.pure.metamodel.pointer.TempCompilerPointer))
                     ? live
                     : value;
         }
@@ -298,7 +298,7 @@ public class CompilerNatives implements NativesExtension
         // function's result compared a CLONED Integer against the live one —
         // "Integer cannot be cast to Integer"). Mirrors the Truffle rule in
         // PointerGraphImmutableResolver ("dep-PDB elements must not be cloned").
-        if (value instanceof meta.pure.metamodel.PackageableElement pe)
+        if (value instanceof platform.pure.metamodel.PackageableElement pe)
         {
             String path = ElementPathNatives.elementToPathString(pe, "::");
             if (path != null && !path.isEmpty() && !byPath.containsKey(path)

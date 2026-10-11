@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +16,7 @@
 package org.finos.legend.pure.specification.generation.model;
 
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.RDFList;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
@@ -105,7 +107,7 @@ public class M3MetamodelReader
         collectProfileInfo(m3Model);
 
         // Inject omitted profiles from protocol grammar (e.g. typemodifiers)
-        m3Model.stereotypeDisplayNames().put(M3_NS + "meta_pure_profiles_typemodifiers_abstract", "typemodifiers.abstract");
+        m3Model.stereotypeDisplayNames().put(M3_NS + "platform_pure_profiles_typemodifiers_abstract", "typemodifiers.abstract");
 
         collectClassInfo(m3Model);
         collectEnumInfo(m3Model);
@@ -372,9 +374,9 @@ public class M3MetamodelReader
     private MutableList<String> extractRawGeneralizations(Resource classRes)
     {
         MutableList<String> result = Lists.mutable.empty();
-        listM3Statements(classRes, "generalizations").forEach(genStmt ->
+        listM3Values(classRes, "generalizations").forEach(gen ->
         {
-            String typeName = extractRawTypeNameFromGeneralization(genStmt.getObject());
+            String typeName = extractRawTypeNameFromGeneralization(gen);
             if (typeName != null)
             {
                 result.add(typeName);
@@ -422,9 +424,9 @@ public class M3MetamodelReader
     private MutableList<String> extractFullGeneralizations(Resource classRes)
     {
         MutableList<String> result = Lists.mutable.empty();
-        listM3Statements(classRes, "generalizations").forEach(genStmt ->
+        listM3Values(classRes, "generalizations").forEach(gen ->
         {
-            String typeName = extractFullTypeNameFromGeneralization(genStmt.getObject());
+            String typeName = extractFullTypeNameFromGeneralization(gen);
             if (typeName != null)
             {
                 result.add(typeName);
@@ -821,6 +823,29 @@ public class M3MetamodelReader
         return results;
     }
 
+    /**
+     * The values of a property, with an RDF collection {@code ( … )} expanded into its items in
+     * order. Generalizations are written as collections in m3.ttl because the comma form is an
+     * unordered set: Jena returns its blank nodes in a different order on every load.
+     */
+    private MutableList<RDFNode> listM3Values(Resource res, String localName)
+    {
+        MutableList<RDFNode> results = Lists.mutable.empty();
+        listM3Statements(res, localName).forEach(stmt ->
+        {
+            RDFNode value = stmt.getObject();
+            if (value.isResource() && value.asResource().hasProperty(RDF.first))
+            {
+                results.addAll(value.as(RDFList.class).asJavaList());
+            }
+            else if (!RDF.nil.equals(value))
+            {
+                results.add(value);
+            }
+        });
+        return results;
+    }
+
     private Statement getM3StatementMulti(Resource res, String... localNames)
     {
         for (String localName : localNames)
@@ -864,7 +889,7 @@ public class M3MetamodelReader
         String pkg = getPackagePath(res);
         if (pkg != null && !pkg.isEmpty())
         {
-            if (name.startsWith("meta::"))
+            if (name.startsWith("platform::"))
             {
                 return name;
             }

@@ -37,7 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The `meta::pure::functions::meta::antlr` natives: parse a source with a named grammar
+ * The `platform::pure::functions::meta::antlr` natives: parse a source with a named grammar
  * and walk the parse tree.
  *
  * <p>ANTLR's runtime is a declared dependency of this platform and the parsers are
@@ -180,7 +180,7 @@ public final class Antlr
     }
 
     /** The line of the first child that is neither EOF nor blank, as an offset. */
-    public static long computeFirstNonNewlineLine(Object context, boolean syntheticHeader)
+    public static long computeFirstNonNewlineLine(Object context)
     {
         Object value = context instanceof List ? (((List<?>) context).isEmpty() ? null : ((List<?>) context).get(0)) : context;
         if (value == null)
@@ -203,7 +203,7 @@ public final class Antlr
             int line = child instanceof TerminalNode
                     ? ((TerminalNode) child).getSymbol().getLine()
                     : ((ParserRuleContext) child).getStart().getLine();
-            return Math.max(0, line - 1 - (syntheticHeader ? 1 : 0));
+            return Math.max(0, line - 1);
         }
         return 0L;
     }

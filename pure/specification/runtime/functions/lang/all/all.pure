@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 native function
     <<functionType.SideEffectFunction,
@@ -22,6 +23,6 @@ native function
         PCT.grammarDoc='AClass.all()',
         PCT.grammarCharacters='.all()'
     }
-    meta::pure::functions::collection::getAll<T>(type:Class<T>[1]):T[*];
+    platform::pure::functions::collection::getAll<T>(type:Class<T>[1]):T[*];
 
 

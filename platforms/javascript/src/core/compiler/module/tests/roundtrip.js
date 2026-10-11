@@ -14,7 +14,7 @@
 
 // Round-trip harness for the PDB writer, exercised by the compiler tests: take a
 // freshly compiled in-memory graph, serialize it to .pdb bytes with the
-// TRANSLATED SELF-HOSTED PURE WRITER (meta::pure::compiler::pdb::archive +
+// TRANSLATED SELF-HOSTED PURE WRITER (platform::pure::compiler::pdb::archive +
 // gen::writeX, compiled into generated/pure/compiler/compiler.js — the same Pure code that
 // runs on the JVM), reopen those bytes with the TRANSLATED SELF-HOSTED PURE
 // READER (pdb/reader/reader.pure via store.js/pure-reader.js), and re-print the graph
@@ -47,12 +47,12 @@ const pathFromEntry = (name) => {
 // 4-arg overload writes without a reverse index.
 function pureWriteArchive(elements, referencedBy) {
     if (referencedBy != null) {
-        const fn5 = globalThis["meta$pure$compiler$pdb$archive$writeArchive_Any_MANY__String_1__String_1__String_MANY__Map_1__Integer_MANY_"];
+        const fn5 = globalThis["platform$pure$compiler$pdb$archive$writeArchive_Any_MANY__String_1__String_1__String_MANY__Map_1__Integer_MANY_"];
         if (typeof fn5 === "function") {
             return Uint8Array.from(fn5(elements, "test", "*", ["core"], referencedBy), Number);
         }
     }
-    const fn = globalThis["meta$pure$compiler$pdb$archive$writeArchive_Any_MANY__String_1__String_1__String_MANY__Integer_MANY_"];
+    const fn = globalThis["platform$pure$compiler$pdb$archive$writeArchive_Any_MANY__String_1__String_1__String_MANY__Integer_MANY_"];
     if (typeof fn !== "function") {
         throw new Error("translated Pure pdb writer not loaded (run `just javascript::generate-all` and loadCompiler() first)");
     }

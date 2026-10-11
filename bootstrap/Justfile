@@ -1,3 +1,18 @@
+# Copyright 2026 Goldman Sachs
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # bootstrap/Justfile — builds and tests the bootstrap Java compiler/CLI.
 #
 # Direct invocation:    just <recipe>             (from bootstrap/)
@@ -80,7 +95,7 @@ stage:
 
 # Generate pdb/writer/generated/generatedWriter.pure (gitignored build output).
 #
-# The writer defines meta::pure::compiler::pdb::gen::*, and producing it needs a
+# The writer defines platform::pure::compiler::pdb::gen::*, and producing it needs a
 # compiled generator — which lives in the same module. Nothing references those
 # names at COMPILE time: archive.pure and the pdb tests resolve them through
 # writerHelper::genFn + evalGenWrite (pathToElement, then eval on a Function cast
@@ -124,8 +139,8 @@ generate-writer:
         echo "" >&2
         echo "ERROR: pass 1 could not compile compiler-pure without pdb/writer/generated/." >&2
         echo "Something now has a COMPILE-TIME reference to the generated writer" >&2
-        echo "(meta::pure::compiler::pdb::gen::*). Resolve it at runtime instead, via" >&2
-        echo "meta::pure::compiler::pdb::writerHelper::evalGenWrite (or genFn + eval on" >&2
+        echo "(platform::pure::compiler::pdb::gen::*). Resolve it at runtime instead, via" >&2
+        echo "platform::pure::compiler::pdb::writerHelper::evalGenWrite (or genFn + eval on" >&2
         echo "a Function cast to the concrete signature). Note evaluate() is NOT a" >&2
         echo "substitute: it introspects an argument's runtime type and fails on the" >&2
         echo "ClassPointer anchors the wire-format fixtures use on purpose." >&2
@@ -140,7 +155,7 @@ generate-writer:
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb "$stage/out/compiler.pdb" \
         --pdb "$stage/out/compiler-tests.pdb" \
-        --function "meta::pure::compiler::pdb::generator::printGeneratedWriter__Boolean_1_" 2>/dev/null \
+        --function "platform::pure::compiler::pdb::generator::printGeneratedWriter__Boolean_1_" 2>/dev/null \
       | awk '/===GENWRITER-BEGIN===/{f=1;next} /===GENWRITER-END===/{f=0} f' > "$body"
     if [[ ! -s "$body" ]]; then
         echo "ERROR: printGeneratedWriter produced no output between its markers" >&2
@@ -212,30 +227,30 @@ spec: spec-compiler spec-pdb spec-functions spec-pct spec-printer-compiled spec-
 
 # Needs core-tests.pdb (runTests is <<test.TestDependency>>, classified into the
 # tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
-# Standalone Pure runTests over meta::pure::functions (assumes `just build` was run).
+# Standalone Pure runTests over platform::pure::functions (assumes `just build` was run).
 spec-functions:
     @{{header}} 'spec-functions'
-    @{{substep}} 'runTests over meta::pure::functions (assumes `just build` was run)'
+    @{{substep}} 'runTests over platform::pure::functions (assumes `just build` was run)'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::functions" "{{test_results}}/spec/functions/pure@cli-bootstrap.json" {{err_filter}}
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::functions" "{{test_results}}/spec/functions/pure@cli-bootstrap.json" {{err_filter}}
 
 # Needs core-tests.pdb and compiler-tests.pdb for the same reason as spec-functions.
-# Standalone Pure PCT tests over meta::pure::functions (assumes `just build` was run).
+# Standalone Pure PCT tests over platform::pure::functions (assumes `just build` was run).
 spec-pct:
     @{{header}} 'spec-pct'
-    @{{substep}} 'runPCTTests over meta::pure::functions (assumes `just build` was run)'
+    @{{substep}} 'runPCTTests over platform::pure::functions (assumes `just build` was run)'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::test::runPCTTests_String_1__String_1__String_1_" \
-        --args "meta::pure::functions" "{{test_results}}/spec/pct/pure@cli-bootstrap.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+        --function "platform::pure::test::runPCTTests_String_1__String_1__String_1_" \
+        --args "platform::pure::functions" "{{test_results}}/spec/pct/pure@cli-bootstrap.json" {{err_filter}} || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
 
 # Parses + compiles each test source, runs the compiled-side printer, and
 # counts how many render without hitting an /* UNSUPPORTED */ sentinel.
@@ -252,7 +267,7 @@ spec-printer-compiled:
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::compiler::test::printer::runCompiledPrinterCorpus_String_1__String_1__String_1_" \
+        --function "platform::pure::compiler::test::printer::runCompiledPrinterCorpus_String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{test_results}}/pure/printer-compiled/pure@cli-bootstrap.json" {{err_filter}}
 
 # Mirrors spec-printer-compiled for the protocol-side printer: parses each
@@ -270,7 +285,7 @@ spec-printer-protocol:
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus_String_1__String_1__String_1_" \
+        --function "platform::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus_String_1__String_1__String_1_" \
         --args "{{spec}}/grammar/tests" "{{test_results}}/pure/printer-protocol/pure@cli-bootstrap.json" {{err_filter}}
 
 # Pure compiler-graph spec tests over pure/specification/compiler/tests via the bootstrap CLI (Pure-on-Java; assumes `just build` was run). Run as part of `just test`.
@@ -282,21 +297,21 @@ spec-compiler:
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
+        --function "platform::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{test_results}}/spec/compiler/pure@cli-bootstrap.json" {{err_filter}}
 
-# Pure runTests over meta::pure::compiler::pdb (PDB writer/reader tests in compiler-tests.pdb) via the bootstrap CLI.
+# Pure runTests over platform::pure::compiler::pdb (PDB writer/reader tests in compiler-tests.pdb) via the bootstrap CLI.
 # The tests live in compiler-tests.pdb, built after the Maven reactor (assumes `just build` was run). Run as part of `just test`.
 spec-pdb:
     @{{header}} 'spec-pdb'
-    @{{substep}} 'runTests over meta::pure::compiler::pdb'
+    @{{substep}} 'runTests over platform::pure::compiler::pdb'
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::compiler::pdb" "{{test_results}}/spec/pdb-format/pure@cli-bootstrap.json" {{err_filter}}
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::compiler::pdb" "{{test_results}}/spec/pdb-format/pure@cli-bootstrap.json" {{err_filter}}
 
 # Self-host: compile compiler-pure on Pure-on-Java, run compiler tests, then diff PDBs vs Java direct (and Truffle if present; assumes `just build` was run).
 spec-compiler-selfhost: generate-writer
@@ -315,7 +330,7 @@ spec-compiler-selfhost: generate-writer
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{boot_out}}/compiler.pdb \
         --pdb {{boot_out}}/compiler-tests.pdb \
-        --function "meta::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
+        --function "platform::pure::compiler::test::runCompiledGraphTests_String_1__String_1__String_1_" \
         --args "{{spec}}/compiler/tests" "{{test_results}}/spec/compiler/pure@cli-bootstrap+selfhost.json" {{err_filter}}
     @{{substep}} 'diff Java compiler.pdb ↔ Pure-compiled compiler.pdb (both lean)'
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
@@ -329,14 +344,15 @@ ide: build-compiler-pdb
     {{pure_bootstrap}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/compiler.pdb \
-        --function "meta::pure::ide::start"
+        --function "platform::pure::ide::start"
 
 # Remove bootstrap/build/ and run mvn clean.
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove bootstrap/build + mvn target/'
-    rm -rf {{boot_out}}
+    @{{substep}} 'remove bootstrap/build, the generated PDB writer, mvn target/ and shade poms'
+    rm -rf {{boot_out}} {{compiler_src}}/pdb/writer/generated
     cd {{boot}} && mvn clean {{mvnq}}
+    find {{boot}} -name dependency-reduced-pom.xml -not -path '*/target/*' -delete
 
 # Internal: parameterized `mvn clean install` invocation.
 # `mode` is "skip-tests" (fast, no Java tests) or "with-tests" (surefire runs unit tests).

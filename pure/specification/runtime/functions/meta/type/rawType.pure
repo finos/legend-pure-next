@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::test::pct::*;
 
 // Returns the underlying Type carried by a GenericType, or empty if none.
 // Currently only GenericTypeValue carries a concrete `.type`; other GenericType
 // shapes (Inferred, TypeParameter binding, etc.) yield empty.
-function meta::pure::metamodel::type::rawType(gt:GenericType[1]):Type[0..1]
+function platform::pure::metamodel::type::rawType(gt:GenericType[1]):Type[0..1]
 {
     $gt->match([
         gtv : GenericTypeValue[1] | $gtv.type,
@@ -27,12 +28,12 @@ function meta::pure::metamodel::type::rawType(gt:GenericType[1]):Type[0..1]
     ]);
 }
 
-function <<PCT.test>> meta::pure::metamodel::type::tests::rawType::testRawTypeOnGenericTypeValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::metamodel::type::tests::rawType::testRawTypeOnGenericTypeValue<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals(String, $f->eval(|let gt = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type=String); $gt->rawType()->toOne();));
+    assertEquals(String, $f->eval(|let gt = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type=String); $gt->rawType()->toOne();));
 }
 
-function <<PCT.test>> meta::pure::metamodel::type::tests::rawType::testRawTypeOnUndefinedGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::metamodel::type::tests::rawType::testRawTypeOnUndefinedGenericType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assert($f->eval(|let gt = ^meta::pure::metamodel::type::generics::UndefinedGenericType(); $gt->rawType()->isEmpty();));
+    assert($f->eval(|let gt = ^platform::pure::metamodel::type::generics::UndefinedGenericType(); $gt->rawType()->isEmpty();));
 }

@@ -38,7 +38,7 @@ public final class PureClassRegistry
     /** Pure path of the {@code Class} metaclass — special-cased because it's
      *  self-classified (every Class element is itself a {@code Class}
      *  instance, including the {@code Class} class element itself). */
-    private static final String CLASS_PATH = "meta::pure::metamodel::type::Class";
+    private static final String CLASS_PATH = "platform::pure::metamodel::type::Class";
 
     /** Hardcoded property list for the {@code Class} metaclass. Mirrors the
      *  walk PureClassRegistry would perform if it could (which it can't —
@@ -72,7 +72,7 @@ public final class PureClassRegistry
      *  PDO singletons (emitted by codegen instead of Java {@code enum}
      *  constants) can be constructed at class-load time without a populated
      *  resolver. */
-    private static final String ENUM_PATH = "meta::pure::metamodel::type::Enum";
+    private static final String ENUM_PATH = "platform::pure::metamodel::type::Enum";
 
     private static final String[] ENUM_BOOTSTRAP_PROPS = new String[]{
             // Any
@@ -102,7 +102,7 @@ public final class PureClassRegistry
         CLASSES.put(ENUM_PATH, enumInfo);
     }
 
-    /** ClassInfo for {@code meta::pure::metamodel::type::Enum} — used by
+    /** ClassInfo for {@code platform::pure::metamodel::type::Enum} — used by
      *  {@link EnumValueSingletons} to construct value PDO singletons. */
     public static PureClassInfo enumClassInfo()
     {

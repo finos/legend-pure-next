@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import x::*;
 
@@ -24,55 +38,55 @@ native function project_Z_MANY__FuncColSpec_1__Relation_1_(cl:Z~project_Z_MANY__
 
 native function project_Z_MANY__FuncColSpecArray_1__Relation_1_(cl:Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[*], x:FuncColSpecArray<{Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[1]->@Any@[*]}, T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]):Relation<T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]  ~NativeFunction<{Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[*], FuncColSpecArray<{Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[1]->@Any@[*]}, T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]->Relation<T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]}>
 
-primitive x::Numeric  ~@PrimitiveType@  @8:1-8:66
+primitive x::Numeric  ~@PrimitiveType@  @22:1-22:66
   typeVariable x :@Integer@[1]
   typeVariable y :@Integer@[1]
 
-class Firm extends Any  ~Class<Firm>  @10:1-14:1
+class Firm extends Any  ~Class<Firm>  @24:1-28:1
   property legalName :@String@[1]  ~Property<Firm, @String@|1>
   property numeric :x::Numeric(1, 2)[1]  ~Property<Firm, x::Numeric(1, 2)|1>
 
 function f__Relation_1_():Relation<(legal:@String@[1])>[1]  ~UserDefinedFunction<{->Relation<(legal:@String@[1])>[1]}>
-  ArrowInvocation project_Z_MANY__FuncColSpec_1__Relation_1_ :#Relation<#(legal:#String##[1]#)#>##[1]#  ~@ArrowInvocation@  @18:13-18:46
+  ArrowInvocation project_Z_MANY__FuncColSpec_1__Relation_1_ :#Relation<#(legal:#String##[1]#)#>##[1]#  ~@ArrowInvocation@  @32:13-32:46
     typeParam T -> #(legal:#String##[1]#)#
     typeParam Z -> #Firm#
-    FunctionInvocation getAll_Class_1__T_MANY_ :#Firm##[*]#  ~@FunctionInvocation@  @18:3-18:12
+    FunctionInvocation getAll_Class_1__T_MANY_ :#Firm##[*]#  ~@FunctionInvocation@  @32:3-32:12
       typeParam T -> Firm
-      AtomicValue  Firm :#Class<Firm>#[1]  ~@AtomicValue@  @18:3-18:12
-    FunctionInvocation funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Firm#[1]->@Any@[1]}#, #(legal:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @18:24-18:45
+      AtomicValue  Firm :#Class<Firm>#[1]  ~@AtomicValue@  @32:3-32:12
+    FunctionInvocation funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Firm#[1]->@Any@[1]}#, #(legal:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @32:24-32:45
       typeParam T -> #(legal:#String##[1]#)#
       typeParam U -> #Firm#
-      Lambda(x:#Firm##[1]#) :#LambdaFunction<#{#Firm##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @18:32-18:45
-        DotApplication Firm.legalName :#String##[1]#  ~@DotApplication@  @18:36-18:45
-          Variable x :#Firm##[1]#  ~@VariableExpression@  @18:34-18:35
-      AtomicValue  'legal' :@String@[1]  ~@AtomicValue@  @18:24-18:28
+      Lambda(x:#Firm##[1]#) :#LambdaFunction<#{#Firm##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @32:32-32:45
+        DotApplication Firm.legalName :#String##[1]#  ~@DotApplication@  @32:36-32:45
+          Variable x :#Firm##[1]#  ~@VariableExpression@  @32:34-32:35
+      AtomicValue  'legal' :@String@[1]  ~@AtomicValue@  @32:24-32:28
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
-  ArrowInvocation project_Z_MANY__FuncColSpecArray_1__Relation_1_ :#Relation<#(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#>##[1]#  ~@ArrowInvocation@  @19:13-19:72
+  ArrowInvocation project_Z_MANY__FuncColSpecArray_1__Relation_1_ :#Relation<#(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#>##[1]#  ~@ArrowInvocation@  @33:13-33:72
     typeParam T -> #(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#
     typeParam Z -> #Firm#
-    FunctionInvocation getAll_Class_1__T_MANY_ :#Firm##[*]#  ~@FunctionInvocation@  @19:3-19:12
+    FunctionInvocation getAll_Class_1__T_MANY_ :#Firm##[*]#  ~@FunctionInvocation@  @33:3-33:12
       typeParam T -> Firm
-      AtomicValue  Firm :#Class<Firm>#[1]  ~@AtomicValue@  @19:3-19:12
-    FunctionInvocation funcColSpecArray_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_ :#FuncColSpecArray<#{#Firm#[1]->@Any@[*]}#, #(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#>##[1]#  ~@FunctionInvocation@  @19:23-19:71
+      AtomicValue  Firm :#Class<Firm>#[1]  ~@AtomicValue@  @33:3-33:12
+    FunctionInvocation funcColSpecArray_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_ :#FuncColSpecArray<#{#Firm#[1]->@Any@[*]}#, #(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#>##[1]#  ~@FunctionInvocation@  @33:23-33:71
       typeParam P -> #(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#
       typeParam T -> #Any#
       typeParam U -> #Firm#
       Collection :#FuncColSpec<#{#Firm##[1]#->#Any##[1]#}#, #Any#>#[2]  ~@Collection@
-        FunctionInvocation funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Firm#[1]->@Any@[1]}#, #(legal:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @19:25-19:46
+        FunctionInvocation funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Firm#[1]->@Any@[1]}#, #(legal:#String##[1]#)#>##[1]#  ~@FunctionInvocation@  @33:25-33:46
           typeParam T -> #(legal:#String##[1]#)#
           typeParam U -> #Firm#
-          Lambda(x:#Firm##[1]#) :#LambdaFunction<#{#Firm##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @19:33-19:46
-            DotApplication Firm.legalName :#String##[1]#  ~@DotApplication@  @19:37-19:46
-              Variable x :#Firm##[1]#  ~@VariableExpression@  @19:35-19:36
-          AtomicValue  'legal' :@String@[1]  ~@AtomicValue@  @19:25-19:29
+          Lambda(x:#Firm##[1]#) :#LambdaFunction<#{#Firm##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @33:33-33:46
+            DotApplication Firm.legalName :#String##[1]#  ~@DotApplication@  @33:37-33:46
+              Variable x :#Firm##[1]#  ~@VariableExpression@  @33:35-33:36
+          AtomicValue  'legal' :@String@[1]  ~@AtomicValue@  @33:25-33:29
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
-        FunctionInvocation funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Firm#[1]->@Any@[1]}#, #(numeric:#x::Numeric##[1]#)#>##[1]#  ~@FunctionInvocation@  @19:49-19:70
+        FunctionInvocation funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Firm#[1]->@Any@[1]}#, #(numeric:#x::Numeric##[1]#)#>##[1]#  ~@FunctionInvocation@  @33:49-33:70
           typeParam T -> #(numeric:#x::Numeric##[1]#)#
           typeParam U -> #Firm#
-          Lambda(x:#Firm##[1]#) :#LambdaFunction<#{#Firm##[1]#->#x::Numeric##[1]#}#>#[1]  ~@AtomicValue@  @19:59-19:70
-            DotApplication Firm.numeric :#x::Numeric##[1]#  ~@DotApplication@  @19:63-19:70
-              Variable x :#Firm##[1]#  ~@VariableExpression@  @19:61-19:62
-          AtomicValue  'numeric' :@String@[1]  ~@AtomicValue@  @19:49-19:55
+          Lambda(x:#Firm##[1]#) :#LambdaFunction<#{#Firm##[1]#->#x::Numeric##[1]#}#>#[1]  ~@AtomicValue@  @33:59-33:70
+            DotApplication Firm.numeric :#x::Numeric##[1]#  ~@DotApplication@  @33:63-33:70
+              Variable x :#Firm##[1]#  ~@VariableExpression@  @33:61-33:62
+          AtomicValue  'numeric' :@String@[1]  ~@AtomicValue@  @33:49-33:55
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(numeric:#x::Numeric##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
       TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
 
@@ -83,11 +97,11 @@ Firm.legalName:
   f__Relation_1_
 Firm.numeric:
   f__Relation_1_
-meta::pure::functions::collection::getAll_Class_1__T_MANY_:
+platform::pure::functions::collection::getAll_Class_1__T_MANY_:
   f__Relation_1_
-meta::pure::functions::relation::funcColSpecArray_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_:
+platform::pure::functions::relation::funcColSpecArray_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_:
   f__Relation_1_
-meta::pure::functions::relation::funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_:
+platform::pure::functions::relation::funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_:
   f__Relation_1_
 project_Z_MANY__FuncColSpecArray_1__Relation_1_:
   f__Relation_1_

@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +18,7 @@ package org.finos.legend.pure.m3.module;
 /**
  * Per-element compilation timing breakdown across passes.
  *
- * @param elementPath           fully qualified element path (e.g. "meta::pure::functions::lang::if")
+ * @param elementPath           fully qualified element path (e.g. "platform::pure::functions::lang::if")
  * @param elementType           element classifier name (e.g. "Class", "Function", "Association")
  * @param firstPassNanos        time spent creating the element in the first pass
  * @param secondPassNanos       time spent resolving cross-references in the second pass

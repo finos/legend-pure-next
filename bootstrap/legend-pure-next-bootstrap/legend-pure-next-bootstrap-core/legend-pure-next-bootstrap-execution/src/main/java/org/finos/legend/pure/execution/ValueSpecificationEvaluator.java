@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,18 +17,18 @@ package org.finos.legend.pure.execution;
 
 import org.finos.legend.pure.execution.natives.NativeRegistry;
 
-import meta.pure.metamodel.SourceInformation;
-import meta.pure.metamodel.function.FunctionDefinition;
-import meta.pure.metamodel.function.LambdaFunction;
-import meta.pure.metamodel.function.NativeFunction;
-import meta.pure.metamodel.function.PackageableFunction;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.Collection;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.SourceInformation;
+import platform.pure.metamodel.function.FunctionDefinition;
+import platform.pure.metamodel.function.LambdaFunction;
+import platform.pure.metamodel.function.NativeFunction;
+import platform.pure.metamodel.function.PackageableFunction;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.valuespecification.AtomicValue;
+import platform.pure.metamodel.valuespecification.Collection;
+import platform.pure.metamodel.valuespecification.FunctionExpression;
+import platform.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
@@ -60,10 +61,10 @@ public class ValueSpecificationEvaluator
     // `at <executingFn> (<source position within that fn>)` convention used by
     // Java / V8 / Rust / Python / Go — instead of the older "callee + callsite"
     // form. Parallel-pushed/popped with callStack in evaluateFunctionExpression.
-    private final Deque<meta.pure.metamodel.function.FunctionDefinition> executingFnStack = new ArrayDeque<>();
+    private final Deque<platform.pure.metamodel.function.FunctionDefinition> executingFnStack = new ArrayDeque<>();
     // Tracks the currently-evaluating FunctionDefinition for any new FE pushes.
     // Pushed when evaluateFunctionDefinition enters fd's body; popped on exit.
-    private final Deque<meta.pure.metamodel.function.FunctionDefinition> fnEvalStack = new ArrayDeque<>();
+    private final Deque<platform.pure.metamodel.function.FunctionDefinition> fnEvalStack = new ArrayDeque<>();
     private final Deque<Scope> varStack = new ArrayDeque<>();
     private final Deque<Object> constructionStack = new ArrayDeque<>();
     // Tracks instances created within the current new()/copy() expression.
@@ -186,18 +187,18 @@ public class ValueSpecificationEvaluator
      * such chains, so callers in well-formed programs only see ≥ 1; the
      * defensive check guards against a runtime cycle through unvetted PDBs.
      */
-    public static int countParentReferenceDepth(meta.pure.metamodel.valuespecification.DotApplication root)
+    public static int countParentReferenceDepth(platform.pure.metamodel.valuespecification.DotApplication root)
     {
         int depth = 1;
-        meta.pure.metamodel.valuespecification.ValueSpecification next =
+        platform.pure.metamodel.valuespecification.ValueSpecification next =
                 root._parametersValues().get(0);
-        while (next instanceof meta.pure.metamodel.valuespecification.DotApplication d
+        while (next instanceof platform.pure.metamodel.valuespecification.DotApplication d
                 && "~".equals(d._functionName()))
         {
             depth++;
             next = d._parametersValues().get(0);
         }
-        if (next instanceof meta.pure.metamodel.valuespecification.VariableExpression v
+        if (next instanceof platform.pure.metamodel.valuespecification.VariableExpression v
                 && "~".equals(v._name()))
         {
             return depth + 1;
@@ -438,7 +439,7 @@ public class ValueSpecificationEvaluator
                 {
                     evaluatedValues.add(evaluate(v));
                 }
-                yield new meta.pure.metamodel.valuespecification.CollectionImpl()
+                yield new platform.pure.metamodel.valuespecification.CollectionImpl()
                         ._values(evaluatedValues)
                         ._genericType(vs._genericType())
                         ._multiplicity(vs._multiplicity());
@@ -511,7 +512,7 @@ public class ValueSpecificationEvaluator
             // with `_func` intentionally null — "~" isn't a real function.
             // Count the chain's total parent depth and peek the construction
             // stack, same way the bare `~` VariableExpression evaluator does.
-            if (fe instanceof meta.pure.metamodel.valuespecification.DotApplication da
+            if (fe instanceof platform.pure.metamodel.valuespecification.DotApplication da
                     && "~".equals(fe._functionName()))
             {
                 int depth = countParentReferenceDepth(da);
@@ -527,17 +528,17 @@ public class ValueSpecificationEvaluator
                 return _E_ValueSpecification.wrap(target, fe._genericType(), fe._multiplicity(),
                         this.natives.resolver());
             }
-            meta.pure.metamodel.function.Function func = fe._func();
+            platform.pure.metamodel.function.Function func = fe._func();
             if (func == null)
             {
-                meta.pure.metamodel.SourceInformation si = fe._sourceInformation();
+                platform.pure.metamodel.SourceInformation si = fe._sourceInformation();
                 throw new RuntimeException("FunctionExpression._func() returned null at "
                         + (si == null ? "?" : si._sourceId() + ":" + si._startLine() + "c" + si._startColumn())
                         + " (call stack: " + getCallStackTrace() + ")");
             }
             return switch (func)
             {
-                case meta.pure.metamodel.function.property.AbstractProperty prop ->
+                case platform.pure.metamodel.function.property.AbstractProperty prop ->
                         evaluatePropertyFunc(fe, prop);
 
                 case NativeFunction nf ->
@@ -599,11 +600,11 @@ public class ValueSpecificationEvaluator
      * The first parameter is the target object, the property is accessed by name.
      */
     private ValueSpecification evaluatePropertyFunc(FunctionExpression fe,
-                                                     meta.pure.metamodel.function.property.AbstractProperty prop)
+                                                     platform.pure.metamodel.function.property.AbstractProperty prop)
     {
         // QualifiedProperty extends both AbstractProperty and FunctionDefinition —
         // evaluate its expression sequence with $this bound to the target, plus extra args
-        if (prop instanceof meta.pure.metamodel.function.property.QualifiedProperty qp)
+        if (prop instanceof platform.pure.metamodel.function.property.QualifiedProperty qp)
         {
             MutableList<ValueSpecification> paramSpecs = fe._parametersValues();
             List<ValueSpecification> args = new ArrayList<>(paramSpecs.size());
@@ -616,17 +617,17 @@ public class ValueSpecificationEvaluator
             Object target = _E_ValueSpecification.unwrap(args.get(0));
             if (target instanceof DynamicInstance di && di.getClassifierGenericType() != null)
             {
-                meta.pure.metamodel.type.generics.GenericType cgt = di.getClassifierGenericType();
-                if (cgt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv
+                platform.pure.metamodel.type.generics.GenericType cgt = di.getClassifierGenericType();
+                if (cgt instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv
                         && gtv._typeVariableValues() != null && gtv._typeVariableValues().notEmpty())
                 {
-                    meta.pure.metamodel.type.Type ownerType = _GenericType.type(cgt);
+                    platform.pure.metamodel.type.Type ownerType = _GenericType.type(cgt);
                     MutableList<VariableExpression> typeVars = null;
-                    if (ownerType instanceof meta.pure.metamodel.type.Class cls)
+                    if (ownerType instanceof platform.pure.metamodel.type.Class cls)
                     {
                         typeVars = cls._typeVariables();
                     }
-                    else if (ownerType instanceof meta.pure.metamodel.type.PrimitiveType pt)
+                    else if (ownerType instanceof platform.pure.metamodel.type.PrimitiveType pt)
                     {
                         typeVars = pt._typeVariables();
                     }
@@ -676,8 +677,8 @@ public class ValueSpecificationEvaluator
      * @param args     the already-evaluated arguments (first element is the target)
      * @return the most-specific matching QP, or {@code staticQP} if no override is found
      */
-    private meta.pure.metamodel.function.property.QualifiedProperty resolveQualifiedPropertyDispatch(
-            meta.pure.metamodel.function.property.QualifiedProperty staticQP,
+    private platform.pure.metamodel.function.property.QualifiedProperty resolveQualifiedPropertyDispatch(
+            platform.pure.metamodel.function.property.QualifiedProperty staticQP,
             List<ValueSpecification> args)
     {
         if (args.isEmpty())
@@ -691,7 +692,7 @@ public class ValueSpecificationEvaluator
             return staticQP;
         }
 
-        meta.pure.metamodel.type.Type runtimeType = _GenericType.type(di.getClassifierGenericType());
+        platform.pure.metamodel.type.Type runtimeType = _GenericType.type(di.getClassifierGenericType());
         if (runtimeType == null)
         {
             return staticQP;
@@ -701,10 +702,10 @@ public class ValueSpecificationEvaluator
         int argCount = args.size();
 
         // Walk the C3 linearization from most-specific to least-specific
-        MutableList<meta.pure.metamodel.type.Type> mro = _Type.linearize(runtimeType, this.natives.resolver());
-        for (meta.pure.metamodel.type.Type type : mro)
+        MutableList<platform.pure.metamodel.type.Type> mro = _Type.linearize(runtimeType, this.natives.resolver());
+        for (platform.pure.metamodel.type.Type type : mro)
         {
-            if (type instanceof meta.pure.metamodel.type.Class cls && cls._qualifiedProperties() != null)
+            if (type instanceof platform.pure.metamodel.type.Class cls && cls._qualifiedProperties() != null)
             {
                 for (var candidateQP : cls._qualifiedProperties())
                 {
@@ -730,7 +731,7 @@ public class ValueSpecificationEvaluator
      */
     private ValueSpecification accessProperty(ValueSpecification targetVs, String propertyName,
                                               GenericType genericType,
-                                              meta.pure.metamodel.multiplicity.Multiplicity multiplicity)
+                                              platform.pure.metamodel.multiplicity.Multiplicity multiplicity)
     {
         Object target = _E_ValueSpecification.unwrap(targetVs);
 
@@ -752,7 +753,7 @@ public class ValueSpecificationEvaluator
         }
 
         // Special fallback for Enumeration — look up enum value by property defaultValue
-        if (result == PROPERTY_NOT_FOUND && effectiveTarget instanceof meta.pure.metamodel.type.Enumeration en)
+        if (result == PROPERTY_NOT_FOUND && effectiveTarget instanceof platform.pure.metamodel.type.Enumeration en)
         {
             if (en._properties() != null)
             {
@@ -858,9 +859,9 @@ public class ValueSpecificationEvaluator
                 String paramName = param._name();
                 // Preserve the argument's specific genericType (e.g., Integer for literal 1)
                 // instead of widening to the parameter's declared type (e.g., Any)
-                meta.pure.metamodel.type.generics.GenericType gt =
+                platform.pure.metamodel.type.generics.GenericType gt =
                         (arg._genericType() != null) ? arg._genericType() : param._genericType();
-                meta.pure.metamodel.multiplicity.Multiplicity mul =
+                platform.pure.metamodel.multiplicity.Multiplicity mul =
                         (arg._multiplicity() != null) ? arg._multiplicity() : param._multiplicity();
                 // Bind the parameter: preserve the arg's own type info where available.
                 // Caller-driven shape coercion (Pure semantics: a 1-element collection
@@ -978,13 +979,13 @@ public class ValueSpecificationEvaluator
         {
             VariableExpression p = params.get(i);
             if (p == null || p._genericType() == null) continue;
-            meta.pure.metamodel.type.Type pType = _GenericType.type(p._genericType());
-            if (!(pType instanceof meta.pure.metamodel.type.generics.TypeParameter tp)) continue;
+            platform.pure.metamodel.type.Type pType = _GenericType.type(p._genericType());
+            if (!(pType instanceof platform.pure.metamodel.type.generics.TypeParameter tp)) continue;
             String tvName = tp._name();
             if (tvName == null || tvName.isEmpty()) continue;
             ValueSpecification a = args.get(i);
             if (a == null || a._genericType() == null) continue;
-            meta.pure.metamodel.type.Type resolved = _GenericType.type(a._genericType());
+            platform.pure.metamodel.type.Type resolved = _GenericType.type(a._genericType());
             if (resolved == null) continue;
             if (bindings == null) bindings = new java.util.HashMap<>(n);
             bindings.put(tvName, resolved);
@@ -1010,8 +1011,8 @@ public class ValueSpecificationEvaluator
         {
             VariableExpression p = params.get(i);
             if (p == null || p._multiplicity() == null) continue;
-            meta.pure.metamodel.multiplicity.Multiplicity pMul = p._multiplicity();
-            if (!(pMul instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)) continue;
+            platform.pure.metamodel.multiplicity.Multiplicity pMul = p._multiplicity();
+            if (!(pMul instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mp)) continue;
             String mvName = mp._name();
             if (mvName == null || mvName.isEmpty()) continue;
             ValueSpecification a = args.get(i);
@@ -1029,7 +1030,7 @@ public class ValueSpecificationEvaluator
      * <ul>
      *   <li>{@link FunctionDefinition} — evaluates expression sequence with bound parameters</li>
      *   <li>{@link NativeFunction} — delegates to the native registry</li>
-     *   <li>{@link meta.pure.metamodel.function.property.AbstractProperty} — accesses property on first arg</li>
+     *   <li>{@link platform.pure.metamodel.function.property.AbstractProperty} — accesses property on first arg</li>
      * </ul>
      */
     public ValueSpecification executeFunction(ValueSpecification fnVS, List<ValueSpecification> args)
@@ -1042,7 +1043,7 @@ public class ValueSpecificationEvaluator
                 String signature = nf._name();
                 yield natives.execute(signature, args, this, nf._returnGenericType(), nf._returnMultiplicity());
             }
-            case meta.pure.metamodel.function.property.AbstractProperty prop ->
+            case platform.pure.metamodel.function.property.AbstractProperty prop ->
             {
                 if (args.isEmpty())
                 {
@@ -1070,7 +1071,7 @@ public class ValueSpecificationEvaluator
      * the FE's `_functionName` so the frame still names something useful.</p>
      */
     private static String formatSourceFrame(FunctionExpression fe,
-            meta.pure.metamodel.function.FunctionDefinition executingFn)
+            platform.pure.metamodel.function.FunctionDefinition executingFn)
     {
         String name = executingFn != null
                 ? functionDefinitionName(executingFn)
@@ -1092,12 +1093,12 @@ public class ValueSpecificationEvaluator
      * `lambda`. Underscores inside the function name itself (e.g.
      * `_length` natives) are preserved.
      */
-    private static String functionDefinitionName(meta.pure.metamodel.function.FunctionDefinition fd)
+    private static String functionDefinitionName(platform.pure.metamodel.function.FunctionDefinition fd)
     {
-        if (fd instanceof meta.pure.metamodel.function.PackageableFunction pf
+        if (fd instanceof platform.pure.metamodel.function.PackageableFunction pf
                 && pf._functionName() != null
                 && !pf._functionName().isEmpty()
-                && fd instanceof meta.pure.metamodel.PackageableElement pe
+                && fd instanceof platform.pure.metamodel.PackageableElement pe
                 && pe._package() != null)
         {
             String pkgPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper
@@ -1145,7 +1146,7 @@ public class ValueSpecificationEvaluator
         }
         java.util.List<String> frames = new java.util.ArrayList<>(callStack.size());
         java.util.Iterator<FunctionExpression> feIt = callStack.iterator();
-        java.util.Iterator<meta.pure.metamodel.function.FunctionDefinition> fnIt = executingFnStack.iterator();
+        java.util.Iterator<platform.pure.metamodel.function.FunctionDefinition> fnIt = executingFnStack.iterator();
         while (feIt.hasNext() && fnIt.hasNext())
         {
             frames.add(formatSourceFrame(feIt.next(), fnIt.next()));

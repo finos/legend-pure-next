@@ -21,7 +21,7 @@ package org.finos.legend.pure.truffle.compiler.module.pdbModule.hooks;
  *
  * <p>The translator generates a class of this name for each host. Truffle's is
  * written out rather than generated for ONE reason: the generated `captures`
- * wraps each captured value in `meta::pure::functions::collection::ListImpl`,
+ * wraps each captured value in `platform::pure::functions::collection::ListImpl`,
  * which would drag the collection metamodel into Truffle's generated set for no
  * benefit — Truffle's {@link org.finos.legend.pure.truffle.compiler.module.pdbModule.hooks.PureLambda}
  * discards captures, because every lambda in the reader is consumed by the

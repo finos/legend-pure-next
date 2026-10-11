@@ -1,6 +1,6 @@
 {
   "name": "java-translation",
-  "packagePattern": "(meta::external::language::java::translation)(::.*)?",
+  "packagePattern": "(platform::external::language::java::translation)(::.*)?",
   "dependencies": [
     "core",
     "java",

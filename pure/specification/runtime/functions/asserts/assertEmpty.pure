@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,32 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::test::pct::*;
 
-function meta::pure::functions::asserts::assertEmpty(collection:Any[*]):Boolean[1]
+function platform::pure::functions::asserts::assertEmpty(collection:Any[*]):Boolean[1]
 {
     assertEmpty($collection, '%s is not empty', [^List<Any>(values=$collection)]);
 }
 
-function meta::pure::functions::asserts::assertEmpty(collection:Any[*], message:String[1]):Boolean[1]
+function platform::pure::functions::asserts::assertEmpty(collection:Any[*], message:String[1]):Boolean[1]
 {
     assert($collection->isEmpty(), $message);
 }
 
-function meta::pure::functions::asserts::assertEmpty(collection:Any[*], formatString:String[1], formatArgs:Any[*]):Boolean[1]
+function platform::pure::functions::asserts::assertEmpty(collection:Any[*], formatString:String[1], formatArgs:Any[*]):Boolean[1]
 {
     assert($collection->isEmpty(), $formatString, $formatArgs);
 }
 
-function meta::pure::functions::asserts::assertEmpty(collection:Any[*], message:Function<{->String[1]}>[1]):Boolean[1]
+function platform::pure::functions::asserts::assertEmpty(collection:Any[*], message:Function<{->String[1]}>[1]):Boolean[1]
 {
     assert($collection->isEmpty(), $message);
 }
 
 
 
-function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::tests::testSuccessAssertEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    // One assertion per eval: failure attributes to a specific call, and
    // the eval's own return value (assertEmpty returns Boolean[1]=true on

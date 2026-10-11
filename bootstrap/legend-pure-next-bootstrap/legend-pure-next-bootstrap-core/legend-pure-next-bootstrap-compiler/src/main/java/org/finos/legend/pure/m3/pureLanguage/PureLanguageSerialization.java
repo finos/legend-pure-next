@@ -1,25 +1,40 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage;
 
 import com.google.flatbuffers.FlatBufferBuilder;
-import meta.pure.metamodel.PackageFlatBufferWrapper;
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.extension.ProfileFlatBufferWrapper;
-import meta.pure.metamodel.function.LambdaFunction;
-import meta.pure.metamodel.function.NativeFunction;
-import meta.pure.metamodel.function.NativeFunctionFlatBufferWrapper;
-import meta.pure.metamodel.function.UserDefinedFunction;
-import meta.pure.metamodel.function.UserDefinedFunctionFlatBufferWrapper;
-import meta.pure.metamodel.multiplicity.InferredPackageableMultiplicityFlatBufferWrapper;
-import meta.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicityFlatBufferWrapper;
-import meta.pure.metamodel.relationship.AssociationFlatBufferWrapper;
-import meta.pure.metamodel.type.ClassFlatBufferWrapper;
-import meta.pure.metamodel.type.EnumerationFlatBufferWrapper;
-import meta.pure.metamodel.type.PrimitiveTypeFlatBufferWrapper;
-import meta.pure.metamodel.type.generics.UserDefinedPackageableGenericTypeFlatBufferWrapper;
-import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.Collection;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.PackageFlatBufferWrapper;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.extension.ProfileFlatBufferWrapper;
+import platform.pure.metamodel.function.LambdaFunction;
+import platform.pure.metamodel.function.NativeFunction;
+import platform.pure.metamodel.function.NativeFunctionFlatBufferWrapper;
+import platform.pure.metamodel.function.UserDefinedFunction;
+import platform.pure.metamodel.function.UserDefinedFunctionFlatBufferWrapper;
+import platform.pure.metamodel.multiplicity.InferredPackageableMultiplicityFlatBufferWrapper;
+import platform.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicityFlatBufferWrapper;
+import platform.pure.metamodel.relationship.AssociationFlatBufferWrapper;
+import platform.pure.metamodel.type.ClassFlatBufferWrapper;
+import platform.pure.metamodel.type.EnumerationFlatBufferWrapper;
+import platform.pure.metamodel.type.PrimitiveTypeFlatBufferWrapper;
+import platform.pure.metamodel.type.generics.UserDefinedPackageableGenericTypeFlatBufferWrapper;
+import platform.pure.metamodel.valuespecification.AtomicValue;
+import platform.pure.metamodel.valuespecification.Collection;
+import platform.pure.metamodel.valuespecification.FunctionExpression;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.Module;
@@ -104,19 +119,19 @@ public class PureLanguageSerialization
 
     private int dispatchWrite(GeneratedFlatBufferWriter writer, PackageableElement element)
     {
-        if (element instanceof meta.pure.metamodel.type.Class cls)
+        if (element instanceof platform.pure.metamodel.type.Class cls)
         {
             return writer.writeClass(cls);
         }
-        else if (element instanceof meta.pure.metamodel.type.Enumeration enm)
+        else if (element instanceof platform.pure.metamodel.type.Enumeration enm)
         {
             return writer.writeEnumeration(enm);
         }
-        else if (element instanceof meta.pure.metamodel.relationship.Association assoc)
+        else if (element instanceof platform.pure.metamodel.relationship.Association assoc)
         {
             return writer.writeAssociation(assoc);
         }
-        else if (element instanceof meta.pure.metamodel.extension.Profile profile)
+        else if (element instanceof platform.pure.metamodel.extension.Profile profile)
         {
             return writer.writeProfile(profile);
         }
@@ -129,23 +144,23 @@ public class PureLanguageSerialization
         {
             return writer.writeNativeFunction(nf);
         }
-        else if (element instanceof meta.pure.metamodel.type.PrimitiveType pt)
+        else if (element instanceof platform.pure.metamodel.type.PrimitiveType pt)
         {
             return writer.writePrimitiveType(pt);
         }
-        else if (element instanceof meta.pure.metamodel.multiplicity.InferredPackageableMultiplicity pim)
+        else if (element instanceof platform.pure.metamodel.multiplicity.InferredPackageableMultiplicity pim)
         {
             return writer.writeInferredPackageableMultiplicity(pim);
         }
-        else if (element instanceof meta.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicity cpm)
+        else if (element instanceof platform.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicity cpm)
         {
             return writer.writeUserDefinedPackageableMultiplicity(cpm);
         }
-        else if (element instanceof meta.pure.metamodel.type.generics.UserDefinedPackageableGenericType pgt)
+        else if (element instanceof platform.pure.metamodel.type.generics.UserDefinedPackageableGenericType pgt)
         {
             return writer.writeUserDefinedPackageableGenericType(pgt);
         }
-        else if (element instanceof meta.pure.metamodel.Package pkg)
+        else if (element instanceof platform.pure.metamodel.Package pkg)
         {
             return writer.writePackage(pkg);
         }
@@ -154,17 +169,17 @@ public class PureLanguageSerialization
 
     private String elementTypeName(PackageableElement element)
     {
-        if (element instanceof meta.pure.metamodel.type.Class) return "Class";
-        if (element instanceof meta.pure.metamodel.type.Enumeration) return "Enumeration";
-        if (element instanceof meta.pure.metamodel.relationship.Association) return "Association";
-        if (element instanceof meta.pure.metamodel.extension.Profile) return "Profile";
+        if (element instanceof platform.pure.metamodel.type.Class) return "Class";
+        if (element instanceof platform.pure.metamodel.type.Enumeration) return "Enumeration";
+        if (element instanceof platform.pure.metamodel.relationship.Association) return "Association";
+        if (element instanceof platform.pure.metamodel.extension.Profile) return "Profile";
         if (element instanceof UserDefinedFunction) return "UserDefinedFunction";
         if (element instanceof NativeFunction) return "NativeFunction";
-        if (element instanceof meta.pure.metamodel.type.PrimitiveType) return "PrimitiveType";
-        if (element instanceof meta.pure.metamodel.multiplicity.InferredPackageableMultiplicity) return "InferredPackageableMultiplicity";
-        if (element instanceof meta.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicity) return "UserDefinedPackageableMultiplicity";
-        if (element instanceof meta.pure.metamodel.type.generics.UserDefinedPackageableGenericType) return "UserDefinedPackageableGenericType";
-        if (element instanceof meta.pure.metamodel.Package) return "Package";
+        if (element instanceof platform.pure.metamodel.type.PrimitiveType) return "PrimitiveType";
+        if (element instanceof platform.pure.metamodel.multiplicity.InferredPackageableMultiplicity) return "InferredPackageableMultiplicity";
+        if (element instanceof platform.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicity) return "UserDefinedPackageableMultiplicity";
+        if (element instanceof platform.pure.metamodel.type.generics.UserDefinedPackageableGenericType) return "UserDefinedPackageableGenericType";
+        if (element instanceof platform.pure.metamodel.Package) return "Package";
         return null;
     }
 
@@ -283,7 +298,7 @@ public class PureLanguageSerialization
             // isn't a real function, so {@code _func} is intentionally null.
             // The type is stamped from the construction stack at compile time
             // and the receiver is the chain itself; no function ref to validate.
-            boolean isParentRefStep = vs instanceof meta.pure.metamodel.valuespecification.DotApplication
+            boolean isParentRefStep = vs instanceof platform.pure.metamodel.valuespecification.DotApplication
                     && "~".equals(fe._functionName());
             if (fe._func() == null && !isParentRefStep)
             {

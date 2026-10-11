@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +15,10 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.function.LambdaFunction;
-import meta.pure.metamodel.function.property.Property;
-import meta.pure.metamodel.type.Enumeration;
-import meta.pure.metamodel.valuespecification.AtomicValue;
+import platform.pure.metamodel.function.LambdaFunction;
+import platform.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.type.Enumeration;
+import platform.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
 /**
@@ -35,14 +36,14 @@ public final class _Enumeration
      * Looks up the Enumeration by path, finds the property with the matching name,
      * and returns the Enum instance from its default value.
      *
-     * @param enumerationPath the full metamodel path (e.g., "meta::pure::metamodel::function::property::AggregationKind")
+     * @param enumerationPath the full metamodel path (e.g., "platform::pure::metamodel::function::property::AggregationKind")
      * @param valueName       the enum value name (e.g., "None")
      * @param model           the metadata access for element lookup
      * @return the Enum instance, or null if not found
      */
-    public static meta.pure.metamodel.type.Enum resolveEnumValue(String enumerationPath, String valueName, MetadataAccess model)
+    public static platform.pure.metamodel.type.Enum resolveEnumValue(String enumerationPath, String valueName, MetadataAccess model)
     {
-        meta.pure.metamodel.PackageableElement element = model.getElement(enumerationPath);
+        platform.pure.metamodel.PackageableElement element = model.getElement(enumerationPath);
         if (!(element instanceof Enumeration enumeration))
         {
             return null;
@@ -60,7 +61,7 @@ public final class _Enumeration
      * @param valueName   the enum value name (e.g., "Composite")
      * @return the Enum instance, or null if not found
      */
-    public static meta.pure.metamodel.type.Enum resolveEnumValue(Enumeration enumeration, String valueName)
+    public static platform.pure.metamodel.type.Enum resolveEnumValue(Enumeration enumeration, String valueName)
     {
         if (enumeration._properties() == null)
         {
@@ -76,7 +77,7 @@ public final class _Enumeration
                         && lambda._expressionSequence().notEmpty())
                 {
                     Object lastExpr = lambda._expressionSequence().getLast();
-                    if (lastExpr instanceof AtomicValue av && av._value() instanceof meta.pure.metamodel.type.Enum enumValue)
+                    if (lastExpr instanceof AtomicValue av && av._value() instanceof platform.pure.metamodel.type.Enum enumValue)
                     {
                         return enumValue;
                     }

@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Column-builder grammar: `~col`, `~col : T[m]`, `~col : lambda`,
 // `~col : lambda : aggLambda`, plus their array forms `~[a, b, c]`.
 //
@@ -10,12 +25,12 @@
 // Each `oneColSpec` produces a FunctionInvocation named `colSpec` /
 // `funcColSpec` / `aggColSpec` based on which lambdas are present.
 
-import meta::pure::parser::mappings::*;
-import meta::pure::functions::meta::antlr::*;
-import meta::pure::parser::mappings::interpreter::*;
-import meta::pure::protocol::grammar::*;
+import platform::pure::parser::mappings::*;
+import platform::pure::functions::meta::antlr::*;
+import platform::pure::parser::mappings::interpreter::*;
+import platform::pure::protocol::grammar::*;
 
-function meta::pure::parser::mappings::buildColumnBuilders(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+function platform::pure::parser::mappings::buildColumnBuilders(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
    let isArray = $ctx->hasToken('BRACKET_OPEN');
    let oneCols = $ctx->getChildren('oneColSpec');
@@ -28,48 +43,48 @@ function meta::pure::parser::mappings::buildColumnBuilders(ctx: AntlrContext[1],
       | buildOneColSpec($oneCols->at(0), $lineOffset));
 }
 
-function meta::pure::parser::mappings::anyHasChild(ctxs: AntlrContext[*], childName: String[1]): Boolean[1]
+function platform::pure::parser::mappings::anyHasChild(ctxs: AntlrContext[*], childName: String[1]): Boolean[1]
 {
    $ctxs->fold({c, acc | $acc || $c->hasChild($childName)}, false)
 }
 
-function meta::pure::parser::mappings::anyHasAnyOfTwo(ctxs: AntlrContext[*], a: String[1], b: String[1]): Boolean[1]
+function platform::pure::parser::mappings::anyHasAnyOfTwo(ctxs: AntlrContext[*], a: String[1], b: String[1]): Boolean[1]
 {
    $ctxs->fold({c, acc | $acc || $c->hasChild($a) || $c->hasChild($b)}, false)
 }
 
 // Array form with at least one lambda (or aggregator).
-function meta::pure::parser::mappings::buildColSpecArrayCall(ctx: AntlrContext[1], oneCols: AntlrContext[*], funcName: String[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+function platform::pure::parser::mappings::buildColSpecArrayCall(ctx: AntlrContext[1], oneCols: AntlrContext[*], funcName: String[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
    let n = $oneCols->size();
-   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+   ^platform::pure::protocol::grammar::valuespecification::FunctionInvocation(
       p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
       functionName        = $funcName,
       parametersValues    = [
-         ^meta::pure::protocol::grammar::valuespecification::Collection(
+         ^platform::pure::protocol::grammar::valuespecification::Collection(
             values       = $oneCols->map(c | buildOneColSpec($c, $lineOffset)),
-            multiplicity = ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
-               lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n),
-               upperBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n)
+            multiplicity = ^platform::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+               lowerBound = ^platform::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n),
+               upperBound = ^platform::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n)
             )),
-         ^meta::pure::protocol::grammar::valuespecification::CompilerGenericTypeAndMultiplicityHolder()
+         ^platform::pure::protocol::grammar::valuespecification::CompilerGenericTypeAndMultiplicityHolder()
       ]
    );
 }
 
 // Array form with no lambdas: emits names + a combined per-column RelationType holder.
-function meta::pure::parser::mappings::buildColSpecArrayNamed(ctx: AntlrContext[1], oneCols: AntlrContext[*], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+function platform::pure::parser::mappings::buildColSpecArrayNamed(ctx: AntlrContext[1], oneCols: AntlrContext[*], lineOffset: Integer[1]): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
    let n = $oneCols->size();
-   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+   ^platform::pure::protocol::grammar::valuespecification::FunctionInvocation(
       p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
       functionName        = 'colSpecArray',
       parametersValues    = [
-         ^meta::pure::protocol::grammar::valuespecification::Collection(
+         ^platform::pure::protocol::grammar::valuespecification::Collection(
             values       = $oneCols->map(c | buildColumnNameAtomic($c, $lineOffset)),
-            multiplicity = ^meta::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
-               lowerBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n),
-               upperBound = ^meta::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n)
+            multiplicity = ^platform::pure::protocol::grammar::multiplicity::UserDefinedAdHocMultiplicity(
+               lowerBound = ^platform::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n),
+               upperBound = ^platform::pure::protocol::grammar::multiplicity::MultiplicityValue(value = $n)
             )),
          buildColSpecArrayHolder($ctx, $oneCols, $lineOffset)
       ]
@@ -77,21 +92,21 @@ function meta::pure::parser::mappings::buildColSpecArrayNamed(ctx: AntlrContext[
 }
 
 // A single column spec: `~col` / `~col:T` / `~col:lambda` / `~col:lambda:aggLambda`.
-function meta::pure::parser::mappings::buildOneColSpec(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+function platform::pure::parser::mappings::buildOneColSpec(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
    let hasLambda = $ctx->hasChild('anyLambda');
    let hasExtra  = $ctx->hasChild('extraFunction');
    let fnName    = if($hasLambda,
                       | if($hasExtra, |'aggColSpec', |'funcColSpec'),
                       | 'colSpec');
-   ^meta::pure::protocol::grammar::valuespecification::FunctionInvocation(
+   ^platform::pure::protocol::grammar::valuespecification::FunctionInvocation(
       p_sourceInformation = buildSourceInfo($ctx, $lineOffset),
       functionName        = $fnName,
       parametersValues    = buildOneColSpecParams($ctx, $hasLambda, $hasExtra, $lineOffset)
    );
 }
 
-function meta::pure::parser::mappings::buildOneColSpecParams(ctx: AntlrContext[1], hasLambda: Boolean[1], hasExtra: Boolean[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[*]
+function platform::pure::parser::mappings::buildOneColSpecParams(ctx: AntlrContext[1], hasLambda: Boolean[1], hasExtra: Boolean[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::valuespecification::ValueSpecification[*]
 {
    let nameAtomic = buildColumnNameAtomic($ctx, $lineOffset);
    let typeHolder = buildOneColSpecHolder($ctx, $lineOffset);
@@ -106,10 +121,10 @@ function meta::pure::parser::mappings::buildOneColSpecParams(ctx: AntlrContext[1
 }
 
 // String AtomicValue holding the column name — used in colSpecArray names slot.
-function meta::pure::parser::mappings::buildColumnNameAtomic(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+function platform::pure::parser::mappings::buildColumnNameAtomic(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
    let cn = $ctx->getChild('columnName')->toOne();
-   ^meta::pure::protocol::grammar::valuespecification::AtomicValue(
+   ^platform::pure::protocol::grammar::valuespecification::AtomicValue(
       p_sourceInformation = buildSourceInfo($cn, $lineOffset),
       genericType         = primitiveType('String'),
       value               = $cn->getText()
@@ -119,39 +134,39 @@ function meta::pure::parser::mappings::buildColumnNameAtomic(ctx: AntlrContext[1
 // Per-column type holder: either a UserDefinedGenericTypeAndMultiplicityHolder
 // wrapping a 1-column RelationType, or a CompilerHolder when no type/multiplicity
 // is given on this column.
-function meta::pure::parser::mappings::buildOneColSpecHolder(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+function platform::pure::parser::mappings::buildOneColSpecHolder(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
    if($ctx->hasChild('type') || $ctx->hasChild('multiplicity'),
-      | ^meta::pure::protocol::grammar::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder(
-           genericType = ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
-              type = ^meta::pure::protocol::grammar::relation::RelationType(
+      | ^platform::pure::protocol::grammar::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder(
+           genericType = ^platform::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+              type = ^platform::pure::protocol::grammar::relation::RelationType(
                  columns = [buildOneColSpecColumn($ctx, $lineOffset)]
               )
            )),
-      | ^meta::pure::protocol::grammar::valuespecification::CompilerGenericTypeAndMultiplicityHolder())
+      | ^platform::pure::protocol::grammar::valuespecification::CompilerGenericTypeAndMultiplicityHolder())
 }
 
 // The combined holder for colSpecArray (no lambdas): a RelationType containing
 // all columns that have explicit types/multiplicities.
-function meta::pure::parser::mappings::buildColSpecArrayHolder(ctx: AntlrContext[1], oneCols: AntlrContext[*], lineOffset: Integer[1]): meta::pure::protocol::grammar::valuespecification::ValueSpecification[1]
+function platform::pure::parser::mappings::buildColSpecArrayHolder(ctx: AntlrContext[1], oneCols: AntlrContext[*], lineOffset: Integer[1]): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
    if(anyHasAnyOfTwo($oneCols, 'type', 'multiplicity'),
-      | ^meta::pure::protocol::grammar::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder(
-           genericType = ^meta::pure::protocol::grammar::type::generics::UserDefinedGenericType(
-              type = ^meta::pure::protocol::grammar::relation::RelationType(
+      | ^platform::pure::protocol::grammar::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder(
+           genericType = ^platform::pure::protocol::grammar::type::generics::UserDefinedGenericType(
+              type = ^platform::pure::protocol::grammar::relation::RelationType(
                  columns = $oneCols->filter(c | $c->hasChild('type') || $c->hasChild('multiplicity'))
                                    ->map(c | buildOneColSpecColumn($c, $lineOffset))
               )
            )),
-      | ^meta::pure::protocol::grammar::valuespecification::CompilerGenericTypeAndMultiplicityHolder())
+      | ^platform::pure::protocol::grammar::valuespecification::CompilerGenericTypeAndMultiplicityHolder())
 }
 
 // A single Column for a RelationType, derived from a oneColSpec ctx.
 // genericType and multiplicity are [0..1] in protocol (optionalInProtocol);
 // emit [] when the grammar omits them so compile-pure substitutes defaults.
-function meta::pure::parser::mappings::buildOneColSpecColumn(ctx: AntlrContext[1], lineOffset: Integer[1]): meta::pure::protocol::grammar::relation::Column[1]
+function platform::pure::parser::mappings::buildOneColSpecColumn(ctx: AntlrContext[1], lineOffset: Integer[1]): platform::pure::protocol::grammar::relation::Column[1]
 {
-   ^meta::pure::protocol::grammar::relation::Column(
+   ^platform::pure::protocol::grammar::relation::Column(
       name         = $ctx->getChild('columnName')->toOne()->getText(),
       nameWildCard = false,
       genericType  = if($ctx->hasChild('type'),

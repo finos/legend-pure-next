@@ -74,7 +74,7 @@ export function registerPureLanguage(monaco, { keywords, primitives }) {
                 [/<<[^>]*>>/, "annotation"],
                 // Multiplicity: [1] [*] [0..1] [1..*] [m]
                 [/\[\s*(\d+(\.\.(\d+|\*))?|\*|[a-z])\s*\]/, "number.multiplicity"],
-                // A qualified path — highlighted whole so meta::pure::… reads as one thing
+                // A qualified path — highlighted whole so platform::pure::… reads as one thing
                 [/[a-zA-Z_][\w]*(::[a-zA-Z_][\w]*)+/, "type.identifier"],
                 [/\$[a-zA-Z_]\w*/, "variable"],
                 [/[a-zA-Z_]\w*/, {

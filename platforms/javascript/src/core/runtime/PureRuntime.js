@@ -29,7 +29,7 @@ import { translateProgramElements } from "../execution/translate-elements.js";
 // The translated compiler-pure entry point (generated/pure/compiler/compiler.js): the overload that takes the
 // language extensions, so a `###Diagram` section becomes a graph element rather than being
 // parsed and dropped. Silent — the live progress bar belongs to the CLI.
-const COMPILE = "meta$pure$compiler$compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
+const COMPILE = "platform$pure$compiler$compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
 const asArray = (v) => (v === undefined || v === null ? [] : Array.isArray(v) ? v : [v]);
 
 /** Modules in dependency order (a module after the modules it depends on). */
@@ -47,7 +47,7 @@ function dependencyOrder(modules) {
 }
 
 // The translated parser-mappings entry point (parser-mappings-bundle.js).
-const PARSE_DOCUMENT = "meta$pure$parser$mappings$interpreter$parseDocument_AntlrContext_1__String_1__Boolean_1__Pair_MANY__PureFile_1_";
+const PARSE_DOCUMENT = "platform$pure$parser$mappings$interpreter$parseDocument_AntlrContext_1__String_1__Pair_MANY__PureFile_1_";
 
 export class PureRuntime {
     static builder() { return new PureRuntimeBuilder(); }
@@ -97,10 +97,8 @@ export class PureRuntime {
         if (typeof globalThis.__parseAntlr !== "function" || typeof parseDocument !== "function") {
             throw new Error("PureRuntime.parse: the parser bundles are not loaded (antlr-bundle.js, parser-mappings-bundle.js)");
         }
-        const syntheticHeader = !content.startsWith("###");
-        const effective = syntheticHeader ? "###Pure\n" + content : content;
-        const document = globalThis.__parseAntlr(effective, "TopParser", sourceId, 0n);
-        return parseDocument(document, sourceId, syntheticHeader, this.sectionParsers());
+        const document = globalThis.__parseAntlr(content, "TopParser", sourceId, 0n);
+        return parseDocument(document, sourceId, this.sectionParsers());
     }
 
     /** The section parsers of every registered language extension. */
@@ -155,7 +153,7 @@ export class PureRuntime {
         }
         // A Pure CompilationResult, built through the generated class so a caller reads it with the
         // same accessors as any other Pure value (`$r.elements`, `$r.errors`).
-        const Cls = globalThis["meta$pure$compiler$CompilationResult"];
+        const Cls = globalThis["platform$pure$compiler$CompilationResult"];
         return typeof Cls === "function" ? Object.assign(new Cls(), { elements, errors }) : { elements, errors };
     }
 

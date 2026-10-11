@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::*;
 
@@ -14,41 +28,41 @@ Class test::MyClass
 
 ###CompiledGraph
 function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:24-6:70
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:24-6:64
-      DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @6:24-6:28
-        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MyClass##[1]#  ~@FunctionInvocation@  @6:3-6:23
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @20:24-20:70
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @20:24-20:64
+      DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @20:24-20:28
+        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MyClass##[1]#  ~@FunctionInvocation@  @20:3-20:23
           typeParam T -> test::MyClass
-          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>  @6:3-6:23
-          Collection :#KeyExpression#[1]  ~@Collection@  @6:3-6:23
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:12-6:22
-              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:12-6:22
-              AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @6:19-6:22
-      DotApplication test::MyClass.name(@String@[1]) :#String##[1]#  ~@DotApplication@  @6:53-6:64
-        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MyClass##[1]#  ~@FunctionInvocation@  @6:32-6:52
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>  @20:3-20:23
+          Collection :#KeyExpression#[1]  ~@Collection@  @20:3-20:23
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:12-20:22
+              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @20:12-20:22
+              AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @20:19-20:22
+      DotApplication test::MyClass.name(@String@[1]) :#String##[1]#  ~@DotApplication@  @20:53-20:64
+        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MyClass##[1]#  ~@FunctionInvocation@  @20:32-20:52
           typeParam T -> test::MyClass
-          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>  @6:32-6:52
-          Collection :#KeyExpression#[1]  ~@Collection@  @6:32-6:52
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:41-6:51
-              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:41-6:51
-              AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @6:48-6:51
-        AtomicValue  'ok3' :@String@[1]  ~@AtomicValue@  @6:59-6:63
-    AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @6:68-6:70
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>  @20:32-20:52
+          Collection :#KeyExpression#[1]  ~@Collection@  @20:32-20:52
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:41-20:51
+              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @20:41-20:51
+              AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @20:48-20:51
+        AtomicValue  'ok3' :@String@[1]  ~@AtomicValue@  @20:59-20:63
+    AtomicValue  'e' :@String@[1]  ~@AtomicValue@  @20:68-20:70
 
-class test::MyClass extends Any  ~Class<test::MyClass>  @9:1-13:1
+class test::MyClass extends Any  ~Class<test::MyClass>  @23:1-27:1
   property name :@String@[1]  ~Property<test::MyClass, @String@|1>
   qualifiedProperty name(s:@String@[1]) :@String@[1]
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @12:28-12:37
-      DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @12:28-12:32
-        Variable this :#test::MyClass##[1]#  ~@VariableExpression@  @12:23-12:27
-      Variable s :#String##[1]#  ~@VariableExpression@  @12:36-12:37
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @26:28-26:37
+      DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @26:28-26:32
+        Variable this :#test::MyClass##[1]#  ~@VariableExpression@  @26:23-26:27
+      Variable s :#String##[1]#  ~@VariableExpression@  @26:36-26:37
 
 ###ReverseIndex
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::tst__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::tst__Any_MANY_
-meta::pure::functions::string::plus_String_1__String_1__String_1_:
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
   test::MyClass.name
   test::tst__Any_MANY_
 test::MyClass:

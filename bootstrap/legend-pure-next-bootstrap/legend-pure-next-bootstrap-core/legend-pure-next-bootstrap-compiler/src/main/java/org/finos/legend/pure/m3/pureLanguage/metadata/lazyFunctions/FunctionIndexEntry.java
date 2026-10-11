@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,25 +15,25 @@
 
 package org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions;
 
-import meta.pure.metamodel.Package;
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.SourceInformation;
-import meta.pure.metamodel.constraint.Constraint;
-import meta.pure.metamodel.extension.Stereotype;
-import meta.pure.metamodel.extension.TaggedValue;
-import meta.pure.metamodel.function.PackageableFunction;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.multiplicity.MultiplicityParameter;
-import meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl;
-import meta.pure.metamodel.type.ElementOverride;
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
-import meta.pure.metamodel.type.generics.TypeParameter;
-import meta.pure.metamodel.type.generics.TypeParameterImpl;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.Package;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.SourceInformation;
+import platform.pure.metamodel.constraint.Constraint;
+import platform.pure.metamodel.extension.Stereotype;
+import platform.pure.metamodel.extension.TaggedValue;
+import platform.pure.metamodel.function.PackageableFunction;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.multiplicity.MultiplicityParameter;
+import platform.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl;
+import platform.pure.metamodel.type.ElementOverride;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.type.generics.TypeParameter;
+import platform.pure.metamodel.type.generics.TypeParameterImpl;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -174,7 +175,7 @@ public abstract class FunctionIndexEntry implements PackageableFunction
     @Override
     public String _name()
     {
-        // The fullPath is the function ID like "meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_"
+        // The fullPath is the function ID like "platform::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_"
         // _name() should return just the element name (last segment)
         int sep = fullPath.lastIndexOf("::");
         return sep >= 0 ? fullPath.substring(sep + 2) : fullPath;
@@ -188,7 +189,7 @@ public abstract class FunctionIndexEntry implements PackageableFunction
     public GenericTypeValue _classifierGenericType()
     {
         // Build PackageableFunction<{FunctionType}> from the stored FunctionType
-        Type pfType = model != null ? (Type) model.getElement("meta::pure::metamodel::function::PackageableFunction") : null;
+        Type pfType = model != null ? (Type) model.getElement("platform::pure::metamodel::function::PackageableFunction") : null;
         return _GenericType.buildUserDefinedGenericType(pfType, model)
                 ._typeArguments(Lists.mutable.with(_GenericType.buildUserDefinedGenericType(functionType, model)));
     }
@@ -306,7 +307,7 @@ public abstract class FunctionIndexEntry implements PackageableFunction
     }
 
     @Override
-    public meta.pure.metamodel.function.FunctionWithParameters _parameters(MutableList<VariableExpression> value)
+    public platform.pure.metamodel.function.FunctionWithParameters _parameters(MutableList<VariableExpression> value)
     {
         throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
     }
@@ -324,31 +325,31 @@ public abstract class FunctionIndexEntry implements PackageableFunction
     }
 
     @Override
-    public meta.pure.metamodel.extension.ElementWithTaggedValues _taggedValues(MutableList<TaggedValue> value)
+    public platform.pure.metamodel.extension.ElementWithTaggedValues _taggedValues(MutableList<TaggedValue> value)
     {
         throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
     }
 
     @Override
-    public meta.pure.metamodel.extension.ElementWithStereotypes _stereotypes(MutableList<Stereotype> value)
+    public platform.pure.metamodel.extension.ElementWithStereotypes _stereotypes(MutableList<Stereotype> value)
     {
         throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
     }
 
     @Override
-    public meta.pure.metamodel.type.Any _elementOverride(ElementOverride value)
+    public platform.pure.metamodel.type.Any _elementOverride(ElementOverride value)
     {
         throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
     }
 
     @Override
-    public meta.pure.metamodel.type.Any _classifierGenericType(GenericTypeValue value)
+    public platform.pure.metamodel.type.Any _classifierGenericType(GenericTypeValue value)
     {
         throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
     }
 
     @Override
-    public meta.pure.metamodel.type.Any _sourceInformation(SourceInformation value)
+    public platform.pure.metamodel.type.Any _sourceInformation(SourceInformation value)
     {
         throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
     }
@@ -402,8 +403,8 @@ public abstract class FunctionIndexEntry implements PackageableFunction
         {
             Type t1 = resolvedType(params1.get(i));
             Type t2 = resolvedType(params2.get(i));
-            boolean t1IsTypeParam = t1 instanceof meta.pure.metamodel.type.generics.TypeParameter;
-            boolean t2IsTypeParam = t2 instanceof meta.pure.metamodel.type.generics.TypeParameter;
+            boolean t1IsTypeParam = t1 instanceof platform.pure.metamodel.type.generics.TypeParameter;
+            boolean t2IsTypeParam = t2 instanceof platform.pure.metamodel.type.generics.TypeParameter;
 
             // Null type (unresolvable) vs concrete type
             if (t1 != null && !t1IsTypeParam && t2 == null)
@@ -583,7 +584,7 @@ public abstract class FunctionIndexEntry implements PackageableFunction
         }
         long lower = 0;
         Long upper = null;
-        if (m instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
+        if (m instanceof platform.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
         {
             lower = cm._lowerBound() != null ? cm._lowerBound()._value() : 0;
             upper = cm._upperBound() != null ? cm._upperBound()._value() : null;

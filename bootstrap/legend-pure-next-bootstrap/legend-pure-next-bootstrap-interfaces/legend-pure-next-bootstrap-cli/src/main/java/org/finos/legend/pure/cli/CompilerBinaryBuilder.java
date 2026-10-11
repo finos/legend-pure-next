@@ -18,7 +18,7 @@ package org.finos.legend.pure.cli;
 import org.finos.legend.pure.m3.module.ModuleRegistry;
 import org.finos.legend.pure.runtime.compilation.JavaCompilation;
 import org.finos.legend.pure.runtime.PureRuntime;
-import meta.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.LanguageExtension;

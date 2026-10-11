@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,48 +15,48 @@
 
 package org.finos.legend.pure.m3.printer;
 
-import meta.pure.metamodel.Inferred;
-import meta.pure.metamodel.Package;
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.PropertyOwner;
-import meta.pure.metamodel.SourceInformation;
-import meta.pure.metamodel.constraint.Constraint;
-import meta.pure.metamodel.extension.ElementWithStereotypes;
-import meta.pure.metamodel.extension.ElementWithTaggedValues;
-import meta.pure.metamodel.extension.Profile;
-import meta.pure.metamodel.extension.Stereotype;
-import meta.pure.metamodel.extension.Tag;
-import meta.pure.metamodel.extension.TaggedValue;
-import meta.pure.metamodel.function.FunctionDefinition;
-import meta.pure.metamodel.function.LambdaFunction;
-import meta.pure.metamodel.function.NativeFunction;
-import meta.pure.metamodel.function.PackageableFunction;
-import meta.pure.metamodel.function.UserDefinedFunction;
-import meta.pure.metamodel.function.property.AbstractProperty;
-import meta.pure.metamodel.function.property.QualifiedProperty;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.multiplicity.MultiplicityValue;
-import meta.pure.metamodel.multiplicity.PackageableMultiplicity;
-import meta.pure.metamodel.relation.Column;
-import meta.pure.metamodel.relation.GenericTypeOperation;
-import meta.pure.metamodel.relation.RelationType;
-import meta.pure.metamodel.relationship.Association;
-import meta.pure.metamodel.type.Any;
-import meta.pure.metamodel.type.Class;
-import meta.pure.metamodel.type.Enumeration;
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.PrimitiveType;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameter;
-import meta.pure.metamodel.type.generics.ResolvedTypeParameter;
-import meta.pure.metamodel.type.generics.UserDefinedGenericType;
-import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.Collection;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.protocol.grammar.Package_Pointer;
+import platform.pure.metamodel.Inferred;
+import platform.pure.metamodel.Package;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.PropertyOwner;
+import platform.pure.metamodel.SourceInformation;
+import platform.pure.metamodel.constraint.Constraint;
+import platform.pure.metamodel.extension.ElementWithStereotypes;
+import platform.pure.metamodel.extension.ElementWithTaggedValues;
+import platform.pure.metamodel.extension.Profile;
+import platform.pure.metamodel.extension.Stereotype;
+import platform.pure.metamodel.extension.Tag;
+import platform.pure.metamodel.extension.TaggedValue;
+import platform.pure.metamodel.function.FunctionDefinition;
+import platform.pure.metamodel.function.LambdaFunction;
+import platform.pure.metamodel.function.NativeFunction;
+import platform.pure.metamodel.function.PackageableFunction;
+import platform.pure.metamodel.function.UserDefinedFunction;
+import platform.pure.metamodel.function.property.AbstractProperty;
+import platform.pure.metamodel.function.property.QualifiedProperty;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.multiplicity.MultiplicityValue;
+import platform.pure.metamodel.multiplicity.PackageableMultiplicity;
+import platform.pure.metamodel.relation.Column;
+import platform.pure.metamodel.relation.GenericTypeOperation;
+import platform.pure.metamodel.relation.RelationType;
+import platform.pure.metamodel.relationship.Association;
+import platform.pure.metamodel.type.Any;
+import platform.pure.metamodel.type.Class;
+import platform.pure.metamodel.type.Enumeration;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.PrimitiveType;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.ResolvedMultiplicityParameter;
+import platform.pure.metamodel.type.generics.ResolvedTypeParameter;
+import platform.pure.metamodel.type.generics.UserDefinedGenericType;
+import platform.pure.metamodel.valuespecification.AtomicValue;
+import platform.pure.metamodel.valuespecification.Collection;
+import platform.pure.metamodel.valuespecification.FunctionExpression;
+import platform.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.protocol.grammar.Package_Pointer;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphImpl;
@@ -82,8 +83,8 @@ import java.util.List;
 public final class CompiledGraphPrinter
 {
     // Prefixes stripped from well-known paths to keep output compact
-    private static final String META_PREFIX = "meta::pure::metamodel::";
-    private static final String FUNCTIONS_PREFIX = "meta::pure::functions::";
+    private static final String META_PREFIX = "platform::pure::metamodel::";
+    private static final String FUNCTIONS_PREFIX = "platform::pure::functions::";
     private static final String PRIMITIVES_PREFIX = META_PREFIX + "type::primitives::";
     private static final String MULTIPLICITY_PREFIX = META_PREFIX + "multiplicity::";
 
@@ -353,8 +354,8 @@ public final class CompiledGraphPrinter
                         && p._defaultValue()._expressionSequence().notEmpty())
                 {
                     ValueSpecification dvs = p._defaultValue()._expressionSequence().getFirst();
-                    if (dvs instanceof meta.pure.metamodel.valuespecification.AtomicValue av
-                            && av._value() instanceof meta.pure.metamodel.type.Enum enumVal)
+                    if (dvs instanceof platform.pure.metamodel.valuespecification.AtomicValue av
+                            && av._value() instanceof platform.pure.metamodel.type.Enum enumVal)
                     {
                         sb.append("  = ^").append(fullPath(e)).append("(name='").append(enumVal._name()).append("')");
                     }
@@ -774,7 +775,7 @@ public final class CompiledGraphPrinter
             };
             return printType(gto._left()) + op + printType(gto._right());
         }
-        if (_GenericType.type(gt) instanceof meta.pure.metamodel.type.generics.TypeParameter tp)
+        if (_GenericType.type(gt) instanceof platform.pure.metamodel.type.generics.TypeParameter tp)
         {
             String name = tp._name();
             if (tp._owner() != null && tp._owner() instanceof PackageableElement ownerElem)
@@ -925,7 +926,7 @@ public final class CompiledGraphPrinter
 
     private static String printMulCore(Multiplicity multiplicity)
     {
-        if (multiplicity instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
+        if (multiplicity instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mp)
         {
             String name = mp._name();
             if (mp._owner() != null && mp._owner() instanceof PackageableElement ownerElem)
@@ -956,7 +957,7 @@ public final class CompiledGraphPrinter
             };
         }
         // Concrete multiplicity
-        if (multiplicity instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
+        if (multiplicity instanceof platform.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
         {
             String lower = formatBound(cm._lowerBound());
             String upper = formatBound(cm._upperBound());
@@ -1006,8 +1007,8 @@ public final class CompiledGraphPrinter
 
     /**
      * Return a compact path for the element, stripping well-known prefixes.
-     * Types under {@code meta::pure::metamodel::} and functions under
-     * {@code meta::pure::functions::} are shortened to their simple name.
+     * Types under {@code platform::pure::metamodel::} and functions under
+     * {@code platform::pure::functions::} are shortened to their simple name.
      */
     private static String shortPath(PackageableElement element)
     {
@@ -1038,7 +1039,7 @@ public final class CompiledGraphPrinter
      * Stereotypes are printed as: {@code  <<profile::path.stereo>}
      * Tagged values are printed as: {@code  {profile::path.tag = 'value'}}
      */
-    private static void appendAggregationKind(StringBuilder sb, meta.pure.metamodel.function.property.Property p)
+    private static void appendAggregationKind(StringBuilder sb, platform.pure.metamodel.function.property.Property p)
     {
         if (p._aggregation() != null)
         {

@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import pack::*;
 
@@ -31,32 +45,32 @@ native function pack::doStuff_String_1__String_1_(a:@String@[1]):@String@[1]  ~N
 native function pack::doStuff_Number_1__Number_1_(a:@Number@[1]):@Number@[1]  ~NativeFunction<{@Number@[1]->@Number@[1]}>
 
 function pack::test_Number_1__Number_1__Number_1_(a:@Number@[1], b:@Number@[1]):@Number@[1]  ~UserDefinedFunction<{@Number@[1], @Number@[1]->@Number@[1]}>
-  ArrowInvocation plus_Number_1__Number_1__Number_1_ :#Number##[1]#  ~@ArrowInvocation@  @10:5-10:14
-    Variable a :#Number##[1]#  ~@VariableExpression@  @10:3-10:4
-    Variable b :#Number##[1]#  ~@VariableExpression@  @10:12-10:13
+  ArrowInvocation plus_Number_1__Number_1__Number_1_ :#Number##[1]#  ~@ArrowInvocation@  @24:5-24:14
+    Variable a :#Number##[1]#  ~@VariableExpression@  @24:3-24:4
+    Variable b :#Number##[1]#  ~@VariableExpression@  @24:12-24:13
 
 function pack::compute_Number_1__Number_1__Number_1_(x:@Number@[1], y:@Number@[1]):@Number@[1]  ~UserDefinedFunction<{@Number@[1], @Number@[1]->@Number@[1]}>
-  ArrowInvocation minus_Number_1__Number_1__Number_1_ :#Number##[1]#  ~@ArrowInvocation@  @15:5-15:25
-    ArrowInvocation plus_Number_1__Number_1__Number_1_ :#Number##[1]#  ~@ArrowInvocation@  @15:5-15:25
-      Variable x :#Number##[1]#  ~@VariableExpression@  @15:3-15:4
-      Variable y :#Number##[1]#  ~@VariableExpression@  @15:12-15:13
-    Variable x :#Number##[1]#  ~@VariableExpression@  @15:23-15:24
+  ArrowInvocation minus_Number_1__Number_1__Number_1_ :#Number##[1]#  ~@ArrowInvocation@  @29:5-29:25
+    ArrowInvocation plus_Number_1__Number_1__Number_1_ :#Number##[1]#  ~@ArrowInvocation@  @29:5-29:25
+      Variable x :#Number##[1]#  ~@VariableExpression@  @29:3-29:4
+      Variable y :#Number##[1]#  ~@VariableExpression@  @29:12-29:13
+    Variable x :#Number##[1]#  ~@VariableExpression@  @29:23-29:24
 
 function pack::testOverloadNumber_Number_1__Number_1_(n:@Number@[1]):@Number@[1]  ~UserDefinedFunction<{@Number@[1]->@Number@[1]}>
-  ArrowInvocation pack::doStuff_Number_1__Number_1_ :#Number##[1]#  ~@ArrowInvocation@  @20:5-20:15
-    Variable n :#Number##[1]#  ~@VariableExpression@  @20:3-20:4
+  ArrowInvocation pack::doStuff_Number_1__Number_1_ :#Number##[1]#  ~@ArrowInvocation@  @34:5-34:15
+    Variable n :#Number##[1]#  ~@VariableExpression@  @34:3-34:4
 
 function pack::testOverloadString_String_1__String_1_(s:@String@[1]):@String@[1]  ~UserDefinedFunction<{@String@[1]->@String@[1]}>
-  ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @25:5-25:15
-    Variable s :#String##[1]#  ~@VariableExpression@  @25:3-25:4
+  ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @39:5-39:15
+    Variable s :#String##[1]#  ~@VariableExpression@  @39:3-39:4
 
 ###ReverseIndex
-meta::pure::functions::math::minus_Number_1__Number_1__Number_1_:
-  pack::compute_Number_1__Number_1__Number_1_
-meta::pure::functions::math::plus_Number_1__Number_1__Number_1_:
-  pack::compute_Number_1__Number_1__Number_1_
-  pack::test_Number_1__Number_1__Number_1_
 pack::doStuff_Number_1__Number_1_:
   pack::testOverloadNumber_Number_1__Number_1_
 pack::doStuff_String_1__String_1_:
   pack::testOverloadString_String_1__String_1_
+platform::pure::functions::math::minus_Number_1__Number_1__Number_1_:
+  pack::compute_Number_1__Number_1__Number_1_
+platform::pure::functions::math::plus_Number_1__Number_1__Number_1_:
+  pack::compute_Number_1__Number_1__Number_1_
+  pack::test_Number_1__Number_1__Number_1_

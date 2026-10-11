@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::*;
 
@@ -19,43 +33,43 @@ function test::use(): Any[*]
 }
 
 ###CompiledGraph
-class test::Base extends Any  ~Class<test::Base>  @4:1-8:1
+class test::Base extends Any  ~Class<test::Base>  @18:1-22:1
   property name :@String@[1]  ~Property<test::Base, @String@|1>
   qualifiedProperty greeting() :@String@[1]
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @7:15-7:35
-      AtomicValue  'Hello ' :@String@[1]  ~@AtomicValue@  @7:15-7:22
-      DotApplication test::Base.name :#String##[1]#  ~@DotApplication@  @7:31-7:35
-        Variable this :#test::Base##[1]#  ~@VariableExpression@  @7:26-7:30
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @21:15-21:35
+      AtomicValue  'Hello ' :@String@[1]  ~@AtomicValue@  @21:15-21:22
+      DotApplication test::Base.name :#String##[1]#  ~@DotApplication@  @21:31-21:35
+        Variable this :#test::Base##[1]#  ~@VariableExpression@  @21:26-21:30
 
-class test::Child extends test::Base  ~Class<test::Child>  @10:1-13:1
+class test::Child extends test::Base  ~Class<test::Child>  @24:1-27:1
   property age :@Integer@[1]  ~Property<test::Child, @Integer@|1>
 
 function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Child##[1]#  ~@FunctionInvocation@  @17:3-17:42
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Child##[1]#  ~@FunctionInvocation@  @31:3-31:42
     typeParam T -> #test::Child#
     mulParam m -> #[1]#
-    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @17:7-17:7
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Child##[1]#  ~@FunctionInvocation@  @17:11-17:42
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @31:7-31:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Child##[1]#  ~@FunctionInvocation@  @31:11-31:42
       typeParam T -> test::Child
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>  @17:11-17:42
-      Collection :#KeyExpression#[2]  ~@Collection@  @17:11-17:42
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @17:18-17:31
-          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @17:18-17:31
-          AtomicValue  'Alice' :@String@[1]  ~@AtomicValue@  @17:25-17:31
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @17:34-17:41
-          AtomicValue  'age' :@String@[1]  ~@AtomicValue@  @17:34-17:41
-          AtomicValue  10 :@Integer@[1]  ~@AtomicValue@  @17:40-17:41
-  DotApplication test::Base.greeting() :#String##[1]#  ~@DotApplication@  @18:5-18:15
-    Variable c :#test::Child##[1]#  ~@VariableExpression@  @18:3-18:4
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>  @31:11-31:42
+      Collection :#KeyExpression#[2]  ~@Collection@  @31:11-31:42
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @31:18-31:31
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @31:18-31:31
+          AtomicValue  'Alice' :@String@[1]  ~@AtomicValue@  @31:25-31:31
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @31:34-31:41
+          AtomicValue  'age' :@String@[1]  ~@AtomicValue@  @31:34-31:41
+          AtomicValue  10 :@Integer@[1]  ~@AtomicValue@  @31:40-31:41
+  DotApplication test::Base.greeting() :#String##[1]#  ~@DotApplication@  @32:5-32:15
+    Variable c :#test::Child##[1]#  ~@VariableExpression@  @32:3-32:4
 
 ###ReverseIndex
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::use__Any_MANY_
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test::use__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::use__Any_MANY_
-meta::pure::functions::string::plus_String_1__String_1__String_1_:
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
   test::Base.greeting
 test::Base:
   test::Child

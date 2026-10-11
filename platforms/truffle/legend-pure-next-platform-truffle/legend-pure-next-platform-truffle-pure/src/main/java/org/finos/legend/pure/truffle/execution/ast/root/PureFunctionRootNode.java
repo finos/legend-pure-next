@@ -346,9 +346,9 @@ public final class PureFunctionRootNode extends RootNode
     {
         String path = switch (count)
         {
-            case 0 -> "meta::pure::metamodel::multiplicity::PureZero";
-            case 1 -> "meta::pure::metamodel::multiplicity::PureOne";
-            default -> "meta::pure::metamodel::multiplicity::OneMany";
+            case 0 -> "platform::pure::metamodel::multiplicity::PureZero";
+            case 1 -> "platform::pure::metamodel::multiplicity::PureOne";
+            default -> "platform::pure::metamodel::multiplicity::OneMany";
         };
         return resolver.getElement(path);
     }

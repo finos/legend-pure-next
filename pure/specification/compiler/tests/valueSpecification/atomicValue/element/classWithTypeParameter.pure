@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import a::*;
 
@@ -13,23 +27,23 @@ function test(): Integer[1]
 }
 
 ###CompiledGraph
-class a::G extends Any  ~Class<a::G<T~a::G>>  @4:1-7:1
+class a::G extends Any  ~Class<a::G<T~a::G>>  @18:1-21:1
   property p :T~a::G[1]  ~Property<a::G<T~a::G>, T~a::G|1>
 
 function test__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Class<#a::G<?>#>##[1]#  ~@FunctionInvocation@  @11:3-11:11
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Class<#a::G<?>#>##[1]#  ~@FunctionInvocation@  @25:3-25:11
     typeParam T -> #Class<#a::G<?>#>#
     mulParam m -> [1]
-    AtomicValue  'g' :@String@[1]  ~@AtomicValue@  @11:7-11:7
-    AtomicValue  a::G :#Class<#a::G<?>#>#[1]  ~@AtomicValue@  @11:11-11:11
-  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @12:16-12:23
-    DotApplication meta::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @12:5-12:15
-      Variable g :#Class<#a::G<?>#>##[1]#  ~@VariableExpression@  @12:3-12:4
+    AtomicValue  'g' :@String@[1]  ~@AtomicValue@  @25:7-25:7
+    AtomicValue  a::G :#Class<#a::G<?>#>#[1]  ~@AtomicValue@  @25:11-25:11
+  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @26:16-26:23
+    DotApplication platform::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @26:5-26:15
+      Variable g :#Class<#a::G<?>#>##[1]#  ~@VariableExpression@  @26:3-26:4
 
 ###ReverseIndex
 a::G:
   test__Integer_1_
-meta::pure::functions::collection::size_Any_MANY__Integer_1_:
+platform::pure::functions::collection::size_Any_MANY__Integer_1_:
   test__Integer_1_
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test__Integer_1_

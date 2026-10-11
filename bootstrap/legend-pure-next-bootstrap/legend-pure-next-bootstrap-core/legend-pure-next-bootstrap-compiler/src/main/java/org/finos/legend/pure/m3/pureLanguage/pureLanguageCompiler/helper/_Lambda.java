@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,17 +15,17 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.function.LambdaFunction;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
-import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
-import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.FunctionTypeImpl;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.function.LambdaFunction;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
+import platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
+import platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.FunctionTypeImpl;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.InferredGenericTypeImpl;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
 /**
@@ -68,7 +69,7 @@ public final class _Lambda
 
     public static InferredGenericTypeImpl getLambdaClassifierGenericType(MetadataAccess model, LambdaFunction lambda)
     {
-        return _GenericType.buildInferredGenericType((Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"), model)
+        return _GenericType.buildInferredGenericType((Type) model.getElement("platform::pure::metamodel::function::LambdaFunction"), model)
                 ._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
                         _GenericType.buildInferredGenericType(buildFunctionType(lambda, model), model)));
     }

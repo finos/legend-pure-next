@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +15,12 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.SourceInformation;
-import meta.pure.metamodel.function.Function;
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.SourceInformation;
+import platform.pure.metamodel.function.Function;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
@@ -28,7 +29,7 @@ import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionInde
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 
 /**
- * Helper methods for {@link meta.pure.metamodel.function.Function}.
+ * Helper methods for {@link platform.pure.metamodel.function.Function}.
  */
 public class _Function
 {
@@ -52,7 +53,7 @@ public class _Function
      */
     public static FunctionType resolveFunctionType(GenericType genericType, MetadataAccess model)
     {
-        Type functionType = (Type) model.getElement("meta::pure::metamodel::function::Function");
+        Type functionType = (Type) model.getElement("platform::pure::metamodel::function::Function");
         return (FunctionType) _GenericType.type(_GenericType.typeArguments(_GenericType.resolveForTarget(genericType, functionType, model)).getFirst());
     }
 
@@ -72,7 +73,7 @@ public class _Function
 
     public static void validateFunctionParameters(MutableList<VariableExpression> params, CompilationContext context, SourceInformation sourceInformation)
     {
-        params.collect(meta.pure.metamodel.valuespecification.VariableExpression::_name)
+        params.collect(platform.pure.metamodel.valuespecification.VariableExpression::_name)
                 .toBag().selectDuplicates().toSet()
                 .each(name -> context.addError(new CompilationError(
                         "Duplicate parameter name '" + name + "'",

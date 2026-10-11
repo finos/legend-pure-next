@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
-native function <<PCT.function>> meta::pure::functions::string::parseDate(string:String[1]):Date[1];
+native function <<PCT.function>> platform::pure::functions::string::parseDate(string:String[1]):Date[1];
 
-function <<PCT.test>> meta::pure::functions::string::tests::parseDate::testParseDate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::parseDate::testParseDate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2014-02-27T10:01:35.231, $f->eval(|parseDate('2014-02-27T10:01:35.231')));
     assertEquals(%2014-02-27T10:01:35.231, $f->eval(|parseDate('2014-2-27T10:01:35.231')));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::parseDate::testParseDateWithZ<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::parseDate::testParseDateWithZ<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2014-02-27T10:01:35.231, $f->eval(|parseDate('2014-02-27T10:01:35.231Z')));
     assertEquals(%2014-02-27T10:01:35.231, $f->eval(|parseDate('2014-2-27T10:01:35.231Z')));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::parseDate::testParseDateWithTimezone<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::parseDate::testParseDateWithTimezone<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(%2014-02-27T10:01:35.231-0500, $f->eval(|parseDate('2014-02-27T10:01:35.231-0500')));
     assertEquals(%2014-02-27T15:01:35.231+0000, $f->eval(|parseDate('2014-02-27T10:01:35.231-0500')));
@@ -37,7 +38,7 @@ function <<PCT.test>> meta::pure::functions::string::tests::parseDate::testParse
     assertEquals(%2014-02-27T05:01:35.231+0000, $f->eval(|parseDate('2014-2-27T10:01:35.231+0500')));
 }
 
-//function <<PCT.test>> meta::pure::functions::string::tests::parseDate::testParseDateTypes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+//function <<PCT.test>> platform::pure::functions::string::tests::parseDate::testParseDateTypes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 //{
 //   let dt = $f->eval(|parseDate('2014-02-27T00:00:00.000000'));
 //   assertInstanceOf($dt, DateTime);

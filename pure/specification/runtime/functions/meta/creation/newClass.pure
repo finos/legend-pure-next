@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::test::pct::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::test::pct::*;
 
 // Construct an anonymous Class<Any> with the given type/multiplicity parameters,
 // a self-referencing classifierGenericType (Class<self<TPs, MPs>>) and the
@@ -25,7 +26,7 @@ import meta::pure::test::pct::*;
 // the outer ^Class<Any> being built, so each parameter copy's owner points at
 // the surviving class instance rather than the input. `~.~.~` inside the
 // nested selfGT does the same for the self-reference in the CGT.
-function <<PCT.function>> meta::pure::functions::meta::creation::newClass(typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*], multiplicityParameters:meta::pure::metamodel::multiplicity::MultiplicityParameter[*]): Class<Any>[1]
+function <<PCT.function>> platform::pure::functions::meta::creation::newClass(typeParameters:platform::pure::metamodel::type::generics::TypeParameter[*], multiplicityParameters:platform::pure::metamodel::multiplicity::MultiplicityParameter[*]): Class<Any>[1]
 {
     ^Class<Any>(
         name = '',
@@ -41,17 +42,17 @@ function <<PCT.function>> meta::pure::functions::meta::creation::newClass(typePa
             type = Class,
             typeArguments = [^UserDefinedGenericType(
                 type = ~.~.~,
-                typeArguments = ~.~.~.typeParameters->map(tp | ^UserDefinedGenericType(type = $tp))->cast(@meta::pure::metamodel::type::generics::GenericType),
+                typeArguments = ~.~.~.typeParameters->map(tp | ^UserDefinedGenericType(type = $tp))->cast(@platform::pure::metamodel::type::generics::GenericType),
                 multiplicityArguments = ~.~.~.multiplicityParameters->cast(@Multiplicity)
             )]
         )
     );
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewClassEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::creation::testNewClassEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
-        let cls = meta::pure::functions::meta::creation::newClass([], []);
+        let cls = platform::pure::functions::meta::creation::newClass([], []);
         // Should be a Class
         assert($cls->instanceOf(Class));
         // Self-referencing CGT: Class<cls>
@@ -64,11 +65,11 @@ function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewClass
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewClassWithTypeParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::creation::testNewClassWithTypeParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let tp = ^TypeParameter(name='T', contravariant=false);
-        let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
+        let cls = platform::pure::functions::meta::creation::newClass([$tp], []);
         // Type parameters should be set
         assertEquals(1, $cls.typeParameters->size());
         // TypeParameter owner should be the created class
@@ -82,12 +83,12 @@ function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewClass
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewClassWithMultipleTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::creation::testNewClassWithMultipleTypeParameters<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let tp1 = ^TypeParameter(name='T', contravariant=false);
         let tp2 = ^TypeParameter(name='U', contravariant=false);
-        let cls = meta::pure::functions::meta::creation::newClass([$tp1, $tp2], []);
+        let cls = platform::pure::functions::meta::creation::newClass([$tp1, $tp2], []);
         assertEquals(2, $cls.typeParameters->size());
         // Both TypeParameters should have owner set to cls
         assertIs($cls, $cls.typeParameters->at(0).owner->toOne());
@@ -95,12 +96,12 @@ function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewClass
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewClassWithMultiplicityParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::creation::testNewClassWithMultiplicityParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let tp = ^TypeParameter(name='K', contravariant=false);
         let mp = ^UserDefinedMultiplicityParameter(name='m');
-        let cls = meta::pure::functions::meta::creation::newClass([$tp], [$mp]);
+        let cls = platform::pure::functions::meta::creation::newClass([$tp], [$mp]);
         assertEquals(1, $cls.typeParameters->size());
         assertEquals(1, $cls.multiplicityParameters->size());
         // MultiplicityParameter owner should be the created class

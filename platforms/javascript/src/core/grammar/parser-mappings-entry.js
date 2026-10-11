@@ -20,7 +20,7 @@
 //
 // Split out from antlr-entry.js because this half needs pure-truffle and the
 // javascript/translation PDBs to exist (antlr-generate-ts-parserMapping
-// translates meta::pure::parser::mappings), while the parser half needs none
+// translates platform::pure::parser::mappings), while the parser half needs none
 // of that. Keeping them apart lets the extension jar be packaged from the
 // parser half alone, upstream of any PDB — see antlr-entry.js.
 //

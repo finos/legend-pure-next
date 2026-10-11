@@ -38,7 +38,7 @@ A test run writes one JSON file at `test-results/<kind>/<group>/<run>.json`:
 
 ```json
 { "schema": 1, "suite": "pct", "durationMs": 754,
-  "cases": [ { "id": "meta::pure::functions::collection::tests::sort::testSimpleSort_Function_1__Boolean_1_",
+  "cases": [ { "id": "platform::pure::functions::collection::tests::sort::testSimpleSort_Function_1__Boolean_1_",
                "status": "passed", "durationMs": 15 },
              { "id": "...", "status": "failed", "durationMs": 3,
                "error": { "message": "Assert failure ...", "stack": ["..."] } } ] }

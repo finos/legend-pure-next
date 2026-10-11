@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +20,8 @@ import org.finos.legend.pure.runtime.compilation.PureCompilation;
 import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.execution.InterpretedExecution;
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.function.FunctionWithParameters;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.function.FunctionWithParameters;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.execution.DynamicInstance;
@@ -49,7 +50,7 @@ import java.util.stream.Stream;
 /**
  * Compile compiler-pure (or any Pure source tree) into a {@code .pdb} by
  * running the <strong>Pure-language compiler</strong>
- * ({@code meta::pure::compiler::compile}) on the bootstrap
+ * ({@code platform::pure::compiler::compile}) on the bootstrap
  * <strong>Java runtime</strong> ({@link PureRuntime}).
  *
  * <p>This is the third corner of the matrix:</p>
@@ -81,7 +82,7 @@ public final class PureRuntimeCompilerBinaryBuilder
      * {@code outputDir}, with filename derived from the module manifest's
      * {@code name}. Each {@code .pure} file under {@code sourceDir} is
      * parsed into a {@code PureFile} and passed through
-     * {@code meta::pure::compiler::compile} via the bootstrap
+     * {@code platform::pure::compiler::compile} via the bootstrap
      * {@link PureRuntime} runtime; the resulting elements are aggregated,
      * optionally partitioned by test-stereotype, and serialized via
      * {@link CompressedArchiveWriter}.
@@ -179,11 +180,11 @@ public final class PureRuntimeCompilerBinaryBuilder
             // Mirror the Java compiler's package-emission rule: skip Package
             // elements that already exist in the anchor (core) PDB. Compile-
             // pure expands every element's package path to all ancestors —
-            // `meta::pure::compiler::helper::class` brings in `meta::pure`,
-            // `meta`, etc. — and those ancestors live in core.pdb, so
+            // `platform::pure::compiler::helper::class` brings in `platform::pure`,
+            // `platform`, etc. — and those ancestors live in core.pdb, so
             // re-emitting them would diverge from the bootstrap output.
             // Non-Package elements always pass through.
-            if (pe instanceof meta.pure.metamodel.Package
+            if (pe instanceof platform.pure.metamodel.Package
                     && anchor != null && anchor.hasElement(path))
             {
                 continue;

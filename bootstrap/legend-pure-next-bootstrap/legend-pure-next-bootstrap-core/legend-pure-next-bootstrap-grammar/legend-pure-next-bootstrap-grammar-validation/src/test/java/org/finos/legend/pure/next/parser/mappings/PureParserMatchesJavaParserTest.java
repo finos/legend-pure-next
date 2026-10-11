@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +16,8 @@
 package org.finos.legend.pure.next.parser.mappings;
 
 import org.finos.legend.pure.m3.module.ModuleRegistry;
-import meta.pure.metamodel.function.FunctionDefinition;
-import meta.pure.protocol.PureFile;
+import platform.pure.metamodel.function.FunctionDefinition;
+import platform.pure.protocol.PureFile;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.runtime.PureRuntime;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
@@ -90,7 +91,7 @@ class PureParserMatchesJavaParserTest
                 .build();
 
         parseDocumentFn = (FunctionDefinition) mappingsModule.getElement(
-                "meta::pure::parser::mappings::interpreter::parseDocument_AntlrContext_1__String_1__Boolean_1__Pair_MANY__PureFile_1_");
+                "platform::pure::parser::mappings::interpreter::parseDocument_AntlrContext_1__String_1__Pair_MANY__PureFile_1_");
         assertNotNull(parseDocumentFn, "parseDocument missing from parser-mappings.pdb");
 
         pureRegistry = buildPureRegistry(mappingsModule);
@@ -103,10 +104,10 @@ class PureParserMatchesJavaParserTest
     private static Object buildPureRegistry(PdbModule mappingsModule)
     {
         FunctionDefinition pureSectionParserFn = (FunctionDefinition) mappingsModule.getElement(
-                "meta::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_");
+                "platform::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_");
         assertNotNull(pureSectionParserFn, "pureSectionParser missing from parser-mappings.pdb");
         FunctionDefinition noOpSectionParserFn = (FunctionDefinition) mappingsModule.getElement(
-                "meta::pure::parser::mappings::interpreter::noOpSectionParser_String_1__Pair_1_");
+                "platform::pure::parser::mappings::interpreter::noOpSectionParser_String_1__Pair_1_");
         assertNotNull(noOpSectionParserFn, "noOpSectionParser missing from parser-mappings.pdb");
 
         List<Object> registry = new ArrayList<>();
@@ -162,11 +163,9 @@ class PureParserMatchesJavaParserTest
         // produce empty `elements` for every stub section.
         PureFile expected = TopLevelParser.parse(source, name, buildReferenceExtensions());
 
-        // Pure interpreter path: TopParser → Pure parseDocument(ctx, sourceId, syntheticHeader, registry).
-        boolean syntheticHeader = !source.startsWith("###");
-        String effectiveSource = syntheticHeader ? "###Pure\n" + source : source;
+        // Pure interpreter path: TopParser → Pure parseDocument(ctx, sourceId, registry).
         org.finos.legend.pure.next.parser.TopLexer lexer = new org.finos.legend.pure.next.parser.TopLexer(
-                org.antlr.v4.runtime.CharStreams.fromString(effectiveSource));
+                org.antlr.v4.runtime.CharStreams.fromString(source));
         org.antlr.v4.runtime.CommonTokenStream tokens = new org.antlr.v4.runtime.CommonTokenStream(lexer);
         org.finos.legend.pure.next.parser.TopParser parser = new org.finos.legend.pure.next.parser.TopParser(tokens);
         parser.removeErrorListeners();
@@ -182,7 +181,7 @@ class PureParserMatchesJavaParserTest
         });
         org.finos.legend.pure.next.parser.TopParser.DocumentContext document = parser.document();
 
-        Object actual = exec.execute(parseDocumentFn, document, name, syntheticHeader, pureRegistry);
+        Object actual = exec.execute(parseDocumentFn, document, name, pureRegistry);
 
         String expectedPrint = ProtocolPrinter.print(expected);
         String actualPrint   = ProtocolPrinter.print(actual);
@@ -212,7 +211,7 @@ class PureParserMatchesJavaParserTest
         private final String sectionName;
         VerbatimSection(String sectionName) { this.sectionName = sectionName; }
         @Override public String sectionName() { return sectionName; }
-        @Override public List<meta.pure.protocol.grammar.PackageableElement> parseSection(
+        @Override public List<platform.pure.protocol.grammar.PackageableElement> parseSection(
                 String content, String sourceId, int lineOffset) { return List.of(); }
     }
 

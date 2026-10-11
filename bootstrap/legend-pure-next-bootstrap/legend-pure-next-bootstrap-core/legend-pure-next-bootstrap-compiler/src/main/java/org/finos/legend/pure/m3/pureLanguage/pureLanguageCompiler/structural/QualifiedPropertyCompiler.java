@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +15,13 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import meta.pure.metamodel.function.property.QualifiedProperty;
-import meta.pure.metamodel.function.property.QualifiedPropertyImpl;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.function.property.QualifiedProperty;
+import platform.pure.metamodel.function.property.QualifiedPropertyImpl;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -33,7 +34,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.Fun
 import java.util.Objects;
 
 /**
- * Compiles a grammar-level {@link meta.pure.protocol.grammar.function.property.QualifiedProperty}
+ * Compiles a grammar-level {@link platform.pure.protocol.grammar.function.property.QualifiedProperty}
  * into a metamodel-level {@link QualifiedProperty}.
  *
  * <p>The first parameter is an implicit {@code this} parameter typed to the owner.</p>
@@ -56,7 +57,7 @@ public final class QualifiedPropertyCompiler
      * @return a fully resolved metamodel QualifiedProperty, or null if unresolvable
      */
     public static QualifiedProperty compile(
-            meta.pure.protocol.grammar.function.property.QualifiedProperty grammarQP,
+            platform.pure.protocol.grammar.function.property.QualifiedProperty grammarQP,
             GenericType owner,
             MutableList<String> imports,
             MetadataAccess model,
@@ -83,7 +84,7 @@ public final class QualifiedPropertyCompiler
             VariableExpression thisParam = _VariableExpression.newVariableExpression(model)
                     ._name("this")
                     ._genericType(owner)
-                    ._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
+                    ._multiplicity((Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::PureOne"));
             parameters.add(0, thisParam);
         }
 
@@ -108,7 +109,7 @@ public final class QualifiedPropertyCompiler
         if (owner != null)
         {
             result._classifierGenericType(
-                    _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::function::property::QualifiedProperty"), model)
+                    _GenericType.buildUserDefinedGenericType((Type) model.getElement("platform::pure::metamodel::function::property::QualifiedProperty"), model)
                             ._typeArguments(Lists.mutable.with(
                                     _GenericType.buildUserDefinedGenericType(
                                             _FunctionType.newFunctionType(model)

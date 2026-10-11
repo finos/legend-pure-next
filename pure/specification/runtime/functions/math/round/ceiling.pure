@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,45 +13,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
-native function <<PCT.function>> meta::pure::functions::math::ceiling(number:Number[1]):Integer[1];
+native function <<PCT.function>> platform::pure::functions::math::ceiling(number:Number[1]):Integer[1];
 
-function <<PCT.test>> meta::pure::functions::math::tests::ceiling::testPositiveIntegerCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::ceiling::testPositiveIntegerCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(17, $f->eval(|ceiling(17)));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::ceiling::testNegativeIntegerCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::ceiling::testNegativeIntegerCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(-17, $f->eval(|ceiling(-17)));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::ceiling::testPositiveFloatCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::ceiling::testPositiveFloatCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(18, $f->eval(|ceiling(17.9)));
     assertEquals(18, $f->eval(|ceiling(17.5)));
     assertEquals(18, $f->eval(|ceiling(17.01)));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::ceiling::testPositiveFloatWithZeroDecimalCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::ceiling::testPositiveFloatWithZeroDecimalCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(17, $f->eval(|ceiling(17.0)));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::ceiling::testNegativeFloatCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::ceiling::testNegativeFloatCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(-17, $f->eval(|ceiling(-17.9)));
     assertEquals(-17, $f->eval(|ceiling(-17.5)));
     assertEquals(-17, $f->eval(|ceiling(-17.01)));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::ceiling::testNegativeFloatWithZeroDecimalCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::ceiling::testNegativeFloatWithZeroDecimalCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(-17, $f->eval(|ceiling(-17.0)));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::ceiling::testDecimalCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::ceiling::testDecimalCeiling<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(4, $f->eval(|3.14d->ceiling()));
     assertEquals(-3, $f->eval(|ceiling(-3.14d)));

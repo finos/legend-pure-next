@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,32 +14,32 @@
 // limitations under the License.
 
 
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::function::property::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::metamodel::relationship::*;
-import meta::pure::metamodel::constraint::*;
-import meta::pure::metamodel::pointer::*;
-import meta::pure::compiler::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::functions::meta::*;
-import meta::pure::functions::collection::*;
-import meta::pure::functions::string::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::test::printer::*;
-import meta::pure::compiler::test::printer::primitive::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::metamodel::constraint::*;
+import platform::pure::metamodel::pointer::*;
+import platform::pure::compiler::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::functions::meta::*;
+import platform::pure::functions::collection::*;
+import platform::pure::functions::string::*;
+import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::test::printer::*;
+import platform::pure::compiler::test::printer::primitive::*;
 
 // -----------------------------------------------------------------------
 // Public entry point
 // -----------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printCompiledGraph(elements:PackageableElement[*], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printCompiledGraph(elements:PackageableElement[*], context:CompilerContext[1]):String[1]
 {
     // Skip test-framework elements (###CompiledGraph, ###CompilerStats,
     // ###File markers) and synthetic Packages — they parse into
@@ -55,10 +56,10 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printCompi
     // its live QualifiedProperty for parameter-signature display). Pointer
     // dereference goes through `dereferencePointer(ptr, context)`.
     $elements
-        ->filter(e | !$e->instanceOf(meta::pure::compiler::test::CompiledGraph)
-                  && !$e->instanceOf(meta::pure::compiler::test::CompilerStats)
-                  && !$e->instanceOf(meta::pure::compiler::test::TestFile)
-                  && !$e->instanceOf(meta::pure::metamodel::Package))
+        ->filter(e | !$e->instanceOf(platform::pure::compiler::test::CompiledGraph)
+                  && !$e->instanceOf(platform::pure::compiler::test::CompilerStats)
+                  && !$e->instanceOf(platform::pure::compiler::test::TestFile)
+                  && !$e->instanceOf(platform::pure::metamodel::Package))
         ->sort({a, b |
             let aSi = $a.sourceInformation;
             let bSi = $b.sourceInformation;
@@ -87,7 +88,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printCompi
         ->joinStrings('\n\n')
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::stripTrailingNewlines(s:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::stripTrailingNewlines(s:String[1]):String[1]
 {
     if($s->endsWith('\n'), | $s->substring(0, $s->length() - 1)->stripTrailingNewlines(), | $s);
 }
@@ -96,7 +97,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::stripTrail
 // Top-level element dispatch
 // -----------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printElement(element:PackageableElement[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printElement(element:PackageableElement[1], context:CompilerContext[1]):String[1]
 {
     $element->match(
         [
@@ -104,8 +105,8 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printEleme
             fn:NativeFunction<Any>[1] | $fn->printNativeFunction(),
             c:Class<Any>[1] | $c->printClass($context),
             assoc:Association[1] | $assoc->printAssociation($context),
-            en:Enumeration<Any>[1] | $en->meta::pure::compiler::test::printer::printEnumeration(),
-            pr:Profile[1] | $pr->meta::pure::compiler::test::printer::printProfile(),
+            en:Enumeration<Any>[1] | $en->platform::pure::compiler::test::printer::printEnumeration(),
+            pr:Profile[1] | $pr->platform::pure::compiler::test::printer::printProfile(),
             p:PrimitiveType[1] | $p->printPrimitive($context),
             a:Any[1] | 'unsupported: ' + $element->cast(@PackageableElement)->fullPath()
         ]
@@ -116,7 +117,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printEleme
 // Functions
 // -----------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printUserDefinedFunction(fn:UserDefinedFunction<Any>[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printUserDefinedFunction(fn:UserDefinedFunction<Any>[1], context:CompilerContext[1]):String[1]
 {
     let sig = $fn->functionSignature();
     let body = $fn.expressionSequence->cast(@ValueSpecification)->map(expr | $expr->printVS('  ', $context))->joinStrings('\n');
@@ -131,7 +132,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printUserD
     ]->joinStrings('');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printNativeFunction(fn:NativeFunction<Any>[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printNativeFunction(fn:NativeFunction<Any>[1]):String[1]
 {
     [
         'native function ', $fn->functionSignature(),
@@ -141,7 +142,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printNativ
     ]->joinStrings('');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::functionSignature(fn:PackageableFunction<Any>[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::functionSignature(fn:PackageableFunction<Any>[1]):String[1]
 {
     let paramStr = $fn.parameters->cast(@VariableExpression)->map(p |
         $p.name->toOne() + ':' + $p.genericType->toOne()->printType() + $p.multiplicity->toOne()->printMul()
@@ -153,7 +154,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::functionSi
 // Classes
 // -----------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printClass(c:Class<Any>[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printClass(c:Class<Any>[1], context:CompilerContext[1]):String[1]
 {
     [
         'class ', $c->fullPath(),
@@ -173,7 +174,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printClass
 // Associations
 // -----------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printAssociation(assoc:Association[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printAssociation(assoc:Association[1], context:CompilerContext[1]):String[1]
 {
     [
         'association ', $assoc->fullPath(),
@@ -190,7 +191,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printAssoc
 // Enumerations
 // -----------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printEnumeration(en:Enumeration<Any>[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printEnumeration(en:Enumeration<Any>[1]):String[1]
 {
     [
         'enumeration ', $en->fullPath(),
@@ -203,7 +204,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printEnume
     ]->joinStrings('');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printEnumerationProperty(p:Any[1], en:Enumeration<Any>[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printEnumerationProperty(p:Any[1], en:Enumeration<Any>[1]):String[1]
 {
     let p2 = $p->cast(@Property<Nil, Any|*>);
     let propCGT = $p2.classifierGenericType->printCGT();
@@ -229,7 +230,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printEnume
 // Profiles
 // -----------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printProfile(pr:Profile[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printProfile(pr:Profile[1]):String[1]
 {
     [
         'profile ', $pr->fullPath(),
@@ -245,7 +246,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printProfi
 // Shared: properties, qualified properties, constraints, annotations
 // -----------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printProperty(p:Property<Nil, Any|*>[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printProperty(p:Property<Nil, Any|*>[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     let agg = if($p.aggregation->isEmpty(), | '',
         | let name = $p.aggregation->toOne()->toString();
@@ -258,7 +259,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printPrope
     $p->printDefaultValue($indent + '  ', $context);
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printDefaultValue(p:Property<Nil, Any|*>[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printDefaultValue(p:Property<Nil, Any|*>[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     if($p.defaultValue->isEmpty(), | '',
         | let lambda = $p.defaultValue->toOne()->cast(@LambdaFunction<Any>);
@@ -271,7 +272,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printDefau
     );
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printQualifiedProperties(owner:Any[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printQualifiedProperties(owner:Any[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     let qps = $owner->cast(@PropertyOwner).qualifiedProperties;
     if($qps->isEmpty(), | '',
@@ -288,23 +289,23 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printQuali
     );
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printConstraints(owner:Any[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printConstraints(owner:Any[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     let constraints = $owner->match([c:Class<Any>[1] | $c.constraints, p:PrimitiveType[1] | $p.constraints, a:Any[1] | []->cast(@Constraint)]);
     $constraints->map(c | $c->printConstraint('constraint', $indent, $context))->joinStrings('');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printPreConstraints(fn:UserDefinedFunction<Any>[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printPreConstraints(fn:UserDefinedFunction<Any>[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     $fn.preConstraints->map(c | $c->printConstraint('preConstraint', $indent, $context))->joinStrings('');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printPostConstraints(fn:UserDefinedFunction<Any>[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printPostConstraints(fn:UserDefinedFunction<Any>[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     $fn.postConstraints->map(c | $c->printConstraint('postConstraint', $indent, $context))->joinStrings('');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printConstraint(c:Constraint[1], label:String[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printConstraint(c:Constraint[1], label:String[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     let header = $indent + $label +
         if($c.name->isEmpty(), | '', | ' ' + $c.name->toOne()) +
@@ -319,7 +320,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printConst
     $header + $body + $msgFn + '\n';
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printAnnotations(element:Any[1], indent:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printAnnotations(element:Any[1], indent:String[1]):String[1]
 {
     let stereos = $element->match([s:ElementWithStereotypes[1] | $s.stereotypes, a:Any[1] | []->cast(@Stereotype)]);
     let tvs = $element->match([t:ElementWithTaggedValues[1] | $t.taggedValues, a:Any[1] | []->cast(@TaggedValue)]);
@@ -332,7 +333,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printAnnot
     $stereoStr + $tvStr;
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printTypeVariables(owner:Any[1], indent:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printTypeVariables(owner:Any[1], indent:String[1]):String[1]
 {
     let tvs = $owner->match([c:Class<Any>[1] | $c.typeVariables, p:PrimitiveType[1] | $p.typeVariables, a:Any[1] | []]);
     $tvs->cast(@VariableExpression)->map(tv |
@@ -344,7 +345,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printTypeV
 // ValueSpecification printing
 // -----------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printVS(vs:ValueSpecification[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printVS(vs:ValueSpecification[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     $vs->match([
         fe:FunctionExpression[1] | $fe->printFunctionExpression($indent, $context),
@@ -356,7 +357,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printVS(vs
     ]);
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printFunctionExpression(fe:FunctionExpression[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printFunctionExpression(fe:FunctionExpression[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     let kind = $fe->type()->toString()->replace('FlatBufferWrapper', '')->replace('Impl', '');
     let funcName = if($fe.func->isEmpty(),
@@ -366,7 +367,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printFunct
             // are populated). The Package/PropertyPointer arms read those
             // directly — the printer wants the identity for display, which is
             // exactly what the pointer carries. shortPath is reused so the
-            // function-name shortening (e.g. stripping `meta::pure::functions::`)
+            // function-name shortening (e.g. stripping `platform::pure::functions::`)
             // is identical to the non-pointer path.
             //
             // The QualifiedPropertyPointer arm needs the parameter signature
@@ -402,7 +403,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printFunct
     ]->joinStrings('');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printAtomicValue(av:AtomicValue[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printAtomicValue(av:AtomicValue[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     let val = $av.value->toOne();
     if($val->instanceOf(LambdaFunction),
@@ -431,7 +432,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printAtomi
     );
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printCollection(col:Collection[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printCollection(col:Collection[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     let items = $col.values->cast(@ValueSpecification)->map(item | $item->printVS($indent + '  ', $context))->joinStrings('\n');
     [
@@ -443,7 +444,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printColle
     ]->joinStrings('');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printVariable(v:VariableExpression[1], indent:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printVariable(v:VariableExpression[1], indent:String[1]):String[1]
 {
     [
         $indent, 'Variable ', $v.name->toOne(),
@@ -453,7 +454,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printVaria
     ]->joinStrings('');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printHolder(gmh:GenericTypeAndMultiplicityHolder[1], indent:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printHolder(gmh:GenericTypeAndMultiplicityHolder[1], indent:String[1]):String[1]
 {
     // TypeHolder's genericType may be empty or CompilerNotSetGenericType (matches Java where it's null).
     // Read type info from classifierGenericType instead.
@@ -467,7 +468,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printHolde
     ]->joinStrings('');
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printLambda(lambda:FunctionDefinition<Any>[1], indent:String[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printLambda(lambda:FunctionDefinition<Any>[1], indent:String[1], context:CompilerContext[1]):String[1]
 {
     let l = $lambda->cast(@LambdaFunction<Any>);
     let paramStr = $l.parameters->cast(@VariableExpression)->map(p |
@@ -481,7 +482,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printLambd
 // Shared helpers
 // -----------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::shortPath(element:PackageableElement[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::shortPath(element:PackageableElement[1]):String[1]
 {
     let path = $element->fullPath();
     // For pointers, use the path-tail as the simple-name short form (the
@@ -490,35 +491,35 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::shortPath(
         ptr : TempCompilerPointer[1] | $path->split('::')->last()->toOne(),
         pe  : PackageableElement[1]  | $pe.name->toOne()
     ]);
-    if([pair(| $path->startsWith('meta::pure::metamodel::type::primitives::'), | $path->substring(41)),
-        pair(| $path->startsWith('meta::pure::metamodel::') || $path->startsWith('meta::pure::functions::'), | $simpleName)],
+    if([pair(| $path->startsWith('platform::pure::metamodel::type::primitives::'), | $path->substring(45)),
+        pair(| $path->startsWith('platform::pure::metamodel::') || $path->startsWith('platform::pure::functions::'), | $simpleName)],
        | $path
     );
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::classifierGT(element:Any[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::classifierGT(element:Any[1]):String[1]
 {
     $element->cast(@Any).classifierGenericType->printCGT();
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::vsCGT(vs:ValueSpecification[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::vsCGT(vs:ValueSpecification[1]):String[1]
 {
     $vs->cast(@Any).classifierGenericType->printCGT();
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printCGT(cgt:GenericType[0..1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printCGT(cgt:GenericType[0..1]):String[1]
 {
     if($cgt->isEmpty(), | '', | '  ~' + $cgt->toOne()->printType());
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printSourceInfo(si:SourceInformation[0..1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printSourceInfo(si:SourceInformation[0..1]):String[1]
 {
     if($si->isEmpty(), | '',
         | '  @' + $si.startLine->toOne()->toString() + ':' + $si.startColumn->toOne()->toString() + '-' + $si.endLine->toOne()->toString() + ':' + $si.endColumn->toOne()->toString()
     );
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::formatLiteral(value:Any[1], declaredType:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::formatLiteral(value:Any[1], declaredType:String[1]):String[1]
 {
     if($value->instanceOf(PackageableElement),
         | $value->cast(@PackageableElement)->fullPath(),
@@ -536,7 +537,7 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::formatLite
 // Type / multiplicity helpers
 // -----------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printType(gt:GenericType[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printType(gt:GenericType[1]):String[1]
 {
     let isInferred = $gt->instanceOf(Inferred);
     // Canonical UDPGT-PE marker: GenericType instances that are also
@@ -597,18 +598,18 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printType(
     if($isCanonicalAnchor, | '@' + $withInferred + '@', | $withInferred);
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printValueInline(vs:ValueSpecification[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printValueInline(vs:ValueSpecification[1]):String[1]
 {
     $vs->match([a:AtomicValue[1] | $a.value->toOne()->toString(), v:Any[1] | $v->toString()]);
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::printMul(mul:Multiplicity[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printMul(mul:Multiplicity[1]):String[1]
 {
     let isInferred = $mul->instanceOf(Inferred);
     let coreMul = $mul->match([
         pm:PackageableMultiplicity[1] |
             let path = $pm->fullPath();
-            let strip1 = if($path->startsWith('meta::pure::metamodel::multiplicity::'), | $path->substring(37), | $path);
+            let strip1 = if($path->startsWith('platform::pure::metamodel::multiplicity::'), | $path->substring(41), | $path);
             let strip2 = if($strip1->startsWith('Inferred'), | $strip1->substring(8), | $strip1);
             if([pair(| $strip2 == 'PureOne', | '[1]'),
                 pair(| $strip2 == 'ZeroOne', | '[0..1]'),
@@ -631,14 +632,14 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printMul(m
 
 // --- Tests for printType on synthetic GenericTypes ---
 
-function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintTypeParameter():Boolean[1]
+function <<test.Test>> platform::pure::compiler::test::printer::tests::testPrintTypeParameter():Boolean[1]
 {
     let tp = buildTypeParameter('T', false);
     let gt = buildUserDefinedGenericType($tp);
     assertEquals('T', $gt->printType());
 }
 
-function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintTypeParameterWithOwner():Boolean[1]
+function <<test.Test>> platform::pure::compiler::test::printer::tests::testPrintTypeParameterWithOwner():Boolean[1]
 {
     let owner = new(^UserDefinedGenericType(type=Class, typeArguments=[^UserDefinedGenericType(type=Any)]))->cast(@Class<Any>);
     let builtOwner = ^$owner(name='MyClass', package=^Package(name='test', package=^Package(name='Root')));
@@ -648,13 +649,13 @@ function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintType
     assertEquals('T~test::MyClass', $gt->printType());
 }
 
-function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintConcreteType():Boolean[1]
+function <<test.Test>> platform::pure::compiler::test::printer::tests::testPrintConcreteType():Boolean[1]
 {
     let gt = ^UserDefinedGenericType(type=String);
     assertEquals('String', $gt->printType());
 }
 
-function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintGenericTypeWithArgs():Boolean[1]
+function <<test.Test>> platform::pure::compiler::test::printer::tests::testPrintGenericTypeWithArgs():Boolean[1]
 {
     // Wrapper<String> — a Class with one type argument
     let owner = new(^UserDefinedGenericType(type=Class, typeArguments=[^UserDefinedGenericType(type=Any)]))->cast(@Class<Any>);

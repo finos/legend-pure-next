@@ -33,7 +33,7 @@ import java.nio.file.Path;
  *
  * <p>Usage: {@code PureJava [--root <dir>] [--pdb a.pdb ...] --function <path> [--args v ...]}. The
  * function path is the element path with its signature
- * ({@code meta::pure::functions::string::joinStrings_String_MANY__String_1__String_1_}); arguments are
+ * ({@code platform::pure::functions::string::joinStrings_String_MANY__String_1__String_1_}); arguments are
  * passed as Strings and the result is printed. {@code --schema m3.fbs} overrides the schema the platform
  * ships; it is not needed.</p>
  *

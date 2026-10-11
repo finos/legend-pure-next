@@ -13,23 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::structural::sourceInformationCompiler::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::qualifiedPropertyCompiler::*;
-import meta::pure::compiler::structural::annotationCompiler::*;
-import meta::pure::compiler::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::function::property::*;
-import meta::pure::metamodel::relationship::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::functions::lang::*;
+import platform::pure::compiler::structural::sourceInformationCompiler::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::compiler::structural::genericTypeCompiler::*;
+import platform::pure::compiler::helper::type::*;
+import platform::pure::compiler::structural::propertyCompiler::*;
+import platform::pure::compiler::structural::qualifiedPropertyCompiler::*;
+import platform::pure::compiler::structural::annotationCompiler::*;
+import platform::pure::compiler::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::functions::lang::*;
 
-function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::pure::protocol::grammar::relationship::Association[1], context:CompilerContext[1]):CompilerResult<Association>[1]
+function platform::pure::compiler::elements::compileAssociation(protocolAssoc:platform::pure::protocol::grammar::relationship::Association[1], context:CompilerContext[1]):CompilerResult<Association>[1]
 {
     let packagePath = $protocolAssoc.package->toOne().value;
     let assocName = $packagePath + '::' + $protocolAssoc.name;
@@ -44,13 +44,13 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
     // genericType attribute to {@code Assoc.propName} in the reverse index.
     // Mirrors Java AssociationHandler.secondPass withCallerSubElement.
     let gt1Result = $context->withCallerSubElement($p1Protocol.name, {ctx |
-        $p1Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)
+        $p1Protocol.genericType->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue)
             ->compileGenericType($ctx, $packagePath, [], 'property \'' + $p1Protocol.name + '\'', $ownerCtx);
     });
     let mGenType1 = $gt1Result.value->toOne();
 
     let gt2Result = $gt1Result.context->withCallerSubElement($p2Protocol.name, {ctx |
-        $p2Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)
+        $p2Protocol.genericType->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue)
             ->compileGenericType($ctx, $packagePath, [], 'property \'' + $p2Protocol.name + '\'', $ownerCtx);
     });
     let mGenType2 = $gt2Result.value->toOne();
@@ -59,8 +59,8 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
 
     if($ctx1.errors->size() > $context.errors->size(),
         | ^CompilerResult<Association>(value = $skeleton, context = $ctx1),
-        | let mMult1 = meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($p1Protocol.multiplicity);
-          let mMult2 = meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($p2Protocol.multiplicity);
+        | let mMult1 = platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($p1Protocol.multiplicity);
+          let mMult2 = platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($p2Protocol.multiplicity);
 
           // Compile each property's stereotypes/tagged values with the caller
           // sub-element pushed (so annotation references attribute to
@@ -127,7 +127,7 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
           // (the class that "owns" the first property, i.e. where QPs are accessible).
           // Deref pointer first so downstream `.name` / `.typeParameters` reads work
           // (Class_Pointer carries only path+element).
-          let qpOwnerClass = $mGenType2->rawType()->meta::pure::compiler::helper::type::derefTypeIfPointer($ctx2)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
+          let qpOwnerClass = $mGenType2->rawType()->platform::pure::compiler::helper::type::derefTypeIfPointer($ctx2)->toOne()->cast(@platform::pure::metamodel::type::Class<Any>);
           let qpAccum = $protocolAssoc.qualifiedProperties->fold({qp, acc |
               // Push the QP sub-element so its references attribute to
               // {@code Assoc.qpName} (mirrors Java AssociationHandler /

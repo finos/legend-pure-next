@@ -65,8 +65,8 @@ public final class OpenVariableValuesNode extends PureNode
     private static Object buildMap(Object lambdaRaw, MetadataAccess resolver)
     {
         PureContext ctx = PureLanguage.get(null);
-        Object mapCgt  = ctx.cgtForType("meta::pure::functions::collection::Map");
-        Object listCgt = ctx.cgtForType("meta::pure::functions::collection::List");
+        Object mapCgt  = ctx.cgtForType("platform::pure::functions::collection::Map");
+        Object listCgt = ctx.cgtForType("platform::pure::functions::collection::List");
         if (mapCgt == null || listCgt == null)
         {
             throw new RuntimeException("[OpenVariableValuesNode] Cannot resolve Map/List type from PDB");
@@ -93,7 +93,7 @@ public final class OpenVariableValuesNode extends PureNode
         for (int i = 0; i < names.length; i++)
         {
             Object listInstance = TruffleInstanceFactory.createInstance(
-                    "meta::pure::functions::collection::List", resolver);
+                    "platform::pure::functions::collection::List", resolver);
             _Any.write(listInstance, "classifierGenericType", listCgt);
             _Any.write(listInstance, "values", toObjectSequence(values[i]));
             map.put(names[i], listInstance);

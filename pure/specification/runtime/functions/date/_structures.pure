@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::date::*;
+import platform::pure::functions::date::*;
 
-Enum meta::pure::functions::date::Month
+Enum platform::pure::functions::date::Month
 {
    January,
    February,
@@ -30,7 +31,7 @@ Enum meta::pure::functions::date::Month
    December
 }
 
-Enum meta::pure::functions::date::Quarter
+Enum platform::pure::functions::date::Quarter
 {
    //todo - change these to numbers when we support integers in enums (1,2,3,4)
    Q1,
@@ -39,7 +40,7 @@ Enum meta::pure::functions::date::Quarter
    Q4
 }
 
-Enum meta::pure::functions::date::DayOfWeek
+Enum platform::pure::functions::date::DayOfWeek
 {
    Monday,
    Tuesday,
@@ -51,7 +52,7 @@ Enum meta::pure::functions::date::DayOfWeek
 }
 
 
-Enum meta::pure::functions::date::DurationUnit
+Enum platform::pure::functions::date::DurationUnit
 {
     YEARS,
     MONTHS,
@@ -65,13 +66,13 @@ Enum meta::pure::functions::date::DurationUnit
     NANOSECONDS
 }
 
-Class meta::pure::functions::date::Duration
+Class platform::pure::functions::date::Duration
 {
     number:Integer[1];
     unit:DurationUnit[1];
 }
 
-Class meta::pure::functions::date::Time
+Class platform::pure::functions::date::Time
 {
    hours:Integer[1];
    minutes:Integer[1];

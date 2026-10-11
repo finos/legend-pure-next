@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +15,13 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
-import meta.pure.metamodel.type.ClassImpl;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.TypeParameter;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
-import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
+import platform.pure.metamodel.type.ClassImpl;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.TypeParameter;
+import platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import platform.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -53,13 +54,13 @@ public final class ClassHandler
     {
     }
 
-    public static meta.pure.metamodel.type.Class firstPass(meta.pure.protocol.grammar.type.Class grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
+    public static platform.pure.metamodel.type.Class firstPass(platform.pure.protocol.grammar.type.Class grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         return new ClassImpl() // the classifierGenericType is set in the secondPass
                    ._name(grammar._name());
     }
 
-    public static meta.pure.metamodel.type.Class secondPass(ClassImpl result, meta.pure.protocol.grammar.type.Class grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static platform.pure.metamodel.type.Class secondPass(ClassImpl result, platform.pure.protocol.grammar.type.Class grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         // Compile and set type parameters (e.g., T, U for Class<T, U>)
         MutableList<TypeParameter> typeParameters = grammar._typeParameters()
@@ -71,7 +72,7 @@ public final class ClassHandler
         }
 
         // Compile and set multiplicity parameters (e.g., m for Class<T|m>)
-        MutableList<meta.pure.metamodel.multiplicity.MultiplicityParameter> multiplicityParameters = grammar._multiplicityParameters()
+        MutableList<platform.pure.metamodel.multiplicity.MultiplicityParameter> multiplicityParameters = grammar._multiplicityParameters()
                 .collect(mp -> org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.MultiplicityCompiler.compileMultiplicityParameter(mp, result, model))
                 .select(Objects::nonNull);
         if (multiplicityParameters.notEmpty())
@@ -100,23 +101,23 @@ public final class ClassHandler
         // Per-property compile attributes references to the sub-element path
         // (e.g. {@code MyClass.bar}) rather than the enclosing Class, so the
         // reverse index shows which property uses each referenced type.
-        MutableList<meta.pure.metamodel.function.property.Property> properties = grammar._properties()
+        MutableList<platform.pure.metamodel.function.property.Property> properties = grammar._properties()
                 .collect(p -> context.withCallerSubElement(p._name(),
                         () -> PropertyCompiler.compile(p, ownerGenericType, imports, model, context)))
                 .select(Objects::nonNull);
-        properties.forEach(p -> ((meta.pure.metamodel.function.property.PropertyImpl) p)._owner(result));
+        properties.forEach(p -> ((platform.pure.metamodel.function.property.PropertyImpl) p)._owner(result));
 
-        MutableList<meta.pure.metamodel.function.property.QualifiedProperty> qualifiedProperties = grammar._qualifiedProperties()
+        MutableList<platform.pure.metamodel.function.property.QualifiedProperty> qualifiedProperties = grammar._qualifiedProperties()
                 .collect(qp -> context.withCallerSubElement(qp._name(),
                         () -> QualifiedPropertyCompiler.compile(qp, ownerGenericType, imports, model, context)))
                 .select(Objects::nonNull);
-        qualifiedProperties.forEach(qp -> ((meta.pure.metamodel.function.property.QualifiedPropertyImpl) qp)._owner(result));
+        qualifiedProperties.forEach(qp -> ((platform.pure.metamodel.function.property.QualifiedPropertyImpl) qp)._owner(result));
 
         result._properties(properties)
                 ._qualifiedProperties(qualifiedProperties)
                 ._generalizations(grammar._generalizations().isEmpty()
-                        ? Lists.mutable.with(new meta.pure.metamodel.relationship.GeneralizationImpl(model)
-                                ._general(_GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::Any"), model))
+                        ? Lists.mutable.with(new platform.pure.metamodel.relationship.GeneralizationImpl(model)
+                                ._general(_GenericType.buildUserDefinedGenericType((Type) model.getElement("platform::pure::metamodel::type::Any"), model))
                                 ._specific(result))
                         : grammar._generalizations()
                                 .collect(g -> GeneralizationCompiler.compile(g, result, imports, model, context))
@@ -128,7 +129,7 @@ public final class ClassHandler
                         .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                         .select(Objects::nonNull))
                 ._classifierGenericType(
-                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::Class"), model)
+                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("platform::pure::metamodel::type::Class"), model)
                                 ._typeArguments(Lists.mutable.with(ownerGenericType)))
                 ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model));
 
@@ -154,7 +155,7 @@ public final class ClassHandler
      * Third pass: resolve expression sequences in qualified properties
      * and validate return type/multiplicity compatibility.
      */
-    public static meta.pure.metamodel.type.Class thirdPass(meta.pure.metamodel.type.Class cls, meta.pure.protocol.grammar.type.Class grammar,
+    public static platform.pure.metamodel.type.Class thirdPass(platform.pure.metamodel.type.Class cls, platform.pure.protocol.grammar.type.Class grammar,
                                   MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         // Set in-scope type/multiplicity params so inner FunctionExpressions in qualified
@@ -176,11 +177,11 @@ public final class ClassHandler
             {
                 if (cls._generalizations() != null)
                 {
-                    for (meta.pure.metamodel.relationship.Generalization gen : cls._generalizations())
+                    for (platform.pure.metamodel.relationship.Generalization gen : cls._generalizations())
                     {
-                        if (gen._general() != null && _GenericType.type(gen._general()) instanceof meta.pure.metamodel.type.Class superOwner)
+                        if (gen._general() != null && _GenericType.type(gen._general()) instanceof platform.pure.metamodel.type.Class superOwner)
                         {
-                            org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.function.property.QualifiedProperty> superProps = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class.findQualifiedProperties(superOwner, qp._name());
+                            org.eclipse.collections.api.list.MutableList<platform.pure.metamodel.function.property.QualifiedProperty> superProps = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class.findQualifiedProperties(superOwner, qp._name());
                             if (superProps != null && superProps.notEmpty())
                             {
                                 GenericType receiverGT = cls._classifierGenericType() != null && _GenericType.typeArguments(cls._classifierGenericType()) != null && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
@@ -188,7 +189,7 @@ public final class ClassHandler
                                         : _GenericType.buildUserDefinedGenericType(cls, model);
                                 org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding bindings = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class.buildBindingsFromGenericType(cls, receiverGT);
 
-                                for (meta.pure.metamodel.function.property.QualifiedProperty superProp : superProps)
+                                for (platform.pure.metamodel.function.property.QualifiedProperty superProp : superProps)
                                 {
                                     if (qp._parameters().size() == superProp._parameters().size())
                                     {
@@ -207,8 +208,8 @@ public final class ClassHandler
                                         {
                                             GenericType msReturnGT = qp._genericType();
                                             GenericType otherReturnGT = _GenericType.makeAsConcreteAsPossible(superProp._genericType(), bindings, model);
-                                            meta.pure.metamodel.multiplicity.Multiplicity msReturnMul = qp._multiplicity();
-                                            meta.pure.metamodel.multiplicity.Multiplicity otherReturnMul = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.makeAsConcreteAsPossible(superProp._multiplicity(), bindings);
+                                            platform.pure.metamodel.multiplicity.Multiplicity msReturnMul = qp._multiplicity();
+                                            platform.pure.metamodel.multiplicity.Multiplicity otherReturnMul = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.makeAsConcreteAsPossible(superProp._multiplicity(), bindings);
 
                                             if (msReturnGT != null && otherReturnGT != null && !_GenericType.isCompatible(otherReturnGT, msReturnGT, model))
                                             {
@@ -245,23 +246,23 @@ public final class ClassHandler
                 // Validate that if this property overrides a superclass property, its return type and multiplicity are INVARIANT
                 if (cls._generalizations() != null)
                 {
-                    for (meta.pure.metamodel.relationship.Generalization gen : cls._generalizations())
+                    for (platform.pure.metamodel.relationship.Generalization gen : cls._generalizations())
                     {
-                        if (gen._general() != null && _GenericType.type(gen._general()) instanceof meta.pure.metamodel.SimplePropertyOwner superOwner)
+                        if (gen._general() != null && _GenericType.type(gen._general()) instanceof platform.pure.metamodel.SimplePropertyOwner superOwner)
                         {
-                            meta.pure.metamodel.function.property.Property superProp = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class.findProperty(superOwner, prop._name());
+                            platform.pure.metamodel.function.property.Property superProp = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class.findProperty(superOwner, prop._name());
                             if (superProp != null)
                             {
 
                                 GenericType receiverGT = cls._classifierGenericType() != null && _GenericType.typeArguments(cls._classifierGenericType()) != null && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
                                         ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
                                         : _GenericType.buildUserDefinedGenericType(cls, model);
-                                meta.pure.metamodel.function.Function resolvedSuperProp = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Property.resolveProperty(superProp, receiverGT, model);
+                                platform.pure.metamodel.function.Function resolvedSuperProp = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Property.resolveProperty(superProp, receiverGT, model);
                                 
                                 String subclassType = _GenericType.print(prop._genericType());
                                 String subclassMul = _Multiplicity.print(prop._multiplicity());
-                                String superType = _GenericType.print(((meta.pure.metamodel.function.property.Property)resolvedSuperProp)._genericType());
-                                String superMul = _Multiplicity.print(((meta.pure.metamodel.function.property.Property)resolvedSuperProp)._multiplicity());
+                                String superType = _GenericType.print(((platform.pure.metamodel.function.property.Property)resolvedSuperProp)._genericType());
+                                String superMul = _Multiplicity.print(((platform.pure.metamodel.function.property.Property)resolvedSuperProp)._multiplicity());
                                 
                                 if (!subclassType.equals(superType) || !subclassMul.equals(superMul))
                                 {
@@ -285,7 +286,7 @@ public final class ClassHandler
                         return;
                     }
 
-                    meta.pure.metamodel.function.LambdaFunction lambda = prop._defaultValue();
+                    platform.pure.metamodel.function.LambdaFunction lambda = prop._defaultValue();
                     if (lambda._expressionSequence() != null && lambda._expressionSequence().notEmpty())
                     {
                         // Build a 'this' variable of the owning class type and push it into scope
@@ -294,12 +295,12 @@ public final class ClassHandler
                                 && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
                                 ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
                                 : _GenericType.buildUserDefinedGenericType(cls, model);
-                        meta.pure.metamodel.valuespecification.VariableExpressionImpl thisVar =
+                        platform.pure.metamodel.valuespecification.VariableExpressionImpl thisVar =
                                 _VariableExpression.newVariableExpression(model)
                                         ._name("this")
                                         ._genericType(ownerGenericType)
-                                        ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity)
-                                                model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
+                                        ._multiplicity((platform.pure.metamodel.multiplicity.Multiplicity)
+                                                model.getElement("platform::pure::metamodel::multiplicity::PureOne"));
                         context.compilerContextExtensions(PureLanguageCompilerContext.class).pushScope(Lists.mutable.with(thisVar));
 
                         try
@@ -314,17 +315,17 @@ public final class ClassHandler
                             context.compilerContextExtensions(PureLanguageCompilerContext.class).popScope();
                         }
                         // Validate type and multiplicity of the resolved default value
-                        meta.pure.metamodel.valuespecification.ValueSpecification lastExpr =
+                        platform.pure.metamodel.valuespecification.ValueSpecification lastExpr =
                                 lambda._expressionSequence().getLast();
-                        meta.pure.metamodel.SourceInformation srcInfo =
+                        platform.pure.metamodel.SourceInformation srcInfo =
                                 prop._sourceInformation();
 
                         // Type check
                         if (lastExpr._genericType() != null && _GenericType.type(lastExpr._genericType()) != null
                                 && prop._genericType() != null && _GenericType.type(prop._genericType()) != null)
                         {
-                            meta.pure.metamodel.type.Type defaultType = _GenericType.type(lastExpr._genericType());
-                            meta.pure.metamodel.type.Type propertyType = _GenericType.type(prop._genericType());
+                            platform.pure.metamodel.type.Type defaultType = _GenericType.type(lastExpr._genericType());
+                            platform.pure.metamodel.type.Type propertyType = _GenericType.type(prop._genericType());
                             if (defaultType != propertyType)
                             {
                                 context.addError(new CompilationError(
@@ -358,7 +359,7 @@ public final class ClassHandler
         return cls;
     }
 
-    private static void resolveClassConstraints(meta.pure.metamodel.type.Class cls, meta.pure.protocol.grammar.type.Class grammar,
+    private static void resolveClassConstraints(platform.pure.metamodel.type.Class cls, platform.pure.protocol.grammar.type.Class grammar,
                                                 MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         if (grammar._constraints() == null || grammar._constraints().isEmpty())
@@ -374,7 +375,7 @@ public final class ClassHandler
         VariableExpressionImpl thisVar = _VariableExpression.newVariableExpression(model)
                 ._name("this")
                 ._genericType(ownerGenericType)
-                ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
+                ._multiplicity((platform.pure.metamodel.multiplicity.Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::PureOne"));
         context.compilerContextExtensions(PureLanguageCompilerContext.class).pushScope(Lists.mutable.with(thisVar));
 
         try

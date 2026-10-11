@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +20,8 @@ import org.eclipse.collections.api.map.MutableMap;
 import org.finos.legend.pure.m3.module.ElementStatistics;
 import org.finos.legend.pure.m3.module.CompilationStatistics;
 import org.finos.legend.pure.m3.module.sourceModule.PureContent;
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.function.FunctionWithParameters;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.function.FunctionWithParameters;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.PureMap;
 import org.finos.legend.pure.execution._E_ValueSpecification;
@@ -48,9 +49,9 @@ import java.util.Set;
  */
 public final class PureCompilation implements Compilation
 {
-    private static final String PARSE_FN = "meta::pure::functions::meta::parse_String_1__String_1__PureFile_1_";
-    private static final String PARSE_DIRS_FN = "meta::pure::compiler::parseDirs_String_MANY__PureFile_MANY_";
-    private static final String COMPILE_FN = "meta::pure::compiler::compile_PureFile_MANY__CompilationResult_1_";
+    private static final String PARSE_FN = "platform::pure::functions::meta::parse_String_1__String_1__PureFile_1_";
+    private static final String PARSE_DIRS_FN = "platform::pure::compiler::parseDirs_String_MANY__PureFile_MANY_";
+    private static final String COMPILE_FN = "platform::pure::compiler::compile_PureFile_MANY__CompilationResult_1_";
 
     private final MetadataAccess registry;
     private final FunctionExecutor executor;
@@ -188,8 +189,8 @@ public final class PureCompilation implements Compilation
         {
             return out;
         }
-        for (Map.Entry<meta.pure.metamodel.valuespecification.ValueSpecification,
-                meta.pure.metamodel.valuespecification.ValueSpecification> entry : map.getMap().entrySet())
+        for (Map.Entry<platform.pure.metamodel.valuespecification.ValueSpecification,
+                platform.pure.metamodel.valuespecification.ValueSpecification> entry : map.getMap().entrySet())
         {
             Object key = _E_ValueSpecification.unwrap(entry.getKey());
             Object value = _E_ValueSpecification.unwrap(entry.getValue());

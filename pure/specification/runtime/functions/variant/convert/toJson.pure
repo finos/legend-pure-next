@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::metamodel::variant::*;
-import meta::pure::functions::variant::convert::*;
+import platform::pure::test::pct::*;
+import platform::pure::metamodel::variant::*;
+import platform::pure::functions::variant::convert::*;
 
 native function
     <<PCT.function>>
     {
         doc.doc='Returns the json representation of the given variant.'
     }
-meta::pure::functions::variant::convert::toJson(variant: Variant[1]): String[1];
+platform::pure::functions::variant::convert::toJson(variant: Variant[1]): String[1];
 
-function <<PCT.test>> meta::pure::functions::variant::convert::tests::toJson::testObjectToJson<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::variant::convert::tests::toJson::testObjectToJson<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('{"Hello":null}', $f->eval(|fromJson('{ "Hello" : null }')->toJson()));
     assertEquals('{"Hello":"World"}', $f->eval(|fromJson('{ "Hello" : "World" }')->toJson()));

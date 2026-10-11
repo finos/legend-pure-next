@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 function
     <<PCT.function>>
@@ -21,89 +22,89 @@ function
         PCT.grammarDoc='$first > $second',
         PCT.grammarCharacters='>'
     }
-    meta::pure::functions::boolean::greaterThan(left:Number[1], right:Number[1]):Boolean[1]
+    platform::pure::functions::boolean::greaterThan(left:Number[1], right:Number[1]):Boolean[1]
 {
     lessThan($right, $left)
 }
 
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:Number[0..1], right:Number[0..1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:Number[0..1], right:Number[0..1]):Boolean[1]
 {
     $left->isNotEmpty() && $right->isNotEmpty() && greaterThan($left->toOne(), $right->toOne())
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:Number[1], right:Number[0..1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:Number[1], right:Number[0..1]):Boolean[1]
 {
     $right->isNotEmpty() && greaterThan($left, $right->toOne())
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:Number[0..1], right:Number[1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:Number[0..1], right:Number[1]):Boolean[1]
 {
     $left->isNotEmpty() && greaterThan($left->toOne(), $right)
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:Date[0..1], right:Date[0..1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:Date[0..1], right:Date[0..1]):Boolean[1]
 {
     $left->isNotEmpty() && $right->isNotEmpty() && greaterThan($left->toOne(), $right->toOne())
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:Date[1], right:Date[0..1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:Date[1], right:Date[0..1]):Boolean[1]
 {
     $right->isNotEmpty() && greaterThan($left, $right->toOne())
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:Date[0..1], right:Date[1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:Date[0..1], right:Date[1]):Boolean[1]
 {
     $left->isNotEmpty() && greaterThan($left->toOne(), $right)
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:String[0..1], right:String[0..1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:String[0..1], right:String[0..1]):Boolean[1]
 {
     $left->isNotEmpty() && $right->isNotEmpty() && greaterThan($left->toOne(), $right->toOne())
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:String[1], right:String[0..1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:String[1], right:String[0..1]):Boolean[1]
 {
     $right->isNotEmpty() && greaterThan($left, $right->toOne())
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:String[0..1], right:String[1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:String[0..1], right:String[1]):Boolean[1]
 {
     $left->isNotEmpty() && greaterThan($left->toOne(), $right)
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:Boolean[0..1], right:Boolean[0..1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:Boolean[0..1], right:Boolean[0..1]):Boolean[1]
 {
     $left->isNotEmpty() && $right->isNotEmpty() && greaterThan($left->toOne(), $right->toOne())
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:Boolean[1], right:Boolean[0..1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:Boolean[1], right:Boolean[0..1]):Boolean[1]
 {
     $right->isNotEmpty() && greaterThan($left, $right->toOne())
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:Boolean[0..1], right:Boolean[1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:Boolean[0..1], right:Boolean[1]):Boolean[1]
 {
     $left->isNotEmpty() && greaterThan($left->toOne(), $right)
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:String[1], right:String[1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:String[1], right:String[1]):Boolean[1]
 {
     lessThan($right, $left)
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:Date[1], right:Date[1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:Date[1], right:Date[1]):Boolean[1]
 {
     lessThan($right, $left)
 }
 
-function <<PCT.function>> meta::pure::functions::boolean::greaterThan(left:Boolean[1], right:Boolean[1]):Boolean[1]
+function <<PCT.function>> platform::pure::functions::boolean::greaterThan(left:Boolean[1], right:Boolean[1]):Boolean[1]
 {
     lessThan($right, $left)
 }
 
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::inequalities::greaterThan::testGreaterThan_Number<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::inequalities::greaterThan::testGreaterThan_Number<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|4 > 3));
     assert($f->eval(|greaterThan(4, 3)));
@@ -114,7 +115,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::inequalities::great
     assertFalse($f->eval(|greaterThan(3, 3)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::inequalities::greaterThan::testGreaterThan_Date<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::inequalities::greaterThan::testGreaterThan_Date<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assert($f->eval(|%2012-10-02 > %2012-10-01));
    assert($f->eval(|greaterThan(%2012-10-02, %2012-10-01)));
@@ -125,7 +126,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::inequalities::great
    assertFalse($f->eval(|greaterThan(%2012-10-02, %2012-10-02)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::inequalities::greaterThan::testGreaterThan_String<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::inequalities::greaterThan::testGreaterThan_String<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|'b' > 'a'));
     assert($f->eval(|greaterThan('b', 'a')));
@@ -136,7 +137,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::inequalities::great
     assertFalse($f->eval(|greaterThan('a', 'a')));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::inequalities::greaterThan::testGreaterThan_Boolean<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::inequalities::greaterThan::testGreaterThan_Boolean<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|true > false));
     assert($f->eval(|greaterThan(true, false)));

@@ -20,8 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
-import meta.pure.metamodel.valuespecification.CollectionImpl;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.CollectionImpl;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
 import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
@@ -67,7 +67,7 @@ public class ArchiveNatives
 
     private static CollectionImpl collection(List<ValueSpecification> values, MetadataAccess resolver)
     {
-        meta.pure.metamodel.type.generics.GenericType gt = values.isEmpty() ? null : values.get(0)._genericType();
+        platform.pure.metamodel.type.generics.GenericType gt = values.isEmpty() ? null : values.get(0)._genericType();
         return new CollectionImpl(resolver)
                 ._values(org.eclipse.collections.api.factory.Lists.mutable.withAll(values))
                 ._genericType(gt)

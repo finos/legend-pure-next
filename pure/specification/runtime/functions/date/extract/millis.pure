@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::date::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::date::*;
 
-native function <<PCT.function>> meta::pure::functions::date::millis(d:DateTime[1]):Integer[1];
+native function <<PCT.function>> platform::pure::functions::date::millis(d:DateTime[1]):Integer[1];
 
-function <<PCT.test>> meta::pure::functions::date::tests::testMillis<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testMillis<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(0, $f->eval(|%2015-04-15T17:09:21->millis()));
     assertEquals(398, $f->eval(|%2015-04-15T17:09:21.398->millis()));

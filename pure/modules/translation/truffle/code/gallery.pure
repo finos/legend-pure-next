@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::truffle::*;
-import meta::external::language::truffle::gallery::*;
-import meta::pure::functions::printer::compiled::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::test::*;
-import meta::pure::translation::shared::gallery::*;
+import platform::external::language::truffle::*;
+import platform::external::language::truffle::gallery::*;
+import platform::pure::functions::printer::compiled::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::test::*;
+import platform::pure::translation::shared::gallery::*;
 
 // ============================================================================
 // Pure -> Truffle AST gallery. Walks every <<PCT.test>> function under
@@ -40,18 +40,18 @@ import meta::pure::translation::shared::gallery::*;
 //     throwing. Drives the in-card badge on the AST column.
 //
 // All HTML chrome (tree, JS, CSS) lives in the shared
-// `meta::pure::translation::shared::gallery` module; this file only emits
+// `platform::pure::translation::shared::gallery` module; this file only emits
 // per-test cards with the data attributes the chrome consumes.
 //
 // Entry point: `renderGallery(rootPackagePath)`. The `gallery` Justfile
 // recipe pipes stdout to `pure/modules/translation/truffle/build/truffle-translation-gallery.html`.
 // ============================================================================
 
-function <<test.TestDependency>> meta::external::language::truffle::gallery::renderGallery(rootPackagePath: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::truffle::gallery::renderGallery(rootPackagePath: String[1]): String[1]
 {
-    let root  = pathToElement($rootPackagePath)->cast(@meta::pure::metamodel::Package);
-    let tests = meta::pure::test::collectPCTTests($root);
-    let ctx   = buildPrintContext($tests->cast(@meta::pure::metamodel::PackageableElement), PrintMode.ManageImports);
+    let root  = pathToElement($rootPackagePath)->cast(@platform::pure::metamodel::Package);
+    let tests = platform::pure::test::collectPCTTests($root);
+    let ctx   = buildPrintContext($tests->cast(@platform::pure::metamodel::PackageableElement), PrintMode.ManageImports);
     let total = $tests->size();
     // No progress reporting: stdout is captured to the gallery file by the
     // calling Justfile, so println would corrupt the HTML output.
@@ -75,9 +75,9 @@ function <<test.TestDependency>> meta::external::language::truffle::gallery::ren
 // Tagged <<test.TestDependency>> because it transitively references the PCT
 // in-memory adapter (`testAdapterForInMemoryExecution`), which lives in the
 // tests PDB. Same rationale on `runTestViaAdapter` below.
-function <<test.TestDependency>> meta::external::language::truffle::gallery::renderTestCard(
-    test: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
-    ctx: meta::pure::functions::printer::compiled::PrintContext[1]
+function <<test.TestDependency>> platform::external::language::truffle::gallery::renderTestCard(
+    test: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1],
+    ctx: platform::pure::functions::printer::compiled::PrintContext[1]
 ): String[1]
 {
     let path    = $test->elementToPath();
@@ -127,22 +127,22 @@ function <<test.TestDependency>> meta::external::language::truffle::gallery::ren
 // current Truffle context — same path `just truffle::spec-pct`
 // takes). `tryEval` swallows any exception thrown during eval + assertion
 // check, so we treat "no failure" as a pass.
-function <<test.TestDependency>> meta::external::language::truffle::gallery::runTestViaAdapter(
-    test: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]
-): meta::pure::functions::collection::Pair<Boolean, String>[1]
+function <<test.TestDependency>> platform::external::language::truffle::gallery::runTestViaAdapter(
+    test: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1]
+): platform::pure::functions::collection::Pair<Boolean, String>[1]
 {
-    let attempt = tryEval(| meta::pure::functions::io::withSilencedPrint(|
-        meta::pure::functions::lang::evaluate(
+    let attempt = tryEval(| platform::pure::functions::io::withSilencedPrint(|
+        platform::pure::functions::lang::evaluate(
             $test,
-            meta::pure::functions::collection::list(
-                meta::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_))));
+            platform::pure::functions::collection::list(
+                platform::pure::test::pct::testAdapterForInMemoryExecution_Function_1__X_o_))));
     if ($attempt.failure->isNotEmpty(),
         | pair(false, $attempt.failure->toOne().message),
         | pair(true, ''));
 }
 
-function meta::external::language::truffle::gallery::sourceIdOf(
-    el: meta::pure::metamodel::PackageableElement[1]
+function platform::external::language::truffle::gallery::sourceIdOf(
+    el: platform::pure::metamodel::PackageableElement[1]
 ): String[1]
 {
     let sids = $el.sourceInformation->map(si | $si.sourceId);
@@ -152,9 +152,9 @@ function meta::external::language::truffle::gallery::sourceIdOf(
 // Lower one captured lambda to a Truffle AST dump. Returns (ok, dump-or-error)
 // so the renderer can mark partially-lowered cards distinctly from fully OK
 // or fully failed ones.
-function meta::external::language::truffle::gallery::truffleAstForLambda(
-    lambda: meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[1]
-): meta::pure::functions::collection::Pair<Boolean, String>[1]
+function platform::external::language::truffle::gallery::truffleAstForLambda(
+    lambda: platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>[1]
+): platform::pure::functions::collection::Pair<Boolean, String>[1]
 {
     let attempt = tryEval(| truffleAstFor($lambda));
     if ($attempt.failure->isNotEmpty(),
@@ -168,22 +168,22 @@ function meta::external::language::truffle::gallery::truffleAstForLambda(
 // the eval receiver — any `eval` with at least one arg whose first param
 // is a lambda-bearing AtomicValue counts. False positives are vanishingly
 // rare in practice and would only widen the gallery, not break it.
-function meta::external::language::truffle::gallery::collectAdapterEvalLambdas(
-    exprs: meta::pure::metamodel::valuespecification::ValueSpecification[*]
-): meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[*]
+function platform::external::language::truffle::gallery::collectAdapterEvalLambdas(
+    exprs: platform::pure::metamodel::valuespecification::ValueSpecification[*]
+): platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>[*]
 {
     $exprs->map(e | $e->collectAdapterEvalLambdasOne());
 }
 
-function meta::external::language::truffle::gallery::collectAdapterEvalLambdasOne(
-    vs: meta::pure::metamodel::valuespecification::ValueSpecification[1]
-): meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[*]
+function platform::external::language::truffle::gallery::collectAdapterEvalLambdasOne(
+    vs: platform::pure::metamodel::valuespecification::ValueSpecification[1]
+): platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>[*]
 {
     $vs->match([
         fe: FunctionExpression[1] |
             let self = if ($fe.functionName == 'eval' && $fe.parametersValues->size() >= 2,
                 | extractLambdaArg($fe.parametersValues->at($fe.parametersValues->size() - 1)),
-                | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+                | []->cast(@platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>)
             );
             concatenate($self, $fe.parametersValues->collectAdapterEvalLambdas());,
         // Lambda-valued AtomicValue: descend into the lambda body so evals
@@ -193,16 +193,16 @@ function meta::external::language::truffle::gallery::collectAdapterEvalLambdasOn
     ])
 }
 
-function meta::external::language::truffle::gallery::extractLambdaArg(
-    vs: meta::pure::metamodel::valuespecification::ValueSpecification[1]
-): meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>[*]
+function platform::external::language::truffle::gallery::extractLambdaArg(
+    vs: platform::pure::metamodel::valuespecification::ValueSpecification[1]
+): platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>[*]
 {
     if ($vs->instanceOf(AtomicValue),
         | let val = $vs->cast(@AtomicValue).value;
-          if ($val->size() == 1 && $val->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction),
-              | $val->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>),
-              | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+          if ($val->size() == 1 && $val->toOne()->instanceOf(platform::pure::metamodel::function::LambdaFunction),
+              | $val->toOne()->cast(@platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>),
+              | []->cast(@platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>)
           );,
-        | []->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>)
+        | []->cast(@platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>)
     );
 }

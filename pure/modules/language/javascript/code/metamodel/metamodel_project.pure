@@ -17,8 +17,8 @@
 // SourceFile nodes plus a tsconfig hint. Mirrors the layout a JavaScript
 // emitter actually produces on disk.
 
-import meta::external::language::javascript::metamodel::*;
-import meta::external::language::javascript::metamodel::project::*;
+import platform::external::language::javascript::metamodel::*;
+import platform::external::language::javascript::metamodel::project::*;
 
 // =============================================================================
 // NpmPackage — root of a generated JavaScript project.
@@ -28,7 +28,7 @@ import meta::external::language::javascript::metamodel::project::*;
 //     a map for v1 (no Map type in scope).
 // =============================================================================
 
-Class meta::external::language::javascript::metamodel::project::NpmPackage
+Class platform::external::language::javascript::metamodel::project::NpmPackage
 {
    <<equality.Key>> name : String[1];
    version         : String[0..1];
@@ -40,13 +40,13 @@ Class meta::external::language::javascript::metamodel::project::NpmPackage
    tsconfig        : TsConfig[0..1];
 }
 
-Enum meta::external::language::javascript::metamodel::project::ModuleType
+Enum platform::external::language::javascript::metamodel::project::ModuleType
 {
    ESM,                                              // package.json "type": "module"
    CommonJS
 }
 
-Class meta::external::language::javascript::metamodel::project::NpmDependency
+Class platform::external::language::javascript::metamodel::project::NpmDependency
 {
    <<equality.Key>> packageName : String[1];
    <<equality.Key>> versionRange : String[1];        // e.g. '^5.6.3'
@@ -57,7 +57,7 @@ Class meta::external::language::javascript::metamodel::project::NpmDependency
 // generator usually wants to set; the rest can be added when needed.
 // =============================================================================
 
-Class meta::external::language::javascript::metamodel::project::TsConfig
+Class platform::external::language::javascript::metamodel::project::TsConfig
 {
    target           : String[0..1];                  // e.g. 'ES2022'
    moduleSetting    : String[0..1];                  // e.g. 'ESNext', 'NodeNext'
@@ -75,10 +75,10 @@ Class meta::external::language::javascript::metamodel::project::TsConfig
 // without rewriting parent pointers.
 // =============================================================================
 
-Class meta::external::language::javascript::metamodel::project::ProjectDirectory
+Class platform::external::language::javascript::metamodel::project::ProjectDirectory
 {
    <<equality.Key>> name : String[1];
-   sourceFiles    : meta::external::language::javascript::metamodel::SourceFile[*];
+   sourceFiles    : platform::external::language::javascript::metamodel::SourceFile[*];
    parent         : ProjectDirectory[0..1];
    subdirectories : ProjectDirectory[*];
 

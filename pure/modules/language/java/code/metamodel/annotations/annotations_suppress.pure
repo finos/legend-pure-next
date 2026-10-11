@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::metamodel::*;
+import platform::external::language::java::metamodel::*;
 
 
 
-Class meta::external::language::java::metamodel::annotations::SuppressWarnings extends meta::external::language::java::metamodel::Annotation
+Class platform::external::language::java::metamodel::annotations::SuppressWarnings extends platform::external::language::java::metamodel::Annotation
 {
    value: String[1];
 }

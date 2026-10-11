@@ -1,12 +1,27 @@
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::functions::lang::*;
-import meta::pure::compiler::helper::column::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::genericType::*;
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::functions::lang::*;
+import platform::pure::compiler::helper::column::*;
+import platform::pure::compiler::helper::type::*;
+import platform::pure::compiler::helper::genericType::*;
 
 // Column helpers
 
-function meta::pure::compiler::helper::column::buildColumn(name:String[1], owner:GenericType[1], genericType:GenericType[1], multiplicity:Multiplicity[1], nameWildCard:Boolean[1]):Column[1]
+function platform::pure::compiler::helper::column::buildColumn(name:String[1], owner:GenericType[1], genericType:GenericType[1], multiplicity:Multiplicity[1], nameWildCard:Boolean[1]):Column[1]
 {
     // `new(...)` so the platform's preferCanonicalAnchor picks the packageable
     // variant (GenericType_UserDefinedPackageableGenericType) for the GT-of-GT
@@ -28,7 +43,7 @@ function meta::pure::compiler::helper::column::buildColumn(name:String[1], owner
 
 // Tests
 
-function <<test.Test>> meta::pure::compiler::helper::column::tests::testBuildColumn():Boolean[1]
+function <<test.Test>> platform::pure::compiler::helper::column::tests::testBuildColumn():Boolean[1]
 {
     let ownerGT = buildInferredGenericType(String);
     let valueGT = buildInferredGenericType(Integer);

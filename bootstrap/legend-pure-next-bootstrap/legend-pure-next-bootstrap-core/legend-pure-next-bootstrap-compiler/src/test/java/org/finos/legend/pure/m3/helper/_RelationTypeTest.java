@@ -1,10 +1,25 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.helper;
 
-import meta.pure.metamodel.function.property.Property;
-import meta.pure.metamodel.type.Class;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
-import meta.pure.metamodel.relation.RelationType;
+import platform.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.type.Class;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.relation.RelationType;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.CompilationResult;
@@ -32,12 +47,12 @@ public class _RelationTypeTest
         String source = 
             "Class test::RelClass<T>\n" +
             "{\n" +
-            "    emptyRt: meta::pure::metamodel::relation::Relation<Any>[1];\n" +
-            "    simpleRt: meta::pure::metamodel::relation::Relation<(col1:String, col2:Integer)>[1];\n" +
-            "    wildcardRt: meta::pure::metamodel::relation::Relation<(?:T)>[1];\n" +
-            "    subRt: meta::pure::metamodel::relation::Relation<(col1:String, col2:Integer, col3:Float)>[1];\n" +
-            "    otherRt: meta::pure::metamodel::relation::Relation<(col2:Integer, col4:Boolean)>[1];\n" +
-            "    otherRt2: meta::pure::metamodel::relation::Relation<(col3:Float)>[1];\n" +
+            "    emptyRt: platform::pure::metamodel::relation::Relation<Any>[1];\n" +
+            "    simpleRt: platform::pure::metamodel::relation::Relation<(col1:String, col2:Integer)>[1];\n" +
+            "    wildcardRt: platform::pure::metamodel::relation::Relation<(?:T)>[1];\n" +
+            "    subRt: platform::pure::metamodel::relation::Relation<(col1:String, col2:Integer, col3:Float)>[1];\n" +
+            "    otherRt: platform::pure::metamodel::relation::Relation<(col2:Integer, col4:Boolean)>[1];\n" +
+            "    otherRt2: platform::pure::metamodel::relation::Relation<(col3:Float)>[1];\n" +
             "}\n";
 
         model = JavaCompiler.withModules(
@@ -122,7 +137,7 @@ public class _RelationTypeTest
 
         ScopedMetadataAccess scopedModel = new ScopedMetadataAccess(model.registry().module("test"), model.registry());
 
-        meta.pure.metamodel.type.Type commonType = _RelationType.findCommonRelationType(Lists.mutable.with(simpleRt, otherRt), scopedModel);
+        platform.pure.metamodel.type.Type commonType = _RelationType.findCommonRelationType(Lists.mutable.with(simpleRt, otherRt), scopedModel);
         
         assertTrue(commonType instanceof RelationType);
         RelationType commonRt = (RelationType) commonType;
@@ -130,7 +145,7 @@ public class _RelationTypeTest
         
         // If we intersect two types with nothing in common, should return Any
         RelationType otherRt2 = getPropRT("otherRt2"); // col3
-        meta.pure.metamodel.type.Type noCommon = _RelationType.findCommonRelationType(Lists.mutable.with(simpleRt, otherRt2), scopedModel);
-        assertEquals("Any", ((meta.pure.metamodel.PackageableElement) noCommon)._name());
+        platform.pure.metamodel.type.Type noCommon = _RelationType.findCommonRelationType(Lists.mutable.with(simpleRt, otherRt2), scopedModel);
+        assertEquals("Any", ((platform.pure.metamodel.PackageableElement) noCommon)._name());
     }
 }

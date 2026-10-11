@@ -1,5 +1,5 @@
 {
   "name": "core",
-  "packagePattern": "(meta::pure)(::.*)?",
+  "packagePattern": "(platform::pure)(::.*)?",
   "dependencies": []
 }

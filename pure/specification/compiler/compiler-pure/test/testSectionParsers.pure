@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,25 +21,25 @@
 // module since the section classes live here. Each entry is a Pair<name,
 // (content, sourceId, lineOffset) -> PackageableElement[*]>.
 
-import meta::pure::compiler::test::*;
+import platform::pure::compiler::test::*;
 
 // Compiler-test section parsers exposed as a registry the caller can append
 // to whatever upstream Pure parser registry they already have (e.g.
 // pureSectionParser() from parser-mappings for the ###Pure section).
 // Composition happens at the caller — no cross-module dep here.
-function meta::pure::compiler::test::testSectionParsers(): meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>[*]
+function platform::pure::compiler::test::testSectionParsers(): platform::pure::functions::collection::Pair<String, platform::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> platform::pure::protocol::grammar::PackageableElement[*]}>>[*]
 {
    [
-      ^meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>(
+      ^platform::pure::functions::collection::Pair<String, platform::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> platform::pure::protocol::grammar::PackageableElement[*]}>>(
          first = 'CompiledGraph',
          second = {c:String[1], s:String[1], o:Integer[1] | buildCompiledGraphSection($c, $s, $o)}),
-      ^meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>(
+      ^platform::pure::functions::collection::Pair<String, platform::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> platform::pure::protocol::grammar::PackageableElement[*]}>>(
          first = 'CompilerStats',
          second = {c:String[1], s:String[1], o:Integer[1] | buildCompilerStatsSection($c, $s, $o)}),
-      ^meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>(
+      ^platform::pure::functions::collection::Pair<String, platform::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> platform::pure::protocol::grammar::PackageableElement[*]}>>(
          first = 'ReverseIndex',
          second = {c:String[1], s:String[1], o:Integer[1] | buildReverseIndexSection($c, $s, $o)}),
-      ^meta::pure::functions::collection::Pair<String, meta::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> meta::pure::protocol::grammar::PackageableElement[*]}>>(
+      ^platform::pure::functions::collection::Pair<String, platform::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> platform::pure::protocol::grammar::PackageableElement[*]}>>(
          first = 'File',
          second = {c:String[1], s:String[1], o:Integer[1] | buildTestFileSection($c, $s, $o)})
    ]

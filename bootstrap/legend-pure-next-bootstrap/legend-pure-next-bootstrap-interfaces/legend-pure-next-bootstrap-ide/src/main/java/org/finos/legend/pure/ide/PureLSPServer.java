@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,8 +18,8 @@ package org.finos.legend.pure.ide;
 import org.finos.legend.pure.runtime.compilation.JavaCompilation;
 import org.finos.legend.pure.runtime.PureRuntime;
 import org.finos.legend.pure.m3.module.ModuleRegistry;
-import meta.pure.metamodel.function.FunctionDefinition;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.function.FunctionDefinition;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.lsp4j.*;
@@ -302,9 +303,9 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             {
                 for (String elementPath : mod.elementPaths())
                 {
-                    meta.pure.metamodel.PackageableElement el = mod.getElement(elementPath);
+                    platform.pure.metamodel.PackageableElement el = mod.getElement(elementPath);
                     if (el == null) continue;
-                    meta.pure.metamodel.SourceInformation si = el._sourceInformation();
+                    platform.pure.metamodel.SourceInformation si = el._sourceInformation();
                     if (si == null) continue;
                     String sid = si._sourceId();
                     if (seen.add(sid == null ? "<null>" : sid))
@@ -381,10 +382,10 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 String elSourceId = sourceIdOf.apply(elementPath);
                 if (elSourceId == null || !elSourceId.equals(sourceId)) continue;
 
-                meta.pure.metamodel.PackageableElement el =
-                        (meta.pure.metamodel.PackageableElement) mod.getElement(elementPath);
+                platform.pure.metamodel.PackageableElement el =
+                        (platform.pure.metamodel.PackageableElement) mod.getElement(elementPath);
                 if (el == null) continue;
-                meta.pure.metamodel.SourceInformation si = el._sourceInformation();
+                platform.pure.metamodel.SourceInformation si = el._sourceInformation();
                 if (si == null) continue;
                 // Line/column range check still applies — only line+col within
                 // the element's range can be a hit. SourceId is already known
@@ -407,11 +408,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             for (Object child : iter) walkForCursor(child, sourceId, line, col, best, bestSize);
             return;
         }
-        if (!(node instanceof meta.pure.metamodel.type.Any any))
+        if (!(node instanceof platform.pure.metamodel.type.Any any))
         {
             return;
         }
-        meta.pure.metamodel.SourceInformation si = nodeSI(any);
+        platform.pure.metamodel.SourceInformation si = nodeSI(any);
         if (si != null)
         {
             if (!siContains(si, sourceId, line, col)) return;  // skip subtrees outside cursor
@@ -426,24 +427,24 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         // hold sub-expressions / sub-nodes; do NOT follow references like
         // `func`, `type`, `owner`, `general` — those point at other elements
         // and would explode the walk.
-        if (any instanceof meta.pure.metamodel.function.FunctionDefinition fd)
+        if (any instanceof platform.pure.metamodel.function.FunctionDefinition fd)
         {
             walkForCursor(fd._expressionSequence(), sourceId, line, col, best, bestSize);
             walkForCursor(fd._parameters(), sourceId, line, col, best, bestSize);
         }
-        if (any instanceof meta.pure.metamodel.valuespecification.FunctionExpression fe)
+        if (any instanceof platform.pure.metamodel.valuespecification.FunctionExpression fe)
         {
             walkForCursor(fe._parametersValues(), sourceId, line, col, best, bestSize);
         }
-        if (any instanceof meta.pure.metamodel.valuespecification.Collection c)
+        if (any instanceof platform.pure.metamodel.valuespecification.Collection c)
         {
             walkForCursor(c._values(), sourceId, line, col, best, bestSize);
         }
-        if (any instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
+        if (any instanceof platform.pure.metamodel.valuespecification.AtomicValue av)
         {
             // AtomicValue.value can hold a lambda — descend into it
             Object v = av._value();
-            if (v instanceof meta.pure.metamodel.function.LambdaFunction lf)
+            if (v instanceof platform.pure.metamodel.function.LambdaFunction lf)
             {
                 walkForCursor(lf._expressionSequence(), sourceId, line, col, best, bestSize);
                 walkForCursor(lf._parameters(), sourceId, line, col, best, bestSize);
@@ -452,12 +453,12 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         // Class properties / qualified properties are top-level: their bodies
         // become FunctionDefinition-shaped (default values, constraints, QP
         // expressionSequence). Walk those.
-        if (any instanceof meta.pure.metamodel.type.Class cls)
+        if (any instanceof platform.pure.metamodel.type.Class cls)
         {
             for (Object pObj : cls._properties())
             {
-                meta.pure.metamodel.function.property.Property p =
-                        (meta.pure.metamodel.function.property.Property) pObj;
+                platform.pure.metamodel.function.property.Property p =
+                        (platform.pure.metamodel.function.property.Property) pObj;
                 walkForCursor(p, sourceId, line, col, best, bestSize);
                 if (p._defaultValue() != null)
                 {
@@ -466,8 +467,8 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             }
             for (Object qpObj : cls._qualifiedProperties())
             {
-                meta.pure.metamodel.function.property.QualifiedProperty qp =
-                        (meta.pure.metamodel.function.property.QualifiedProperty) qpObj;
+                platform.pure.metamodel.function.property.QualifiedProperty qp =
+                        (platform.pure.metamodel.function.property.QualifiedProperty) qpObj;
                 walkForCursor(qp, sourceId, line, col, best, bestSize);
                 walkForCursor(qp._expressionSequence(), sourceId, line, col, best, bestSize);
                 walkForCursor(qp._parameters(), sourceId, line, col, best, bestSize);
@@ -477,16 +478,16 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
     /** Source info for a node, or null. SourceInformation lives at the
      *  ValueSpecification level and on PackageableElement subtypes. */
-    private static meta.pure.metamodel.SourceInformation nodeSI(meta.pure.metamodel.type.Any node)
+    private static platform.pure.metamodel.SourceInformation nodeSI(platform.pure.metamodel.type.Any node)
     {
-        if (node instanceof meta.pure.metamodel.PackageableElement pe) return pe._sourceInformation();
-        if (node instanceof meta.pure.metamodel.valuespecification.ValueSpecification vs) return vs._sourceInformation();
-        if (node instanceof meta.pure.metamodel.function.property.AbstractProperty p) return p._sourceInformation();
+        if (node instanceof platform.pure.metamodel.PackageableElement pe) return pe._sourceInformation();
+        if (node instanceof platform.pure.metamodel.valuespecification.ValueSpecification vs) return vs._sourceInformation();
+        if (node instanceof platform.pure.metamodel.function.property.AbstractProperty p) return p._sourceInformation();
         return null;
     }
 
     /** Does {@code si} contain the cursor position (sourceId, line, col, 1-based)? */
-    private static boolean siContains(meta.pure.metamodel.SourceInformation si, String sourceId, int line, int col)
+    private static boolean siContains(platform.pure.metamodel.SourceInformation si, String sourceId, int line, int col)
     {
         if (si == null) return false;
         String siSource = si._sourceId();
@@ -507,7 +508,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     /** Approximate area of a SourceInformation range — used to pick the
      *  smallest containing match. Lines weighted heavily so a 3-line
      *  range never beats a 1-line one regardless of column span. */
-    private static long siSize(meta.pure.metamodel.SourceInformation si)
+    private static long siSize(platform.pure.metamodel.SourceInformation si)
     {
         long lines = si._endLine().longValue() - si._startLine().longValue();
         long cols = si._endColumn().longValue() - si._startColumn().longValue();
@@ -522,29 +523,29 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         // FunctionExpression: jump to its resolved function (or property for
         // DotApplication, since the compiler stores the resolved Property
         // in the func slot too).
-        if (node instanceof meta.pure.metamodel.valuespecification.FunctionExpression fe)
+        if (node instanceof platform.pure.metamodel.valuespecification.FunctionExpression fe)
         {
-            meta.pure.metamodel.function.Function func = fe._func();
+            platform.pure.metamodel.function.Function func = fe._func();
             if (func == null) return null;
             Object live = derefPointer(func);
             return targetFor(live);
         }
         // GenericTypeValue: jump to the type the cursor is on.
-        if (node instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+        if (node instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv)
         {
-            meta.pure.metamodel.type.Type t = gtv._type();
+            platform.pure.metamodel.type.Type t = gtv._type();
             if (t == null) return null;
             return targetFor(derefPointer(t));
         }
         // VariableExpression: walk enclosing function/lambda to find a
         // parameter or `let` binding with the same name.
-        if (node instanceof meta.pure.metamodel.valuespecification.VariableExpression ve)
+        if (node instanceof platform.pure.metamodel.valuespecification.VariableExpression ve)
         {
-            meta.pure.metamodel.SourceInformation si = resolveVariableSourceInfo(ve);
+            platform.pure.metamodel.SourceInformation si = resolveVariableSourceInfo(ve);
             return si == null ? null : siToTarget(si, null);
         }
         // PackageableElement itself (top-level reference like `extends Foo`).
-        if (node instanceof meta.pure.metamodel.PackageableElement pe)
+        if (node instanceof platform.pure.metamodel.PackageableElement pe)
         {
             return targetFor(pe);
         }
@@ -557,8 +558,8 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
      *  per-element SIs — only the enclosing file SI carries it). */
     private TargetLocation targetFor(Object live)
     {
-        if (!(live instanceof meta.pure.metamodel.PackageableElement pe)) return null;
-        meta.pure.metamodel.SourceInformation si = pe._sourceInformation();
+        if (!(live instanceof platform.pure.metamodel.PackageableElement pe)) return null;
+        platform.pure.metamodel.SourceInformation si = pe._sourceInformation();
         if (si == null) return null;
         return siToTarget(si, qualifiedPath(pe));
     }
@@ -566,7 +567,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     /** SourceInformation + optional element path → TargetLocation. If
      *  {@code si._sourceId()} is null, look it up via
      *  {@code module.getSourceIdForElement(elementPath)}. */
-    private TargetLocation siToTarget(meta.pure.metamodel.SourceInformation si, String elementPath)
+    private TargetLocation siToTarget(platform.pure.metamodel.SourceInformation si, String elementPath)
     {
         String sourceId = si._sourceId();
         if (sourceId == null && elementPath != null)
@@ -594,7 +595,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
      *  shared compiler helper (handles empty/root package edge cases that
      *  a naive `while (pkg._name() != null)` loop gets wrong — was producing
      *  `::::meta::…` paths previously). */
-    private static String qualifiedPath(meta.pure.metamodel.PackageableElement pe)
+    private static String qualifiedPath(platform.pure.metamodel.PackageableElement pe)
     {
         return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
     }
@@ -621,7 +622,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             {
                 for (Module mod : lastRegistry.modules())
                 {
-                    meta.pure.metamodel.PackageableElement el = mod.getElement(path);
+                    platform.pure.metamodel.PackageableElement el = mod.getElement(path);
                     if (el != null && el != obj) return el;
                 }
             }
@@ -629,7 +630,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         // compile-pure TempCompilerPointer (Class_Pointer / PropertyPointer / etc.)
         try
         {
-            Class<?> tcpClass = Class.forName("meta.pure.metamodel.pointer.TempCompilerPointer");
+            Class<?> tcpClass = Class.forName("platform.pure.metamodel.pointer.TempCompilerPointer");
             if (tcpClass.isInstance(obj))
             {
                 java.lang.reflect.Method pathM = obj.getClass().getMethod("_path");
@@ -638,7 +639,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 {
                     for (Module mod : lastRegistry.modules())
                     {
-                        meta.pure.metamodel.PackageableElement el = mod.getElement(path);
+                        platform.pure.metamodel.PackageableElement el = mod.getElement(path);
                         if (el != null) return el;
                     }
                 }
@@ -655,11 +656,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     /** Walk top-level elements in lastRegistry looking for the enclosing function
      *  containing {@code ve}; return the SI of a matching parameter or let
      *  binding. */
-    private meta.pure.metamodel.SourceInformation resolveVariableSourceInfo(meta.pure.metamodel.valuespecification.VariableExpression ve)
+    private platform.pure.metamodel.SourceInformation resolveVariableSourceInfo(platform.pure.metamodel.valuespecification.VariableExpression ve)
     {
         if (lastRegistry == null || ve._name() == null) return null;
         String varName = ve._name();
-        meta.pure.metamodel.SourceInformation veSI = ve._sourceInformation();
+        platform.pure.metamodel.SourceInformation veSI = ve._sourceInformation();
         if (veSI == null) return null;
         // Find the enclosing FunctionDefinition by source containment.
         for (Module mod : lastRegistry.modules())
@@ -667,11 +668,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             for (String elementPath : mod.elementPaths())
             {
                 Object el = mod.getElement(elementPath);
-                if (!(el instanceof meta.pure.metamodel.function.FunctionDefinition fd)) continue;
-                meta.pure.metamodel.SourceInformation fdSI =
-                        ((meta.pure.metamodel.PackageableElement) fd)._sourceInformation();
+                if (!(el instanceof platform.pure.metamodel.function.FunctionDefinition fd)) continue;
+                platform.pure.metamodel.SourceInformation fdSI =
+                        ((platform.pure.metamodel.PackageableElement) fd)._sourceInformation();
                 if (!siEncloses(fdSI, veSI)) continue;
-                meta.pure.metamodel.SourceInformation found = findVarInScope(fd, varName, veSI);
+                platform.pure.metamodel.SourceInformation found = findVarInScope(fd, varName, veSI);
                 if (found != null) return found;
             }
         }
@@ -681,30 +682,30 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     /** Returns SI of the parameter / let-binder for {@code varName} within
      *  {@code fd}'s body, or null if not found. Prefers the nearest enclosing
      *  binding to the reference site. */
-    private static meta.pure.metamodel.SourceInformation findVarInScope(
-            meta.pure.metamodel.function.FunctionDefinition fd,
+    private static platform.pure.metamodel.SourceInformation findVarInScope(
+            platform.pure.metamodel.function.FunctionDefinition fd,
             String varName,
-            meta.pure.metamodel.SourceInformation refSI)
+            platform.pure.metamodel.SourceInformation refSI)
     {
-        for (meta.pure.metamodel.valuespecification.VariableExpression p : fd._parameters())
+        for (platform.pure.metamodel.valuespecification.VariableExpression p : fd._parameters())
         {
             if (varName.equals(p._name())) return p._sourceInformation();
         }
         // `let x = ...` compiles to a letFunction(AtomicValue("x"), ...) call.
         // Find one whose first argument's value is the name AND that is
         // lexically before the reference site.
-        meta.pure.metamodel.SourceInformation best = null;
+        platform.pure.metamodel.SourceInformation best = null;
         long bestLine = -1;
-        for (meta.pure.metamodel.valuespecification.ValueSpecification stmt : fd._expressionSequence())
+        for (platform.pure.metamodel.valuespecification.ValueSpecification stmt : fd._expressionSequence())
         {
-            if (!(stmt instanceof meta.pure.metamodel.valuespecification.FunctionExpression fe)) continue;
+            if (!(stmt instanceof platform.pure.metamodel.valuespecification.FunctionExpression fe)) continue;
             String fnName = fe._functionName();
             if (fnName == null || !fnName.startsWith("letFunction")) continue;
             if (fe._parametersValues() == null || fe._parametersValues().isEmpty()) continue;
-            meta.pure.metamodel.valuespecification.ValueSpecification nameVS = fe._parametersValues().get(0);
-            if (!(nameVS instanceof meta.pure.metamodel.valuespecification.AtomicValue av)) continue;
+            platform.pure.metamodel.valuespecification.ValueSpecification nameVS = fe._parametersValues().get(0);
+            if (!(nameVS instanceof platform.pure.metamodel.valuespecification.AtomicValue av)) continue;
             if (!(av._value() instanceof String name) || !varName.equals(name)) continue;
-            meta.pure.metamodel.SourceInformation letSI = fe._sourceInformation();
+            platform.pure.metamodel.SourceInformation letSI = fe._sourceInformation();
             if (letSI == null) continue;
             // Lexical scoping: prefer the latest let before refSI.
             long letLine = letSI._startLine().longValue();
@@ -720,8 +721,8 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     }
 
     /** Does {@code outer} fully enclose {@code inner}? */
-    private static boolean siEncloses(meta.pure.metamodel.SourceInformation outer,
-                                      meta.pure.metamodel.SourceInformation inner)
+    private static boolean siEncloses(platform.pure.metamodel.SourceInformation outer,
+                                      platform.pure.metamodel.SourceInformation inner)
     {
         if (outer == null || inner == null) return false;
         if (outer._sourceId() != null && inner._sourceId() != null
@@ -990,7 +991,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             for (CompilationError error : result.errors())
             {
                 int line = 0, col = 0, endLine, endCol;
-                meta.pure.metamodel.SourceInformation si = error.sourceInformation();
+                platform.pure.metamodel.SourceInformation si = error.sourceInformation();
                 if (si != null)
                 {
                     line = si._startLine() != null ? Math.max(0, si._startLine().intValue() - 1) : 0;
@@ -1111,11 +1112,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     // Test Runner
     // =========================================================================
 
-    private boolean isTestStereotype(meta.pure.metamodel.PackageableElement element, String expectedProfile, String expectedValue)
+    private boolean isTestStereotype(platform.pure.metamodel.PackageableElement element, String expectedProfile, String expectedValue)
     {
-        if (element instanceof meta.pure.metamodel.extension.ElementWithStereotypes ews)
+        if (element instanceof platform.pure.metamodel.extension.ElementWithStereotypes ews)
         {
-            for (meta.pure.metamodel.extension.Stereotype s : ews._stereotypes())
+            for (platform.pure.metamodel.extension.Stereotype s : ews._stereotypes())
             {
                 if (s != null && expectedValue.equals(s._value()) && s._profile() != null && expectedProfile.equals(s._profile()._name()))
                 {
@@ -1141,7 +1142,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 {
                     try
                     {
-                        meta.pure.metamodel.PackageableElement element = m.getElement(path);
+                        platform.pure.metamodel.PackageableElement element = m.getElement(path);
                         if (element instanceof FunctionDefinition && isTestStereotype(element, "PCT", "adapter"))
                         {
                             adapters.add(path);
@@ -1171,7 +1172,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 {
                     try
                     {
-                        meta.pure.metamodel.PackageableElement element = m.getElement(path);
+                        platform.pure.metamodel.PackageableElement element = m.getElement(path);
                         if (element instanceof FunctionDefinition && (isTestStereotype(element, profile, "test") || isTestStereotype(element, profile, "Test") || ("simple".equals(mode) && isTestStereotype(element, "test", "Test"))))
                         {
                             tests.add(path);
@@ -1219,7 +1220,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         ValueSpecification adapterArg = null;
         if ("pct".equals(mode) && adapterPath != null && !adapterPath.isEmpty())
         {
-            meta.pure.metamodel.PackageableElement adapterElem = null;
+            platform.pure.metamodel.PackageableElement adapterElem = null;
             for (Module m : lastRegistry.modules()) {
                 if ((adapterElem = m.getElement(adapterPath)) != null) break;
             }
@@ -1258,7 +1259,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             Map<String, String> result = new LinkedHashMap<>();
             result.put("test", testPath);
 
-            meta.pure.metamodel.PackageableElement testElem = null;
+            platform.pure.metamodel.PackageableElement testElem = null;
             for (Module m : lastRegistry.modules()) {
                 if ((testElem = m.getElement(testPath)) != null) break;
             }
@@ -1440,24 +1441,24 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             for (String path : module.elementPaths())
             {
                 if (elementEntries.containsKey(path)) { continue; }
-                meta.pure.metamodel.PackageableElement element = module.getElement(path);
+                platform.pure.metamodel.PackageableElement element = module.getElement(path);
                 String type = "UserDefined";
                 String displayName = null;
                 if (element != null)
                 {
-                    if (element instanceof meta.pure.metamodel.type.Class) { type = "Class"; }
-                    else if (element instanceof meta.pure.metamodel.type.Enumeration) { type = "Enumeration"; }
-                    else if (element instanceof meta.pure.metamodel.relationship.Association) { type = "Association"; }
-                    else if (element instanceof meta.pure.metamodel.extension.Profile) { type = "Profile"; }
-                    else if (element instanceof meta.pure.metamodel.function.UserDefinedFunction) { type = "UserDefinedFunction"; }
-                    else if (element instanceof meta.pure.metamodel.function.NativeFunction) { type = "NativeFunction"; }
-                    else if (element instanceof meta.pure.metamodel.type.PrimitiveType) { type = "PrimitiveType"; }
-                    else if (element instanceof meta.pure.metamodel.Package) { type = "Package"; }
+                    if (element instanceof platform.pure.metamodel.type.Class) { type = "Class"; }
+                    else if (element instanceof platform.pure.metamodel.type.Enumeration) { type = "Enumeration"; }
+                    else if (element instanceof platform.pure.metamodel.relationship.Association) { type = "Association"; }
+                    else if (element instanceof platform.pure.metamodel.extension.Profile) { type = "Profile"; }
+                    else if (element instanceof platform.pure.metamodel.function.UserDefinedFunction) { type = "UserDefinedFunction"; }
+                    else if (element instanceof platform.pure.metamodel.function.NativeFunction) { type = "NativeFunction"; }
+                    else if (element instanceof platform.pure.metamodel.type.PrimitiveType) { type = "PrimitiveType"; }
+                    else if (element instanceof platform.pure.metamodel.Package) { type = "Package"; }
                     if (element instanceof FunctionIndexEntry fie)
                     {
                         displayName = fie.signatureWithoutPackage();
                     }
-                    else if (element instanceof meta.pure.metamodel.function.PackageableFunction fn)
+                    else if (element instanceof platform.pure.metamodel.function.PackageableFunction fn)
                     {
                         displayName = buildFunctionSignature(fn);
                     }
@@ -1698,7 +1699,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 {
                     try 
                     {
-                        meta.pure.metamodel.PackageableElement element = module.getElement(elementPath);
+                        platform.pure.metamodel.PackageableElement element = module.getElement(elementPath);
                         if (element != null && element._sourceInformation() != null)
                         {
                             Long lLine = element._sourceInformation()._startLine();
@@ -1767,7 +1768,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     /**
      * Build a display signature for a locally-compiled PackageableFunction.
      */
-    private String buildFunctionSignature(meta.pure.metamodel.function.PackageableFunction fn)
+    private String buildFunctionSignature(platform.pure.metamodel.function.PackageableFunction fn)
     {
         try
         {
@@ -1777,7 +1778,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             if (fn._parameters() != null)
             {
                 boolean first = true;
-                for (meta.pure.metamodel.valuespecification.VariableExpression param : fn._parameters())
+                for (platform.pure.metamodel.valuespecification.VariableExpression param : fn._parameters())
                 {
                     if (!first) sb.append(", ");
                     first = false;

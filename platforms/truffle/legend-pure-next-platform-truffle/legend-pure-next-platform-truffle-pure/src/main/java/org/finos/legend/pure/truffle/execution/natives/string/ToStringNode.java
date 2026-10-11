@@ -70,7 +70,7 @@ public final class ToStringNode extends PureNode
 
     /**
      * Pure-source representation of an enum value: "<EnumerationPath>.<ValueName>"
-     * (e.g. "meta::pure::...::LA_GeographicEntityType.CITY"). Returns null when
+     * (e.g. "platform::pure::...::LA_GeographicEntityType.CITY"). Returns null when
      * {@code v} isn't recognisable as a Pure enum value — caller should fall
      * back to the regular toString form. Used by {@code %r} (toRepresentation)
      * since enum values in Pure source are always written in qualified form.
@@ -81,9 +81,9 @@ public final class ToStringNode extends PureNode
         if (v == null) return null;
         String pureType = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeOf(v);
         // Post enum-to-PDO migration: enum values are PDOs typed as
-        // {@code meta::pure::metamodel::type::Enum}. The Java-enum branch
+        // {@code platform::pure::metamodel::type::Enum}. The Java-enum branch
         // is dead.
-        if ("meta::pure::metamodel::type::Enum".equals(pureType))
+        if ("platform::pure::metamodel::type::Enum".equals(pureType))
         {
             Object name = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(v, SLOT_NAME);
             if (name instanceof String s)
@@ -128,7 +128,7 @@ public final class ToStringNode extends PureNode
         // (e.g. "CITY"), matching the standard convention. Callers wanting
         // the fully-qualified "<EnumerationPath>.<ValueName>" form (the
         // toRepresentation/%r convention) must use enumQualifiedPath above.
-        if ("meta::pure::metamodel::type::Enum".equals(pureType))
+        if ("platform::pure::metamodel::type::Enum".equals(pureType))
         {
             Object name = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(v, SLOT_NAME);
             if (name instanceof String s)
@@ -137,7 +137,7 @@ public final class ToStringNode extends PureNode
             }
         }
         // List — [a, b, c]
-        if ("meta::pure::functions::collection::List".equals(pureType))
+        if ("platform::pure::functions::collection::List".equals(pureType))
         {
             Object valuesObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(v, SLOT_VALUES);
             if (!(valuesObj instanceof org.finos.legend.pure.truffle.execution.types.PureSequence values) || values.isEmpty())
@@ -153,7 +153,7 @@ public final class ToStringNode extends PureNode
             return sb.append("]").toString();
         }
         // Pair — <a, b>
-        if ("meta::pure::functions::collection::Pair".equals(pureType))
+        if ("platform::pure::functions::collection::Pair".equals(pureType))
         {
             return "<" + pureToString(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(v, SLOT_FIRST), reader)
                     + ", " + pureToString(org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(v, SLOT_SECOND), reader) + ">";
@@ -203,7 +203,7 @@ public final class ToStringNode extends PureNode
                     Object enumType = org.finos.legend.pure.truffle.execution.PureLanguage.get(null).resolver().getElement(prefix);
                     if (enumType != null
                             && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(enumType,
-                                    "meta::pure::metamodel::type::Enumeration"))
+                                    "platform::pure::metamodel::type::Enumeration"))
                     {
                         return s.substring(dotIdx + 1);
                     }

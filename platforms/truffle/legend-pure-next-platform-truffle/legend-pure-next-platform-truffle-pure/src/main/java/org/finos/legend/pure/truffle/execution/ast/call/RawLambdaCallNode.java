@@ -143,9 +143,9 @@ public final class RawLambdaCallNode extends Node
     }
 
     private static final String LAMBDA_FUNCTION_PATH =
-            "meta::pure::metamodel::function::LambdaFunction";
+            "platform::pure::metamodel::function::LambdaFunction";
     private static final String PROPERTY_PATH =
-            "meta::pure::metamodel::function::property::Property";
+            "platform::pure::metamodel::function::property::Property";
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private RootCallTarget getCallTarget(Object v)
@@ -212,13 +212,13 @@ public final class RawLambdaCallNode extends Node
         MetadataAccess resolver =
                 getContext().resolver();
         if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(lambdaOrClosure,
-                "meta::pure::metamodel::function::FunctionDefinition", resolver))
+                "platform::pure::metamodel::function::FunctionDefinition", resolver))
         {
             Object[] rawArgs = extractArgs(args);
             return getContext().executeFunction(lambdaOrClosure, rawArgs);
         }
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(lambdaOrClosure,
-                "meta::pure::metamodel::function::NativeFunction"))
+                "platform::pure::metamodel::function::NativeFunction"))
         {
             Object[] rawArgs = extractArgs(args);
             return org.finos.legend.pure.truffle.execution.natives.lang.EvalNode.dispatch(getContext(), lambdaOrClosure, rawArgs, propertyReader);

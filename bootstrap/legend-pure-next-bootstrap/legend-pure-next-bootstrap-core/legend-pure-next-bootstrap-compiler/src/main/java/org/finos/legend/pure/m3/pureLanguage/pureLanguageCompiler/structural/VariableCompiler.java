@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,15 +15,15 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 
 /**
- * Compiles a grammar-level {@link meta.pure.protocol.grammar.valuespecification.VariableExpression}
+ * Compiles a grammar-level {@link platform.pure.protocol.grammar.valuespecification.VariableExpression}
  * into a metamodel-level {@link VariableExpression}, resolving the parameter's
  * generic type and multiplicity.
  */
@@ -42,7 +43,7 @@ public final class VariableCompiler
      * @param context      the compilation context for error collection
      * @return a fully resolved metamodel VariableExpression, or null if the type is unresolvable
      */
-    public static VariableExpression compileParameter(meta.pure.protocol.grammar.valuespecification.VariableExpression grammarParam, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static VariableExpression compileParameter(platform.pure.protocol.grammar.valuespecification.VariableExpression grammarParam, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         int errorsBefore = context.currentErrorCount();
         GenericType genericType = GenericTypeCompiler.compile(grammarParam._genericType(), imports, model, context);

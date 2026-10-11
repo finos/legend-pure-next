@@ -16,7 +16,7 @@
 package org.finos.legend.pure.m3.module.pdbModule.archive;
 
 import com.google.flatbuffers.FlatBufferBuilder;
-import meta.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ModuleManifest;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndex;
@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.Deflater;
@@ -119,9 +120,9 @@ public class CompressedArchiveWriter
                 byte[] data = (byte[]) e.getValue()[1];
                 elementEntries.add(new String[]{path, typeName});
                 writtenPaths.add(path);
-                // Entry name format: "elements/meta/pure/metamodel/type/ElementName.TypeName"
+                // Entry name format: "elements/platform/pure/metamodel/type/ElementName.TypeName"
                 String entryPath = "elements/" + path.replace("::", "/") + "." + typeName;
-                ZipEntry entry = new ZipEntry(entryPath);
+                ZipEntry entry = newEntry(entryPath);
                 zos.putNextEntry(entry);
                 zos.write(data);
                 zos.closeEntry();
@@ -154,9 +155,23 @@ public class CompressedArchiveWriter
         }
     }
 
+    // Every entry carries the same timestamp, so the same content always gives the same archive
+    // bytes. Left unset, ZipOutputStream stamps the current time and every rebuild rewrites every
+    // PDB. 1980-01-01 00:00:02 is the first DOS instant after the epoch: the JDK treats the epoch
+    // itself as its "before 1980" sentinel and then adds an extended-timestamp field holding the
+    // time-zone-dependent Unix time. Any later instant is stored as DOS date/time only.
+    private static final LocalDateTime ENTRY_TIME = LocalDateTime.of(1980, 1, 1, 0, 0, 2);
+
+    private static ZipEntry newEntry(String name)
+    {
+        ZipEntry entry = new ZipEntry(name);
+        entry.setTimeLocal(ENTRY_TIME);
+        return entry;
+    }
+
     private static void writeManifest(ZipOutputStream zos, ModuleManifest manifest) throws IOException
     {
-        ZipEntry entry = new ZipEntry(ModuleManifest.ARCHIVE_SECTION);
+        ZipEntry entry = newEntry(ModuleManifest.ARCHIVE_SECTION);
         zos.putNextEntry(entry);
         zos.write(manifest.toBytes());
         zos.closeEntry();
@@ -164,7 +179,7 @@ public class CompressedArchiveWriter
 
     private static void writeSection(ZipOutputStream zos, PDBArchiveSection section) throws IOException
     {
-        ZipEntry zipEntry = new ZipEntry(section.name());
+        ZipEntry zipEntry = newEntry(section.name());
         zos.putNextEntry(zipEntry);
         zos.write(section.data());
         zos.closeEntry();
@@ -194,7 +209,7 @@ public class CompressedArchiveWriter
                 .createElementIndex(builder, elementsVectorOffset);
         builder.finish(indexOffset);
 
-        ZipEntry zipEntry = new ZipEntry("elementIndex");
+        ZipEntry zipEntry = newEntry("elementIndex");
         zos.putNextEntry(zipEntry);
         zos.write(builder.sizedByteArray());
         zos.closeEntry();

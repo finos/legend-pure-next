@@ -636,7 +636,7 @@ function specMatrix() {
   const q = query();
   const differs = st => new Set(runs.map(r => st[r.run]?.status ?? "missing").filter(s => s !== "skipped")).size > 1;
   const ids = [...byId.keys()].filter(id => (!q || id.toLowerCase().includes(q)) && (!state.onlyDiff || differs(byId.get(id)))).sort();
-  const groupOf = id => id.includes("::") ? id.split("::").slice(0, -1).join("::").replace(/^meta::pure::functions::/, "") : (id.includes("/") ? id.split("/").slice(0, -1).join("/") : "(root)");
+  const groupOf = id => id.includes("::") ? id.split("::").slice(0, -1).join("::").replace(/^platform::pure::functions::/, "") : (id.includes("/") ? id.split("/").slice(0, -1).join("/") : "(root)");
   const groups = new Map();
   for (const id of ids) { const g = groupOf(id); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(id); }
   const fixture = ["compiler", "grammar", "printer-compiled", "printer-protocol"].includes(state.spec);

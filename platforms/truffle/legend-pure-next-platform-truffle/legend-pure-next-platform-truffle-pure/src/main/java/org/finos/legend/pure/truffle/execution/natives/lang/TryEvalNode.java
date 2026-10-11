@@ -33,9 +33,9 @@ import org.finos.legend.pure.truffle.execution.types.PureSequence;
 @NodeInfo(shortName = "tryEval")
 public final class TryEvalNode extends PureNode
 {
-    private static final String TRY_RESULT_PATH = "meta::pure::functions::lang::TryResult";
-    private static final String ERROR_PATH = "meta::pure::functions::lang::Error";
-    private static final String LAMBDA_PATH = "meta::pure::metamodel::function::LambdaFunction";
+    private static final String TRY_RESULT_PATH = "platform::pure::functions::lang::TryResult";
+    private static final String ERROR_PATH = "platform::pure::functions::lang::Error";
+    private static final String LAMBDA_PATH = "platform::pure::metamodel::function::LambdaFunction";
     private static final String STACK_HEADER = "\nPure stack trace:";
 
     @Child

@@ -13,24 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::metamodel::relation::*;
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::relationTypeCompiler::*;
-import meta::pure::compiler::helper::column::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::relation::*;
+import platform::pure::compiler::structural::genericTypeCompiler::*;
+import platform::pure::compiler::structural::relationTypeCompiler::*;
+import platform::pure::compiler::helper::column::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::*;
 
 // Mirrors Java RelationTypeCompiler.compile()
 // Compiles a protocol RelationType into a metamodel RelationType.
-function meta::pure::compiler::structural::relationTypeCompiler::compileRelationType(rt:meta::pure::protocol::grammar::relation::RelationType[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<GenericType>[1]
+function platform::pure::compiler::structural::relationTypeCompiler::compileRelationType(rt:platform::pure::protocol::grammar::relation::RelationType[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<GenericType>[1]
 {
     let ownerGT = buildUserDefinedGenericType(RelationType);
-    let colAccum = $rt.columns->cast(@meta::pure::protocol::grammar::relation::Column)->fold({col, acc |
+    let colAccum = $rt.columns->cast(@platform::pure::protocol::grammar::relation::Column)->fold({col, acc |
         let colGenType = $col.genericType;
-        let colGTResult = if($colGenType->isNotEmpty() && $colGenType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
-            | $colGenType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext),
+        let colGTResult = if($colGenType->isNotEmpty() && $colGenType->toOne()->instanceOf(platform::pure::protocol::grammar::type::generics::GenericTypeValue),
+            | $colGenType->toOne()->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext),
             | ^CompilerResult<GenericType>(
                   value = ^CompilerNotSetGenericType(),
                   context = $acc.context
@@ -38,7 +38,7 @@ function meta::pure::compiler::structural::relationTypeCompiler::compileRelation
         );
         let colMul = if($col.multiplicity->isEmpty(),
             | PureOne,
-            | $col.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity()
+            | $col.multiplicity->toOne()->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity()
         );
         let colNameWC = if($col.nameWildCard->isEmpty(), | false, | $col.nameWildCard);
         ^$acc(
@@ -58,7 +58,7 @@ function meta::pure::compiler::structural::relationTypeCompiler::compileRelation
     // newRelationTypeUDGTOwned is this exact shape (and also closes the older
     // self-host diff: without the classifier wiring the auto-set classifier
     // carries `Any`, diverging from Java's UDGT-of-instance).
-    let compiledRT = meta::pure::compiler::helper::relationType::newRelationTypeUDGTOwned($colAccum.values);
+    let compiledRT = platform::pure::compiler::helper::relationType::newRelationTypeUDGTOwned($colAccum.values);
     ^CompilerResult<GenericType>(
         value = buildUserDefinedGenericType($compiledRT),
         context = $colAccum.context

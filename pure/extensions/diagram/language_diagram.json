@@ -8,14 +8,14 @@
     "entryRule": "section"
   },
   "pure": {
-    "sectionParsers": "meta::pure::diagram::parser::diagramSectionParsers__Pair_MANY_",
-    "compilerExtension": "meta::pure::diagram::compiler::diagramExtension__CompilerExtension_1_"
+    "sectionParsers": "platform::pure::diagram::parser::diagramSectionParsers__Pair_MANY_",
+    "compilerExtension": "platform::pure::diagram::compiler::diagramExtension__CompilerExtension_1_"
   },
   "pdbs": [
     "pure/extensions/diagram/build/diagram.pdb"
   ],
   "packages": [
-    "meta::pure::diagram::metamodel",
-    "meta::pure::diagram::protocol"
+    "platform::pure::diagram::metamodel",
+    "platform::pure::diagram::protocol"
   ]
 }

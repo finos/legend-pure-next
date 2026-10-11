@@ -24,7 +24,7 @@ import org.finos.legend.pure.truffle.execution.types.PureBinary;
 import org.finos.legend.pure.truffle.execution.types.PureSequence;
 
 /**
- * {@code meta::pure::functions::binary} on Truffle. A Binary is a host
+ * {@code platform::pure::functions::binary} on Truffle. A Binary is a host
  * {@code byte[]}; a Byte is a constrained extension of Integer and so is a
  * plain long, produced here unsigned 0..255 BY CONSTRUCTION — these natives
  * never evaluate the Byte constraint, only an explicit {@code cast(@Byte)}

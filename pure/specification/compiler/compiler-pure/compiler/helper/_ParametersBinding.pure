@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,32 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::functions::collection::*;
+import platform::pure::compiler::helper::multiplicity::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::parametersBinding::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::*;
+import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::functions::collection::*;
 
 
-Class meta::pure::compiler::helper::parametersBinding::ParametersBinding
+Class platform::pure::compiler::helper::parametersBinding::ParametersBinding
 {
     typeBindings: Map<String, List<GenericType>>[1];
     multiplicityBindings: Map<String, List<Multiplicity>>[1];
 }
 
-Class meta::pure::compiler::helper::parametersBinding::PlainParametersBinding extends ParametersBinding
+Class platform::pure::compiler::helper::parametersBinding::PlainParametersBinding extends ParametersBinding
 {
 }
 
-Class meta::pure::compiler::helper::parametersBinding::EnclosingOwnerParametersBinding extends ParametersBinding
+Class platform::pure::compiler::helper::parametersBinding::EnclosingOwnerParametersBinding extends ParametersBinding
 {
     owner: TypeAndMultiplicityParametersOwner[1];
 }
 
-Class meta::pure::compiler::helper::parametersBinding::FunctionCallParametersBinding extends ParametersBinding
+Class platform::pure::compiler::helper::parametersBinding::FunctionCallParametersBinding extends ParametersBinding
 {
     expr: FunctionExpression[0..1];
     function: TypeAndMultiplicityParametersOwner[0..1]; // Corresponds to FunctionIndexEntry
@@ -46,7 +47,7 @@ Class meta::pure::compiler::helper::parametersBinding::FunctionCallParametersBin
     enclosingOwner: EnclosingOwnerParametersBinding[0..1];
 }
 
-function meta::pure::compiler::helper::parametersBinding::newPlainParametersBinding():PlainParametersBinding[1]
+function platform::pure::compiler::helper::parametersBinding::newPlainParametersBinding():PlainParametersBinding[1]
 {
     ^PlainParametersBinding(
         typeBindings = newMap([]->cast(@Pair<String, List<GenericType>>)),
@@ -54,7 +55,7 @@ function meta::pure::compiler::helper::parametersBinding::newPlainParametersBind
     );
 }
 
-function meta::pure::compiler::helper::parametersBinding::addTypeBinding(pb:ParametersBinding[1], typeParam:TypeParameter[1], argGT:GenericType[1]):ParametersBinding[1]
+function platform::pure::compiler::helper::parametersBinding::addTypeBinding(pb:ParametersBinding[1], typeParam:TypeParameter[1], argGT:GenericType[1]):ParametersBinding[1]
 {
     $pb->match([
         fcpb : FunctionCallParametersBinding[1] |
@@ -79,7 +80,7 @@ function meta::pure::compiler::helper::parametersBinding::addTypeBinding(pb:Para
 // as multiple object instances during compilation (e.g. captured in scope when typeparams
 // are minted vs. read back from elementMap when FCPB is built). Fall back to qualified-path
 // comparison when both are PackageableElements so routing matches Java's intent.
-function meta::pure::compiler::helper::parametersBinding::ownersMatch(a:Any[1], b:Any[1]):Boolean[1]
+function platform::pure::compiler::helper::parametersBinding::ownersMatch(a:Any[1], b:Any[1]):Boolean[1]
 {
     if($a == $b,
         | true,
@@ -93,12 +94,12 @@ function meta::pure::compiler::helper::parametersBinding::ownersMatch(a:Any[1], 
     )
 }
 
-function meta::pure::compiler::helper::parametersBinding::addMultiplicityBinding(pb:ParametersBinding[1], mulParam:MultiplicityParameter[1], argMul:Multiplicity[1]):ParametersBinding[1]
+function platform::pure::compiler::helper::parametersBinding::addMultiplicityBinding(pb:ParametersBinding[1], mulParam:MultiplicityParameter[1], argMul:Multiplicity[1]):ParametersBinding[1]
 {
     ^$pb(multiplicityBindings = $pb.multiplicityBindings->putMapList($mulParam.name, $argMul))
 }
 
-function meta::pure::compiler::helper::parametersBinding::putMapList<K,V>(map:Map<K,List<V>>[1], key:K[1], value:V[1]):Map<K,List<V>>[1]
+function platform::pure::compiler::helper::parametersBinding::putMapList<K,V>(map:Map<K,List<V>>[1], key:K[1], value:V[1]):Map<K,List<V>>[1]
 {
     let currentList = $map->get($key);
     let newList = if($currentList->isEmpty(),
@@ -108,7 +109,7 @@ function meta::pure::compiler::helper::parametersBinding::putMapList<K,V>(map:Ma
     $map->put($key, $newList);
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify_step1_pairwiseBind(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+function platform::pure::compiler::helper::parametersBinding::unify_step1_pairwiseBind(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
 {
     $fcpb.typeBindings->keyValues()->fold({kv, b |
         if($kv.second.values->size() > 1,
@@ -127,7 +128,7 @@ function meta::pure::compiler::helper::parametersBinding::unify_step1_pairwiseBi
     ]);
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify_step2_transitiveType_Helper(tb:FunctionCallParametersBinding[1], changed:Boolean[1], kvName:String[1], gt:GenericType[1]):Pair<FunctionCallParametersBinding, Boolean>[1]
+function platform::pure::compiler::helper::parametersBinding::unify_step2_transitiveType_Helper(tb:FunctionCallParametersBinding[1], changed:Boolean[1], kvName:String[1], gt:GenericType[1]):Pair<FunctionCallParametersBinding, Boolean>[1]
 {
     $gt->match([
         gtv : GenericTypeValue[1] |
@@ -168,7 +169,7 @@ function meta::pure::compiler::helper::parametersBinding::unify_step2_transitive
     ]);
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify_step2_transitiveType(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+function platform::pure::compiler::helper::parametersBinding::unify_step2_transitiveType(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
 {
     let kvs = $fcpb.typeBindings->keyValues();
     let newState = fold($kvs, {kv, stateAndChanged |
@@ -186,7 +187,7 @@ function meta::pure::compiler::helper::parametersBinding::unify_step2_transitive
     );
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify_step3_transitiveMul_Helper(tb:FunctionCallParametersBinding[1], changed:Boolean[1], kvName:String[1], mul:Multiplicity[1]):Pair<FunctionCallParametersBinding, Boolean>[1]
+function platform::pure::compiler::helper::parametersBinding::unify_step3_transitiveMul_Helper(tb:FunctionCallParametersBinding[1], changed:Boolean[1], kvName:String[1], mul:Multiplicity[1]):Pair<FunctionCallParametersBinding, Boolean>[1]
 {
     $mul->match([
         mp : MultiplicityParameter[1] |
@@ -204,7 +205,7 @@ function meta::pure::compiler::helper::parametersBinding::unify_step3_transitive
     ]);
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify_step3_transitiveMul(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+function platform::pure::compiler::helper::parametersBinding::unify_step3_transitiveMul(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
 {
     let kvs = $fcpb.multiplicityBindings->keyValues();
     let newState = fold($kvs, {kv, stateAndChanged |
@@ -222,7 +223,7 @@ function meta::pure::compiler::helper::parametersBinding::unify_step3_transitive
     );
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify_preReduce_Helper(fcpb:FunctionCallParametersBinding[1], kvName:String[1], kvValues:List<GenericType>[1]):FunctionCallParametersBinding[1]
+function platform::pure::compiler::helper::parametersBinding::unify_preReduce_Helper(fcpb:FunctionCallParametersBinding[1], kvName:String[1], kvValues:List<GenericType>[1]):FunctionCallParametersBinding[1]
 {
     let newValsAndChanged = $kvValues.values->fold({gt, agg |
         let keepOriginal = pair(^List<GenericType>(values=$agg.first.values->concatenate($gt)), $agg.second);
@@ -264,7 +265,7 @@ function meta::pure::compiler::helper::parametersBinding::unify_preReduce_Helper
     );
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify_step4_preReduceEnclosing(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+function platform::pure::compiler::helper::parametersBinding::unify_step4_preReduceEnclosing(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
 {
     if($fcpb.enclosingOwner->isEmpty(),
         | $fcpb,
@@ -278,7 +279,7 @@ function meta::pure::compiler::helper::parametersBinding::unify_step4_preReduceE
     );
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify_step5_finalReduce(fcpb:FunctionCallParametersBinding[1], context:meta::pure::compiler::CompilerContext[1]):FunctionCallParametersBinding[1]
+function platform::pure::compiler::helper::parametersBinding::unify_step5_finalReduce(fcpb:FunctionCallParametersBinding[1], context:platform::pure::compiler::CompilerContext[1]):FunctionCallParametersBinding[1]
 {
     let st1 = fold($fcpb.typeBindings->keyValues(), {kv, b |
         if($kv.second.values->size() > 1,
@@ -303,7 +304,7 @@ function meta::pure::compiler::helper::parametersBinding::unify_step5_finalReduc
     }, $st1);
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify(fcpb:FunctionCallParametersBinding[1], context:meta::pure::compiler::CompilerContext[1]):FunctionCallParametersBinding[1]
+function platform::pure::compiler::helper::parametersBinding::unify(fcpb:FunctionCallParametersBinding[1], context:platform::pure::compiler::CompilerContext[1]):FunctionCallParametersBinding[1]
 {
     let step1 = unify_step1_pairwiseBind($fcpb);
     let step2 = unify_step2_transitiveType($step1);
@@ -312,7 +313,7 @@ function meta::pure::compiler::helper::parametersBinding::unify(fcpb:FunctionCal
     unify_step5_finalReduce($step4, $context);
 }
 
-function meta::pure::compiler::helper::parametersBinding::toString(pb:ParametersBinding[1]):String[1]
+function platform::pure::compiler::helper::parametersBinding::toString(pb:ParametersBinding[1]):String[1]
 {
     let typeKeys = $pb.typeBindings->keys();
     let typePart = if($typeKeys->isEmpty(), | '', | 

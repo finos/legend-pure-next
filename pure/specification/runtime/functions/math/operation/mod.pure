@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
-native function <<PCT.function>> {doc.doc='Compute the modulo as defined mathematically.  The result is never negative.  This is different from the % operation on computer languages, where for negative inputs it will return negative numbers.  For that operation in Pure, please see the function reminder - rem()'} meta::pure::functions::math::mod(dividend:Integer[1], divisor:Integer[1]):Integer[1];
+native function <<PCT.function>> {doc.doc='Compute the modulo as defined mathematically.  The result is never negative.  This is different from the % operation on computer languages, where for negative inputs it will return negative numbers.  For that operation in Pure, please see the function reminder - rem()'} platform::pure::functions::math::mod(dividend:Integer[1], divisor:Integer[1]):Integer[1];
 
-function <<PCT.test>> meta::pure::functions::math::tests::mod::testMod<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::mod::testMod<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(2, $f->eval(|mod(12, 5)));
     assertEquals(5, $f->eval(|mod(5, 12)));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::mod::testModWithNegativeNumbers<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::mod::testModWithNegativeNumbers<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(3, $f->eval(|mod(-12, 5)));
     assertEquals(7, $f->eval(|mod(-5, 12)));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::mod::testModInEval<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::mod::testModInEval<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let dividend = 12;
     let divisor = 5;

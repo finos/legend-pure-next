@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import protocol::*;
 import protocol::support::*;
@@ -15,22 +29,22 @@ Class protocol::MyClass
 }
 
 ###CompiledGraph
-profile protocol::support::AProfile  ~@Profile@  @5:1-9:1
+profile protocol::support::AProfile  ~@Profile@  @19:1-23:1
   stereotype flag  ~@Stereotype@
   tag tag1  ~@Tag@
 
-class protocol::MyClass extends Any  ~Class<protocol::MyClass>  @11:1-15:1
+class protocol::MyClass extends Any  ~Class<protocol::MyClass>  @25:1-29:1
   property name :@String@[1]  ~Property<protocol::MyClass, @String@|1>
   qualifiedProperty displayName(prefix:@String@[1]) :@String@[1]
     <<protocol::support::AProfile.flag>>
     {protocol::support::AProfile.tag1 = 'yeah'}
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @14:78-14:97
-      Variable prefix :#String##[1]#  ~@VariableExpression@  @14:78-14:84
-      DotApplication protocol::MyClass.name :#String##[1]#  ~@DotApplication@  @14:93-14:97
-        Variable this :#protocol::MyClass##[1]#  ~@VariableExpression@  @14:88-14:92
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @28:78-28:97
+      Variable prefix :#String##[1]#  ~@VariableExpression@  @28:78-28:84
+      DotApplication protocol::MyClass.name :#String##[1]#  ~@DotApplication@  @28:93-28:97
+        Variable this :#protocol::MyClass##[1]#  ~@VariableExpression@  @28:88-28:92
 
 ###ReverseIndex
-meta::pure::functions::string::plus_String_1__String_1__String_1_:
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
   protocol::MyClass.displayName
 protocol::MyClass.name:
   protocol::MyClass.displayName

@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +15,10 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
-import meta.pure.metamodel.function.UserDefinedFunction;
-import meta.pure.metamodel.function.UserDefinedFunctionImpl;
-import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
+import platform.pure.metamodel.function.UserDefinedFunction;
+import platform.pure.metamodel.function.UserDefinedFunctionImpl;
+import platform.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -42,14 +43,14 @@ public final class UserDefinedFunctionHandler
     {
     }
 
-    public static UserDefinedFunction firstPass(meta.pure.protocol.grammar.function.UserDefinedFunction grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
+    public static UserDefinedFunction firstPass(platform.pure.protocol.grammar.function.UserDefinedFunction grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         return new UserDefinedFunctionImpl()
                 ._name(grammar._name())
                 ._functionName(grammar._functionName());
     }
 
-    public static UserDefinedFunction secondPass(UserDefinedFunctionImpl result, meta.pure.protocol.grammar.function.UserDefinedFunction grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static UserDefinedFunction secondPass(UserDefinedFunctionImpl result, platform.pure.protocol.grammar.function.UserDefinedFunction grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         result = (UserDefinedFunctionImpl) PackageableFunctionCompiler.compileShared(result, grammar, imports, model, context);
 
@@ -89,8 +90,8 @@ public final class UserDefinedFunctionHandler
      * Third pass: resolve inferred function references in the expression sequence,
      * then validate return type and multiplicity compatibility.
      */
-    public static UserDefinedFunction thirdPass(meta.pure.metamodel.function.UserDefinedFunction result,
-                                                   meta.pure.protocol.grammar.function.UserDefinedFunction grammar,
+    public static UserDefinedFunction thirdPass(platform.pure.metamodel.function.UserDefinedFunction result,
+                                                   platform.pure.protocol.grammar.function.UserDefinedFunction grammar,
                                                    MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         // Set in-scope type/multiplicity params so inner FunctionExpressions
@@ -115,8 +116,8 @@ public final class UserDefinedFunctionHandler
         return result;
     }
 
-    private static void resolveFunctionConstraints(meta.pure.metamodel.function.UserDefinedFunction result,
-                                                    meta.pure.protocol.grammar.function.UserDefinedFunction grammar,
+    private static void resolveFunctionConstraints(platform.pure.metamodel.function.UserDefinedFunction result,
+                                                    platform.pure.protocol.grammar.function.UserDefinedFunction grammar,
                                                     MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         MutableList<VariableExpression> funcParams = result._parameters();
@@ -161,34 +162,34 @@ public final class UserDefinedFunctionHandler
     }
 
     private static void resolveFunctionConstraintList(
-            MutableList<meta.pure.metamodel.constraint.Constraint> compiledConstraints,
-            MutableList<? extends meta.pure.protocol.grammar.constraint.Constraint> grammarConstraints,
+            MutableList<platform.pure.metamodel.constraint.Constraint> compiledConstraints,
+            MutableList<? extends platform.pure.protocol.grammar.constraint.Constraint> grammarConstraints,
             MutableList<VariableExpression> params,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         compiledConstraints.zip(grammarConstraints).forEach(pair ->
         {
-            meta.pure.metamodel.constraint.Constraint compiled = pair.getOne();
-            meta.pure.protocol.grammar.constraint.Constraint grammarC = pair.getTwo();
+            platform.pure.metamodel.constraint.Constraint compiled = pair.getOne();
+            platform.pure.protocol.grammar.constraint.Constraint grammarC = pair.getTwo();
 
-            if (grammarC._functionDefinition() instanceof meta.pure.protocol.grammar.function.LambdaFunction lambdaFunc)
+            if (grammarC._functionDefinition() instanceof platform.pure.protocol.grammar.function.LambdaFunction lambdaFunc)
             {
-                meta.pure.metamodel.function.LambdaFunctionImpl lambda =
+                platform.pure.metamodel.function.LambdaFunctionImpl lambda =
                         org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.LambdaCompiler.compile(lambdaFunc, imports, model, context);
                 lambda._parameters(Lists.mutable.<VariableExpression>withAll(params));
                 lambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(lambda._expressionSequence(), model, context));
-                lambda._classifierGenericType((meta.pure.metamodel.type.generics.GenericTypeValue)
+                lambda._classifierGenericType((platform.pure.metamodel.type.generics.GenericTypeValue)
                         org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Lambda.getLambdaClassifierGenericType(model, lambda));
                 compiled._functionDefinition(lambda);
             }
 
-            if (grammarC._messageFunction() instanceof meta.pure.protocol.grammar.function.LambdaFunction msgFunc)
+            if (grammarC._messageFunction() instanceof platform.pure.protocol.grammar.function.LambdaFunction msgFunc)
             {
-                meta.pure.metamodel.function.LambdaFunctionImpl msgLambda =
+                platform.pure.metamodel.function.LambdaFunctionImpl msgLambda =
                         org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.LambdaCompiler.compile(msgFunc, imports, model, context);
                 msgLambda._parameters(Lists.mutable.<VariableExpression>withAll(params));
                 msgLambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(msgLambda._expressionSequence(), model, context));
-                msgLambda._classifierGenericType((meta.pure.metamodel.type.generics.GenericTypeValue)
+                msgLambda._classifierGenericType((platform.pure.metamodel.type.generics.GenericTypeValue)
                         org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Lambda.getLambdaClassifierGenericType(model, msgLambda));
                 compiled._messageFunction(msgLambda);
             }

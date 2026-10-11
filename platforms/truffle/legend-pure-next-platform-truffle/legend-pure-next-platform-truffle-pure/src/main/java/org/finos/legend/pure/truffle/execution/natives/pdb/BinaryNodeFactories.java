@@ -18,7 +18,7 @@ import org.finos.legend.pure.truffle.execution.natives.NativeRegistry;
 
 /**
  * Registers the specialized Truffle nodes for
- * {@code meta::pure::functions::binary} — the Binary primitive and the
+ * {@code platform::pure::functions::binary} — the Binary primitive and the
  * byte-level operations backing the self-hosted PDB reader and writer.
  */
 public final class BinaryNodeFactories

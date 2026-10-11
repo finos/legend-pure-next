@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 Class MyClass<Z>
 {
@@ -15,27 +29,27 @@ function test(): Any[*]
 }
 
 ###CompiledGraph
-class MyClass extends Any  ~Class<MyClass<Z~MyClass>>  @2:1-5:1
+class MyClass extends Any  ~Class<MyClass<Z~MyClass>>  @16:1-19:1
   property value :Z~MyClass[1]  ~Property<MyClass<Z~MyClass>, Z~MyClass|1>
 
 function f_T_MANY__MyClass_1_(s:T~f_T_MANY__MyClass_1_[*]):MyClass<T~f_T_MANY__MyClass_1_>[1]  ~UserDefinedFunction<{T~f_T_MANY__MyClass_1_[*]->MyClass<T~f_T_MANY__MyClass_1_>[1]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#MyClass<T~f_T_MANY__MyClass_1_>##[1]#  ~@FunctionInvocation@  @9:3-9:27
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#MyClass<T~f_T_MANY__MyClass_1_>##[1]#  ~@FunctionInvocation@  @23:3-23:27
     typeParam T -> MyClass<T~f_T_MANY__MyClass_1_>
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<MyClass<T~f_T_MANY__MyClass_1_>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<MyClass<T~f_T_MANY__MyClass_1_>|1>  @9:3-9:27
-    Collection :#KeyExpression#[1]  ~@Collection@  @9:3-9:27
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @9:15-9:26
-        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @9:15-9:26
-        AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @9:23-9:26
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<MyClass<T~f_T_MANY__MyClass_1_>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<MyClass<T~f_T_MANY__MyClass_1_>|1>  @23:3-23:27
+    Collection :#KeyExpression#[1]  ~@Collection@  @23:3-23:27
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @23:15-23:26
+        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @23:15-23:26
+        AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @23:23-23:26
 
 function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @14:16-14:28
-    DotApplication MyClass.value :#String##[1]#  ~@DotApplication@  @14:16-14:21
-      FunctionInvocation f_T_MANY__MyClass_1_ :#MyClass<#String#>##[1]#  ~@FunctionInvocation@  @14:3-14:15
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @28:16-28:28
+    DotApplication MyClass.value :#String##[1]#  ~@DotApplication@  @28:16-28:21
+      FunctionInvocation f_T_MANY__MyClass_1_ :#MyClass<#String#>##[1]#  ~@FunctionInvocation@  @28:3-28:15
         typeParam T -> #String#
-        Collection :#String#[2]  ~@Collection@  @14:5-14:14
-          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @14:6-14:8
-          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @14:11-14:13
-    AtomicValue  'ee' :@String@[1]  ~@AtomicValue@  @14:25-14:28
+        Collection :#String#[2]  ~@Collection@  @28:5-28:14
+          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @28:6-28:8
+          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @28:11-28:13
+    AtomicValue  'ee' :@String@[1]  ~@AtomicValue@  @28:25-28:28
 
 ###ReverseIndex
 MyClass:
@@ -44,9 +58,9 @@ MyClass.value:
   test__Any_MANY_
 f_T_MANY__MyClass_1_:
   test__Any_MANY_
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   f_T_MANY__MyClass_1_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   f_T_MANY__MyClass_1_
-meta::pure::functions::string::plus_String_1__String_1__String_1_:
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
   test__Any_MANY_

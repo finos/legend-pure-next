@@ -17,7 +17,7 @@ package org.finos.legend.pure.truffle.execution.ast.root;
 
 /**
  * Cached frame-path analysis of a single {@link
- * meta::pure::metamodel::function::FunctionDefinition}: just the
+ * platform::pure::metamodel::function::FunctionDefinition}: just the
  * {@link FrameLayout} (slot allocation for parameters and
  * {@code letFunction} targets).
  *

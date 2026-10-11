@@ -17,23 +17,23 @@
 // Handles relation-column-specific enrichment for "magical" column spec
 // functions such as funcColSpec, aggColSpec, funcColSpecArray, aggColSpecArray, and colSpecArray.
 
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::metamodel::relation::*;
-import meta::pure::metamodel::*;
-import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::*;
-import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::*;
-import meta::pure::compiler::structural::sourceInformationCompiler::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::relation::*;
+import platform::pure::metamodel::*;
+import platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::*;
+import platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::*;
+import platform::pure::compiler::structural::sourceInformationCompiler::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::multiplicity::*;
+import platform::pure::compiler::helper::parametersBinding::*;
+import platform::pure::compiler::helper::type::*;
+import platform::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::enrichRelationTypeHolderForMagicalFunctions(funcName:String[1], resolvedParams:ValueSpecification[*], ft:FunctionType[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1], exprSourceInformation:SourceInformation[0..1]):EnrichResult[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::enrichRelationTypeHolderForMagicalFunctions(funcName:String[1], resolvedParams:ValueSpecification[*], ft:FunctionType[1], bindings:platform::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1], exprSourceInformation:SourceInformation[0..1]):EnrichResult[1]
 {
     let bindingsDebug = $bindings.typeBindings->keys()->map(k | $k + '=' + printGenericType($bindings.typeBindings->get($k)->toOne().values->at(0)));
     debug($context, | 'enrichRelationTypeHolder: ' + $funcName + ' bindings={' + $bindingsDebug->joinStrings(',') + '}');
@@ -62,15 +62,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::enrichColumnTypeHolder(paramValues:ValueSpecification[*], lambdaIdx:Integer[1], nameIdx:Integer[1], typeHolderIdx:Integer[1]):ValueSpecification[*]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::enrichColumnTypeHolder(paramValues:ValueSpecification[*], lambdaIdx:Integer[1], nameIdx:Integer[1], typeHolderIdx:Integer[1]):ValueSpecification[*]
 {
     let lambda = $paramValues->at($lambdaIdx)->cast(@AtomicValue).value->toOne()->cast(@LambdaFunction<Any>);
     let lastExpr = $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1);
     let colName = $paramValues->at($nameIdx)->cast(@AtomicValue).value->toOne()->cast(@String);
     // Self-wired inferred RelationType (owner/classifier cycle) — the shared
     // wrapper GT is what Java's enrichColumnTypeHolder passes around as ownerGT.
-    let enrichedGT = meta::pure::compiler::helper::relationType::newRelationType([
-        meta::pure::compiler::helper::column::buildColumn($colName, buildUserDefinedGenericType(RelationType), if($lastExpr.genericType->isNotEmpty(), | $lastExpr.genericType->toOne(), | ^CompilerNotSetGenericType()), if($lastExpr.multiplicity->isNotEmpty(), | $lastExpr.multiplicity->toOne(), | PureOne), false)
+    let enrichedGT = platform::pure::compiler::helper::relationType::newRelationType([
+        platform::pure::compiler::helper::column::buildColumn($colName, buildUserDefinedGenericType(RelationType), if($lastExpr.genericType->isNotEmpty(), | $lastExpr.genericType->toOne(), | ^CompilerNotSetGenericType()), if($lastExpr.multiplicity->isNotEmpty(), | $lastExpr.multiplicity->toOne(), | PureOne), false)
     ]);
     let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
     let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
@@ -78,7 +78,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     range($paramValues->size())->map(i | if($i == $typeHolderIdx, | let val = $paramValues->at($i); ^$val(genericType = $typeHolderGT, classifierGenericType = $compilerCGT);, | $paramValues->at($i)));
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::mergeColSpecArrayTypeHolder(paramValues:ValueSpecification[*]):ValueSpecification[*]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::mergeColSpecArrayTypeHolder(paramValues:ValueSpecification[*]):ValueSpecification[*]
 {
     let collection = $paramValues->at(0)->cast(@Collection);
     let mergedColumns = $collection.values->map(v |
@@ -96,7 +96,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
     // Merged columns keep their inner-colSpec owners; only the classifier is
     // self-wired, and the holder gets its own fresh wrap (Java's merge shape).
-    let mergedRT = meta::pure::compiler::helper::relationType::newRelationTypeKeepingColumnOwners($mergedColumns);
+    let mergedRT = platform::pure::compiler::helper::relationType::newRelationTypeKeepingColumnOwners($mergedColumns);
     let enrichedGT = buildInferredGenericType($mergedRT);
     let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
     let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
@@ -105,7 +105,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     [$paramValues->at(0), ^$val(genericType = $typeHolderGT, classifierGenericType = $compilerCGT)];
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::tryResolveSubsetForTypeHolder(paramValues:ValueSpecification[*], ft:FunctionType[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1], exprSourceInformation:SourceInformation[0..1]):EnrichResult[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::tryResolveSubsetForTypeHolder(paramValues:ValueSpecification[*], ft:FunctionType[1], bindings:platform::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1], exprSourceInformation:SourceInformation[0..1]):EnrichResult[1]
 {
     let typeHolderParamGT = $ft.parameters->at(1)->cast(@VariableExpression).genericType->toOne();
     let typeArgs = $typeHolderParamGT->genericTypeTypeArguments();
@@ -137,7 +137,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::resolveFromSubset(paramValues:ValueSpecification[*], subsetOp:GenericTypeOperation[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1], exprSourceInformation:SourceInformation[0..1]):EnrichResult[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::resolveFromSubset(paramValues:ValueSpecification[*], subsetOp:GenericTypeOperation[1], bindings:platform::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1], exprSourceInformation:SourceInformation[0..1]):EnrichResult[1]
 {
     let resolvedRight = makeAsConcreteAsPossible($subsetOp.right, $bindings, $context);
     let referenceType = $resolvedRight->rawType();
@@ -151,13 +151,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                       let foundCol = $referenceRT.columns->cast(@Column<Nil, Any|*>)->filter(c | $c.name == $colName);
                       if($foundCol->isEmpty(),
                           | let errCtx = $acc.context;
-                            ^$acc(context = ^$errCtx(errors += 'The column \'' + $colName + '\' can\'t be found in the relation ' + meta::pure::compiler::helper::relationType::printRelationType($referenceRT) + $siCtx));,
+                            ^$acc(context = ^$errCtx(errors += 'The column \'' + $colName + '\' can\'t be found in the relation ' + platform::pure::compiler::helper::relationType::printRelationType($referenceRT) + $siCtx));,
                           | let col = $foundCol->at(0);
-                            let newCol = meta::pure::compiler::helper::column::buildColumn($colName, buildUserDefinedGenericType(RelationType), if($col.genericType->isNotEmpty(), | $col.genericType->toOne(), | ^CompilerNotSetGenericType()), if($col.multiplicity->isNotEmpty(), | $col.multiplicity->toOne(), | PureOne), false);
+                            let newCol = platform::pure::compiler::helper::column::buildColumn($colName, buildUserDefinedGenericType(RelationType), if($col.genericType->isNotEmpty(), | $col.genericType->toOne(), | ^CompilerNotSetGenericType()), if($col.multiplicity->isNotEmpty(), | $col.multiplicity->toOne(), | PureOne), false);
                             ^$acc(values += $newCol);
                       );
                   }, ^CompilerListResult<Any>(context = $context));
-                  let enrichedGT = meta::pure::compiler::helper::relationType::newRelationType($lookupResult.values->cast(@Column<Nil, Any|*>));
+                  let enrichedGT = platform::pure::compiler::helper::relationType::newRelationType($lookupResult.values->cast(@Column<Nil, Any|*>));
                   let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
     let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
                   let compilerCGT = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
@@ -168,7 +168,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::resolveFromEqualWithWildcard(paramValues:ValueSpecification[*], equalOp:GenericTypeOperation[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1]):EnrichResult[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::resolveFromEqualWithWildcard(paramValues:ValueSpecification[*], equalOp:GenericTypeOperation[1], bindings:platform::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1]):EnrichResult[1]
 {
     let resolvedRight = makeAsConcreteAsPossible($equalOp.right, $bindings, $context);
     let rightType = $resolvedRight->rawType();
@@ -180,8 +180,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   let resolvedColType = makeAsConcreteAsPossible($wildcardCol.genericType->toOne(), $bindings, $context);
                   let resolvedColMul = if($wildcardCol.multiplicity->isNotEmpty(), | makeAsConcreteAsPossible($wildcardCol.multiplicity->toOne(), $bindings), | PureOne);
                   let columnNames = extractColumnNames($paramValues->at(0));
-                  let enrichedCols = $columnNames->map(colName | meta::pure::compiler::helper::column::buildColumn($colName, buildUserDefinedGenericType(RelationType), $resolvedColType, $resolvedColMul, false));
-                  let enrichedGT = meta::pure::compiler::helper::relationType::newRelationType($enrichedCols);
+                  let enrichedCols = $columnNames->map(colName | platform::pure::compiler::helper::column::buildColumn($colName, buildUserDefinedGenericType(RelationType), $resolvedColType, $resolvedColMul, false));
+                  let enrichedGT = platform::pure::compiler::helper::relationType::newRelationType($enrichedCols);
                   let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
     let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
                   let compilerCGT = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
@@ -192,7 +192,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::extractColumnNames(arg:ValueSpecification[1]):String[*]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::extractColumnNames(arg:ValueSpecification[1]):String[*]
 {
     $arg->match([
         fe:FunctionInvocation[1] |
@@ -218,7 +218,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     ]);
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::updateTypeHolderBinding(ft:FunctionType[1], paramValues:ValueSpecification[*], typeHolderArgIdx:Integer[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1]):meta::pure::compiler::helper::parametersBinding::ParametersBinding[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::updateTypeHolderBinding(ft:FunctionType[1], paramValues:ValueSpecification[*], typeHolderArgIdx:Integer[1], bindings:platform::pure::compiler::helper::parametersBinding::ParametersBinding[1]):platform::pure::compiler::helper::parametersBinding::ParametersBinding[1]
 {
     let enrichedGT = $paramValues->at($typeHolderArgIdx).genericType;
     if($enrichedGT->isNotEmpty() && !$enrichedGT->toOne()->instanceOf(CompilerNotSetGenericType),

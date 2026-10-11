@@ -68,7 +68,7 @@ public final class RawPropertyAccessNode extends PureNode
         // Pre-resolve property name and kind at construction time
         Object func = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(fe, SLOT_FUNC);
         this.isQualifiedProperty = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(func,
-                "meta::pure::metamodel::function::property::QualifiedProperty");
+                "platform::pure::metamodel::function::property::QualifiedProperty");
         if (!isQualifiedProperty)
         {
             Object nameObj = func != null
@@ -127,7 +127,7 @@ public final class RawPropertyAccessNode extends PureNode
             // a Pure Enumeration. pureTypeIs is class-keyed-cached so the
             // hot non-Enumeration path avoids the lookup cost entirely.
             if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(target,
-                    "meta::pure::metamodel::type::Enumeration"))
+                    "platform::pure::metamodel::type::Enumeration"))
             {
                 if (cachedEnumTarget == target && cachedEnumValue != null
                         && cachedPropName != null && cachedPropName.equals(propName))
@@ -229,7 +229,7 @@ public final class RawPropertyAccessNode extends PureNode
                     }
                     Object expr = dvSeq.getBoxed(0);
                     if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(expr,
-                            "meta::pure::metamodel::valuespecification::AtomicValue"))
+                            "platform::pure::metamodel::valuespecification::AtomicValue"))
                     {
                         return org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(expr, SLOT_VALUE);
                     }

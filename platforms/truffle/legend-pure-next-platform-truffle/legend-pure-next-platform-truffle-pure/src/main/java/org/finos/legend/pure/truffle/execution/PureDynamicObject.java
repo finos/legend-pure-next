@@ -121,7 +121,7 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
         // {@code element} on PropertyPointer/EnumPointer/TagPointer/…) means
         // a consumer skipped upstream resolution — throw.
         if (classInfo.purePath != null
-                && classInfo.purePath.startsWith("meta::pure::metamodel::pointer::"))
+                && classInfo.purePath.startsWith("platform::pure::metamodel::pointer::"))
         {
             String[] names = classInfo.nameBySlot();
             if (slotIdx < names.length)
@@ -212,7 +212,7 @@ public class PureDynamicObject implements PropertyAccessor, TruffleObject
         // Pointer-access contract (see feature_pointerAccess.pure) — see
         // readSlot for the rationale and pointer-native whitelist.
         if (classInfo.purePath != null
-                && classInfo.purePath.startsWith("meta::pure::metamodel::pointer::")
+                && classInfo.purePath.startsWith("platform::pure::metamodel::pointer::")
                 && !isPointerNativeSlot(name))
         {
             throw new IllegalStateException(

@@ -73,7 +73,7 @@ public final class FrameDescriptorBuilder
         // post-warmup. After the loader flip the receiver is a
         // PureDynamicObject whose Shape's dynamic type is the Pure path.
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(fd,
-                "meta::pure::metamodel::function::LambdaFunction"))
+                "platform::pure::metamodel::function::LambdaFunction"))
         {
             return analyzeLambda(fd);
         }
@@ -218,11 +218,11 @@ public final class FrameDescriptorBuilder
                                           Map<String, Integer> slots)
     {
         if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs,
-                "meta::pure::metamodel::valuespecification::FunctionInvocation")
+                "platform::pure::metamodel::valuespecification::FunctionInvocation")
                 && !org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs,
-                        "meta::pure::metamodel::valuespecification::DotApplication")
+                        "platform::pure::metamodel::valuespecification::DotApplication")
                 && !org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs,
-                        "meta::pure::metamodel::valuespecification::ArrowInvocation"))
+                        "platform::pure::metamodel::valuespecification::ArrowInvocation"))
         {
             return;
         }
@@ -232,7 +232,7 @@ public final class FrameDescriptorBuilder
             Object func = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_FUNC);
             if (func != null
                     && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(func,
-                            "meta::pure::metamodel::function::NativeFunction"))
+                            "platform::pure::metamodel::function::NativeFunction"))
             {
                 Object nfName = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(func, SLOT_NAME);
                 if (LET_FUNCTION_SIGNATURE.equals(nfName))
@@ -279,17 +279,17 @@ public final class FrameDescriptorBuilder
     private static boolean containsLambdaIn(Object vs)
     {
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs,
-                "meta::pure::metamodel::valuespecification::AtomicValue"))
+                "platform::pure::metamodel::valuespecification::AtomicValue"))
         {
             Object inner = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_VALUE);
             if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(inner,
-                    "meta::pure::metamodel::function::LambdaFunction"))
+                    "platform::pure::metamodel::function::LambdaFunction"))
             {
                 return true;
             }
         }
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(vs,
-                "meta::pure::metamodel::valuespecification::Collection"))
+                "platform::pure::metamodel::valuespecification::Collection"))
         {
             Object valsObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_VALUES);
             if (valsObj instanceof org.finos.legend.pure.truffle.execution.types.PureSequence vals)
@@ -324,7 +324,7 @@ public final class FrameDescriptorBuilder
         }
         Object first = args.getBoxed(0);
         if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(first,
-                "meta::pure::metamodel::valuespecification::AtomicValue"))
+                "platform::pure::metamodel::valuespecification::AtomicValue"))
         {
             Object inner = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(first, SLOT_VALUE);
             if (inner instanceof String s)
@@ -365,7 +365,7 @@ public final class FrameDescriptorBuilder
                                              Map<String, Integer> slots)
     {
         String pureType = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeOf(vs);
-        if ("meta::pure::metamodel::valuespecification::VariableExpression".equals(pureType))
+        if ("platform::pure::metamodel::valuespecification::VariableExpression".equals(pureType))
         {
             Object n = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_NAME);
             if (n instanceof String name)
@@ -374,12 +374,12 @@ public final class FrameDescriptorBuilder
             }
             return;
         }
-        if ("meta::pure::metamodel::valuespecification::AtomicValue".equals(pureType))
+        if ("platform::pure::metamodel::valuespecification::AtomicValue".equals(pureType))
         {
             // Don't recurse into lambdas — they get their own layout
             return;
         }
-        if ("meta::pure::metamodel::valuespecification::Collection".equals(pureType))
+        if ("platform::pure::metamodel::valuespecification::Collection".equals(pureType))
         {
             Object valsObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(vs, SLOT_VALUES);
             if (valsObj instanceof org.finos.legend.pure.truffle.execution.types.PureSequence vals)

@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 function test::wrapAndPut<K,V>(map: Map<K, List<V>>[1], key: K[1], value: V[1]): Map<K, List<V>>[1]
 {
@@ -7,35 +21,35 @@ function test::wrapAndPut<K,V>(map: Map<K, List<V>>[1], key: K[1], value: V[1]):
 
 ###CompiledGraph
 function test::wrapAndPut_Map_1__K_1__V_1__Map_1_(map:Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1], key:K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1], value:V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1]):Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1]  ~UserDefinedFunction<{Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1], K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1], V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1]->Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@FunctionInvocation@  @4:3-4:38
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@FunctionInvocation@  @18:3-18:38
     typeParam T -> #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#
     mulParam m -> #[1]#
-    AtomicValue  'nl' :@String@[1]  ~@AtomicValue@  @4:7-4:8
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@FunctionInvocation@  @4:12-4:38
+    AtomicValue  'nl' :@String@[1]  ~@AtomicValue@  @18:7-18:8
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@FunctionInvocation@  @18:12-18:38
       typeParam T -> List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>|1>  @4:12-4:38
-      Collection :#KeyExpression#[1]  ~@Collection@  @4:12-4:38
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @4:21-4:37
-          AtomicValue  'values' :@String@[1]  ~@AtomicValue@  @4:21-4:37
-          Collection :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_#[1]  ~@Collection@  @4:30-4:37
-            Variable value :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @4:31-4:36
-  ArrowInvocation put_Map_1__U_1__V_1__Map_1_ :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#>##[1]#  ~@ArrowInvocation@  @5:7-5:22
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>|1>  @18:12-18:38
+      Collection :#KeyExpression#[1]  ~@Collection@  @18:12-18:38
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @18:21-18:37
+          AtomicValue  'values' :@String@[1]  ~@AtomicValue@  @18:21-18:37
+          Collection :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_#[1]  ~@Collection@  @18:30-18:37
+            Variable value :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @18:31-18:36
+  ArrowInvocation put_Map_1__U_1__V_1__Map_1_ :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#>##[1]#  ~@ArrowInvocation@  @19:7-19:22
     typeParam U -> K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_
     typeParam V -> #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#
-    Variable map :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>##[1]#  ~@VariableExpression@  @5:3-5:6
-    Variable key :#K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @5:13-5:16
-    Variable nl :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@VariableExpression@  @5:19-5:21
+    Variable map :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>##[1]#  ~@VariableExpression@  @19:3-19:6
+    Variable key :#K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @19:13-19:16
+    Variable nl :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@VariableExpression@  @19:19-19:21
 
 ###ReverseIndex
-meta::pure::functions::collection::List:
+platform::pure::functions::collection::List:
   test::wrapAndPut_Map_1__K_1__V_1__Map_1_
-meta::pure::functions::collection::Map:
+platform::pure::functions::collection::Map:
   test::wrapAndPut_Map_1__K_1__V_1__Map_1_
-meta::pure::functions::collection::put_Map_1__U_1__V_1__Map_1_:
+platform::pure::functions::collection::put_Map_1__U_1__V_1__Map_1_:
   test::wrapAndPut_Map_1__K_1__V_1__Map_1_
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::wrapAndPut_Map_1__K_1__V_1__Map_1_
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test::wrapAndPut_Map_1__K_1__V_1__Map_1_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::wrapAndPut_Map_1__K_1__V_1__Map_1_

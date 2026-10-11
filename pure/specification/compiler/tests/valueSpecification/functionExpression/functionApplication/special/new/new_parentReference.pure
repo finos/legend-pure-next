@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::new::parentRef::*;
 
@@ -41,118 +55,118 @@ Class test::new::parentRef::Container
 
 ###CompiledGraph
 function test::new::parentRef::testNewSelfReference__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~@FunctionInvocation@  @6:3-6:28
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~@FunctionInvocation@  @20:3-20:28
     typeParam T -> test::new::parentRef::Node
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>  @6:3-6:28
-    Collection :#KeyExpression#[2]  ~@Collection@  @6:3-6:28
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:9-6:17
-        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @6:9-6:17
-        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:17-6:17
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:20-6:27
-        AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @6:20-6:27
-        Variable ~ :#test::new::parentRef::Node##[1]#  ~@VariableExpression@  @6:27-6:27
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>  @20:3-20:28
+    Collection :#KeyExpression#[2]  ~@Collection@  @20:3-20:28
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:9-20:17
+        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @20:9-20:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:17-20:17
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:20-20:27
+        AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @20:20-20:27
+        Variable ~ :#test::new::parentRef::Node##[1]#  ~@VariableExpression@  @20:27-20:27
 
 function test::new::parentRef::testNewNestedParentReference__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~@FunctionInvocation@  @11:3-11:55
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~@FunctionInvocation@  @25:3-25:55
     typeParam T -> test::new::parentRef::Node
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>  @11:3-11:55
-    Collection :#KeyExpression#[2]  ~@Collection@  @11:3-11:55
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:9-11:17
-        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @11:9-11:17
-        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @11:17-11:17
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:20-11:54
-        AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @11:20-11:54
-        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~@FunctionInvocation@  @11:27-11:54
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>  @25:3-25:55
+    Collection :#KeyExpression#[2]  ~@Collection@  @25:3-25:55
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @25:9-25:17
+        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @25:9-25:17
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @25:17-25:17
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @25:20-25:54
+        AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @25:20-25:54
+        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~@FunctionInvocation@  @25:27-25:54
           typeParam T -> test::new::parentRef::Node
-          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>  @11:27-11:54
-          Collection :#KeyExpression#[2]  ~@Collection@  @11:27-11:54
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:33-11:41
-              AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @11:33-11:41
-              AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @11:41-11:41
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:44-11:53
-              AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @11:44-11:53
-              DotApplication ~ :#test::new::parentRef::Node##[1]#  ~@DotApplication@  @11:51-11:53
-                Variable ~ :#test::new::parentRef::Node##[1]#  ~@VariableExpression@  @11:51-11:53
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>  @25:27-25:54
+          Collection :#KeyExpression#[2]  ~@Collection@  @25:27-25:54
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @25:33-25:41
+              AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @25:33-25:41
+              AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @25:41-25:41
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @25:44-25:53
+              AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @25:44-25:53
+              DotApplication ~ :#test::new::parentRef::Node##[1]#  ~@DotApplication@  @25:51-25:53
+                Variable ~ :#test::new::parentRef::Node##[1]#  ~@VariableExpression@  @25:51-25:53
 
 function test::new::parentRef::testNewPropertyAccess__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Container##[1]#  ~@FunctionInvocation@  @16:3-16:66
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Container##[1]#  ~@FunctionInvocation@  @30:3-30:66
     typeParam T -> test::new::parentRef::Container
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>  @16:3-16:66
-    Collection :#KeyExpression#[3]  ~@Collection@  @16:3-16:66
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:14-16:27
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @16:14-16:27
-        AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @16:21-16:27
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:30-16:47
-        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @16:30-16:47
-        Collection :#String#[2]  ~@Collection@  @16:38-16:47
-          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @16:39-16:41
-          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @16:44-16:46
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @16:50-16:65
-        AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @16:50-16:65
-        DotApplication test::new::parentRef::Container.items :#String##[*]#  ~@DotApplication@  @16:59-16:65
-          Variable ~ :#test::new::parentRef::Container##[1]#  ~@VariableExpression@  @16:59-16:65
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>  @30:3-30:66
+    Collection :#KeyExpression#[3]  ~@Collection@  @30:3-30:66
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @30:14-30:27
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @30:14-30:27
+        AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @30:21-30:27
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @30:30-30:47
+        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @30:30-30:47
+        Collection :#String#[2]  ~@Collection@  @30:38-30:47
+          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @30:39-30:41
+          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @30:44-30:46
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @30:50-30:65
+        AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @30:50-30:65
+        DotApplication test::new::parentRef::Container.items :#String##[*]#  ~@DotApplication@  @30:59-30:65
+          Variable ~ :#test::new::parentRef::Container##[1]#  ~@VariableExpression@  @30:59-30:65
 
 function test::new::parentRef::testNewPropertyArrow__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Container##[1]#  ~@FunctionInvocation@  @21:3-21:77
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Container##[1]#  ~@FunctionInvocation@  @35:3-35:77
     typeParam T -> test::new::parentRef::Container
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>  @21:3-21:77
-    Collection :#KeyExpression#[3]  ~@Collection@  @21:3-21:77
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:14-21:27
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @21:14-21:27
-        AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @21:21-21:27
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:30-21:47
-        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @21:30-21:47
-        Collection :#String#[2]  ~@Collection@  @21:38-21:47
-          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @21:39-21:41
-          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @21:44-21:46
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:50-21:76
-        AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @21:50-21:76
-        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@ArrowInvocation@  @21:66-21:76
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>  @35:3-35:77
+    Collection :#KeyExpression#[3]  ~@Collection@  @35:3-35:77
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @35:14-35:27
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @35:14-35:27
+        AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @35:21-35:27
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @35:30-35:47
+        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @35:30-35:47
+        Collection :#String#[2]  ~@Collection@  @35:38-35:47
+          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @35:39-35:41
+          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @35:44-35:46
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @35:50-35:76
+        AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @35:50-35:76
+        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@ArrowInvocation@  @35:66-35:76
           typeParam T -> #String#
           typeParam V -> #String#
           mulParam m -> #[*]#
-          DotApplication test::new::parentRef::Container.items :#String##[*]#  ~@DotApplication@  @21:59-21:65
-            Variable ~ :#test::new::parentRef::Container##[1]#  ~@VariableExpression@  @21:59-21:65
-          Lambda(s:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @21:72-21:75
-            Variable s :#String##[1]#  ~@VariableExpression@  @21:74-21:75
+          DotApplication test::new::parentRef::Container.items :#String##[*]#  ~@DotApplication@  @35:59-35:65
+            Variable ~ :#test::new::parentRef::Container##[1]#  ~@VariableExpression@  @35:59-35:65
+          Lambda(s:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @35:72-35:75
+            Variable s :#String##[1]#  ~@VariableExpression@  @35:74-35:75
 
 function test::new::parentRef::testNewKeyExpressionReorder__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Container##[1]#  ~@FunctionInvocation@  @26:3-26:66
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Container##[1]#  ~@FunctionInvocation@  @40:3-40:66
     typeParam T -> test::new::parentRef::Container
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>  @26:3-26:66
-    Collection :#KeyExpression#[3]  ~@Collection@  @26:3-26:66
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @26:14-26:27
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @26:14-26:27
-        AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @26:21-26:27
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @26:30-26:47
-        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @26:30-26:47
-        Collection :#String#[2]  ~@Collection@  @26:38-26:47
-          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @26:39-26:41
-          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @26:44-26:46
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @26:50-26:65
-        AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @26:50-26:65
-        DotApplication test::new::parentRef::Container.items :#String##[*]#  ~@DotApplication@  @26:59-26:65
-          Variable ~ :#test::new::parentRef::Container##[1]#  ~@VariableExpression@  @26:59-26:65
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Container|1>  @40:3-40:66
+    Collection :#KeyExpression#[3]  ~@Collection@  @40:3-40:66
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @40:14-40:27
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @40:14-40:27
+        AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @40:21-40:27
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @40:30-40:47
+        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @40:30-40:47
+        Collection :#String#[2]  ~@Collection@  @40:38-40:47
+          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @40:39-40:41
+          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @40:44-40:46
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @40:50-40:65
+        AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @40:50-40:65
+        DotApplication test::new::parentRef::Container.items :#String##[*]#  ~@DotApplication@  @40:59-40:65
+          Variable ~ :#test::new::parentRef::Container##[1]#  ~@VariableExpression@  @40:59-40:65
 
-class test::new::parentRef::Node extends Any  ~Class<test::new::parentRef::Node>  @29:1-33:1
+class test::new::parentRef::Node extends Any  ~Class<test::new::parentRef::Node>  @43:1-47:1
   property value :@Integer@[1]  ~Property<test::new::parentRef::Node, @Integer@|1>
   property next :test::new::parentRef::Node[0..1]  ~Property<test::new::parentRef::Node, test::new::parentRef::Node|0..1>
 
-class test::new::parentRef::Container extends Any  ~Class<test::new::parentRef::Container>  @35:1-40:1
+class test::new::parentRef::Container extends Any  ~Class<test::new::parentRef::Container>  @49:1-54:1
   property name :@String@[1]  ~Property<test::new::parentRef::Container, @String@|1>
   property items :@String@[*]  ~Property<test::new::parentRef::Container, @String@|*>
   property echoed :@String@[*]  ~Property<test::new::parentRef::Container, @String@|*>
 
 ###ReverseIndex
-meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
   test::new::parentRef::testNewPropertyArrow__Any_MANY_
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::new::parentRef::testNewKeyExpressionReorder__Any_MANY_
   test::new::parentRef::testNewNestedParentReference__Any_MANY_
   test::new::parentRef::testNewPropertyAccess__Any_MANY_
   test::new::parentRef::testNewPropertyArrow__Any_MANY_
   test::new::parentRef::testNewSelfReference__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::new::parentRef::testNewKeyExpressionReorder__Any_MANY_
   test::new::parentRef::testNewNestedParentReference__Any_MANY_
   test::new::parentRef::testNewPropertyAccess__Any_MANY_

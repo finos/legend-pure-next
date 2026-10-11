@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,31 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::test::pct::*;
 
-function meta::pure::functions::asserts::assertNotEmpty(collection:Any[*]):Boolean[1]
+function platform::pure::functions::asserts::assertNotEmpty(collection:Any[*]):Boolean[1]
 {
     assertNotEmpty($collection, 'Expected non-empty collection');
 }
 
-function meta::pure::functions::asserts::assertNotEmpty(collection:Any[*], message:String[1]):Boolean[1]
+function platform::pure::functions::asserts::assertNotEmpty(collection:Any[*], message:String[1]):Boolean[1]
 {
     assertFalse($collection->isEmpty(), $message);
 }
 
-function meta::pure::functions::asserts::assertNotEmpty(collection:Any[*], formatString:String[1], formatArgs:Any[*]):Boolean[1]
+function platform::pure::functions::asserts::assertNotEmpty(collection:Any[*], formatString:String[1], formatArgs:Any[*]):Boolean[1]
 {
     assertFalse($collection->isEmpty(), $formatString, $formatArgs);
 }
 
-function meta::pure::functions::asserts::assertNotEmpty(collection:Any[*], message:Function<{->String[1]}>[1]):Boolean[1]
+function platform::pure::functions::asserts::assertNotEmpty(collection:Any[*], message:Function<{->String[1]}>[1]):Boolean[1]
 {
     assertFalse($collection->isEmpty(), $message);
 }
 
 
-function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertNotEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::tests::testSuccessAssertNotEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assert($f->eval(|assertNotEmpty([1, 2, 3])));
 }

@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -8,8 +9,8 @@
 
 package org.finos.legend.pure.m3.extensions.reverseindex;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.protocol.grammar.Package_PointerImpl;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.protocol.grammar.Package_PointerImpl;
 import org.finos.legend.pure.m3.LanguageExtension;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
@@ -50,13 +51,13 @@ public final class ReverseIndexLanguageExtension implements LanguageExtension
     {
         if (protocolObject instanceof ReverseIndex)
         {
-            return "meta::pure::compiler::test::ReverseIndex";
+            return "platform::pure::compiler::test::ReverseIndex";
         }
         return null;
     }
 
     @Override
-    public List<meta.pure.protocol.grammar.PackageableElement> parseSection(String content, String sourceId, int lineOffset)
+    public List<platform.pure.protocol.grammar.PackageableElement> parseSection(String content, String sourceId, int lineOffset)
     {
         return List.of(
                 new ReverseIndex()
@@ -65,7 +66,7 @@ public final class ReverseIndexLanguageExtension implements LanguageExtension
     }
 
     @Override
-    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context)
+    public PackageableElement firstPass(platform.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context)
     {
         if (grammar instanceof ReverseIndex ri)
         {

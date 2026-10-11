@@ -41,9 +41,9 @@ const SHARED = join(REPO, "shared");
 const GEN = join(HERE, "../../../generated");              // -> platforms/javascript/generated
 
 // The compiler's two public entry points, under their full-path-mangled names.
-const COMPILE = "meta$pure$compiler$compile_PureFile_MANY__CompilationResult_1_";
+const COMPILE = "platform$pure$compiler$compile_PureFile_MANY__CompilationResult_1_";
 const PRINT_GRAPH =
-    "meta$pure$compiler$test$printer$printCompiledGraph_PackageableElement_MANY__CompilerContext_1__String_1_";
+    "platform$pure$compiler$test$printer$printCompiledGraph_PackageableElement_MANY__CompilerContext_1__String_1_";
 
 // PDBs that back the metadata globals (the type/function graph the compiler reads).
 const PDBS = ["core.pdb", "core-tests.pdb", "compiler.pdb", "compiler-tests.pdb"];

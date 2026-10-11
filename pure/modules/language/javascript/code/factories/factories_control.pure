@@ -16,15 +16,15 @@
 // Factories for control flow: ternary, if-statement, let/const declarations,
 // and the small unary operators that commonly compose with them.
 
-import meta::external::language::javascript::factories::*;
-import meta::external::language::javascript::metamodel::*;
+import platform::external::language::javascript::factories::*;
+import platform::external::language::javascript::metamodel::*;
 
 // =============================================================================
 // Ternary expression.
 //   jsTernary(cond, t, e)  ->  cond ? t : e
 // =============================================================================
 
-function meta::external::language::javascript::factories::jsTernary(condition: Expression[1], whenTrue: Expression[1], whenFalse: Expression[1]): ConditionalExpression[1]
+function platform::external::language::javascript::factories::jsTernary(condition: Expression[1], whenTrue: Expression[1], whenFalse: Expression[1]): ConditionalExpression[1]
 {
    ^ConditionalExpression(condition=$condition, whenTrue=$whenTrue, whenFalse=$whenFalse);
 }
@@ -37,7 +37,7 @@ function meta::external::language::javascript::factories::jsTernary(condition: E
 // else-if chains pass another IfStatement as elseStmt.
 // =============================================================================
 
-function meta::external::language::javascript::factories::jsIfStmt(condition: Expression[1], thenStmt: Statement[1], elseStmt: Statement[0..1]): IfStatement[1]
+function platform::external::language::javascript::factories::jsIfStmt(condition: Expression[1], thenStmt: Statement[1], elseStmt: Statement[0..1]): IfStatement[1]
 {
    ^IfStatement(expression=$condition, thenStatement=$thenStmt, elseStatement=$elseStmt);
 }
@@ -51,7 +51,7 @@ function meta::external::language::javascript::factories::jsIfStmt(condition: Ex
 // legal for let).
 // =============================================================================
 
-function meta::external::language::javascript::factories::jsLet(name: String[1], init: Expression[0..1]): VariableStatement[1]
+function platform::external::language::javascript::factories::jsLet(name: String[1], init: Expression[0..1]): VariableStatement[1]
 {
    ^VariableStatement(
       modifiers=[],
@@ -60,7 +60,7 @@ function meta::external::language::javascript::factories::jsLet(name: String[1],
    );
 }
 
-function meta::external::language::javascript::factories::jsConst(name: String[1], init: Expression[0..1]): VariableStatement[1]
+function platform::external::language::javascript::factories::jsConst(name: String[1], init: Expression[0..1]): VariableStatement[1]
 {
    ^VariableStatement(
       modifiers=[],
@@ -73,17 +73,17 @@ function meta::external::language::javascript::factories::jsConst(name: String[1
 // Unary operators commonly used with conditionals.
 // =============================================================================
 
-function meta::external::language::javascript::factories::jsNot(operand: Expression[1]): PrefixUnaryExpression[1]
+function platform::external::language::javascript::factories::jsNot(operand: Expression[1]): PrefixUnaryExpression[1]
 {
    ^PrefixUnaryExpression(operator='!', operand=$operand);
 }
 
-function meta::external::language::javascript::factories::jsNeg(operand: Expression[1]): PrefixUnaryExpression[1]
+function platform::external::language::javascript::factories::jsNeg(operand: Expression[1]): PrefixUnaryExpression[1]
 {
    ^PrefixUnaryExpression(operator='-', operand=$operand);
 }
 
-function meta::external::language::javascript::factories::jsTypeof(operand: Expression[1]): PrefixUnaryExpression[1]
+function platform::external::language::javascript::factories::jsTypeof(operand: Expression[1]): PrefixUnaryExpression[1]
 {
    ^PrefixUnaryExpression(operator='typeof ', operand=$operand);
 }

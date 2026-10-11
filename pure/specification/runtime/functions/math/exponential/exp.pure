@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
-native function <<PCT.function>> meta::pure::functions::math::exp(exponent:Number[1]):Float[1];
+native function <<PCT.function>> platform::pure::functions::math::exp(exponent:Number[1]):Float[1];
 
-function <<PCT.test>> meta::pure::functions::math::tests::exp::testNumberExp<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::exp::testNumberExp<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let z = {a:Number[1] | exp($a)};
     assertEqWithinTolerance(2.718281828459045, $f->eval(|$z->eval(1.0)), 0.000000000000001);
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::exp::testSimple<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::exp::testSimple<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEqWithinTolerance(2.718281828459045, $f->eval(|exp(1.0)), 0.000000000000001);
     assertEqWithinTolerance(2.718281828459045, $f->eval(|exp(1)), 0.000000000000001);

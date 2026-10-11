@@ -69,7 +69,7 @@ public final class MapPutNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object populateMapCgt()
     {
-        Object cgt = getContext().cgtForType("meta::pure::functions::collection::Map");
+        Object cgt = getContext().cgtForType("platform::pure::functions::collection::Map");
         if (cgt == null)
         {
             throw new RuntimeException("[MapPutNode] Cannot resolve Map type from PDB");

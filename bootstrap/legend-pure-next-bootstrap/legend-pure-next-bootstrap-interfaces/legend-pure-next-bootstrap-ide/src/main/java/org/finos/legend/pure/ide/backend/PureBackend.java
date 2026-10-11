@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -9,8 +10,8 @@
 package org.finos.legend.pure.ide.backend;
 
 import org.finos.legend.pure.m3.module.ModuleRegistry;
-import meta.pure.metamodel.function.FunctionDefinition;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.function.FunctionDefinition;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
@@ -29,7 +30,7 @@ import org.finos.legend.pure.m3.module.sourceModule.SourceModule;
  *   <li>Truffle ignores the Java-direct model + function (function
  *       representations are incompatible — Truffle's resolver only knows
  *       {@code PureDynamicObject}s). It re-compiles the editable modules via
- *       {@code meta::pure::compiler::parseDir} + {@code meta::pure::compiler::compile}
+ *       {@code platform::pure::compiler::parseDir} + {@code platform::pure::compiler::compile}
  *       invoked through {@code PureRuntime}, then finds the target
  *       function in the resulting {@code CompilationResult.elements} by matching
  *       on {@code function._name()}.</li>
@@ -120,7 +121,7 @@ public interface PureBackend
     }
 
     /**
-     * Typed mirror of Pure's {@code meta::pure::compiler::CompilationStatistics}.
+     * Typed mirror of Pure's {@code platform::pure::compiler::CompilationStatistics}.
      * Built by the backend by reading the structured fields off the returned
      * {@code CompilationResult} — never parsed from stdout.
      */

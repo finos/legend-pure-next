@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,27 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::collection::tests::model::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::collection::tests::model::*;
 
 native function
     <<PCT.function>>
     {
         doc.doc=''
     }
-    meta::pure::functions::collection::concatenate<T>(set1:T[*], set2:T[*]):T[*];
+    platform::pure::functions::collection::concatenate<T>(set1:T[*], set2:T[*]):T[*];
 
-function <<PCT.test>> meta::pure::functions::collection::tests::concatenate::testConcatenateSimple<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::concatenate::testConcatenateSimple<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([1, 2, 3, 4, 5], $f->eval(|concatenate([1, 2, 3], [4, 5])));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::concatenate::testConcatenateMixedType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::concatenate::testConcatenateMixedType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([1, 2, 3, 'a', 'b'], $f->eval(|concatenate([1, 2, 3], ['a', 'b'])));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::concatenate::testConcatenateTypeInference<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::concatenate::testConcatenateTypeInference<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let a = $f->eval(|concatenate([1, 2, 3], [4, 5]));
     assertIs(Integer, $a->type()->toOne());

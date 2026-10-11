@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::*;
 
@@ -19,27 +33,27 @@ function test::isValid(s: String[1]): Boolean[1]
 }
 
 ###CompiledGraph
-class test::MyClass extends Any  ~Class<test::MyClass>  @4:1-14:1
+class test::MyClass extends Any  ~Class<test::MyClass>  @18:1-28:1
   property name :@String@[1]  ~Property<test::MyClass, @String@|1>
   constraint c1
     Lambda(this:test::MyClass[1])  ~#LambdaFunction<#{test::MyClass[1]->#Boolean##[1]#}#>#
-      ArrowInvocation test::isValid_String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @8:26-8:36
-        DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @8:21-8:25
-          Variable this :#test::MyClass##[1]#  ~@VariableExpression@  @8:16-8:20
+      ArrowInvocation test::isValid_String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @22:26-22:36
+        DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @22:21-22:25
+          Variable this :#test::MyClass##[1]#  ~@VariableExpression@  @22:16-22:20
     messageFunction
       Lambda(this:test::MyClass[1])  ~#LambdaFunction<#{test::MyClass[1]->@String@[1]}#>#
-        AtomicValue  'not valid' :@String@[1]  ~@AtomicValue@  @9:15-9:25
+        AtomicValue  'not valid' :@String@[1]  ~@AtomicValue@  @23:15-23:25
 
 function test::isValid_String_1__Boolean_1_(s:@String@[1]):@Boolean@[1]  ~UserDefinedFunction<{@String@[1]->@Boolean@[1]}>
-  FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @18:5-18:18
-    ArrowInvocation length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @18:5-18:14
-      Variable s :#String##[1]#  ~@VariableExpression@  @18:3-18:4
-    AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @18:18-18:18
+  FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @32:5-32:18
+    ArrowInvocation length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @32:5-32:14
+      Variable s :#String##[1]#  ~@VariableExpression@  @32:3-32:4
+    AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @32:18-32:18
 
 ###ReverseIndex
-meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
+platform::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_:
   test::isValid_String_1__Boolean_1_
-meta::pure::functions::string::length_String_1__Integer_1_:
+platform::pure::functions::string::length_String_1__Integer_1_:
   test::isValid_String_1__Boolean_1_
 test::MyClass.name:
   test::MyClass.c1

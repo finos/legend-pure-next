@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +15,11 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.relation.Column;
-import meta.pure.metamodel.relation.ColumnImpl;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.relation.Column;
+import platform.pure.metamodel.relation.ColumnImpl;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
@@ -46,14 +47,14 @@ public final class _Column
      */
     public static Column build(String name, GenericType owner, GenericType genericType, Multiplicity multiplicity, boolean nameWildCard, MetadataAccess model)
     {
-        Multiplicity mul = multiplicity != null ? multiplicity : (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne");
+        Multiplicity mul = multiplicity != null ? multiplicity : (Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::PureOne");
         return new ColumnImpl()
                 ._name(name)
                 ._nameWildCard(nameWildCard)
                 ._genericType(genericType)
                 ._multiplicity(mul)
                 ._classifierGenericType(
-                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::Column"), model)
+                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("platform::pure::metamodel::relation::Column"), model)
                                 ._typeArguments(Lists.mutable.with(owner, genericType))
                                 ._multiplicityArguments(Lists.mutable.with(mul)));
     }

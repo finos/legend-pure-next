@@ -15,9 +15,9 @@
 
 package org.finos.legend.pure.execution.natives.collection;
 
-import meta.pure.metamodel.valuespecification.AtomicValueImpl;
-import meta.pure.metamodel.valuespecification.CollectionImpl;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.AtomicValueImpl;
+import platform.pure.metamodel.valuespecification.CollectionImpl;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.execution.DynamicInstance;
@@ -63,7 +63,7 @@ public class CollectionNatives
         // short-circuit — later thunks aren't evaluated.
         natives.put("firstNonEmpty_Function_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection thunks = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection thunks = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (ValueSpecification thunk : thunks._values())
             {
                 ValueSpecification result = eval.executeFunction(thunk, List.of());
@@ -78,7 +78,7 @@ public class CollectionNatives
         // toOne(T[*]) : T[1]
         natives.put("toOne_T_MANY__T_1_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             if (col._values().size() != 1)
             {
                 throw new RuntimeException("toOne expected exactly 1 element, got " + col._values().size());
@@ -89,7 +89,7 @@ public class CollectionNatives
         // toOne(T[*], message:String[1]) : T[1]
         natives.put("toOne_T_MANY__String_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             if (col._values().size() != 1)
             {
                 String msg = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -101,7 +101,7 @@ public class CollectionNatives
         // toOneMany(T[*]) : T[1..*]
         natives.put("toOneMany_T_MANY__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             if (col._values().isEmpty())
             {
                 throw new RuntimeException("toOneMany expected at least 1 element, got 0");
@@ -112,8 +112,8 @@ public class CollectionNatives
         // concatenate(T[*], T[*]) : T[*]
         natives.put("concatenate_T_MANY__T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection colA = _E_ValueSpecification.toCollection(args.get(0), resolver);
-            meta.pure.metamodel.valuespecification.Collection colB = _E_ValueSpecification.toCollection(args.get(1), resolver);
+            platform.pure.metamodel.valuespecification.Collection colA = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection colB = _E_ValueSpecification.toCollection(args.get(1), resolver);
             List<ValueSpecification> result = new ArrayList<>(colA._values());
             result.addAll(colB._values());
             return makeCollection(result, resolver);
@@ -123,7 +123,7 @@ public class CollectionNatives
         natives.put("at_T_MANY__Integer_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
             long index = (Long) _E_ValueSpecification.unwrap(args.get(1));
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             if (index < 0 || index >= col._values().size())
             {
                 throw new RuntimeException("The system is trying to get an element at offset " + index + " where the collection is of size " + col._values().size());
@@ -137,7 +137,7 @@ public class CollectionNatives
         // arg[0]=col, arg[1]=key extractor, arg[2]=comparator on keys
         natives.put("sort_T_m__Function_$0_1$__Function_$0_1$__T_m_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             List<ValueSpecification> sorted = new ArrayList<>(col._values());
             ValueSpecification keyFnVS = args.size() > 1 ? args.get(1) : null;
             ValueSpecification compFnVS = args.size() > 2 ? args.get(2) : null;
@@ -188,12 +188,12 @@ public class CollectionNatives
         natives.put("map_T_MANY__Function_1__V_MANY_", (args, eval, genericType, multiplicity) ->
         {
             List<ValueSpecification> results = new ArrayList<>();
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (ValueSpecification itemVS : col._values())
             {
                 ValueSpecification result = eval.executeFunction(args.get(1), List.of(itemVS));
                 // Pure map is flatMap — if result is a Collection, splice in its VS items
-                if (result instanceof meta.pure.metamodel.valuespecification.Collection resultCol)
+                if (result instanceof platform.pure.metamodel.valuespecification.Collection resultCol)
                 {
                     results.addAll(resultCol._values());
                 }
@@ -223,7 +223,7 @@ public class CollectionNatives
         natives.put("filter_T_MANY__Function_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
             List<ValueSpecification> results = new ArrayList<>();
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (ValueSpecification itemVS : col._values())
             {
                 if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(args.get(1), List.of(itemVS)))))
@@ -237,7 +237,7 @@ public class CollectionNatives
         // head(T[*]) : T[0..1] — canonical native
         natives.put("head_T_MANY__T_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             return col._values().isEmpty()
                     ? _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver)
                     : col._values().get(0);
@@ -246,7 +246,7 @@ public class CollectionNatives
         // init(T[*]) : T[*] — all but the last element
         natives.put("init_T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             int sz = col._values().size();
             return makeCollection(sz <= 1 ? new ArrayList<>() : new ArrayList<>(col._values().subList(0, sz - 1)), resolver);
         });
@@ -254,7 +254,7 @@ public class CollectionNatives
         // tail(T[*]) : T[*] — all but the first element
         natives.put("tail_T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             int sz = col._values().size();
             return makeCollection(sz <= 1 ? new ArrayList<>() : new ArrayList<>(col._values().subList(1, sz)), resolver);
         });
@@ -262,7 +262,7 @@ public class CollectionNatives
         // last(T[*]) : T[0..1]
         natives.put("last_T_MANY__T_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             return col._values().isEmpty()
                     ? _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver)
                     : col._values().get(col._values().size() - 1);
@@ -290,7 +290,7 @@ public class CollectionNatives
         // add(T[*], T[1]) : T[1..*]
         natives.put("add_T_MANY__T_1__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             List<ValueSpecification> result = new ArrayList<>(col._values());
             result.add(args.get(1));
             return makeCollection(result, resolver);
@@ -299,7 +299,7 @@ public class CollectionNatives
         // add(T[*], Integer[1], T[1]) : T[1..*]
         natives.put("add_T_MANY__Integer_1__T_1__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             int index = ((Long) _E_ValueSpecification.unwrap(args.get(1))).intValue();
             List<ValueSpecification> result = new ArrayList<>(col._values());
             result.add(index, args.get(2));
@@ -309,7 +309,7 @@ public class CollectionNatives
         // find(T[*], Function<{T[1]->Boolean[1]}>[1]) : T[0..1]
         natives.put("find_T_MANY__Function_1__T_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (ValueSpecification itemVS : col._values())
             {
                 if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(args.get(1), List.of(itemVS)))))
@@ -324,7 +324,7 @@ public class CollectionNatives
         natives.put("fold_T_MANY__Function_1__V_MANY__V_MANY_", (args, eval, genericType, multiplicity) ->
         {
             ValueSpecification accumulator = args.get(2);
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (ValueSpecification itemVS : col._values())
             {
                 accumulator = eval.executeFunction(args.get(1), List.of(itemVS, accumulator));
@@ -338,7 +338,7 @@ public class CollectionNatives
         // removeDuplicates(T[*], Function[0..1], Function[0..1]) : T[*]
         natives.put("removeDuplicates_T_MANY__Function_$0_1$__Function_$0_1$__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             ValueSpecification keyFnVS = args.size() > 1 ? args.get(1) : null;
             ValueSpecification eqlFnVS = args.size() > 2 ? args.get(2) : null;
             boolean hasKeyFn = keyFnVS != null
@@ -396,7 +396,7 @@ public class CollectionNatives
             {
                 return _E_ValueSpecification.wrap((long) ((String) rawList).indexOf((String) target), genericType, multiplicity, resolver);
             }
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (int i = 0; i < col._values().size(); i++)
             {
                 // pureEquals auto-unwraps both VS arguments
@@ -410,7 +410,7 @@ public class CollectionNatives
         // drop(T[*], Integer[1]) : T[*]
         natives.put("drop_T_MANY__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             long count = (Long) _E_ValueSpecification.unwrap(args.get(1));
             int from = (int) Math.min(Math.max(count, 0), col._values().size());
             return makeCollection(new ArrayList<>(col._values().subList(from, col._values().size())), resolver);
@@ -419,7 +419,7 @@ public class CollectionNatives
         // take(T[*], Integer[1]) : T[*]
         natives.put("take_T_MANY__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             long count = (Long) _E_ValueSpecification.unwrap(args.get(1));
             int to = (int) Math.min(Math.max(count, 0), col._values().size());
             return makeCollection(new ArrayList<>(col._values().subList(0, to)), resolver);
@@ -428,7 +428,7 @@ public class CollectionNatives
         // slice(T[*], Integer[1], Integer[1]) : T[*]
         natives.put("slice_T_MANY__Integer_1__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             int from = (int) Math.max(0, (Long) _E_ValueSpecification.unwrap(args.get(1)));
             int to = (int) Math.min(col._values().size(), (Long) _E_ValueSpecification.unwrap(args.get(2)));
             from = Math.min(from, col._values().size());
@@ -439,7 +439,7 @@ public class CollectionNatives
         // reverse(T[m]) : T[m]
         natives.put("reverse_T_m__T_m_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             List<ValueSpecification> reversed = new ArrayList<>(col._values());
             java.util.Collections.reverse(reversed);
             return makeCollection(reversed, resolver);
@@ -448,8 +448,8 @@ public class CollectionNatives
         // zip(T[*], U[*]) : Pair<T,U>[*]
         natives.put("zip_T_MANY__U_MANY__Pair_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection colA = _E_ValueSpecification.toCollection(args.get(0), resolver);
-            meta.pure.metamodel.valuespecification.Collection colB = _E_ValueSpecification.toCollection(args.get(1), resolver);
+            platform.pure.metamodel.valuespecification.Collection colA = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection colB = _E_ValueSpecification.toCollection(args.get(1), resolver);
             int size = Math.min(colA._values().size(), colB._values().size());
             List<ValueSpecification> result = new ArrayList<>();
             for (int i = 0; i < size; i++)
@@ -470,8 +470,8 @@ public class CollectionNatives
         // removeAll(T[*], T[*]) : T[*]
         natives.put("removeAll_T_MANY__T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection setCol = _E_ValueSpecification.toCollection(args.get(0), resolver);
-            meta.pure.metamodel.valuespecification.Collection otherCol = _E_ValueSpecification.toCollection(args.get(1), resolver);
+            platform.pure.metamodel.valuespecification.Collection setCol = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection otherCol = _E_ValueSpecification.toCollection(args.get(1), resolver);
             List<ValueSpecification> result = new ArrayList<>();
             for (ValueSpecification vs : setCol._values())
             {
@@ -618,7 +618,7 @@ public class CollectionNatives
         // exists(T[*], Function<{T[1]->Boolean[1]}>[1]) : Boolean[1]
         natives.put("exists_T_MANY__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (ValueSpecification itemVS : col._values())
             {
                 if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(args.get(1), List.of(itemVS)))))
@@ -635,7 +635,7 @@ public class CollectionNatives
         // to let backends skip the per-element closure dispatch.
         natives.put("contains_Any_MANY__Any_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             Object value = _E_ValueSpecification.unwrap(args.get(1));
             for (ValueSpecification itemVS : col._values())
             {
@@ -650,7 +650,7 @@ public class CollectionNatives
         // forAll(T[*], Function<{T[1]->Boolean[1]}>[1]) : Boolean[1]
         natives.put("forAll_T_MANY__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             for (ValueSpecification itemVS : col._values())
             {
                 if (!Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(args.get(1), List.of(itemVS)))))
@@ -665,7 +665,7 @@ public class CollectionNatives
         // Pure's List<X> has a 'values' property that contains the grouped elements
         natives.put("groupBy_X_MANY__Function_1__Map_1_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            platform.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             java.util.LinkedHashMap<ValueSpecification, List<ValueSpecification>> grouped = new java.util.LinkedHashMap<>();
             for (ValueSpecification itemVS : col._values())
             {
@@ -689,7 +689,7 @@ public class CollectionNatives
             java.util.LinkedHashMap<ValueSpecification, ValueSpecification> resultMap = new java.util.LinkedHashMap<>();
             for (Map.Entry<ValueSpecification, List<ValueSpecification>> e : grouped.entrySet())
             {
-                DynamicInstance listInstance = new DynamicInstance("meta::pure::functions::collection::List");
+                DynamicInstance listInstance = new DynamicInstance("platform::pure::functions::collection::List");
                 listInstance.put("values", makeCollection(e.getValue(), resolver));
                 resultMap.put(e.getKey(), _E_ValueSpecification.wrap(listInstance, null, null, resolver));
             }
@@ -705,12 +705,12 @@ public class CollectionNatives
     public static CollectionImpl makeCollection(List<ValueSpecification> items, MetadataAccess resolver)
     {
         MutableList<ValueSpecification> vs = Lists.mutable.withAll(items);
-        MutableList<meta.pure.metamodel.type.generics.GenericType> elementTypes =
+        MutableList<platform.pure.metamodel.type.generics.GenericType> elementTypes =
                 vs.collect(ValueSpecification::_genericType).select(gt -> gt != null);
-        meta.pure.metamodel.type.generics.GenericType gt = elementTypes.notEmpty()
+        platform.pure.metamodel.type.generics.GenericType gt = elementTypes.notEmpty()
                 ? _GenericType.findCommonGenericType(elementTypes, resolver)
-                : (meta.pure.metamodel.type.generics.GenericType) resolver.getElement(
-                        "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_Nil");
+                : (platform.pure.metamodel.type.generics.GenericType) resolver.getElement(
+                        "platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_type_Nil");
         int size = vs.size();
         return new CollectionImpl(resolver)
                 ._values(vs)
@@ -723,17 +723,17 @@ public class CollectionNatives
      * built from the actual element types of the two input collections.
      */
     private static DynamicInstance makePair(ValueSpecification first, ValueSpecification second,
-            meta.pure.metamodel.type.generics.GenericType firstGT,
-            meta.pure.metamodel.type.generics.GenericType secondGT,
+            platform.pure.metamodel.type.generics.GenericType firstGT,
+            platform.pure.metamodel.type.generics.GenericType secondGT,
             org.finos.legend.pure.m3.module.MetadataAccess resolver)
     {
-        DynamicInstance pair = new DynamicInstance("meta::pure::functions::collection::Pair");
+        DynamicInstance pair = new DynamicInstance("platform::pure::functions::collection::Pair");
         pair.put("first", first);
         pair.put("second", second);
-        meta.pure.metamodel.type.Type pairClass =
-                (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::functions::collection::Pair");
+        platform.pure.metamodel.type.Type pairClass =
+                (platform.pure.metamodel.type.Type) resolver.getElement("platform::pure::functions::collection::Pair");
         pair.setClassifierGenericType(
-                new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver)
+                new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver)
                         ._type(pairClass)
                         ._typeArguments(org.eclipse.collections.api.factory.Lists.mutable.with(firstGT, secondGT)));
         return pair;

@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,23 +15,23 @@
 
 package org.finos.legend.pure.m3.module;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.constraint.Constraint;
-import meta.pure.metamodel.function.Function;
-import meta.pure.metamodel.function.FunctionDefinition;
-import meta.pure.metamodel.function.LambdaFunction;
-import meta.pure.metamodel.function.UserDefinedFunction;
-import meta.pure.metamodel.function.property.AbstractProperty;
-import meta.pure.metamodel.function.property.Property;
-import meta.pure.metamodel.function.property.QualifiedProperty;
-import meta.pure.metamodel.relationship.Association;
-import meta.pure.metamodel.type.Class;
-import meta.pure.metamodel.type.Enumeration;
-import meta.pure.metamodel.type.PrimitiveType;
-import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.Collection;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.constraint.Constraint;
+import platform.pure.metamodel.function.Function;
+import platform.pure.metamodel.function.FunctionDefinition;
+import platform.pure.metamodel.function.LambdaFunction;
+import platform.pure.metamodel.function.UserDefinedFunction;
+import platform.pure.metamodel.function.property.AbstractProperty;
+import platform.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.function.property.QualifiedProperty;
+import platform.pure.metamodel.relationship.Association;
+import platform.pure.metamodel.type.Class;
+import platform.pure.metamodel.type.Enumeration;
+import platform.pure.metamodel.type.PrimitiveType;
+import platform.pure.metamodel.valuespecification.AtomicValue;
+import platform.pure.metamodel.valuespecification.Collection;
+import platform.pure.metamodel.valuespecification.FunctionExpression;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
 import java.util.List;
@@ -212,7 +213,7 @@ public final class FunctionRefExtractor
             if (target != null)
             {
                 String targetPath = pathOf(target);
-                if (targetPath != null && !targetPath.startsWith("meta::pure::metamodel::") && !targetPath.equals(caller))
+                if (targetPath != null && !targetPath.startsWith("platform::pure::metamodel::") && !targetPath.equals(caller))
                 {
                     sink.accept(targetPath, caller);
                 }

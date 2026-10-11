@@ -110,10 +110,10 @@ public final class CastNode extends PureNode
         // Skipping them here lets the right validation fire per variant.
         boolean targetTypeUndefined = targetGT != null
                 && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(targetGT,
-                        "meta::pure::metamodel::type::generics::UndefinedGenericType");
+                        "platform::pure::metamodel::type::generics::UndefinedGenericType");
         boolean targetMulUndefined = targetMul != null
                 && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(targetMul,
-                        "meta::pure::metamodel::multiplicity::UndefinedMultiplicity");
+                        "platform::pure::metamodel::multiplicity::UndefinedMultiplicity");
 
         // If the target type is a TypeParameter (e.g. `cast(@T)` inside `f<T>(...)`),
         // resolve T from the enclosing function's recorded `<T>`-bindings
@@ -131,7 +131,7 @@ public final class CastNode extends PureNode
         if (!targetTypeUndefined
                 && targetType != null
                 && org.finos.legend.pure.truffle.compiler.helper._Any.isType(targetType,
-                        "meta::pure::metamodel::type::generics::TypeParameter", resolver))
+                        "platform::pure::metamodel::type::generics::TypeParameter", resolver))
         {
             Object tvNameObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(targetType, SLOT_NAME);
             String tvName = tvNameObj instanceof String s ? s : null;
@@ -157,7 +157,7 @@ public final class CastNode extends PureNode
         if (!targetMulUndefined
                 && targetMul != null
                 && org.finos.legend.pure.truffle.compiler.helper._Any.isType(targetMul,
-                        "meta::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
+                        "platform::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
         {
             Object mvNameObj = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(targetMul, SLOT_NAME);
             String mvName = mvNameObj instanceof String s ? s : null;
@@ -174,7 +174,7 @@ public final class CastNode extends PureNode
         if (!targetMulUndefined
                 && targetMul != null
                 && org.finos.legend.pure.truffle.compiler.helper._Any.isType(targetMul,
-                        "meta::pure::metamodel::multiplicity::ConcreteMultiplicity", resolver))
+                        "platform::pure::metamodel::multiplicity::ConcreteMultiplicity", resolver))
         {
             int count = inputCount(inputResult);
             long[] bounds = multiplicityBounds(targetMul);
@@ -206,14 +206,14 @@ public final class CastNode extends PureNode
         {
             String targetPath = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(targetType, resolver);
             if (targetPath != null
-                    && !"meta::pure::metamodel::type::Any".equals(targetPath)
-                    && !targetPath.startsWith("meta::pure::metamodel::valuespecification::"))
+                    && !"platform::pure::metamodel::type::Any".equals(targetPath)
+                    && !targetPath.startsWith("platform::pure::metamodel::valuespecification::"))
             {
                 Object sourceType = MetaHelper.getRawValueType(inputResult, resolver);
                 if (sourceType != null)
                 {
                     String sourcePath = org.finos.legend.pure.truffle.compiler.helper._PackageableElement.path(sourceType, resolver);
-                    if (sourcePath != null && !"meta::pure::metamodel::type::Nil".equals(sourcePath))
+                    if (sourcePath != null && !"platform::pure::metamodel::type::Nil".equals(sourcePath))
                     {
                         boolean related = false;
                         try
@@ -401,7 +401,7 @@ public final class CastNode extends PureNode
                     Object rawVal = typeVarVals.getBoxed(i);
                     // PDB metadata values may be AtomicValue FlatBuffer wrappers — unwrap
                     if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(rawVal,
-                            "meta::pure::metamodel::valuespecification::AtomicValue"))
+                            "platform::pure::metamodel::valuespecification::AtomicValue"))
                     {
                         Object inner = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(rawVal, SLOT_VALUE);
                         if (inner != null) rawVal = inner;

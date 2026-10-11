@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::printer::compiled::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::constraint::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::valuespecification::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::printer::compiled::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::constraint::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::valuespecification::*;
 
 // Compiled-side printers for function elements: UserDefinedFunction (with
 // body), NativeFunction (declaration-only).
 
-function meta::pure::functions::printer::compiled::printCompiledUserDefinedFunction(fn: UserDefinedFunction<Any>[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledUserDefinedFunction(fn: UserDefinedFunction<Any>[1], ctx: PrintContext[1]): String[1]
 {
     // Statement separator: trailing `;` only when multi-statement (matches
     // protocol-side printer convention).
@@ -39,7 +40,7 @@ function meta::pure::functions::printer::compiled::printCompiledUserDefinedFunct
     '}\n';
 }
 
-function meta::pure::functions::printer::compiled::printCompiledNativeFunction(fn: NativeFunction<Any>[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledNativeFunction(fn: NativeFunction<Any>[1], ctx: PrintContext[1]): String[1]
 {
     'native function ' + printCompiledAnnotations($fn.stereotypes, $fn.taggedValues, $ctx) + printPackagePrefix($fn.package) + $fn.functionName->toOne() +
         printCompiledTypeAndMulParams($fn.typeParameters, $fn.multiplicityParameters) +
@@ -49,13 +50,13 @@ function meta::pure::functions::printer::compiled::printCompiledNativeFunction(f
 }
 
 // `p: Type[mul]` — parameter is a metamodel `VariableExpression`.
-function meta::pure::functions::printer::compiled::printCompiledFunctionParameter(p: VariableExpression[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledFunctionParameter(p: VariableExpression[1], ctx: PrintContext[1]): String[1]
 {
     $p.name->orElse('') + ': ' + printGenericType($p.genericType->toOne(), $ctx) + printMultiplicity($p.multiplicity->toOne());
 }
 
 // `<T1, T2|m1, m2>` — emitted only when at least one type/mul param present.
-function meta::pure::functions::printer::compiled::printCompiledTypeAndMulParams(typeParams: TypeParameter[*], mulParams: MultiplicityParameter[*]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledTypeAndMulParams(typeParams: TypeParameter[*], mulParams: MultiplicityParameter[*]): String[1]
 {
     if ($typeParams->isEmpty() && $mulParams->isEmpty(),
         | '',
@@ -68,7 +69,7 @@ function meta::pure::functions::printer::compiled::printCompiledTypeAndMulParams
 
 // `[ pre1, pre2: $x > 0, post ]` — element-level constraints block. Empty
 // when no constraints. Each rendered via `printCompiledConstraint`.
-function meta::pure::functions::printer::compiled::printCompiledFunctionConstraints(pre: Constraint[*], post: Constraint[*], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledFunctionConstraints(pre: Constraint[*], post: Constraint[*], ctx: PrintContext[1]): String[1]
 {
     let all = $pre->concatenate($post);
     if ($all->isEmpty(),
@@ -77,7 +78,7 @@ function meta::pure::functions::printer::compiled::printCompiledFunctionConstrai
     );
 }
 
-function meta::pure::functions::printer::compiled::printCompiledConstraint(c: Constraint[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledConstraint(c: Constraint[1], ctx: PrintContext[1]): String[1]
 {
     let body = compiledConstraintBody($c, $ctx);
     let name = $c.name->orElse('');
@@ -90,7 +91,7 @@ function meta::pure::functions::printer::compiled::printCompiledConstraint(c: Co
        | $body);
 }
 
-function meta::pure::functions::printer::compiled::compiledConstraintBody(c: Constraint[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::compiledConstraintBody(c: Constraint[1], ctx: PrintContext[1]): String[1]
 {
     if ($c.functionDefinition->isEmpty(),
         | '',
@@ -99,7 +100,7 @@ function meta::pure::functions::printer::compiled::compiledConstraintBody(c: Con
     );
 }
 
-function meta::pure::functions::printer::compiled::printCompiledConstraintGRule(c: Constraint[1], name: String[1], body: String[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledConstraintGRule(c: Constraint[1], name: String[1], body: String[1], ctx: PrintContext[1]): String[1]
 {
     let owner = if ($c.owner->isEmpty(), | '', | '\n    ~owner: ' + $c.owner->toOne());
     let externalId = if ($c.externalId->isEmpty(), | '', | '\n    ~externalId: \'' + $c.externalId->toOne() + '\'');

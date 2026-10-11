@@ -129,7 +129,12 @@ test-all:
 # modules::build alone is not enough: it builds translation_java::build, not
 # build-tests, and the reader generation needs the tests PDB as well (its entry
 # points are <<test.TestDependency>>).
-_test-all: clean javascript::antlr-bundle bootstrap::test-all modules::build modules::translation_java::build-tests truffle::test-all javascript::test-all modules::test-all
+#
+# The same protocol -> extensions -> modules step as `build` and `_test`: `clean` does not
+# touch pure/extensions/*/build, so without it diagram-analysis compiled against a stale
+# diagram.pdb. And `clean` runs java::clean, so java::test-all goes last to rebuild and
+# test the Java platform rather than leave it deleted and unrun.
+_test-all: clean javascript::antlr-bundle bootstrap::test-all modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests truffle::test-all javascript::test-all modules::test-all java::test-all
 
 # Render every translator gallery (java + javascript + truffle).
 gallery: modules::gallery
@@ -140,11 +145,23 @@ dashboard:
     @{{substep}} 'render test-results/ -> test-results/dashboard.html'
     node {{root}}/tools/test-dashboard/build.mjs
 
-# Remove shared/ and per-subproject build artifacts.
-clean: bootstrap::clean truffle::clean javascript::clean java::clean modules::clean
+# Remove shared/, per-subproject build artifacts, every generated/ tree and the test reports.
+# The dashboard's history.json and builds.json are kept: they are the trend across runs, not
+# one run's output. Every generated/ tree is rebuilt by the build that consumes it
+# (bootstrap::generate-writer, truffle::generate-pdb-reader, diagram's generate-protocol,
+# javascript::generate-all), so removing them is safe.
+#
+# The last step is a guard: anything git ignores under a build/, generated/ or target/
+# directory (or a shade dependency-reduced-pom.xml) that survives is a clean recipe missing
+# a path, and fails here rather than going stale silently — which is how a pre-rename
+# diagram.pdb and pre-rename generated JS once outlived `clean`.
+clean: clean-generated bootstrap::clean truffle::clean javascript::clean java::clean modules::clean extensions::clean
     @{{header}} 'clean'
-    @{{substep}} 'remove shared/'
+    @{{substep}} 'remove shared/ and test-results/ reports'
     rm -rf {{out}}
+    find {{root}}/test-results -mindepth 1 -maxdepth 1 ! -name history.json ! -name builds.json -exec rm -rf {} + 2>/dev/null || true
+    @{{substep}} 'check that no build output is left'
+    left=$(git -C {{root}} ls-files --others --ignored --exclude-standard --directory | grep -E '(^|/)(build|generated|target)/$|dependency-reduced-pom\.xml$|^shared/$' || true); if [ -n "$left" ]; then printf 'clean left build output behind:\n%s\n' "$left" >&2; exit 1; fi
 
 # Launch the bootstrap-backed Pure IDE.
 ide: bootstrap::ide

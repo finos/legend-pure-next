@@ -175,7 +175,7 @@ public final class CompileAndExecuteNode extends PureNode
         // returned untouched.
         if (value instanceof java.util.Map.Entry<?, ?> entry)
         {
-            Object pair = newPureInstance("meta::pure::functions::collection::Pair", context, resolver);
+            Object pair = newPureInstance("platform::pure::functions::collection::Pair", context, resolver);
             if (pair != null)
             {
                 org.finos.legend.pure.truffle.compiler.helper._Any.write(pair, "first", toPureValue(entry.getKey(), context, resolver));
@@ -192,7 +192,7 @@ public final class CompileAndExecuteNode extends PureNode
         }
         // The generated PureDate prints its Pure text and carries its kind
         // (StrictDate, DateTime, or Date for a partial date).
-        if ("meta::pure::metamodel::type::primitives::Date".equals(purePath))
+        if ("platform::pure::metamodel::type::primitives::Date".equals(purePath))
         {
             try
             {

@@ -1,5 +1,6 @@
 /*
  * Copyright 2024 Goldman Sachs
+ * ©2026 JP Morgan Chase & Co. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +17,8 @@
 
 package org.finos.legend.pure.next.parser.topLevel;
 
-import meta.pure.protocol.PureFile;
-import meta.pure.protocol.Section;
+import platform.pure.protocol.PureFile;
+import platform.pure.protocol.Section;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.finos.legend.pure.next.parser.ParserExtension;
@@ -39,8 +40,9 @@ import java.util.Map;
  * from {@code top-mappings.dsl}). Custom section types are supplied as
  * {@link ParserExtension}s; the generated dispatcher routes by section name.</p>
  *
- * <p>Content before the first {@code ###} header is treated as a default
- * {@code Pure} section.</p>
+ * <p>Content before the first {@code ###} header is the grammar's implicit
+ * section, built as a {@code Pure} section — unless it is only comments and blank
+ * lines above a header (a licence header), which is no section at all.</p>
  */
 public final class TopLevelParser
 {
@@ -66,11 +68,7 @@ public final class TopLevelParser
             parsers.put(ext.sectionName(), ext);
         }
 
-        // If the source has no ### header, treat it as implicit ###Pure.
-        boolean syntheticHeader = !source.startsWith("###");
-        String effectiveSource = syntheticHeader ? "###Pure\n" + source : source;
-
-        TopLexer lexer = new TopLexer(CharStreams.fromString(effectiveSource));
+        TopLexer lexer = new TopLexer(CharStreams.fromString(source));
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         TopParser parser = new TopParser(tokens);
         parser.removeErrorListeners();
@@ -91,6 +89,6 @@ public final class TopLevelParser
         });
 
         TopParser.DocumentContext document = parser.document();
-        return new TopLevelProtocolBuilder(parsers, sourceId, syntheticHeader).buildDocument(document);
+        return new TopLevelProtocolBuilder(parsers, sourceId).buildDocument(document);
     }
 }

@@ -15,27 +15,27 @@
 
 // Factories for template literals (plain + interpolated).
 
-import meta::external::language::javascript::factories::*;
-import meta::external::language::javascript::metamodel::*;
+import platform::external::language::javascript::factories::*;
+import platform::external::language::javascript::metamodel::*;
 
 // =============================================================================
 // Template literals.
 // =============================================================================
 
 // `plain text` — no interpolation.
-function meta::external::language::javascript::factories::jsTemplate(text: String[1]): NoSubstitutionTemplateLiteral[1]
+function platform::external::language::javascript::factories::jsTemplate(text: String[1]): NoSubstitutionTemplateLiteral[1]
 {
    ^NoSubstitutionTemplateLiteral(text=$text);
 }
 
 // `head${spans[0].expr}lit0${spans[1].expr}lit1…` — interpolated template.
-function meta::external::language::javascript::factories::jsTemplateExpr(head: String[1], spans: TemplateSpan[1..*]): TemplateExpression[1]
+function platform::external::language::javascript::factories::jsTemplateExpr(head: String[1], spans: TemplateSpan[1..*]): TemplateExpression[1]
 {
    ^TemplateExpression(head=$head, spans=$spans);
 }
 
 // One `${expr}<literal>` span.
-function meta::external::language::javascript::factories::jsTemplateSpan(expression: Expression[1], literal: String[1]): TemplateSpan[1]
+function platform::external::language::javascript::factories::jsTemplateSpan(expression: Expression[1], literal: String[1]): TemplateSpan[1]
 {
    ^TemplateSpan(expression=$expression, literal=$literal);
 }

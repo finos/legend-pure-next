@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::collection::*;
-import meta::pure::functions::io::*;
-import meta::pure::functions::lang::*;
-import meta::pure::functions::printer::protocol::*;
-import meta::pure::functions::printer::protocol::tests::*;
-import meta::pure::functions::string::*;
-import meta::pure::protocol::*;
-import meta::pure::ui::progress::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::collection::*;
+import platform::pure::functions::io::*;
+import platform::pure::functions::lang::*;
+import platform::pure::functions::printer::protocol::*;
+import platform::pure::functions::printer::protocol::tests::*;
+import platform::pure::functions::string::*;
+import platform::pure::protocol::*;
+import platform::pure::ui::progress::*;
 
 // Grammar-corpus-driven runner for the protocol-side printer. Walks the given
 // directory for `grammar.pure` files (the parser test corpus), and for each:
@@ -32,20 +33,20 @@ import meta::pure::ui::progress::*;
 // Mirrors the compiled-side `runCompiledPrinterCorpus` so both printers have
 // the same harness shape and the same Justfile recipe pattern.
 
-function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus(testDir: String[1]): String[1]
+function <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus(testDir: String[1]): String[1]
 {
     runProtocolPrinterCorpusWithReport($testDir, []);
 }
 
 // Same, also writing the run's test report to `reportPath` (read by tools/test-dashboard).
-function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus(testDir: String[1], reportPath: String[1]): String[1]
+function <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::runProtocolPrinterCorpus(testDir: String[1], reportPath: String[1]): String[1]
 {
     runProtocolPrinterCorpusWithReport($testDir, $reportPath);
 }
 
-function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::runProtocolPrinterCorpusWithReport(testDir: String[1], reportPath: String[0..1]): String[1]
+function <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::runProtocolPrinterCorpusWithReport(testDir: String[1], reportPath: String[0..1]): String[1]
 {
-    let start = meta::pure::functions::date::currentTimeMillis();
+    let start = platform::pure::functions::date::currentTimeMillis();
     let allFiles = $testDir->directoryTree();
     let grammarFiles = $allFiles->filter(p | $p->endsWith('/grammar.pure'));
     // Skip files that exercise grammar-error paths (not valid Pure to print)
@@ -67,7 +68,7 @@ function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests
 
     let passed = $total - $mismatches->size();
     let summary = 'Protocol printer corpus: ' + $passed->toString() + ' / ' + $total->toString() + ' byte-equal to source';
-    if ($reportPath->isEmpty(), | [], | meta::pure::test::report::writeSuiteReport($reportPath->toOne(), 'protocolPrinter', meta::pure::functions::date::currentTimeMillis() - $start, $cases));
+    if ($reportPath->isEmpty(), | [], | platform::pure::test::report::writeSuiteReport($reportPath->toOne(), 'protocolPrinter', platform::pure::functions::date::currentTimeMillis() - $start, $cases));
     // Throw on any mismatch so the CLI's exit code reflects corpus status —
     // returning just the summary lets the bootstrap CLI swallow failures.
     assert($mismatches->isEmpty(), $summary);
@@ -75,22 +76,22 @@ function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests
 }
 
 // One grammar.pure check as a report case: the id is the fixture directory, as the grammar corpus names it.
-function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::protocolPrinterCase(path: String[1], prefixLen: Integer[1], index: Integer[1], total: Integer[1]): meta::pure::test::report::TestCaseReport[1]
+function <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::protocolPrinterCase(path: String[1], prefixLen: Integer[1], index: Integer[1], total: Integer[1]): platform::pure::test::report::TestCaseReport[1]
 {
     let rel = if ($path->length() > $prefixLen, | $path->substring($prefixLen, $path->length()), | $path);
     tickProgress($index, $total, $rel);
-    let started = meta::pure::functions::date::currentTimeMillis();
+    let started = platform::pure::functions::date::currentTimeMillis();
     let result = withSilencedPrint(| checkProtocolPrinterFile($path));
-    ^meta::pure::test::report::TestCaseReport(
+    ^platform::pure::test::report::TestCaseReport(
         id = if ($rel->endsWith('/grammar.pure'), | $rel->substring(0, $rel->length() - 13), | $rel),
-        durationMs = meta::pure::functions::date::currentTimeMillis() - $started,
-        error = if ($result.failure->isEmpty(), | [], | ^meta::pure::functions::lang::Error(message = $result.failure->toOne(), stack = []))
+        durationMs = platform::pure::functions::date::currentTimeMillis() - $started,
+        error = if ($result.failure->isEmpty(), | [], | ^platform::pure::functions::lang::Error(message = $result.failure->toOne(), stack = []))
     );
 }
 
-// Discoverable test wrapper — picked up by `runTests over meta::pure::functions`
+// Discoverable test wrapper — picked up by `runTests over platform::pure::functions`
 // so the runtime suite still covers the protocol printer.
-function <<test.Test>> meta::pure::functions::printer::protocol::tests::testGrammarCorpusCoverage(): Boolean[1]
+function <<test.Test>> platform::pure::functions::printer::protocol::tests::testGrammarCorpusCoverage(): Boolean[1]
 {
     let allFiles = grammarTestsRoot()->directoryTree();
     let grammarFiles = $allFiles->filter(p | $p->endsWith('/grammar.pure'));
@@ -102,7 +103,7 @@ function <<test.Test>> meta::pure::functions::printer::protocol::tests::testGram
     );
 }
 
-Class <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::ProtocolPrinterCheckResult
+Class <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::ProtocolPrinterCheckResult
 {
     path: String[1];
     // Non-empty when the printer emitted an UNSUPPORTED sentinel, when
@@ -111,7 +112,7 @@ Class <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::P
     failure: String[0..1];
 }
 
-function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::checkProtocolPrinterFile(path: String[1]): ProtocolPrinterCheckResult[1]
+function <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::checkProtocolPrinterFile(path: String[1]): ProtocolPrinterCheckResult[1]
 {
     let comparePath = findCompareOverride($path);
     let useExplicit = $comparePath->contains('_explicit.pure');
@@ -136,10 +137,10 @@ function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests
 // parse → printProtocolFile (or its `_explicit` variant). Single pass — the
 // grammar corpus IS the canonical printer-target form, so comparing the
 // print to the source is sufficient; no parse→print→parse→print round-trip.
-function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::renderProtocolFile(path: String[1], explicit: Boolean[1]): String[1]
+function <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::renderProtocolFile(path: String[1], explicit: Boolean[1]): String[1]
 {
     let source = readFile($path);
-    let parsed = meta::pure::functions::meta::parse($path, $source);
+    let parsed = platform::pure::functions::meta::parse($path, $source);
     if ($explicit, | printProtocolFileExplicit($parsed), | printProtocolFile($parsed));
 }
 
@@ -147,7 +148,7 @@ function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests
 // canonical printer-target form — used when the source `grammar.pure` has
 // equivalent shapes the parser collapses (e.g. `!(a == b)` vs `a != b`). Use
 // the override when present; otherwise compare to the source itself.
-function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::findCompareOverride(grammarPath: String[1]): String[1]
+function <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::findCompareOverride(grammarPath: String[1]): String[1]
 {
     let dir = $grammarPath->substring(0, $grammarPath->length() - 'grammar.pure'->length());
     let candidates = [$dir + 'grammar_compare.pure', $dir + 'grammar_compare_explicit.pure'];
@@ -155,16 +156,18 @@ function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests
     if ($existing->isEmpty(), | $grammarPath, | $existing->at(0));
 }
 
-// Whitespace-tolerant comparison: trim each line, drop blank lines, strip
+// Whitespace-tolerant comparison: trim each line, drop blank lines and
+// full-line `//` comments (the printer never emits comments — license headers
+// included; PureToJsonRoundtripTest.normalizePure drops them too), strip
 // trailing semicolons (Pure treats `;` as an optional terminator, and the
 // grammar corpus is inconsistent — `[]` vs `1 * 2;` both appear as single-
 // statement function bodies), and join with `\n`.
-function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::normalizePureSource(s: String[1]): String[1]
+function <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::normalizePureSource(s: String[1]): String[1]
 {
-    $s->split('\n')->map(l | stripTrailingSemicolon($l->trim()))->filter(l | $l != '')->joinStrings('\n');
+    $s->split('\n')->map(l | stripTrailingSemicolon($l->trim()))->filter(l | $l != '' && !$l->startsWith('//'))->joinStrings('\n');
 }
 
-function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::stripTrailingSemicolon(s: String[1]): String[1]
+function <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::stripTrailingSemicolon(s: String[1]): String[1]
 {
     if ($s->endsWith(';'), | $s->substring(0, $s->length() - 1), | $s);
 }
@@ -174,7 +177,7 @@ function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests
 // common ancestors and pick the first one whose directoryTree succeeds.
 // `runProtocolPrinterCorpus(testDir)` takes the dir as a parameter so the
 // CLI invocation can pass an absolute path without going through this probe.
-function <<test.TestDependency>> meta::pure::functions::printer::protocol::tests::grammarTestsRoot(): String[1]
+function <<test.TestDependency>> platform::pure::functions::printer::protocol::tests::grammarTestsRoot(): String[1]
 {
     let candidates = [
         'pure/specification/grammar/tests',

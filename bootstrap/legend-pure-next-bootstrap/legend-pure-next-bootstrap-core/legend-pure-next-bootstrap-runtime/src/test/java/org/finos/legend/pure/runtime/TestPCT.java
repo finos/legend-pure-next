@@ -17,9 +17,9 @@ package org.finos.legend.pure.runtime;
 
 import org.finos.legend.pure.execution.PureAssertionError;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.extension.Stereotype;
-import meta.pure.metamodel.function.FunctionDefinition;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.extension.Stereotype;
+import platform.pure.metamodel.function.FunctionDefinition;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.execution.natives.io.IONatives;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
@@ -146,7 +146,7 @@ class TestPCT
      */
     private static boolean requiresCompiler(PackageableElement element)
     {
-        if (element instanceof meta.pure.metamodel.extension.ElementWithStereotypes ews)
+        if (element instanceof platform.pure.metamodel.extension.ElementWithStereotypes ews)
         {
             for (Stereotype s : ews._stereotypes())
             {
@@ -161,7 +161,7 @@ class TestPCT
 
     private static boolean isPCTTest(PackageableElement element)
     {
-        if (element instanceof meta.pure.metamodel.extension.ElementWithStereotypes ews)
+        if (element instanceof platform.pure.metamodel.extension.ElementWithStereotypes ews)
         {
             for (Stereotype s : ews._stereotypes())
             {
@@ -179,7 +179,7 @@ class TestPCT
      */
     private static boolean isPCTAdapter(PackageableElement element)
     {
-        if (element instanceof meta.pure.metamodel.extension.ElementWithStereotypes ews)
+        if (element instanceof platform.pure.metamodel.extension.ElementWithStereotypes ews)
         {
             for (Stereotype s : ews._stereotypes())
             {

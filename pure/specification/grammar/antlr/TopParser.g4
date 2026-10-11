@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 parser grammar TopParser;
 
 options
@@ -5,10 +20,17 @@ options
     tokenVocab = TopLexer;
 }
 
-// A document is a sequence of sections.
-// If no ### header is present, the Java layer prepends ###Pure.
+// A document is the text before its first header, then its sections.
 document
-    : section* EOF
+    : implicitSection section* EOF
+    ;
+
+// Everything before the first ###header: a section with no header. In a file that
+// names no section it is the whole file, which is Pure. Above a header it may be only
+// comments and blank lines — a licence header — and as the lexer skips comments that
+// leaves NEWLINEs alone: the builders then drop it rather than make an empty section.
+implicitSection
+    : NEWLINE* importStatement* sectionContent?
     ;
 
 // A named section: ###SectionName followed by imports and content

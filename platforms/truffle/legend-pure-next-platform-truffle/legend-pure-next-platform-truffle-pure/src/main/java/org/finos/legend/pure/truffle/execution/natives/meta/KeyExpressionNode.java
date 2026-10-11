@@ -73,7 +73,7 @@ public final class KeyExpressionNode extends PureNode
                                           MetadataAccess resolver)
     {
         Object keyExpr = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                "meta::pure::functions::lang::KeyExpression", resolver);
+                "platform::pure::functions::lang::KeyExpression", resolver);
         org.finos.legend.pure.truffle.compiler.helper._Any.write(keyExpr, "name", values[0]);
         Object expr = values[1];
         if (expr instanceof org.finos.legend.pure.truffle.execution.types.PureSequence)

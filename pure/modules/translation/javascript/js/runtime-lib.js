@@ -522,8 +522,8 @@ function __unwrapAtomicValue(v) {
     const singleton = cgt && cgt.__purePath;
     const t = cgt && cgt.type;
     const isAtomic = typeof singleton === "string"
-      ? singleton.endsWith("GenericType_meta_pure_metamodel_valuespecification_AtomicValue")
-      : (t && t.__purePath) === "meta::pure::metamodel::valuespecification::AtomicValue";
+      ? singleton.endsWith("GenericType_platform_pure_metamodel_valuespecification_AtomicValue")
+      : (t && t.__purePath) === "platform::pure::metamodel::valuespecification::AtomicValue";
     if (!isAtomic || v.value === undefined || v.value === null) break;
     v = v.value;
   }
@@ -992,7 +992,7 @@ function __chunk(coll, n) {
   for (let i = 0; i < coll.length; i += N) out.push(coll.slice(i, i + N));
   return out;
 }
-// meta::pure::functions::binary — byte-level primitives backing binary
+// platform::pure::functions::binary — byte-level primitives backing binary
 // serialization (the self-hosted PDB writer). Pure Integer is a bigint, so
 // each returned byte is a bigint 0n..255n; byte-identity with the JVM
 // implementations is the PCT contract.
@@ -1170,7 +1170,7 @@ function __qp(ownerPath, name, recv, ...rest) {
     seen.add(path);
     const q = declared(__qpsOf(path));
     if (q) return q.eval(recv, ...rest);
-    if (path === ownerPath || path === "meta::pure::metamodel::type::Any") continue;
+    if (path === ownerPath || path === "platform::pure::metamodel::type::Any") continue;
     for (const g of __asArr(__pureResolve(path).generalizations)) {
       const p = pathOf(g && g.general && g.general.type);
       if (typeof p === "string") queue.push(p);
@@ -1203,7 +1203,7 @@ function __metadataInvoke(path, args) { return __hostService("metadataInvoke")(p
 function __findAllTypes() { return __hostService("findAllTypes")(); }
 function __findFunctionsByNameAndArity(name, arity) { return __hostService("findFunctionsByNameAndArity")(name, arity); }
 function __pureParseTop(sourceId, content) { return __hostService("pureParseTop")(sourceId, content); }
-// meta::pure::functions::meta::antlr natives (the host's AntlrExtension implements them).
+// platform::pure::functions::meta::antlr natives (the host's AntlrExtension implements them).
 function __parseAntlr(...args) { return __hostService("parseAntlr")(...args); }
 function __getText(...args) { return __hostService("getText")(...args); }
 function __grammarRuleName(...args) { return __hostService("grammarRuleName")(...args); }
@@ -1261,7 +1261,7 @@ function __writeFile(path, content) {
   if (typeof globalThis.__pureHost?.hostWriteFile === "function") return globalThis.__pureHost?.hostWriteFile(path, content);
   throw new Error("writeFile: no file system in this environment");
 }
-// meta::external::language::javascript::{compile,execute,drainCompiledSources}
+// platform::external::language::javascript::{compile,execute,drainCompiledSources}
 // — evaluating JavaScript is a HOST capability, so runtime-lib only routes. The
 // standalone JS platform installs these from src/execution/js-natives.js; an
 // environment without them throws rather than silently degrading.
@@ -1282,10 +1282,10 @@ function __jsDrainCompiledSources() {
   throw new Error("javascript::drainCompiledSources: no host implementation in this environment");
 }
 function __gtmHolder(clsPath, typeArgTypes) {
-  const udgCgt = __pureResolve("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType");
+  const udgCgt = __pureResolve("platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType");
   const cgt = __newCgt({ type: __pureResolve(clsPath), classifierGenericType: udgCgt });
   cgt.typeArguments = __asArr(typeArgTypes).map((t) => __newCgt({ type: t, classifierGenericType: udgCgt }));
-  const holder = __newOf("meta$pure$metamodel$valuespecification$GenericTypeAndMultiplicityHolder", { classifierGenericType: cgt });
+  const holder = __newOf("platform$pure$metamodel$valuespecification$GenericTypeAndMultiplicityHolder", { classifierGenericType: cgt });
   holder.genericType = cgt; // self-reference: the holder is described by its own CGT
   return holder;
 }
@@ -1298,7 +1298,7 @@ function __pair(first, second) {
   // The two type arguments are UNKNOWN but still GenericTypeValues: a Pair's element types are not
   // tracked here, and `[{}, {}]` placeholders answered no accessor — `$gtv.typeArguments` on one of
   // them is `gtv._typeArguments()`, which is how the zip tests failed.
-  return __newOf("meta$pure$functions$collection$Pair", { first, second, classifierGenericType: __newCgt({ type: __pureResolve("meta::pure::functions::collection::Pair"), typeArguments: [__newCgt({}), __newCgt({})], __equalityKeys: ["first", "second"] }) });
+  return __newOf("platform$pure$functions$collection$Pair", { first, second, classifierGenericType: __newCgt({ type: __pureResolve("platform::pure::functions::collection::Pair"), typeArguments: [__newCgt({}), __newCgt({})], __equalityKeys: ["first", "second"] }) });
 }
 function __zip(a, b) {
   const A = __asArr(a), B = __asArr(b);
@@ -1326,10 +1326,10 @@ function __firstNonEmpty(thunks) {
 }
 function __tryEval(thunk) {
   try {
-    return __newOf("meta$pure$functions$lang$TryResult", {
+    return __newOf("platform$pure$functions$lang$TryResult", {
       value: thunk(),
       failure: void 0,
-      classifierGenericType: __newCgt({ type: __pureResolve("meta::pure::functions::lang::TryResult") })
+      classifierGenericType: __newCgt({ type: __pureResolve("platform::pure::functions::lang::TryResult") })
     });
   } catch (e) {
     const msg = e && e.message !== void 0 ? String(e.message) : String(e);
@@ -1342,14 +1342,14 @@ function __tryEval(thunk) {
       frames = lines.filter((s) => s.startsWith("at ") || s.includes("@"));
       if (frames.length === 0 && lines.length > 0) frames = lines;
     }
-    return __newOf("meta$pure$functions$lang$TryResult", {
+    return __newOf("platform$pure$functions$lang$TryResult", {
       value: void 0,
-      failure: __newOf("meta$pure$functions$lang$Error", {
+      failure: __newOf("platform$pure$functions$lang$Error", {
         message: msg,
         stack: frames,
-        classifierGenericType: __newCgt({ type: __pureResolve("meta::pure::functions::lang::Error") })
+        classifierGenericType: __newCgt({ type: __pureResolve("platform::pure::functions::lang::Error") })
       }),
-      classifierGenericType: __newCgt({ type: __pureResolve("meta::pure::functions::lang::TryResult") })
+      classifierGenericType: __newCgt({ type: __pureResolve("platform::pure::functions::lang::TryResult") })
     });
   }
 }
@@ -1396,7 +1396,7 @@ function __lambdaParamType(lam) {
   if (params.length === 0) return null;
   const p = params[0];
   const t = p.genericType && p.genericType.type;
-  const typePath = t && (t.__purePath ?? t.path) || "meta::pure::metamodel::type::Any";
+  const typePath = t && (t.__purePath ?? t.path) || "platform::pure::metamodel::type::Any";
   let lower = 0;
   let upper;
   const m = p.multiplicity;
@@ -1513,7 +1513,7 @@ function __mapRemoveAll(m, keys) {
   const ks = __asArr(keys);
   return { __mapEntries: __mapEntriesOf(m).filter((x) => !ks.some((k) => k === x[0])) };
 }
-// meta::pure::functions::collection::removeAll(set, other): `set` minus every
+// platform::pure::functions::collection::removeAll(set, other): `set` minus every
 // element __eq to one in `other` (so <<equality.Key>> classes compare by key).
 // A map receiver keeps map semantics.
 function __removeAll(set, other) {
@@ -1524,7 +1524,7 @@ function __removeAll(set, other) {
   return __asArr(set).filter((x) => !os.some((o) => __eq(x, o)));
 }
 function __mapKeyValues(m) {
-  return __mapEntriesOf(m).map(([k, v]) => __newOf("meta$pure$functions$collection$Pair", { first: k, second: v }));
+  return __mapEntriesOf(m).map(([k, v]) => __newOf("platform$pure$functions$collection$Pair", { first: k, second: v }));
 }
 function __mapKeys(m) {
   return __mapEntriesOf(m).map((x) => x[0]);
@@ -1575,7 +1575,7 @@ function __groupBy(coll, keyFn) {
     const k = keyFn(x);
     let i = __mapFindIdx(entries, k);
     if (i < 0) {
-      entries.push([k, __newOf("meta$pure$functions$collection$List", { values: [] })]);
+      entries.push([k, __newOf("platform$pure$functions$collection$List", { values: [] })]);
       i = entries.length - 1;
     }
     entries[i][1].values.push(x);
@@ -1684,7 +1684,7 @@ function __range(a, b, step) {
   else for (let i = start; i > end; i += s) out.push(i);
   return out;
 }
-const POINTER_PREFIX = "meta::pure::metamodel::pointer::";
+const POINTER_PREFIX = "platform::pure::metamodel::pointer::";
 function __pgr_pointerPath(v) {
   if (!v || typeof v !== "object") return null;
   const cgt = v.classifierGenericType;
@@ -2197,17 +2197,17 @@ function __fail(msg) {
   throw new Error(String(msg));
 }
 const __metaHierarchy = {
-  "meta::pure::metamodel::type::Any": [],
-  "meta::pure::metamodel::type::Type": ["meta::pure::metamodel::PackageableElement", "meta::pure::metamodel::type::Any"],
-  "meta::pure::metamodel::type::DataType": ["meta::pure::metamodel::type::Type", "meta::pure::metamodel::PackageableElement", "meta::pure::metamodel::type::Any"],
-  "meta::pure::metamodel::type::PrimitiveType": ["meta::pure::metamodel::type::DataType", "meta::pure::metamodel::type::Type", "meta::pure::metamodel::PackageableElement", "meta::pure::metamodel::type::Any"],
-  "meta::pure::metamodel::type::Class": ["meta::pure::metamodel::type::Type", "meta::pure::metamodel::PackageableElement", "meta::pure::metamodel::type::Any"],
-  "meta::pure::metamodel::type::Enumeration": ["meta::pure::metamodel::type::DataType", "meta::pure::metamodel::type::Type", "meta::pure::metamodel::PackageableElement", "meta::pure::metamodel::type::Any"],
-  "meta::pure::metamodel::PackageableElement": ["meta::pure::metamodel::type::Any"]
+  "platform::pure::metamodel::type::Any": [],
+  "platform::pure::metamodel::type::Type": ["platform::pure::metamodel::PackageableElement", "platform::pure::metamodel::type::Any"],
+  "platform::pure::metamodel::type::DataType": ["platform::pure::metamodel::type::Type", "platform::pure::metamodel::PackageableElement", "platform::pure::metamodel::type::Any"],
+  "platform::pure::metamodel::type::PrimitiveType": ["platform::pure::metamodel::type::DataType", "platform::pure::metamodel::type::Type", "platform::pure::metamodel::PackageableElement", "platform::pure::metamodel::type::Any"],
+  "platform::pure::metamodel::type::Class": ["platform::pure::metamodel::type::Type", "platform::pure::metamodel::PackageableElement", "platform::pure::metamodel::type::Any"],
+  "platform::pure::metamodel::type::Enumeration": ["platform::pure::metamodel::type::DataType", "platform::pure::metamodel::type::Type", "platform::pure::metamodel::PackageableElement", "platform::pure::metamodel::type::Any"],
+  "platform::pure::metamodel::PackageableElement": ["platform::pure::metamodel::type::Any"]
 };
 function __instanceOf(v, t) {
   const tPath = t && typeof t === "object" && t.path || void 0;
-  if (tPath === "meta::pure::metamodel::type::Any") return v !== void 0 && v !== null;
+  if (tPath === "platform::pure::metamodel::type::Any") return v !== void 0 && v !== null;
   if (v === void 0 || v === null) return false;
   // Translated closures carry their Pure address too (`__lambda(arrow, path)`,
   // e.g. a captured lambda value); their classifier comes from that address.
@@ -2222,22 +2222,22 @@ function __instanceOf(v, t) {
     return false;
   }
   if (v instanceof Date) {
-    return tPath === "meta::pure::metamodel::type::primitives::Date" || tPath === "meta::pure::metamodel::type::primitives::StrictDate" || tPath === "meta::pure::metamodel::type::primitives::DateTime" || tPath === "meta::pure::metamodel::type::primitives::StrictTime";
+    return tPath === "platform::pure::metamodel::type::primitives::Date" || tPath === "platform::pure::metamodel::type::primitives::StrictDate" || tPath === "platform::pure::metamodel::type::primitives::DateTime" || tPath === "platform::pure::metamodel::type::primitives::StrictTime";
   }
   if (typeof v === "string") {
-    return tPath === "meta::pure::metamodel::type::primitives::String";
+    return tPath === "platform::pure::metamodel::type::primitives::String";
   }
   if (typeof v === "bigint") {
-    return tPath === "meta::pure::metamodel::type::primitives::Integer" || tPath === "meta::pure::metamodel::type::primitives::Number";
+    return tPath === "platform::pure::metamodel::type::primitives::Integer" || tPath === "platform::pure::metamodel::type::primitives::Number";
   }
   if (v instanceof Big) {
-    return tPath === "meta::pure::metamodel::type::primitives::Decimal" || tPath === "meta::pure::metamodel::type::primitives::Number";
+    return tPath === "platform::pure::metamodel::type::primitives::Decimal" || tPath === "platform::pure::metamodel::type::primitives::Number";
   }
   if (typeof v === "number") {
-    return tPath === "meta::pure::metamodel::type::primitives::Float" || tPath === "meta::pure::metamodel::type::primitives::Number";
+    return tPath === "platform::pure::metamodel::type::primitives::Float" || tPath === "platform::pure::metamodel::type::primitives::Number";
   }
   if (typeof v === "boolean") {
-    return tPath === "meta::pure::metamodel::type::primitives::Boolean";
+    return tPath === "platform::pure::metamodel::type::primitives::Boolean";
   }
   // Two vestigial tag branches used to sit here, `v._kind` (a type-leaf name concatenated into a
   // path) and `v._type` (a flattened supertype chain). Both said what the NEXT branch derives
@@ -2284,7 +2284,7 @@ function __validateCgt(userCgt, holderTypePath) {
   // (3) Proposed is a subtype of the expected metaclass \u2014 the enum-value pattern
   // re-classifying ^Enum(...) as a specific user enumeration.
   if (__subtypeViaGeneralizations(t, holderTypePath)) return userCgt;
-  throw new Error("Cannot change classifierGenericType.type from '" + holderTypePath + "' to '" + tp + "'. The classifier's raw type is system-managed (derived from the instance's metaclass) \u2014 only typeArguments, multiplicityArguments and typeVariableValues are user-customizable. Use meta::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
+  throw new Error("Cannot change classifierGenericType.type from '" + holderTypePath + "' to '" + tp + "'. The classifier's raw type is system-managed (derived from the instance's metaclass) \u2014 only typeArguments, multiplicityArguments and typeVariableValues are user-customizable. Use platform::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
 }
 function __toCanonicalCgt(gt) {
   if (gt === null || typeof gt !== "object") return gt;
@@ -2293,26 +2293,26 @@ function __toCanonicalCgt(gt) {
   }
   const t0 = gt.type;
   const tp0 = t0 && typeof t0 === "object" ? typeof t0.path === "string" ? t0.path : typeof t0.__purePath === "string" ? t0.__purePath : void 0 : void 0;
-  if (tp0 === "meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder" && Array.isArray(gt.typeArguments) && gt.typeArguments.length > 0) {
+  if (tp0 === "platform::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder" && Array.isArray(gt.typeArguments) && gt.typeArguments.length > 0) {
     gt = gt.typeArguments[0];
   }
   const t = gt.type;
   if (t === null || typeof t !== "object") return gt;
   const tp = typeof t.path === "string" ? t.path : typeof t.__purePath === "string" ? t.__purePath : void 0;
   if (typeof tp !== "string") return gt;
-  if (tp === "meta::pure::metamodel::type::Class") {
+  if (tp === "platform::pure::metamodel::type::Class") {
     const tas = gt.typeArguments;
     if (!Array.isArray(tas) || tas.length === 0) {
       throw new Error("Cannot instantiate Class<Class<T>> because the typeArgs are not set for the typeParam");
     }
   }
-  if (!tp.startsWith("meta::pure::metamodel::")) return gt;
+  if (!tp.startsWith("platform::pure::metamodel::")) return gt;
   // Only canonicalize a BARE (argument-less) generic type to the optimization
   // singleton — a parameterized one (e.g. Property<Owner, Value|mul>) must keep
   // its type/multiplicity arguments, which the singleton doesn't carry.
   const tas = gt.typeArguments, mas = gt.multiplicityArguments;
   if ((Array.isArray(tas) && tas.length > 0) || (Array.isArray(mas) && mas.length > 0)) return gt;
-  return __pureResolve("meta::pure::metamodel::type::generics::optimization::GenericType_" + tp.split("::").join("_"));
+  return __pureResolve("platform::pure::metamodel::type::generics::optimization::GenericType_" + tp.split("::").join("_"));
 }
 // elementToPath(element[, separator]) — Truffle ElementToPathNode parity: the
 // root's path is '', and a separator other than '::' replaces every '::'.
@@ -2494,7 +2494,7 @@ function __regexpLike(str, pat, flags) {
   }
   return new RegExp(pat, f).test(str);
 }
-const __P = "meta::pure::metamodel::type::primitives::";
+const __P = "platform::pure::metamodel::type::primitives::";
 function __pureTypeOf(v) {
   if (v === void 0 || v === null) return void 0;
   if (typeof v === "bigint") return __P + "Integer";
@@ -2536,13 +2536,13 @@ function __commonAncestor(a, b) {
     }
     frontier = next;
   }
-  return "meta::pure::metamodel::type::Any";
+  return "platform::pure::metamodel::type::Any";
 }
 function __commonType(coll) {
   const arr = __asArr(coll);
-  if (arr.length === 0) return "meta::pure::metamodel::type::Any";
-  let t = __pureTypeOf(arr[0]) ?? "meta::pure::metamodel::type::Any";
-  for (let i = 1; i < arr.length; i++) t = __commonAncestor(t, __pureTypeOf(arr[i]) ?? "meta::pure::metamodel::type::Any");
+  if (arr.length === 0) return "platform::pure::metamodel::type::Any";
+  let t = __pureTypeOf(arr[0]) ?? "platform::pure::metamodel::type::Any";
+  for (let i = 1; i < arr.length; i++) t = __commonAncestor(t, __pureTypeOf(arr[i]) ?? "platform::pure::metamodel::type::Any");
   return t;
 }
 function __checkConstraint(ok, name, owner, msgFn) {
@@ -2582,17 +2582,17 @@ function __ctorScope(build) {
 // (isPointerNativeSlot) and bootstrap's PointerAccessGuard do. Only declared
 // Pure property names are guarded, so runtime-internal reads pass through.
 const __POINTER_NATIVE_SLOTS = new Set(["path", "element", "classifierGenericType", "generalizations"]);
-const __POINTER_GENERIC_TYPE = "GenericType_meta_pure_metamodel_pointer_";
+const __POINTER_GENERIC_TYPE = "GenericType_platform_pure_metamodel_pointer_";
 function __pointerClassOf(v) {
   if (v === null || typeof v !== "object" || Array.isArray(v)) return undefined;
   const cgt = v.classifierGenericType;
   if (cgt === undefined || cgt === null) return undefined;
   if (typeof cgt.__purePath === "string") {
     const i = cgt.__purePath.indexOf(__POINTER_GENERIC_TYPE);
-    return i < 0 ? undefined : "meta::pure::metamodel::pointer::" + cgt.__purePath.slice(i + __POINTER_GENERIC_TYPE.length);
+    return i < 0 ? undefined : "platform::pure::metamodel::pointer::" + cgt.__purePath.slice(i + __POINTER_GENERIC_TYPE.length);
   }
   const tp = cgt.type && cgt.type.__purePath;
-  return typeof tp === "string" && tp.startsWith("meta::pure::metamodel::pointer::") ? tp : undefined;
+  return typeof tp === "string" && tp.startsWith("platform::pure::metamodel::pointer::") ? tp : undefined;
 }
 function __guardPointer(v) {
   const cls = __pointerClassOf(v);
@@ -2643,7 +2643,7 @@ function __cast(value, targetPath) {
   throw new Error("Cast exception: " + __castLeaf(vtPath) + " cannot be cast to " + __castLeaf(targetPath));
 }
 const __resolveCache = {};
-const __OPT_CGT_PREFIX = "meta::pure::metamodel::type::generics::optimization::GenericType_";
+const __OPT_CGT_PREFIX = "platform::pure::metamodel::type::generics::optimization::GenericType_";
 const __OPT_DEFAULTS = {
   typeArguments: () => [],
   multiplicityArguments: () => [],
@@ -2721,7 +2721,7 @@ function __pureResolve(address) {
 //
 // Without this the reflection form produced a bare `{ classifierGenericType }` literal, and anything
 // copied from it stayed a plain object: the resolved Property that
-// meta::pure::compiler::helper::property::resolveProperty returns was the one part of a compiled
+// platform::pure::compiler::helper::property::resolveProperty returns was the one part of a compiled
 // graph that was not an instance of its own class, so none of its accessors resolved.
 function __newByType(cgt) {
   const t = cgt && cgt.type;
@@ -2732,11 +2732,11 @@ function __newByType(cgt) {
     // The type may be an ENUMERATION, whose global is a const object of its values rather than a
     // constructor — and an enumeration built at RUN TIME has no path to look up at all. Either way
     // the value being created is an enum value, and every enum value is an instance of
-    // meta::pure::metamodel::type::Enum.
+    // platform::pure::metamodel::type::Enum.
     const tcgt = t && t.classifierGenericType && t.classifierGenericType.type;
     const tPath = tcgt && (tcgt.__purePath !== void 0 ? tcgt.__purePath : tcgt.path);
-    if (tPath === "meta::pure::metamodel::type::Enumeration" || (Cls && typeof Cls === "object")) {
-      Cls = globalThis["meta$pure$metamodel$type$Enum"];
+    if (tPath === "platform::pure::metamodel::type::Enumeration" || (Cls && typeof Cls === "object")) {
+      Cls = globalThis["platform$pure$metamodel$type$Enum"];
     }
   }
   if (typeof Cls !== "function") return { classifierGenericType: cgt };
@@ -2750,7 +2750,7 @@ function __newByType(cgt) {
 // The class is looked up at run time rather than emitted as a bare `new meta$...GenericTypeValue()`
 // because the STANDALONE PARSER loads neither the compiler's metamodel module nor its classes: a
 // bare identifier there is a ReferenceError, which is exactly how the grammar corpus failed
-// ("meta$pure$metamodel$type$generics$GenericTypeValue is not defined"). Where the class is absent
+// ("platform$pure$metamodel$type$generics$GenericTypeValue is not defined"). Where the class is absent
 // this falls back to the plain self-describing object, which is all this ever was.
 //
 // `slots` carries runtime-internal keys too (`__equalityKeys`), which have no accessor to chain —
@@ -2762,7 +2762,7 @@ function __newByType(cgt) {
 // genuinely is not loaded, the plain object comes back, which is all this used to be.
 //
 // Without this, such an instance answered no accessor: `p._lastName is not a function`, from
-// meta::external::language::javascript::translation's own test suite.
+// platform::external::language::javascript::translation's own test suite.
 function __newOfSlots(slots) {
   const cgt = slots.classifierGenericType;
   const out = __newByType(cgt);
@@ -2780,7 +2780,7 @@ function __newOfSlots(slots) {
   return Object.assign(out, slots);
 }
 function __newCgt(slots) {
-  return __newOf("meta$pure$metamodel$type$generics$GenericTypeValue", slots);
+  return __newOf("platform$pure$metamodel$type$generics$GenericTypeValue", slots);
 }
 // Build an instance of a translated class named at run time, falling back to the plain slots object
 // when that class is not loaded in this host.
@@ -2820,7 +2820,7 @@ function __openVariableValues(lam) {
   // Entries are thunks by convention (see wrapLambdaWithAst): the capture is
   // read here, not at lambda construction, so a snapshot never trips a
   // temporal-dead-zone ReferenceError for over-approximated open variables.
-  for (const k of Object.keys(ov)) entries.push([k, __newOf("meta$pure$functions$collection$List", { values: __asArr(ov[k]()) })]);
+  for (const k of Object.keys(ov)) entries.push([k, __newOf("platform$pure$functions$collection$List", { values: __asArr(ov[k]()) })]);
   return { __mapEntries: entries };
 }
 const __ctorStack = [];
@@ -2957,7 +2957,7 @@ function __genericType(v) {
   // generalization step (through the metadata globals) until every element's
   // type is a subtype of it.
   if (Array.isArray(v)) {
-    if (v.length === 0) return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::Nil") });
+    if (v.length === 0) return __newCgt({ type: __pureResolve("platform::pure::metamodel::type::Nil") });
     if (v.length === 1) return __genericType(v[0]);
     const pathOf = (x) => {
       const g = __genericType(x);
@@ -2965,7 +2965,7 @@ function __genericType(v) {
       return t && (t.__purePath !== void 0 ? t.__purePath : t.path);
     };
     const paths = v.map(pathOf);
-    const ANY = "meta::pure::metamodel::type::Any";
+    const ANY = "platform::pure::metamodel::type::Any";
     const covers = (c) => paths.every((p) => p && (p === c || __metadataSubtypeOf(p, c)));
     let cand = paths[0];
     while (cand && cand !== ANY && !covers(cand)) {
@@ -2976,22 +2976,22 @@ function __genericType(v) {
     return __newCgt({ type: __pureResolve(cand && covers(cand) ? cand : ANY) });
   }
   if (typeof v === "bigint") {
-    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::Integer") });
+    return __newCgt({ type: __pureResolve("platform::pure::metamodel::type::primitives::Integer") });
   }
   if (v instanceof Big) {
-    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::Decimal") });
+    return __newCgt({ type: __pureResolve("platform::pure::metamodel::type::primitives::Decimal") });
   }
   if (typeof v === "number") {
-    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::Float") });
+    return __newCgt({ type: __pureResolve("platform::pure::metamodel::type::primitives::Float") });
   }
   if (typeof v === "string") {
-    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::String") });
+    return __newCgt({ type: __pureResolve("platform::pure::metamodel::type::primitives::String") });
   }
   if (typeof v === "boolean") {
-    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::Boolean") });
+    return __newCgt({ type: __pureResolve("platform::pure::metamodel::type::primitives::Boolean") });
   }
   if (v instanceof Date) {
-    return __newCgt({ type: __pureResolve("meta::pure::metamodel::type::primitives::Date") });
+    return __newCgt({ type: __pureResolve("platform::pure::metamodel::type::primitives::Date") });
   }
   return __pdo(v).classifierGenericType;
 }
@@ -3058,7 +3058,7 @@ function __formatPureDate(d) {
   if (dot !== null) out += "." + dot[1];
   return out;
 }
-// ===== Variant (meta::pure::metamodel::variant::Variant) =====
+// ===== Variant (platform::pure::metamodel::variant::Variant) =====
 // A Variant wraps an immutable JSON tree:
 //   null | boolean | bigint (JSON integer) | number (JSON decimal) |
 //   string | Array | Map (JSON object, insertion-ordered).
@@ -3067,8 +3067,8 @@ function __formatPureDate(d) {
 // number, so parsing is hand-rolled. Coercion rules and error messages
 // mirror the Java backends (Jackson node-type names: NULL, BOOLEAN, NUMBER,
 // STRING, ARRAY, OBJECT) — they are part of the cross-platform PCT contract.
-const __VARIANT_PATH = "meta::pure::metamodel::variant::Variant";
-const __VARIANT_P = "meta::pure::metamodel::type::primitives::";
+const __VARIANT_PATH = "platform::pure::metamodel::variant::Variant";
+const __VARIANT_P = "platform::pure::metamodel::type::primitives::";
 function __mkVariant(tree) {
   // classifierGenericType makes __matchType/cast/instanceOf see a Variant
   return { __variantJson: tree, classifierGenericType: __newCgt({ type: { path: __VARIANT_PATH } }) };
@@ -3267,7 +3267,7 @@ function __variantValueTree(v) {
 }
 function __vDescName(d) {
   const simple = (path) =>
-    path && (path.startsWith("meta::pure::metamodel::") || path.startsWith("meta::pure::functions::"))
+    path && (path.startsWith("platform::pure::metamodel::") || path.startsWith("platform::pure::functions::"))
       ? path.split("::").pop()
       : path || "?";
   return simple(d.p) + (d.a.length ? "<" + d.a.map(__vDescName).join(", ") + ">" : "");
@@ -3307,17 +3307,17 @@ function __variantCoerce(t, d) {
   if (d.p === __VARIANT_PATH) return __mkVariant(t);
   if (t === null) return null;
   let wrong = false;
-  if (d.p === "meta::pure::functions::collection::List") {
+  if (d.p === "platform::pure::functions::collection::List") {
     if (Array.isArray(t)) {
       const ed = d.a[0] || { p: void 0, a: [] };
-      return __newOf("meta$pure$functions$collection$List", {
+      return __newOf("platform$pure$functions$collection$List", {
         values: t.map((e) => __variantCoerce(e, ed)).filter((e) => e !== null),
         // self-describing tag so the JS->Truffle marshaller lifts to a List PDO
-        classifierGenericType: __newCgt({ type: { path: "meta::pure::functions::collection::List" } })
+        classifierGenericType: __newCgt({ type: { path: "platform::pure::functions::collection::List" } })
       });
     }
     wrong = true;
-  } else if (d.p === "meta::pure::functions::collection::Map" && d.a[0] && d.a[0].p === __VARIANT_P + "String") {
+  } else if (d.p === "platform::pure::functions::collection::Map" && d.a[0] && d.a[0].p === __VARIANT_P + "String") {
     if (t instanceof Map) {
       const vd = d.a[1] || { p: void 0, a: [] };
       const entries = [];
@@ -3425,7 +3425,7 @@ function __pureFormat(v, depth) {
   }
   return String(v);
 }
-// meta::pure::functions::io::withSilencedPrint — suppress the WRITE only. The
+// platform::pure::functions::io::withSilencedPrint — suppress the WRITE only. The
 // native's contract is that `println(x)` still RETURNS 'x\n'; just nothing
 // reaches stdout. Nesting is counted so an inner silence cannot un-silence an
 // outer one, and the counter is restored on throw.

@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::new::support::*;
 
@@ -41,91 +55,91 @@ Class test::new::support::MyClassWithKandM<K|m>
 
 ###CompiledGraph
 function test::new::testNew__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @6:3-6:25
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @20:3-20:25
     typeParam T -> test::new::support::MyClass
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>  @6:3-6:25
-    Collection :#KeyExpression#[1]  ~@Collection@  @6:3-6:25
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:12-6:24
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:12-6:24
-        AtomicValue  'test' :@String@[1]  ~@AtomicValue@  @6:19-6:24
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @7:3-7:38
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>  @20:3-20:25
+    Collection :#KeyExpression#[1]  ~@Collection@  @20:3-20:25
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:12-20:24
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @20:12-20:24
+        AtomicValue  'test' :@String@[1]  ~@AtomicValue@  @20:19-20:24
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @21:3-21:38
     typeParam T -> test::new::support::MyClass
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>  @7:3-7:38
-    Collection :#KeyExpression#[2]  ~@Collection@  @7:3-7:38
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @7:12-7:25
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @7:12-7:25
-        AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @7:19-7:25
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @7:28-7:37
-        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @7:28-7:37
-        AtomicValue  42 :@Integer@[1]  ~@AtomicValue@  @7:36-7:37
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @8:3-8:41
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>  @21:3-21:38
+    Collection :#KeyExpression#[2]  ~@Collection@  @21:3-21:38
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:12-21:25
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @21:12-21:25
+        AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @21:19-21:25
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:28-21:37
+        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @21:28-21:37
+        AtomicValue  42 :@Integer@[1]  ~@AtomicValue@  @21:36-21:37
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @22:3-22:41
     typeParam T -> test::new::support::MyClass
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>  @8:3-8:41
-    Collection :#KeyExpression#[2]  ~@Collection@  @8:3-8:41
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @8:12-8:25
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @8:12-8:25
-        AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @8:19-8:25
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @8:28-8:40
-        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @8:28-8:40
-        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @8:36-8:40
-          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @8:36-8:36
-          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @8:40-8:40
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClassWithK<@String@>##[1]#  ~@FunctionInvocation@  @9:3-9:39
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>  @22:3-22:41
+    Collection :#KeyExpression#[2]  ~@Collection@  @22:3-22:41
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:12-22:25
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @22:12-22:25
+        AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @22:19-22:25
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @22:28-22:40
+        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @22:28-22:40
+        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @22:36-22:40
+          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @22:36-22:36
+          AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @22:40-22:40
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClassWithK<@String@>##[1]#  ~@FunctionInvocation@  @23:3-23:39
     typeParam T -> test::new::support::MyClassWithK<@String@>
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClassWithK<@String@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClassWithK<@String@>|1>  @9:3-9:39
-    Collection :#KeyExpression#[1]  ~@Collection@  @9:3-9:39
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @9:25-9:38
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @9:25-9:38
-        AtomicValue  'typed' :@String@[1]  ~@AtomicValue@  @9:32-9:38
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClassWithKandM<@Integer@|1>##[1]#  ~@FunctionInvocation@  @10:3-10:61
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClassWithK<@String@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClassWithK<@String@>|1>  @23:3-23:39
+    Collection :#KeyExpression#[1]  ~@Collection@  @23:3-23:39
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @23:25-23:38
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @23:25-23:38
+        AtomicValue  'typed' :@String@[1]  ~@AtomicValue@  @23:32-23:38
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClassWithKandM<@Integer@|1>##[1]#  ~@FunctionInvocation@  @24:3-24:61
     typeParam T -> test::new::support::MyClassWithKandM<@Integer@|1>
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClassWithKandM<@Integer@|1>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClassWithKandM<@Integer@|1>|1>  @10:3-10:61
-    Collection :#KeyExpression#[2]  ~@Collection@  @10:3-10:61
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @10:32-10:49
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @10:32-10:49
-        AtomicValue  'typedMult' :@String@[1]  ~@AtomicValue@  @10:39-10:49
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @10:52-10:60
-        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @10:52-10:60
-        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @10:60-10:60
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::A##[1]#  ~@FunctionInvocation@  @11:3-11:22
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClassWithKandM<@Integer@|1>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClassWithKandM<@Integer@|1>|1>  @24:3-24:61
+    Collection :#KeyExpression#[2]  ~@Collection@  @24:3-24:61
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @24:32-24:49
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @24:32-24:49
+        AtomicValue  'typedMult' :@String@[1]  ~@AtomicValue@  @24:39-24:49
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @24:52-24:60
+        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @24:52-24:60
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @24:60-24:60
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::A##[1]#  ~@FunctionInvocation@  @25:3-25:22
     typeParam T -> test::new::support::A
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::A|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::A|1>  @11:3-11:22
-    Collection :#KeyExpression#[1]  ~@Collection@  @11:3-11:22
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:6-11:21
-        AtomicValue  'bs' :@String@[1]  ~@AtomicValue@  @11:6-11:21
-        Collection :#test::new::support::B#[1]  ~@Collection@  @11:11-11:21
-          FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::B##[1]#  ~@FunctionInvocation@  @11:12-11:20
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::A|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::A|1>  @25:3-25:22
+    Collection :#KeyExpression#[1]  ~@Collection@  @25:3-25:22
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @25:6-25:21
+        AtomicValue  'bs' :@String@[1]  ~@AtomicValue@  @25:6-25:21
+        Collection :#test::new::support::B#[1]  ~@Collection@  @25:11-25:21
+          FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::B##[1]#  ~@FunctionInvocation@  @25:12-25:20
             typeParam T -> test::new::support::B
-            TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::B|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::B|1>  @11:12-11:20
-            Collection :#KeyExpression#[1]  ~@Collection@  @11:12-11:20
-              FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:15-11:19
-                AtomicValue  'n' :@String@[1]  ~@AtomicValue@  @11:15-11:19
-                AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @11:19-11:19
+            TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::B|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::B|1>  @25:12-25:20
+            Collection :#KeyExpression#[1]  ~@Collection@  @25:12-25:20
+              FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @25:15-25:19
+                AtomicValue  'n' :@String@[1]  ~@AtomicValue@  @25:15-25:19
+                AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @25:19-25:19
 
-class test::new::support::A extends Any  ~Class<test::new::support::A>  @14:1-17:1
+class test::new::support::A extends Any  ~Class<test::new::support::A>  @28:1-31:1
   property bs :test::new::support::B[*]  ~Property<test::new::support::A, test::new::support::B|*>
 
-class test::new::support::B extends Any  ~Class<test::new::support::B>  @19:1-22:1
+class test::new::support::B extends Any  ~Class<test::new::support::B>  @33:1-36:1
   property n :@Integer@[1]  ~Property<test::new::support::B, @Integer@|1>
 
-class test::new::support::MyClass extends Any  ~Class<test::new::support::MyClass>  @24:1-28:1
+class test::new::support::MyClass extends Any  ~Class<test::new::support::MyClass>  @38:1-42:1
   property name :@String@[1]  ~Property<test::new::support::MyClass, @String@|1>
   property value :@Integer@[0..1]  ~Property<test::new::support::MyClass, @Integer@|0..1>
 
-class test::new::support::MyClassWithK extends Any  ~Class<test::new::support::MyClassWithK<K~test::new::support::MyClassWithK>>  @30:1-34:1
+class test::new::support::MyClassWithK extends Any  ~Class<test::new::support::MyClassWithK<K~test::new::support::MyClassWithK>>  @44:1-48:1
   property name :@String@[1]  ~Property<test::new::support::MyClassWithK<K~test::new::support::MyClassWithK>, @String@|1>
   property value :K~test::new::support::MyClassWithK[0..1]  ~Property<test::new::support::MyClassWithK<K~test::new::support::MyClassWithK>, K~test::new::support::MyClassWithK|0..1>
 
-class test::new::support::MyClassWithKandM extends Any  ~Class<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM|m~test::new::support::MyClassWithKandM>>  @36:1-40:1
+class test::new::support::MyClassWithKandM extends Any  ~Class<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM|m~test::new::support::MyClassWithKandM>>  @50:1-54:1
   property name :@String@[1]  ~Property<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM|m~test::new::support::MyClassWithKandM>, @String@|1>
   property value :K~test::new::support::MyClassWithKandM[m]  ~Property<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM|m~test::new::support::MyClassWithKandM>, K~test::new::support::MyClassWithKandM|m>
 
 ###ReverseIndex
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::new::testNew__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::new::testNew__Any_MANY_
-meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
   test::new::testNew__Any_MANY_
 test::new::support::A:
   test::new::testNew__Any_MANY_

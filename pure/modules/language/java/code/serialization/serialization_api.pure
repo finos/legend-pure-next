@@ -13,22 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::factory::*;
-import meta::external::language::java::metamodel::*;
-import meta::external::language::java::metamodel::annotations::json::*;
-import meta::external::language::java::metamodel::project::*;
-import meta::external::language::java::serialization::*;
+import platform::external::language::java::factory::*;
+import platform::external::language::java::metamodel::*;
+import platform::external::language::java::metamodel::annotations::json::*;
+import platform::external::language::java::metamodel::project::*;
+import platform::external::language::java::serialization::*;
 
-function meta::external::language::java::serialization::ofClass(sfer:Stringifier[1], j:meta::external::language::java::metamodel::Class[1]): String[1]
+function platform::external::language::java::serialization::ofClass(sfer:Stringifier[1], j:platform::external::language::java::metamodel::Class[1]): String[1]
 {
    let newSfer = $sfer->classSerializer($j);
    $j->match([
-      e: meta::external::language::java::metamodel::Enumeration[1] | $newSfer->ofEnumInternal($e),
-      c: meta::external::language::java::metamodel::Class[1]       | $newSfer->ofClassInternal($c)
+      e: platform::external::language::java::metamodel::Enumeration[1] | $newSfer->ofEnumInternal($e),
+      c: platform::external::language::java::metamodel::Class[1]       | $newSfer->ofClassInternal($c)
    ])->getResult();
 }
 
-function meta::external::language::java::serialization::ofEnum(sfer:Stringifier[1], j:meta::external::language::java::metamodel::Enumeration[1]): String[1]
+function platform::external::language::java::serialization::ofEnum(sfer:Stringifier[1], j:platform::external::language::java::metamodel::Enumeration[1]): String[1]
 {
    let newSfer = $sfer->classSerializer($j);
    $newSfer->ofEnumInternal($j)->getResult();
@@ -39,58 +39,58 @@ function meta::external::language::java::serialization::ofEnum(sfer:Stringifier[
 // is what tests compare against and what in-memory compilation is handed. Only
 // the file emitters, which pass their output through withPositionTable, ask for
 // the marked form below.
-function meta::external::language::java::serialization::classToString(j:meta::external::language::java::metamodel::Class[1]):String[1]
+function platform::external::language::java::serialization::classToString(j:platform::external::language::java::metamodel::Class[1]):String[1]
 {
-   $j->meta::external::language::java::serialization::classToStringWithPositions()
-      ->meta::external::language::java::serialization::withoutMarkers();
+   $j->platform::external::language::java::serialization::classToStringWithPositions()
+      ->platform::external::language::java::serialization::withoutMarkers();
 }
 
-function meta::external::language::java::serialization::classToStringWithPositions(j:meta::external::language::java::metamodel::Class[1]):String[1]
+function platform::external::language::java::serialization::classToStringWithPositions(j:platform::external::language::java::metamodel::Class[1]):String[1]
 {
    newStringifier()->ofClass($j);
 }
 
-function meta::external::language::java::serialization::enumToString(j:meta::external::language::java::metamodel::Enumeration[1]):String[1]
+function platform::external::language::java::serialization::enumToString(j:platform::external::language::java::metamodel::Enumeration[1]):String[1]
 {
    newStringifier()->ofEnum($j);
 }
 
-function meta::external::language::java::serialization::packageToString(j:meta::external::language::java::metamodel::Package[1]):String[1]
+function platform::external::language::java::serialization::packageToString(j:platform::external::language::java::metamodel::Package[1]):String[1]
 {
  if($j.fullPath->isNotEmpty(),
       | $j.fullPath->toOne(),
  
       |  
       $j.parent->match([
-           p0:meta::external::language::java::metamodel::Package[0] | [],
-            p :meta::external::language::java::metamodel::Package[1] | $p->packageToString()
+           p0:platform::external::language::java::metamodel::Package[0] | [],
+            p :platform::external::language::java::metamodel::Package[1] | $p->packageToString()
                    ])->concatenate($j.name)->joinStrings('.')
  );
 }
 
-function meta::external::language::java::serialization::qualifiedClassName(j:meta::external::language::java::metamodel::Class[1]):String[1]
+function platform::external::language::java::serialization::qualifiedClassName(j:platform::external::language::java::metamodel::Class[1]):String[1]
 {
    $j.package->packageToString() + '.' + $j.simpleName;
 }
 
 // TODO This should not be necessary once all code gen creates Code instead of String
-function meta::external::language::java::serialization::codeToString(code: Code[1], forClass:meta::external::language::java::metamodel::Class[1]):String[1]
+function platform::external::language::java::serialization::codeToString(code: Code[1], forClass:platform::external::language::java::metamodel::Class[1]):String[1]
 {
    newStringifier()->classSerializer($forClass)->doCode($code)->getResult();
 }
 
-function meta::external::language::java::serialization::codeToString(code: Code[1]):String[1]
+function platform::external::language::java::serialization::codeToString(code: Code[1]):String[1]
 {
    newStringifier()->doCode($code)->getResult();
 }
 
-function meta::external::language::java::serialization::typeToString(type:meta::external::language::java::metamodel::Type[1]):String[1]
+function platform::external::language::java::serialization::typeToString(type:platform::external::language::java::metamodel::Type[1]):String[1]
 {
    newStringifier()->doType($type)->getResult();
 }
 
 // TODO This should not be necessary once all code gen creates Code instead of String
-function meta::external::language::java::serialization::typeToString(type:meta::external::language::java::metamodel::Type[1], forClass:meta::external::language::java::metamodel::Class[1]):String[1]
+function platform::external::language::java::serialization::typeToString(type:platform::external::language::java::metamodel::Type[1], forClass:platform::external::language::java::metamodel::Class[1]):String[1]
 {
    newStringifier()->classSerializer($forClass)->doType($type)->getResult();
 }

@@ -26,16 +26,16 @@
 // it is read by the reader and the generator too, so owning it here made
 // reader.pure depend on a file named "writer".
 
-import meta::pure::metamodel::pointer::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::metamodel::function::property::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::functions::binary::*;
+import platform::pure::metamodel::pointer::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::functions::binary::*;
 
 // --- shared encode helpers (called by the emitted writer) ----------------------
 
 // PointerKind name -> discriminant (m3.fbs `enum PointerKind : byte { Element, Property, QualifiedProperty, Stereotype, Tag }`).
-function meta::pure::compiler::pdb::writerHelper::pointerKind(name:String[1]):Integer[1]
+function platform::pure::compiler::pdb::writerHelper::pointerKind(name:String[1]):Integer[1]
 {
    if([pair(| $name == 'Element',           | 0),
        pair(| $name == 'Property',          | 1),
@@ -47,16 +47,16 @@ function meta::pure::compiler::pdb::writerHelper::pointerKind(name:String[1]):In
 }
 
 // Accumulator for building a list of string offsets.
-Class meta::pure::compiler::pdb::writerHelper::StringsAndBuilder
+Class platform::pure::compiler::pdb::writerHelper::StringsAndBuilder
 {
-   builder : meta::pure::compiler::pdb::fbb::Builder[1];
+   builder : platform::pure::compiler::pdb::fbb::Builder[1];
    offsets : Integer[*];
 }
 
 // A union-field encode result: offset + 1-based member discriminant (0 = absent).
-Class meta::pure::compiler::pdb::writerHelper::UnionRes
+Class platform::pure::compiler::pdb::writerHelper::UnionRes
 {
-   builder  : meta::pure::compiler::pdb::fbb::Builder[1];
+   builder  : platform::pure::compiler::pdb::fbb::Builder[1];
    offset   : Integer[1];
    typeByte : Integer[1];
 }
@@ -68,7 +68,7 @@ Class meta::pure::compiler::pdb::writerHelper::UnionRes
 // structurally equal to (but distinct from) their originals — structural ==
 // would conflate a copy with the on-stack original and emit an AncestorRef
 // where the reference inlines the copy.
-function meta::pure::compiler::pdb::writerHelper::ancestorDepth(stack:Any[*], obj:Any[1]):Integer[1]
+function platform::pure::compiler::pdb::writerHelper::ancestorDepth(stack:Any[*], obj:Any[1]):Integer[1]
 {
    let idx = range(0, $stack->size())->filter(i | is($stack->at($i), $obj))->last()->toOne();
    $stack->size() - $idx - 1;
@@ -76,7 +76,7 @@ function meta::pure::compiler::pdb::writerHelper::ancestorDepth(stack:Any[*], ob
 
 // Is the object already on the write path? (reference `_writing.containsKey` —
 // identity semantics, see ancestorDepth).
-function meta::pure::compiler::pdb::writerHelper::onStack(stack:Any[*], obj:Any[1]):Boolean[1]
+function platform::pure::compiler::pdb::writerHelper::onStack(stack:Any[*], obj:Any[1]):Boolean[1]
 {
    $stack->exists(x | is($x, $obj));
 }
@@ -84,95 +84,95 @@ function meta::pure::compiler::pdb::writerHelper::onStack(stack:Any[*], obj:Any[
 // PointerRef { kind (id 0, byte enum, default Element/0), path: [string] (id 1) }.
 // Matches the reference writePointerRef byte-for-byte: strings created in path
 // order, then the offset vector, then the table adding kind THEN path.
-function meta::pure::compiler::pdb::writerHelper::encodePointerRef(b:meta::pure::compiler::pdb::fbb::Builder[1], segs:String[*], kind:Integer[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+function platform::pure::compiler::pdb::writerHelper::encodePointerRef(b:platform::pure::compiler::pdb::fbb::Builder[1], segs:String[*], kind:Integer[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
    let strs = $segs->fold(
       {seg, acc |
-         let r = $acc.builder->meta::pure::compiler::pdb::fbb::createSharedString($seg);
-         ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $r.builder, offsets = $acc.offsets->concatenate($r.offset));
+         let r = $acc.builder->platform::pure::compiler::pdb::fbb::createSharedString($seg);
+         ^platform::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $r.builder, offsets = $acc.offsets->concatenate($r.offset));
       },
-      ^meta::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $b, offsets = []));
-   let b1 = $strs.builder->meta::pure::compiler::pdb::fbb::startVector(4, $segs->size(), 4);
+      ^platform::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $b, offsets = []));
+   let b1 = $strs.builder->platform::pure::compiler::pdb::fbb::startVector(4, $segs->size(), 4);
    // offsets prepended in reverse so element 0 ends up front-most.
-   let b2 = $strs.offsets->reverse()->fold({off, acc | $acc->meta::pure::compiler::pdb::fbb::addOffset($off)}, $b1);
-   let vec = $b2->meta::pure::compiler::pdb::fbb::endVector($segs->size());
-   let t0 = $vec.builder->meta::pure::compiler::pdb::fbb::startObject(2);
-   let t1 = $t0->meta::pure::compiler::pdb::fbb::addFieldScalar(0, $kind, 0, 1);   // kind first (reference order)
-   let t2 = $t1->meta::pure::compiler::pdb::fbb::addFieldOffset(1, $vec.offset);   // then path
-   $t2->meta::pure::compiler::pdb::fbb::endObject();
+   let b2 = $strs.offsets->reverse()->fold({off, acc | $acc->platform::pure::compiler::pdb::fbb::addOffset($off)}, $b1);
+   let vec = $b2->platform::pure::compiler::pdb::fbb::endVector($segs->size());
+   let t0 = $vec.builder->platform::pure::compiler::pdb::fbb::startObject(2);
+   let t1 = $t0->platform::pure::compiler::pdb::fbb::addFieldScalar(0, $kind, 0, 1);   // kind first (reference order)
+   let t2 = $t1->platform::pure::compiler::pdb::fbb::addFieldOffset(1, $vec.offset);   // then path
+   $t2->platform::pure::compiler::pdb::fbb::endObject();
 }
 
 // Kind + path segments for a pointer target — the reference writePointerRef
 // instanceof chain, SAME ARM ORDER (pointer subclasses before their live bases;
 // member pointers are 2 segments [ownerPath, name] UNSPLIT; elements 1 segment).
-Class meta::pure::compiler::pdb::writerHelper::KindAndSegs
+Class platform::pure::compiler::pdb::writerHelper::KindAndSegs
 {
    kind : Integer[1];
    segs : String[*];
 }
 
-function meta::pure::compiler::pdb::writerHelper::pointerKindAndSegs(v:Any[1]):meta::pure::compiler::pdb::writerHelper::KindAndSegs[1]
+function platform::pure::compiler::pdb::writerHelper::pointerKindAndSegs(v:Any[1]):platform::pure::compiler::pdb::writerHelper::KindAndSegs[1]
 {
    $v->match([
-      qpp : QualifiedPropertyPointer<Any>[1] | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 2, segs = [$qpp.path, $qpp.element]),
-      pp  : PropertyPointer<Nil, Any|*>[1]   | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 1, segs = [$pp.path, $pp.element]),
-      cp  : ColumnPointer<Nil, Any|*>[1]     | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 1, segs = [$cp.path, $cp.element]),
-      sp  : StereotypePointer[1]             | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 3, segs = [$sp.path, $sp.element]),
-      tp  : TagPointer[1]                    | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 4, segs = [$tp.path, $tp.element]),
-      ep  : EnumPointer[1]                   | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 1, segs = [$ep.path, $ep.element]),
+      qpp : QualifiedPropertyPointer<Any>[1] | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 2, segs = [$qpp.path, $qpp.element]),
+      pp  : PropertyPointer<Nil, Any|*>[1]   | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 1, segs = [$pp.path, $pp.element]),
+      cp  : ColumnPointer<Nil, Any|*>[1]     | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 1, segs = [$cp.path, $cp.element]),
+      sp  : StereotypePointer[1]             | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 3, segs = [$sp.path, $sp.element]),
+      tp  : TagPointer[1]                    | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 4, segs = [$tp.path, $tp.element]),
+      ep  : EnumPointer[1]                   | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 1, segs = [$ep.path, $ep.element]),
       // Root PackagePointers carry path='' (toPackagePointer's parentless
       // special case); on the wire the root's canonical path is '::' — the
       // live root Package's name, which is what a Java-compiled graph stores
       // (its root reference is the live Package, path '::'). Same
       // normalization fullPath applies for display.
-      tcp : TempCompilerPointer[1]           | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = if($tcp.path == '', | ['::'], | [$tcp.path])),
-      qp  : QualifiedProperty<Any>[1]        | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 2, segs = [$qp.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath(), $qp.name->toOne()]),
-      ap  : AbstractProperty<Any>[1]         | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 1, segs = [$ap.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath(), $ap.name->toOne()]),
-      s   : Stereotype[1]                    | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 3, segs = [$s.profile->toOne()->fullPath(), $s.value->toOne()]),
-      t   : Tag[1]                           | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 4, segs = [$t.profile->toOne()->fullPath(), $t.value->toOne()]),
-      pe  : meta::pure::metamodel::PackageableElement[1] | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [$pe->fullPath()]),
+      tcp : TempCompilerPointer[1]           | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = if($tcp.path == '', | ['::'], | [$tcp.path])),
+      qp  : QualifiedProperty<Any>[1]        | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 2, segs = [$qp.owner->toOne()->cast(@platform::pure::metamodel::PackageableElement)->fullPath(), $qp.name->toOne()]),
+      ap  : AbstractProperty<Any>[1]         | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 1, segs = [$ap.owner->toOne()->cast(@platform::pure::metamodel::PackageableElement)->fullPath(), $ap.name->toOne()]),
+      s   : Stereotype[1]                    | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 3, segs = [$s.profile->toOne()->fullPath(), $s.value->toOne()]),
+      t   : Tag[1]                           | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 4, segs = [$t.profile->toOne()->fullPath(), $t.value->toOne()]),
+      pe  : platform::pure::metamodel::PackageableElement[1] | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [$pe->fullPath()]),
       // Live relation column whose owner is a RelationType (not packageable):
       // unresolvable either way, but the segment must be deterministic and
       // platform-independent — toString would differ between the JVM
       // interpreter and the JS runtime. Mirrors the reference writer's
       // explicit Column arm (column name).
-      col : meta::pure::metamodel::relation::Column<Nil, Any|*>[1] | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [if($col.name->isEmpty(), | $col->toString(), | $col.name->toOne())]),
-      a   : Any[1]                           | ^meta::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [$a->toString()])
+      col : platform::pure::metamodel::relation::Column<Nil, Any|*>[1] | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [if($col.name->isEmpty(), | $col->toString(), | $col.name->toOne())]),
+      a   : Any[1]                           | ^platform::pure::compiler::pdb::writerHelper::KindAndSegs(kind = 0, segs = [$a->toString()])
    ]);
 }
 
 // PointerRef for any pointer-able value (the emitted writer's `writePointerRef`).
-function meta::pure::compiler::pdb::writerHelper::writePointerRefFor(b:meta::pure::compiler::pdb::fbb::Builder[1], v:Any[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+function platform::pure::compiler::pdb::writerHelper::writePointerRefFor(b:platform::pure::compiler::pdb::fbb::Builder[1], v:Any[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
-   let ks = meta::pure::compiler::pdb::writerHelper::pointerKindAndSegs($v);
-   meta::pure::compiler::pdb::writerHelper::encodePointerRef($b, $ks.segs, $ks.kind);
+   let ks = platform::pure::compiler::pdb::writerHelper::pointerKindAndSegs($v);
+   platform::pure::compiler::pdb::writerHelper::encodePointerRef($b, $ks.segs, $ks.kind);
 }
 
 // AncestorRef { depth: int (id 0, default 0) }.
-function meta::pure::compiler::pdb::writerHelper::encodeAncestorRef(b:meta::pure::compiler::pdb::fbb::Builder[1], depth:Integer[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+function platform::pure::compiler::pdb::writerHelper::encodeAncestorRef(b:platform::pure::compiler::pdb::fbb::Builder[1], depth:Integer[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
-   let t0 = $b->meta::pure::compiler::pdb::fbb::startObject(1);
-   let t1 = $t0->meta::pure::compiler::pdb::fbb::addFieldScalar(0, $depth, 0, 4);
-   $t1->meta::pure::compiler::pdb::fbb::endObject();
+   let t0 = $b->platform::pure::compiler::pdb::fbb::startObject(1);
+   let t1 = $t0->platform::pure::compiler::pdb::fbb::addFieldScalar(0, $depth, 0, 4);
+   $t1->platform::pure::compiler::pdb::fbb::endObject();
 }
 
 // --- helpers for the EMITTED writer (pdb/writer/generated/generatedWriter.pure) --------
 
 // Accumulator for a union-typed list field: parallel offset + discriminant lists.
-Class meta::pure::compiler::pdb::writerHelper::UnionListAcc
+Class platform::pure::compiler::pdb::writerHelper::UnionListAcc
 {
-   builder : meta::pure::compiler::pdb::fbb::Builder[1];
+   builder : platform::pure::compiler::pdb::fbb::Builder[1];
    offsets : Integer[*];
    types   : Integer[*];
 }
 
 // Offset vector, as flatc's createXVector: startVector(4, n, 4), addOffset per
 // element in REVERSE (prepend leaves element 0 front-most), length prefix.
-function meta::pure::compiler::pdb::writerHelper::createOffsetVector(b:meta::pure::compiler::pdb::fbb::Builder[1], offsets:Integer[*]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+function platform::pure::compiler::pdb::writerHelper::createOffsetVector(b:platform::pure::compiler::pdb::fbb::Builder[1], offsets:Integer[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
-   let b1 = $b->meta::pure::compiler::pdb::fbb::startVector(4, $offsets->size(), 4);
-   let b2 = $offsets->reverse()->fold({off, acc | $acc->meta::pure::compiler::pdb::fbb::addOffset($off)}, $b1);
-   $b2->meta::pure::compiler::pdb::fbb::endVector($offsets->size());
+   let b1 = $b->platform::pure::compiler::pdb::fbb::startVector(4, $offsets->size(), 4);
+   let b2 = $offsets->reverse()->fold({off, acc | $acc->platform::pure::compiler::pdb::fbb::addOffset($off)}, $b1);
+   $b2->platform::pure::compiler::pdb::fbb::endVector($offsets->size());
 }
 
 // Byte vector (union type vectors): startVector(1, n, 1), then the whole run.
@@ -182,101 +182,101 @@ function meta::pure::compiler::pdb::writerHelper::createOffsetVector(b:meta::pur
 // own length. The elements are 1-aligned, so addScalar's prep(1, 0) could
 // never insert padding between them and a single prepend of the run in
 // front-to-back order produces byte-identical output.
-function meta::pure::compiler::pdb::writerHelper::createByteVector(b:meta::pure::compiler::pdb::fbb::Builder[1], bytes:Integer[*]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+function platform::pure::compiler::pdb::writerHelper::createByteVector(b:platform::pure::compiler::pdb::fbb::Builder[1], bytes:Integer[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
-   let b1 = $b->meta::pure::compiler::pdb::fbb::startVector(1, $bytes->size(), 1);
-   let run = $bytes->map(v | meta::pure::functions::binary::intToLeBytes($v, 1))->meta::pure::functions::binary::binaryConcat();
-   let b2 = $b1->meta::pure::compiler::pdb::fbb::prepend($run);
-   $b2->meta::pure::compiler::pdb::fbb::endVector($bytes->size());
+   let b1 = $b->platform::pure::compiler::pdb::fbb::startVector(1, $bytes->size(), 1);
+   let run = $bytes->map(v | platform::pure::functions::binary::intToLeBytes($v, 1))->platform::pure::functions::binary::binaryConcat();
+   let b2 = $b1->platform::pure::compiler::pdb::fbb::prepend($run);
+   $b2->platform::pure::compiler::pdb::fbb::endVector($bytes->size());
 }
 
 // fbs `string` field value -> wire string (reference: enum values via _name(),
 // everything else via toString()/String.valueOf).
-function meta::pure::compiler::pdb::writerHelper::asFbsString(v:Any[1]):String[1]
+function platform::pure::compiler::pdb::writerHelper::asFbsString(v:Any[1]):String[1]
 {
-   if($v->instanceOf(meta::pure::metamodel::type::Enum),
-      | $v->cast(@meta::pure::metamodel::type::Enum).name->toOne(),
+   if($v->instanceOf(platform::pure::metamodel::type::Enum),
+      | $v->cast(@platform::pure::metamodel::type::Enum).name->toOne(),
       | $v->toString());
 }
 
 // Fail-loud terminal else of an emitted union dispatch (reference NEVER
 // silent-fails: a 0-typed slot reads as "absent" and crashes far away).
-function meta::pure::compiler::pdb::writerHelper::failUnion(b:meta::pure::compiler::pdb::fbb::Builder[1], unionName:String[1]):meta::pure::compiler::pdb::writerHelper::UnionRes[1]
+function platform::pure::compiler::pdb::writerHelper::failUnion(b:platform::pure::compiler::pdb::fbb::Builder[1], unionName:String[1]):platform::pure::compiler::pdb::writerHelper::UnionRes[1]
 {
    fail('PDB writer: value not handled by any FBS union arm of ' + $unionName);
-   ^meta::pure::compiler::pdb::writerHelper::UnionRes(builder = $b, offset = 0, typeByte = 0);
+   ^platform::pure::compiler::pdb::writerHelper::UnionRes(builder = $b, offset = 0, typeByte = 0);
 }
 
 // IntegerValueDef { val: long (id 0) }
-function meta::pure::compiler::pdb::writerHelper::encodeIntegerValueDef(b:meta::pure::compiler::pdb::fbb::Builder[1], v:Integer[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+function platform::pure::compiler::pdb::writerHelper::encodeIntegerValueDef(b:platform::pure::compiler::pdb::fbb::Builder[1], v:Integer[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
-   $b->meta::pure::compiler::pdb::fbb::startObject(1)
-     ->meta::pure::compiler::pdb::fbb::addFieldScalar(0, $v, 0, 8)
-     ->meta::pure::compiler::pdb::fbb::endObject();
+   $b->platform::pure::compiler::pdb::fbb::startObject(1)
+     ->platform::pure::compiler::pdb::fbb::addFieldScalar(0, $v, 0, 8)
+     ->platform::pure::compiler::pdb::fbb::endObject();
 }
 
 // BooleanValueDef { val: bool (id 0) }
-function meta::pure::compiler::pdb::writerHelper::encodeBooleanValueDef(b:meta::pure::compiler::pdb::fbb::Builder[1], v:Boolean[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+function platform::pure::compiler::pdb::writerHelper::encodeBooleanValueDef(b:platform::pure::compiler::pdb::fbb::Builder[1], v:Boolean[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
-   $b->meta::pure::compiler::pdb::fbb::startObject(1)
-     ->meta::pure::compiler::pdb::fbb::addFieldScalar(0, if($v, |1, |0), 0, 1)
-     ->meta::pure::compiler::pdb::fbb::endObject();
+   $b->platform::pure::compiler::pdb::fbb::startObject(1)
+     ->platform::pure::compiler::pdb::fbb::addFieldScalar(0, if($v, |1, |0), 0, 1)
+     ->platform::pure::compiler::pdb::fbb::endObject();
 }
 
 // FloatValueDef { val: double (id 0) }
-function meta::pure::compiler::pdb::writerHelper::encodeFloatValueDef(b:meta::pure::compiler::pdb::fbb::Builder[1], v:Float[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+function platform::pure::compiler::pdb::writerHelper::encodeFloatValueDef(b:platform::pure::compiler::pdb::fbb::Builder[1], v:Float[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
-   $b->meta::pure::compiler::pdb::fbb::startObject(1)
-     ->meta::pure::compiler::pdb::fbb::addFieldFloat(0, $v)
-     ->meta::pure::compiler::pdb::fbb::endObject();
+   $b->platform::pure::compiler::pdb::fbb::startObject(1)
+     ->platform::pure::compiler::pdb::fbb::addFieldFloat(0, $v)
+     ->platform::pure::compiler::pdb::fbb::endObject();
 }
 
 // StringValueDef and DecimalValueDef share the shape { val: string (id 0) }.
-function meta::pure::compiler::pdb::writerHelper::encodeStringishValueDef(b:meta::pure::compiler::pdb::fbb::Builder[1], s:String[1]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+function platform::pure::compiler::pdb::writerHelper::encodeStringishValueDef(b:platform::pure::compiler::pdb::fbb::Builder[1], s:String[1]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
-   let r = $b->meta::pure::compiler::pdb::fbb::createSharedString($s);
-   $r.builder->meta::pure::compiler::pdb::fbb::startObject(1)
-             ->meta::pure::compiler::pdb::fbb::addFieldOffset(0, $r.offset)
-             ->meta::pure::compiler::pdb::fbb::endObject();
+   let r = $b->platform::pure::compiler::pdb::fbb::createSharedString($s);
+   $r.builder->platform::pure::compiler::pdb::fbb::startObject(1)
+             ->platform::pure::compiler::pdb::fbb::addFieldOffset(0, $r.offset)
+             ->platform::pure::compiler::pdb::fbb::endObject();
 }
 
 // AtomicValue enum content: '<enumerationPath>.<valueName>' when the genericType
 // names a packageable element, else just the value name (reference writer).
-function meta::pure::compiler::pdb::writerHelper::atomicEnumPath(gt:Any[0..1], valueName:String[1]):String[1]
+function platform::pure::compiler::pdb::writerHelper::atomicEnumPath(gt:Any[0..1], valueName:String[1]):String[1]
 {
-   if($gt->isNotEmpty() && $gt->toOne()->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
-      | let t = $gt->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type;
-        if($t->isNotEmpty() && $t->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
-           | $t->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath() + '.' + $valueName,
+   if($gt->isNotEmpty() && $gt->toOne()->instanceOf(platform::pure::metamodel::type::generics::GenericTypeValue),
+      | let t = $gt->toOne()->cast(@platform::pure::metamodel::type::generics::GenericTypeValue).type;
+        if($t->isNotEmpty() && $t->toOne()->instanceOf(platform::pure::metamodel::PackageableElement),
+           | $t->toOne()->cast(@platform::pure::metamodel::PackageableElement)->fullPath() + '.' + $valueName,
            | $valueName);,
       | $valueName);
 }
 
 // Decimal-typed Float disambiguation (reference: genericType._type()._name() == 'Decimal').
-function meta::pure::compiler::pdb::writerHelper::isDecimalTyped(gt:Any[0..1]):Boolean[1]
+function platform::pure::compiler::pdb::writerHelper::isDecimalTyped(gt:Any[0..1]):Boolean[1]
 {
    $gt->isNotEmpty()
-      && $gt->toOne()->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue)
-      && $gt->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type
-            ->exists(t | $t->instanceOf(meta::pure::metamodel::PackageableElement)
-                         && ($t->cast(@meta::pure::metamodel::PackageableElement).name == 'Decimal'));
+      && $gt->toOne()->instanceOf(platform::pure::metamodel::type::generics::GenericTypeValue)
+      && $gt->toOne()->cast(@platform::pure::metamodel::type::generics::GenericTypeValue).type
+            ->exists(t | $t->instanceOf(platform::pure::metamodel::PackageableElement)
+                         && ($t->cast(@platform::pure::metamodel::PackageableElement).name == 'Decimal'));
 }
 
 // --- validation helpers (byte-neutral: only fire on invalid graphs) --------------
 // Ports of the reference writer's hand-written pointerPath/sourceInfo used in
 // validation messages, and the two semantic checks the reference emits.
 
-function meta::pure::compiler::pdb::writerHelper::pointerPath(obj:Any[1]):String[1]
+function platform::pure::compiler::pdb::writerHelper::pointerPath(obj:Any[1]):String[1]
 {
    $obj->match([
-      pe : meta::pure::metamodel::PackageableElement[1] | $pe->fullPath(),
+      pe : platform::pure::metamodel::PackageableElement[1] | $pe->fullPath(),
       qp : QualifiedProperty<Any>[1] |
-         if($qp.owner->isNotEmpty() && $qp.owner->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
-            | $qp.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath() + '.qp:' + $qp.name->joinStrings(''),
+         if($qp.owner->isNotEmpty() && $qp.owner->toOne()->instanceOf(platform::pure::metamodel::PackageableElement),
+            | $qp.owner->toOne()->cast(@platform::pure::metamodel::PackageableElement)->fullPath() + '.qp:' + $qp.name->joinStrings(''),
             | $qp->toString()),
       ap : AbstractProperty<Any>[1] |
-         if($ap.owner->isNotEmpty() && $ap.owner->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
-            | $ap.owner->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath() + '.' + $ap.name->joinStrings(''),
+         if($ap.owner->isNotEmpty() && $ap.owner->toOne()->instanceOf(platform::pure::metamodel::PackageableElement),
+            | $ap.owner->toOne()->cast(@platform::pure::metamodel::PackageableElement)->fullPath() + '.' + $ap.name->joinStrings(''),
             | $ap->toString()),
       s : Stereotype[1] | if($s.profile->isNotEmpty(), | $s.profile->toOne()->fullPath() + '.' + $s.value->joinStrings(''), | $s->toString()),
       t : Tag[1]        | if($t.profile->isNotEmpty(), | $t.profile->toOne()->fullPath() + '#' + $t.value->joinStrings(''), | $t->toString()),
@@ -284,7 +284,7 @@ function meta::pure::compiler::pdb::writerHelper::pointerPath(obj:Any[1]):String
    ]);
 }
 
-function meta::pure::compiler::pdb::writerHelper::sourceInfo(obj:Any[1]):String[1]
+function platform::pure::compiler::pdb::writerHelper::sourceInfo(obj:Any[1]):String[1]
 {
    let si = $obj.sourceInformation;
    if($si->isEmpty(),
@@ -297,20 +297,20 @@ function meta::pure::compiler::pdb::writerHelper::sourceInfo(obj:Any[1]):String[
 // single-valued union writer): a value that self-references its owner is only
 // valid as the canonical UDGT anchor — anything else is an upstream construction
 // bug, surfaced loudly at write time instead of round-tripping corrupt data.
-function meta::pure::compiler::pdb::writerHelper::checkGtvAnchor(v:Any[0..1], obj:Any[1]):Boolean[1]
+function platform::pure::compiler::pdb::writerHelper::checkGtvAnchor(v:Any[0..1], obj:Any[1]):Boolean[1]
 {
-   if($v->isNotEmpty() && ($v->toOne() == $obj) && $obj->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
-      | let t = $obj->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type;
-        if($t->isNotEmpty() && $t->toOne()->instanceOf(meta::pure::metamodel::PackageableElement)
-              && ($t->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath() != 'meta::pure::metamodel::type::generics::UserDefinedGenericType'),
-           | fail('Self-classified GenericTypeValue is only valid as the canonical UDGT anchor (type=UserDefinedGenericType). Got type=' + $t->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath());,
+   if($v->isNotEmpty() && ($v->toOne() == $obj) && $obj->instanceOf(platform::pure::metamodel::type::generics::GenericTypeValue),
+      | let t = $obj->cast(@platform::pure::metamodel::type::generics::GenericTypeValue).type;
+        if($t->isNotEmpty() && $t->toOne()->instanceOf(platform::pure::metamodel::PackageableElement)
+              && ($t->toOne()->cast(@platform::pure::metamodel::PackageableElement)->fullPath() != 'platform::pure::metamodel::type::generics::UserDefinedGenericType'),
+           | fail('Self-classified GenericTypeValue is only valid as the canonical UDGT anchor (type=UserDefinedGenericType). Got type=' + $t->toOne()->cast(@platform::pure::metamodel::PackageableElement)->fullPath());,
            | true);,
       | true);
 }
 
 // --- the generated writer, resolved at RUNTIME -----------------------------------
 // Nothing outside pdb/writer/generated/ holds a compile-time reference to
-// meta::pure::compiler::pdb::gen::*. The generated writer is produced FROM a
+// platform::pure::compiler::pdb::gen::*. The generated writer is produced FROM a
 // compiled compiler-pure, so a static call would make its own callers
 // uncompilable until it exists — the cycle that used to force them into a
 // separate source tree compiled in a second pass.
@@ -319,10 +319,10 @@ function meta::pure::compiler::pdb::writerHelper::checkGtvAnchor(v:Any[0..1], ob
 // Change a generated signature and nothing fails until a write actually runs.
 // Mangling is `_<SimpleParamType>_<mul>_` per parameter then the return, with
 // MANY for [*] and $0_1$ for [0..1].
-function meta::pure::compiler::pdb::writerHelper::genFn(mangled:String[1]):meta::pure::metamodel::function::Function<Any>[1]
+function platform::pure::compiler::pdb::writerHelper::genFn(mangled:String[1]):platform::pure::metamodel::function::Function<Any>[1]
 {
-   meta::pure::functions::meta::pathToElement('meta::pure::compiler::pdb::gen::' + $mangled)
-      ->cast(@meta::pure::metamodel::function::Function<Any>);
+   platform::pure::functions::meta::pathToElement('platform::pure::compiler::pdb::gen::' + $mangled)
+      ->cast(@platform::pure::metamodel::function::Function<Any>);
 }
 
 // The (builder, obj, stack) shape every gen::writeX shares.
@@ -333,11 +333,11 @@ function meta::pure::compiler::pdb::writerHelper::genFn(mangled:String[1]):meta:
 // classifierGenericType.type, which trips the pointer guard when that is an
 // undereferenced ClassPointer — exactly what the wire-format fixtures put there
 // on purpose, to exercise the writer's pointer handling. eval never looks.
-function meta::pure::compiler::pdb::writerHelper::evalGenWrite<T>(mangled:String[1], b:meta::pure::compiler::pdb::fbb::Builder[1], obj:T[1], stack:Any[*]):meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]
+function platform::pure::compiler::pdb::writerHelper::evalGenWrite<T>(mangled:String[1], b:platform::pure::compiler::pdb::fbb::Builder[1], obj:T[1], stack:Any[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]
 {
-   meta::pure::functions::lang::eval(
-      meta::pure::compiler::pdb::writerHelper::genFn($mangled)
-         ->cast(@meta::pure::metamodel::function::Function<{meta::pure::compiler::pdb::fbb::Builder[1], T[1], Any[*]->meta::pure::compiler::pdb::fbb::BuilderAndOffset[1]}>),
+   platform::pure::functions::lang::eval(
+      platform::pure::compiler::pdb::writerHelper::genFn($mangled)
+         ->cast(@platform::pure::metamodel::function::Function<{platform::pure::compiler::pdb::fbb::Builder[1], T[1], Any[*]->platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]}>),
       $b, $obj, $stack);
 }
 
@@ -345,56 +345,56 @@ function meta::pure::compiler::pdb::writerHelper::evalGenWrite<T>(mangled:String
 // Wire-format pins: the expected byte lists were produced by THE REFERENCE
 // IMPLEMENTATION (bootstrap generated fbs classes + com.google.flatbuffers.
 // FlatBufferBuilder) building the same values. Byte-identity is the bar.
-function <<test.Test>> meta::pure::compiler::pdb::writerHelper::tests::testEncodePointerRefWireFormat():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::writerHelper::tests::testEncodePointerRefWireFormat():Boolean[1]
 {
-   let res = meta::pure::compiler::pdb::fbb::newBuilder()
-               ->meta::pure::compiler::pdb::writerHelper::encodePointerRef(['a::b','c'], meta::pure::compiler::pdb::writerHelper::pointerKind('Property'));
-   let fin = $res.builder->meta::pure::compiler::pdb::fbb::finish($res.offset);
+   let res = platform::pure::compiler::pdb::fbb::newBuilder()
+               ->platform::pure::compiler::pdb::writerHelper::encodePointerRef(['a::b','c'], platform::pure::compiler::pdb::writerHelper::pointerKind('Property'));
+   let fin = $res.builder->platform::pure::compiler::pdb::fbb::finish($res.offset);
    assertEquals(
       '0C00000008000C000B000400080000000800000000000001020000001000000004000000010000006300000004000000613A3A6200000000',
-      $fin->meta::pure::compiler::pdb::fbb::result()->meta::pure::functions::binary::binaryToHex());
+      $fin->platform::pure::compiler::pdb::fbb::result()->platform::pure::functions::binary::binaryToHex());
 }
 
-function <<test.Test>> meta::pure::compiler::pdb::writerHelper::tests::testPointerKindAndSegs():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::writerHelper::tests::testPointerKindAndSegs():Boolean[1]
 {
    // Element: a real PackageableElement -> kind 0 (Element), 1 unsplit segment.
-   let cls = meta::pure::functions::meta::pathToElement('meta::pure::metamodel::type::Class');
-   let ke  = meta::pure::compiler::pdb::writerHelper::pointerKindAndSegs($cls);
+   let cls = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::type::Class');
+   let ke  = platform::pure::compiler::pdb::writerHelper::pointerKindAndSegs($cls);
    assertEquals(0, $ke.kind);
-   assertEquals(['meta::pure::metamodel::type::Class'], $ke.segs);
+   assertEquals(['platform::pure::metamodel::type::Class'], $ke.segs);
    // Member pointers: 2 segments [ownerPath, member], reference kinds.
-   let ks = meta::pure::compiler::pdb::writerHelper::pointerKindAndSegs(^StereotypePointer(path = 'a::P', element = 'doc'));
+   let ks = platform::pure::compiler::pdb::writerHelper::pointerKindAndSegs(^StereotypePointer(path = 'a::P', element = 'doc'));
    assertEquals(3, $ks.kind);
    assertEquals(['a::P','doc'], $ks.segs);
-   let kp = meta::pure::compiler::pdb::writerHelper::pointerKindAndSegs(^PropertyPointer<Nil, Any|*>(path = 'a::C', element = 'f'));
+   let kp = platform::pure::compiler::pdb::writerHelper::pointerKindAndSegs(^PropertyPointer<Nil, Any|*>(path = 'a::C', element = 'f'));
    assertEquals(1, $kp.kind);
    assertEquals(['a::C','f'], $kp.segs);
    // TempCompilerPointer (non-member): kind 0, 1 segment.
-   let kt = meta::pure::compiler::pdb::writerHelper::pointerKindAndSegs(^PackagePointer(path = 'x::y'));
+   let kt = platform::pure::compiler::pdb::writerHelper::pointerKindAndSegs(^PackagePointer(path = 'x::y'));
    assertEquals(0, $kt.kind);
    assertEquals(['x::y'], $kt.segs);
 }
 
-function <<test.Test>> meta::pure::compiler::pdb::writerHelper::tests::testSharedStringDedupWireFormat():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::writerHelper::tests::testSharedStringDedupWireFormat():Boolean[1]
 {
    // A repeated path segment reuses the SAME string (reference createSharedString):
    // 48 bytes, both vector elements pointing at one 'a::b'.
-   let res = meta::pure::compiler::pdb::fbb::newBuilder()
-               ->meta::pure::compiler::pdb::writerHelper::encodePointerRef(['a::b','a::b'], meta::pure::compiler::pdb::writerHelper::pointerKind('Property'));
-   let fin = $res.builder->meta::pure::compiler::pdb::fbb::finish($res.offset);
+   let res = platform::pure::compiler::pdb::fbb::newBuilder()
+               ->platform::pure::compiler::pdb::writerHelper::encodePointerRef(['a::b','a::b'], platform::pure::compiler::pdb::writerHelper::pointerKind('Property'));
+   let fin = $res.builder->platform::pure::compiler::pdb::fbb::finish($res.offset);
    assertEquals(
       '0C00000008000C000B00040008000000080000000000000102000000080000000400000004000000613A3A6200000000',
-      $fin->meta::pure::compiler::pdb::fbb::result()->meta::pure::functions::binary::binaryToHex());
+      $fin->platform::pure::compiler::pdb::fbb::result()->platform::pure::functions::binary::binaryToHex());
 }
 
-function <<test.Test>> meta::pure::compiler::pdb::writerHelper::tests::testEncodeAncestorRefWireFormat():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::writerHelper::tests::testEncodeAncestorRefWireFormat():Boolean[1]
 {
    // depth=0 is the scalar default -> elided (empty vtable, minimal table).
-   let r0 = meta::pure::compiler::pdb::fbb::newBuilder()->meta::pure::compiler::pdb::writerHelper::encodeAncestorRef(0);
+   let r0 = platform::pure::compiler::pdb::fbb::newBuilder()->platform::pure::compiler::pdb::writerHelper::encodeAncestorRef(0);
    assertEquals('080000000400040004000000',
-      $r0.builder->meta::pure::compiler::pdb::fbb::finish($r0.offset)->meta::pure::compiler::pdb::fbb::result()->meta::pure::functions::binary::binaryToHex());
+      $r0.builder->platform::pure::compiler::pdb::fbb::finish($r0.offset)->platform::pure::compiler::pdb::fbb::result()->platform::pure::functions::binary::binaryToHex());
    // depth=2 is written (int32 field at id 0).
-   let r2 = meta::pure::compiler::pdb::fbb::newBuilder()->meta::pure::compiler::pdb::writerHelper::encodeAncestorRef(2);
+   let r2 = platform::pure::compiler::pdb::fbb::newBuilder()->platform::pure::compiler::pdb::writerHelper::encodeAncestorRef(2);
    assertEquals('0C00000000000600080004000600000002000000',
-      $r2.builder->meta::pure::compiler::pdb::fbb::finish($r2.offset)->meta::pure::compiler::pdb::fbb::result()->meta::pure::functions::binary::binaryToHex());
+      $r2.builder->platform::pure::compiler::pdb::fbb::finish($r2.offset)->platform::pure::compiler::pdb::fbb::result()->platform::pure::functions::binary::binaryToHex());
 }

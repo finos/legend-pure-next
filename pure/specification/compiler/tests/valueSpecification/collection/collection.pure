@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import a::*;
 
@@ -31,45 +45,45 @@ Class a::X
 
 ###CompiledGraph
 function protocol::f_X_1__Any_MANY_(x:a::X[1]):@Any@[*]  ~UserDefinedFunction<{a::X[1]->@Any@[*]}>
-  Collection :#Integer#[2]  ~@Collection@  @6:3-6:8
-    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:4-6:4
-    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @6:7-6:7
-  Collection :#Any#[3]  ~@Collection@  @7:3-7:16
-    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @7:4-7:6
-    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @7:9-7:9
-    AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @7:12-7:15
-  Collection :#Any#[2]  ~@Collection@  @8:3-8:14
-    FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @8:4-8:8
-      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @8:4-8:4
-      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @8:8-8:8
-    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @8:11-8:13
-  Collection :#Integer#[2]  ~@Collection@  @9:3-9:17
-    ArrowInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @9:5-9:13
-      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @9:4-9:4
-      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @9:12-9:12
-    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @9:16-9:16
-  Collection :#Integer#[2]  ~@Collection@  @10:3-10:19
-    DotApplication a::X.property :#Integer##[1]#  ~@DotApplication@  @10:6-10:14
-      Variable x :#a::X##[1]#  ~@VariableExpression@  @10:4-10:5
-    AtomicValue  10 :@Integer@[1]  ~@AtomicValue@  @10:17-10:18
-  Collection :#Any#[2]  ~@Collection@  @11:3-11:8
-    AtomicValue  a::A :#Class<a::A>#[1]  ~@AtomicValue@  @11:4-11:4
-    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @11:7-11:7
-  Collection :#a::C#[2]  ~@Collection@  @12:3-12:14
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#a::A##[1]#  ~@FunctionInvocation@  @12:4-12:7
+  Collection :#Integer#[2]  ~@Collection@  @20:3-20:8
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:4-20:4
+    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @20:7-20:7
+  Collection :#Any#[3]  ~@Collection@  @21:3-21:16
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @21:4-21:6
+    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @21:9-21:9
+    AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @21:12-21:15
+  Collection :#Any#[2]  ~@Collection@  @22:3-22:14
+    FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @22:4-22:8
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @22:4-22:4
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @22:8-22:8
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @22:11-22:13
+  Collection :#Integer#[2]  ~@Collection@  @23:3-23:17
+    ArrowInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @23:5-23:13
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @23:4-23:4
+      AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @23:12-23:12
+    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @23:16-23:16
+  Collection :#Integer#[2]  ~@Collection@  @24:3-24:19
+    DotApplication a::X.property :#Integer##[1]#  ~@DotApplication@  @24:6-24:14
+      Variable x :#a::X##[1]#  ~@VariableExpression@  @24:4-24:5
+    AtomicValue  10 :@Integer@[1]  ~@AtomicValue@  @24:17-24:18
+  Collection :#Any#[2]  ~@Collection@  @25:3-25:8
+    AtomicValue  a::A :#Class<a::A>#[1]  ~@AtomicValue@  @25:4-25:4
+    AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @25:7-25:7
+  Collection :#a::C#[2]  ~@Collection@  @26:3-26:14
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#a::A##[1]#  ~@FunctionInvocation@  @26:4-26:7
       typeParam T -> a::A
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<a::A|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<a::A|1>  @12:4-12:7
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#a::B##[1]#  ~@FunctionInvocation@  @12:10-12:13
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<a::A|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<a::A|1>  @26:4-26:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#a::B##[1]#  ~@FunctionInvocation@  @26:10-26:13
       typeParam T -> a::B
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<a::B|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<a::B|1>  @12:10-12:13
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<a::B|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<a::B|1>  @26:10-26:13
 
-class a::A extends a::C  ~Class<a::A>  @15:1-17:1
+class a::A extends a::C  ~Class<a::A>  @29:1-31:1
 
-class a::B extends a::C  ~Class<a::B>  @19:1-21:1
+class a::B extends a::C  ~Class<a::B>  @33:1-35:1
 
-class a::C extends Any  ~Class<a::C>  @23:1-25:1
+class a::C extends Any  ~Class<a::C>  @37:1-39:1
 
-class a::X extends Any  ~Class<a::X>  @27:1-30:1
+class a::X extends Any  ~Class<a::X>  @41:1-44:1
   property property :@Integer@[1]  ~Property<a::X, @Integer@|1>
 
 ###ReverseIndex
@@ -84,7 +98,7 @@ a::X:
   protocol::f_X_1__Any_MANY_
 a::X.property:
   protocol::f_X_1__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__T_1_:
   protocol::f_X_1__Any_MANY_
-meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
   protocol::f_X_1__Any_MANY_

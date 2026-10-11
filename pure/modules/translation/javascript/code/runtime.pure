@@ -13,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::javascript::*;
-import meta::external::language::javascript::serialization::*;
-import meta::external::language::javascript::translation::*;
-import meta::pure::translation::shared::*;
+import platform::external::language::javascript::*;
+import platform::external::language::javascript::serialization::*;
+import platform::external::language::javascript::translation::*;
+import platform::pure::translation::shared::*;
 
 // Host-runtime adapter: translation.pure produces a SourceFile; this file
 // serialises it, runs it through `compileModule` (the host's eval pipe — the JS
@@ -24,8 +24,8 @@ import meta::pure::translation::shared::*;
 // `execute` export and surfaces the result for round-trip / PCT tests.
 
 function <<test.TestDependency>>
-   meta::external::language::javascript::translation::runViaTranslation(
-   f: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
+   platform::external::language::javascript::translation::runViaTranslation(
+   f: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1],
    args: Any[*]
 ): Any[*]
 {
@@ -47,18 +47,18 @@ function <<test.TestDependency>>
 // FunctionDefinition (UserDefinedFunction OR LambdaFunction), so both
 // shapes are handled by the same dispatch.
 function <<test.TestDependency>>
-   meta::external::language::javascript::translation::testAdapterForTranslatedJavaScript<X|o>(
-   f: meta::pure::metamodel::function::Function<{->X[o]}>[1]
+   platform::external::language::javascript::translation::testAdapterForTranslatedJavaScript<X|o>(
+   f: platform::pure::metamodel::function::Function<{->X[o]}>[1]
 ): X[o]
 {
-   let lambda    = $f->cast(@meta::pure::metamodel::function::LambdaFunction<meta::pure::metamodel::type::Any>);
+   let lambda    = $f->cast(@platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>);
    // Localize open variables: each capture becomes a single `let name = <value>;`
    // binding at the top of the body, and `$name` references survive. This names
    // each captured value once (so `is($x, $x)` is the same reference, and a
    // capture used inside a thunk resolves to the local binding) instead of
    // duplicating the value at every use site as InlineOpenVariables would.
-   let canonical = $lambda->meta::pure::translation::shared::makeCanonical(
-                       [meta::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]);
+   let canonical = $lambda->platform::pure::translation::shared::makeCanonical(
+                       [platform::pure::translation::shared::CanonicalMode.LocalizeOpenVariables]);
    let conv      = conventionForRoot($canonical);
    let sf        = $canonical->translateFunctionDef($conv);
    // The host loads `runtime-lib.js` into the same global scope as every
@@ -75,7 +75,7 @@ function <<test.TestDependency>>
    let source     = $sf->serialize();
    let funcType   = $canonical.classifierGenericType.typeArguments
                        ->at(0)->rawType()->toOne()
-                       ->cast(@meta::pure::metamodel::type::FunctionType);
+                       ->cast(@platform::pure::metamodel::type::FunctionType);
    $source->compileModule()->execute('execute', [], $funcType.returnType, $funcType.returnMultiplicity, [$canonical]);
 }
 
@@ -83,9 +83,9 @@ function <<test.TestDependency>>
 // translator adapter. Marked <<test.TestDependency>> so it lands in the
 // -tests PDB alongside the core PCT runner.
 function <<test.TestDependency>>
-   meta::external::language::javascript::translation::runPCTTestsViaTranslator(rootPackagePath:String[1]):String[1]
+   platform::external::language::javascript::translation::runPCTTestsViaTranslator(rootPackagePath:String[1]):String[1]
 {
-   meta::pure::test::runPCTTests(
+   platform::pure::test::runPCTTests(
       $rootPackagePath,
       testAdapterForTranslatedJavaScript_Function_1__X_o_
    );
@@ -93,9 +93,9 @@ function <<test.TestDependency>>
 
 // Same, also writing the run's test report to `reportPath` (read by tools/test-dashboard).
 function <<test.TestDependency>>
-   meta::external::language::javascript::translation::runPCTTestsViaTranslator(rootPackagePath:String[1], reportPath:String[1]):String[1]
+   platform::external::language::javascript::translation::runPCTTestsViaTranslator(rootPackagePath:String[1], reportPath:String[1]):String[1]
 {
-   meta::pure::test::runPCTTests(
+   platform::pure::test::runPCTTests(
       $rootPackagePath,
       testAdapterForTranslatedJavaScript_Function_1__X_o_,
       $reportPath

@@ -13,26 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::javascript::metamodel::*;
-import meta::external::language::javascript::serialization::*;
-import meta::external::language::javascript::serialization::tests::*;
+import platform::external::language::javascript::metamodel::*;
+import platform::external::language::javascript::serialization::*;
+import platform::external::language::javascript::serialization::tests::*;
 
 // Golden-text helpers. Each compares the rendered text against an expected
 // String for one node category. We deliberately do NOT normalize whitespace —
 // the serializer's exact byte output is what `tsc` will see, so that is what
 // the tests pin down.
 
-function meta::external::language::javascript::serialization::tests::testExpr(expected: String[1], e: Expression[1]): Boolean[1]
+function platform::external::language::javascript::serialization::tests::testExpr(expected: String[1], e: Expression[1]): Boolean[1]
 {
    assertEquals($expected, $e->serializeExpression());
 }
 
-function meta::external::language::javascript::serialization::tests::testStmt(expected: String[1], s: Statement[1]): Boolean[1]
+function platform::external::language::javascript::serialization::tests::testStmt(expected: String[1], s: Statement[1]): Boolean[1]
 {
    assertEquals($expected, $s->serializeStatement(''));
 }
 
-function meta::external::language::javascript::serialization::tests::testFile(expected: String[1], sf: SourceFile[1]): Boolean[1]
+function platform::external::language::javascript::serialization::tests::testFile(expected: String[1], sf: SourceFile[1]): Boolean[1]
 {
    assertEquals($expected, $sf->serialize());
 }

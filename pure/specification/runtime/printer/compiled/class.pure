@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::printer::compiled::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::constraint::*;
-import meta::pure::metamodel::function::property::*;
-import meta::pure::metamodel::relationship::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::metamodel::valuespecification::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::printer::compiled::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::constraint::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::valuespecification::*;
 
 // Compiled-side printer for `Class`. Mirrors the protocol-side shape:
 // annotations + name + type/mul params + extends + constraints + body.
 
-function meta::pure::functions::printer::compiled::printCompiledClass(c: Class<Any>[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledClass(c: Class<Any>[1], ctx: PrintContext[1]): String[1]
 {
     let body = compiledClassBody($c.properties, $c.qualifiedProperties, $ctx);
     'Class ' + printCompiledAnnotations($c.stereotypes, $c.taggedValues, $ctx) + printPackagePrefix($c.package) + $c.name->toOne() +
@@ -38,7 +39,7 @@ function meta::pure::functions::printer::compiled::printCompiledClass(c: Class<A
 
 // Collapses an empty body to `{\n}` (no blank line between). Non-empty body
 // renders one line per property / qualified property.
-function meta::pure::functions::printer::compiled::compiledClassBody(properties: Property<Nil, Any|*>[*], qualifiedProperties: QualifiedProperty<Any>[*], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::compiledClassBody(properties: Property<Nil, Any|*>[*], qualifiedProperties: QualifiedProperty<Any>[*], ctx: PrintContext[1]): String[1]
 {
     let parts = [
         $properties->map(p | '  ' + printCompiledProperty($p, $ctx))->joinStrings('\n'),
@@ -49,7 +50,7 @@ function meta::pure::functions::printer::compiled::compiledClassBody(properties:
 
 // Emit a single property line:
 //   `<<stereos>> {tags} (aggKind) name: Type[mult] = defaultValue;`
-function meta::pure::functions::printer::compiled::printCompiledProperty(p: Property<Nil, Any|*>[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledProperty(p: Property<Nil, Any|*>[1], ctx: PrintContext[1]): String[1]
 {
     let defaultPart = if ($p.defaultValue->isEmpty(),
                           | '',
@@ -62,7 +63,7 @@ function meta::pure::functions::printer::compiled::printCompiledProperty(p: Prop
 }
 
 // `<<stereos>> {tags} name(p1: T1[m1], ...) { body }: ReturnType[mult];`
-function meta::pure::functions::printer::compiled::printCompiledQualifiedProperty(qp: QualifiedProperty<Any>[1], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledQualifiedProperty(qp: QualifiedProperty<Any>[1], ctx: PrintContext[1]): String[1]
 {
     let annotations = printCompiledAnnotations($qp.stereotypes, $qp.taggedValues, $ctx);
     // M3 QualifiedProperty.parameters includes the implicit `$this` first;
@@ -80,7 +81,7 @@ function meta::pure::functions::printer::compiled::printCompiledQualifiedPropert
 
 // `extends Super1, Super2`. The implicit `Any` parent is filtered out so
 // `Class X` without an explicit `extends` clause prints without `extends Any`.
-function meta::pure::functions::printer::compiled::printCompiledGeneralizations(gens: Generalization[*], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledGeneralizations(gens: Generalization[*], ctx: PrintContext[1]): String[1]
 {
     let parents = $gens->map(g | printGenericType($g.general->toOne(), $ctx))->filter(s | $s != 'Any');
     if ($parents->isEmpty(),
@@ -90,7 +91,7 @@ function meta::pure::functions::printer::compiled::printCompiledGeneralizations(
 }
 
 // `[ c1, c2: $x > 0, ... ]` element-level constraint block.
-function meta::pure::functions::printer::compiled::printCompiledElementConstraints(constraints: Constraint[*], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledElementConstraints(constraints: Constraint[*], ctx: PrintContext[1]): String[1]
 {
     if ($constraints->isEmpty(),
         | '',
@@ -101,7 +102,7 @@ function meta::pure::functions::printer::compiled::printCompiledElementConstrain
 // `(x:Type[m], y:Type[m])` — parameterised-class type-variables block. The
 // VariableExpressions live on Class.typeVariables; each carries name/type/mul.
 // Emitted only when non-empty so unparameterised classes stay clean.
-function meta::pure::functions::printer::compiled::printCompiledTypeVariables(tvs: VariableExpression[*], ctx: PrintContext[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledTypeVariables(tvs: VariableExpression[*], ctx: PrintContext[1]): String[1]
 {
     if ($tvs->isEmpty(),
         | '',
@@ -111,7 +112,7 @@ function meta::pure::functions::printer::compiled::printCompiledTypeVariables(tv
 
 // AggregationKind enum value → `(composite) ` / `(shared) ` / no prefix for
 // None. The M3 enum is distinct from the protocol's Enum_Pointer form.
-function meta::pure::functions::printer::compiled::printAggregationKindEnum(a: AggregationKind[0..1]): String[1]
+function platform::pure::functions::printer::compiled::printAggregationKindEnum(a: AggregationKind[0..1]): String[1]
 {
     if ($a->isEmpty() || $a->toOne() == AggregationKind.None,
         | '',

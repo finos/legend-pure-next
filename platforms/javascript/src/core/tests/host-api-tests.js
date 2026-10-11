@@ -35,7 +35,7 @@ import { TestReport } from "./test-report.js";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SHARED = join(HERE, "../../../../../shared");
 const REPO = join(HERE, "../../../../..");
-const ANY = "meta::pure::metamodel::type::Any";
+const ANY = "platform::pure::metamodel::type::Any";
 
 const results = [];
 const report = new TestReport("host-api");
@@ -55,7 +55,7 @@ check("PdbModule.open reads identity from the manifest", () => {
     const core = PdbModule.open(join(SHARED, "core.pdb"));
     assert.equal(core.name, "core");
     assert.deepEqual([...core.dependencies], []);
-    assert.equal(core.packagePattern, "(meta::pure)(::.*)?");
+    assert.equal(core.packagePattern, "(platform::pure)(::.*)?");
     assert.equal(core.kind, "pdb");
 });
 
@@ -165,17 +165,17 @@ check("NativeRegistry rejects a signature with no runtime-lib hook", () => {
 
 check("every host native signature is a native declared in the loaded PDBs", () => {
     const declaredIn = {
-        [SIG.COMPILE_SOURCE]: "meta::pure::functions::meta",
-        [SIG.EVALUATE]: "meta::pure::functions::lang",
-        [SIG.JS_COMPILE_MODULE]: "meta::external::language::javascript",
-        [SIG.JS_EXECUTE]: "meta::external::language::javascript",
-        [SIG.JS_DRAIN_COMPILED_SOURCES]: "meta::external::language::javascript",
-        [SIG.READ_FILE_BYTES]: "meta::pure::functions::io",
-        [SIG.DIRECTORY_TREE]: "meta::pure::functions::io",
-        [SIG.WRITE_FILE]: "meta::pure::functions::io",
-        [SIG.ENTRY_NAMES]: "meta::pure::compiler::pdb::archive",
-        [SIG.ENTRY_BYTES]: "meta::pure::compiler::pdb::archive",
-        ...Object.fromEntries(SIG.ANTLR_NATIVES.map(([, signature]) => [signature, "meta::pure::functions::meta::antlr"])),
+        [SIG.COMPILE_SOURCE]: "platform::pure::functions::meta",
+        [SIG.EVALUATE]: "platform::pure::functions::lang",
+        [SIG.JS_COMPILE_MODULE]: "platform::external::language::javascript",
+        [SIG.JS_EXECUTE]: "platform::external::language::javascript",
+        [SIG.JS_DRAIN_COMPILED_SOURCES]: "platform::external::language::javascript",
+        [SIG.READ_FILE_BYTES]: "platform::pure::functions::io",
+        [SIG.DIRECTORY_TREE]: "platform::pure::functions::io",
+        [SIG.WRITE_FILE]: "platform::pure::functions::io",
+        [SIG.ENTRY_NAMES]: "platform::pure::compiler::pdb::archive",
+        [SIG.ENTRY_BYTES]: "platform::pure::compiler::pdb::archive",
+        ...Object.fromEntries(SIG.ANTLR_NATIVES.map(([, signature]) => [signature, "platform::pure::functions::meta::antlr"])),
     };
     for (const [signature, pkg] of Object.entries(declaredIn)) {
         assert.ok(host.hasElement(`${pkg}::${signature}`), `${pkg}::${signature} is not declared`);
@@ -193,7 +193,7 @@ check("host services live on one global: no __host*, __metadata* or ANTLR global
     const leaked = Object.keys(globalThis).filter((k) => /^__(host|metadata)[A-Z]/.test(k) && typeof globalThis[k] !== "function");
     assert.deepEqual(leaked, []);
     // runtime-lib's forwarders reach the host object.
-    assert.equal(__metadataPathToElement("meta::pure::metamodel::type::Any", "::"), "meta::pure::metamodel::type::Any");
+    assert.equal(__metadataPathToElement("platform::pure::metamodel::type::Any", "::"), "platform::pure::metamodel::type::Any");
 });
 
 check("PureRuntime has the default language extensions", () => {
@@ -241,15 +241,15 @@ check("the extension descriptors come from the extensions' own manifests", () =>
         "extensions/diagram/compiler/compiler.js",
     ]);
     assert.deepEqual(diagram.translate.map((t) => t.package), [
-        "meta::pure::diagram::metamodel",
-        "meta::pure::diagram::protocol",
-        "meta::pure::diagram::parser",
-        "meta::pure::diagram::compiler",
+        "platform::pure::diagram::metamodel",
+        "platform::pure::diagram::protocol",
+        "platform::pure::diagram::parser",
+        "platform::pure::diagram::compiler",
     ]);
     // `pure` is the manifest's own block, re-exported verbatim — the generator copies no field, so a
     // key added to language_<name>.json arrives here untouched.
-    assert.ok(diagram.pure.sectionParsers.startsWith("meta::pure::diagram::"));
-    assert.ok(diagram.pure.compilerExtension.startsWith("meta::pure::diagram::"));
+    assert.ok(diagram.pure.sectionParsers.startsWith("platform::pure::diagram::"));
+    assert.ok(diagram.pure.compilerExtension.startsWith("platform::pure::diagram::"));
 });
 
 check("the Pure language declares its grammar like any other, and Top is not a language", () => {
@@ -370,7 +370,7 @@ check("a ###Diagram section compiles to a Diagram element with its types resolve
 });
 
 check("PureRuntime.execute runs a function element", () => {
-    const fn = host.getElement("meta::pure::ui::progress::statusWidth__Integer_1_");
+    const fn = host.getElement("platform::pure::ui::progress::statusWidth__Integer_1_");
     assert.ok(fn);
     assert.equal(Number(runtime.execute(fn)), 78);
 });
@@ -439,7 +439,7 @@ check("every class in the graph has a translated JavaScript class", () => {
 });
 
 check("an accessor reads and writes the slot it names", () => {
-    const Point = globalThis["meta$pure$diagram$metamodel$Point"];
+    const Point = globalThis["platform$pure$diagram$metamodel$Point"];
     const p = new Point()._x(3n)._y(4n);   // construction IS a setter chain; there is no constructor
     assert.equal(p._x(), 3n, "_x() reads the slot");
     assert.equal(p._y(), 4n, "_y() reads the slot");

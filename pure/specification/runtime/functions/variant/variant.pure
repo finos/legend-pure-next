@@ -18,6 +18,6 @@
 // runtime. Values are created with fromJson/toVariant and extracted with
 // to/toMany/get. Each execution platform provides its own boxed
 // representation; toString() renders the compact JSON text.
-Class meta::pure::metamodel::variant::Variant
+Class platform::pure::metamodel::variant::Variant
 {
 }

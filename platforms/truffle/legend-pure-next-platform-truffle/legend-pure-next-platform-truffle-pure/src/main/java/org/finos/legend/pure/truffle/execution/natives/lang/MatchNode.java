@@ -111,7 +111,7 @@ public final class MatchNode extends PureNode
                 // Unwrap AtomicValue wrapper — FlatBuffer-based collections may
                 // deliver match lambdas still wrapped in their VS envelope.
                 if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(mfRaw,
-                        "meta::pure::metamodel::valuespecification::AtomicValue"))
+                        "platform::pure::metamodel::valuespecification::AtomicValue"))
                 {
                     Object inner = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(mfRaw, SLOT_VALUE);
                     if (inner != null)
@@ -124,7 +124,7 @@ public final class MatchNode extends PureNode
                     fd = rc2.lambda();
                 }
                 else if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(mfRaw,
-                        "meta::pure::metamodel::function::FunctionDefinition", resolver))
+                        "platform::pure::metamodel::function::FunctionDefinition", resolver))
                 {
                     fd = mfRaw;
                 }
@@ -167,7 +167,7 @@ public final class MatchNode extends PureNode
         {
             Object mfRawD = CollectionHelper.at(matchFns, di);
             if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(mfRawD,
-                    "meta::pure::metamodel::valuespecification::AtomicValue"))
+                    "platform::pure::metamodel::valuespecification::AtomicValue"))
             {
                 Object inner = org.finos.legend.pure.truffle.compiler.helper._Any.readBySlot(mfRawD, SLOT_VALUE);
                 if (inner != null) mfRawD = inner;
@@ -236,7 +236,7 @@ public final class MatchNode extends PureNode
 
         Object param = params.getBoxed(0);
         if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(param,
-                "meta::pure::metamodel::valuespecification::VariableExpression"))
+                "platform::pure::metamodel::valuespecification::VariableExpression"))
         {
             throw new RuntimeException("Error");
         }

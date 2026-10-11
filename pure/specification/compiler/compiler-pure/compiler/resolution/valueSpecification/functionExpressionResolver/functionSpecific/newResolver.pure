@@ -13,23 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::function::property::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::metamodel::*;
-import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
-import meta::pure::compiler::structural::sourceInformationCompiler::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::class::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::metamodel::*;
+import platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
+import platform::pure::compiler::structural::sourceInformationCompiler::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::multiplicity::*;
+import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::compiler::helper::type::*;
+import platform::pure::compiler::helper::class::*;
+import platform::pure::compiler::helper::parametersBinding::*;
+import platform::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNewFromFI(fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNewFromFI(fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
 {
     // Extract class from the first argument (GenericTypeAndMultiplicityHolder), then look up
     // the fully compiled class from the context (the GTMH references the pass 1 skeleton)
@@ -76,7 +76,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     validateNew($fi, $cls, $providedNames, $ctxAfterClassRecord);
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGTMH(vs:ValueSpecification[1]):Class<Any>[0..1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGTMH(vs:ValueSpecification[1]):Class<Any>[0..1]
 {
     // The GTMH's genericType has typeArguments where the first one is the target class's GenericType
     $vs->match([
@@ -98,7 +98,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     ]);
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGenericType(gt:GenericType[0..1]):Class<Any>[0..1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGenericType(gt:GenericType[0..1]):Class<Any>[0..1]
 {
     if($gt->isNotEmpty(),
         | $gt->toOne()->match([
@@ -116,7 +116,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNew(fi:FunctionApplication[1], compiledClass:Class<Any>[0..1], providedPropertyNames:String[*], context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNew(fi:FunctionApplication[1], compiledClass:Class<Any>[0..1], providedPropertyNames:String[*], context:CompilerContext[1]):CompilerContext[1]
 {
     if($compiledClass->isEmpty(),
         | $context,
@@ -138,15 +138,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::isCompilerPointer(cls:Class<Any>[1]):Boolean[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::isCompilerPointer(cls:Class<Any>[1]):Boolean[1]
 {
     $cls.stereotypes->exists(s | $s.value == 'pointer'
         && $s.profile->isNotEmpty()
-        && $s.profile->toOne()->fullPath() == 'meta::pure::profiles::compiler');
+        && $s.profile->toOne()->fullPath() == 'platform::pure::profiles::compiler');
 }
 
 // Matches Java NewResolver.validateCopyProperties — copy only checks key expressions, not abstract/missing
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateCopyFromFI(fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateCopyFromFI(fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
 {
     let cls = extractClassFromGenericType($fi.genericType);
     let compiledCls = if($cls->isNotEmpty(),
@@ -187,9 +187,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkAbstract(cls:Class<Any>[1], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkAbstract(cls:Class<Any>[1], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
 {
-    let isAbstract = $cls.stereotypes->exists(s | $s.value == 'abstract' && $s.profile->toOne()->fullPath() == 'meta::pure::profiles::typemodifiers');
+    let isAbstract = $cls.stereotypes->exists(s | $s.value == 'abstract' && $s.profile->toOne()->fullPath() == 'platform::pure::profiles::typemodifiers');
     if($isAbstract,
         | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
           ^$context(errors += 'Cannot instantiate abstract class \'' + $cls->fullPath() + '\'' + $siCtx);,
@@ -197,7 +197,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkMissingProperties(cls:Class<Any>[1], providedNames:String[*], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkMissingProperties(cls:Class<Any>[1], providedNames:String[*], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
 {
     let requiredProps = $cls.properties
         ->filter(p | $p.multiplicity->isNotEmpty() && multiplicityLowerBound($p.multiplicity->toOne()) >= 1)
@@ -215,7 +215,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Matches Java NewResolver.checkKeyExpressions — validates unknown properties, multiplicity, type, and deep paths
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkKeyExpressions(cls:Class<Any>[1], providedNames:String[*], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkKeyExpressions(cls:Class<Any>[1], providedNames:String[*], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
 {
     // Build class type parameter bindings from the new/copy expression's return type
     let classBindings = if($fi.genericType->isNotEmpty() && !$fi.genericType->toOne()->instanceOf(UndefinedGenericType) && !$fi.genericType->toOne()->instanceOf(CompilerNotSetGenericType),
@@ -281,8 +281,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                                         | // A property's type can be the enclosing function's type
                                                           // PARAMETER, which is not a PackageableElement: read the
                                                           // name off whichever shape the type has.
-                                                          let pName = $propType->toOne()->meta::pure::compiler::helper::type::typeName()->toOne();
-                                                          let vName = $valType->toOne()->meta::pure::compiler::helper::type::typeName()->toOne();
+                                                          let pName = $propType->toOne()->platform::pure::compiler::helper::type::typeName()->toOne();
+                                                          let vName = $valType->toOne()->platform::pure::compiler::helper::type::typeName()->toOne();
                                                           let skip = $pName == 'Any' || $vName == 'Any' || $vName == 'Nil'
                                                               || $pName == 'Unknown' || $vName == 'Unknown'
                                                               || $pName == $vName
@@ -310,13 +310,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Validate deep property path like 'address.name' by traversing each segment
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateDeepPropertyPath(cls:Class<Any>[1], fullPath:String[1], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateDeepPropertyPath(cls:Class<Any>[1], fullPath:String[1], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
 {
     let segments = $fullPath->split('.');
     validateDeepPropertyPathSegments($cls, $cls, $segments, 0, $fullPath, $fi, $context);
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateDeepPropertyPathSegments(rootCls:Class<Any>[1], currentType:Class<Any>[1], segments:String[*], index:Integer[1], fullPath:String[1], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateDeepPropertyPathSegments(rootCls:Class<Any>[1], currentType:Class<Any>[1], segments:String[*], index:Integer[1], fullPath:String[1], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
 {
     if($index >= $segments->size(),
         | $context,
@@ -355,7 +355,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Simple type compatibility check: is actual a subtype of declared?
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::isCompatibleType(declared:GenericType[1], actual:GenericType[1], context:CompilerContext[1]):Boolean[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::isCompatibleType(declared:GenericType[1], actual:GenericType[1], context:CompilerContext[1]):Boolean[1]
 {
     let declaredType = $declared->rawType();
     let actualType = $actual->rawType();
@@ -368,7 +368,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::resolveCanonicalType(t:Type[1], context:CompilerContext[1]):Type[1]
+function platform::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::resolveCanonicalType(t:Type[1], context:CompilerContext[1]):Type[1]
 {
     if($t->instanceOf(PackageableElement),
         | let path = $t->cast(@PackageableElement)->fullPath();

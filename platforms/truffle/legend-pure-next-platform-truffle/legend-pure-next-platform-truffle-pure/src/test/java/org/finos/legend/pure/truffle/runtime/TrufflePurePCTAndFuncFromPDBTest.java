@@ -94,7 +94,7 @@ class TrufflePurePCTAndFuncFromPDBTest
         compilerLoader = new PdbModule(compilerPdb);
         compilerTestsLoader = new PdbModule(compilerTestsPdb);
         // parser-mappings.pdb is required for the `parse` Pure native to resolve
-        // `meta::pure::parser::mappings::interpreter::parseDocument` — TrufflePureParser
+        // `platform::pure::parser::mappings::interpreter::parseDocument` — TrufflePureParser
         // dispatches every section through the Pure-side registry, no host fallback.
         PdbModule parserMappingsLoader =
                 new PdbModule(parserMappingsPdb);
@@ -168,7 +168,7 @@ class TrufflePurePCTAndFuncFromPDBTest
         {
             Object element = coreTestsLoader.getElement(path);
             if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(element,
-                    "meta::pure::metamodel::function::FunctionDefinition", resolver)
+                    "platform::pure::metamodel::function::FunctionDefinition", resolver)
                     && isPCTAdapter(element))
             {
                 pctAdapter = element;
@@ -256,7 +256,7 @@ class TrufflePurePCTAndFuncFromPDBTest
         {
             Object element = coreTestsLoader.getElement(path);
             if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(element,
-                    "meta::pure::metamodel::function::FunctionDefinition", resolver)
+                    "platform::pure::metamodel::function::FunctionDefinition", resolver)
                     && isTestStereotype(element) && isZeroArg(element))
             {
                 tests.add(createTest(path, element, null));
@@ -268,7 +268,7 @@ class TrufflePurePCTAndFuncFromPDBTest
         {
             Object element = compilerTestsLoader.getElement(path);
             if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(element,
-                    "meta::pure::metamodel::function::FunctionDefinition", resolver)
+                    "platform::pure::metamodel::function::FunctionDefinition", resolver)
                     && isTestStereotype(element) && isZeroArg(element))
             {
                 tests.add(createTest(path, element, null));
@@ -291,7 +291,7 @@ class TrufflePurePCTAndFuncFromPDBTest
         {
             Object element = coreTestsLoader.getElement(path);
             if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(element,
-                    "meta::pure::metamodel::function::FunctionDefinition", resolver)
+                    "platform::pure::metamodel::function::FunctionDefinition", resolver)
                     && isPCTTest(element))
             {
                 tests.add(createTest(path, element, pctAdapter));
@@ -381,7 +381,7 @@ class TrufflePurePCTAndFuncFromPDBTest
         for (Object stereotype : st.toBoxedArray())
         {
             if (!org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(stereotype,
-                    "meta::pure::metamodel::extension::Stereotype"))
+                    "platform::pure::metamodel::extension::Stereotype"))
             {
                 continue;
             }

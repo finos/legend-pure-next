@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +15,7 @@
 
 package org.finos.legend.pure.execution;
 
-import meta.pure.metamodel.type.generics.UserDefinedGenericType;
+import platform.pure.metamodel.type.generics.UserDefinedGenericType;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
@@ -46,13 +47,13 @@ public class ProtocolToDynamicInstance
     public static String defaultTypeResolutionStrategy(Object javaPOJO)
     {
         if (javaPOJO.getClass().getName().startsWith("org.finos.legend.pure.m3.generated.protocol.")
-            || javaPOJO.getClass().getName().startsWith("meta.pure.protocol.")
-            || javaPOJO.getClass().getName().startsWith("meta.pure.compiler."))
+            || javaPOJO.getClass().getName().startsWith("platform.pure.protocol.")
+            || javaPOJO.getClass().getName().startsWith("platform.pure.compiler."))
         {
             String fullName = javaPOJO.getClass().getName();
             if (fullName.startsWith("org.finos.legend.pure.m3.generated."))
             {
-                fullName = "meta.pure." + fullName.substring("org.finos.legend.pure.m3.generated.".length());
+                fullName = "platform.pure." + fullName.substring("org.finos.legend.pure.m3.generated.".length());
             }
             if (fullName.endsWith("Impl"))
             {
@@ -93,14 +94,14 @@ public class ProtocolToDynamicInstance
         String pureClassPath = this.typeResolutionStrategy.apply(javaPOJO);
         if (pureClassPath != null)
         {
-            meta.pure.metamodel.PackageableElement pureClass = resolver.getElement(pureClassPath);
+            platform.pure.metamodel.PackageableElement pureClass = resolver.getElement(pureClassPath);
             if (pureClass == null)
             {
                 throw new RuntimeException("Could not find Pure class for protocol object: " + pureClassPath);
             }
 
             DynamicInstance instance = new DynamicInstance(pureClassPath);
-            UserDefinedGenericType cgt = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) pureClass, resolver);
+            UserDefinedGenericType cgt = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType((platform.pure.metamodel.type.Type) pureClass, resolver);
             instance.setClassifierGenericType(cgt);
 
             for (Method method : getPropertyMethods(javaPOJO.getClass()))

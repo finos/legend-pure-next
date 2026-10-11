@@ -1,4 +1,5 @@
 // Copyright 2023 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,39 +13,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::relation::*;
+import platform::pure::metamodel::relation::*;
 
-Class meta::pure::metamodel::relation::ColSpec<T> // Where T is of type RelationType
+Class platform::pure::metamodel::relation::ColSpec<T> // Where T is of type RelationType
 {
     name : String[1];
 }
 
-Class meta::pure::metamodel::relation::ColSpecArray<T> // Where T is of type RelationType
+Class platform::pure::metamodel::relation::ColSpecArray<T> // Where T is of type RelationType
 {
     names : String[*];
 }
 
 
-Class meta::pure::metamodel::relation::FuncColSpec<Z,T> // Where T is of type RelationType
+Class platform::pure::metamodel::relation::FuncColSpec<Z,T> // Where T is of type RelationType
 {
     name : String[1];
     function : Function<Z>[1];
 }
 
-Class meta::pure::metamodel::relation::FuncColSpecArray<Z,T> // Where T is of type RelationType
+Class platform::pure::metamodel::relation::FuncColSpecArray<Z,T> // Where T is of type RelationType
 {
-    funcSpecs : meta::pure::metamodel::relation::FuncColSpec<Z,Any>[*];
+    funcSpecs : platform::pure::metamodel::relation::FuncColSpec<Z,Any>[*];
 }
 
 
-Class meta::pure::metamodel::relation::AggColSpec<Z,V,T> // Where T is of type RelationType
+Class platform::pure::metamodel::relation::AggColSpec<Z,V,T> // Where T is of type RelationType
 {
     name : String[1];
     map : Function<Z>[1];
     reduce : Function<V>[1];
 }
 
-Class meta::pure::metamodel::relation::AggColSpecArray<A,B,T> // Where T is of type RelationType
+Class platform::pure::metamodel::relation::AggColSpecArray<A,B,T> // Where T is of type RelationType
 {
   aggSpecs : AggColSpec<A,B,Any>[*];
 }

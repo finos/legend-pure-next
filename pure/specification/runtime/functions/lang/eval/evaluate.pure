@@ -13,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::lang::tests::model::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::lang::tests::model::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::test::pct::*;
 
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::evaluate(func:Function<Any>[1], params:List<Any>[*]):Any[*];
+native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::lang::evaluate(func:Function<Any>[1], params:List<Any>[*]):Any[*];
 
 // --- REAL dynamic evaluation: compile a source string on the fly, then
 // evaluate the freshly compiled function held as a VALUE (no global
@@ -26,10 +26,10 @@ native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::
 // interpreters compile in-memory; the JavaScript host compiles with the
 // translated compiler and translates the result for invocation).
 
-function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::lang::tests::evaluate::testEvaluateDynamicallyCompiledFunction<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test, PCT.requiresCompiler>> platform::pure::functions::lang::tests::evaluate::testEvaluateDynamicallyCompiledFunction<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(4, $f->eval(|
-        let els = meta::pure::functions::meta::compileSource('dynamicEval1',
+        let els = platform::pure::functions::meta::compileSource('dynamicEval1',
                      'function my::dyn::addOne(x:Integer[1]):Integer[1] { $x + 1 }', 'core').elements;
         let fn = $els->filter(e | $e->instanceOf(PackageableFunction))
                      ->cast(@PackageableFunction<Any>)->toOne();
@@ -37,10 +37,10 @@ function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::lang::tests::
     ));
 }
 
-function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::lang::tests::evaluate::testEvaluateDynamicallyCompiledFunctionMultipleParams<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test, PCT.requiresCompiler>> platform::pure::functions::lang::tests::evaluate::testEvaluateDynamicallyCompiledFunctionMultipleParams<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('a::b', $f->eval(|
-        let els = meta::pure::functions::meta::compileSource('dynamicEval2',
+        let els = platform::pure::functions::meta::compileSource('dynamicEval2',
                      'function my::dyn::joinTwo(a:String[1], b:String[1]):String[1] { $a + \'::\' + $b }', 'core').elements;
         let fn = $els->filter(e | $e->instanceOf(PackageableFunction))
                      ->cast(@PackageableFunction<Any>)->toOne();
@@ -51,13 +51,13 @@ function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::lang::tests::
 
 // Same sourceId compiled twice: each call returns its own self-contained,
 // independently evaluable values (call-scoped validity, no cross-talk).
-function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::lang::tests::evaluate::testEvaluateDynamicallyCompiledFunctionIsRepeatable<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test, PCT.requiresCompiler>> platform::pure::functions::lang::tests::evaluate::testEvaluateDynamicallyCompiledFunctionIsRepeatable<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([10, 10], $f->eval(|
-        let first  = meta::pure::functions::meta::compileSource('csRepeat',
+        let first  = platform::pure::functions::meta::compileSource('csRepeat',
                         'function cs::rep::ten():Integer[1] { 10 }', 'core')
                      .elements->filter(e | $e->instanceOf(PackageableFunction))->cast(@PackageableFunction<Any>)->toOne();
-        let second = meta::pure::functions::meta::compileSource('csRepeat',
+        let second = platform::pure::functions::meta::compileSource('csRepeat',
                         'function cs::rep::ten():Integer[1] { 10 }', 'core')
                      .elements->filter(e | $e->instanceOf(PackageableFunction))->cast(@PackageableFunction<Any>)->toOne();
         [$first->evaluate([])->cast(@Integer)->toOne(), $second->evaluate([])->cast(@Integer)->toOne()];
@@ -65,7 +65,7 @@ function <<PCT.test, PCT.requiresCompiler>> meta::pure::functions::lang::tests::
 }
 
 
-function <<PCT.test>> meta::pure::functions::lang::tests::evaluate::testEvaluateOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::evaluate::testEvaluateOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('name', $f->eval(|
         let p = ^LA_Person(firstName='name', lastName='name');
@@ -73,7 +73,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::evaluate::testEvaluate
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::evaluate::testEvaluateInheritance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::evaluate::testEvaluateInheritance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(LA_GeographicEntityType.CITY, $f->eval(|
         let lambda = {p:LA_GeographicEntity[1] | $p.type};
@@ -81,7 +81,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::evaluate::testEvaluate
     ));
 }
 
-function <<PCT.test>>   meta::pure::functions::lang::tests::evaluate::testEvaluateAnyWithMultiplicities<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>>   platform::pure::functions::lang::tests::evaluate::testEvaluateAnyWithMultiplicities<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let lambda = {s:String[1], p:String[*] | $s + ' \/\/ ' + $p->joinStrings(',')};
     assertEquals(['ok \/\/ ok1'], $f->eval(|
@@ -92,7 +92,7 @@ function <<PCT.test>>   meta::pure::functions::lang::tests::evaluate::testEvalua
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::eval::testEvalOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::eval::testEvalOne<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('Hoboken, NJ', $f->eval(|
         let address = ^LA_Address(name='Hoboken, NJ', type=LA_GeographicEntityType.CITY);
@@ -100,7 +100,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::eval::testEvalOne<Z|y>
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::evaluate::testEvaluateWithNoParams<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::evaluate::testEvaluateWithNoParams<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assertEquals('Something else', $f->eval(|
        let lambda = { | 'Something' + ' else'};
@@ -108,7 +108,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::evaluate::testEvaluate
    ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::evaluate::testEvaluateQualifier<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::evaluate::testEvaluateQualifier<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('Joe Bloggs', $f->eval(|
         let p = ^LA_Person(firstName='Joe', lastName='Bloggs');
@@ -116,7 +116,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::evaluate::testEvaluate
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::evaluate::testEvaluateQualifierWithParam<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::evaluate::testEvaluateQualifierWithParam<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('Mr Joe Bloggs', $f->eval(|
         let p = ^LA_Person(firstName='Joe', lastName='Bloggs');
@@ -124,21 +124,21 @@ function <<PCT.test>> meta::pure::functions::lang::tests::evaluate::testEvaluate
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::evaluate::minus::testReflectiveExecution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::evaluate::minus::testReflectiveExecution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
 
-//   assertEquals(1, meta::pure::functions::math::minus_Integer_MANY__Integer_1_->eval([3,2]));
-//   assertEquals(2, meta::pure::functions::math::minus_Integer_MANY__Integer_1_->evaluate(^List<Integer>(values=[5,3]))->cast(@Integer)->toOne());
+//   assertEquals(1, platform::pure::functions::math::minus_Integer_MANY__Integer_1_->eval([3,2]));
+//   assertEquals(2, platform::pure::functions::math::minus_Integer_MANY__Integer_1_->evaluate(^List<Integer>(values=[5,3]))->cast(@Integer)->toOne());
 
-//   assertEquals(1.0, meta::pure::functions::math::minus_Float_MANY__Float_1_->eval([3.0,2.0]));
-//   assertEquals(2.0, meta::pure::functions::math::minus_Float_MANY__Float_1_->evaluate(^List<Float>(values=[5.0,3.0]))->cast(@Float)->toOne());
+//   assertEquals(1.0, platform::pure::functions::math::minus_Float_MANY__Float_1_->eval([3.0,2.0]));
+//   assertEquals(2.0, platform::pure::functions::math::minus_Float_MANY__Float_1_->evaluate(^List<Float>(values=[5.0,3.0]))->cast(@Float)->toOne());
 
-//   assertEquals(100, meta::pure::functions::math::minus_Number_MANY__Number_1_->eval([300,200]));
-//  assertEquals(22, meta::pure::functions::math::minus_Number_MANY__Number_1_->evaluate(^List<Number>(values=[55,33]))->cast(@Number)->toOne());
+//   assertEquals(100, platform::pure::functions::math::minus_Number_MANY__Number_1_->eval([300,200]));
+//  assertEquals(22, platform::pure::functions::math::minus_Number_MANY__Number_1_->evaluate(^List<Number>(values=[55,33]))->cast(@Number)->toOne());
 assertEquals(true, $f->eval(|true));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::evaluate::divide::testNumberDivide<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::evaluate::divide::testNumberDivide<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(1.75, $f->eval(|
         let lambda = {a:Number[1], b:Number[1] | $a / $b};
@@ -146,7 +146,7 @@ function <<PCT.test>> meta::pure::functions::math::tests::evaluate::divide::test
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::evaluate::plus::testPlusInLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::evaluate::plus::testPlusInLambda<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('Hoboken, NJ; Jersey City, NJ', $f->eval(|
         let hoboken = ^LA_Location(place='Hoboken, NJ', type=LA_GeographicEntityType.CITY);

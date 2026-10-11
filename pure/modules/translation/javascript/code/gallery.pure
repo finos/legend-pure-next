@@ -13,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::javascript::*;
-import meta::external::language::javascript::serialization::*;
-import meta::external::language::javascript::translation::*;
-import meta::external::language::javascript::translation::gallery::*;
-import meta::pure::functions::printer::compiled::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::test::*;
-import meta::pure::translation::shared::*;
-import meta::pure::translation::shared::gallery::*;
+import platform::external::language::javascript::*;
+import platform::external::language::javascript::serialization::*;
+import platform::external::language::javascript::translation::*;
+import platform::external::language::javascript::translation::gallery::*;
+import platform::pure::functions::printer::compiled::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::test::*;
+import platform::pure::translation::shared::*;
+import platform::pure::translation::shared::gallery::*;
 
 // ============================================================================
 // Pure -> JavaScript translation gallery. Walks every <<PCT.test>> function
@@ -43,18 +43,18 @@ import meta::pure::translation::shared::gallery::*;
 //     in-card badge on the translated column.
 //
 // All HTML chrome (tree, JS, CSS) lives in the shared
-// `meta::pure::translation::shared::gallery` module; this file only emits
+// `platform::pure::translation::shared::gallery` module; this file only emits
 // per-test cards with the data attributes the chrome consumes.
 //
 // Entry point: `renderGallery(rootPackagePath)`. The `gallery` Justfile
 // recipe pipes stdout to `pure/modules/translation/javascript/build/javascript-translation-gallery.html`.
 // ============================================================================
 
-function <<test.TestDependency>> meta::external::language::javascript::translation::gallery::renderGallery(rootPackagePath: String[1]): String[1]
+function <<test.TestDependency>> platform::external::language::javascript::translation::gallery::renderGallery(rootPackagePath: String[1]): String[1]
 {
-    let root  = pathToElement($rootPackagePath)->cast(@meta::pure::metamodel::Package);
-    let tests = meta::pure::test::collectPCTTests($root);
-    let ctx   = buildPrintContext($tests->cast(@meta::pure::metamodel::PackageableElement), PrintMode.ManageImports);
+    let root  = pathToElement($rootPackagePath)->cast(@platform::pure::metamodel::Package);
+    let tests = platform::pure::test::collectPCTTests($root);
+    let ctx   = buildPrintContext($tests->cast(@platform::pure::metamodel::PackageableElement), PrintMode.ManageImports);
     let total = $tests->size();
     // No progress reporting: stdout is captured to the gallery file by the
     // calling Justfile, so println would corrupt the HTML output.
@@ -75,9 +75,9 @@ function <<test.TestDependency>> meta::external::language::javascript::translati
 // `$f->eval(|lambda)` call, translates each one to TS (for display), and
 // runs the whole test through the TS adapter (for runtime pass/fail).
 function <<test.TestDependency>>
-   meta::external::language::javascript::translation::gallery::renderTestCard(
-    test: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1],
-    ctx: meta::pure::functions::printer::compiled::PrintContext[1]
+   platform::external::language::javascript::translation::gallery::renderTestCard(
+    test: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1],
+    ctx: platform::pure::functions::printer::compiled::PrintContext[1]
 ): String[1]
 {
     let path    = $test->elementToPath();
@@ -129,22 +129,22 @@ function <<test.TestDependency>>
 // assertEquals/assertSize which throw on mismatch, so a clean return is
 // always a pass.
 function <<test.TestDependency>>
-   meta::external::language::javascript::translation::gallery::runTestViaAdapter(
-    test: meta::pure::metamodel::function::UserDefinedFunction<meta::pure::metamodel::type::Any>[1]
-): meta::pure::functions::collection::Pair<Boolean, String>[1]
+   platform::external::language::javascript::translation::gallery::runTestViaAdapter(
+    test: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1]
+): platform::pure::functions::collection::Pair<Boolean, String>[1]
 {
-    let attempt = tryEval(| meta::pure::functions::io::withSilencedPrint(|
-        meta::pure::functions::lang::evaluate(
+    let attempt = tryEval(| platform::pure::functions::io::withSilencedPrint(|
+        platform::pure::functions::lang::evaluate(
             $test,
-            meta::pure::functions::collection::list(testAdapterForTranslatedJavaScript_Function_1__X_o_))));
+            platform::pure::functions::collection::list(testAdapterForTranslatedJavaScript_Function_1__X_o_))));
     if ($attempt.failure->isNotEmpty(),
         | pair(false, $attempt.failure->toOne().message),
         | pair(true, ''));
 }
 
 function <<test.TestDependency>>
-   meta::external::language::javascript::translation::gallery::sourceIdOf(
-    el: meta::pure::metamodel::PackageableElement[1]
+   platform::external::language::javascript::translation::gallery::sourceIdOf(
+    el: platform::pure::metamodel::PackageableElement[1]
 ): String[1]
 {
     let sids = $el.sourceInformation->map(si | $si.sourceId);

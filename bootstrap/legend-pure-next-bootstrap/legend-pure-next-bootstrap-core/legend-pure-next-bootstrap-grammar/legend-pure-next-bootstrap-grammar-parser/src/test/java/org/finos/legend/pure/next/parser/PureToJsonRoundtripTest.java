@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -105,7 +106,7 @@ public class PureToJsonRoundtripTest {
         String expectedJson = loadResource(cl, testPath + PROTOCOL_FILE);
 
         // Parse Pure via TopLevelProtocolBuilder
-        meta.pure.protocol.PureFile pureFile = TopLevelParser.parse(pureSource, "testFile", Lists.mutable.with(new PureLanguageParser()));
+        platform.pure.protocol.PureFile pureFile = TopLevelParser.parse(pureSource, "testFile", Lists.mutable.with(new PureLanguageParser()));
         Assertions.assertFalse(pureFile._sections().isEmpty(),
                 "Expected at least one section for " + testName);
         Assertions.assertEquals("Pure", pureFile._sections().get(0)._parserName(),

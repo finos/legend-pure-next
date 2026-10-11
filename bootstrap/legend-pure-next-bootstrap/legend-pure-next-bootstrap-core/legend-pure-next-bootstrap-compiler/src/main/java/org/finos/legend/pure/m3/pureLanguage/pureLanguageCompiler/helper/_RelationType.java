@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,14 +15,14 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.Inferred;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.relation.Column;
-import meta.pure.metamodel.relation.RelationType;
-import meta.pure.metamodel.relation.RelationTypeImpl;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import platform.pure.metamodel.Inferred;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.relation.Column;
+import platform.pure.metamodel.relation.RelationType;
+import platform.pure.metamodel.relation.RelationTypeImpl;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -137,7 +138,7 @@ public class _RelationType
      * Find the common type for a list of RelationTypes.
      * Returns a RelationType (common columns) or Any/Nil (no common columns).
      */
-    public static meta.pure.metamodel.type.Type findCommonRelationType(MutableList<RelationType> relationTypes, MetadataAccess model)
+    public static platform.pure.metamodel.type.Type findCommonRelationType(MutableList<RelationType> relationTypes, MetadataAccess model)
     {
         return findCommonRelationType(relationTypes, false, model);
     }
@@ -210,7 +211,7 @@ public class _RelationType
         return result
                 ._columns(commonColumns)
                 ._classifierGenericType(
-                    _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
+                    _GenericType.buildUserDefinedGenericType((Type) model.getElement("platform::pure::metamodel::relation::RelationType"), model)
                             ._typeArguments(Lists.mutable.with(ownerGT))
                 );
     }
@@ -270,8 +271,8 @@ public class _RelationType
      * Pure functional — no in-place mutation.
      * The caller is responsible for integrating the returned copy into the tree.
      */
-    public static RelationType reconcileInferred(meta.pure.metamodel.relation.RelationType expectedRT,
-                                                 meta.pure.metamodel.relation.RelationType actualRT,
+    public static RelationType reconcileInferred(platform.pure.metamodel.relation.RelationType expectedRT,
+                                                 platform.pure.metamodel.relation.RelationType actualRT,
                                                  MetadataAccess model)
     {
         if (expectedRT._columns() == null || actualRT._columns() == null)
@@ -286,7 +287,7 @@ public class _RelationType
                             {
                                 Column expectedCol = pair.getOne();
                                 Column actualCol = pair.getTwo();
-                                return new meta.pure.metamodel.relation.ColumnImpl()
+                                return new platform.pure.metamodel.relation.ColumnImpl()
                                         ._classifierGenericType( actualCol._classifierGenericType())
                                         ._name(actualCol._name())
                                         ._nameWildCard(actualCol._nameWildCard())
@@ -338,9 +339,9 @@ public class _RelationType
             {
                 changed = true;
                 Multiplicity finalMul = resolvedColMul != null ? resolvedColMul
-                        : new meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl(model)
-                          ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L))
-                          ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L));
+                        : new platform.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl(model)
+                          ._lowerBound(new platform.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L))
+                          ._upperBound(new platform.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L));
                 RelationTypeImpl tempRT = new RelationTypeImpl();
                 GenericType tempOwnerGT = _GenericType.buildUserDefinedGenericType(tempRT, model);
                 resolvedColumns.add(_Column.build(col._name(), tempOwnerGT, resolvedColGT != null ? resolvedColGT : colGT, finalMul,
@@ -354,7 +355,7 @@ public class _RelationType
         if (changed)
         {
             RelationTypeImpl newRT = new RelationTypeImpl();
-            GenericType newOwnerGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(newRT);
+            GenericType newOwnerGT = new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(newRT);
             MutableList<Column> rebuiltColumns = Lists.mutable.empty();
             for (Column col : resolvedColumns)
             {
@@ -363,7 +364,7 @@ public class _RelationType
             }
             newRT._columns(rebuiltColumns)
                  ._classifierGenericType(
-                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
+                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("platform::pure::metamodel::relation::RelationType"), model)
                                 ._typeArguments(Lists.mutable.with(newOwnerGT))
                  );
             return newOwnerGT;
@@ -395,7 +396,7 @@ public class _RelationType
             rt._columns().forEach(col ->
             {
                 _GenericType.collectReferencedMultiplicityParameterNames(col._genericType(), names);
-                if (col._multiplicity() instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
+                if (col._multiplicity() instanceof platform.pure.metamodel.multiplicity.MultiplicityParameter mp)
                 {
                     names.add(mp._name());
                 }

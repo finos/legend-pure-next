@@ -1,23 +1,38 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver;
 
-import meta.pure.metamodel.function.property.AbstractProperty;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.relation.Column;
-import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.DotApplication;
-import meta.pure.metamodel.valuespecification.FunctionApplication;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.function.property.AbstractProperty;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.relation.Column;
+import platform.pure.metamodel.type.FunctionType;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.valuespecification.DotApplication;
+import platform.pure.metamodel.valuespecification.FunctionApplication;
+import platform.pure.metamodel.valuespecification.FunctionExpression;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationError;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
-import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
-import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
+import platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
+import platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.FunctionCallParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
@@ -28,11 +43,11 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multip
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.ValueSpecificationResolver;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific.NewResolver;
-import meta.pure.metamodel.valuespecification.AtomicValueImpl;
-import meta.pure.metamodel.valuespecification.Collection;
-import meta.pure.metamodel.valuespecification.FunctionInvocationImpl;
-import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.metamodel.function.LambdaFunctionImpl;
+import platform.pure.metamodel.valuespecification.AtomicValueImpl;
+import platform.pure.metamodel.valuespecification.Collection;
+import platform.pure.metamodel.valuespecification.FunctionInvocationImpl;
+import platform.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.function.LambdaFunctionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 
@@ -180,7 +195,7 @@ public final class FunctionExpressionResolver
      */
     private static ValueSpecification buildCopyAutomap(FunctionExpression expr, ValueSpecification resolvedReceiver, MetadataAccess model, CompilationContext context)
     {
-        Multiplicity pureOne = (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne");
+        Multiplicity pureOne = (Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::PureOne");
         // Lambda param: _automap : ReceiverElementType[1] — uses the receiver's
         // element-level genericType so the inner copy's signature match resolves on `T[1]`.
         VariableExpression lambdaParam = _VariableExpression.newVariableExpression(model)
@@ -205,7 +220,7 @@ public final class FunctionExpressionResolver
         // Build lambda — classifierGenericType filled by later inference.
         LambdaFunctionImpl lambda = new LambdaFunctionImpl();
         lambda._classifierGenericType(_GenericType.buildUserDefinedGenericType(
-                (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"),
+                (platform.pure.metamodel.type.Type) model.getElement("platform::pure::metamodel::function::LambdaFunction"),
                 model));
         lambda._parameters(Lists.mutable.with(lambdaParam));
         lambda._expressionSequence(Lists.mutable.with(innerCopy));
@@ -237,7 +252,7 @@ public final class FunctionExpressionResolver
         if ("new".equals(expr._functionName()))
         {
             ValueSpecification firstArg = expr._parametersValues().getFirst();
-            if (firstArg instanceof meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder gtmh
+            if (firstArg instanceof platform.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder gtmh
                     && gtmh._genericType() != null)
             {
                 GenericType gt = gtmh._genericType();
@@ -260,9 +275,9 @@ public final class FunctionExpressionResolver
                 return firstArg._genericType();
             }
             // Best effort for `^$x(...)`: look the variable up in scope by name.
-            if (firstArg instanceof meta.pure.metamodel.valuespecification.VariableExpression ve)
+            if (firstArg instanceof platform.pure.metamodel.valuespecification.VariableExpression ve)
             {
-                meta.pure.metamodel.valuespecification.VariableExpression match = plctx.resolveVariable(ve._name());
+                platform.pure.metamodel.valuespecification.VariableExpression match = plctx.resolveVariable(ve._name());
                 if (match != null && match._genericType() != null
                         && !(match._genericType() instanceof CompilerNotSetGenericType))
                 {
@@ -287,7 +302,7 @@ public final class FunctionExpressionResolver
         if (!"new".equals(expr._functionName()) && !"copy".equals(expr._functionName())) return expr;
         if (expr._parametersValues() == null || expr._parametersValues().size() < 2) return expr;
         ValueSpecification keyExprsArg = expr._parametersValues().get(1);
-        if (!(keyExprsArg instanceof meta.pure.metamodel.valuespecification.Collection col)) return expr;
+        if (!(keyExprsArg instanceof platform.pure.metamodel.valuespecification.Collection col)) return expr;
         org.eclipse.collections.api.list.MutableList<ValueSpecification> items = col._values();
         if (items == null || items.size() <= 1) return expr;
 
@@ -345,9 +360,9 @@ public final class FunctionExpressionResolver
                 org.eclipse.collections.api.factory.Lists.mutable.empty();
         for (int idx : order) sorted.add(items.get(idx));
 
-        meta.pure.metamodel.valuespecification.Collection newCol =
-                (meta.pure.metamodel.valuespecification.Collection) ((meta.pure.metamodel.valuespecification.Collection) col)._copy();
-        ((meta.pure.metamodel.valuespecification.CollectionImpl) newCol)._values(sorted);
+        platform.pure.metamodel.valuespecification.Collection newCol =
+                (platform.pure.metamodel.valuespecification.Collection) ((platform.pure.metamodel.valuespecification.Collection) col)._copy();
+        ((platform.pure.metamodel.valuespecification.CollectionImpl) newCol)._values(sorted);
 
         org.eclipse.collections.api.list.MutableList<ValueSpecification> newParams =
                 org.eclipse.collections.api.factory.Lists.mutable.empty();
@@ -366,7 +381,7 @@ public final class FunctionExpressionResolver
         if (!"keyExpression".equals(fi._functionName())) return null;
         if (fi._parametersValues() == null || fi._parametersValues().isEmpty()) return null;
         ValueSpecification nameVS = fi._parametersValues().getFirst();
-        if (nameVS instanceof meta.pure.metamodel.valuespecification.AtomicValue av
+        if (nameVS instanceof platform.pure.metamodel.valuespecification.AtomicValue av
                 && av._value() instanceof String s) return s;
         return null;
     }
@@ -383,11 +398,11 @@ public final class FunctionExpressionResolver
     private static void collectParentReferenceSiblings(ValueSpecification vs, int constructionDepth, java.util.Set<String> out)
     {
         if (vs == null) return;
-        if (vs instanceof meta.pure.metamodel.valuespecification.DotApplication da
+        if (vs instanceof platform.pure.metamodel.valuespecification.DotApplication da
                 && da._parametersValues() != null && !da._parametersValues().isEmpty())
         {
             ValueSpecification receiver = da._parametersValues().getFirst();
-            if (receiver instanceof meta.pure.metamodel.valuespecification.VariableExpression ve
+            if (receiver instanceof platform.pure.metamodel.valuespecification.VariableExpression ve
                     && ve._name() != null
                     && org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext.parentReferenceTildeCount(ve._name()) == 1
                     && constructionDepth == 0)
@@ -413,7 +428,7 @@ public final class FunctionExpressionResolver
             }
             return;
         }
-        if (vs instanceof meta.pure.metamodel.valuespecification.Collection col && col._values() != null)
+        if (vs instanceof platform.pure.metamodel.valuespecification.Collection col && col._values() != null)
         {
             for (ValueSpecification item : col._values())
             {
@@ -479,7 +494,7 @@ public final class FunctionExpressionResolver
                 if (receiver._genericType() != null && !(receiver._genericType() instanceof CompilerNotSetGenericType))
                 {
                     Type ownerType = _GenericType.type(receiver._genericType());
-                    if (ownerType instanceof meta.pure.metamodel.type.Class cls)
+                    if (ownerType instanceof platform.pure.metamodel.type.Class cls)
                     {
                         ParametersBinding classBindings = _Class.buildBindingsFromGenericType(cls, receiver._genericType());
                         classBindings.typeBindings().forEachKeyValue((k, v) ->

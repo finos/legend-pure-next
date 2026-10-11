@@ -140,13 +140,10 @@ gallery: build-tests
     @{{substep}} 'render Pure -> Java gallery on the Java platform'
     # No OUT override: the gallery is a report about the Java host, so it lands in that platform's
     # build/ with the other two.
-    cd {{repo_root}} && just java::gallery "meta::pure::functions"
+    cd {{repo_root}} && just java::gallery "platform::pure::functions"
 
+# Remove build/ — the PDBs and anything else this module writes there.
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove build/java-translation.pdb + java-translation-tests.pdb'
-    rm -f {{translation_java_out}}/java-translation.pdb {{translation_java_out}}/java-translation-tests.pdb
-    # The gallery too: it is this module's output, and nothing else removes it —
-    # which is how a gallery built against an older test corpus survived weeks of
-    # rebuilds and kept showing stale counts on the dashboard.
-    rm -f {{translation_java_out}}/java-translation-gallery.html   # legacy location, before the gallery moved to platforms/java
+    @{{substep}} 'remove build/'
+    rm -rf {{translation_java_out}}

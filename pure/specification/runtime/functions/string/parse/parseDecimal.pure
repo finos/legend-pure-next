@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 native function <<PCT.function>>
     {
         doc.doc='Cast a String to decimal with database default precision and scale. Deprecated in preference of parseDecimal(precision, scale).'
     }
-meta::pure::functions::string::parseDecimal(string:String[1]):Decimal[1];
+platform::pure::functions::string::parseDecimal(string:String[1]):Decimal[1];
 
 native function <<PCT.function>>
     {
         doc.doc='Cast a String to decimal with user defined precision and scale.'
     }
-meta::pure::functions::string::parseDecimal(string:String[1], precision: Integer[1], scale: Integer[1]):Decimal[1];
+platform::pure::functions::string::parseDecimal(string:String[1], precision: Integer[1], scale: Integer[1]):Decimal[1];
 
-function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testParseDecimal<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::parseDecimal::testParseDecimal<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(3.14159d, $f->eval(|parseDecimal('3.14159d')));
     assertEquals(3.14159d, $f->eval(|parseDecimal('3.14159')));
@@ -35,7 +36,7 @@ function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testPa
     assertEquals(-3.1415900000d, $f->eval(|parseDecimal('-0000003.1415900000')));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testParseZero<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::parseDecimal::testParseZero<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(0.0d, $f->eval(|parseDecimal('0.0')));
     assertEquals(0.000d, $f->eval(|parseDecimal('-000.000')));
@@ -54,12 +55,12 @@ function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testPa
 // (literal + native both call Double.parseDouble on the same string), so the
 // bit patterns match. This test introduces arithmetic between two separately-
 // parsed Decimals, which surfaces the precision loss.
-function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testParseDecimalPreservesPrecisionThroughArithmetic<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::parseDecimal::testParseDecimalPreservesPrecisionThroughArithmetic<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(parseDecimal('0.3'), $f->eval(|parseDecimal('0.1') + parseDecimal('0.2')));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testParseDecimalWithPrecisionScale<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::string::tests::parseDecimal::testParseDecimalWithPrecisionScale<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(123.13d, $f->eval(|parseDecimal('123.126', 5, 2)));
     assertEquals(123.123d, $f->eval(|parseDecimal('123.123', 7, 3)));

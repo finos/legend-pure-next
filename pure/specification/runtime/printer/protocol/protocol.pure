@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::printer::protocol::*;
-import meta::pure::protocol::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::printer::protocol::*;
+import platform::pure::protocol::*;
 
 // Top-level entry points for the protocol-side printer. printProtocolFile
 // walks a PureFile and emits each section with its `###<parser>` header,
@@ -26,7 +27,7 @@ import meta::pure::protocol::*;
 
 // Emit a full PureFile: each section gets a `###<parserName>` header, then
 // each element printed on its own line (with blank line between elements).
-function meta::pure::functions::printer::protocol::printProtocolFile(file: PureFile[1]): String[1]
+function platform::pure::functions::printer::protocol::printProtocolFile(file: PureFile[1]): String[1]
 {
     $file.sections->map(s | printProtocolSection($s))->joinStrings('');
 }
@@ -36,25 +37,25 @@ function meta::pure::functions::printer::protocol::printProtocolFile(file: PureF
 // `__paren__` markers around operator operands), then delegates to the
 // regular printer. The printer's `__paren__` arm renders markers as `(...)`.
 // Matches the form expected by `grammar_compare_explicit.pure` overrides.
-function meta::pure::functions::printer::protocol::printProtocolFileExplicit(file: PureFile[1]): String[1]
+function platform::pure::functions::printer::protocol::printProtocolFileExplicit(file: PureFile[1]): String[1]
 {
     let transformedSections = $file.sections->map(s |
-        ^$s(elements = $s.elements->map(e | transformElementExplicit($e))->cast(@meta::pure::protocol::grammar::PackageableElement))
+        ^$s(elements = $s.elements->map(e | transformElementExplicit($e))->cast(@platform::pure::protocol::grammar::PackageableElement))
     );
     let transformed = ^$file(sections = $transformedSections);
     printProtocolFile($transformed);
 }
 
-function meta::pure::functions::printer::protocol::transformElementExplicit(e: meta::pure::protocol::grammar::PackageableElement[1]): meta::pure::protocol::grammar::PackageableElement[1]
+function platform::pure::functions::printer::protocol::transformElementExplicit(e: platform::pure::protocol::grammar::PackageableElement[1]): platform::pure::protocol::grammar::PackageableElement[1]
 {
     $e->match([
-        udf: meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
-            ^$udf(expressionSequence = $udf.expressionSequence->map(es | wrapExplicit($es))->cast(@meta::pure::protocol::grammar::valuespecification::ValueSpecification)),
-        any: meta::pure::protocol::grammar::PackageableElement[1] | $e
+        udf: platform::pure::protocol::grammar::function::UserDefinedFunction[1] |
+            ^$udf(expressionSequence = $udf.expressionSequence->map(es | wrapExplicit($es))->cast(@platform::pure::protocol::grammar::valuespecification::ValueSpecification)),
+        any: platform::pure::protocol::grammar::PackageableElement[1] | $e
     ]);
 }
 
-function meta::pure::functions::printer::protocol::printProtocolSection(s: Section[1]): String[1]
+function platform::pure::functions::printer::protocol::printProtocolSection(s: Section[1]): String[1]
 {
     let header = '###' + $s.parserName + '\n';
     let imports = if ($s.imports->isEmpty(), | '', | $s.imports->map(i | 'import ' + $i + ';')->joinStrings('\n') + '\n\n');
@@ -66,16 +67,16 @@ function meta::pure::functions::printer::protocol::printProtocolSection(s: Secti
 // emit a sentinel comment marking what's missing — running the printer over
 // a wide corpus surfaces TODO shapes in test diffs without crashing the run,
 // so one missing kind doesn't hide the rest.
-function meta::pure::functions::printer::protocol::printProtocolElement(elem: meta::pure::protocol::grammar::PackageableElement[1]): String[1]
+function platform::pure::functions::printer::protocol::printProtocolElement(elem: platform::pure::protocol::grammar::PackageableElement[1]): String[1]
 {
     $elem->match([
-        c:   meta::pure::protocol::grammar::type::Class[1] | printProtocolClass($c),
-        e:   meta::pure::protocol::grammar::type::Enumeration[1] | printProtocolEnum($e),
-        a:   meta::pure::protocol::grammar::relationship::Association[1] | printProtocolAssociation($a),
-        pf:  meta::pure::protocol::grammar::extension::Profile[1] | printProtocolProfile($pf),
-        pt:  meta::pure::protocol::grammar::type::PrimitiveType[1] | printProtocolPrimitive($pt),
-        udf: meta::pure::protocol::grammar::function::UserDefinedFunction[1] | printProtocolUserDefinedFunction($udf),
-        nf:  meta::pure::protocol::grammar::function::NativeFunction[1] | printProtocolNativeFunction($nf),
-        any: meta::pure::protocol::grammar::PackageableElement[1] | '/* UNSUPPORTED ELEMENT KIND: ' + $any->genericType().type->toOne()->elementToPath() + ' name=' + $any.name + ' */\n'
+        c:   platform::pure::protocol::grammar::type::Class[1] | printProtocolClass($c),
+        e:   platform::pure::protocol::grammar::type::Enumeration[1] | printProtocolEnum($e),
+        a:   platform::pure::protocol::grammar::relationship::Association[1] | printProtocolAssociation($a),
+        pf:  platform::pure::protocol::grammar::extension::Profile[1] | printProtocolProfile($pf),
+        pt:  platform::pure::protocol::grammar::type::PrimitiveType[1] | printProtocolPrimitive($pt),
+        udf: platform::pure::protocol::grammar::function::UserDefinedFunction[1] | printProtocolUserDefinedFunction($udf),
+        nf:  platform::pure::protocol::grammar::function::NativeFunction[1] | printProtocolNativeFunction($nf),
+        any: platform::pure::protocol::grammar::PackageableElement[1] | '/* UNSUPPORTED ELEMENT KIND: ' + $any->genericType().type->toOne()->elementToPath() + ' name=' + $any.name + ' */\n'
     ]);
 }

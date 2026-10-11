@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,32 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
-native function <<PCT.function>> meta::pure::functions::collection::zip<T,U>(set1:T[*], set2:U[*]):Pair<T,U>[*];
+native function <<PCT.function>> platform::pure::functions::collection::zip<T,U>(set1:T[*], set2:U[*]):Pair<T,U>[*];
 
-function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipBothListsEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::zip::testZipBothListsEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   let a = [];
   let b = [];
   assertEmpty($f->eval(|$a->zip($b)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipFirstListEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::zip::testZipFirstListEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   let a = [];
   let b = ['a', 'b', 'c', 'd'];
   assertEmpty($f->eval(|$a->zip($b)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipSecondListEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::zip::testZipSecondListEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   let a = [1, 2, 3, 4];
   let b = [];
   assertEmpty($f->eval(|$a->zip($b)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipBothListsSameLength<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::zip::testZipBothListsSameLength<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   let a = [1, 2, 3, 4];
   let b = ['a', 'b', 'c', 'd'];
@@ -48,7 +49,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipBoth
                 $f->eval(|$a->zip($b)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipFirstListLonger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::zip::testZipFirstListLonger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   let a = [1, 2, 3, 4];
   let b = ['a', 'b'];
@@ -57,7 +58,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipFirs
                 $f->eval(|$a->zip($b)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipSecondListLonger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::zip::testZipSecondListLonger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   let a = [1, 2];
   let b = ['a', 'b', 'c', 'd'];
@@ -66,7 +67,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipSeco
                 $f->eval(|$a->zip($b)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipBothListsAreOfPairs<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::zip::testZipBothListsAreOfPairs<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   let a = [1, 2, 3];
   let b = ['a', 'b', 'c'];
@@ -83,7 +84,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipBoth
                 $f->eval(|$x->zip($y)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipFirstListsIsOfPairs<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::zip::testZipFirstListsIsOfPairs<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   let a = [1, 2, 3];
   let b = ['a', 'b', 'c'];
@@ -98,7 +99,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipFirs
                 $f->eval(|$x->zip($c)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::zip::testZipSecondListsIsOfPairs<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::zip::testZipSecondListsIsOfPairs<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   let a = [1, 2, 3];
   let c = [4, 5, 6];

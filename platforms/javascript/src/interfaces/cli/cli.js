@@ -19,7 +19,7 @@
 //   pure-js execute [--pdb <file>...] --function <path> [--args <arg>...]
 //
 // `--function` takes the mangled path pure-truffle takes
-// (`meta::pure::test::runTests_String_1__String_1_`). A non-empty result is
+// (`platform::pure::test::runTests_String_1__String_1_`). A non-empty result is
 // printed to stdout; a thrown error — runTests and runPCTTests assert when any
 // test fails — goes to stderr with exit code 1. `--pdb` replaces the host's
 // default PDB set.

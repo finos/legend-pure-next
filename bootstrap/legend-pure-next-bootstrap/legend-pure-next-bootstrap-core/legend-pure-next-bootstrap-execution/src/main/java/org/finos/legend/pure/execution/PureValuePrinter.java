@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +15,13 @@
 
 package org.finos.legend.pure.execution;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.SimplePropertyOwner;
-import meta.pure.metamodel.function.property.Property;
-import meta.pure.metamodel.relationship.Generalization;
-import meta.pure.metamodel.type.Any;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.SimplePropertyOwner;
+import platform.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.relationship.Generalization;
+import platform.pure.metamodel.type.Any;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
 import pure.annotations.Excluded;
 import pure.annotations.Inferred;
 import pure.annotations.Pointer;
@@ -308,7 +309,7 @@ public class PureValuePrinter
      */
     private static List<Property> collectProperties(Any instance)
     {
-        meta.pure.metamodel.type.generics.GenericType cgt = instance._classifierGenericType();
+        platform.pure.metamodel.type.generics.GenericType cgt = instance._classifierGenericType();
         if (!(cgt instanceof GenericTypeValue gtv))
         {
             return List.of();
@@ -348,7 +349,7 @@ public class PureValuePrinter
         {
             for (Generalization g : t._generalizations())
             {
-                meta.pure.metamodel.type.generics.GenericType general = g._general();
+                platform.pure.metamodel.type.generics.GenericType general = g._general();
                 if (general instanceof GenericTypeValue gtv && gtv._type() != null)
                 {
                     collectPropertiesFrom(gtv._type(), seen, result, visitedTypes);
@@ -402,7 +403,7 @@ public class PureValuePrinter
 
     private static String metaclassName(Any any)
     {
-        meta.pure.metamodel.type.generics.GenericType cgt = any._classifierGenericType();
+        platform.pure.metamodel.type.generics.GenericType cgt = any._classifierGenericType();
         if (cgt instanceof GenericTypeValue gtv && gtv._type() instanceof PackageableElement pe)
         {
             return pe._name() != null ? pe._name() : any.getClass().getSimpleName().replace("Impl", "");

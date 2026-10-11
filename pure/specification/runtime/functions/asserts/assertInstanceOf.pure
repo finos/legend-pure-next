@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,38 +13,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::test::pct::*;
 
-function meta::pure::functions::asserts::assertInstanceOf(instance:Any[1], type:Type[1]):Boolean[1]
+function platform::pure::functions::asserts::assertInstanceOf(instance:Any[1], type:Type[1]):Boolean[1]
 {
     assertInstanceOf($instance, $type, | format('expected %r to be an instance of %s, actual: %s', [$instance, $type->elementToPath(), $instance->type()->toOne()->elementToPath()]));
 }
 
-function meta::pure::functions::asserts::assertInstanceOf(instance:Any[1], type:Type[1], message:String[1]):Boolean[1]
+function platform::pure::functions::asserts::assertInstanceOf(instance:Any[1], type:Type[1], message:String[1]):Boolean[1]
 {
     assert($instance->instanceOf($type), $message);
 }
 
-function meta::pure::functions::asserts::assertInstanceOf(instance:Any[1], type:Type[1], formatString:String[1], formatArgs:Any[*]):Boolean[1]
+function platform::pure::functions::asserts::assertInstanceOf(instance:Any[1], type:Type[1], formatString:String[1], formatArgs:Any[*]):Boolean[1]
 {
     assert($instance->instanceOf($type), $formatString, $formatArgs);
 }
 
-function meta::pure::functions::asserts::assertInstanceOf(instance:Any[1], type:Type[1], message:Function<{->String[1]}>[1]):Boolean[1]
+function platform::pure::functions::asserts::assertInstanceOf(instance:Any[1], type:Type[1], message:Function<{->String[1]}>[1]):Boolean[1]
 {
     assert($instance->instanceOf($type), $message);
 }
 
 
 
-function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertInstanceOf<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::tests::testSuccessAssertInstanceOf<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertInstanceOf(1, Integer)));
     assert($f->eval(|assertInstanceOf('the quick' + ' ' + 'brown fox', String)));
 }
 
-function <<PCT.test>> meta::pure::functions::asserts::tests::testSuccessAssertInstanceOfDates<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::asserts::tests::testSuccessAssertInstanceOfDates<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|assertInstanceOf(%2015-03-14, Date)));
     assert($f->eval(|assertInstanceOf(%2015-03-14, StrictDate)));

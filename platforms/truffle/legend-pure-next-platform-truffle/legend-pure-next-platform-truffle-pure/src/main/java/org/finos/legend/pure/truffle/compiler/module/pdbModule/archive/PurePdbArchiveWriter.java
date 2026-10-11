@@ -28,7 +28,7 @@ import java.util.List;
 
 /**
  * Writes a {@code .pdb} archive by invoking the SELF-HOSTED PURE WRITER
- * ({@code meta::pure::compiler::pdb::archive::writeArchive}, compiled into
+ * ({@code platform::pure::compiler::pdb::archive::writeArchive}, compiled into
  * compiler.pdb) through the Truffle runtime — the same Pure code validated
  * byte-for-byte against the flatc-anchored Java reference goldens.
  *
@@ -41,9 +41,9 @@ import java.util.List;
 public final class PurePdbArchiveWriter
 {
     private static final String WRITE_ARCHIVE_FN_PATH =
-            "meta::pure::compiler::pdb::archive::writeArchive_Any_MANY__String_1__String_1__String_MANY__Map_1__Binary_1_";
+            "platform::pure::compiler::pdb::archive::writeArchive_Any_MANY__String_1__String_1__String_MANY__Map_1__Binary_1_";
     private static final String REFBY_FROM_LISTS_FN_PATH =
-            "meta::pure::compiler::pdb::archive::referencedByFromLists_String_MANY__String_MANY__Map_1_";
+            "platform::pure::compiler::pdb::archive::referencedByFromLists_String_MANY__String_MANY__Map_1_";
 
     private PurePdbArchiveWriter()
     {

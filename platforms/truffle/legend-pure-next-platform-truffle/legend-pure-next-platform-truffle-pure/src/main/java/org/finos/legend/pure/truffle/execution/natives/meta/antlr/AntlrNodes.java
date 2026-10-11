@@ -419,26 +419,23 @@ public final class AntlrNodes
     public static final class ComputeFirstNonNewlineLineNode extends PureNode
     {
         @Child private PureNode ctxArg;
-        @Child private PureNode syntheticHeaderArg;
-        public ComputeFirstNonNewlineLineNode(PureNode ctxArg, PureNode syntheticHeaderArg)
+        public ComputeFirstNonNewlineLineNode(PureNode ctxArg)
         {
             this.ctxArg = ctxArg;
-            this.syntheticHeaderArg = syntheticHeaderArg;
         }
         @Override public Object executeGeneric(VirtualFrame frame)
         {
             Object raw = ctxArg.executeGeneric(frame);
-            boolean syntheticHeader = (boolean) syntheticHeaderArg.executeGeneric(frame);
             // [0..1] args may arrive as a PureSequence/List or a bare object.
             Object ctx;
             if (raw == null) ctx = null;
             else if (raw instanceof PureSequence ps) ctx = ps.size() == 0 ? null : ps.getBoxed(0);
             else if (raw instanceof java.util.List<?> l) ctx = l.isEmpty() ? null : l.get(0);
             else ctx = raw;
-            return doExecute(ctx, syntheticHeader);
+            return doExecute(ctx);
         }
         @CompilerDirectives.TruffleBoundary
-        private static long doExecute(Object ctx, boolean syntheticHeader)
+        private static long doExecute(Object ctx)
         {
             if (ctx == null) return 0L;
             ParserRuleContext prc = (ParserRuleContext) ctx;
@@ -452,9 +449,7 @@ public final class AntlrNodes
                 int line = (child instanceof TerminalNode tn2)
                         ? tn2.getSymbol().getLine()
                         : ((ParserRuleContext) child).getStart().getLine();
-                int offset = line - 1;
-                if (syntheticHeader) offset -= 1;
-                return offset;
+                return line - 1;
             }
             return 0L;
         }

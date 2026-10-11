@@ -1,5 +1,6 @@
 /*
  * Copyright 2024 Goldman Sachs
+ * ©2026 JP Morgan Chase & Co. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +17,7 @@
 
 package org.finos.legend.pure.next.parser;
 
-import meta.pure.protocol.grammar.PackageableElement;
+import platform.pure.protocol.grammar.PackageableElement;
 
 import java.util.List;
 
@@ -49,7 +50,7 @@ public interface ParserExtension
      * Java types to their Pure counterparts.
      *
      * @param protocolObject the object to resolve
-     * @return the fully-qualified Pure class path (e.g. {@code "meta::pure::compiler::test::CompiledGraph"}),
+     * @return the fully-qualified Pure class path (e.g. {@code "platform::pure::compiler::test::CompiledGraph"}),
      *         or {@code null} if this extension does not handle the object
      */
     default String resolveType(Object protocolObject)

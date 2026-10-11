@@ -50,7 +50,7 @@ test
 ├── stage                    cp pure-bootstrap.jar + core.pdb + specs/
 ├── build-compiler-pdb       pure-bootstrap compile compiler-pure → shared/compiler.pdb
 └── spec-compiler
-    └── body: pure-bootstrap execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
+    └── body: pure-bootstrap execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
 ```
 
 ```
@@ -60,19 +60,19 @@ test-java
 
 ```
 spec-functions
-└── body: pure-bootstrap execute meta::pure::test::runTests              meta::pure::functions
+└── body: pure-bootstrap execute platform::pure::test::runTests              platform::pure::functions
                                  (assumes `just build` was run — no Maven, no stage)
 ```
 
 ```
 spec-pct
-└── body: pure-bootstrap execute meta::pure::test::runPCTTests           meta::pure::functions
+└── body: pure-bootstrap execute platform::pure::test::runPCTTests           platform::pure::functions
                                  (assumes `just build` was run — no Maven, no stage)
 ```
 
 ```
 spec-compiler
-└── body: pure-bootstrap execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
+└── body: pure-bootstrap execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
                                  (assumes `just build` was run — no Maven, no stage)
 ```
 
@@ -81,14 +81,14 @@ spec-compiler-selfhost
 └── build-compiler-pdb     pure-bootstrap compile (assumes core.pdb staged)
     └── body
         ├── pure-bootstrap compile-via-pure compiler-pure → bootstrap/build/compiler_bootstrap.pdb
-        └── pure-bootstrap execute meta::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
+        └── pure-bootstrap execute platform::pure::compiler::test::runCompiledGraphTests pure/specification/compiler/tests
                                     (using compiler_bootstrap.pdb instead of compiler.pdb)
 ```
 
 ```
 ide
 └── build-compiler-pdb
-    └── body: pure-bootstrap execute meta::pure::ide::start
+    └── body: pure-bootstrap execute platform::pure::ide::start
 ```
 
 ```

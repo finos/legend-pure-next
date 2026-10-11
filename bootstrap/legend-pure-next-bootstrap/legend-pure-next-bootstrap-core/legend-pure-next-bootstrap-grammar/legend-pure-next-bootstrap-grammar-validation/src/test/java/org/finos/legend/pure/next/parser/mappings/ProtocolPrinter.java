@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +30,7 @@ import java.util.TreeSet;
 /**
  * Renders a protocol-grammar value to a canonical multi-line string that's
  * identical regardless of whether the value came from the production
- * .dsl-derived parser (a typed POJO from {@code meta.pure.protocol.grammar.*})
+ * .dsl-derived parser (a typed POJO from {@code platform.pure.protocol.grammar.*})
  * or from the Pure interpreter (a {@code DynamicInstance}).
  *
  * <p>Slot iteration is sorted alphabetically by slot name so the two pipelines
@@ -103,7 +104,7 @@ final class ProtocolPrinter
             }
             return;
         }
-        if (value.getClass().getName().startsWith("meta.pure.protocol."))
+        if (value.getClass().getName().startsWith("platform.pure.protocol."))
         {
             if (!visited.add(value)) { sb.append("<cycle>"); return; }
             String javaCls = value.getClass().getSimpleName();
@@ -165,7 +166,7 @@ final class ProtocolPrinter
     {
         if (v instanceof List<?>) return v;
         if (v instanceof DynamicInstance) return List.of(v);
-        if (v != null && v.getClass().getName().startsWith("meta.pure.protocol.")) return List.of(v);
+        if (v != null && v.getClass().getName().startsWith("platform.pure.protocol.")) return List.of(v);
         return v;
     }
 

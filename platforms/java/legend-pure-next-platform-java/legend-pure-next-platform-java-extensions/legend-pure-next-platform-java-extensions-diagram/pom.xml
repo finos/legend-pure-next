@@ -132,7 +132,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- The extension's translated Pure — meta::pure::diagram's metamodel, protocol, parser
+            <!-- The extension's translated Pure — platform::pure::diagram's metamodel, protocol, parser
                  rules and compiler passes — written here by `just java::generate-diagram`, exactly as
                  the engine's own generated/ is written by its generate-* steps. It compiles against the
                  engine's generated metamodel, which is what the dependency direction is for.

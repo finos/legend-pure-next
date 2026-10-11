@@ -15,7 +15,7 @@
 
 package org.finos.legend.pure.execution;
 
-import meta.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
 /**
@@ -66,7 +66,7 @@ public final class PureTypeResolver
         }
 
         // Metamodel instances (Any subtypes) — read classifierGenericType directly
-        if (value instanceof meta.pure.metamodel.type.Any any)
+        if (value instanceof platform.pure.metamodel.type.Any any)
         {
             return any._classifierGenericType();
         }
@@ -77,12 +77,12 @@ public final class PureTypeResolver
             String pureName = getPureTypeName(value);
             if (pureName != null)
             {
-                meta.pure.metamodel.type.Type primitiveType = (meta.pure.metamodel.type.Type) resolver.getElement(pureName);
+                platform.pure.metamodel.type.Type primitiveType = (platform.pure.metamodel.type.Type) resolver.getElement(pureName);
                 if (primitiveType != null)
                 {
                     // For built-in types (e.g. String), instantiate an InferredGenericTypeImpl to wrap the type.
                     // This satisfies the GenericType interface without requiring a custom DynamicInstance wrapper.
-                    return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver)
+                    return new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver)
                             ._type(primitiveType);
                 }
             }
@@ -131,8 +131,8 @@ public final class PureTypeResolver
             GenericType cgt = di.getClassifierGenericType();
             if (cgt != null)
             {
-                meta.pure.metamodel.type.Type type = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(cgt);
-                if (type instanceof meta.pure.metamodel.PackageableElement pe) return pe._name();
+                platform.pure.metamodel.type.Type type = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(cgt);
+                if (type instanceof platform.pure.metamodel.PackageableElement pe) return pe._name();
             }
             return null;
         }
@@ -141,18 +141,18 @@ public final class PureTypeResolver
             GenericType cgt = pi.getClassifierGenericType();
             if (cgt != null)
             {
-                meta.pure.metamodel.type.Type type = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(cgt);
-                if (type instanceof meta.pure.metamodel.PackageableElement pe) return pe._name();
+                platform.pure.metamodel.type.Type type = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(cgt);
+                if (type instanceof platform.pure.metamodel.PackageableElement pe) return pe._name();
             }
             return null;
         }
-        if (value instanceof meta.pure.metamodel.type.Any any)
+        if (value instanceof platform.pure.metamodel.type.Any any)
         {
             GenericType cgt = any._classifierGenericType();
             if (cgt != null)
             {
-                meta.pure.metamodel.type.Type type = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(cgt);
-                if (type instanceof meta.pure.metamodel.PackageableElement pe) return pe._name();
+                platform.pure.metamodel.type.Type type = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(cgt);
+                if (type instanceof platform.pure.metamodel.PackageableElement pe) return pe._name();
             }
             return null;
         }

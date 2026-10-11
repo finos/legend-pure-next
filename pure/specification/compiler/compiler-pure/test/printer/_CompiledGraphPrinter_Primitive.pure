@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,16 +14,16 @@
 // limitations under the License.
 
 
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::functions::collection::*;
-import meta::pure::functions::string::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::test::printer::*;
-import meta::pure::compiler::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::functions::collection::*;
+import platform::pure::functions::string::*;
+import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::compiler::test::printer::*;
+import platform::pure::compiler::*;
 
-function <<test.TestDependency>> meta::pure::compiler::test::printer::primitive::printPrimitive(p:PrimitiveType[1], context:CompilerContext[1]):String[1]
+function <<test.TestDependency>> platform::pure::compiler::test::printer::primitive::printPrimitive(p:PrimitiveType[1], context:CompilerContext[1]):String[1]
 {
     [
         'primitive ', $p->fullPath(),

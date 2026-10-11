@@ -1,3 +1,18 @@
+# Copyright 2026 Goldman Sachs
+# ©2026 JP Morgan Chase & Co. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # pure/modules/translation/shared/Justfile — Pure-AST -> Pure-AST transformations
 # shared across target-language translators.
 #
@@ -71,12 +86,12 @@ build-tests:
 # doesn't register the same natives surface so they're effectively
 # Truffle-only (see comment at top of canonical_tests.pure).
 
-# Run the canonical_tests.pure suite via Truffle (meta::pure::translation::shared::tests).
+# Run the canonical_tests.pure suite via Truffle (platform::pure::translation::shared::tests).
 # Named `test-all` for symmetry with translation/{java,javascript}/Justfile, even
 # though there's only one suite here today.
 test-all: build-tests
     @{{header}} 'test-all'
-    @{{substep}} 'runTests meta::pure::translation::shared::tests (Truffle)'
+    @{{substep}} 'runTests platform::pure::translation::shared::tests (Truffle)'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -85,11 +100,11 @@ test-all: build-tests
         --pdb {{shared_out}}/parser-mappings.pdb \
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_shared_out}}/translation-shared-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::translation::shared::tests" "{{test_results}}/pure/translation-shared/pure@cli-truffle.json" {{err_filter}}
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::translation::shared::tests" "{{test_results}}/pure/translation-shared/pure@cli-truffle.json" {{err_filter}}
 
-# Remove build/translation-shared.pdb (and the tests PDB).
+# Remove build/ — the PDBs and anything else this module writes there.
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove build/translation-shared.pdb + translation-shared-tests.pdb'
-    rm -f {{translation_shared_out}}/translation-shared.pdb {{translation_shared_out}}/translation-shared-tests.pdb
+    @{{substep}} 'remove build/'
+    rm -rf {{translation_shared_out}}

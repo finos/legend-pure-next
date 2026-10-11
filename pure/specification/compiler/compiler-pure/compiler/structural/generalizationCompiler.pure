@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::relationship::*;
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::compiler::structural::genericTypeCompiler::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::*;
 
-function meta::pure::compiler::structural::generalizationCompiler::compileGeneralizations(protocolGeneralizations:meta::pure::protocol::grammar::relationship::Generalization[*], skeleton:Type[1], context:CompilerContext[1], packagePath:String[1], ownerContext:String[1]):CompilerListResult<Generalization>[1]
+function platform::pure::compiler::structural::generalizationCompiler::compileGeneralizations(protocolGeneralizations:platform::pure::protocol::grammar::relationship::Generalization[*], skeleton:Type[1], context:CompilerContext[1], packagePath:String[1], ownerContext:String[1]):CompilerListResult<Generalization>[1]
 {
     let typeParams = $skeleton->match(
         [
@@ -39,7 +40,7 @@ function meta::pure::compiler::structural::generalizationCompiler::compileGenera
               context = $context
           ),
         | $protocolGeneralizations->fold({g, acc |
-              let gtResult = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParams, 'super type', $ownerContext);
+              let gtResult = $g.general->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParams, 'super type', $ownerContext);
               ^$acc(
                   values += ^Generalization(
                       general = $gtResult.value->toOne(),

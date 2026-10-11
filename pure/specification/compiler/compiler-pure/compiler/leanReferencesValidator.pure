@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::functions::lang::*;
-import meta::pure::functions::string::*;
-import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import platform::pure::compiler::*;
+import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::functions::lang::*;
+import platform::pure::functions::string::*;
+import platform::pure::compiler::structural::sourceInformationCompiler::*;
 
 // Mirrors Java LeanReferencesValidator: classify each (target, caller) pair in
 // the reverse reference index and flag any non-test caller that references a
-// test-only target. The test profile lives at meta::pure::profiles::test;
+// test-only target. The test profile lives at platform::pure::profiles::test;
 // any stereotype on it (Test, TestDependency, BeforePackage, AfterPackage,
-// ToFix) marks an element as test-only. A subset of meta::pure::test::pct::PCT
+// ToFix) marks an element as test-only. A subset of platform::pure::test::pct::PCT
 // stereotypes (test, adapter) are also test-only.
-function meta::pure::compiler::isTestElement(element:PackageableElement[0..1]):Boolean[1]
+function platform::pure::compiler::isTestElement(element:PackageableElement[0..1]):Boolean[1]
 {
     if($element->isEmpty(),
         | false,
@@ -38,15 +39,15 @@ function meta::pure::compiler::isTestElement(element:PackageableElement[0..1]):B
     );
 }
 
-function meta::pure::compiler::isTestStereotype(s:Stereotype[1]):Boolean[1]
+function platform::pure::compiler::isTestStereotype(s:Stereotype[1]):Boolean[1]
 {
     if($s.profile->isEmpty(),
         | false,
         | let profilePath = $s.profile->toOne()->fullPath();
-          let profileMatch = $profilePath == 'meta::pure::profiles::test';
+          let profileMatch = $profilePath == 'platform::pure::profiles::test';
           if($profileMatch,
               | true,
-              | $profilePath == 'meta::pure::test::pct::PCT'
+              | $profilePath == 'platform::pure::test::pct::PCT'
                   && $s.value->isNotEmpty()
                   && ($s.value->toOne() == 'test' || $s.value->toOne() == 'adapter')
           );
@@ -57,7 +58,7 @@ function meta::pure::compiler::isTestStereotype(s:Stereotype[1]):Boolean[1]
 // element. Sub-element paths like {@code Foo.bar} or {@code MyEnum.VAL} have
 // at most one dot (between the parent element path and the sub-element name).
 // Their parent carries the stereotype classification.
-function meta::pure::compiler::resolveElementWithSubPath(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
+function platform::pure::compiler::resolveElementWithSubPath(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
 {
     let parts = $path->split('.');
     let parentPath = $parts->at(0);
@@ -68,7 +69,7 @@ function meta::pure::compiler::resolveElementWithSubPath(context:CompilerContext
 // return a list of formatted error messages. Each violation is reported once
 // per (caller, target) pair; the source-info attribution uses the caller
 // element's sourceInformation (function/class definition line).
-function meta::pure::compiler::validateLeanReferences(context:CompilerContext[1]):String[*]
+function platform::pure::compiler::validateLeanReferences(context:CompilerContext[1]):String[*]
 {
     // Flatten the reverse index into (caller, target) pairs first, then sort
     // by (caller, target) so output is deterministic across Java/Pure

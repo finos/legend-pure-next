@@ -8,7 +8,7 @@
     "entryRule": "definition"
   },
   "pure": {
-    "sectionParsers": "meta::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_"
+    "sectionParsers": "platform::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_"
   },
   "pdbs": [
     "shared/core.pdb",

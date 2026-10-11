@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::meta::*;
-import meta::pure::functions::meta::tests::value4Tag::*;
-import meta::pure::metamodel::extension::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::meta::*;
+import platform::pure::functions::meta::tests::value4Tag::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::test::pct::*;
 
 // Returns the TaggedValue on `element` matching the given (`profile`, `tag`)
 // pair, or empty if none. Argument order mirrors legend-pure: element is the
 // receiver (`$elt->value4Tag('tagName', SomeProfile)`).
-function meta::pure::functions::meta::value4Tag(element:meta::pure::metamodel::extension::AnnotatedElement[1], tag:String[1], profile:meta::pure::metamodel::extension::Profile[1]): meta::pure::metamodel::extension::TaggedValue[0..1]
+function platform::pure::functions::meta::value4Tag(element:platform::pure::metamodel::extension::AnnotatedElement[1], tag:String[1], profile:platform::pure::metamodel::extension::Profile[1]): platform::pure::metamodel::extension::TaggedValue[0..1]
 {
     $element.taggedValues->filter(tv | $tv.tag.profile == $profile && $tv.tag.value == $tag)->head();
 }
 
-Profile <<test.TestDependency>> meta::pure::functions::meta::tests::value4Tag::TagProfile
+Profile <<test.TestDependency>> platform::pure::functions::meta::tests::value4Tag::TagProfile
 {
     tags: [doc, owner];
 }
@@ -36,21 +37,21 @@ Class <<test.TestDependency>>
     TagProfile.doc   = 'sample class',
     TagProfile.owner = 'pierre'
 }
-meta::pure::functions::meta::tests::value4Tag::TaggedClass
+platform::pure::functions::meta::tests::value4Tag::TaggedClass
 {
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::value4Tag::testValue4TagPresent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::value4Tag::testValue4TagPresent<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('sample class', $f->eval(|TaggedClass->value4Tag('doc', TagProfile)->toOne().value));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::value4Tag::testValue4TagDistinguishesTags<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::value4Tag::testValue4TagDistinguishesTags<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('pierre', $f->eval(|TaggedClass->value4Tag('owner', TagProfile)->toOne().value));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::value4Tag::testValue4TagMissing<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::value4Tag::testValue4TagMissing<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|TaggedClass->value4Tag('nonexistent', TagProfile)->isEmpty()));
 }

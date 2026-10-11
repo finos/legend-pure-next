@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::genericTypeOperation::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::relation::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::genericTypeOperation::*;
+import platform::pure::compiler::helper::relationType::*;
+import platform::pure::compiler::helper::parametersBinding::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::relation::*;
 
-function meta::pure::compiler::helper::genericTypeOperation::printGenericTypeOperation(gto:GenericTypeOperation[1], fullPath:Boolean[1]):String[1]
+function platform::pure::compiler::helper::genericTypeOperation::printGenericTypeOperation(gto:GenericTypeOperation[1], fullPath:Boolean[1]):String[1]
 {
     let left = $gto.left->printGenericType($fullPath);
     let opName = $gto.operationType->toString();
@@ -32,7 +33,7 @@ function meta::pure::compiler::helper::genericTypeOperation::printGenericTypeOpe
     $left + $op + $right;
 }
 
-function meta::pure::compiler::helper::genericTypeOperation::isConcreteGenericTypeOperation(gto:GenericTypeOperation[1]):Boolean[1]
+function platform::pure::compiler::helper::genericTypeOperation::isConcreteGenericTypeOperation(gto:GenericTypeOperation[1]):Boolean[1]
 {
     let opName = $gto.operationType->toString();
     if($opName == 'Subset' || $opName == 'Equal',
@@ -41,13 +42,13 @@ function meta::pure::compiler::helper::genericTypeOperation::isConcreteGenericTy
     );
 }
 
-function meta::pure::compiler::helper::genericTypeOperation::collectGenericTypeOperationReferencedTypeParameterNames(gto:GenericTypeOperation[1]):String[*]
+function platform::pure::compiler::helper::genericTypeOperation::collectGenericTypeOperationReferencedTypeParameterNames(gto:GenericTypeOperation[1]):String[*]
 {
     $gto.left->collectReferencedTypeParameterNames()
         ->concatenate($gto.right->collectReferencedTypeParameterNames());
 }
 
-function meta::pure::compiler::helper::genericTypeOperation::collectGenericTypeOperationTypeParameterBindings(gto:GenericTypeOperation[1], argGT:GenericType[1], bindings:ParametersBinding[1]):ParametersBinding[1]
+function platform::pure::compiler::helper::genericTypeOperation::collectGenericTypeOperationTypeParameterBindings(gto:GenericTypeOperation[1], argGT:GenericType[1], bindings:ParametersBinding[1]):ParametersBinding[1]
 {
     if([pair(| $gto.operationType == GenericTypeOperationType.Subset, | collectTypeParameterBindings($gto.left, $argGT, $bindings)),
         pair(| $gto.operationType == GenericTypeOperationType.Equal,
@@ -57,7 +58,7 @@ function meta::pure::compiler::helper::genericTypeOperation::collectGenericTypeO
     );
 }
 
-function meta::pure::compiler::helper::genericTypeOperation::makeGenericTypeOperationAsConcreteAsPossible(gto:GenericTypeOperation[1], bindings:ParametersBinding[1], context:meta::pure::compiler::CompilerContext[1]):GenericType[1]
+function platform::pure::compiler::helper::genericTypeOperation::makeGenericTypeOperationAsConcreteAsPossible(gto:GenericTypeOperation[1], bindings:ParametersBinding[1], context:platform::pure::compiler::CompilerContext[1]):GenericType[1]
 {
     let resolvedLeft = makeAsConcreteAsPossible($gto.left, $bindings, $context);
     let resolvedRight = makeAsConcreteAsPossible($gto.right, $bindings, $context);
@@ -89,7 +90,7 @@ function meta::pure::compiler::helper::genericTypeOperation::makeGenericTypeOper
     );
 }
 
-function meta::pure::compiler::helper::genericTypeOperation::isCompatibleGenericTypeOperation(gto:GenericTypeOperation[1], other:GenericType[1], contravariant:Boolean[1], context:meta::pure::compiler::CompilerContext[1]):Boolean[1]
+function platform::pure::compiler::helper::genericTypeOperation::isCompatibleGenericTypeOperation(gto:GenericTypeOperation[1], other:GenericType[1], contravariant:Boolean[1], context:platform::pure::compiler::CompilerContext[1]):Boolean[1]
 {
     let right = $gto.right;
     if([pair(| $gto.operationType == GenericTypeOperationType.Equal, | isCompatibleGenericType($right, $other, $contravariant, $context)),

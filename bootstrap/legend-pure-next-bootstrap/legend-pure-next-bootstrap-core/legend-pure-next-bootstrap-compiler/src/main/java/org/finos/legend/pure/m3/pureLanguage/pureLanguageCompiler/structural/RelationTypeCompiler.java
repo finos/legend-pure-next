@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +15,11 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import meta.pure.metamodel.relation.RelationType;
-import meta.pure.metamodel.relation.RelationTypeImpl;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import platform.pure.metamodel.relation.RelationType;
+import platform.pure.metamodel.relation.RelationTypeImpl;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -27,8 +28,8 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Column
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
- * Compiles a grammar-level {@link meta.pure.protocol.grammar.relation.RelationType}
- * into a metamodel-level {@link meta.pure.metamodel.relation.RelationType}.
+ * Compiles a grammar-level {@link platform.pure.protocol.grammar.relation.RelationType}
+ * into a metamodel-level {@link platform.pure.metamodel.relation.RelationType}.
  */
 public final class RelationTypeCompiler
 {
@@ -37,11 +38,11 @@ public final class RelationTypeCompiler
     }
 
     /**
-     * Compile a grammar-level {@link meta.pure.protocol.grammar.relation.RelationType}
-     * into a metamodel-level {@link meta.pure.metamodel.relation.RelationType}.
+     * Compile a grammar-level {@link platform.pure.protocol.grammar.relation.RelationType}
+     * into a metamodel-level {@link platform.pure.metamodel.relation.RelationType}.
      */
     public static RelationType compile(
-            meta.pure.protocol.grammar.relation.RelationType rt,
+            platform.pure.protocol.grammar.relation.RelationType rt,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         RelationTypeImpl result = new RelationTypeImpl();
@@ -56,7 +57,7 @@ public final class RelationTypeCompiler
                                                                     model)
                                                                 )
                 )._classifierGenericType(
-                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
+                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("platform::pure::metamodel::relation::RelationType"), model)
                                 ._typeArguments(Lists.mutable.with(ownerGT))
                 );
     }

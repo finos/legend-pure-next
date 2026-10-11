@@ -47,9 +47,9 @@ import java.util.TreeMap;
  */
 final class VariantHelper
 {
-    static final String LIST_PATH = "meta::pure::functions::collection::List";
-    static final String MAP_PATH = "meta::pure::functions::collection::Map";
-    static final String PRIMITIVES = "meta::pure::metamodel::type::primitives::";
+    static final String LIST_PATH = "platform::pure::functions::collection::List";
+    static final String MAP_PATH = "platform::pure::functions::collection::Map";
+    static final String PRIMITIVES = "platform::pure::metamodel::type::primitives::";
 
     private static final int SLOT_GENERIC_TYPE = PureClassRegistry.globalSlot("genericType");
     private static final int SLOT_VALUES = PureClassRegistry.globalSlot("values");
@@ -378,7 +378,7 @@ final class VariantHelper
         {
             return "?";
         }
-        if (path.startsWith("meta::pure::metamodel::") || path.startsWith("meta::pure::functions::"))
+        if (path.startsWith("platform::pure::metamodel::") || path.startsWith("platform::pure::functions::"))
         {
             int lastSeparator = path.lastIndexOf("::");
             return lastSeparator < 0 ? path : path.substring(lastSeparator + 2);

@@ -1,9 +1,24 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.helper;
 
-import meta.pure.metamodel.function.property.Property;
-import meta.pure.metamodel.type.Class;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.UndefinedGenericTypeImpl;
+import platform.pure.metamodel.function.property.Property;
+import platform.pure.metamodel.type.Class;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.UndefinedGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Sets;
 import org.finos.legend.pure.m3.JavaCompiler;
@@ -203,10 +218,10 @@ public class _GenericTypeTest
     @Test
     public void testFindCommonGenericType_subtypes()
     {
-        meta.pure.metamodel.type.generics.InferredGenericTypeImpl intGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)
-                ._type((meta.pure.metamodel.type.Type) m3.getElement("meta::pure::metamodel::type::primitives::Integer"));
-        meta.pure.metamodel.type.generics.InferredGenericTypeImpl floatGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)
-                ._type((meta.pure.metamodel.type.Type) m3.getElement("meta::pure::metamodel::type::primitives::Float"));
+        platform.pure.metamodel.type.generics.InferredGenericTypeImpl intGT = new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)
+                ._type((platform.pure.metamodel.type.Type) m3.getElement("platform::pure::metamodel::type::primitives::Integer"));
+        platform.pure.metamodel.type.generics.InferredGenericTypeImpl floatGT = new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)
+                ._type((platform.pure.metamodel.type.Type) m3.getElement("platform::pure::metamodel::type::primitives::Float"));
         GenericType result = _GenericType.findCommonGenericType(Lists.mutable.with(intGT, floatGT), m3);
         assertNotNull(result);
         assertEquals("Number", _GenericType.print(result));
@@ -215,36 +230,36 @@ public class _GenericTypeTest
     @Test
     public void testFindCommonGenericType_lambdaWithDifferentFunctionTypeInstances()
     {
-        meta.pure.metamodel.type.Type lambdaType = (meta.pure.metamodel.type.Type) m3.getElement("meta::pure::metamodel::function::LambdaFunction");
-        meta.pure.metamodel.type.Type intType = (meta.pure.metamodel.type.Type) m3.getElement("meta::pure::metamodel::type::primitives::Integer");
-        meta.pure.metamodel.multiplicity.Multiplicity pureOne = (meta.pure.metamodel.multiplicity.Multiplicity) m3.getElement("meta::pure::metamodel::multiplicity::PureOne");
+        platform.pure.metamodel.type.Type lambdaType = (platform.pure.metamodel.type.Type) m3.getElement("platform::pure::metamodel::function::LambdaFunction");
+        platform.pure.metamodel.type.Type intType = (platform.pure.metamodel.type.Type) m3.getElement("platform::pure::metamodel::type::primitives::Integer");
+        platform.pure.metamodel.multiplicity.Multiplicity pureOne = (platform.pure.metamodel.multiplicity.Multiplicity) m3.getElement("platform::pure::metamodel::multiplicity::PureOne");
 
-        meta.pure.metamodel.type.FunctionTypeImpl ft1 = new meta.pure.metamodel.type.FunctionTypeImpl(m3);
+        platform.pure.metamodel.type.FunctionTypeImpl ft1 = new platform.pure.metamodel.type.FunctionTypeImpl(m3);
         ft1._parameters(Lists.mutable.with(
-                new meta.pure.metamodel.valuespecification.VariableExpressionImpl(m3)
+                new platform.pure.metamodel.valuespecification.VariableExpressionImpl(m3)
                         ._name("x")
-                        ._genericType(new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(intType))
+                        ._genericType(new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(intType))
                         ._multiplicity(pureOne)));
-        ft1._returnType(new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(intType));
+        ft1._returnType(new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(intType));
         ft1._returnMultiplicity(pureOne);
 
-        meta.pure.metamodel.type.FunctionTypeImpl ft2 = new meta.pure.metamodel.type.FunctionTypeImpl(m3);
+        platform.pure.metamodel.type.FunctionTypeImpl ft2 = new platform.pure.metamodel.type.FunctionTypeImpl(m3);
         ft2._parameters(Lists.mutable.with(
-                new meta.pure.metamodel.valuespecification.VariableExpressionImpl(m3)
+                new platform.pure.metamodel.valuespecification.VariableExpressionImpl(m3)
                         ._name("y")
-                        ._genericType(new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(intType))
+                        ._genericType(new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(intType))
                         ._multiplicity(pureOne)));
-        ft2._returnType(new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(intType));
+        ft2._returnType(new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(intType));
         ft2._returnMultiplicity(pureOne);
 
-        GenericType lambdaGT1 = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)
+        GenericType lambdaGT1 = new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)
                 ._type(lambdaType)
                 ._typeArguments(Lists.mutable.with(
-                        new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(ft1)));
-        GenericType lambdaGT2 = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)
+                        new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(ft1)));
+        GenericType lambdaGT2 = new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)
                 ._type(lambdaType)
                 ._typeArguments(Lists.mutable.with(
-                        new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(ft2)));
+                        new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(m3)._type(ft2)));
 
         GenericType result = _GenericType.findCommonGenericType(Lists.mutable.with(lambdaGT1, lambdaGT2), m3);
         assertNotNull(result);

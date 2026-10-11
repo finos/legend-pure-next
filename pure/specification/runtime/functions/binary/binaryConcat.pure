@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::binary::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::binary::*;
 
 // The concatenation of every part, in order. Takes a collection rather than a
 // pair so that assembling n pieces is one native call and one allocation —
 // the FlatBuffers builder prepends constantly, and pairwise concatenation
 // would copy the accumulated buffer once per piece.
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::binaryConcat(parts:Binary[*]):Binary[1];
+native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::binary::binaryConcat(parts:Binary[*]):Binary[1];
 
-function <<PCT.test>> meta::pure::functions::binary::tests::binaryConcat::testJoinsInOrder<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::binary::tests::binaryConcat::testJoinsInOrder<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('1F8B08', $f->eval(|[0x1F, 0x8B, 0x08]->binaryConcat()->binaryToHex()));
     assertEquals('FF00', $f->eval(|[0xFF, 0x00]->binaryConcat()->binaryToHex()));
 }
 
-function <<PCT.test>> meta::pure::functions::binary::tests::binaryConcat::testEmptyParts<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::binary::tests::binaryConcat::testEmptyParts<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('', $f->eval(|[]->cast(@Binary)->binaryConcat()->binaryToHex()));
     assertEquals('FF', $f->eval(|[0x, 0xFF, 0x]->binaryConcat()->binaryToHex()));

@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.truffle.execution.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -38,7 +53,7 @@ public final class NewClassNode extends PureNode
     private static Object doNewClass(Object typeParams, Object multParams, MetadataAccess resolver)
     {
         var cls = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                "meta::pure::metamodel::type::Class", resolver);
+                "platform::pure::metamodel::type::Class", resolver);
 
         // Normalize to PureSequence (single values get wrapped)
         PureSequence tpSeq = toSequence(typeParams);
@@ -58,7 +73,7 @@ public final class NewClassNode extends PureNode
             {
                 Object tp = tpSeq.getBoxed(i);
                 if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(tp,
-                        "meta::pure::metamodel::type::generics::TypeParameter", resolver))
+                        "platform::pure::metamodel::type::generics::TypeParameter", resolver))
                 {
                     org.finos.legend.pure.truffle.compiler.helper._Any.write(tp, "owner", cls);
                     var tpGT = org.finos.legend.pure.truffle.compiler.helper._GenericType.buildUserDefinedGenericType(tp, resolver);
@@ -80,7 +95,7 @@ public final class NewClassNode extends PureNode
             {
                 Object mp = mpSeq.getBoxed(i);
                 if (org.finos.legend.pure.truffle.compiler.helper._Any.isType(mp,
-                        "meta::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
+                        "platform::pure::metamodel::multiplicity::MultiplicityParameter", resolver))
                 {
                     org.finos.legend.pure.truffle.compiler.helper._Any.write(mp, "owner", cls);
                 }
@@ -89,7 +104,7 @@ public final class NewClassNode extends PureNode
             org.finos.legend.pure.truffle.compiler.helper._Any.write(selfGT, "multiplicityArguments", new ObjectSequence(mpArgs));
         }
 
-        Object classType = resolver.getElement("meta::pure::metamodel::type::Class");
+        Object classType = resolver.getElement("platform::pure::metamodel::type::Class");
         var cgt = org.finos.legend.pure.truffle.compiler.helper._GenericType.buildUserDefinedGenericType(classType, resolver);
         org.finos.legend.pure.truffle.compiler.helper._Any.write(cgt, "typeArguments", new ObjectSequence(new Object[]{selfGT}));
 

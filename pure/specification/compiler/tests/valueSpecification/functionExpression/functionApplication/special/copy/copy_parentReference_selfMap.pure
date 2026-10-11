@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::copy::parentRefSelfMap::*;
 
@@ -15,58 +29,58 @@ Class test::copy::parentRefSelfMap::Container
 
 ###CompiledGraph
 function test::copy::parentRefSelfMap::testCopySelfMap__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::parentRefSelfMap::Container##[1]#  ~@FunctionInvocation@  @6:3-6:56
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::parentRefSelfMap::Container##[1]#  ~@FunctionInvocation@  @20:3-20:56
     typeParam T -> #test::copy::parentRefSelfMap::Container#
     mulParam m -> #[1]#
-    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @6:7-6:7
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::parentRefSelfMap::Container##[1]#  ~@FunctionInvocation@  @6:11-6:56
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @20:7-20:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::parentRefSelfMap::Container##[1]#  ~@FunctionInvocation@  @20:11-20:56
       typeParam T -> test::copy::parentRefSelfMap::Container
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRefSelfMap::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRefSelfMap::Container|1>  @6:11-6:56
-      Collection :#KeyExpression#[2]  ~@Collection@  @6:11-6:56
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:22-6:35
-          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:22-6:35
-          AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @6:29-6:35
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:38-6:55
-          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @6:38-6:55
-          Collection :#String#[2]  ~@Collection@  @6:46-6:55
-            AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @6:47-6:49
-            AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @6:52-6:54
-  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::parentRefSelfMap::Container##[1]#  ~@FunctionInvocation@  @7:3-7:55
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRefSelfMap::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRefSelfMap::Container|1>  @20:11-20:56
+      Collection :#KeyExpression#[2]  ~@Collection@  @20:11-20:56
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:22-20:35
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @20:22-20:35
+          AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @20:29-20:35
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:38-20:55
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @20:38-20:55
+          Collection :#String#[2]  ~@Collection@  @20:46-20:55
+            AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @20:47-20:49
+            AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @20:52-20:54
+  FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::parentRefSelfMap::Container##[1]#  ~@FunctionInvocation@  @21:3-21:55
     typeParam T -> #test::copy::parentRefSelfMap::Container#
-    Variable c :#test::copy::parentRefSelfMap::Container##[1]#  ~@VariableExpression@  @7:4-7:5
-    Collection :#KeyExpression#[2]  ~@Collection@  @7:3-7:55
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @7:7-7:20
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @7:7-7:20
-        AtomicValue  'inner' :@String@[1]  ~@AtomicValue@  @7:14-7:20
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @7:23-7:54
-        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @7:23-7:54
-        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@ArrowInvocation@  @7:38-7:54
+    Variable c :#test::copy::parentRefSelfMap::Container##[1]#  ~@VariableExpression@  @21:4-21:5
+    Collection :#KeyExpression#[2]  ~@Collection@  @21:3-21:55
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:7-21:20
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @21:7-21:20
+        AtomicValue  'inner' :@String@[1]  ~@AtomicValue@  @21:14-21:20
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:23-21:54
+        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @21:23-21:54
+        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@ArrowInvocation@  @21:38-21:54
           typeParam T -> #String#
           typeParam V -> #String#
           mulParam m -> #[*]#
-          DotApplication test::copy::parentRefSelfMap::Container.items :#String##[*]#  ~@DotApplication@  @7:31-7:37
-            Variable ~ :#test::copy::parentRefSelfMap::Container##[1]#  ~@VariableExpression@  @7:31-7:37
-          Lambda(s:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @7:44-7:53
-            FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @7:46-7:53
-              Variable s :#String##[1]#  ~@VariableExpression@  @7:46-7:47
-              AtomicValue  '!' :@String@[1]  ~@AtomicValue@  @7:51-7:53
+          DotApplication test::copy::parentRefSelfMap::Container.items :#String##[*]#  ~@DotApplication@  @21:31-21:37
+            Variable ~ :#test::copy::parentRefSelfMap::Container##[1]#  ~@VariableExpression@  @21:31-21:37
+          Lambda(s:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @21:44-21:53
+            FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @21:46-21:53
+              Variable s :#String##[1]#  ~@VariableExpression@  @21:46-21:47
+              AtomicValue  '!' :@String@[1]  ~@AtomicValue@  @21:51-21:53
 
-class test::copy::parentRefSelfMap::Container extends Any  ~Class<test::copy::parentRefSelfMap::Container>  @10:1-14:1
+class test::copy::parentRefSelfMap::Container extends Any  ~Class<test::copy::parentRefSelfMap::Container>  @24:1-28:1
   property name :@String@[1]  ~Property<test::copy::parentRefSelfMap::Container, @String@|1>
   property items :@String@[*]  ~Property<test::copy::parentRefSelfMap::Container, @String@|*>
 
 ###ReverseIndex
-meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
   test::copy::parentRefSelfMap::testCopySelfMap__Any_MANY_
-meta::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
   test::copy::parentRefSelfMap::testCopySelfMap__Any_MANY_
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::copy::parentRefSelfMap::testCopySelfMap__Any_MANY_
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test::copy::parentRefSelfMap::testCopySelfMap__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::copy::parentRefSelfMap::testCopySelfMap__Any_MANY_
-meta::pure::functions::string::plus_String_1__String_1__String_1_:
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
   test::copy::parentRefSelfMap::testCopySelfMap__Any_MANY_
 test::copy::parentRefSelfMap::Container:
   test::copy::parentRefSelfMap::testCopySelfMap__Any_MANY_

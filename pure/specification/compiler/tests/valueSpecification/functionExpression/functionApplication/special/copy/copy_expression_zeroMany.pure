@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::copy::zeroMany::*;
 
@@ -14,37 +28,37 @@ Class test::copy::zeroMany::Node
 
 ###CompiledGraph
 function test::copy::zeroMany::testCopyOfCollection_Node_1__Any_MANY_(node:test::copy::zeroMany::Node[1]):@Any@[*]  ~UserDefinedFunction<{test::copy::zeroMany::Node[1]->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::zeroMany::Node##[*]#  ~@FunctionInvocation@  @6:3-6:49
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::zeroMany::Node##[*]#  ~@FunctionInvocation@  @20:3-20:49
     typeParam T -> #test::copy::zeroMany::Node#
     mulParam m -> #[*]#
-    AtomicValue  'renamed' :@String@[1]  ~@AtomicValue@  @6:7-6:13
-    FunctionInvocation map_T_m__Function_1__V_m_ :#test::copy::zeroMany::Node##[*]#  ~@FunctionInvocation@  @6:17-6:49
+    AtomicValue  'renamed' :@String@[1]  ~@AtomicValue@  @20:7-20:13
+    FunctionInvocation map_T_m__Function_1__V_m_ :#test::copy::zeroMany::Node##[*]#  ~@FunctionInvocation@  @20:17-20:49
       typeParam T -> #test::copy::zeroMany::Node#
       typeParam V -> #test::copy::zeroMany::Node#
       mulParam m -> #[*]#
-      DotApplication test::copy::zeroMany::Node.children :#test::copy::zeroMany::Node##[*]#  ~@DotApplication@  @6:23-6:31
-        Variable node :#test::copy::zeroMany::Node##[1]#  ~@VariableExpression@  @6:18-6:22
+      DotApplication test::copy::zeroMany::Node.children :#test::copy::zeroMany::Node##[*]#  ~@DotApplication@  @20:23-20:31
+        Variable node :#test::copy::zeroMany::Node##[1]#  ~@VariableExpression@  @20:18-20:22
       Lambda(_automap:#test::copy::zeroMany::Node#[1]) :#LambdaFunction<#{#test::copy::zeroMany::Node#[1]->#test::copy::zeroMany::Node##[1]#}#>#[1]  ~@AtomicValue@
-        FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::zeroMany::Node##[1]#  ~@FunctionInvocation@  @6:17-6:49
+        FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::zeroMany::Node##[1]#  ~@FunctionInvocation@  @20:17-20:49
           typeParam T -> #test::copy::zeroMany::Node#
           Variable _automap :#test::copy::zeroMany::Node##[1]#  ~@VariableExpression@
-          Collection :#KeyExpression#[1]  ~@Collection@  @6:17-6:49
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:33-6:48
-              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:33-6:48
-              AtomicValue  'renamed' :@String@[1]  ~@AtomicValue@  @6:40-6:48
+          Collection :#KeyExpression#[1]  ~@Collection@  @20:17-20:49
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:33-20:48
+              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @20:33-20:48
+              AtomicValue  'renamed' :@String@[1]  ~@AtomicValue@  @20:40-20:48
 
-class test::copy::zeroMany::Node extends Any  ~Class<test::copy::zeroMany::Node>  @9:1-13:1
+class test::copy::zeroMany::Node extends Any  ~Class<test::copy::zeroMany::Node>  @23:1-27:1
   property name :@String@[1]  ~Property<test::copy::zeroMany::Node, @String@|1>
   property children :test::copy::zeroMany::Node[*]  ~Property<test::copy::zeroMany::Node, test::copy::zeroMany::Node|*>
 
 ###ReverseIndex
-meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
   test::copy::zeroMany::testCopyOfCollection_Node_1__Any_MANY_
-meta::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
   test::copy::zeroMany::testCopyOfCollection_Node_1__Any_MANY_
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::copy::zeroMany::testCopyOfCollection_Node_1__Any_MANY_
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test::copy::zeroMany::testCopyOfCollection_Node_1__Any_MANY_
 test::copy::zeroMany::Node:
   test::copy::zeroMany::Node.children

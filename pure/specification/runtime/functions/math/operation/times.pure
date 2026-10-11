@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 native function
     <<PCT.function>>
@@ -21,37 +22,37 @@ native function
         PCT.grammarDoc='5 * 2',
         PCT.grammarCharacters='*'
     }
-    meta::pure::functions::math::times(left:Integer[1], right:Integer[1]):Integer[1];
+    platform::pure::functions::math::times(left:Integer[1], right:Integer[1]):Integer[1];
 
-native function <<PCT.function>> meta::pure::functions::math::times(left:Float[1], right:Float[1]):Float[1];
+native function <<PCT.function>> platform::pure::functions::math::times(left:Float[1], right:Float[1]):Float[1];
 
-native function <<PCT.function>> meta::pure::functions::math::times(left:Decimal[1], right:Decimal[1]):Decimal[1];
+native function <<PCT.function>> platform::pure::functions::math::times(left:Decimal[1], right:Decimal[1]):Decimal[1];
 
-native function <<PCT.function>> meta::pure::functions::math::times(left:Number[1], right:Number[1]):Number[1];
+native function <<PCT.function>> platform::pure::functions::math::times(left:Number[1], right:Number[1]):Number[1];
 
-function <<PCT.test>> meta::pure::functions::math::tests::times::testSimpleTimes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::times::testSimpleTimes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(6, $f->eval(|3 * 2));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::times::testComplexTimes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::times::testComplexTimes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(420, $f->eval(|3 * (4 * 5) * 7));
     assertEquals(420, $f->eval(|3 * 4 * 5 * 7));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::times::testNegativeTimes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::times::testNegativeTimes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(-6, $f->eval(|3 * -2));
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::times::testFloatTimes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::times::testFloatTimes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEqWithinTolerance(0.75, $f->eval(|1.5 * 0.5), 0.001);
     assertEqWithinTolerance(2.1, $f->eval(|3 * 0.7), 0.001);
 }
 
-function <<PCT.test>> meta::pure::functions::math::tests::times::testDecimalTimes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::times::testDecimalTimes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(353791.470d, $f->eval(|times(19.905d,17774)));
     assertEquals(353791.470d, $f->eval(|19.905d*17774));
@@ -63,7 +64,7 @@ function <<PCT.test>> meta::pure::functions::math::tests::times::testDecimalTime
 // In BigDecimal it's 0.02 exactly. If times_Decimal unwraps to Double for the
 // multiply (as it did before the BigDecimal-everywhere fix), the test fails;
 // if it stays in BigDecimal end-to-end, it passes.
-function <<PCT.test>> meta::pure::functions::math::tests::times::testDecimalTimesPreservesPrecision<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::math::tests::times::testDecimalTimesPreservesPrecision<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(0.02d, $f->eval(|0.1d * 0.2d));
 }

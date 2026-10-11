@@ -1,10 +1,25 @@
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::metamodel::pointer::*;
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import platform::pure::compiler::helper::type::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::metamodel::pointer::*;
 
 // Compare two types by path — equivalent to Java's pointer equality since Java resolves to unique singletons.
 // In Pure, types loaded from PDB may be different instances for the same type, so we compare by path.
-function meta::pure::compiler::helper::type::typeEquals(t1:Type[1], t2:Type[1]):Boolean[1]
+function platform::pure::compiler::helper::type::typeEquals(t1:Type[1], t2:Type[1]):Boolean[1]
 {
     if($t1 == $t2,
         | true,
@@ -24,22 +39,22 @@ function meta::pure::compiler::helper::type::typeEquals(t1:Type[1], t2:Type[1]):
 // Compare by path so pointer-wrapped Anys still register as the top type.
 // {@code pe.name} reads the local name slot — empty on TempCompilerPointer —
 // and would falsely return {@code false} for {@code ClassPointer(Any)}.
-function meta::pure::compiler::helper::type::isTopType(t:Type[1]):Boolean[1]
+function platform::pure::compiler::helper::type::isTopType(t:Type[1]):Boolean[1]
 {
     $t->match(
         [
-            pe : PackageableElement[1] | $pe->elementToPath() == 'meta::pure::metamodel::type::Any',
+            pe : PackageableElement[1] | $pe->elementToPath() == 'platform::pure::metamodel::type::Any',
             a  : Any[1] | false
         ]
     )
 }
 
 // See {@link isTopType} — path-based to handle pointer-wrapped Nil.
-function meta::pure::compiler::helper::type::isBottomType(t:Type[1]):Boolean[1]
+function platform::pure::compiler::helper::type::isBottomType(t:Type[1]):Boolean[1]
 {
     $t->match(
         [
-            pe : PackageableElement[1] | $pe->elementToPath() == 'meta::pure::metamodel::type::Nil',
+            pe : PackageableElement[1] | $pe->elementToPath() == 'platform::pure::metamodel::type::Nil',
             a  : Any[1] | false
         ]
     )
@@ -48,7 +63,7 @@ function meta::pure::compiler::helper::type::isBottomType(t:Type[1]):Boolean[1]
 // Pointers carry only {@code .path} — {@code .generalizations} reads empty
 // on them. Deref to the live element before walking ancestors so a
 // pointer-wrapped type still reports its parent chain.
-function meta::pure::compiler::helper::type::directSupertypes(t:Type[1], context:meta::pure::compiler::CompilerContext[1]):Type[*]
+function platform::pure::compiler::helper::type::directSupertypes(t:Type[1], context:platform::pure::compiler::CompilerContext[1]):Type[*]
 {
     $t->derefTypeIfPointer($context)->toOne().generalizations->map(g | $g.general->rawType())
 }
@@ -58,11 +73,11 @@ function meta::pure::compiler::helper::type::directSupertypes(t:Type[1], context
 // PackageableElement (`Type extends Any`), so casting one is a type error. The
 // hosts used to differ here: Truffle exempted a TypeParameter VALUE from the
 // cast check while a compiled host checked it and threw.
-function meta::pure::compiler::helper::type::typeName(t:Type[1]):String[0..1]
+function platform::pure::compiler::helper::type::typeName(t:Type[1]):String[0..1]
 {
     $t->match([
-        pe : meta::pure::metamodel::PackageableElement[1]        | $pe.name,
-        tp : meta::pure::metamodel::type::generics::TypeParameter[1] | $tp.name,
+        pe : platform::pure::metamodel::PackageableElement[1]        | $pe.name,
+        tp : platform::pure::metamodel::type::generics::TypeParameter[1] | $tp.name,
         other : Type[1]                                          | []
     ]);
 }
@@ -78,7 +93,7 @@ function meta::pure::compiler::helper::type::typeName(t:Type[1]):String[0..1]
 // identity / path comparisons don't need to deref — pointers are still
 // PackageableElement subclasses, so `elementToPath` and `instanceOf<parent>`
 // work unchanged.
-function meta::pure::compiler::helper::type::derefTypeIfPointer(t:Type[0..1], context:meta::pure::compiler::CompilerContext[1]):Type[0..1]
+function platform::pure::compiler::helper::type::derefTypeIfPointer(t:Type[0..1], context:platform::pure::compiler::CompilerContext[1]):Type[0..1]
 {
     $t->match([
         ptr   : TempCompilerPointer[1] | $ptr->dereferencePointer($context)->cast(@Type),
@@ -99,7 +114,7 @@ function meta::pure::compiler::helper::type::derefTypeIfPointer(t:Type[0..1], co
 // covers source elements + universe-reachable built-ins. A miss is reported via
 // {@code println} so coverage gaps are visible during development; callers fall
 // back to a full C3 walk in that case.
-function meta::pure::compiler::helper::type::linearize(t:Type[1], context:meta::pure::compiler::CompilerContext[1]):String[*]
+function platform::pure::compiler::helper::type::linearize(t:Type[1], context:platform::pure::compiler::CompilerContext[1]):String[*]
 {
     if(!$t->instanceOf(PackageableElement),
         | [],
@@ -115,7 +130,7 @@ function meta::pure::compiler::helper::type::linearize(t:Type[1], context:meta::
 // resolve once at the entry, then go through the cached 1-arg overload. This
 // keeps the hot {@code findCommonType} caller on the cache fast path instead of
 // walking generalizations on every call.
-function meta::pure::compiler::helper::type::linearize(t:Type[1], resolve:Function<{Type[1]->Type[1]}>[1], context:meta::pure::compiler::CompilerContext[1]):String[*]
+function platform::pure::compiler::helper::type::linearize(t:Type[1], resolve:Function<{Type[1]->Type[1]}>[1], context:platform::pure::compiler::CompilerContext[1]):String[*]
 {
     $resolve->eval($t)->linearize($context)
 }
@@ -125,7 +140,7 @@ function meta::pure::compiler::helper::type::linearize(t:Type[1], resolve:Functi
 // during cache build we don't trigger spurious miss prints on every ancestor:
 // the cache is empty during the build, and entries are only inserted in bulk
 // at the end.
-function meta::pure::compiler::helper::type::linearizeWalk(t:Type[1], context:meta::pure::compiler::CompilerContext[1]):String[*]
+function platform::pure::compiler::helper::type::linearizeWalk(t:Type[1], context:platform::pure::compiler::CompilerContext[1]):String[*]
 {
     if(!$t->instanceOf(PackageableElement),
         | [],
@@ -150,7 +165,7 @@ function meta::pure::compiler::helper::type::linearizeWalk(t:Type[1], context:me
     );
 }
 
-function meta::pure::compiler::helper::type::c3merge(lists:List<String>[*]):String[*]
+function platform::pure::compiler::helper::type::c3merge(lists:List<String>[*]):String[*]
 {
     let nonEmpty = $lists->filter(l | $l.values->isNotEmpty());
     if($nonEmpty->isEmpty(),
@@ -166,7 +181,7 @@ function meta::pure::compiler::helper::type::c3merge(lists:List<String>[*]):Stri
     );
 }
 
-function meta::pure::compiler::helper::type::subtypeOf(sub:Type[1], super:Type[1], context:meta::pure::compiler::CompilerContext[1]):Boolean[1]
+function platform::pure::compiler::helper::type::subtypeOf(sub:Type[1], super:Type[1], context:platform::pure::compiler::CompilerContext[1]):Boolean[1]
 {
     if([pair(| typeEquals($sub, $super), | true),
         pair(| $sub->isBottomType() || $super->isTopType(), | true),
@@ -176,17 +191,17 @@ function meta::pure::compiler::helper::type::subtypeOf(sub:Type[1], super:Type[1
     );
 }
 
-function meta::pure::compiler::helper::type::findCommonType(types:Type[*], context:meta::pure::compiler::CompilerContext[1]):Type[0..1]
+function platform::pure::compiler::helper::type::findCommonType(types:Type[*], context:platform::pure::compiler::CompilerContext[1]):Type[0..1]
 {
     $types->findCommonType(false, $context)
 }
 
-function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contravariant:Boolean[1], context:meta::pure::compiler::CompilerContext[1]):Type[0..1]
+function platform::pure::compiler::helper::type::findCommonType(types:Type[*], contravariant:Boolean[1], context:platform::pure::compiler::CompilerContext[1]):Type[0..1]
 {
     findCommonType($types, $contravariant, {x:Type[1] | $x}, $context);
 }
 
-function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contravariant:Boolean[1], resolve:Function<{Type[1]->Type[1]}>[1], context:meta::pure::compiler::CompilerContext[1]):Type[0..1]
+function platform::pure::compiler::helper::type::findCommonType(types:Type[*], contravariant:Boolean[1], resolve:Function<{Type[1]->Type[1]}>[1], context:platform::pure::compiler::CompilerContext[1]):Type[0..1]
 {
     if([pair(| $types->isEmpty(), | []),
         pair(| $types->size() == 1, | $types->at(0))],
@@ -227,7 +242,7 @@ function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contr
 
 // Walk the type's generalization chain to find a Type whose path matches.
 // Used by findCommonType to convert a c3merge path result back to a Type.
-function meta::pure::compiler::helper::type::findTypeByPath(t:Type[1], path:String[1], context:meta::pure::compiler::CompilerContext[1]):Type[0..1]
+function platform::pure::compiler::helper::type::findTypeByPath(t:Type[1], path:String[1], context:platform::pure::compiler::CompilerContext[1]):Type[0..1]
 {
     // Pointers carry only path/element — no `generalizations` slot — so
     // walking their supertypes returns empty. Deref ONCE to the live target
@@ -243,30 +258,30 @@ function meta::pure::compiler::helper::type::findTypeByPath(t:Type[1], path:Stri
 }
 
 
-function meta::pure::compiler::helper::type::isFunctionType(t:Type[1], context:meta::pure::compiler::CompilerContext[1]):Boolean[1]
+function platform::pure::compiler::helper::type::isFunctionType(t:Type[1], context:platform::pure::compiler::CompilerContext[1]):Boolean[1]
 {
-    $t->linearize($context)->contains('meta::pure::metamodel::function::Function')
+    $t->linearize($context)->contains('platform::pure::metamodel::function::Function')
 }
 
 // Tests
 
-function <<test.Test>> meta::pure::compiler::helper::type::tests::testIsTopType():Boolean[1]
+function <<test.Test>> platform::pure::compiler::helper::type::tests::testIsTopType():Boolean[1]
 {
     assert(Any->isTopType());
     assertFalse(String->isTopType());
     assertFalse(Integer->isTopType());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::type::tests::testIsBottomType():Boolean[1]
+function <<test.Test>> platform::pure::compiler::helper::type::tests::testIsBottomType():Boolean[1]
 {
     assert(Nil->isBottomType());
     assertFalse(Any->isBottomType());
     assertFalse(String->isBottomType());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::type::tests::testLinearize():Boolean[1]
+function <<test.Test>> platform::pure::compiler::helper::type::tests::testLinearize():Boolean[1]
 {
-    let ctx = meta::pure::compiler::newPlainCompilerContext();
+    let ctx = platform::pure::compiler::newPlainCompilerContext();
     let anyPath = Any->elementToPath();
     let numberPath = Number->elementToPath();
     let integerPath = Integer->elementToPath();
@@ -299,9 +314,9 @@ function <<test.Test>> meta::pure::compiler::helper::type::tests::testLinearize(
     assertEquals($anyPath, $floatLin->at(2));
 }
 
-function <<test.Test>> meta::pure::compiler::helper::type::tests::testSubtypeOf():Boolean[1]
+function <<test.Test>> platform::pure::compiler::helper::type::tests::testSubtypeOf():Boolean[1]
 {
-    let ctx = meta::pure::compiler::newPlainCompilerContext();
+    let ctx = platform::pure::compiler::newPlainCompilerContext();
     assert(Integer->subtypeOf(Integer, $ctx));
     assert(Integer->subtypeOf(Number, $ctx));
     assert(Integer->subtypeOf(Any, $ctx));
@@ -312,9 +327,9 @@ function <<test.Test>> meta::pure::compiler::helper::type::tests::testSubtypeOf(
     assert(String->subtypeOf(Any, $ctx));
 }
 
-function <<test.Test>> meta::pure::compiler::helper::type::tests::testFindCommonType():Boolean[1]
+function <<test.Test>> platform::pure::compiler::helper::type::tests::testFindCommonType():Boolean[1]
 {
-    let ctx = meta::pure::compiler::newPlainCompilerContext();
+    let ctx = platform::pure::compiler::newPlainCompilerContext();
     let sameTypes = [Integer, Integer];
     assertEquals(Integer, $sameTypes->findCommonType($ctx));
     let numTypes = [Integer, Float];
@@ -335,9 +350,9 @@ function <<test.Test>> meta::pure::compiler::helper::type::tests::testFindCommon
 }
 
 
-function <<test.Test>> meta::pure::compiler::helper::type::tests::testIsFunctionType():Boolean[1]
+function <<test.Test>> platform::pure::compiler::helper::type::tests::testIsFunctionType():Boolean[1]
 {
-    let ctx = meta::pure::compiler::newPlainCompilerContext();
+    let ctx = platform::pure::compiler::newPlainCompilerContext();
     assertFalse(Integer->isFunctionType($ctx));
     assertFalse(String->isFunctionType($ctx));
     assertFalse(Class->isFunctionType($ctx));

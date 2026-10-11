@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::boolean::tests::equalitymodel::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::boolean::tests::equalitymodel::*;
+import platform::pure::test::pct::*;
 
 native function
     <<PCT.function>>
     {
         doc.doc='General equality. Identity, primitive equality, collection equality, and model-defined equality. ' +
                 'For model-defined equality, the properties used to define equality should be given the ' +
-                'meta::pure::profiles::equality.Key stereotype. Then two instances are equal if all of the ' +
+                'platform::pure::profiles::equality.Key stereotype. Then two instances are equal if all of the ' +
                 'properties with this stereotype have equal values.',
         PCT.grammarDoc='$first == $second',
         PCT.grammarCharacters='=='
     }
-    meta::pure::functions::boolean::equal(left:Any[*], right:Any[*]):Boolean[1];
+    platform::pure::functions::boolean::equal(left:Any[*], right:Any[*]):Boolean[1];
 
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualInteger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualInteger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|6 == 6));
     assert($f->eval(|equal(6, 6)));
@@ -38,7 +39,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     assert($f->eval(|!equal(6, 7)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualFloat<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualFloat<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|6.3 == 6.3));
     assert($f->eval(|equal(6.3, 6.3)));
@@ -48,7 +49,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     assert($f->eval(|!equal(6.3, 7.8)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|'ab' == 'ab'));
     assert($f->eval(|equal('ab', 'ab')));
@@ -58,7 +59,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     assert($f->eval(|!equal('ab', 'cd')));
 }
 
-function <<PCT.test>>  meta::pure::functions::boolean::tests::equality::equal::testEqualDate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>>  platform::pure::functions::boolean::tests::equality::equal::testEqualDate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|%2014-02-27T05:01:35.231+0000 == %2014-02-27T05:01:35.231+0000));
     assert($f->eval(|equal(%2014-02-27T05:01:35.231+0000, %2014-02-27T05:01:35.231+0000)));
@@ -68,7 +69,7 @@ function <<PCT.test>>  meta::pure::functions::boolean::tests::equality::equal::t
     assert($f->eval(|!equal(%2014-02-27T05:01:35.231+0000, %2014-02-27T05:01:35.231-0500)));
 }
 
-function <<PCT.test>>  meta::pure::functions::boolean::tests::equality::equal::testEqualDateStrictYear<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>>  platform::pure::functions::boolean::tests::equality::equal::testEqualDateStrictYear<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|%2014 == %2014));
     assert($f->eval(|equal(%2014, %2014)));
@@ -78,7 +79,7 @@ function <<PCT.test>>  meta::pure::functions::boolean::tests::equality::equal::t
     assert($f->eval(|!equal(%2014, %2013)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualBoolean<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualBoolean<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|true == true));
     assert($f->eval(|equal(true, true)));
@@ -90,7 +91,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     assert($f->eval(|!equal(false, true)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualEnum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualEnum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|equal(TestEnum1.FIRST, TestEnum1.FIRST)));
     assert($f->eval(|TestEnum1.FIRST == TestEnum1.FIRST));
@@ -119,7 +120,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     assert($f->eval(|$x != TestEnum1.SECOND));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualVarIdentity<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualVarIdentity<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let x = 6;
     assert($f->eval(|$x == $x));
@@ -134,7 +135,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     assert($f->eval(|equal($instance, $instance)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualNonPrimitive<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualNonPrimitive<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let side1 = ^SideClass(stringId='firstSide', intId=1);
     let side2 = ^SideClass(stringId='firstSide', intId=1);
@@ -217,7 +218,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     assert($f->eval(|!equal($otherBot12, $otherBot21)));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualPrimitiveCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualPrimitiveCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|['a', 'b'] == ['a', 'b']));
     assert($f->eval(|equal(['a', 'b'], ['a', 'b'])));
@@ -235,7 +236,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     assertFalse($f->eval(|equal(['a', 'b'], ['b', 'a'])));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualRecursivePrimitiveCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualRecursivePrimitiveCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let side1 = ^SideClass(stringId='firstSide', intId=1);
     let side2 = ^SideClass(stringId='firstSide', intId=1);
@@ -261,7 +262,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     assertFalse($f->eval(|equal([$bot11, $bot21], [$bot11, $bot12])));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualMixedCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualMixedCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let side1 = ^SideClass(stringId='firstSide', intId=1);
     let side2 = ^SideClass(stringId='firstSide', intId=1);
@@ -287,7 +288,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     assertFalse($f->eval(|equal([$bot11, $bot21], [$bot11, 'a'])));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualEmptyCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualEmptyCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|[] == []));
     assert($f->eval(|equal([], [])));
@@ -307,7 +308,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
 
 // Instances of a class without <<equality.Key>> properties are never equal
 // (only identity makes them equal). The old fallback incorrectly returned true.
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualNoKeyClassInstancesNotEqual<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualNoKeyClassInstancesNotEqual<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertFalse($f->eval(|
         let a = ^NoKeyClass(name='x', value=1);
@@ -316,7 +317,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualNoKeyClassSameInstanceEqual<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualNoKeyClassSameInstanceEqual<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
         let a = ^NoKeyClass(name='x', value=1);
@@ -324,7 +325,7 @@ function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::te
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualPrimitiveExtension<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::boolean::tests::equality::equal::testEqualPrimitiveExtension<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|equal(1, 1->cast(@ExtendedInteger))));
     assert($f->eval(|equal(1->cast(@ExtendedInteger), 1)));

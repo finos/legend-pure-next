@@ -1,8 +1,23 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage;
 
 import org.finos.legend.pure.m3.module.inMemoryModule.InMemoryModule;
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.type.FunctionTypeFlatBufferWrapper;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.type.FunctionTypeFlatBufferWrapper;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.list.MutableList;
@@ -84,7 +99,7 @@ public class PureLanguageExtension implements LanguageExtension
             org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndexEntry fbEntry = index.entries(i);
             if (fbEntry != null)
             {
-                meta.pure.metamodel.type.FunctionType functionType =
+                platform.pure.metamodel.type.FunctionType functionType =
                         new FunctionTypeFlatBufferWrapper(fbEntry.functionType(), resolver);
                 FunctionIndexEntry entry = fbEntry.isNative()
                         ? new NativeFunctionIndexEntry(fbEntry.fullPath(), fbEntry.functionName(), functionType, resolver)
@@ -152,7 +167,7 @@ public class PureLanguageExtension implements LanguageExtension
     }
 
     @Override
-    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context)
+    public PackageableElement firstPass(platform.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model, CompilationContext context)
     {
         return pureLanguageCompilerExtension.firstPass(grammar, model, context);
     }
@@ -180,7 +195,7 @@ public class PureLanguageExtension implements LanguageExtension
     }
 
     @Override
-    public List<meta.pure.protocol.grammar.PackageableElement> parseSection(String content, String sourceId, int lineOffset)
+    public List<platform.pure.protocol.grammar.PackageableElement> parseSection(String content, String sourceId, int lineOffset)
     {
         return parser.parseSection(content, sourceId, lineOffset);
     }

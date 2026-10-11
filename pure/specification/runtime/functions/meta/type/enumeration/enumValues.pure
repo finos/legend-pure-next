@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::meta::*;
-import meta::pure::functions::meta::tests::enumValues::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::meta::*;
+import platform::pure::functions::meta::tests::enumValues::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::test::pct::*;
 
 // Returns the values of an enumeration as Enum instances.
 //
@@ -25,24 +26,24 @@ import meta::pure::test::pct::*;
 // LambdaFunction whose first expression is an AtomicValue holding the
 // actual Enum instance. Both `MyEnum.SOME_VALUE` and the values returned
 // here are the same Enum instances.
-function meta::pure::functions::meta::enumValues<E>(enumeration:Enumeration<E>[1]): meta::pure::metamodel::type::Enum[*]
+function platform::pure::functions::meta::enumValues<E>(enumeration:Enumeration<E>[1]): platform::pure::metamodel::type::Enum[*]
 {
     $enumeration.properties->map(p |
-        $p.defaultValue->toOne().expressionSequence->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@meta::pure::metamodel::type::Enum)
+        $p.defaultValue->toOne().expressionSequence->at(0)->cast(@platform::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@platform::pure::metamodel::type::Enum)
     );
 }
 
-Enum <<test.TestDependency>> meta::pure::functions::meta::tests::enumValues::TestColor
+Enum <<test.TestDependency>> platform::pure::functions::meta::tests::enumValues::TestColor
 {
     RED, GREEN, BLUE
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::enumValues::testEnumValuesReturnsAllInOrder<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEnumValuesReturnsAllInOrder<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(['RED', 'GREEN', 'BLUE'], $f->eval(|TestColor->enumValues().name));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::enumValues::testEnumValuesMatchLiterals<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::enumValues::testEnumValuesMatchLiterals<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals([TestColor.RED, TestColor.GREEN, TestColor.BLUE], $f->eval(|TestColor->enumValues()));
 }

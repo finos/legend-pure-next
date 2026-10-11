@@ -1,3 +1,18 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.truffle.compiler.helper;
 
 import org.finos.legend.pure.truffle.compiler.module.MetadataAccess;
@@ -15,10 +30,10 @@ public final class _GenericType
     private static final int SLOT_RETURN_TYPE = org.finos.legend.pure.truffle.compiler.module.PureClassRegistry.globalSlot("returnType");
     private _GenericType() {}
 
-    private static final String GENERIC_TYPE_VALUE_PATH = "meta::pure::metamodel::type::generics::GenericTypeValue";
-    private static final String FUNCTION_TYPE_PATH = "meta::pure::metamodel::type::FunctionType";
+    private static final String GENERIC_TYPE_VALUE_PATH = "platform::pure::metamodel::type::generics::GenericTypeValue";
+    private static final String FUNCTION_TYPE_PATH = "platform::pure::metamodel::type::FunctionType";
     private static final String VARIABLE_EXPRESSION_PATH =
-            "meta::pure::metamodel::valuespecification::VariableExpression";
+            "platform::pure::metamodel::valuespecification::VariableExpression";
 
     // Pre-resolved global slot indices for the properties this helper reads
     // hot on the type-inference path. Lets the PDO fast path bypass the
@@ -46,7 +61,7 @@ public final class _GenericType
     public static Object buildUserDefinedGenericType(Object type, MetadataAccess resolver)
     {
         Object gt = org.finos.legend.pure.truffle.execution.TruffleInstanceFactory.createInstance(
-                "meta::pure::metamodel::type::generics::UserDefinedGenericType", resolver);
+                "platform::pure::metamodel::type::generics::UserDefinedGenericType", resolver);
         if (type != null)
         {
             _Any.write(gt, "type", type);
@@ -58,7 +73,7 @@ public final class _GenericType
         // from Java's compiler.pdb encoding.
         if (resolver != null)
         {
-            Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_type_generics_UserDefinedGenericType");
+            Object canonical = resolver.getElement("platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType");
             if (canonical != null)
             {
                 _Any.write(gt, "classifierGenericType", canonical);

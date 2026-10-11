@@ -20,7 +20,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "value" : "meta::pure::metamodel::type::primitives::String"
+              "value" : "platform::pure::metamodel::type::primitives::String"
             }
           },
           "p_sourceInformation" : {
@@ -104,7 +104,7 @@
                   "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
-                    "value" : "meta::pure::metamodel::type::primitives::String"
+                    "value" : "platform::pure::metamodel::type::primitives::String"
                   }
                 },
                 "p_sourceInformation" : {
@@ -121,7 +121,7 @@
                   "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
-                    "value" : "meta::pure::metamodel::type::primitives::String"
+                    "value" : "platform::pure::metamodel::type::primitives::String"
                   }
                 },
                 "p_sourceInformation" : {
@@ -152,7 +152,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "value" : "meta::pure::metamodel::type::primitives::String"
+              "value" : "platform::pure::metamodel::type::primitives::String"
             }
           },
           "p_sourceInformation" : {
@@ -219,7 +219,7 @@
                   "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
-                    "value" : "meta::pure::metamodel::type::primitives::String"
+                    "value" : "platform::pure::metamodel::type::primitives::String"
                   }
                 },
                 "p_sourceInformation" : {
@@ -236,7 +236,7 @@
                   "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
-                    "value" : "meta::pure::metamodel::type::primitives::String"
+                    "value" : "platform::pure::metamodel::type::primitives::String"
                   }
                 },
                 "p_sourceInformation" : {
@@ -308,7 +308,7 @@
             "_type" : "PointerValue",
             "value" : "None"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
@@ -351,7 +351,7 @@
             "_type" : "PointerValue",
             "value" : "None"
           } ],
-          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "platform::pure::metamodel::function::property::AggregationKind"
         },
         "genericType" : {
           "_type" : "UserDefinedGenericType",

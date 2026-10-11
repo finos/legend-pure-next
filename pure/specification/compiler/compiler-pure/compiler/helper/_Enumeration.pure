@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::compiler::helper::enumeration::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::compiler::helper::enumeration::*;
 
-function meta::pure::compiler::helper::enumeration::resolveEnumValue(enumeration:Enumeration<Any>[1], valueName:String[1]):Enum[0..1]
+function platform::pure::compiler::helper::enumeration::resolveEnumValue(enumeration:Enumeration<Any>[1], valueName:String[1]):Enum[0..1]
 {
     let matched = $enumeration.properties->filter(p | $p.name == $valueName);
     if($matched->isEmpty(),

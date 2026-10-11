@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::function::property::*;
-import meta::pure::metamodel::function::*;
-import meta::pure::metamodel::relationship::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::functions::meta::tests::model::*;
+import platform::pure::test::pct::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::metamodel::function::*;
+import platform::pure::metamodel::relationship::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::functions::meta::tests::model::*;
 
 // Construct a fully formed Enumeration<Any> with the given values. Mirrors
 // newClass's pattern: self-referencing CGT (Enumeration<self>) and uses `~.~`
@@ -31,7 +32,7 @@ import meta::pure::functions::meta::tests::model::*;
 // enumeration. The Enum is built via `new(GenericType[1])` so its CGT can
 // be set to the in-progress enumeration (the `^Enum(...)` form would reject
 // the override since the proposed type isn't the system-derived `Enum`).
-function <<PCT.function>> meta::pure::functions::meta::creation::newEnumeration(name:String[1], package:Package[1], valueNames:String[*]):Enumeration<Any>[1]
+function <<PCT.function>> platform::pure::functions::meta::creation::newEnumeration(name:String[1], package:Package[1], valueNames:String[*]):Enumeration<Any>[1]
 {
     ^Enumeration<Any>(
         name = $name,
@@ -58,7 +59,7 @@ function <<PCT.function>> meta::pure::functions::meta::creation::newEnumeration(
             // Enum value: CGT type = the outer enumeration. `new(GT)`
             // bypasses classifier-override validation. Set name via copy.
             let baseEnum = new(^UserDefinedGenericType(type = ~.~))
-                ->cast(@meta::pure::metamodel::type::Enum);
+                ->cast(@platform::pure::metamodel::type::Enum);
             let namedEnum = ^$baseEnum(name = $vn);
             // Property: CGT = Property<Enumeration<self>, self|1> with
             // multiplicity 1, mirroring the canonical structure built by
@@ -74,7 +75,7 @@ function <<PCT.function>> meta::pure::functions::meta::creation::newEnumeration(
                     ^UserDefinedGenericType(type = ~.~.~)
                 ],
                 multiplicityArguments = PureOne
-            ))->cast(@meta::pure::metamodel::function::property::Property<meta::pure::metamodel::type::Enumeration<meta::pure::metamodel::type::Any>, meta::pure::metamodel::type::Enum|1>);
+            ))->cast(@platform::pure::metamodel::function::property::Property<platform::pure::metamodel::type::Enumeration<platform::pure::metamodel::type::Any>, platform::pure::metamodel::type::Enum|1>);
             ^$baseProp(
                 name = $vn,
                 owner = ~.~,
@@ -83,7 +84,7 @@ function <<PCT.function>> meta::pure::functions::meta::creation::newEnumeration(
                 genericType = ^UserDefinedGenericType(type = ~.~.~),
                 defaultValue = ^LambdaFunction<{->Any[1]}>(
                     expressionSequence = ^AtomicValue(
-                        value = $namedEnum->cast(@meta::pure::metamodel::type::Any),
+                        value = $namedEnum->cast(@platform::pure::metamodel::type::Any),
                         genericType = ^UserDefinedGenericType(type = ~.~.~.~.~),
                         multiplicity = PureOne
                     )
@@ -93,10 +94,10 @@ function <<PCT.function>> meta::pure::functions::meta::creation::newEnumeration(
     );
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewEnumeration<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::creation::testNewEnumeration<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
-        let en = meta::pure::functions::meta::creation::newEnumeration('TestEnum', ^Package(name='test', package=^Package(name='Root')), ['A', 'B', 'C']);
+        let en = platform::pure::functions::meta::creation::newEnumeration('TestEnum', ^Package(name='test', package=^Package(name='Root')), ['A', 'B', 'C']);
         assert($en->instanceOf(Enumeration));
         assertEquals('TestEnum', $en.name);
         // Should have 3 properties (one per value)
@@ -111,10 +112,10 @@ function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewEnume
     ));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::creation::testNewEnumerationValueCGT<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::creation::testNewEnumerationValueCGT<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|
-        let en = meta::pure::functions::meta::creation::newEnumeration('TestEnum2', ^Package(name='test', package=^Package(name='Root')), ['X', 'Y']);
+        let en = platform::pure::functions::meta::creation::newEnumeration('TestEnum2', ^Package(name='test', package=^Package(name='Root')), ['X', 'Y']);
         let lambda = $en.properties->at(0).defaultValue->toOne();
         // The default value should be an Enum instance
         assertEquals(1, $lambda.expressionSequence->size());

@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::date::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::date::*;
 
-native function <<PCT.function>> meta::pure::functions::date::dateDiff(d1:Date[1], d2:Date[1], du:DurationUnit[1]):Integer[1];
+native function <<PCT.function>> platform::pure::functions::date::dateDiff(d1:Date[1], d2:Date[1], du:DurationUnit[1]):Integer[1];
 
-function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffYears<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testDateDiffYears<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assertEquals(1, $f->eval(|%2015->dateDiff(%2016, DurationUnit.YEARS)));
    assertEquals(-1, $f->eval(|%2016->dateDiff(%2015, DurationUnit.YEARS)));
@@ -28,7 +29,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffYears<Z|y>
    assertEquals(1, $f->eval(|%2015-12-31T23:59:59->dateDiff(%2016-01-01T00:00:01, DurationUnit.YEARS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffMonths<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testDateDiffMonths<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assertEquals(0, $f->eval(|%2016-02-01->dateDiff(%2016-02-01, DurationUnit.MONTHS)));
    assertEquals(0, $f->eval(|%2016-02-01->dateDiff(%2016-02-29, DurationUnit.MONTHS)));
@@ -43,7 +44,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffMonths<Z|y
    assertEquals(12, $f->eval(|%2016-01-01->dateDiff(%2017-01-01, DurationUnit.MONTHS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffWeeks<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testDateDiffWeeks<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assertEquals(0, $f->eval(|%2015-07-05->dateDiff(%2015-07-05, DurationUnit.WEEKS)));
    assertEquals(0, $f->eval(|%2015-07-03->dateDiff(%2015-07-04, DurationUnit.WEEKS)));
@@ -61,7 +62,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffWeeks<Z|y>
    assertEquals(53, $f->eval(|%2016-01-01->dateDiff(%2017-01-01, DurationUnit.WEEKS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffDays<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testDateDiffDays<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assertEquals(0, $f->eval(|%2015-07-07->dateDiff(%2015-07-07, DurationUnit.DAYS)));
    assertEquals(1, $f->eval(|%2015-07-07->dateDiff(%2015-07-08, DurationUnit.DAYS)));
@@ -75,7 +76,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffDays<Z|y>(
    assertEquals(-7, $f->eval(|%2015-01-04->dateDiff(%2014-12-28, DurationUnit.DAYS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffHours<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testDateDiffHours<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assertEquals(0, $f->eval(|%2015-07-07T13:00:00->dateDiff(%2015-07-07T13:00:00, DurationUnit.HOURS)));
    assertEquals(1, $f->eval(|%2015-07-07T13:00:00->dateDiff(%2015-07-07T14:00:00, DurationUnit.HOURS)));
@@ -86,7 +87,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffHours<Z|y>
    assertEquals(0, $f->eval(|%2014-12-01T00:00:00->dateDiff(%2014-12-01T00:59:59, DurationUnit.HOURS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffMinutes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testDateDiffMinutes<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assertEquals(0, $f->eval(|%2015-07-07T13:00:00->dateDiff(%2015-07-07T13:00:00, DurationUnit.MINUTES)));
    assertEquals(1, $f->eval(|%2015-07-07T13:00:00->dateDiff(%2015-07-07T13:01:00, DurationUnit.MINUTES)));
@@ -97,7 +98,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffMinutes<Z|
    assertEquals(0, $f->eval(|%2014-12-01T00:00:00->dateDiff(%2014-12-01T00:00:59, DurationUnit.MINUTES)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffSeconds<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testDateDiffSeconds<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assertEquals(0, $f->eval(|%2015-07-07T13:00:00->dateDiff(%2015-07-07T13:00:00, DurationUnit.SECONDS)));
    assertEquals(1, $f->eval(|%2015-07-07T13:00:00->dateDiff(%2015-07-07T13:00:01, DurationUnit.SECONDS)));
@@ -108,7 +109,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffSeconds<Z|
    assertEquals(7200, $f->eval(|%2015-07-07T23:00:00->dateDiff(%2015-07-08T01:00:00, DurationUnit.SECONDS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffMilliseconds<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testDateDiffMilliseconds<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    assertEquals(0, $f->eval(|%2015-07-07T13:00:00->dateDiff(%2015-07-07T13:00:00, DurationUnit.MILLISECONDS)));
    assertEquals(1 * 1000, $f->eval(|%2015-07-07T13:00:00->dateDiff(%2015-07-07T13:00:01, DurationUnit.MILLISECONDS)));
@@ -119,7 +120,7 @@ function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffMillisecon
    assertEquals(7200 * 1000, $f->eval(|%2015-07-07T23:00:00->dateDiff(%2015-07-08T01:00:00, DurationUnit.MILLISECONDS)));
 }
 
-function <<PCT.test>> meta::pure::functions::date::tests::testDateDiffWithDifferentTimeZones<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::date::tests::testDateDiffWithDifferentTimeZones<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    let ny = parseDate('2014-12-31T23:00:00.000-0500');
    let paris = parseDate('2015-1-1T5:00:00.000+0100');

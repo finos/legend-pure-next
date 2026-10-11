@@ -139,10 +139,10 @@ build-tests:
 # reach exist only on that host.
 test-all: test-translation test-pure-runtime
 
-# Run the translator's own <<test.Test>> suite (meta::external::language::javascript::translation).
+# Run the translator's own <<test.Test>> suite (platform::external::language::javascript::translation).
 test-translation: build-tests _host-generate _depCheck_runtime-pdbs
     @{{header}} 'test-translation'
-    @{{substep}} 'runTests meta::external::language::javascript::translation (JavaScript host)'
+    @{{substep}} 'runTests platform::external::language::javascript::translation (JavaScript host)'
     {{pure_js}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -151,17 +151,17 @@ test-translation: build-tests _host-generate _depCheck_runtime-pdbs
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::external::language::javascript::translation" "{{test_results}}/pure/translation-javascript/pure@cli-javascript.json"
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::external::language::javascript::translation" "{{test_results}}/pure/translation-javascript/pure@cli-javascript.json"
 
-# Run the standard Pure runtime suites over meta::pure::functions on the JavaScript host, plus the
+# Run the standard Pure runtime suites over platform::pure::functions on the JavaScript host, plus the
 # PCT tests through the translator adapter (their failures are reported without failing the build).
 test-pure-runtime: test-pure-runtime-testFunctions test-pure-runtime-PCTs
 
-# Run runTests over meta::pure::functions on the JavaScript host.
+# Run runTests over platform::pure::functions on the JavaScript host.
 test-pure-runtime-testFunctions: build-tests _host-generate _depCheck_runtime-pdbs
     @{{header}} 'test-pure-runtime-testFunctions'
-    @{{substep}} 'runTests meta::pure::functions (JavaScript host)'
+    @{{substep}} 'runTests platform::pure::functions (JavaScript host)'
     {{pure_js}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -170,13 +170,13 @@ test-pure-runtime-testFunctions: build-tests _host-generate _depCheck_runtime-pd
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "meta::pure::functions" "{{test_results}}/spec/functions/pure@cli-javascript.json"
+        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
+        --args "platform::pure::functions" "{{test_results}}/spec/functions/pure@cli-javascript.json"
 
-# Run PCT tests over meta::pure::functions via the translator adapter (lambdas -> JavaScript -> compileModule -> execute).
+# Run PCT tests over platform::pure::functions via the translator adapter (lambdas -> JavaScript -> compileModule -> execute).
 test-pure-runtime-PCTs: build-tests _host-generate _depCheck_runtime-pdbs
     @{{header}} 'test-pure-runtime-PCTs'
-    @{{substep}} 'runPCTTests meta::pure::functions (JavaScript host, translator adapter)'
+    @{{substep}} 'runPCTTests platform::pure::functions (JavaScript host, translator adapter)'
     {{pure_js}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -185,8 +185,8 @@ test-pure-runtime-PCTs: build-tests _host-generate _depCheck_runtime-pdbs
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "meta::external::language::javascript::translation::runPCTTestsViaTranslator_String_1__String_1__String_1_" \
-        --args "meta::pure::functions" "{{test_results}}/spec/pct/javascript-translation@cli-javascript.json" || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
+        --function "platform::external::language::javascript::translation::runPCTTestsViaTranslator_String_1__String_1__String_1_" \
+        --args "platform::pure::functions" "{{test_results}}/spec/pct/javascript-translation@cli-javascript.json" || echo "  PCT failures do not fail the build: they are in the report and on the dashboard"
 
 # Build the Pure -> JavaScript translation gallery as a self-contained HTML page.
 # pure-js prints the returned String to stdout, so a plain redirect is enough.
@@ -230,9 +230,8 @@ _depCheck_emit-pdbs:
         exit 1
     fi
 
-# Remove build/javascript-translation.pdb (and the tests PDB).
+# Remove build/ — the PDBs and anything else this module writes there.
 clean:
     @{{header}} 'clean'
-    @{{substep}} 'remove build/javascript-translation.pdb + javascript-translation-tests.pdb'
-    rm -f {{translation_javascript_out}}/javascript-translation.pdb {{translation_javascript_out}}/javascript-translation-tests.pdb
-    rm -f {{translation_javascript_out}}/javascript-translation-gallery.html
+    @{{substep}} 'remove build/'
+    rm -rf {{translation_javascript_out}}

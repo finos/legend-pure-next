@@ -15,7 +15,7 @@
 
 package org.finos.legend.pure.platform.java.compiler.module.pdbModule;
 
-import org.finos.legend.pure.m3.meta.pure.compiler.pdb.reader.FbsNode;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.FbsNode;
 
 import java.util.ArrayList;
 import java.util.Collections;

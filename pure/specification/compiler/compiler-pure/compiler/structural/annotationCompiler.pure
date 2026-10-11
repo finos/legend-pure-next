@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,30 +13,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::extension::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::functions::lang::*;
-import meta::pure::compiler::structural::sourceInformationCompiler::*;
-import meta::pure::compiler::structural::annotationCompiler::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::compiler::*;
+import platform::pure::metamodel::extension::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::functions::lang::*;
+import platform::pure::compiler::structural::sourceInformationCompiler::*;
+import platform::pure::compiler::structural::annotationCompiler::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::compiler::*;
 
-function meta::pure::compiler::structural::annotationCompiler::compileStereotype(s:meta::pure::protocol::grammar::extension::Stereotype_Pointer[1], acc:CompilerListResult<Stereotype>[1], ownerCtx:String[1]):CompilerListResult<Stereotype>[1]
+function platform::pure::compiler::structural::annotationCompiler::compileStereotype(s:platform::pure::protocol::grammar::extension::Stereotype_Pointer[1], acc:CompilerListResult<Stereotype>[1], ownerCtx:String[1]):CompilerListResult<Stereotype>[1]
 {
     let ctx0 = $acc.context;
     let profileR = $ctx0->resolveElementR($s.value);
     let profileOpt = $profileR.value;
     let ctx = $profileR.context;
     if($profileOpt->isEmpty(),
-        | let siCtx = formatSourceInfo($s->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation, $ctx);
+        | let siCtx = formatSourceInfo($s->cast(@platform::pure::protocol::grammar::type::Any).p_sourceInformation, $ctx);
           let newCtx = ^$ctx(errors += 'The profile \'' + $s.value + '\' can\'t be found in ' + $ownerCtx + $siCtx);
           ^$acc(context = $newCtx);,
         | let profile = $profileOpt->toOne()->cast(@Profile);
           let stereotypeName = $s.extraPointerValues->at(0).value;
           let matched = $profile.p_stereotypes->filter(x | $x.value == $stereotypeName);
           if($matched->isEmpty(),
-              | let siCtx = formatSourceInfo($s.extraPointerValues->at(0).p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx);
+              | let siCtx = formatSourceInfo($s.extraPointerValues->at(0).p_sourceInformation->cast(@platform::pure::protocol::grammar::SourceInformation), $ctx);
                 let newCtx = ^$ctx(errors += 'The stereotype \'' + $stereotypeName + '\' can\'t be found in profile \'' + $s.value + '\' in ' + $ownerCtx + $siCtx);
                 ^$acc(context = $newCtx);,
               | // Record sub-element reference: {@code Profile.stereotypeName}.
@@ -47,7 +48,7 @@ function meta::pure::compiler::structural::annotationCompiler::compileStereotype
     );
 }
 
-function meta::pure::compiler::structural::annotationCompiler::compilePropertyStereotypes(p:meta::pure::protocol::grammar::function::property::Property[1], ctx:CompilerContext[1], ownerCtx:String[1]):CompilerListResult<Stereotype>[1]
+function platform::pure::compiler::structural::annotationCompiler::compilePropertyStereotypes(p:platform::pure::protocol::grammar::function::property::Property[1], ctx:CompilerContext[1], ownerCtx:String[1]):CompilerListResult<Stereotype>[1]
 {
     let propCtx = 'property \'' + $p.name + '\' in ' + $ownerCtx;
     $p.stereotypes->fold({s, acc |
@@ -55,7 +56,7 @@ function meta::pure::compiler::structural::annotationCompiler::compilePropertySt
     }, ^CompilerListResult<Stereotype>(context = $ctx));
 }
 
-function meta::pure::compiler::structural::annotationCompiler::compilePropertyTaggedValues(p:meta::pure::protocol::grammar::function::property::Property[1], ctx:CompilerContext[1], ownerCtx:String[1]):CompilerListResult<TaggedValue>[1]
+function platform::pure::compiler::structural::annotationCompiler::compilePropertyTaggedValues(p:platform::pure::protocol::grammar::function::property::Property[1], ctx:CompilerContext[1], ownerCtx:String[1]):CompilerListResult<TaggedValue>[1]
 {
     let propCtx = 'property \'' + $p.name + '\' in ' + $ownerCtx;
     $p.taggedValues->fold({t, acc |
@@ -63,7 +64,7 @@ function meta::pure::compiler::structural::annotationCompiler::compilePropertyTa
     }, ^CompilerListResult<TaggedValue>(context = $ctx));
 }
 
-function meta::pure::compiler::structural::annotationCompiler::compileTaggedValue(t:meta::pure::protocol::grammar::extension::TaggedValue[1], acc:CompilerListResult<TaggedValue>[1], ownerCtx:String[1]):CompilerListResult<TaggedValue>[1]
+function platform::pure::compiler::structural::annotationCompiler::compileTaggedValue(t:platform::pure::protocol::grammar::extension::TaggedValue[1], acc:CompilerListResult<TaggedValue>[1], ownerCtx:String[1]):CompilerListResult<TaggedValue>[1]
 {
     let ctx0 = $acc.context;
     let profileR = $ctx0->resolveElementR($t.tag.value);
@@ -75,7 +76,7 @@ function meta::pure::compiler::structural::annotationCompiler::compileTaggedValu
           let tagName = $t.tag.extraPointerValues->at(0).value;
           let matched = $profile.p_tags->filter(x | $x.value == $tagName);
           if($matched->isEmpty(),
-              | let siCtx = formatSourceInfo($t.tag.extraPointerValues->at(0).p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx);
+              | let siCtx = formatSourceInfo($t.tag.extraPointerValues->at(0).p_sourceInformation->cast(@platform::pure::protocol::grammar::SourceInformation), $ctx);
                 let newCtx = ^$ctx(errors += 'The tag \'' + $tagName + '\' can\'t be found in profile \'' + $t.tag.value + '\' in ' + $ownerCtx + $siCtx);
                 ^$acc(context = $newCtx);,
               | // Record sub-element reference: {@code Profile.tagName}.

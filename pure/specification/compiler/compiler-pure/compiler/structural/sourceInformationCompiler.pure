@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::*;
-import meta::pure::compiler::*;
-import meta::pure::functions::collection::*;
+import platform::pure::metamodel::*;
+import platform::pure::compiler::*;
+import platform::pure::functions::collection::*;
 
 // Compile a grammar-level SourceInformation to a metamodel-level one,
 // falling back to {@code context.sourceId} when the grammar SI has no
@@ -23,7 +24,7 @@ import meta::pure::functions::collection::*;
 // CompilerContext (set per file in every compile pass — see
 // compiler.pure phases 2/3/4). Every compiled SI must carry the file —
 // LSP go-to-definition, error reporting, and stack frames depend on it.
-function meta::pure::compiler::structural::sourceInformationCompiler::compileSourceInformation(grammarSI:meta::pure::protocol::grammar::SourceInformation[0..1], context:CompilerContext[1]):SourceInformation[0..1]
+function platform::pure::compiler::structural::sourceInformationCompiler::compileSourceInformation(grammarSI:platform::pure::protocol::grammar::SourceInformation[0..1], context:CompilerContext[1]):SourceInformation[0..1]
 {
     $grammarSI->map(si |
         let sid = if($si.sourceId->isNotEmpty(), | $si.sourceId, | $context.sourceId);
@@ -46,7 +47,7 @@ function meta::pure::compiler::structural::sourceInformationCompiler::compileSou
 // (ValueSpecificationEvaluator.formatSourceFrame) and Truffle's
 // PureStackFormatter. A single IDE regex turns any of these into a clickable
 // jump-to-source link.
-function meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo(si:meta::pure::protocol::grammar::SourceInformation[0..1], context:CompilerContext[1]):String[1]
+function platform::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo(si:platform::pure::protocol::grammar::SourceInformation[0..1], context:CompilerContext[1]):String[1]
 {
     if($si->isEmpty(),
         | '',
@@ -62,7 +63,7 @@ function meta::pure::compiler::structural::sourceInformationCompiler::formatSour
     );
 }
 
-function meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo(si:SourceInformation[0..1], context:CompilerContext[1]):String[1]
+function platform::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo(si:SourceInformation[0..1], context:CompilerContext[1]):String[1]
 {
     if($si->isEmpty(),
         | '',

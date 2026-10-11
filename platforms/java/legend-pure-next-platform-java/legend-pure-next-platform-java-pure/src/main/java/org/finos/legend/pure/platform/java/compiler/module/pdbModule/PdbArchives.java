@@ -20,7 +20,7 @@ import java.util.List;
 import org.finos.legend.pure.platform.java.compiler.module.pdbModule.archive.Zip;
 
 /**
- * The `meta::pure::compiler::pdb::archive` natives on this platform: reading the
+ * The `platform::pure::compiler::pdb::archive` natives on this platform: reading the
  * zip container a .pdb is, with {@link Zip}. See archiveRead.pure.
  */
 public final class PdbArchives

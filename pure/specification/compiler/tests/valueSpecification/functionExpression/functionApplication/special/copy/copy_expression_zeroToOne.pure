@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::copy::zeroToOne::*;
 
@@ -14,36 +28,36 @@ Class test::copy::zeroToOne::Node
 
 ###CompiledGraph
 function test::copy::zeroToOne::testCopyOfOptional_Node_1__Any_MANY_(node:test::copy::zeroToOne::Node[1]):@Any@[*]  ~UserDefinedFunction<{test::copy::zeroToOne::Node[1]->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::zeroToOne::Node##[0..1]#  ~@FunctionInvocation@  @6:3-6:42
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::zeroToOne::Node##[0..1]#  ~@FunctionInvocation@  @20:3-20:42
     typeParam T -> #test::copy::zeroToOne::Node#
     mulParam m -> #[0..1]#
-    AtomicValue  'opt' :@String@[1]  ~@AtomicValue@  @6:7-6:9
-    FunctionInvocation map_T_$0_1$__Function_1__V_$0_1$_ :#test::copy::zeroToOne::Node##[0..1]#  ~@FunctionInvocation@  @6:13-6:42
+    AtomicValue  'opt' :@String@[1]  ~@AtomicValue@  @20:7-20:9
+    FunctionInvocation map_T_$0_1$__Function_1__V_$0_1$_ :#test::copy::zeroToOne::Node##[0..1]#  ~@FunctionInvocation@  @20:13-20:42
       typeParam T -> #test::copy::zeroToOne::Node#
       typeParam V -> #test::copy::zeroToOne::Node#
-      DotApplication test::copy::zeroToOne::Node.parent :#test::copy::zeroToOne::Node##[0..1]#  ~@DotApplication@  @6:19-6:25
-        Variable node :#test::copy::zeroToOne::Node##[1]#  ~@VariableExpression@  @6:14-6:18
+      DotApplication test::copy::zeroToOne::Node.parent :#test::copy::zeroToOne::Node##[0..1]#  ~@DotApplication@  @20:19-20:25
+        Variable node :#test::copy::zeroToOne::Node##[1]#  ~@VariableExpression@  @20:14-20:18
       Lambda(_automap:#test::copy::zeroToOne::Node#[1]) :#LambdaFunction<#{#test::copy::zeroToOne::Node#[1]->#test::copy::zeroToOne::Node##[1]#}#>#[1]  ~@AtomicValue@
-        FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::zeroToOne::Node##[1]#  ~@FunctionInvocation@  @6:13-6:42
+        FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::zeroToOne::Node##[1]#  ~@FunctionInvocation@  @20:13-20:42
           typeParam T -> #test::copy::zeroToOne::Node#
           Variable _automap :#test::copy::zeroToOne::Node##[1]#  ~@VariableExpression@
-          Collection :#KeyExpression#[1]  ~@Collection@  @6:13-6:42
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:27-6:41
-              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:27-6:41
-              AtomicValue  'copied' :@String@[1]  ~@AtomicValue@  @6:34-6:41
+          Collection :#KeyExpression#[1]  ~@Collection@  @20:13-20:42
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:27-20:41
+              AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @20:27-20:41
+              AtomicValue  'copied' :@String@[1]  ~@AtomicValue@  @20:34-20:41
 
-class test::copy::zeroToOne::Node extends Any  ~Class<test::copy::zeroToOne::Node>  @9:1-13:1
+class test::copy::zeroToOne::Node extends Any  ~Class<test::copy::zeroToOne::Node>  @23:1-27:1
   property name :@String@[1]  ~Property<test::copy::zeroToOne::Node, @String@|1>
   property parent :test::copy::zeroToOne::Node[0..1]  ~Property<test::copy::zeroToOne::Node, test::copy::zeroToOne::Node|0..1>
 
 ###ReverseIndex
-meta::pure::functions::collection::map_T_$0_1$__Function_1__V_$0_1$_:
+platform::pure::functions::collection::map_T_$0_1$__Function_1__V_$0_1$_:
   test::copy::zeroToOne::testCopyOfOptional_Node_1__Any_MANY_
-meta::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::copy_T_1__KeyExpression_MANY__T_1_:
   test::copy::zeroToOne::testCopyOfOptional_Node_1__Any_MANY_
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::copy::zeroToOne::testCopyOfOptional_Node_1__Any_MANY_
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test::copy::zeroToOne::testCopyOfOptional_Node_1__Any_MANY_
 test::copy::zeroToOne::Node:
   test::copy::zeroToOne::Node.parent

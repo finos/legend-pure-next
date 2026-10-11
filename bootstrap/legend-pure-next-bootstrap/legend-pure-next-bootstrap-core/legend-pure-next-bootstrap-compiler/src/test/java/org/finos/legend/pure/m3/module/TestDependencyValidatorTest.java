@@ -40,7 +40,7 @@ public class TestDependencyValidatorTest
 
     /** `core-tests` owns anything under the shared test corpus; this module owns the rest. */
     private static final Function<String, String> OWNER = path ->
-            path.startsWith("meta::pure::test") || path.contains("::tests::") ? "core-tests" : null;
+            path.startsWith("platform::pure::test") || path.contains("::tests::") ? "core-tests" : null;
 
     private static Function<String, Caller> callers(Map<String, Boolean> isTest)
     {
@@ -55,7 +55,7 @@ public class TestDependencyValidatorTest
     public void failsWhenNonTestCodeReachesIntoATestOnlyDependency()
     {
         List<CompilationError> errors = TestDependencyValidator.validate(
-                Map.of("meta::pure::test::resolveChild_X_1__Y_1_", Set.of("m::translatePackage_String_1__String_1_")),
+                Map.of("platform::pure::test::resolveChild_X_1__Y_1_", Set.of("m::translatePackage_String_1__String_1_")),
                 TEST_DEPS, OWNER,
                 callers(Map.of("m::translatePackage_String_1__String_1_", false)));
         assertEquals(1, errors.size());
@@ -72,7 +72,7 @@ public class TestDependencyValidatorTest
     {
         // This is the whole point of the field — the test half may use it freely.
         assertEquals(List.of(), TestDependencyValidator.validate(
-                Map.of("meta::pure::test::resolveChild_X_1__Y_1_", Set.of("m::renderGallery_String_1__String_1_")),
+                Map.of("platform::pure::test::resolveChild_X_1__Y_1_", Set.of("m::renderGallery_String_1__String_1_")),
                 TEST_DEPS, OWNER,
                 callers(Map.of("m::renderGallery_String_1__String_1_", true))));
     }
@@ -81,7 +81,7 @@ public class TestDependencyValidatorTest
     public void ignoresReferencesIntoModulesThatAreOrdinaryDependencies()
     {
         assertEquals(List.of(), TestDependencyValidator.validate(
-                Map.of("meta::pure::functions::collection::map_T_m__Function_1__V_m_", Set.of("m::f__String_1_")),
+                Map.of("platform::pure::functions::collection::map_T_m__Function_1__V_m_", Set.of("m::f__String_1_")),
                 TEST_DEPS, OWNER,
                 callers(Map.of("m::f__String_1_", false))));
     }
@@ -91,7 +91,7 @@ public class TestDependencyValidatorTest
     {
         // A native, or an element of another module: not ours to police.
         assertEquals(List.of(), TestDependencyValidator.validate(
-                Map.of("meta::pure::test::resolveChild_X_1__Y_1_", Set.of("somewhere::else_X_1_")),
+                Map.of("platform::pure::test::resolveChild_X_1__Y_1_", Set.of("somewhere::else_X_1_")),
                 TEST_DEPS, OWNER, callers(Map.of())));
     }
 
@@ -100,7 +100,7 @@ public class TestDependencyValidatorTest
     {
         // Every module without the field must behave exactly as before.
         assertEquals(List.of(), TestDependencyValidator.validate(
-                Map.of("meta::pure::test::resolveChild_X_1__Y_1_", Set.of("m::f__String_1_")),
+                Map.of("platform::pure::test::resolveChild_X_1__Y_1_", Set.of("m::f__String_1_")),
                 List.of(), OWNER,
                 callers(Map.of("m::f__String_1_", false))));
     }
@@ -110,7 +110,7 @@ public class TestDependencyValidatorTest
     {
         // `Foo.bar` does not resolve on its own; the owner and the caller are both the parent.
         List<CompilationError> errors = TestDependencyValidator.validate(
-                Map.of("meta::pure::functions::collection::tests::model::CO_Person.firstName",
+                Map.of("platform::pure::functions::collection::tests::model::CO_Person.firstName",
                        Set.of("m::render_String_1_.inner")),
                 TEST_DEPS, OWNER,
                 callers(Map.of("m::render_String_1_", false)));
@@ -123,7 +123,7 @@ public class TestDependencyValidatorTest
         // The reverse index is built in whatever order references were recorded; the output
         // must not be, or the error list churns between compilers.
         List<CompilationError> errors = TestDependencyValidator.validate(
-                Map.of("meta::pure::test::a_X_1_", Set.of("m::zeta__String_1_", "m::alpha__String_1_")),
+                Map.of("platform::pure::test::a_X_1_", Set.of("m::zeta__String_1_", "m::alpha__String_1_")),
                 TEST_DEPS, OWNER,
                 callers(Map.of("m::zeta__String_1_", false, "m::alpha__String_1_", false)));
         assertEquals(2, errors.size());

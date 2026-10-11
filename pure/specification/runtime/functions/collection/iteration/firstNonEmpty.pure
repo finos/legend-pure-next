@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 // Try a list of strategies in order; return the result of the first one that
 // yields a non-empty value. Each strategy is a no-arg thunk
@@ -30,26 +31,26 @@ import meta::pure::test::pct::*;
 //       | $remoteIndex->lookup($key),
 //       | $defaults->get($key)
 //   ])
-native function <<PCT.function>> meta::pure::functions::collection::firstNonEmpty<T>(thunks:Function<{->T[*]}>[*]):T[*];
+native function <<PCT.function>> platform::pure::functions::collection::firstNonEmpty<T>(thunks:Function<{->T[*]}>[*]):T[*];
 
-function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testFirstThunkWins<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::firstNonEmpty::testFirstThunkWins<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals('first', $f->eval(|firstNonEmpty([| 'first', | 'second'])->toOne()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testEmptyFirstFallsThrough<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::firstNonEmpty::testEmptyFirstFallsThrough<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let empty = []->cast(@String);
     assertEquals('second', $f->eval(|firstNonEmpty([| $empty, | 'second'])->toOne()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testAllEmptyReturnsEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::firstNonEmpty::testAllEmptyReturnsEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let empty = []->cast(@String);
     assert($f->eval(|firstNonEmpty([| $empty, | $empty])->isEmpty()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testCapturesParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::firstNonEmpty::testCapturesParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // Each thunk closes over the local `pick` variable. Mirrors how
     // production callers use firstNonEmpty (e.g. resolveElement walks
@@ -61,7 +62,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::t
     assertEquals('matched', $f->eval(|firstNonEmpty([| []->cast(@String), | $pick])->toOne()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testShortCircuit<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::firstNonEmpty::testShortCircuit<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // The second thunk would error if evaluated (toOne on empty). If
     // firstNonEmpty short-circuits correctly, the first thunk's non-empty
@@ -69,7 +70,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::t
     assertEquals('first', $f->eval(|firstNonEmpty([| 'first', | []->cast(@String)->toOne()])->toOne()));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testThreeStrategies<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::firstNonEmpty::testThreeStrategies<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let empty = []->cast(@String);
     assertEquals('third', $f->eval(|firstNonEmpty([| $empty, | $empty, | 'third'])->toOne()));

@@ -28,12 +28,12 @@
 // real metadata read — which only happens once the compiler is loaded.
 
 const FNS = {
-    parseFbs: "meta$pure$compiler$pdb$schema$parseFbs_String_1__FbsSchema_1_",
-    elementNode: "meta$pure$compiler$pdb$reader$elementNode_Binary_1__String_1__FbsNode_1_",
-    rootNode: "meta$pure$compiler$pdb$reader$rootNode_Binary_1__String_1__FbsNode_1_",
-    readField: "meta$pure$compiler$pdb$reader$readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_",
-    fieldPos: "meta$pure$compiler$pdb$reader$fieldPos_FbsNode_1__Integer_1__Integer_1_",
-    unwrapValueDef: "meta$pure$compiler$pdb$reader$unwrapValueDef_FbsNode_1__Any_1_",
+    parseFbs: "platform$pure$compiler$pdb$schema$parseFbs_String_1__FbsSchema_1_",
+    elementNode: "platform$pure$compiler$pdb$reader$elementNode_Binary_1__String_1__FbsNode_1_",
+    rootNode: "platform$pure$compiler$pdb$reader$rootNode_Binary_1__String_1__FbsNode_1_",
+    readField: "platform$pure$compiler$pdb$reader$readField_FbsSchema_1__FbsNode_1__String_1__Any_MANY_",
+    fieldPos: "platform$pure$compiler$pdb$reader$fieldPos_FbsNode_1__Integer_1__Integer_1_",
+    unwrapValueDef: "platform$pure$compiler$pdb$reader$unwrapValueDef_FbsNode_1__Any_1_",
 };
 
 function fn(name) {

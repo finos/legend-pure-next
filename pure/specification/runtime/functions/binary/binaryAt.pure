@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
-import meta::pure::functions::binary::*;
+import platform::pure::test::pct::*;
+import platform::pure::functions::binary::*;
 
 // The byte at a zero-based index. O(1) — this is the PDB reader's inner loop,
 // so it must be an array index, not a list walk.
@@ -24,15 +24,15 @@ import meta::pure::functions::binary::*;
 // Named `binaryAt` rather than `at`: the Java and JavaScript translators match
 // coders by SHORT name, so an `at` overload would collide with the collection
 // `at`.
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::binary::binaryAt(b:Binary[1], index:Integer[1]):Byte[1];
+native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::binary::binaryAt(b:Binary[1], index:Integer[1]):Byte[1];
 
-function <<PCT.test>> meta::pure::functions::binary::tests::binaryAt::testEachByte<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::binary::tests::binaryAt::testEachByte<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // 0x8B is the one that matters: a signed byte would read back as -117.
     assertEquals([31, 139, 8], $f->eval(|[0, 1, 2]->map(i | 0x1F8B08->binaryAt($i))));
 }
 
-function <<PCT.test>> meta::pure::functions::binary::tests::binaryAt::testArithmeticWithoutConversion<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::binary::tests::binaryAt::testArithmeticWithoutConversion<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     // A Byte is an Integer — the PDB reader's little-endian assembly shape.
     assertEquals(8075, $f->eval(|(0x1F8B08->binaryAt(0) * 256) + 0x1F8B08->binaryAt(1)));

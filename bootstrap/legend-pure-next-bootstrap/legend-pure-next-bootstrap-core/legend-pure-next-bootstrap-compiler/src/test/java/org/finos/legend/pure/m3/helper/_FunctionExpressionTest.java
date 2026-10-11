@@ -1,9 +1,24 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.helper;
 
-import meta.pure.metamodel.type.Class;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.function.FunctionDefinition;
+import platform.pure.metamodel.type.Class;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.valuespecification.FunctionExpression;
+import platform.pure.metamodel.function.FunctionDefinition;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Sets;
 import org.finos.legend.pure.m3.JavaCompiler;
@@ -73,7 +88,7 @@ public class _FunctionExpressionTest
         FunctionExpression expr = (FunctionExpression) fd._expressionSequence().getFirst();
         
         GenericType targetGT = targetClass._classifierGenericType();
-        meta.pure.metamodel.multiplicity.Multiplicity mul = (meta.pure.metamodel.multiplicity.Multiplicity) model.registry().module("m3").getElement("meta::pure::metamodel::multiplicity::PureOne");
+        platform.pure.metamodel.multiplicity.Multiplicity mul = (platform.pure.metamodel.multiplicity.Multiplicity) model.registry().module("m3").getElement("platform::pure::metamodel::multiplicity::PureOne");
 
         ParametersBinding bindings = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
         bindings.typeBindings().put("T", Lists.mutable.with(targetGT));
@@ -125,7 +140,7 @@ public class _FunctionExpressionTest
         FunctionExpression expr = (FunctionExpression) fd._expressionSequence().getFirst();
         
         GenericType targetGT = targetClass._classifierGenericType();
-        meta.pure.metamodel.multiplicity.Multiplicity mul = (meta.pure.metamodel.multiplicity.Multiplicity) model.registry().module("m3").getElement("meta::pure::metamodel::multiplicity::PureOne");
+        platform.pure.metamodel.multiplicity.Multiplicity mul = (platform.pure.metamodel.multiplicity.Multiplicity) model.registry().module("m3").getElement("platform::pure::metamodel::multiplicity::PureOne");
 
         ParametersBinding bindings = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
         bindings.typeBindings().put("T", Lists.mutable.with(targetGT));

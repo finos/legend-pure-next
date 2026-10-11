@@ -64,7 +64,7 @@
     </properties>
 
     <dependencies>
-        <!-- The parser library, for the `meta::pure::functions::meta::antlr` natives.
+        <!-- The parser library, for the `platform::pure::functions::meta::antlr` natives.
              Not another platform: see the note above. -->
         <dependency>
             <groupId>org.antlr</groupId>

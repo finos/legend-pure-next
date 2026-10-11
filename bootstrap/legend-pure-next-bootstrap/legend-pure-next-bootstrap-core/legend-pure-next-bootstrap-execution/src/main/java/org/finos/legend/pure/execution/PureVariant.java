@@ -17,7 +17,7 @@ package org.finos.legend.pure.execution;
 import java.util.Objects;
 
 /**
- * Runtime representation of a Pure {@code meta::pure::metamodel::variant::Variant}
+ * Runtime representation of a Pure {@code platform::pure::metamodel::variant::Variant}
  * value: an immutable JSON tree.
  *
  * <p>{@code toString()} is the compact JSON text — this is part of the PCT
@@ -28,7 +28,7 @@ import java.util.Objects;
  */
 public class PureVariant
 {
-    public static final String TYPE_PATH = "meta::pure::metamodel::variant::Variant";
+    public static final String TYPE_PATH = "platform::pure::metamodel::variant::Variant";
 
     private final JsonValue value;
 

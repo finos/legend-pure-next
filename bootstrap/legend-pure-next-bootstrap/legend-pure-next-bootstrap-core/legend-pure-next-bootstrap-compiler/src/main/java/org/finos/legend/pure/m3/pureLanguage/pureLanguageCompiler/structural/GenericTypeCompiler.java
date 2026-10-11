@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +15,16 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.SourceInformation;
-import meta.pure.metamodel.relation.GenericTypeOperationImpl;
-import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.TypeParameter;
-import meta.pure.metamodel.type.generics.TypeParameterImpl;
-import meta.pure.protocol.grammar.relation.GenericTypeOperation;
-import meta.pure.protocol.grammar.type.Type_Pointer;
-import meta.pure.protocol.grammar.type.generics.GenericTypeValue;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.SourceInformation;
+import platform.pure.metamodel.relation.GenericTypeOperationImpl;
+import platform.pure.metamodel.type.Type;
+import platform.pure.metamodel.type.generics.GenericType;
+import platform.pure.metamodel.type.generics.TypeParameter;
+import platform.pure.metamodel.type.generics.TypeParameterImpl;
+import platform.pure.protocol.grammar.relation.GenericTypeOperation;
+import platform.pure.protocol.grammar.type.Type_Pointer;
+import platform.pure.protocol.grammar.type.generics.GenericTypeValue;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.JavaCompiler;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -35,7 +36,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Generi
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
 /**
- * Compiles a grammar-level {@link meta.pure.protocol.grammar.type.generics.GenericType}
+ * Compiles a grammar-level {@link platform.pure.protocol.grammar.type.generics.GenericType}
  * into a metamodel-level {@link GenericType}, resolving pointer references
  * via a {@link JavaCompiler} and a list of imports.
  */
@@ -61,9 +62,9 @@ public final class GenericTypeCompiler
      * @param context            the compilation context for error collection
      * @return a fully resolved metamodel GenericType, or null if the type can't be resolved
      */
-    public static GenericType compile(meta.pure.protocol.grammar.type.generics.GenericType_Protocol grammarGenericType, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static GenericType compile(platform.pure.protocol.grammar.type.generics.GenericType_Protocol grammarGenericType, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        if (grammarGenericType instanceof meta.pure.protocol.grammar.type.generics.GenericType_Pointer ptr)
+        if (grammarGenericType instanceof platform.pure.protocol.grammar.type.generics.GenericType_Pointer ptr)
         {
             // GenericType_Pointer is a PDB-serialization construct — it should
             // never appear in compile-time grammar. If we see one here, the
@@ -73,15 +74,15 @@ public final class GenericTypeCompiler
                     + "'). This is a PDB-only concept; grammar values should always be inline GenericType subtypes. "
                     + "Check parser/protocol-generator output.");
         }
-        meta.pure.protocol.grammar.type.generics.GenericType inline = (meta.pure.protocol.grammar.type.generics.GenericType) grammarGenericType;
+        platform.pure.protocol.grammar.type.generics.GenericType inline = (platform.pure.protocol.grammar.type.generics.GenericType) grammarGenericType;
         return switch (inline)
         {
-            case meta.pure.protocol.grammar.type.generics.UndefinedGenericType ignored -> new meta.pure.metamodel.type.generics.UndefinedGenericTypeImpl(model);
+            case platform.pure.protocol.grammar.type.generics.UndefinedGenericType ignored -> new platform.pure.metamodel.type.generics.UndefinedGenericTypeImpl(model);
             case GenericTypeOperation gto -> compileGenericTypeOperation(gto, imports, model, context);
             case GenericTypeValue gtv ->
             {
                 // Type parameter reference (e.g., T) — rawType is a protocol TypeParameter
-                if (gtv._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter grammarTP)
+                if (gtv._type() instanceof platform.pure.protocol.grammar.type.generics.TypeParameter grammarTP)
                 {
                     yield _GenericType.buildUserDefinedGenericType(resolveOrCompileTypeParameter(grammarTP, context, model), model);
                 }
@@ -109,7 +110,7 @@ public final class GenericTypeCompiler
                     yield null;
                 }
 
-                meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl built = _GenericType.buildUserDefinedGenericType(rawType, model)
+                platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl built = _GenericType.buildUserDefinedGenericType(rawType, model)
                         ._typeArguments(gtv._typeArguments().collect(arg -> compile(arg, imports, model, context)))
                         ._multiplicityArguments(gtv._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model, context)))
                         ._typeVariableValues(gtv._typeVariableValues().collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)));
@@ -129,9 +130,9 @@ public final class GenericTypeCompiler
                     String typePath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(rawPE);
                     if (typePath != null && !typePath.isEmpty())
                     {
-                        Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_"
+                        Object canonical = model.getElement("platform::pure::metamodel::type::generics::optimization::GenericType_"
                                 + typePath.replace("::", "_"));
-                        if (canonical instanceof meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT && canonicalGT._type() == rawType)
+                        if (canonical instanceof platform.pure.metamodel.type.generics.GenericTypeValue canonicalGT && canonicalGT._type() == rawType)
                         {
                             yield canonicalGT;
                         }
@@ -149,23 +150,23 @@ public final class GenericTypeCompiler
         GenericType right = compile(gto._right(), imports, model, context);
         // Read enum value from Enum_Pointer and resolve from graph
         String opName = gto._operationType()._extraPointerValues().getFirst()._value();
-        meta.pure.metamodel.relation.GenericTypeOperationType opType = (meta.pure.metamodel.relation.GenericTypeOperationType) _Enumeration.resolveEnumValue("meta::pure::metamodel::relation::GenericTypeOperationType", opName, model);
+        platform.pure.metamodel.relation.GenericTypeOperationType opType = (platform.pure.metamodel.relation.GenericTypeOperationType) _Enumeration.resolveEnumValue("platform::pure::metamodel::relation::GenericTypeOperationType", opName, model);
         return new GenericTypeOperationImpl(model)
                 ._left(left)
                 ._right(right)
                 ._operationType(opType);
     }
 
-    private static Type resolveType(meta.pure.protocol.grammar.type.Type_Protocol rawType, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    private static Type resolveType(platform.pure.protocol.grammar.type.Type_Protocol rawType, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         // FunctionType (e.g., {K[1]->Boolean[1]}) — compile into a metamodel FunctionType
-        if (rawType instanceof meta.pure.protocol.grammar.type.FunctionType ft)
+        if (rawType instanceof platform.pure.protocol.grammar.type.FunctionType ft)
         {
             return FunctionTypeCompiler.compile(ft, imports, model, context);
         }
 
         // RelationType (e.g., (name:String[1], age:Integer[1])) — compile into a metamodel RelationType
-        if (rawType instanceof meta.pure.protocol.grammar.relation.RelationType rt)
+        if (rawType instanceof platform.pure.protocol.grammar.relation.RelationType rt)
         {
             return RelationTypeCompiler.compile(rt, imports, model, context);
         }
@@ -189,8 +190,8 @@ public final class GenericTypeCompiler
     }
 
 
-    public static TypeParameter compileTypeParameter(meta.pure.protocol.grammar.type.generics.TypeParameter grammarTypeParameter,
-                                                      meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner,
+    public static TypeParameter compileTypeParameter(platform.pure.protocol.grammar.type.generics.TypeParameter grammarTypeParameter,
+                                                      platform.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner,
                                                       MetadataAccess model)
     {
         if (grammarTypeParameter == null)
@@ -208,7 +209,7 @@ public final class GenericTypeCompiler
      * the compilation scope. Falls back to creating a fresh TypeParameter if not in scope
      * (e.g. during bootstrap or when compiling type arguments in class definitions).
      */
-    private static TypeParameter resolveOrCompileTypeParameter(meta.pure.protocol.grammar.type.generics.TypeParameter grammarTypeParameter,
+    private static TypeParameter resolveOrCompileTypeParameter(platform.pure.protocol.grammar.type.generics.TypeParameter grammarTypeParameter,
                                                                 CompilationContext context, MetadataAccess model)
     {
         if (grammarTypeParameter == null)

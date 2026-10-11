@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::factory::*;
-import meta::external::language::java::factory::tests::*;
-import meta::external::language::java::metamodel::*;
-import meta::external::language::java::serialization::*;
+import platform::external::language::java::factory::*;
+import platform::external::language::java::factory::tests::*;
+import platform::external::language::java::metamodel::*;
+import platform::external::language::java::serialization::*;
 
 // ----------------------------------------------------------------------------
 // Associativity / parenthesization tests for the serializer.
@@ -31,7 +32,7 @@ import meta::external::language::java::serialization::*;
 // Left-associative same-precedence nested on the RIGHT: parens required.
 // Without the fix, all three of these would emit without parens and reparse
 // incorrectly.
-function <<test.Test>> meta::external::language::java::factory::tests::infixRightNestedSameLevelKeepsParens():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::infixRightNestedSameLevelKeepsParens():Boolean[1]
 {
    // Subtraction: `a - (b - c)` != `(a - b) - c`
    assertCode('a - (b - c)', javaInt(),
@@ -51,7 +52,7 @@ function <<test.Test>> meta::external::language::java::factory::tests::infixRigh
 
 // Left-associative same-precedence nested on the LEFT: parens NOT required.
 // The natural left-to-right parse already matches the AST structure.
-function <<test.Test>> meta::external::language::java::factory::tests::infixLeftNestedSameLevelDropsParens():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::infixLeftNestedSameLevelDropsParens():Boolean[1]
 {
    // `(a - b) - c` is the natural left-associative parse, emit unparenthesized
    assertCode('a - b - c', javaInt(),
@@ -66,7 +67,7 @@ function <<test.Test>> meta::external::language::java::factory::tests::infixLeft
 
 // Cross-level: lower-precedence (parent) wrapping higher-precedence (child)
 // never needs parens, regardless of side.
-function <<test.Test>> meta::external::language::java::factory::tests::infixHigherPrecedenceChildDropsParens():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::infixHigherPrecedenceChildDropsParens():Boolean[1]
 {
    // `a + b * c` (parent +, child *) — no parens
    assertCode('a + b * c', javaInt(),
@@ -80,7 +81,7 @@ function <<test.Test>> meta::external::language::java::factory::tests::infixHigh
 
 // Cross-level: lower-precedence (child) inside higher-precedence (parent)
 // always needs parens on either side.
-function <<test.Test>> meta::external::language::java::factory::tests::infixLowerPrecedenceChildKeepsParens():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::infixLowerPrecedenceChildKeepsParens():Boolean[1]
 {
    // `(a + b) * c` — without parens, `*` would bind tighter
    assertCode('(a + b) * c', javaInt(),
@@ -96,7 +97,7 @@ function <<test.Test>> meta::external::language::java::factory::tests::infixLowe
 // equal-precedence on the left is the side that breaks associativity).
 // Without the fix, `(a == b) ? c : d) ? e : f` would have lost the outer
 // parens and reparsed as `a == b ? c : d ? e : f` = `a == b ? c : (d ? e : f)`.
-function <<test.Test>> meta::external::language::java::factory::tests::ternaryInTestPositionKeepsParens():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::ternaryInTestPositionKeepsParens():Boolean[1]
 {
    let inner = j_variable(javaBoolean(), 'a')->j_conditional(j_variable(javaInt(), 'b'),
                                                               j_variable(javaInt(), 'c'));
@@ -110,7 +111,7 @@ function <<test.Test>> meta::external::language::java::factory::tests::ternaryIn
 
 // Ternary in the THEN / ELSE positions does NOT need parens — those slots
 // accept any expression including nested ternary (right-associative).
-function <<test.Test>> meta::external::language::java::factory::tests::ternaryInThenOrElseDropsParens():Boolean[1]
+function <<test.Test>> platform::external::language::java::factory::tests::ternaryInThenOrElseDropsParens():Boolean[1]
 {
    // Nested ternary in ELSE: `a ? b : c ? d : e` parses right-associatively
    // as `a ? b : (c ? d : e)`, which is what the AST says — no parens needed.

@@ -15,7 +15,7 @@
 
 package org.finos.legend.pure.m3;
 
-import meta.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.CompilationResult;
@@ -142,7 +142,7 @@ public class SpecificationBinaryBuilder
         // --- Collect elements from the index (all modules), deduplicated by path ---
         //
         // THE COMPILED COPY WINS. A Package is the one element both modules legitimately hold: m3.ttl
-        // defines `meta::pure::metamodel::relation`, and a source file then adds `ColSpec` to it. The
+        // defines `platform::pure::metamodel::relation`, and a source file then adds `ColSpec` to it. The
         // compiled copy has m3's children PLUS whatever the sources contributed, so it is strictly the
         // more complete one.
         //
@@ -169,7 +169,7 @@ public class SpecificationBinaryBuilder
                     continue;
                 }
                 PackageableElement existing = elementsByPath.get(path);
-                if (existing == null || (existing instanceof meta.pure.metamodel.Package && element instanceof meta.pure.metamodel.Package))
+                if (existing == null || (existing instanceof platform.pure.metamodel.Package && element instanceof platform.pure.metamodel.Package))
                 {
                     elementsByPath.put(path, element);
                 }

@@ -1,22 +1,37 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
-import meta.pure.metamodel.valuespecification.ArrowInvocationImpl;
-import meta.pure.metamodel.valuespecification.AtomicValueImpl;
-import meta.pure.metamodel.valuespecification.CollectionImpl;
-import meta.pure.metamodel.valuespecification.DotApplicationImpl;
-import meta.pure.metamodel.valuespecification.FunctionInvocationImpl;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.multiplicity.Multiplicity;
+import platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import platform.pure.metamodel.valuespecification.ArrowInvocationImpl;
+import platform.pure.metamodel.valuespecification.AtomicValueImpl;
+import platform.pure.metamodel.valuespecification.CollectionImpl;
+import platform.pure.metamodel.valuespecification.DotApplicationImpl;
+import platform.pure.metamodel.valuespecification.FunctionInvocationImpl;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
-import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
-import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
-import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import platform.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
+import platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
+import platform.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 
@@ -27,7 +42,7 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 
 /**
- * Compiles grammar-level {@link meta.pure.protocol.grammar.valuespecification.ValueSpecification}
+ * Compiles grammar-level {@link platform.pure.protocol.grammar.valuespecification.ValueSpecification}
  * into metamodel-level {@link ValueSpecification}.
  */
 public final class ValueSpecificationCompiler
@@ -38,23 +53,23 @@ public final class ValueSpecificationCompiler
 
     // ---- Grammar → Metamodel compilation ----
 
-    public static ValueSpecification compile(meta.pure.protocol.grammar.valuespecification.ValueSpecification vs, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static ValueSpecification compile(platform.pure.protocol.grammar.valuespecification.ValueSpecification vs, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         return switch (vs)
         {
-            case meta.pure.protocol.grammar.valuespecification.ArrowInvocationImpl arrow ->
+            case platform.pure.protocol.grammar.valuespecification.ArrowInvocationImpl arrow ->
                     compileArrowInvocation(arrow, imports, model, context);
-            case meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl var ->
+            case platform.pure.protocol.grammar.valuespecification.VariableExpressionImpl var ->
                     compileVariableExpression(var, model, context);
-            case meta.pure.protocol.grammar.valuespecification.AtomicValueImpl av ->
+            case platform.pure.protocol.grammar.valuespecification.AtomicValueImpl av ->
                     compileAtomicValue(av, imports, model, context);
-            case meta.pure.protocol.grammar.valuespecification.CollectionImpl col ->
+            case platform.pure.protocol.grammar.valuespecification.CollectionImpl col ->
                     compileCollection(col, imports, model, context);
-            case meta.pure.protocol.grammar.valuespecification.FunctionInvocationImpl fa ->
+            case platform.pure.protocol.grammar.valuespecification.FunctionInvocationImpl fa ->
                     compileFunctionInvocation(fa, imports, model, context);
-            case meta.pure.protocol.grammar.valuespecification.DotApplicationImpl dot ->
+            case platform.pure.protocol.grammar.valuespecification.DotApplicationImpl dot ->
                     compileDotApplication(dot, imports, model, context);
-            case meta.pure.protocol.grammar.valuespecification.GenericTypeAndMultiplicityHolder holder ->
+            case platform.pure.protocol.grammar.valuespecification.GenericTypeAndMultiplicityHolder holder ->
                     compileGenericTypeAndMultiplicityHolder(holder, imports, model, context);
             default -> throw new UnsupportedOperationException(
                     "Unsupported ValueSpecification type: " + vs.getClass().getName());
@@ -62,7 +77,7 @@ public final class ValueSpecificationCompiler
     }
 
     private static ArrowInvocationImpl compileArrowInvocation(
-            meta.pure.protocol.grammar.valuespecification.ArrowInvocationImpl arrow,
+            platform.pure.protocol.grammar.valuespecification.ArrowInvocationImpl arrow,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         ArrowInvocationImpl result = new ArrowInvocationImpl(model)
@@ -77,7 +92,7 @@ public final class ValueSpecificationCompiler
     }
 
     private static ValueSpecification compileFunctionInvocation(
-            meta.pure.protocol.grammar.valuespecification.FunctionInvocationImpl fa,
+            platform.pure.protocol.grammar.valuespecification.FunctionInvocationImpl fa,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         MutableList<ValueSpecification> params = fa._parametersValues()
@@ -135,7 +150,7 @@ public final class ValueSpecificationCompiler
             return false;
         }
         Object inner = av._value();
-        if (!(inner instanceof meta.pure.metamodel.function.LambdaFunction lambda))
+        if (!(inner instanceof platform.pure.metamodel.function.LambdaFunction lambda))
         {
             return false;
         }
@@ -163,7 +178,7 @@ public final class ValueSpecificationCompiler
     }
 
     private static ValueSpecification tryFoldUnaryMinus(
-            meta.pure.protocol.grammar.valuespecification.FunctionInvocationImpl fa,
+            platform.pure.protocol.grammar.valuespecification.FunctionInvocationImpl fa,
             MutableList<ValueSpecification> params,
             MetadataAccess model,
             CompilationContext context)
@@ -210,7 +225,7 @@ public final class ValueSpecificationCompiler
     }
 
     private static DotApplicationImpl compileDotApplication(
-            meta.pure.protocol.grammar.valuespecification.DotApplicationImpl dot,
+            platform.pure.protocol.grammar.valuespecification.DotApplicationImpl dot,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         DotApplicationImpl result = new DotApplicationImpl(model)
@@ -225,16 +240,16 @@ public final class ValueSpecificationCompiler
     }
 
     private static ValueSpecification compileGenericTypeAndMultiplicityHolder(
-            meta.pure.protocol.grammar.valuespecification.GenericTypeAndMultiplicityHolder holder,
+            platform.pure.protocol.grammar.valuespecification.GenericTypeAndMultiplicityHolder holder,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        if (holder instanceof meta.pure.protocol.grammar.valuespecification.CompilerGenericTypeAndMultiplicityHolder)
+        if (holder instanceof platform.pure.protocol.grammar.valuespecification.CompilerGenericTypeAndMultiplicityHolder)
         {
-            return new meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl();
+            return new platform.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl();
         }
-        else if (holder instanceof meta.pure.protocol.grammar.valuespecification.UserDefinedGenericTypeAndMultiplicityHolder)
+        else if (holder instanceof platform.pure.protocol.grammar.valuespecification.UserDefinedGenericTypeAndMultiplicityHolder)
         {
-            meta.pure.metamodel.type.generics.GenericType heldGT = holder._genericType() != null
+            platform.pure.metamodel.type.generics.GenericType heldGT = holder._genericType() != null
                     ? GenericTypeCompiler.compile(holder._genericType(), imports, model, context)
                     : new CompilerNotSetGenericTypeImpl();
             Multiplicity heldMul = holder._multiplicity() != null
@@ -242,8 +257,8 @@ public final class ValueSpecificationCompiler
                     : new CompilerNotSetMultiplicityImpl();
 
             // Build classifier type: GenericType(type=UserDefinedGenericTypeAndMultiplicityHolder, typeArguments=[heldGT])
-            meta.pure.metamodel.type.Type holderType = (meta.pure.metamodel.type.Type) model.getElement(
-                    "meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder");
+            platform.pure.metamodel.type.Type holderType = (platform.pure.metamodel.type.Type) model.getElement(
+                    "platform::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder");
             UserDefinedGenericTypeImpl classifierGT = _GenericType.buildUserDefinedGenericType(holderType, model);
             if (!(heldGT instanceof CompilerNotSetGenericType))
             {
@@ -254,10 +269,10 @@ public final class ValueSpecificationCompiler
                 classifierGT._multiplicityArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(heldMul));
             }
 
-            return new meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl()
+            return new platform.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl()
                     ._classifierGenericType(classifierGT)
                     ._genericType(classifierGT)
-                    ._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"))
+                    ._multiplicity((Multiplicity) model.getElement("platform::pure::metamodel::multiplicity::PureOne"))
                     ._sourceInformation(holder._p_sourceInformation() != null ? SourceInformationCompiler.compile(holder._p_sourceInformation(), context.getSourceId(), model) : null);
         }
         else
@@ -268,7 +283,7 @@ public final class ValueSpecificationCompiler
     }
 
     private static VariableExpressionImpl compileVariableExpression(
-            meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl var, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
+            platform.pure.protocol.grammar.valuespecification.VariableExpressionImpl var, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         VariableExpressionImpl result = _VariableExpression.newVariableExpression(model)
                 ._name(var._name() != null ? var._name() : "")
@@ -282,7 +297,7 @@ public final class ValueSpecificationCompiler
     }
 
     private static AtomicValueImpl compileAtomicValue(
-            meta.pure.protocol.grammar.valuespecification.AtomicValueImpl av,
+            platform.pure.protocol.grammar.valuespecification.AtomicValueImpl av,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         AtomicValueImpl result = new AtomicValueImpl(model);
@@ -295,16 +310,16 @@ public final class ValueSpecificationCompiler
                 : new CompilerNotSetGenericTypeImpl());
         result._multiplicity(av._multiplicity() != null
                 ? MultiplicityCompiler.compile(av._multiplicity(), model)
-                : (Multiplicity)model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
+                : (Multiplicity)model.getElement("platform::pure::metamodel::multiplicity::PureOne"));
 
         // Compile the single value: recursively compile inner ValueSpecification,
         // compile LambdaFunction (grammar -> metamodel), or pass through raw primitives as-is
         Object value = av._value();
-        if (value instanceof meta.pure.protocol.grammar.function.LambdaFunction grammarLambda)
+        if (value instanceof platform.pure.protocol.grammar.function.LambdaFunction grammarLambda)
         {
             result._value(LambdaCompiler.compile(grammarLambda, imports, model, context));
         }
-        else if (value instanceof meta.pure.protocol.grammar.valuespecification.ValueSpecification vs)
+        else if (value instanceof platform.pure.protocol.grammar.valuespecification.ValueSpecification vs)
         {
             result._value(compile(vs, imports, model, context));
         }
@@ -340,23 +355,23 @@ public final class ValueSpecificationCompiler
                 String dateTypePath;
                 if (dateBody.contains("T"))
                 {
-                    dateTypePath = "meta::pure::metamodel::type::primitives::DateTime";
+                    dateTypePath = "platform::pure::metamodel::type::primitives::DateTime";
                 }
                 else if (dateBody.length() <= 7)
                 {
                     // YYYY or YYYY-MM — Date
-                    dateTypePath = "meta::pure::metamodel::type::primitives::Date";
+                    dateTypePath = "platform::pure::metamodel::type::primitives::Date";
                 }
                 else
                 {
                     // YYYY-MM-DD — StrictDate
-                    dateTypePath = "meta::pure::metamodel::type::primitives::StrictDate";
+                    dateTypePath = "platform::pure::metamodel::type::primitives::StrictDate";
                 }
                 PackageableElement dateType = model.getElement(dateTypePath);
-                if (dateType instanceof meta.pure.metamodel.type.Type)
+                if (dateType instanceof platform.pure.metamodel.type.Type)
                 {
                     UserDefinedGenericTypeImpl gt = _GenericType.buildUserDefinedGenericType(null, model);
-                    gt._type((meta.pure.metamodel.type.Type) dateType);
+                    gt._type((platform.pure.metamodel.type.Type) dateType);
                     result._genericType(gt);
                 }
             }
@@ -366,7 +381,7 @@ public final class ValueSpecificationCompiler
     }
 
     private static CollectionImpl compileCollection(
-            meta.pure.protocol.grammar.valuespecification.CollectionImpl col,
+            platform.pure.protocol.grammar.valuespecification.CollectionImpl col,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         CollectionImpl result = new CollectionImpl(model);
@@ -380,11 +395,11 @@ public final class ValueSpecificationCompiler
         }
 
         // Compile values: recursively compile inner ValueSpecifications
-        org.eclipse.collections.api.list.MutableList<meta.pure.protocol.grammar.valuespecification.ValueSpecification> values = col._values();
+        org.eclipse.collections.api.list.MutableList<platform.pure.protocol.grammar.valuespecification.ValueSpecification> values = col._values();
         if (values != null)
         {
             org.eclipse.collections.api.list.MutableList<ValueSpecification> compiledValues = org.eclipse.collections.impl.factory.Lists.mutable.empty();
-            for (meta.pure.protocol.grammar.valuespecification.ValueSpecification v : values)
+            for (platform.pure.protocol.grammar.valuespecification.ValueSpecification v : values)
             {
                 compiledValues.add(compile(v, imports, model, context));
             }
@@ -463,10 +478,10 @@ public final class ValueSpecificationCompiler
     {
         var gt = av._genericType();
         if (gt == null) { return null; }
-        if (gt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+        if (gt instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv)
         {
             var type = gtv._type();
-            if (type instanceof meta.pure.protocol.grammar.type.Type_Pointer ptr) { return ptr._value(); }
+            if (type instanceof platform.pure.protocol.grammar.type.Type_Pointer ptr) { return ptr._value(); }
             if (type instanceof PackageableElement pe) { return pe._name(); }
         }
         return null;

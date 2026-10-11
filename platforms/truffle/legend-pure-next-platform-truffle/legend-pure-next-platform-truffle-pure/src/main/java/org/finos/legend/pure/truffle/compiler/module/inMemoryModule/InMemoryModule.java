@@ -87,7 +87,7 @@ public final class InMemoryModule implements Module
             byPath.put(path, el);
             pathByElement.put(el, path);
         }
-        // Pointer resolution happens inside meta::pure::compiler::compile
+        // Pointer resolution happens inside platform::pure::compiler::compile
         // (via the resolveAndReturnGraph native) BEFORE the elements reach
         // this constructor. No post-compile Java resolution is needed.
         //

@@ -34,7 +34,7 @@ import org.eclipse.collections.api.list.MutableList;
 public final class PureParsing
 {
     private static final String PARSE_DOCUMENT =
-            "meta::pure::parser::mappings::interpreter::parseDocument_AntlrContext_1__String_1__Boolean_1__Pair_MANY__PureFile_1_";
+            "platform::pure::parser::mappings::interpreter::parseDocument_AntlrContext_1__String_1__Pair_MANY__PureFile_1_";
     private static volatile MutableList<Object> sectionParsers;
 
     private PureParsing()
@@ -43,12 +43,10 @@ public final class PureParsing
 
     public static Object parse(String sourceId, String content)
     {
-        // Source that names no section is Pure: the header the grammar needs is
-        // added here, and parseDocument is told so it can keep line numbers.
-        boolean syntheticHeader = !content.startsWith("###");
-        String effective = syntheticHeader ? "###Pure\n" + content : content;
-        Object document = Antlr.parseAntlr(effective, "TopParser", sourceId, 0L);
-        return call(PARSE_DOCUMENT, document, sourceId, syntheticHeader, sectionParsers());
+        // Text before the first header — the whole of a file that names no section — is
+        // the grammar's implicit section, which parseDocument reads as Pure.
+        Object document = Antlr.parseAntlr(content, "TopParser", sourceId, 0L);
+        return call(PARSE_DOCUMENT, document, sourceId, sectionParsers());
     }
 
     /**

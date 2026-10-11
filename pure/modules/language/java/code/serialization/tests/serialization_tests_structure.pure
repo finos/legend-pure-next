@@ -1,4 +1,5 @@
 // Copyright 2020 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::java::factory::*;
-import meta::external::language::java::factory::project::*;
-import meta::external::language::java::metamodel::*;
-import meta::external::language::java::metamodel::annotations::java::validation::constraints::*;
-import meta::external::language::java::metamodel::annotations::json::*;
-import meta::external::language::java::metamodel::project::*;
-import meta::external::language::java::serialization::*;
-import meta::external::language::java::serialization::tests::*;
+import platform::external::language::java::factory::*;
+import platform::external::language::java::factory::project::*;
+import platform::external::language::java::metamodel::*;
+import platform::external::language::java::metamodel::annotations::java::validation::constraints::*;
+import platform::external::language::java::metamodel::annotations::json::*;
+import platform::external::language::java::metamodel::project::*;
+import platform::external::language::java::serialization::*;
+import platform::external::language::java::serialization::tests::*;
 
-function <<test.Test>> meta::external::language::java::serialization::tests::classToStringWithInferredImports():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::classToStringWithInferredImports():Boolean[1]
 {
    let c = testClass()->inferImports();
 
@@ -93,7 +94,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::cla
    test($expected, $c);
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::classToStringWithRandomImports():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::classToStringWithRandomImports():Boolean[1]
 {
    let proto = testClass();
    let c = ^$proto(additionalImports = ['org.finos.legend.otherapi.*', 'org.eclipse.collections.*']);
@@ -161,7 +162,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::cla
    test($expected, $c);
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::classToStringWithNoImports():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::classToStringWithNoImports():Boolean[1]
 {
    let c = testClass();
 
@@ -224,7 +225,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::cla
    test($expected, $c);
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::interfaceToString():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::interfaceToString():Boolean[1]
 {
    let i = javaClass(['public', 'interface'], 'org.finos.IFace')
       ->jextends(javaParameterizedType(javaClass('org.finos.OtherIface'), javaString()))
@@ -246,11 +247,11 @@ function <<test.Test>> meta::external::language::java::serialization::tests::int
    test($expected, $i);
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::simpleEnumToString():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::simpleEnumToString():Boolean[1]
 {
    let e = javaEnum('public', 'org.finos.Things')
       ->addEntries([
-           javaEnumEntry('Alpha')->annotate(^meta::external::language::java::metamodel::annotations::generated::Generated(value='a', comments='In the beginning'))->javaDoc('The first one'),
+           javaEnumEntry('Alpha')->annotate(^platform::external::language::java::metamodel::annotations::generated::Generated(value='a', comments='In the beginning'))->javaDoc('The first one'),
            javaEnumEntry('Beta'),
            javaEnumEntry('Gamma'),
            javaEnumEntry('Delta'),
@@ -280,7 +281,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::sim
    test($expected, $e);
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::complexEnumToString():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::complexEnumToString():Boolean[1]
 {
    let e = javaEnum('public', 'org.finos.Things')
       ->addEntries([
@@ -323,7 +324,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::com
    test($expected, $e);
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::testImportsForClass():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::testImportsForClass():Boolean[1]
 {
    // Class in same package is considered imported
    test('''
@@ -383,14 +384,14 @@ function <<test.Test>> meta::external::language::java::serialization::tests::tes
    );
 }
 
-function <<test.Test>> meta::external::language::java::serialization::tests::interface():Boolean[1]
+function <<test.Test>> platform::external::language::java::serialization::tests::interface():Boolean[1]
 {
 
-   let proto = javaClass(['public', 'interface'], 'meta.java.generation.tests.model.A');
+   let proto = javaClass(['public', 'interface'], 'platform.java.generation.tests.model.A');
    let cls   = ^$proto(additionalImports = ['javax.annotation.Generated', 'java.time.*', 'java.util.*', 'javax.validation.*', 'javax.validation.constraints.*']);
    
    test('''
-        package meta.java.generation.tests.model;
+        package platform.java.generation.tests.model;
         
         import javax.annotation.Generated;
         import java.time.*;
@@ -398,7 +399,7 @@ function <<test.Test>> meta::external::language::java::serialization::tests::int
         import javax.validation.*;
         import javax.validation.constraints.*;
         
-        @Generated("meta::java::generation::tests::model::1_0_0::A")
+        @Generated("platform::java::generation::tests::model::1_0_0::A")
         public interface A
         {
             static final String _version_ = "AHH#AKu:AHO:0-ALD:AHj:2$AHO#ALf:AEfOIi:3$%AHj#A6M:A6M-A6T:A6T";
@@ -410,18 +411,18 @@ function <<test.Test>> meta::external::language::java::serialization::tests::int
             @Valid
             List<E> getE();
         }''',
-        $cls->annotate(^meta::external::language::java::metamodel::annotations::generated::Generated(value='meta::java::generation::tests::model::1_0_0::A'))
+        $cls->annotate(^platform::external::language::java::metamodel::annotations::generated::Generated(value='platform::java::generation::tests::model::1_0_0::A'))
             ->addField(javaField(['static','final'], javaString(), '_version_', j_string('AHH#AKu:AHO:0-ALD:AHj:2$AHO#ALf:AEfOIi:3$%AHj#A6M:A6M-A6T:A6T')))
             ->addField(javaField(['static','final'], javaString(), '_type_', j_string('A')))
-            ->addMethod(javaMethod([], javaOptional(javaClass('meta.java.generation.tests.model.B')), 'getB', []))
-            ->addMethod(javaMethod([], javaList(javaClass('meta.java.generation.tests.model.E')), 'getE', [])
-                           ->annotate(^	meta::external::language::java::metamodel::annotations::java::validation::constraints::NotNull())
-                           ->annotate(^	meta::external::language::java::metamodel::annotations::java::validation::constraints::Valid())
+            ->addMethod(javaMethod([], javaOptional(javaClass('platform.java.generation.tests.model.B')), 'getB', []))
+            ->addMethod(javaMethod([], javaList(javaClass('platform.java.generation.tests.model.E')), 'getE', [])
+                           ->annotate(^	platform::external::language::java::metamodel::annotations::java::validation::constraints::NotNull())
+                           ->annotate(^	platform::external::language::java::metamodel::annotations::java::validation::constraints::Valid())
                        )
    );
 }
 
-function <<access.private>> meta::external::language::java::serialization::tests::testClass(): meta::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::external::language::java::serialization::tests::testClass(): platform::external::language::java::metamodel::Class[1]
 {
    let wildcardParam = j_parameter(javaList(javaWildcardExtends(javaObject())), 'p');
 
@@ -430,8 +431,8 @@ function <<access.private>> meta::external::language::java::serialization::tests
       ->implements(javaClass('org.finos.SomethingElse'))
       ->implements(javaClass('org.finos.AndMore'))
       ->javaDoc('This is the class level documentation for a test class that checks how classes are converted into string representations.  This text is long enough that it should wrap onto multiple lines.')
-      ->annotate(^meta::external::language::java::metamodel::annotations::json::JsonIgnoreProperties(ignoreUnknown=true))
-      ->annotate(^meta::external::language::java::metamodel::annotations::json::JsonSubTypes(subTypes=[^meta::external::language::java::metamodel::annotations::json::JsonSubType(value='Alpha', name='a'), ^meta::external::language::java::metamodel::annotations::json::JsonSubType(value='Beta')]))
+      ->annotate(^platform::external::language::java::metamodel::annotations::json::JsonIgnoreProperties(ignoreUnknown=true))
+      ->annotate(^platform::external::language::java::metamodel::annotations::json::JsonSubTypes(subTypes=[^platform::external::language::java::metamodel::annotations::json::JsonSubType(value='Alpha', name='a'), ^platform::external::language::java::metamodel::annotations::json::JsonSubType(value='Beta')]))
       ->addConstructor(^Constructor())
       ->addConstructor(javaConstructor([], j_parameter(javaString(), 'value')->annotate(^NotNull())->javaDoc('Give some value'), 'this.myField = value;'))
       ->addField(javaField(['private', 'static'], javaString(), 'myField', '"Mine!"')->annotate(^NotNull())->javaDoc('This is MY field!'))

@@ -1,16 +1,31 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import meta.pure.metamodel.constraint.Constraint;
-import meta.pure.metamodel.constraint.ConstraintImpl;
-import meta.pure.metamodel.function.LambdaFunctionImpl;
-import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
-import meta.pure.protocol.grammar.function.LambdaFunction;
+import platform.pure.metamodel.constraint.Constraint;
+import platform.pure.metamodel.constraint.ConstraintImpl;
+import platform.pure.metamodel.function.LambdaFunctionImpl;
+import platform.pure.metamodel.valuespecification.VariableExpression;
+import platform.pure.metamodel.valuespecification.VariableExpressionImpl;
+import platform.pure.protocol.grammar.function.LambdaFunction;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
+import platform.pure.metamodel.type.generics.GenericTypeValue;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Lambda;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
 
@@ -27,7 +42,7 @@ public final class ConstraintCompiler
      * Create a constraint shell with metadata (name, owner, etc.) but no expression sequences.
      * Expression sequences are compiled in the third pass when all functions are available.
      */
-    public static Constraint compileShell(meta.pure.protocol.grammar.constraint.Constraint grammarConstraint, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
+    public static Constraint compileShell(platform.pure.protocol.grammar.constraint.Constraint grammarConstraint, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         ConstraintImpl c = new ConstraintImpl(model);
         if (grammarConstraint._name() != null)
@@ -59,7 +74,7 @@ public final class ConstraintCompiler
      */
     public static void resolveConstraints(
             MutableList<Constraint> compiledConstraints,
-            MutableList<? extends meta.pure.protocol.grammar.constraint.Constraint> grammarConstraints,
+            MutableList<? extends platform.pure.protocol.grammar.constraint.Constraint> grammarConstraints,
             VariableExpressionImpl thisVar,
             MutableList<VariableExpression> extraParams,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
@@ -67,7 +82,7 @@ public final class ConstraintCompiler
         compiledConstraints.zip(grammarConstraints).forEach(pair ->
         {
             Constraint compiled = pair.getOne();
-            meta.pure.protocol.grammar.constraint.Constraint grammarC = pair.getTwo();
+            platform.pure.protocol.grammar.constraint.Constraint grammarC = pair.getTwo();
 
             // Push the constraint name onto the caller path so references
             // resolved inside the constraint body attribute to

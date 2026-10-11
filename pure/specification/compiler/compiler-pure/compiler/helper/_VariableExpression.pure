@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::functions::lang::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::variableExpression::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::pointer::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::functions::lang::*;
+import platform::pure::compiler::helper::type::*;
+import platform::pure::compiler::helper::variableExpression::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::pointer::*;
 
-function meta::pure::compiler::helper::variableExpression::newVariableExpression():VariableExpression[1]
+function platform::pure::compiler::helper::variableExpression::newVariableExpression():VariableExpression[1]
 {
     let ve = new(^InferredGenericType(type = VariableExpression))->cast(@VariableExpression);
     ^$ve(
@@ -31,7 +32,7 @@ function meta::pure::compiler::helper::variableExpression::newVariableExpression
     );
 }
 
-function <<test.Test>> meta::pure::compiler::helper::variableExpression::tests::testNewVariableExpression():Boolean[1]
+function <<test.Test>> platform::pure::compiler::helper::variableExpression::tests::testNewVariableExpression():Boolean[1]
 {
     let varExpr = newVariableExpression();
     assert(rawType($varExpr.classifierGenericType->toOne())->toOne() == VariableExpression);

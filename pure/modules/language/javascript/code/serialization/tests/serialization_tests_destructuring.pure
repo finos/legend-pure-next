@@ -12,30 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::javascript::factories::*;
-import meta::external::language::javascript::metamodel::*;
-import meta::external::language::javascript::serialization::*;
-import meta::external::language::javascript::serialization::tests::*;
+import platform::external::language::javascript::factories::*;
+import platform::external::language::javascript::metamodel::*;
+import platform::external::language::javascript::serialization::*;
+import platform::external::language::javascript::serialization::tests::*;
 
 // =============================================================================
 // Object destructuring
 // =============================================================================
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::constObjectDestructureSimple(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::constObjectDestructureSimple(): Boolean[1]
 {
    testStmt(
       'const { a, b } = obj;',
       jsConst(jsObjectBinding([jsBindName('a'), jsBindName('b')]), jsId('obj')));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::constObjectDestructureRename(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::constObjectDestructureRename(): Boolean[1]
 {
    testStmt(
       'const { source: alias } = obj;',
       jsConst(jsObjectBinding([jsBindRename('source', 'alias')]), jsId('obj')));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::constObjectDestructureDefault(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::constObjectDestructureDefault(): Boolean[1]
 {
    testStmt(
       'const { x = 0, y = 1 } = obj;',
@@ -47,14 +47,14 @@ function <<test.Test>> meta::external::language::javascript::serialization::test
          jsId('obj')));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::constObjectDestructureRest(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::constObjectDestructureRest(): Boolean[1]
 {
    testStmt(
       'const { head, ...rest } = obj;',
       jsConst(jsObjectBinding([jsBindName('head'), jsBindRest('rest')]), jsId('obj')));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::constObjectDestructureNested(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::constObjectDestructureNested(): Boolean[1]
 {
    testStmt(
       'const { user: { name } } = obj;',
@@ -69,21 +69,21 @@ function <<test.Test>> meta::external::language::javascript::serialization::test
 // Array destructuring
 // =============================================================================
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::constArrayDestructureSimple(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::constArrayDestructureSimple(): Boolean[1]
 {
    testStmt(
       'const [a, b] = arr;',
       jsConst(jsArrayBinding([jsBindName('a'), jsBindName('b')]), jsId('arr')));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::constArrayDestructureRest(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::constArrayDestructureRest(): Boolean[1]
 {
    testStmt(
       'const [head, ...tail] = arr;',
       jsConst(jsArrayBinding([jsBindName('head'), jsBindRest('tail')]), jsId('arr')));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::letArrayDestructureDefault(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::letArrayDestructureDefault(): Boolean[1]
 {
    testStmt(
       'let [first = 0, second = 0] = arr;',
@@ -99,7 +99,7 @@ function <<test.Test>> meta::external::language::javascript::serialization::test
 // Parameter destructuring
 // =============================================================================
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::paramObjectDestructure(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::paramObjectDestructure(): Boolean[1]
 {
    // Standalone test: just the parameter renders as `{ x, y }`
    testStmt(
@@ -115,7 +115,7 @@ function <<test.Test>> meta::external::language::javascript::serialization::test
       ]));
 }
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::paramArrayDestructure(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::paramArrayDestructure(): Boolean[1]
 {
    testStmt(
       '''
@@ -136,7 +136,7 @@ function <<test.Test>> meta::external::language::javascript::serialization::test
 // Mixed
 // =============================================================================
 
-function <<test.Test>> meta::external::language::javascript::serialization::tests::constMixedDestructure(): Boolean[1]
+function <<test.Test>> platform::external::language::javascript::serialization::tests::constMixedDestructure(): Boolean[1]
 {
    testStmt(
       'const { name: userName, age = 0, ...rest } = user;',

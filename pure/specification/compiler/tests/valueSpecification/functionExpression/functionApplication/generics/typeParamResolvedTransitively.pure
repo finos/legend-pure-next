@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::*;
 
@@ -13,36 +27,36 @@ function test::testTypeParamResolution<Z|y>(f: Function<{Function<{->Z[y]}>[1]->
 }
 
 ###CompiledGraph
-class test::TPR_Person extends Any  ~Class<test::TPR_Person>  @4:1-8:1
+class test::TPR_Person extends Any  ~Class<test::TPR_Person>  @18:1-22:1
   property firstName :@String@[1]  ~Property<test::TPR_Person, @String@|1>
   property lastName :@String@[1]  ~Property<test::TPR_Person, @String@|1>
 
 function test::testTypeParamResolution_Function_1__Any_MANY_(f:Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]):@Any@[*]  ~UserDefinedFunction<{Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->@Any@[*]}>
-  DotApplication test::TPR_Person.lastName :#String##[1]#  ~@DotApplication@  @12:58-12:66
-    ArrowInvocation eval_Function_1__T_n__V_m_ :#test::TPR_Person##[1]#  ~@ArrowInvocation@  @12:5-12:57
+  DotApplication test::TPR_Person.lastName :#String##[1]#  ~@DotApplication@  @26:58-26:66
+    ArrowInvocation eval_Function_1__T_n__V_m_ :#test::TPR_Person##[1]#  ~@ArrowInvocation@  @26:5-26:57
       typeParam T -> #Function<#{->#test::TPR_Person##[*]#}#>#
       typeParam V -> #test::TPR_Person#
       mulParam m -> #[1]#
       mulParam n -> #[1]#
-      Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>##[1]#  ~@VariableExpression@  @12:3-12:4
-      Lambda :#LambdaFunction<#{->#test::TPR_Person##[1]#}#>#[1]  ~@AtomicValue@  @12:12-12:56
-        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  ~@FunctionInvocation@  @12:13-12:56
+      Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Any_MANY_[y]}>##[1]#  ~@VariableExpression@  @26:3-26:4
+      Lambda :#LambdaFunction<#{->#test::TPR_Person##[1]#}#>#[1]  ~@AtomicValue@  @26:12-26:56
+        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  ~@FunctionInvocation@  @26:13-26:56
           typeParam T -> test::TPR_Person
-          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>  @12:13-12:56
-          Collection :#KeyExpression#[2]  ~@Collection@  @12:13-12:56
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:25-12:39
-              AtomicValue  'firstName' :@String@[1]  ~@AtomicValue@  @12:25-12:39
-              AtomicValue  'A' :@String@[1]  ~@AtomicValue@  @12:37-12:39
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:42-12:55
-              AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @12:42-12:55
-              AtomicValue  'B' :@String@[1]  ~@AtomicValue@  @12:53-12:55
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>  @26:13-26:56
+          Collection :#KeyExpression#[2]  ~@Collection@  @26:13-26:56
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @26:25-26:39
+              AtomicValue  'firstName' :@String@[1]  ~@AtomicValue@  @26:25-26:39
+              AtomicValue  'A' :@String@[1]  ~@AtomicValue@  @26:37-26:39
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @26:42-26:55
+              AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @26:42-26:55
+              AtomicValue  'B' :@String@[1]  ~@AtomicValue@  @26:53-26:55
 
 ###ReverseIndex
-meta::pure::functions::lang::eval_Function_1__T_n__V_m_:
+platform::pure::functions::lang::eval_Function_1__T_n__V_m_:
   test::testTypeParamResolution_Function_1__Any_MANY_
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::testTypeParamResolution_Function_1__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::testTypeParamResolution_Function_1__Any_MANY_
 test::TPR_Person:
   test::testTypeParamResolution_Function_1__Any_MANY_

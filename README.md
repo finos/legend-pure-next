@@ -101,7 +101,7 @@ pure/specification/
 - [`compiler-pure/`](pure/specification/compiler/compiler-pure/) — **the slice of the compiler written in Pure itself**. Its own `compiler/`, `printer/`, `test/` trees; this is what makes Legend Pure Next self-describing.
 
 **Runtime** ([`runtime/`](pure/specification/runtime/)) — the executable surface area:
-- [`functions/`](pure/specification/runtime/functions/) — the `meta::pure::functions::*` standard library, grouped by domain: [`collection/`](pure/specification/runtime/functions/collection/), [`string/`](pure/specification/runtime/functions/string/), [`relation/`](pure/specification/runtime/functions/relation/), [`date/`](pure/specification/runtime/functions/date/), [`math/`](pure/specification/runtime/functions/math/), [`boolean/`](pure/specification/runtime/functions/boolean/), [`lang/`](pure/specification/runtime/functions/lang/), [`meta/`](pure/specification/runtime/functions/meta/), [`io/`](pure/specification/runtime/functions/io/), [`asserts/`](pure/specification/runtime/functions/asserts/).
+- [`functions/`](pure/specification/runtime/functions/) — the `platform::pure::functions::*` standard library, grouped by domain: [`collection/`](pure/specification/runtime/functions/collection/), [`string/`](pure/specification/runtime/functions/string/), [`relation/`](pure/specification/runtime/functions/relation/), [`date/`](pure/specification/runtime/functions/date/), [`math/`](pure/specification/runtime/functions/math/), [`boolean/`](pure/specification/runtime/functions/boolean/), [`lang/`](pure/specification/runtime/functions/lang/), [`meta/`](pure/specification/runtime/functions/meta/), [`io/`](pure/specification/runtime/functions/io/), [`asserts/`](pure/specification/runtime/functions/asserts/).
 - [`featureTests/`](pure/specification/runtime/featureTests/) — backend-agnostic tests for cross-cutting features (dispatch, open variables, pointer access, …).
 - [`test/`](pure/specification/runtime/test/) — the PCT (Pure Compatibility Test) harness shared across backends.
 - [`printer/`](pure/specification/runtime/printer/) — compiled-form and protocol-form printers.
@@ -155,7 +155,7 @@ bootstrap/
 
 ### Platforms — [`platforms/`](platforms/)
 
-Execution targets that reuse the bootstrap front-end. Each ships a **gallery** rendering every PCT test in `meta::pure::functions` side-by-side as Pure source vs. the translated target — a live coverage snapshot per backend. [Browse all galleries →](https://finos.github.io/legend-pure-next/)
+Execution targets that reuse the bootstrap front-end. Each ships a **gallery** rendering every PCT test in `platform::pure::functions` side-by-side as Pure source vs. the translated target — a live coverage snapshot per backend. [Browse all galleries →](https://finos.github.io/legend-pure-next/)
 
 <pre>
 platforms/

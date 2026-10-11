@@ -1,7 +1,22 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.finos.legend.pure.execution.natives.lang;
 
-import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import platform.pure.metamodel.valuespecification.AtomicValue;
+import platform.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.natives.NativeRegistry.LazyNativeImpl;
 import org.finos.legend.pure.execution.natives.NativeRegistry.NativeImpl;
@@ -96,10 +111,10 @@ public class LangNatives
         // unset, failure carries an Error(message, stack).
         natives.put("tryEval_Function_1__TryResult_1_", (args, eval, genericType, multiplicity) ->
         {
-            DynamicInstance tryResult = new DynamicInstance("meta::pure::functions::lang::TryResult");
+            DynamicInstance tryResult = new DynamicInstance("platform::pure::functions::lang::TryResult");
             // genericType is the TryResult<V|m> classifier from the call site —
             // cast preserves V's GT and m bindings.
-            if (genericType instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+            if (genericType instanceof platform.pure.metamodel.type.generics.GenericTypeValue gtv)
             {
                 tryResult.setClassifierGenericType(gtv);
             }
@@ -118,11 +133,11 @@ public class LangNatives
                 {
                     msg = msg.substring(0, stackHeaderIdx);
                 }
-                DynamicInstance error = new DynamicInstance("meta::pure::functions::lang::Error");
-                meta.pure.metamodel.type.Type errorType =
-                        (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::functions::lang::Error");
+                DynamicInstance error = new DynamicInstance("platform::pure::functions::lang::Error");
+                platform.pure.metamodel.type.Type errorType =
+                        (platform.pure.metamodel.type.Type) resolver.getElement("platform::pure::functions::lang::Error");
                 error.setClassifierGenericType(
-                        new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver)._type(errorType));
+                        new platform.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver)._type(errorType));
                 error.put("message", _E_ValueSpecification.wrap(msg, null, null, resolver));
                 error.put("stack", _E_ValueSpecification.wrap(eval.getCallStackFrames(), null, null, resolver));
                 tryResult.put("failure", _E_ValueSpecification.wrap(error, null, null, resolver));
@@ -168,9 +183,9 @@ public class LangNatives
         // match — type- and multiplicity-based dispatch
         natives.put("match_Any_MANY__Function_$1_MANY$__T_m_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0), resolver);
+            platform.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0), resolver);
             int valueCount = getValueCount(_E_ValueSpecification.unwrap(args.get(0)));
-            meta.pure.metamodel.valuespecification.Collection matchFuncCol = _E_ValueSpecification.toCollection(args.get(1), resolver);
+            platform.pure.metamodel.valuespecification.Collection matchFuncCol = _E_ValueSpecification.toCollection(args.get(1), resolver);
 
             for (ValueSpecification mfVS : matchFuncCol._values())
             {
@@ -189,21 +204,21 @@ public class LangNatives
             else
             {
                 diag.append(valueType.getClass().getName());
-                if (valueType instanceof meta.pure.metamodel.PackageableElement vpe) diag.append(" name=").append(vpe._name());
+                if (valueType instanceof platform.pure.metamodel.PackageableElement vpe) diag.append(" name=").append(vpe._name());
             }
             int idx = 0;
             for (ValueSpecification mfVS : matchFuncCol._values())
             {
                 Object mf = _E_ValueSpecification.unwrap(mfVS);
                 diag.append("\n  arm[").append(idx++).append("] ");
-                if (mf instanceof meta.pure.metamodel.function.FunctionDefinition fd
+                if (mf instanceof platform.pure.metamodel.function.FunctionDefinition fd
                         && fd._parameters() != null && !fd._parameters().isEmpty())
                 {
                     var p = fd._parameters().getFirst();
                     var pt = p._genericType() == null ? null : _GenericType.type(p._genericType());
                     diag.append("paramType=")
                             .append(pt == null ? "null"
-                                    : pt.getClass().getName() + (pt instanceof meta.pure.metamodel.PackageableElement ppe ? " name=" + ppe._name() : ""))
+                                    : pt.getClass().getName() + (pt instanceof platform.pure.metamodel.PackageableElement ppe ? " name=" + ppe._name() : ""))
                             .append(" subtypeOf=")
                             .append(pt == null || valueType == null ? "n/a" : _Type.subtypeOf(valueType, pt, resolver));
                 }
@@ -214,9 +229,9 @@ public class LangNatives
         // match with extra parameter — match(Any[*], Function[1..*], P[o]) : T[m]
         natives.put("match_Any_MANY__Function_$1_MANY$__P_o__T_m_", (args, eval, genericType, multiplicity) ->
         {
-            meta.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0), resolver);
+            platform.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0), resolver);
             int valueCount = getValueCount(_E_ValueSpecification.unwrap(args.get(0)));
-            meta.pure.metamodel.valuespecification.Collection matchFuncCol = _E_ValueSpecification.toCollection(args.get(1), resolver);
+            platform.pure.metamodel.valuespecification.Collection matchFuncCol = _E_ValueSpecification.toCollection(args.get(1), resolver);
 
             for (ValueSpecification mfVS : matchFuncCol._values())
             {
@@ -225,7 +240,7 @@ public class LangNatives
                 {
                     continue;
                 }
-                if (mf instanceof meta.pure.metamodel.function.FunctionDefinition fd2
+                if (mf instanceof platform.pure.metamodel.function.FunctionDefinition fd2
                         && fd2._parameters() != null && fd2._parameters().size() >= 2)
                 {
                     return eval.executeFunction(mfVS, List.of(args.get(0), args.get(2)));
@@ -259,22 +274,22 @@ public class LangNatives
      * 2. The value count is within the parameter's declared multiplicity bounds
      */
     private static boolean matchesBranch(Object mf,
-                                         meta.pure.metamodel.type.Type valueType,
+                                         platform.pure.metamodel.type.Type valueType,
                                          int valueCount,
                                          MetadataAccess resolver)
     {
-        if (!(mf instanceof meta.pure.metamodel.function.FunctionDefinition fd)
+        if (!(mf instanceof platform.pure.metamodel.function.FunctionDefinition fd)
                 || fd._parameters() == null || fd._parameters().isEmpty())
         {
             return true; // No parameters — matches anything
         }
 
-        meta.pure.metamodel.valuespecification.VariableExpression param = fd._parameters().getFirst();
+        platform.pure.metamodel.valuespecification.VariableExpression param = fd._parameters().getFirst();
 
         // Check type
         if (param._genericType() != null)
         {
-            meta.pure.metamodel.type.Type paramType = _GenericType.type(param._genericType());
+            platform.pure.metamodel.type.Type paramType = _GenericType.type(param._genericType());
             if (paramType != null && !_Type.subtypeOf(valueType, paramType, resolver))
             {
                 return false;
@@ -297,9 +312,9 @@ public class LangNatives
      * Check if a multiplicity accepts the given count.
      * ConcreteMultiplicity has lowerBound and upperBound (null upper = unbounded).
      */
-    private static boolean multiplicityAccepts(meta.pure.metamodel.multiplicity.Multiplicity mult, int count)
+    private static boolean multiplicityAccepts(platform.pure.metamodel.multiplicity.Multiplicity mult, int count)
     {
-        if (!(mult instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm))
+        if (!(mult instanceof platform.pure.metamodel.multiplicity.ConcreteMultiplicity cm))
         {
             // MultiplicityParameter or unknown — accept anything
             return true;

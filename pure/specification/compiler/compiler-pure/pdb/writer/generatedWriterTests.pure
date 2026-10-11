@@ -30,24 +30,24 @@
 // with its own union fields (PointerRef arms for a packageable GenericTypeValue
 // and a ClassPointer through TypePropertyUnion), shared strings, long scalars in
 // non-monotonic slot order (endLine=3, sourceId=6, startColumn=4, endColumn=5,
-// startLine=7), and vtable trimming — 240 bytes.
-function <<test.Test>> meta::pure::compiler::pdb::gen::tests::testWriteSourceInformationWireFormat():Boolean[1]
+// startLine=7), and vtable trimming — 248 bytes.
+function <<test.Test>> platform::pure::compiler::pdb::gen::tests::testWriteSourceInformationWireFormat():Boolean[1]
 {
-   let cpSI = ^meta::pure::metamodel::pointer::ClassPointer<Any>(path = 'meta::pure::metamodel::SourceInformation');
+   let cpSI = ^platform::pure::metamodel::pointer::ClassPointer<Any>(path = 'platform::pure::metamodel::SourceInformation');
    // upgt is udgt's classifierGenericType, and in Pure the cgt IS the instance's
    // runtime type descriptor — its `type` must be the real UserDefinedGenericType
    // class or udgt fails instanceOf dispatch. Never serialized (upgt itself goes
    // through the PointerRef arm, path only), so byte-neutral.
-   let upgt = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
-                 type = meta::pure::functions::meta::pathToElement('meta::pure::metamodel::type::generics::UserDefinedGenericType')->cast(@Class<Any>));
-   let udgt = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $cpSI, classifierGenericType = $upgt);
-   let si   = ^meta::pure::metamodel::SourceInformation(classifierGenericType = $udgt,
+   let upgt = ^platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT',
+                 type = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::type::generics::UserDefinedGenericType')->cast(@Class<Any>));
+   let udgt = ^platform::pure::metamodel::type::generics::UserDefinedGenericType(type = $cpSI, classifierGenericType = $upgt);
+   let si   = ^platform::pure::metamodel::SourceInformation(classifierGenericType = $udgt,
                  sourceId = 'test.pure', startLine = 1, startColumn = 2, endLine = 3, endColumn = 4);
-   let r   = meta::pure::compiler::pdb::writerHelper::evalGenWrite('writeSourceInformation_Builder_1__SourceInformation_1__Any_MANY__BuilderAndOffset_1_', meta::pure::compiler::pdb::fbb::newBuilder(), $si, []);
-   let fin = $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset);
+   let r   = platform::pure::compiler::pdb::writerHelper::evalGenWrite('writeSourceInformation_Builder_1__SourceInformation_1__Any_MANY__BuilderAndOffset_1_', platform::pure::compiler::pdb::fbb::newBuilder(), $si, []);
+   let fin = $r.builder->platform::pure::compiler::pdb::fbb::finish($r.offset);
    assertEquals(
-      '1C000000000000001400340033002C000000240014000C00200004001400000001000000000000000400000000000000020000000000000000000000140000000300000000000000280000000000000409000000746573742E70757265001200140013000C000000000000000B0004001200000010000000000000015000000000000001C0FFFFFF040000000100000004000000280000006D6574613A3A707572653A3A6D6574616D6F64656C3A3A536F75726365496E666F726D6174696F6E000000000800080000000400080000000400000001000000040000000C00000074657374416E63686F72475400000000',
-      $fin->meta::pure::compiler::pdb::fbb::result()->meta::pure::functions::binary::binaryToHex());
+      '1C0000000000000014003800370030000000240014000C0020000400140000000100000000000000040000000000000002000000000000000000000018000000030000000000000000000000280000000000000409000000746573742E70757265001200140013000C000000000000000B0004001200000010000000000000015400000000000001BCFFFFFF0400000001000000040000002C000000706C6174666F726D3A3A707572653A3A6D6574616D6F64656C3A3A536F75726365496E666F726D6174696F6E000000000800080000000400080000000400000001000000040000000C00000074657374416E63686F72475400000000',
+      $fin->platform::pure::compiler::pdb::fbb::result()->platform::pure::functions::binary::binaryToHex());
 }
 
 // An AtomicValue holding a Float (3.14): exercises the AtomicValueContentUnion
@@ -55,23 +55,23 @@ function <<test.Test>> meta::pure::compiler::pdb::gen::tests::testWriteSourceInf
 // plus the multiplicity/genericType property unions through their PointerRef
 // arms, and vtable dedup across the value tables — 184 bytes
 // (reference probe RefBytesFloat.java, 2026-07-04).
-function <<test.Test>> meta::pure::compiler::pdb::gen::tests::testWriteAtomicValueFloatWireFormat():Boolean[1]
+function <<test.Test>> platform::pure::compiler::pdb::gen::tests::testWriteAtomicValueFloatWireFormat():Boolean[1]
 {
-   let avCls = meta::pure::functions::meta::pathToElement('meta::pure::metamodel::valuespecification::AtomicValue')->cast(@Class<Any>);
+   let avCls = platform::pure::functions::meta::pathToElement('platform::pure::metamodel::valuespecification::AtomicValue')->cast(@Class<Any>);
    // name-only packageable instances terminate the property chains through the
    // PointerRef union arms (only their names are serialized); the extra required
    // props (`type`, `lowerBound`) satisfy the ^-checker and are byte-neutral.
    // anchor is av's cgt = its runtime type descriptor, so its `type` must be the
    // real AtomicValue class.
-   let anchor  = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT', type = $avCls);
-   let pureOne = ^meta::pure::metamodel::multiplicity::UserDefinedPackageableMultiplicity(name = 'PureOne',
-                    lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = 1));
-   let floatGT = ^meta::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'FloatGT', type = $avCls);
-   let av = ^meta::pure::metamodel::valuespecification::AtomicValue(classifierGenericType = $anchor,
+   let anchor  = ^platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'testAnchorGT', type = $avCls);
+   let pureOne = ^platform::pure::metamodel::multiplicity::UserDefinedPackageableMultiplicity(name = 'PureOne',
+                    lowerBound = ^platform::pure::metamodel::multiplicity::MultiplicityValue(value = 1));
+   let floatGT = ^platform::pure::metamodel::type::generics::UserDefinedPackageableGenericType(name = 'FloatGT', type = $avCls);
+   let av = ^platform::pure::metamodel::valuespecification::AtomicValue(classifierGenericType = $anchor,
                multiplicity = $pureOne, genericType = $floatGT, value = 3.14);
-   let r   = meta::pure::compiler::pdb::writerHelper::evalGenWrite('writeAtomicValue_Builder_1__AtomicValue_1__Any_MANY__BuilderAndOffset_1_', meta::pure::compiler::pdb::fbb::newBuilder(), $av, []);
-   let fin = $r.builder->meta::pure::compiler::pdb::fbb::finish($r.offset);
+   let r   = platform::pure::compiler::pdb::writerHelper::evalGenWrite('writeAtomicValue_Builder_1__AtomicValue_1__Any_MANY__BuilderAndOffset_1_', platform::pure::compiler::pdb::fbb::newBuilder(), $av, []);
+   let fin = $r.builder->platform::pure::compiler::pdb::fbb::finish($r.offset);
    assertEquals(
       '1C00000000001600220021001C0000001B00140013000C000B0004001600000024000000000000022C0000000000000140000000000000015C0000000001060010000400060000001F85EB51B81E094000000000C8FFFFFF04000000010000000400000007000000466C6F6174475400E4FFFFFF04000000010000000400000007000000507572654F6E65000800080000000400080000000400000001000000040000000C00000074657374416E63686F72475400000000',
-      $fin->meta::pure::compiler::pdb::fbb::result()->meta::pure::functions::binary::binaryToHex());
+      $fin->platform::pure::compiler::pdb::fbb::result()->platform::pure::functions::binary::binaryToHex());
 }

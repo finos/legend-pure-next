@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,35 +13,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::valuespecification::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::multiplicity::*;
-import meta::pure::functions::lang::*;
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
-import meta::pure::compiler::structural::sourceInformationCompiler::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::compiler::helper::pointer::*;
-import meta::pure::compiler::helper::function::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::lambda::*;
-import meta::pure::compiler::helper::functionExpression::*;
-import meta::pure::compiler::helper::variableExpression::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::functionType::*;
-import meta::pure::compiler::helper::property::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::class::*;
-import meta::pure::compiler::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::valuespecification::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::multiplicity::*;
+import platform::pure::functions::lang::*;
+import platform::pure::compiler::structural::genericTypeCompiler::*;
+import platform::pure::compiler::structural::valueSpecificationCompiler::*;
+import platform::pure::compiler::structural::lambdaCompiler::*;
+import platform::pure::compiler::structural::sourceInformationCompiler::*;
+import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::compiler::helper::pointer::*;
+import platform::pure::compiler::helper::function::*;
+import platform::pure::compiler::helper::relationType::*;
+import platform::pure::compiler::helper::column::*;
+import platform::pure::compiler::helper::type::*;
+import platform::pure::compiler::helper::multiplicity::*;
+import platform::pure::compiler::helper::lambda::*;
+import platform::pure::compiler::helper::functionExpression::*;
+import platform::pure::compiler::helper::variableExpression::*;
+import platform::pure::compiler::helper::genericType::*;
+import platform::pure::compiler::helper::functionType::*;
+import platform::pure::compiler::helper::property::*;
+import platform::pure::compiler::helper::parametersBinding::*;
+import platform::pure::compiler::helper::class::*;
+import platform::pure::compiler::*;
 
 
-Class meta::pure::compiler::structural::valueSpecificationCompiler::SequenceCompileResult
+Class platform::pure::compiler::structural::valueSpecificationCompiler::SequenceCompileResult
 {
     specs: ValueSpecification[*];
     scope: VariableExpression[*];
@@ -48,7 +49,7 @@ Class meta::pure::compiler::structural::valueSpecificationCompiler::SequenceComp
     context: CompilerContext[0..1];
 }
 
-Class meta::pure::compiler::structural::valueSpecificationCompiler::ValueCompileResult
+Class platform::pure::compiler::structural::valueSpecificationCompiler::ValueCompileResult
 {
     values: ValueSpecification[*];
     openVariables: VariableExpression[*];
@@ -59,7 +60,7 @@ Class meta::pure::compiler::structural::valueSpecificationCompiler::ValueCompile
 // Expression sequence compilation
 // ============================================================================
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::compileExpressionSequence(expressions:meta::pure::protocol::grammar::valuespecification::ValueSpecification[*], ctx:CompilerContext[1], scope:VariableExpression[*]): SequenceCompileResult[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::compileExpressionSequence(expressions:platform::pure::protocol::grammar::valuespecification::ValueSpecification[*], ctx:CompilerContext[1], scope:VariableExpression[*]): SequenceCompileResult[1]
 {
     let result = fold($expressions, {expr, acc |
         let currentCtx = if($acc.context->isNotEmpty(), | $acc.context->toOne(), | $ctx);
@@ -77,7 +78,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileEx
               let exprOpenVars = $m3ExprResult.openVariables;
               // Expand scope for let bindings
               let newScope = match($expr, [
-                  fi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+                  fi:platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
                       if($fi.functionName == 'letFunction',
                           | let m3FI = $m3Expr->cast(@FunctionInvocation);
                             let args = $m3FI.parametersValues;
@@ -107,38 +108,38 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileEx
 // Value specification compilation — dispatches by protocol type
 // ============================================================================
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::compileValueSpecification(vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]): ValueCompileResult[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::compileValueSpecification(vs:platform::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]): ValueCompileResult[1]
 {
     // Compile genericType (when present) and capture the recording-updated
     // context so cast/type-arg references inside this value spec propagate.
-    let gtCompileR = if($vs.genericType->isEmpty(), | [], | match($vs.genericType->toOne(), [g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] | $g->compileGenericType($ctx, '', []), a:Any[1] | []]));
+    let gtCompileR = if($vs.genericType->isEmpty(), | [], | match($vs.genericType->toOne(), [g:platform::pure::protocol::grammar::type::generics::GenericTypeValue[1] | $g->compileGenericType($ctx, '', []), a:Any[1] | []]));
     let mGenType = if($gtCompileR->isEmpty(), | []->cast(@GenericType), | $gtCompileR->toOne().value);
     let ctxGT = if($gtCompileR->isEmpty(), | $ctx, | $gtCompileR->toOne().context);
-    let mMult = if($vs.multiplicity->isEmpty(), | [], | $vs.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity());
+    let mMult = if($vs.multiplicity->isEmpty(), | [], | $vs.multiplicity->toOne()->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity());
 
     match($vs, [
-        a:meta::pure::protocol::grammar::valuespecification::AtomicValue[1] |
+        a:platform::pure::protocol::grammar::valuespecification::AtomicValue[1] |
             compileAtomicValue($a, $vs, $ctxGT, $scope, $mGenType, $mMult),
 
-        v:meta::pure::protocol::grammar::valuespecification::VariableExpression[1] |
+        v:platform::pure::protocol::grammar::valuespecification::VariableExpression[1] |
             compileVariableExpression($v, $vs, $ctxGT, $scope),
 
-        fi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+        fi:platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
             compileFunctionInvocation($fi, $vs, $ctxGT, $scope),
 
-        l:meta::pure::protocol::grammar::function::LambdaFunction[1] |
+        l:platform::pure::protocol::grammar::function::LambdaFunction[1] |
             $l->compileLambda($ctxGT, $scope, $mGenType, $mMult),
 
-        c:meta::pure::protocol::grammar::valuespecification::Collection[1] |
+        c:platform::pure::protocol::grammar::valuespecification::Collection[1] |
             compileCollection($c, $ctxGT, $scope),
 
-        arrow:meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1] |
+        arrow:platform::pure::protocol::grammar::valuespecification::ArrowInvocation[1] |
             compileArrowInvocation($arrow, $vs, $ctxGT, $scope),
 
-        dot:meta::pure::protocol::grammar::valuespecification::DotApplication[1] |
+        dot:platform::pure::protocol::grammar::valuespecification::DotApplication[1] |
             compileDotApplication($dot, $vs, $ctxGT, $scope),
 
-        gmh:meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1] |
+        gmh:platform::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1] |
             compileGenericTypeAndMultiplicityHolder($gmh, $vs, $ctxGT),
 
         any:Any[1] |
@@ -150,11 +151,11 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
 // AtomicValue compilation
 // ============================================================================
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::compileAtomicValue(a:meta::pure::protocol::grammar::valuespecification::AtomicValue[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*], mGenType:GenericType[0..1], mMult:Multiplicity[0..1]):ValueCompileResult[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::compileAtomicValue(a:platform::pure::protocol::grammar::valuespecification::AtomicValue[1], vs:platform::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*], mGenType:GenericType[0..1], mMult:Multiplicity[0..1]):ValueCompileResult[1]
 {
     let rawValue = $a.value->toOne();
     match($rawValue, [
-        lf:meta::pure::protocol::grammar::function::LambdaFunction[1] |
+        lf:platform::pure::protocol::grammar::function::LambdaFunction[1] |
             let lambdaResult = $lf->compileLambda($ctx, $scope, $mGenType, $mMult);
             if($lambdaResult.values->isEmpty(),
                 | $lambdaResult,
@@ -171,7 +172,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                       context = $lambdaResult.context
                   );
             );,
-        pp:meta::pure::protocol::grammar::Package_Pointer[1] |
+        pp:platform::pure::protocol::grammar::Package_Pointer[1] |
             let resolvedR = $ctx->resolveElementR($pp.value);
             let resolved = $resolvedR.value;
             let ctxR = $resolvedR.context;
@@ -206,7 +207,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                   // pass-2/3 winners at runtime. {@code toElementPointer}
                   // dispatches per PE subtype (Class, Enumeration, Primitive,
                   // Association, Profile, Package, PackageableFunction).
-                  let embeddedValue = $element->cast(@meta::pure::metamodel::PackageableElement)->toElementPointer();
+                  let embeddedValue = $element->cast(@platform::pure::metamodel::PackageableElement)->toElementPointer();
                   ^ValueCompileResult(
                       values = [^AtomicValue(
                           value = $embeddedValue,
@@ -219,7 +220,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                   );
             );,
         any:Any[1] |
-            let parserGT = $a.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+            let parserGT = $a.genericType->toOne()->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue);
             let compiledGT = $parserGT->compileGenericType($ctx, '', []);
             let ctxAfterGT = $compiledGT.context;
             let inferredGT = if($compiledGT.value->isEmpty() || $compiledGT.value->toOne()->instanceOf(UndefinedGenericType),
@@ -236,7 +237,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                 | // Parser leaves escape sequences as literal two-char sequences;
                   // unescape via the native (chained replace can't handle `\\`
                   // without distorting its own patterns under self-host).
-                  meta::pure::compiler::structural::valueSpecificationCompiler::unescapePureString($rawValue->cast(@String)),
+                  platform::pure::compiler::structural::valueSpecificationCompiler::unescapePureString($rawValue->cast(@String)),
                 | if($isDate,
                     | normalizeDateString($rawValue->toString()),
                     | $rawValue
@@ -245,10 +246,10 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
             let finalGT = if($isDate,
                 | let ds = $processedValue->toString();
                   let dateTypePath = if($ds->contains('T'),
-                      | 'meta::pure::metamodel::type::primitives::DateTime',
+                      | 'platform::pure::metamodel::type::primitives::DateTime',
                       | if($ds->length() <= 7,
-                          | 'meta::pure::metamodel::type::primitives::Date',
-                          | 'meta::pure::metamodel::type::primitives::StrictDate'
+                          | 'platform::pure::metamodel::type::primitives::Date',
+                          | 'platform::pure::metamodel::type::primitives::StrictDate'
                       )
                   );
                   let dateType = $ctx->resolveElement($dateTypePath);
@@ -275,7 +276,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
 // VariableExpression compilation
 // ============================================================================
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::compileVariableExpression(v:meta::pure::protocol::grammar::valuespecification::VariableExpression[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::compileVariableExpression(v:platform::pure::protocol::grammar::valuespecification::VariableExpression[1], vs:platform::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
 {
     let inScope = $scope->filter(s | $s.name == $v.name);
     if($inScope->isEmpty(),
@@ -306,7 +307,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
 // FunctionInvocation compilation
 // ============================================================================
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::compileFunctionInvocation(fi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::compileFunctionInvocation(fi:platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1], vs:platform::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
 {
     // Structural compilation only — function resolution happens in pass 3.
     // Thread the recording-aware context through each param compilation so
@@ -362,7 +363,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileFu
     );
 }
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::tryFoldUnaryMinus(fi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], paramValues:ValueSpecification[*], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1]):AtomicValue[0..1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::tryFoldUnaryMinus(fi:platform::pure::protocol::grammar::valuespecification::FunctionInvocation[1], paramValues:ValueSpecification[*], vs:platform::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1]):AtomicValue[0..1]
 {
     let av = if($fi.functionName == 'minus' && $paramValues->size() == 1 && $paramValues->at(0)->instanceOf(AtomicValue),
         | $paramValues->at(0)->cast(@AtomicValue),
@@ -399,7 +400,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::tryFoldUn
 // Column-spec arity dispatch
 // ----------------------------------------------------------------------------
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::dispatchColSpecArity(name:String[1], paramValues:ValueSpecification[*]):String[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::dispatchColSpecArity(name:String[1], paramValues:ValueSpecification[*]):String[1]
 {
     if($paramValues->isEmpty(),
         | $name,
@@ -413,7 +414,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::dispatchC
     )
 }
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::firstParamIsLambdaOfArity(paramValues:ValueSpecification[*], arity:Integer[1]):Boolean[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::firstParamIsLambdaOfArity(paramValues:ValueSpecification[*], arity:Integer[1]):Boolean[1]
 {
     let first = $paramValues->at(0);
     let lambdaArity = if($first->instanceOf(AtomicValue),
@@ -427,7 +428,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::firstPara
     $lambdaArity == $arity;
 }
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::firstCollectionElementUsesArity2(paramValues:ValueSpecification[*]):Boolean[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::firstCollectionElementUsesArity2(paramValues:ValueSpecification[*]):Boolean[1]
 {
     let first = $paramValues->at(0);
     let innerName = if($first->instanceOf(Collection),
@@ -445,7 +446,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::firstColl
 // ArrowInvocation compilation (same as FunctionInvocation but preserves type)
 // ============================================================================
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::compileArrowInvocation(arrow:meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::compileArrowInvocation(arrow:platform::pure::protocol::grammar::valuespecification::ArrowInvocation[1], vs:platform::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
 {
     // Structural compilation only — function resolution happens in pass 3.
     // Thread the recording-aware context through each param compilation so
@@ -482,7 +483,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAr
 // DotApplication compilation (pass 2 — structural only, resolution in pass 3)
 // ============================================================================
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::compileDotApplication(dot:meta::pure::protocol::grammar::valuespecification::DotApplication[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::compileDotApplication(dot:platform::pure::protocol::grammar::valuespecification::DotApplication[1], vs:platform::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
 {
     // Thread the recording-aware context through each param compilation so
     // type references inside the receiver / additional params propagate to
@@ -514,7 +515,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileDo
 // Collection compilation
 // ============================================================================
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::compileCollection(c:meta::pure::protocol::grammar::valuespecification::Collection[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::compileCollection(c:platform::pure::protocol::grammar::valuespecification::Collection[1], ctx:CompilerContext[1], scope:VariableExpression[*]):ValueCompileResult[1]
 {
     // Thread the recording-aware context through each element compilation +
     // collection genericType compilation so type references inside collection
@@ -537,14 +538,14 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileCo
           // resolution infers from the values.
           let collMult = if($c.multiplicity->isEmpty(),
                             | ^CompilerNotSetMultiplicity(),
-                            | $c.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity());
+                            | $c.multiplicity->toOne()->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity());
           // Only descend into compileGenericType when the slot is BOTH non-empty
           // AND a GenericTypeValue subtype. CompilerNotSetGenericType (carried
           // through by callers that don't yet know the type) is non-empty but
           // NOT a GenericTypeValue — pass it through to downstream resolution.
           let collGenTypeR = if($c.genericType->isNotEmpty()
-                                && $c.genericType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
-              | $c.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctxAfterElems, '', []),
+                                && $c.genericType->toOne()->instanceOf(platform::pure::protocol::grammar::type::generics::GenericTypeValue),
+              | $c.genericType->toOne()->cast(@platform::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctxAfterElems, '', []),
               | ^CompilerResult<GenericType>(value = ^CompilerNotSetGenericType(), context = $ctxAfterElems)
           );
           let collGenType = $collGenTypeR.value->toOne();
@@ -566,12 +567,12 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileCo
 // GenericTypeAndMultiplicityHolder compilation
 // ============================================================================
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::compileGenericTypeAndMultiplicityHolder(gmh:meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1]):ValueCompileResult[1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::compileGenericTypeAndMultiplicityHolder(gmh:platform::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1], vs:platform::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1]):ValueCompileResult[1]
 {
     // Mirrors Java ValueSpecificationCompiler.compileGenericTypeAndMultiplicityHolder (lines 112-140):
     // CompilerGenericTypeAndMultiplicityHolder → bare instance (gt=null, compiler-managed, enriched later)
     // UserDefinedGenericTypeAndMultiplicityHolder → full compilation with genericType set
-    if($gmh->instanceOf(meta::pure::protocol::grammar::valuespecification::CompilerGenericTypeAndMultiplicityHolder),
+    if($gmh->instanceOf(platform::pure::protocol::grammar::valuespecification::CompilerGenericTypeAndMultiplicityHolder),
         | // Compiler-managed TypeHolder — bare instance with no genericType (matches Java line 118)
           let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
           let holder = new($compilerCGT)->cast(@CompilerGenericTypeAndMultiplicityHolder);
@@ -588,9 +589,9 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
           let gtCompileR = if($gmh.genericType->isEmpty(),
               | ^CompilerResult<GenericType>(value = []->cast(@GenericType), context = $ctx),
               | match($gmh.genericType->toOne(), [
-                  g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] |
+                  g:platform::pure::protocol::grammar::type::generics::GenericTypeValue[1] |
                       $g->compileGenericType($ctx, '', []),
-                  u:meta::pure::protocol::grammar::type::generics::UndefinedGenericType[1] |
+                  u:platform::pure::protocol::grammar::type::generics::UndefinedGenericType[1] |
                       ^CompilerResult<GenericType>(value = ^UndefinedGenericType()->cast(@GenericType), context = $ctx),
                   a:Any[1] |
                       ^CompilerResult<GenericType>(value = []->cast(@GenericType), context = $ctx)
@@ -599,7 +600,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
           let heldGT = $gtCompileR.value;
           let ctxAfterGT = $gtCompileR.context;
           let heldMul = if($gmh.multiplicity->isNotEmpty(),
-              | $gmh.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(),
+              | $gmh.multiplicity->toOne()->platform::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(),
               | []->cast(@Multiplicity)
           );
           let classifierGT = ^UserDefinedGenericType(type = UserDefinedGenericTypeAndMultiplicityHolder, typeArguments = $heldGT, multiplicityArguments = $heldMul);
@@ -617,7 +618,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
 // Date literal helpers
 // ============================================================================
 
-function meta::pure::compiler::structural::valueSpecificationCompiler::getGenericTypeName(gt:GenericType[1]):String[0..1]
+function platform::pure::compiler::structural::valueSpecificationCompiler::getGenericTypeName(gt:GenericType[1]):String[0..1]
 {
     $gt->match([
         gtv:GenericTypeValue[1] |
@@ -627,7 +628,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::getGeneri
                     // derive the simple-name segment from `elementToPath()`.
                     // Works uniformly for both concrete PDOs and pointer
                     // subclasses (ClassPointer / PrimitiveTypePointer / etc.).
-                    pe:PackageableElement[1] | $pe->meta::pure::functions::meta::elementToPath()->split('::')->last(),
+                    pe:PackageableElement[1] | $pe->platform::pure::functions::meta::elementToPath()->split('::')->last(),
                     a:Any[1] | []
                 ])
             ),
@@ -635,10 +636,10 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::getGeneri
     ]);
 }
 
-native function meta::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString(dateStr:String[1]):String[1];
+native function platform::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString(dateStr:String[1]):String[1];
 
 // Char-by-char unescape of Pure string-literal escape sequences. Implemented
 // as a native because the chained-replace alternative is not self-host stable —
 // each iteration of the Pure compiler re-compiling itself distorts the patterns
 // it stores for the next iteration.
-native function meta::pure::compiler::structural::valueSpecificationCompiler::unescapePureString(s:String[1]):String[1];
+native function platform::pure::compiler::structural::valueSpecificationCompiler::unescapePureString(s:String[1]):String[1];

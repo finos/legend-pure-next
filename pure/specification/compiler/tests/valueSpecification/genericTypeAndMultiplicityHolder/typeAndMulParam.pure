@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 function test::run<T|m>(witness: T[m], probe: Any[*]): T[m]
 {
@@ -6,12 +20,12 @@ function test::run<T|m>(witness: T[m], probe: Any[*]): T[m]
 
 ###CompiledGraph
 function test::run_T_m__Any_MANY__T_m_(witness:T~test::run_T_m__Any_MANY__T_m_[m], probe:@Any@[*]):T~test::run_T_m__Any_MANY__T_m_[m]  ~UserDefinedFunction<{T~test::run_T_m__Any_MANY__T_m_[m], @Any@[*]->T~test::run_T_m__Any_MANY__T_m_[m]}>
-  ArrowInvocation cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_ :#T~test::run_T_m__Any_MANY__T_m_##[m]#  ~@ArrowInvocation@  @4:9-4:20
+  ArrowInvocation cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_ :#T~test::run_T_m__Any_MANY__T_m_##[m]#  ~@ArrowInvocation@  @18:9-18:20
     typeParam T -> T~test::run_T_m__Any_MANY__T_m_
     mulParam m -> [m]
-    Variable probe :#Any##[*]#  ~@VariableExpression@  @4:3-4:8
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<T~test::run_T_m__Any_MANY__T_m_|m>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<T~test::run_T_m__Any_MANY__T_m_|m>  @4:16-4:19
+    Variable probe :#Any##[*]#  ~@VariableExpression@  @18:3-18:8
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<T~test::run_T_m__Any_MANY__T_m_|m>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<T~test::run_T_m__Any_MANY__T_m_|m>  @18:16-18:19
 
 ###ReverseIndex
-meta::pure::functions::lang::cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_:
+platform::pure::functions::lang::cast_Any_MANY__GenericTypeAndMultiplicityHolder_1__T_m_:
   test::run_T_m__Any_MANY__T_m_

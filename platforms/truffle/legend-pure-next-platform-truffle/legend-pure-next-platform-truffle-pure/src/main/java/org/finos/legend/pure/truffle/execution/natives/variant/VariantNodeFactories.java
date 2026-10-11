@@ -18,7 +18,7 @@ import org.finos.legend.pure.truffle.execution.natives.NativeRegistry;
 
 /**
  * Registers specialized Truffle nodes for the Variant natives
- * ({@code meta::pure::functions::variant::convert}).
+ * ({@code platform::pure::functions::variant::convert}).
  */
 public final class VariantNodeFactories
 {

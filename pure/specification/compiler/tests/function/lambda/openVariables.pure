@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 function test::t(): Any[*]
 {
@@ -7,19 +21,19 @@ function test::t(): Any[*]
 
 ###CompiledGraph
 function test::t__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1]#  ~@FunctionInvocation@  @4:3-4:11
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1]#  ~@FunctionInvocation@  @18:3-18:11
     typeParam T -> @Integer@
     mulParam m -> [1]
-    AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @4:7-4:7
-    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @4:11-4:11
-  Lambda(z:@Integer@[1]) :#LambdaFunction<#{@Integer@[1]->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @5:3-5:22
+    AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @18:7-18:7
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @18:11-18:11
+  Lambda(z:@Integer@[1]) :#LambdaFunction<#{@Integer@[1]->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @19:3-19:22
     openVar x :#Integer##[1]#
-    FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @5:16-5:22
-      Variable x :#Integer##[1]#  ~@VariableExpression@  @5:16-5:17
-      Variable z :#Integer##[1]#  ~@VariableExpression@  @5:21-5:22
+    FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @19:16-19:22
+      Variable x :#Integer##[1]#  ~@VariableExpression@  @19:16-19:17
+      Variable z :#Integer##[1]#  ~@VariableExpression@  @19:21-19:22
 
 ###ReverseIndex
-meta::pure::functions::lang::letFunction_String_1__T_m__T_m_:
+platform::pure::functions::lang::letFunction_String_1__T_m__T_m_:
   test::t__Any_MANY_
-meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
   test::t__Any_MANY_

@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,7 +60,7 @@ class TestPureModel
         JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
                         new SourceModule("test", "*", Lists.mutable.with("m3"),
-                                Lists.mutable.with(new PureContent("Class meta::pure::MyClass { name : String[1]; }", "test.pure"))))
+                                Lists.mutable.with(new PureContent("Class platform::pure::MyClass { name : String[1]; }", "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
@@ -69,9 +70,9 @@ class TestPureModel
         // Resolve the compiled class from the test module
         Module testModule = model.registry().module("test");
         assertNotNull(testModule, "test module should exist");
-        assertNotNull(testModule.getElement("meta::pure::MyClass"),
+        assertNotNull(testModule.getElement("platform::pure::MyClass"),
                 "MyClass should be resolvable from the test module");
-        assertEquals("MyClass", testModule.getElement("meta::pure::MyClass")._name());
+        assertEquals("MyClass", testModule.getElement("platform::pure::MyClass")._name());
     }
 
     @Test
@@ -80,7 +81,7 @@ class TestPureModel
         JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
                         new SourceModule("test", "*", Lists.mutable.with("m3"),
-                                Lists.mutable.with(new PureContent("Enum meta::pure::MyColor { RED, GREEN, BLUE }", "test.pure"))))
+                                Lists.mutable.with(new PureContent("Enum platform::pure::MyColor { RED, GREEN, BLUE }", "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
@@ -88,9 +89,9 @@ class TestPureModel
                 "Compilation errors: " + result.errors());
 
         Module testModule = model.registry().module("test");
-        assertNotNull(testModule.getElement("meta::pure::MyColor"));
-        assertInstanceOf(meta.pure.metamodel.type.Enumeration.class,
-                testModule.getElement("meta::pure::MyColor"));
+        assertNotNull(testModule.getElement("platform::pure::MyColor"));
+        assertInstanceOf(platform.pure.metamodel.type.Enumeration.class,
+                testModule.getElement("platform::pure::MyColor"));
     }
 
     // -----------------------------------------------------------------------
@@ -122,18 +123,18 @@ class TestPureModel
         // Verify PackageableGenericType anchors are bootstrapped. The anchor name
         // now encodes the type's full Pure path (`::` -> `_`) so collisions
         // between user modules and platform types can't pick the wrong anchor.
-        String siAnchor = "meta::pure::metamodel::type::generics::optimization::GenericType_meta_pure_metamodel_SourceInformation";
+        String siAnchor = "platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_SourceInformation";
         assertTrue(bootstrap.elementPaths().stream().anyMatch(p -> p.equals(siAnchor)),
                 "Bootstrap should contain " + siAnchor);
         assertNotNull(bootstrap.getElement(siAnchor),
                 siAnchor + " should be resolvable by full path");
-        assertInstanceOf(meta.pure.metamodel.type.generics.PackageableGenericType.class,
+        assertInstanceOf(platform.pure.metamodel.type.generics.PackageableGenericType.class,
                 bootstrap.getElement(siAnchor),
                 siAnchor + " should be a PackageableGenericType");
-        meta.pure.metamodel.type.generics.PackageableGenericType sourceInfoGT =
-                (meta.pure.metamodel.type.generics.PackageableGenericType) bootstrap.getElement(siAnchor);
+        platform.pure.metamodel.type.generics.PackageableGenericType sourceInfoGT =
+                (platform.pure.metamodel.type.generics.PackageableGenericType) bootstrap.getElement(siAnchor);
         assertNotNull(sourceInfoGT._type(), siAnchor + " should have its type wired");
-        assertEquals("SourceInformation", ((meta.pure.metamodel.PackageableElement) sourceInfoGT._type())._name(), siAnchor + " should point to SourceInformation type");
+        assertEquals("SourceInformation", ((platform.pure.metamodel.PackageableElement) sourceInfoGT._type())._name(), siAnchor + " should point to SourceInformation type");
     }
 
     @Test
@@ -142,13 +143,13 @@ class TestPureModel
         JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
                         new SourceModule("test", "*", Lists.mutable.with("m3"),
-                                Lists.mutable.with(new PureContent("Class meta::pure::A { name : String[1]; }", "test.pure"))))
+                                Lists.mutable.with(new PureContent("Class platform::pure::A { name : String[1]; }", "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
         model.compile();
 
         Module testModule = model.registry().module("test");
-        assertTrue(testModule.hasElement("meta::pure::A"));
-        assertTrue(testModule.elementPaths().contains("meta::pure::A"));
+        assertTrue(testModule.hasElement("platform::pure::A"));
+        assertTrue(testModule.elementPaths().contains("platform::pure::A"));
     }
 
     @Test
@@ -157,9 +158,9 @@ class TestPureModel
         JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
                         new SourceModule("moduleA", "*", Lists.mutable.with("m3"),
-                                Lists.mutable.with(new PureContent("Class meta::pure::A {}", "a.pure"))),
+                                Lists.mutable.with(new PureContent("Class platform::pure::A {}", "a.pure"))),
                         new SourceModule("moduleB", "*", Lists.mutable.with("m3"),
-                                Lists.mutable.with(new PureContent("Class meta::pure::B {}", "b.pure"))))
+                                Lists.mutable.with(new PureContent("Class platform::pure::B {}", "b.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
         model.compile();
 
@@ -167,12 +168,12 @@ class TestPureModel
         Module modB = model.registry().module("moduleB");
 
         // Each module sees its own elements
-        assertTrue(modA.hasElement("meta::pure::A"));
-        assertTrue(modB.hasElement("meta::pure::B"));
+        assertTrue(modA.hasElement("platform::pure::A"));
+        assertTrue(modB.hasElement("platform::pure::B"));
 
         // But not the other module's elements (no dependency declared)
-        assertFalse(modA.hasElement("meta::pure::B"));
-        assertFalse(modB.hasElement("meta::pure::A"));
+        assertFalse(modA.hasElement("platform::pure::B"));
+        assertFalse(modB.hasElement("platform::pure::A"));
     }
 
 
@@ -186,7 +187,7 @@ class TestPureModel
         JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
                         new SourceModule("test", "*", Lists.mutable.with("m3"),
-                                Lists.mutable.with(new PureContent("Class meta::pure::Bad { value : UnknownType[1]; }", "test.pure"))))
+                                Lists.mutable.with(new PureContent("Class platform::pure::Bad { value : UnknownType[1]; }", "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
@@ -199,7 +200,7 @@ class TestPureModel
     {
         JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
-                        new SourceModule("test", "(meta::pure)(::.*)?", Lists.mutable.with("m3"),
+                        new SourceModule("test", "(platform::pure)(::.*)?", Lists.mutable.with("m3"),
                                 Lists.mutable.with(new PureContent("Class wrong::path::MyClass {}", "test.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
@@ -220,9 +221,9 @@ class TestPureModel
         JavaCompiler model = JavaCompiler.withModules(
                 Lists.mutable.with(new BootstrapModule(BootstrapModule.locateM3Ttl()),
                         new SourceModule("moduleA", "*", Lists.mutable.with("m3"),
-                                Lists.mutable.with(new PureContent("Class meta::pure::Base {}", "a.pure"))),
+                                Lists.mutable.with(new PureContent("Class platform::pure::Base {}", "a.pure"))),
                         new SourceModule("moduleB", "*", Lists.mutable.with("m3", "moduleA"),
-                                Lists.mutable.with(new PureContent("Class meta::pure::Child extends meta::pure::Base {}", "b.pure"))))
+                                Lists.mutable.with(new PureContent("Class platform::pure::Child extends platform::pure::Base {}", "b.pure"))))
         ).withExtensions(Lists.mutable.with(new PureLanguageExtension())).build();
 
         CompilationResult result = model.compile();
@@ -247,7 +248,7 @@ class TestPureModel
 
         // A local module that depends on the PDB-backed specification
         // and compiles a function calling filter (provided by the spec)
-        String source = "function meta::pure::test::keepPositive(numbers: Integer[*]): Integer[*]\n"
+        String source = "function platform::pure::test::keepPositive(numbers: Integer[*]): Integer[*]\n"
                 + "{\n"
                 + "  $numbers->filter(n | $n > 0);\n"
                 + "}\n";
@@ -272,7 +273,7 @@ class TestPureModel
         // The locally compiled function should be resolvable from the test module
         Module testModule = model.registry().module("test");
         assertNotNull(testModule);
-        assertTrue(testModule.hasElement("meta::pure::test::keepPositive_Integer_MANY__Integer_MANY_"),
+        assertTrue(testModule.hasElement("platform::pure::test::keepPositive_Integer_MANY__Integer_MANY_"),
                 "Compiled function should be resolvable from the test module");
     }
 }

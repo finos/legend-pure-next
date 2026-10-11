@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::printer::protocol::*;
-import meta::pure::protocol::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::printer::protocol::*;
+import platform::pure::protocol::*;
 // Wildcard import gives us the protocol-only Pointer types (Package_Pointer,
 // Enum_Pointer, ...) for free. The conflicting protocol types — Class, Property,
 // QualifiedProperty, Generalization, Constraint — would each collide with the
 // auto-imported M3 metamodel, so they stay FQN inline.
-import meta::pure::protocol::grammar::*;
+import platform::pure::protocol::grammar::*;
 
 // Protocol printer for `Class` elements. First cut: name, package, simple
 // properties (primitive type + pointer multiplicity). Stereotypes / tagged
@@ -30,7 +31,7 @@ import meta::pure::protocol::grammar::*;
 // Emit `Class <pkg::>Name { props }` for a Class. Uses the same multi-line
 // shape for empty and populated classes — the body is always on its own line
 // so the layout is stable as properties are added/removed.
-function meta::pure::functions::printer::protocol::printProtocolClass(c: meta::pure::protocol::grammar::type::Class[1]): String[1]
+function platform::pure::functions::printer::protocol::printProtocolClass(c: platform::pure::protocol::grammar::type::Class[1]): String[1]
 {
     'Class ' + printAnnotations($c.stereotypes, $c.taggedValues) + printPackagePointer($c.package) + $c.name +
         printTypeAndMulParams($c.typeParameters, $c.multiplicityParameters) +
@@ -47,7 +48,7 @@ function meta::pure::functions::printer::protocol::printProtocolClass(c: meta::p
 // Emit a single property line:
 //   `<<stereos>> {tags} (aggKind) name: Type[mult] = defaultValue;`
 // Annotation / aggregation / default-value pieces are omitted when absent.
-function meta::pure::functions::printer::protocol::printProperty(p: meta::pure::protocol::grammar::function::property::Property[1]): String[1]
+function platform::pure::functions::printer::protocol::printProperty(p: platform::pure::protocol::grammar::function::property::Property[1]): String[1]
 {
     let annotations = printAnnotations($p.stereotypes, $p.taggedValues);
     let agg = printAggregationKind($p.aggregation);
@@ -64,7 +65,7 @@ function meta::pure::functions::printer::protocol::printProperty(p: meta::pure::
 // (Composite / Shared / None). Empty/missing → no prefix; `None` is the
 // implicit default and omitted from printed source (both builders always
 // populate the slot for validator parity).
-function meta::pure::functions::printer::protocol::printAggregationKind(a: Enum_Pointer[0..1]): String[1]
+function platform::pure::functions::printer::protocol::printAggregationKind(a: Enum_Pointer[0..1]): String[1]
 {
     if ($a->isEmpty(),
         | '',
@@ -74,7 +75,7 @@ function meta::pure::functions::printer::protocol::printAggregationKind(a: Enum_
 }
 
 // `<<stereos>> {tags} name(p1: T1[m1], ...) { body }: ReturnType[mult];`
-function meta::pure::functions::printer::protocol::printQualifiedProperty(qp: meta::pure::protocol::grammar::function::property::QualifiedProperty[1]): String[1]
+function platform::pure::functions::printer::protocol::printQualifiedProperty(qp: platform::pure::protocol::grammar::function::property::QualifiedProperty[1]): String[1]
 {
     let annotations = printAnnotations($qp.stereotypes, $qp.taggedValues);
     // Body layout matches the parser corpus: single-statement QPs render inline
@@ -94,7 +95,7 @@ function meta::pure::functions::printer::protocol::printQualifiedProperty(qp: me
 // (each carrying a Type_Pointer or richer Type). `extends ` prefix added
 // only when at least one parent is present. The implicit Any parent is
 // skipped at parser level and never appears here.
-function meta::pure::functions::printer::protocol::printGeneralizations(gens: meta::pure::protocol::grammar::relationship::Generalization[*]): String[1]
+function platform::pure::functions::printer::protocol::printGeneralizations(gens: platform::pure::protocol::grammar::relationship::Generalization[*]): String[1]
 {
     if ($gens->isEmpty(),
         | '',
@@ -105,7 +106,7 @@ function meta::pure::functions::printer::protocol::printGeneralizations(gens: me
 // `[ constraint1, constraint2, ... ]` — element-level constraint block used
 // by Class and PrimitiveType. Distinct from `printFunctionConstraints`
 // (function pre/post), but renders each Constraint with the same helper.
-function meta::pure::functions::printer::protocol::printElementConstraints(constraints: meta::pure::protocol::grammar::constraint::Constraint[*]): String[1]
+function platform::pure::functions::printer::protocol::printElementConstraints(constraints: platform::pure::protocol::grammar::constraint::Constraint[*]): String[1]
 {
     if ($constraints->isEmpty(),
         | '',

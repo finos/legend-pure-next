@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -6,43 +7,43 @@
 //
 //      http://www.apache.org/licenses/LICENSE-2.0
 
-import meta::pure::functions::lang::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::lang::*;
+import platform::pure::test::pct::*;
 
-Class meta::pure::functions::lang::Error
+Class platform::pure::functions::lang::Error
 {
    message : String[1];
    stack : String[*];
 }
 
-Class meta::pure::functions::lang::TryResult<V|m>
+Class platform::pure::functions::lang::TryResult<V|m>
 {
    value : V[m];
-   failure : meta::pure::functions::lang::Error[0..1];
+   failure : platform::pure::functions::lang::Error[0..1];
 }
 
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::tryEval<V|m>(func:Function<{->V[m]}>[1]):meta::pure::functions::lang::TryResult<V|m>[1];
+native function <<PCT.function, PCT.platformOnly>> platform::pure::functions::lang::tryEval<V|m>(func:Function<{->V[m]}>[1]):platform::pure::functions::lang::TryResult<V|m>[1];
 
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-function <<PCT.test>> meta::pure::functions::lang::tests::tryEval::testTryEvalSuccess<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::tryEval::testTryEvalSuccess<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    let result = $f->eval(|tryEval(|42));
    assert($result.failure->isEmpty(), 'expected no failure on successful eval');
    assertEquals(42, $result.value);
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::tryEval::testTryEvalSuccessWithCollection<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::tryEval::testTryEvalSuccessWithCollection<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    let result = $f->eval(|tryEval(|[1, 2, 3]));
    assert($result.failure->isEmpty(), 'expected no failure');
    assertEquals([1, 2, 3], $result.value);
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::tryEval::testTryEvalCapturesFailureMessage<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::tryEval::testTryEvalCapturesFailureMessage<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    let result = $f->eval(|tryEval(|assert(false, 'boom')));
    assert($result.failure->isNotEmpty(), 'expected failure on throw');
@@ -50,7 +51,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::tryEval::testTryEvalCa
    assert($err.message->contains('boom'), 'expected message to contain "boom"; got: ' + $err.message);
 }
 
-function <<PCT.test>> meta::pure::functions::lang::tests::tryEval::testTryEvalCapturesFailureStack<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::lang::tests::tryEval::testTryEvalCapturesFailureStack<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
    let result = $f->eval(|tryEval(|assert(false, 'boom')));
    let err = $result.failure->toOne();

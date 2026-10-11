@@ -16,7 +16,7 @@
 // lexer/parsers + the 17 ANTLR-bridge native impls, and exports them — built with
 // --global-name=PureAntlr, the bundle exposes them as `globalThis.PureAntlr`. The
 // JavaScript PureRuntime installs them as the `__parseAntlr`, `__getText`, … hooks the
-// translator emits for `meta::pure::functions::meta::antlr::*` (AntlrExtension).
+// translator emits for `platform::pure::functions::meta::antlr::*` (AntlrExtension).
 //
 // The bundle output (build/antlr-bundle.js) is a single no-imports IIFE so
 // it runs unchanged in any host without module resolution AND in the

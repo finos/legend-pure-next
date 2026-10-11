@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::asserts::*;
-import meta::pure::functions::printer::compiled::*;
-import meta::pure::metamodel::*;
-import meta::pure::metamodel::extension::*;
+import platform::pure::functions::asserts::*;
+import platform::pure::functions::printer::compiled::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::extension::*;
 
 // Compiled-side printer for `Profile`. M3 Profile holds `p_stereotypes` /
 // `p_tags` as full `Stereotype` / `Tag` PDOs (vs the protocol pointer form).
 // Each renders to its name; the empty case is skipped via concatenate.
-function meta::pure::functions::printer::compiled::printCompiledProfile(p: Profile[1]): String[1]
+function platform::pure::functions::printer::compiled::printCompiledProfile(p: Profile[1]): String[1]
 {
     'Profile ' + printPackagePrefix($p.package) + $p.name->toOne() +
     '\n{\n' +

@@ -30,7 +30,7 @@ import java.util.List;
  * compileSource(file: PureFile[1], dependencies: String[*]): CompileSourceResult[1]
  *
  * <p>THE dynamic-evaluation primitive: compiles an already-parsed PureFile by
- * dispatching into the INTERPRETED Pure compiler ({@code meta::pure::compiler::
+ * dispatching into the INTERPRETED Pure compiler ({@code platform::pure::compiler::
  * compile} from compiler.pdb — the same Pure code the JavaScript platform runs
  * translated), and repackages the {@code CompilationResult} into a
  * {@code CompileSourceResult} VALUE. Deliberately mutates no global state: the
@@ -46,8 +46,8 @@ import java.util.List;
 @NodeInfo(shortName = "compileSource")
 public final class CompileSourceNode extends PureNode
 {
-    private static final String COMPILE_FN = "meta::pure::compiler::compile_PureFile_MANY__CompilationResult_1_";
-    private static final String RESULT_CLASS = "meta::pure::functions::meta::CompileSourceResult";
+    private static final String COMPILE_FN = "platform::pure::compiler::compile_PureFile_MANY__CompilationResult_1_";
+    private static final String RESULT_CLASS = "platform::pure::functions::meta::CompileSourceResult";
 
     @Child
     private PureNode fileNode;

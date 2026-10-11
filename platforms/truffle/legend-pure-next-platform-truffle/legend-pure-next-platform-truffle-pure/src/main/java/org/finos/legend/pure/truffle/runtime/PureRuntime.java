@@ -144,7 +144,7 @@ public final class PureRuntime
                     // writeDotApplication_body), so exclude the namespace from
                     // compilation — it stays interpreted, correctness is
                     // covered by byte-parity tests against the Java reference.
-                    .option("engine.CompileOnly", "~meta::pure::compiler::pdb::");
+                    .option("engine.CompileOnly", "~platform::pure::compiler::pdb::");
             // Instrument options (cpusampler.*, pureprofiler.*) and explicit
             // engine.* overrides must go on the Engine, not the Context — when
             // a Context shares an Engine, instrument-scope options can only
@@ -549,7 +549,7 @@ public final class PureRuntime
     // that ignores what it does not recognise, and an extension fills that arm; without it a `###Diagram`
     // section parsed and then produced nothing.
     private static final String COMPILE_FN_PATH =
-            "meta::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
+            "platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__CompilationResult_1_";
 
     /** The registry this runtime resolves through. */
     public MetadataAccess registry()

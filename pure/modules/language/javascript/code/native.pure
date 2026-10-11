@@ -13,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::external::language::javascript::*;
-import meta::pure::metamodel::type::*;
-import meta::pure::metamodel::type::generics::*;
-import meta::pure::metamodel::multiplicity::*;
+import platform::external::language::javascript::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::type::generics::*;
+import platform::pure::metamodel::multiplicity::*;
 
 // ----------------------------------------------------------------------------
 // JavaScript execution natives, implemented by the HOST. The standalone JS
@@ -58,10 +58,10 @@ import meta::pure::metamodel::multiplicity::*;
 
 // Named `compileModule` rather than `compile`: the JavaScript translator's
 // coder table dispatches on the LAST ::-segment, so a native called `compile`
-// would also capture meta::pure::compiler::compile — and compiler.js is itself
-// produced by translating meta::pure::compiler, so every internal call would be
+// would also capture platform::pure::compiler::compile — and compiler.js is itself
+// produced by translating platform::pure::compiler, so every internal call would be
 // rewritten into the JS eval pipe.
-native function meta::external::language::javascript::compileModule(
+native function platform::external::language::javascript::compileModule(
    source: String[1]
 ): Any[1];
 
@@ -70,9 +70,9 @@ native function meta::external::language::javascript::compileModule(
 // running a test through the PCT adapter, so the displayed JavaScript is the
 // EXACT source that was compiled + executed — keeping the gallery 100% in sync
 // with the PCT run rather than re-deriving source through a separate path.
-native function meta::external::language::javascript::drainCompiledSources(): String[*];
+native function platform::external::language::javascript::drainCompiledSources(): String[*];
 
-native function meta::external::language::javascript::execute(
+native function platform::external::language::javascript::execute(
    ctx: Any[1],
    fnName: String[1],
    args: Any[*],
@@ -84,7 +84,7 @@ native function meta::external::language::javascript::execute(
    // PDB (e.g., a canonical lambda built in memory by a test adapter),
    // those reads route to this graph instead. Cleaned up after execute
    // returns — same lifetime as the call.
-   graph: meta::pure::metamodel::type::Any[0..1]
+   graph: platform::pure::metamodel::type::Any[0..1]
 ): Any[*];
 
 // ----------------------------------------------------------------------------

@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 native function f<T>(s: Function<{->T[1]}>[1]): T[1];
 
@@ -11,23 +25,23 @@ function test(): Any[*]
 native function f_Function_1__T_1_(s:Function<{->T~f_Function_1__T_1_[1]}>[1]):T~f_Function_1__T_1_[1]  ~NativeFunction<{Function<{->T~f_Function_1__T_1_[1]}>[1]->T~f_Function_1__T_1_[1]}>
 
 function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @6:3-6:11
-    FunctionInvocation f_Function_1__T_1_ :#Integer##[1]#  ~@FunctionInvocation@  @6:3-6:7
+  FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @20:3-20:11
+    FunctionInvocation f_Function_1__T_1_ :#Integer##[1]#  ~@FunctionInvocation@  @20:3-20:7
       typeParam T -> @Integer@
-      Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @6:5-6:6
-        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:6-6:6
-    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:11-6:11
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @7:3-7:15
-    FunctionInvocation f_Function_1__T_1_ :#String##[1]#  ~@FunctionInvocation@  @7:3-7:9
+      Lambda :#LambdaFunction<#{->@Integer@[1]}#>#[1]  ~@AtomicValue@  @20:5-20:6
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:6-20:6
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:11-20:11
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @21:3-21:15
+    FunctionInvocation f_Function_1__T_1_ :#String##[1]#  ~@FunctionInvocation@  @21:3-21:9
       typeParam T -> @String@
-      Lambda :#LambdaFunction<#{->@String@[1]}#>#[1]  ~@AtomicValue@  @7:5-7:8
-        AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @7:6-7:8
-    AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @7:13-7:15
+      Lambda :#LambdaFunction<#{->@String@[1]}#>#[1]  ~@AtomicValue@  @21:5-21:8
+        AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @21:6-21:8
+    AtomicValue  '1' :@String@[1]  ~@AtomicValue@  @21:13-21:15
 
 ###ReverseIndex
 f_Function_1__T_1_:
   test__Any_MANY_
-meta::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
+platform::pure::functions::math::plus_Integer_1__Integer_1__Integer_1_:
   test__Any_MANY_
-meta::pure::functions::string::plus_String_1__String_1__String_1_:
+platform::pure::functions::string::plus_String_1__String_1__String_1_:
   test__Any_MANY_

@@ -118,7 +118,7 @@ also carry the dot suffix (e.g. `Profile.stereotypeName`,
 
 ### Noise filter
 
-`recordReference` filters out anything matching `meta::pure::metamodel::*`
+`recordReference` filters out anything matching `platform::pure::metamodel::*`
 — the compiler internally looks up dozens of metamodel types per
 compile, and including them would drown the signal. Self-references
 (target == caller) are also filtered.
@@ -129,7 +129,7 @@ After pass 3, the **`LeanReferencesValidator`** scans the reverse index
 to enforce a hard rule: **non-test elements may not reference test-only
 elements**. The validator iterates every recorded `(target, caller)`
 pair, classifies each via `TestElementFilter.isTestElement` (anything
-stereotyped under `meta::pure::profiles::test` or with `<<PCT.test>>` /
+stereotyped under `platform::pure::profiles::test` or with `<<PCT.test>>` /
 `<<PCT.adapter>>`), and emits one `CompilationError` per violation. Sub-
 element paths resolve to their parent for classification; the caller
 element's `_sourceInformation` provides the `(at sourceId:line c col)`
@@ -138,7 +138,7 @@ suffix.
 Violations are sorted by `(callerPath, targetPath)` so the output is
 deterministic across Java and Pure compilers, regardless of recording
 order. Java's `LeanReferencesValidator.validate` and Pure's
-`meta::pure::compiler::validateLeanReferences` produce byte-identical
+`platform::pure::compiler::validateLeanReferences` produce byte-identical
 error lists for the same input — a critical parity property for the
 test suite (e.g. `leanReferencesTest_E_nonTestReferencesTestElement`)
 which runs on both compilers.

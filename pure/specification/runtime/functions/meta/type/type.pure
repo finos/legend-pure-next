@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::meta::tests::model::*;
-import meta::pure::test::pct::*;
+import platform::pure::functions::meta::tests::model::*;
+import platform::pure::test::pct::*;
 
-function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::type(any:Any[*]):Type[1]
+function <<PCT.function, PCT.platformOnly>> platform::pure::functions::meta::type(any:Any[*]):Type[1]
 {
     $any->genericType().type->toOne()
 }
 
 
-function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypePrimitive<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::type::testTypePrimitive<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(Integer, $f->eval(|1->type()));
     assertEquals(String, $f->eval(|'the quick brown fox jumps over the lazy dog'->type()));
@@ -30,27 +31,27 @@ function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypePrimitiv
     assertEquals(Date, $f->eval(|%2014-01->type()));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypeInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::type::testTypeInstance<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(CC_Person, $f->eval(|^CC_Person(firstName='Pierre', lastName='Doe')->type()));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypeFromType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::type::testTypeFromType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(Class, $f->eval(|CC_Person->type()));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypeFromEnum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::type::testTypeFromEnum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(Enumeration, $f->eval(|CC_GeographicEntityType->type()));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypeFromEnumVal<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::type::testTypeFromEnumVal<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(CC_GeographicEntityType, $f->eval(|CC_GeographicEntityType.CITY->type()));
 }
 
-function <<PCT.test>> meta::pure::functions::meta::tests::type::testTypeWithGenerics<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::meta::tests::type::testTypeWithGenerics<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(CC_List, $f->eval(|^CC_List<String>(values=['a', 'b', 'c'])->type()));
 }

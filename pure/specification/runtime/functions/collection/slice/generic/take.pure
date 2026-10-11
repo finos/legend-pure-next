@@ -1,4 +1,5 @@
 // Copyright 2022 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,61 +13,61 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
-native function <<PCT.function>> meta::pure::functions::collection::take<T>(set:T[*], count:Integer[1]):T[*];
+native function <<PCT.function>> platform::pure::functions::collection::take<T>(set:T[*], count:Integer[1]):T[*];
 
-function <<PCT.test>> meta::pure::functions::collection::tests::take::testTakeNegativeOnEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::take::testTakeNegativeOnEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEmpty($f->eval(|[]->take(-1)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::take::testTakeNegativeOnNonEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::take::testTakeNegativeOnNonEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEmpty($f->eval(|[1, 2, 3]->take(-1)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::take::testTakeZeroOnEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::take::testTakeZeroOnEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEmpty($f->eval(|[]->take(0)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::take::testTakeZeroOnNonEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::take::testTakeZeroOnNonEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEmpty($f->eval(|[1, 2, 3]->take(0)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::take::testTakeOneOnEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::take::testTakeOneOnEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEmpty($f->eval(|[]->take(1)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::take::testTakeOneOnNonEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::take::testTakeOneOnNonEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEquals([1], $f->eval(|[1, 2, 3]->take(1)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::take::testTakeManyOnEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::take::testTakeManyOnEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEmpty($f->eval(|[]->take(2)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::take::testTakeManyOnNonEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::take::testTakeManyOnNonEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEquals([1, 2], $f->eval(|[1, 2, 3]->take(2)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::take::testTakeExceedsSizeOnEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::take::testTakeExceedsSizeOnEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEmpty($f->eval(|[]->take(5)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::take::testTakeExceedsSizeOnNonEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::take::testTakeExceedsSizeOnNonEmptyList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEquals([1, 2, 3], $f->eval(|[1, 2, 3]->take(5)));
 }
 
-function <<PCT.test>> meta::pure::functions::collection::tests::take::testTakeInList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+function <<PCT.test>> platform::pure::functions::collection::tests::take::testTakeInList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
   assertEquals(list([1, 2]), $f->eval(|list([1, 2, 3]->take(2))));
 }

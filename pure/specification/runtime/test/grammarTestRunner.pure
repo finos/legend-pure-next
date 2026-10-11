@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::variant::convert::*;
-import meta::pure::test::grammar::*;
-import meta::pure::test::report::*;
-import meta::pure::ui::progress::*;
+import platform::pure::functions::variant::convert::*;
+import platform::pure::test::grammar::*;
+import platform::pure::test::report::*;
+import platform::pure::ui::progress::*;
 
 // ---------------------------------------------------------------------------
 // Grammar corpus runner: parses every grammar.pure of the grammar specification corpus
@@ -29,20 +30,20 @@ import meta::pure::ui::progress::*;
 // A fixture without protocol.json only has to parse.
 // ---------------------------------------------------------------------------
 
-function <<test.TestDependency>> meta::pure::test::grammar::runGrammarCorpus(testDir:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::test::grammar::runGrammarCorpus(testDir:String[1]):String[1]
 {
     runGrammarCorpusWithReport($testDir, []);
 }
 
 // Same, also writing the run's test report to `reportPath` (read by tools/test-dashboard).
-function <<test.TestDependency>> meta::pure::test::grammar::runGrammarCorpus(testDir:String[1], reportPath:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::test::grammar::runGrammarCorpus(testDir:String[1], reportPath:String[1]):String[1]
 {
     runGrammarCorpusWithReport($testDir, $reportPath);
 }
 
-function <<test.TestDependency>> meta::pure::test::grammar::runGrammarCorpusWithReport(testDir:String[1], reportPath:String[0..1]):String[1]
+function <<test.TestDependency>> platform::pure::test::grammar::runGrammarCorpusWithReport(testDir:String[1], reportPath:String[0..1]):String[1]
 {
-    let start = meta::pure::functions::date::currentTimeMillis();
+    let start = platform::pure::functions::date::currentTimeMillis();
     let files = $testDir->directoryTree();
     let fixtures = $files->filter(f | $f->endsWith('/grammar.pure'));
     let total = $fixtures->size();
@@ -56,44 +57,44 @@ function <<test.TestDependency>> meta::pure::test::grammar::runGrammarCorpusWith
 
     let passed = $total - $mismatches->size();
     let summary = 'Grammar corpus: ' + $passed->toString() + ' / ' + $total->toString() + ' match protocol.json';
-    if ($reportPath->isEmpty(), | [], | writeSuiteReport($reportPath->toOne(), 'grammar', meta::pure::functions::date::currentTimeMillis() - $start, $cases));
+    if ($reportPath->isEmpty(), | [], | writeSuiteReport($reportPath->toOne(), 'grammar', platform::pure::functions::date::currentTimeMillis() - $start, $cases));
     // Throw on any mismatch so the CLI's exit code reflects corpus status.
     assert($mismatches->isEmpty(), $summary);
     $summary;
 }
 
 // One fixture as a report case: the id is the fixture directory, as the grammar corpus names it.
-function <<test.TestDependency>> meta::pure::test::grammar::grammarCase(file:String[1], files:String[*], prefixLen:Integer[1], index:Integer[1], total:Integer[1]):TestCaseReport[1]
+function <<test.TestDependency>> platform::pure::test::grammar::grammarCase(file:String[1], files:String[*], prefixLen:Integer[1], index:Integer[1], total:Integer[1]):TestCaseReport[1]
 {
     let rel = if ($file->length() > $prefixLen, | $file->substring($prefixLen, $file->length()), | $file);
     let id = $rel->substring(0, $rel->length() - '/grammar.pure'->length());
     tickProgress($index, $total, $id);
-    let started = meta::pure::functions::date::currentTimeMillis();
+    let started = platform::pure::functions::date::currentTimeMillis();
     let baseline = $file->substring(0, $file->length() - 'grammar.pure'->length()) + 'protocol.json';
     let failure = withSilencedPrint(| checkGrammarFile($file, if ($files->contains($baseline), | $baseline, | [])));
     ^TestCaseReport(
         id = $id,
-        durationMs = meta::pure::functions::date::currentTimeMillis() - $started,
-        error = if ($failure->isEmpty(), | [], | ^meta::pure::functions::lang::Error(message = $failure->toOne(), stack = []))
+        durationMs = platform::pure::functions::date::currentTimeMillis() - $started,
+        error = if ($failure->isEmpty(), | [], | ^platform::pure::functions::lang::Error(message = $failure->toOne(), stack = []))
     );
 }
 
 // The failure for one fixture, if any: the parse failed, or its protocol JSON differs from protocol.json.
-function <<test.TestDependency>> meta::pure::test::grammar::checkGrammarFile(file:String[1], baseline:String[0..1]):String[0..1]
+function <<test.TestDependency>> platform::pure::test::grammar::checkGrammarFile(file:String[1], baseline:String[0..1]):String[0..1]
 {
-    let parsed = tryEval(| meta::pure::functions::meta::parse('testFile', readFile($file)));
+    let parsed = tryEval(| platform::pure::functions::meta::parse('testFile', readFile($file)));
     if ($parsed.failure->isNotEmpty(),
         | 'parse failed: ' + $parsed.failure->toOne().message,
         | $baseline->map(b | compareProtocol(protocolJson($parsed.value->toOne(), true), readFile($b))));
 }
 
-function <<test.TestDependency>> meta::pure::test::grammar::compareProtocol(actual:String[1], baselineJson:String[1]):String[0..1]
+function <<test.TestDependency>> platform::pure::test::grammar::compareProtocol(actual:String[1], baselineJson:String[1]):String[0..1]
 {
     let expected = fromJson($baselineJson)->toJson();
     if ($actual == $expected, | [], | 'protocol.json mismatch ' + firstDifference($actual, $expected));
 }
 
-function <<test.TestDependency>> meta::pure::test::grammar::firstDifference(actual:String[1], expected:String[1]):String[1]
+function <<test.TestDependency>> platform::pure::test::grammar::firstDifference(actual:String[1], expected:String[1]):String[1]
 {
     let common = if ($actual->length() < $expected->length(), | $actual->length(), | $expected->length());
     let differing = range(0, $common)->filter(i | $actual->substring($i, $i + 1) != $expected->substring($i, $i + 1));
@@ -105,7 +106,7 @@ function <<test.TestDependency>> meta::pure::test::grammar::firstDifference(actu
 }
 
 // A protocol value as JSON: scalars as JSON literals, enumeration values by name, objects field by field.
-function <<test.TestDependency>> meta::pure::test::grammar::protocolJson(value:Any[1], withType:Boolean[1]):String[1]
+function <<test.TestDependency>> platform::pure::test::grammar::protocolJson(value:Any[1], withType:Boolean[1]):String[1]
 {
     if ([
             pair(| $value->instanceOf(String) || $value->instanceOf(Number) || $value->instanceOf(Boolean), | $value->toVariant()->toJson()),
@@ -114,7 +115,7 @@ function <<test.TestDependency>> meta::pure::test::grammar::protocolJson(value:A
         | objectJson($value, $withType));
 }
 
-function <<test.TestDependency>> meta::pure::test::grammar::objectJson(value:Any[1], withType:Boolean[1]):String[1]
+function <<test.TestDependency>> platform::pure::test::grammar::objectJson(value:Any[1], withType:Boolean[1]):String[1]
 {
     let typeName = $value->genericType().type->toOne()->elementToPath()->split('::')->last()->toOne();
     let properties = $value->genericType()->properties()->filter(p | !['classifierGenericType', 'elementOverride']->contains($p.name->toOne()));
@@ -125,7 +126,7 @@ function <<test.TestDependency>> meta::pure::test::grammar::objectJson(value:Any
 }
 
 // One field as `"name":json`, or nothing when the value is empty. To-many properties are JSON arrays.
-function <<test.TestDependency>> meta::pure::test::grammar::fieldJson(typeName:String[1], property:Property<Nil,Any|*>[1], owner:Any[1]):String[0..1]
+function <<test.TestDependency>> platform::pure::test::grammar::fieldJson(typeName:String[1], property:Property<Nil,Any|*>[1], owner:Any[1]):String[0..1]
 {
     let name = $property.name->toOne();
     let withType = !($typeName == 'AtomicValue' && $name == 'value');

@@ -92,8 +92,8 @@ public final class PointerGraphImmutableResolver
         return out;
     }
 
-    private static final String PACKAGEABLE_ELEMENT_PATH = "meta::pure::metamodel::PackageableElement";
-    private static final String PACKAGE_PATH = "meta::pure::metamodel::Package";
+    private static final String PACKAGEABLE_ELEMENT_PATH = "platform::pure::metamodel::PackageableElement";
+    private static final String PACKAGE_PATH = "platform::pure::metamodel::Package";
 
     private static final class Context
     {
@@ -298,18 +298,18 @@ public final class PointerGraphImmutableResolver
             if (pointerType == null) return owner;
             switch (pointerType)
             {
-                case "meta::pure::metamodel::pointer::PropertyPointer":
+                case "platform::pure::metamodel::pointer::PropertyPointer":
                 {
                     Object hit = findByName(owner, "properties", elementName);
                     return hit != null ? hit : findByName(owner, "propertiesFromAssociations", elementName);
                 }
-                case "meta::pure::metamodel::pointer::QualifiedPropertyPointer":
+                case "platform::pure::metamodel::pointer::QualifiedPropertyPointer":
                     return findByName(owner, "qualifiedProperties", elementName);
-                case "meta::pure::metamodel::pointer::StereotypePointer":
+                case "platform::pure::metamodel::pointer::StereotypePointer":
                     return findByValue(owner, "p_stereotypes", elementName);
-                case "meta::pure::metamodel::pointer::TagPointer":
+                case "platform::pure::metamodel::pointer::TagPointer":
                     return findByValue(owner, "p_tags", elementName);
-                case "meta::pure::metamodel::pointer::EnumPointer":
+                case "platform::pure::metamodel::pointer::EnumPointer":
                     return findByName(owner, "values", elementName);
                 default:
                     return owner;

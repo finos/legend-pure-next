@@ -1,3 +1,17 @@
+// Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 ###Pure
 import test::new::parentRefLambda::*;
 
@@ -15,42 +29,42 @@ Class test::new::parentRefLambda::Container
 
 ###CompiledGraph
 function test::new::parentRefLambda::testNewTildeInLambda__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRefLambda::Container##[1]#  ~@FunctionInvocation@  @6:3-6:84
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRefLambda::Container##[1]#  ~@FunctionInvocation@  @20:3-20:84
     typeParam T -> test::new::parentRefLambda::Container
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRefLambda::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRefLambda::Container|1>  @6:3-6:84
-    Collection :#KeyExpression#[3]  ~@Collection@  @6:3-6:84
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:14-6:27
-        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:14-6:27
-        AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @6:21-6:27
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:30-6:47
-        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @6:30-6:47
-        Collection :#String#[2]  ~@Collection@  @6:38-6:47
-          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @6:39-6:41
-          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @6:44-6:46
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:50-6:83
-        AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @6:50-6:83
-        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[2]#  ~@ArrowInvocation@  @6:69-6:83
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRefLambda::Container|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRefLambda::Container|1>  @20:3-20:84
+    Collection :#KeyExpression#[3]  ~@Collection@  @20:3-20:84
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:14-20:27
+        AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @20:14-20:27
+        AtomicValue  'outer' :@String@[1]  ~@AtomicValue@  @20:21-20:27
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:30-20:47
+        AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @20:30-20:47
+        Collection :#String#[2]  ~@Collection@  @20:38-20:47
+          AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @20:39-20:41
+          AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @20:44-20:46
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @20:50-20:83
+        AtomicValue  'echoed' :@String@[1]  ~@AtomicValue@  @20:50-20:83
+        ArrowInvocation map_T_m__Function_1__V_m_ :#String##[2]#  ~@ArrowInvocation@  @20:69-20:83
           typeParam T -> #String#
           typeParam V -> #String#
           mulParam m -> [2]
-          Collection :#String#[2]  ~@Collection@  @6:59-6:68
-            AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @6:60-6:62
-            AtomicValue  'y' :@String@[1]  ~@AtomicValue@  @6:65-6:67
-          Lambda(s:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @6:75-6:82
-            DotApplication test::new::parentRefLambda::Container.name :#String##[1]#  ~@DotApplication@  @6:77-6:82
-              Variable ~ :#test::new::parentRefLambda::Container##[1]#  ~@VariableExpression@  @6:77-6:82
+          Collection :#String#[2]  ~@Collection@  @20:59-20:68
+            AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @20:60-20:62
+            AtomicValue  'y' :@String@[1]  ~@AtomicValue@  @20:65-20:67
+          Lambda(s:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @20:75-20:82
+            DotApplication test::new::parentRefLambda::Container.name :#String##[1]#  ~@DotApplication@  @20:77-20:82
+              Variable ~ :#test::new::parentRefLambda::Container##[1]#  ~@VariableExpression@  @20:77-20:82
 
-class test::new::parentRefLambda::Container extends Any  ~Class<test::new::parentRefLambda::Container>  @9:1-14:1
+class test::new::parentRefLambda::Container extends Any  ~Class<test::new::parentRefLambda::Container>  @23:1-28:1
   property name :@String@[1]  ~Property<test::new::parentRefLambda::Container, @String@|1>
   property items :@String@[*]  ~Property<test::new::parentRefLambda::Container, @String@|*>
   property echoed :@String@[*]  ~Property<test::new::parentRefLambda::Container, @String@|*>
 
 ###ReverseIndex
-meta::pure::functions::collection::map_T_m__Function_1__V_m_:
+platform::pure::functions::collection::map_T_m__Function_1__V_m_:
   test::new::parentRefLambda::testNewTildeInLambda__Any_MANY_
-meta::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
+platform::pure::functions::lang::keyExpression_String_1__Any_MANY__KeyExpression_1_:
   test::new::parentRefLambda::testNewTildeInLambda__Any_MANY_
-meta::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
+platform::pure::functions::lang::new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_:
   test::new::parentRefLambda::testNewTildeInLambda__Any_MANY_
 test::new::parentRefLambda::Container:
   test::new::parentRefLambda::testNewTildeInLambda__Any_MANY_

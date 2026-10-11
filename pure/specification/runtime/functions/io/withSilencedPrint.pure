@@ -1,4 +1,5 @@
 // Copyright 2026 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::test::pct::*;
+import platform::pure::test::pct::*;
 
 // Run {@code body} with the stdout side effect of {@code print} (and
 // therefore {@code println}, which is built on print) suppressed. The
@@ -20,9 +21,9 @@ import meta::pure::test::pct::*;
 // {@code println(x) == 'x\n'} keep working — only the write to stdout is
 // skipped.
 //
-// Used by the test runner ({@code meta::pure::test::runTests}) to wrap each
+// Used by the test runner ({@code platform::pure::test::runTests}) to wrap each
 // test body so individual tests can't pollute the runner's progress UI.
 // The suppression is thread-local and only active for the duration of the
 // closure — surrounding code (progress prints, prompts) is unaffected.
 native function <<functionType.SideEffectFunction, PCT.function, PCT.platformOnly>>
-    meta::pure::functions::io::withSilencedPrint<T|m>(body:Function<{->T[m]}>[1]):T[m];
+    platform::pure::functions::io::withSilencedPrint<T|m>(body:Function<{->T[m]}>[1]):T[m];

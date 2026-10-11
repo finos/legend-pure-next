@@ -79,7 +79,7 @@ public final class AntlrNodeFactories
                 (args, gt, mul, fe) -> new AntlrNodes.ParseAntlrNode(args[0], args[1], args[2], args[3]));
 
         registry.register(
-                "computeFirstNonNewlineLine_AntlrContext_$0_1$__Boolean_1__Integer_1_",
-                (args, gt, mul, fe) -> new AntlrNodes.ComputeFirstNonNewlineLineNode(args[0], args[1]));
+                "computeFirstNonNewlineLine_AntlrContext_$0_1$__Integer_1_",
+                (args, gt, mul, fe) -> new AntlrNodes.ComputeFirstNonNewlineLineNode(args[0]));
     }
 }

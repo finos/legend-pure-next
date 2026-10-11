@@ -1,4 +1,5 @@
 // Copyright 2024 Goldman Sachs
+// ©2026 JP Morgan Chase & Co. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +15,12 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
-import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.extension.Profile;
-import meta.pure.metamodel.extension.ProfileImpl;
-import meta.pure.metamodel.extension.StereotypeImpl;
-import meta.pure.metamodel.extension.TagImpl;
-import meta.pure.metamodel.type.Type;
+import platform.pure.metamodel.PackageableElement;
+import platform.pure.metamodel.extension.Profile;
+import platform.pure.metamodel.extension.ProfileImpl;
+import platform.pure.metamodel.extension.StereotypeImpl;
+import platform.pure.metamodel.extension.TagImpl;
+import platform.pure.metamodel.type.Type;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
@@ -34,7 +35,7 @@ public final class ProfileHandler
     {
     }
 
-    public static Profile firstPass(meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
+    public static Profile firstPass(platform.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model, org.finos.legend.pure.m3.module.sourceModule.topLevel.CompilationContext context)
     {
         ProfileImpl result = new ProfileImpl(model)
                                 ._name(grammar._name());
@@ -51,7 +52,7 @@ public final class ProfileHandler
                 ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), context.getSourceId(), model));
     }
 
-    public static Profile secondPass(ProfileImpl result, meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model)
+    public static Profile secondPass(ProfileImpl result, platform.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model)
     {
         // Ctor (firstPass) already set classifier to canonical GenericType_Profile (UDPGT).
         return result;

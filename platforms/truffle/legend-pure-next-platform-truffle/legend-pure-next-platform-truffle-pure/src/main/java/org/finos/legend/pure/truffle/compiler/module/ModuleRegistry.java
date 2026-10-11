@@ -137,7 +137,7 @@ public final class ModuleRegistry implements MetadataAccess
                 {
                     Object hereElement = module.getElement(path);
                     if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(
-                            hereElement, "meta::pure::metamodel::Package"))
+                            hereElement, "platform::pure::metamodel::Package"))
                     {
                         continue;
                     }
@@ -250,7 +250,7 @@ public final class ModuleRegistry implements MetadataAccess
             Object removedElement = removed.getElement(path);
             if (!(removedElement instanceof org.finos.legend.pure.truffle.execution.PureDynamicObject removedPkg)
                     || !org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(
-                            removedPkg, "meta::pure::metamodel::Package"))
+                            removedPkg, "platform::pure::metamodel::Package"))
             {
                 continue;
             }
@@ -260,7 +260,7 @@ public final class ModuleRegistry implements MetadataAccess
                 Object e = m.getElement(path);
                 if (e instanceof org.finos.legend.pure.truffle.execution.PureDynamicObject pdo
                         && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(
-                                pdo, "meta::pure::metamodel::Package"))
+                                pdo, "platform::pure::metamodel::Package"))
                 {
                     newAnchor = pdo;
                     break;
@@ -336,7 +336,7 @@ public final class ModuleRegistry implements MetadataAccess
             {
                 Object element = getElement(path);
                 if (!org.finos.legend.pure.truffle.compiler.helper._Any.isType(element,
-                        "meta::pure::metamodel::function::PackageableFunction", this))
+                        "platform::pure::metamodel::function::PackageableFunction", this))
                 {
                     continue;
                 }
@@ -389,7 +389,7 @@ public final class ModuleRegistry implements MetadataAccess
             {
                 Object element = getElement(path);
                 if (!org.finos.legend.pure.truffle.compiler.helper._Any.isType(element,
-                        "meta::pure::metamodel::relationship::Association", this))
+                        "platform::pure::metamodel::relationship::Association", this))
                 {
                     continue;
                 }
@@ -522,7 +522,7 @@ public final class ModuleRegistry implements MetadataAccess
                 // contributors fold straight into its children slot.
                 if (e instanceof org.finos.legend.pure.truffle.execution.PureDynamicObject pdo
                         && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(
-                                pdo, "meta::pure::metamodel::Package"))
+                                pdo, "platform::pure::metamodel::Package"))
                 {
                     anchorPdo = pdo;
                 }
@@ -536,7 +536,7 @@ public final class ModuleRegistry implements MetadataAccess
             if (anchorPdo != null
                     && e instanceof org.finos.legend.pure.truffle.execution.PureDynamicObject otherPdo
                     && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(
-                            otherPdo, "meta::pure::metamodel::Package"))
+                            otherPdo, "platform::pure::metamodel::Package"))
             {
                 foldChildrenInto(anchorPdo, otherPdo);
             }
@@ -646,9 +646,9 @@ public final class ModuleRegistry implements MetadataAccess
             return;
         }
         boolean existingIsPkg = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(
-                existing, "meta::pure::metamodel::Package");
+                existing, "platform::pure::metamodel::Package");
         boolean newIsPkg = org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(
-                k, "meta::pure::metamodel::Package");
+                k, "platform::pure::metamodel::Package");
         if (existingIsPkg && newIsPkg)
         {
             // Benign Package collision — keep existing anchor; the sub-Package's

@@ -13,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::functions::io::*;
-import meta::pure::functions::math::*;
-import meta::pure::functions::string::*;
+import platform::pure::functions::io::*;
+import platform::pure::functions::math::*;
+import platform::pure::functions::string::*;
 
 // ---------------------------------------------------------------------------
 // Two-line ANSI progress display: a bar that overwrites itself in place plus
@@ -43,13 +43,13 @@ import meta::pure::functions::string::*;
 // sequence walks back one VISUAL line (into the wrap continuation) instead
 // of the bar line, and every subsequent redraw leaves the previous bar
 // stranded on screen. 78 = 80-column default minus the 2-char leading indent.
-function meta::pure::ui::progress::statusWidth():Integer[1] { 78 }
+function platform::pure::ui::progress::statusWidth():Integer[1] { 78 }
 
 // Truncate {@code s} so the resulting string is at most {@code maxLen}
 // characters. Keeps the suffix (test/function names live at the end) and
 // marks the cut with a leading ellipsis so it's obvious the value was
 // shortened. Pass-through when already short enough.
-function meta::pure::ui::progress::truncateForStatus(s:String[1], maxLen:Integer[1]):String[1]
+function platform::pure::ui::progress::truncateForStatus(s:String[1], maxLen:Integer[1]):String[1]
 {
     let len = $s->length();
     if($len <= $maxLen,
@@ -61,7 +61,7 @@ function meta::pure::ui::progress::truncateForStatus(s:String[1], maxLen:Integer
 // Render a 30-char progress bar plus percentage and counter. Pure function;
 // kept public so callers that want the bar text without the cursor dance
 // (logging, custom redraw) can reuse it.
-function meta::pure::ui::progress::renderBar(done:Integer[1], total:Integer[1]):String[1]
+function platform::pure::ui::progress::renderBar(done:Integer[1], total:Integer[1]):String[1]
 {
     let fullBar = '██████████████████████████████';
     let emptyBar = '░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░';
@@ -80,7 +80,7 @@ function meta::pure::ui::progress::renderBar(done:Integer[1], total:Integer[1]):
 // Print the header, reserve two lines for the bar + status display, then park
 // the cursor on the bar line. Caller should print no other output between
 // startProgress and the matching finishProgress, or the bar will scroll off.
-function meta::pure::ui::progress::startProgress(label:String[1]):Boolean[1]
+function platform::pure::ui::progress::startProgress(label:String[1]):Boolean[1]
 {
     println($label);
     println('');
@@ -98,15 +98,15 @@ function meta::pure::ui::progress::startProgress(label:String[1]):Boolean[1]
 //                         long name can't wrap and break the cursor invariant)
 //   [K            — clear tail (in case previous item name was longer)
 //   [A\r          — cursor up back to bar line, col 0
-function meta::pure::ui::progress::tickProgress(done:Integer[1], total:Integer[1], current:String[1]):Boolean[1]
+function platform::pure::ui::progress::tickProgress(done:Integer[1], total:Integer[1], current:String[1]):Boolean[1]
 {
     if($total == 0, | true,
         | let curPct = floor($done * 100 / $total);
           let prevPct = if($done <= 1, | -1, | floor(($done - 1) * 100 / $total));
           let shouldEmit = $done == 1 || $done == $total || $curPct != $prevPct;
           if($shouldEmit,
-              | print('\r[K' + meta::pure::ui::progress::renderBar($done, $total)
-                      + '[B\r[K  ' + meta::pure::ui::progress::truncateForStatus($current, meta::pure::ui::progress::statusWidth()) + '[K[A\r');
+              | print('\r[K' + platform::pure::ui::progress::renderBar($done, $total)
+                      + '[B\r[K  ' + platform::pure::ui::progress::truncateForStatus($current, platform::pure::ui::progress::statusWidth()) + '[K[A\r');
                 true;,
               | true
           );
@@ -124,7 +124,7 @@ function meta::pure::ui::progress::tickProgress(done:Integer[1], total:Integer[1
 //   [B\r[K  — down to the status line, col 0, clear it
 //   [B\r    — down to a fresh line, col 0 (same two downs as before, so the
 //               cursor invariant startProgress set up is preserved)
-function meta::pure::ui::progress::finishProgress():Boolean[1]
+function platform::pure::ui::progress::finishProgress():Boolean[1]
 {
     print('[B\r[K[B\r');
     true;
@@ -150,7 +150,7 @@ function meta::pure::ui::progress::finishProgress():Boolean[1]
 
 // Reserve 3 lines and park cursor on line 1. Unlike startProgress, no header
 // is printed — the header is rendered live by tickProgress3 so it can change.
-function meta::pure::ui::progress::startProgress3():Boolean[1]
+function platform::pure::ui::progress::startProgress3():Boolean[1]
 {
     println('');
     println('');
@@ -175,7 +175,7 @@ function meta::pure::ui::progress::startProgress3():Boolean[1]
 // terminal edge and break the cursor-up invariant — once a line wraps,
 // `[A` walks back into the wrap continuation, not the bar line, and
 // every subsequent redraw leaves the previous frame stranded on screen.
-function meta::pure::ui::progress::tickProgress3(header:String[1], done:Integer[1], total:Integer[1], current:String[1]):Boolean[1]
+function platform::pure::ui::progress::tickProgress3(header:String[1], done:Integer[1], total:Integer[1], current:String[1]):Boolean[1]
 {
     if($total == 0, | true,
         | let curPct = floor($done * 100 / $total);
@@ -183,8 +183,8 @@ function meta::pure::ui::progress::tickProgress3(header:String[1], done:Integer[
           let shouldEmit = $done == 1 || $done == $total || $curPct != $prevPct;
           if($shouldEmit,
               | print('\r' + $header + '[K[B\r  '
-                      + meta::pure::ui::progress::renderBar($done, $total) + '[K[B\r  '
-                      + meta::pure::ui::progress::truncateForStatus($current, meta::pure::ui::progress::statusWidth()) + '[K[A[A\r');
+                      + platform::pure::ui::progress::renderBar($done, $total) + '[K[B\r  '
+                      + platform::pure::ui::progress::truncateForStatus($current, platform::pure::ui::progress::statusWidth()) + '[K[A[A\r');
                 true;,
               | true
           );
@@ -197,7 +197,7 @@ function meta::pure::ui::progress::tickProgress3(header:String[1], done:Integer[
 //   [3B  cursor down 3 lines (no scroll, no overwrite)
 //   \r         column 0
 //   \n         newline so subsequent output starts below a blank gap
-function meta::pure::ui::progress::finishProgress3():Boolean[1]
+function platform::pure::ui::progress::finishProgress3():Boolean[1]
 {
     print('[3B\r\n');
     true;
