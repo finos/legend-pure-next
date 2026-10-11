@@ -12,42 +12,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::imports::*;
-import platform::external::language::javascript::metamodel::*;
-import platform::external::language::javascript::serialization::*;
-import platform::external::language::javascript::serialization::tests::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::imports::*;
+import platform::extensions::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::serialization::*;
+import platform::extensions::language::javascript::serialization::tests::*;
 
 // =============================================================================
 // relativeModuleSpecifier — path arithmetic
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::pathSameDir(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::pathSameDir(): Boolean[1]
 {
    assertEquals('./b.js', relativeModuleSpecifier('a.ts', 'b.ts'));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::pathSameDirNested(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::pathSameDirNested(): Boolean[1]
 {
    assertEquals('./c.js', relativeModuleSpecifier('a/b.ts', 'a/c.ts'));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::pathDownToSubdir(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::pathDownToSubdir(): Boolean[1]
 {
    assertEquals('./lib/user.js', relativeModuleSpecifier('src/app.ts', 'src/lib/user.ts'));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::pathUpFromSubdir(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::pathUpFromSubdir(): Boolean[1]
 {
    assertEquals('../user.js', relativeModuleSpecifier('src/lib/app.ts', 'src/user.ts'));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::pathSiblingDir(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::pathSiblingDir(): Boolean[1]
 {
    assertEquals('../util/c.js', relativeModuleSpecifier('a/lib/b.ts', 'a/util/c.ts'));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::pathDeepSibling(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::pathDeepSibling(): Boolean[1]
 {
    assertEquals('../../lib/db.js', relativeModuleSpecifier('src/api/handlers/user.ts', 'src/lib/db.ts'));
 }
@@ -56,7 +56,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
 // resolveImports — end-to-end
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::resolveSingleLocalImport(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::resolveSingleLocalImport(): Boolean[1]
 {
    // userFile defines createUser; appFile calls it.
    let userFile = jsSourceFile('src/user.ts', []);
@@ -71,7 +71,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             $appFile->resolveImports());
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::resolveDedupesNames(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::resolveDedupesNames(): Boolean[1]
 {
    // Same createUser referenced from multiple sites → one import.
    let userFile = jsSourceFile('src/user.ts', []);
@@ -89,7 +89,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             $appFile->resolveImports());
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::resolveExternalImport(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::resolveExternalImport(): Boolean[1]
 {
    let appFile = jsSourceFile('src/app.ts', [
       jsConst('s', jsCall(jsIdFrom('z', jsExternalSource('zod')), []))
@@ -102,7 +102,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             $appFile->resolveImports());
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::resolveMixedImports(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::resolveMixedImports(): Boolean[1]
 {
    // External imports first (sorted), then locals — names alphabetic inside.
    let userFile  = jsSourceFile('src/user.ts', []);
@@ -130,7 +130,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             $appFile->resolveImports());
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::resolveMergesSameSource(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::resolveMergesSameSource(): Boolean[1]
 {
    // Two names imported from one external source merge into one declaration.
    let appFile = jsSourceFile('src/app.ts', [
@@ -147,7 +147,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             $appFile->resolveImports());
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::resolveSkipsSelfImport(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::resolveSkipsSelfImport(): Boolean[1]
 {
    // A LocalSource pointing at thisFile must NOT produce an import line.
    let selfFile = jsSourceFile('src/self.ts', []);

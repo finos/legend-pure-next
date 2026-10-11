@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::metamodel::*;
-import platform::external::language::javascript::serialization::*;
-import platform::external::language::javascript::serialization::tests::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::serialization::*;
+import platform::extensions::language::javascript::serialization::tests::*;
 
 // =============================================================================
 // Get / Set accessors
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::classWithGetter(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::classWithGetter(): Boolean[1]
 {
    testStmt('''
             class Box {
@@ -34,7 +34,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             ]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::classWithSetter(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::classWithSetter(): Boolean[1]
 {
    testStmt('''
             class Box {
@@ -47,7 +47,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             ]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::classWithGetterAndSetter(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::classWithGetterAndSetter(): Boolean[1]
 {
    testStmt('''
             class Box {
@@ -69,12 +69,12 @@ function <<test.Test>> platform::external::language::javascript::serialization::
 // Shorthand property assignment — emits `{ x }`, not `{ x: x }`.
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::shorthandSingle(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::shorthandSingle(): Boolean[1]
 {
    testExpr('{ x }', jsObject([jsEntryShorthand('x')]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::shorthandMixed(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::shorthandMixed(): Boolean[1]
 {
    // Shorthand and long-form sit side by side in the same literal.
    testExpr('{ x, name: \'Ada\', y }',

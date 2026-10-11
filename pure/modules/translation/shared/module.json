@@ -1,5 +1,5 @@
 {
   "name": "translation-shared",
-  "packagePattern": "(platform::pure::translation::shared)(::.*)?",
+  "packagePattern": "(platform::extensions::pure::translation)(::.*)?",
   "dependencies": ["core", "compiler"]
 }

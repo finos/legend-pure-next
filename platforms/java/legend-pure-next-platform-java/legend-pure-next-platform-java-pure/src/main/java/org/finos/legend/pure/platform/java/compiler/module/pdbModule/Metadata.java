@@ -30,9 +30,9 @@ public final class Metadata
     private static final String HOLDER = "platform::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder";
     private static final String VALUE_SPECIFICATION = "platform::pure::metamodel::valuespecification::";
     private static final String TRANSLATE_PATH =
-            "platform::external::language::java::translation::translateFunctionProgram_String_1__String_1_";
+            "platform::extensions::language::java::translation::translateFunctionProgram_String_1__String_1_";
     private static final String TRANSLATE_VALUE =
-            "platform::external::language::java::translation::translateFunctionValueProgram_UserDefinedFunction_1__String_1_";
+            "platform::extensions::language::java::translation::translateFunctionValueProgram_UserDefinedFunction_1__String_1_";
     /** The Java of each dynamically compiled function, by identity. */
     private static final java.util.Map<Object, String> TRANSLATED = java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
 

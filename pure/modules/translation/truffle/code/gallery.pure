@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::truffle::*;
-import platform::external::language::truffle::gallery::*;
+import platform::extensions::language::truffle::*;
+import platform::extensions::language::truffle::gallery::*;
 import platform::pure::functions::printer::compiled::*;
 import platform::pure::metamodel::function::*;
 import platform::pure::metamodel::valuespecification::*;
 import platform::pure::test::*;
-import platform::pure::translation::shared::gallery::*;
+import platform::extensions::pure::translation::gallery::*;
 
 // ============================================================================
 // Pure -> Truffle AST gallery. Walks every <<PCT.test>> function under
@@ -40,14 +40,14 @@ import platform::pure::translation::shared::gallery::*;
 //     throwing. Drives the in-card badge on the AST column.
 //
 // All HTML chrome (tree, JS, CSS) lives in the shared
-// `platform::pure::translation::shared::gallery` module; this file only emits
+// `platform::extensions::pure::translation::gallery` module; this file only emits
 // per-test cards with the data attributes the chrome consumes.
 //
 // Entry point: `renderGallery(rootPackagePath)`. The `gallery` Justfile
 // recipe pipes stdout to `pure/modules/translation/truffle/build/truffle-translation-gallery.html`.
 // ============================================================================
 
-function <<test.TestDependency>> platform::external::language::truffle::gallery::renderGallery(rootPackagePath: String[1]): String[1]
+function <<test.TestDependency>> platform::extensions::language::truffle::gallery::renderGallery(rootPackagePath: String[1]): String[1]
 {
     let root  = pathToElement($rootPackagePath)->cast(@platform::pure::metamodel::Package);
     let tests = platform::pure::test::collectPCTTests($root);
@@ -75,7 +75,7 @@ function <<test.TestDependency>> platform::external::language::truffle::gallery:
 // Tagged <<test.TestDependency>> because it transitively references the PCT
 // in-memory adapter (`testAdapterForInMemoryExecution`), which lives in the
 // tests PDB. Same rationale on `runTestViaAdapter` below.
-function <<test.TestDependency>> platform::external::language::truffle::gallery::renderTestCard(
+function <<test.TestDependency>> platform::extensions::language::truffle::gallery::renderTestCard(
     test: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1],
     ctx: platform::pure::functions::printer::compiled::PrintContext[1]
 ): String[1]
@@ -127,7 +127,7 @@ function <<test.TestDependency>> platform::external::language::truffle::gallery:
 // current Truffle context — same path `just truffle::spec-pct`
 // takes). `tryEval` swallows any exception thrown during eval + assertion
 // check, so we treat "no failure" as a pass.
-function <<test.TestDependency>> platform::external::language::truffle::gallery::runTestViaAdapter(
+function <<test.TestDependency>> platform::extensions::language::truffle::gallery::runTestViaAdapter(
     test: platform::pure::metamodel::function::UserDefinedFunction<platform::pure::metamodel::type::Any>[1]
 ): platform::pure::functions::collection::Pair<Boolean, String>[1]
 {
@@ -141,7 +141,7 @@ function <<test.TestDependency>> platform::external::language::truffle::gallery:
         | pair(true, ''));
 }
 
-function platform::external::language::truffle::gallery::sourceIdOf(
+function platform::extensions::language::truffle::gallery::sourceIdOf(
     el: platform::pure::metamodel::PackageableElement[1]
 ): String[1]
 {
@@ -152,7 +152,7 @@ function platform::external::language::truffle::gallery::sourceIdOf(
 // Lower one captured lambda to a Truffle AST dump. Returns (ok, dump-or-error)
 // so the renderer can mark partially-lowered cards distinctly from fully OK
 // or fully failed ones.
-function platform::external::language::truffle::gallery::truffleAstForLambda(
+function platform::extensions::language::truffle::gallery::truffleAstForLambda(
     lambda: platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>[1]
 ): platform::pure::functions::collection::Pair<Boolean, String>[1]
 {
@@ -168,14 +168,14 @@ function platform::external::language::truffle::gallery::truffleAstForLambda(
 // the eval receiver — any `eval` with at least one arg whose first param
 // is a lambda-bearing AtomicValue counts. False positives are vanishingly
 // rare in practice and would only widen the gallery, not break it.
-function platform::external::language::truffle::gallery::collectAdapterEvalLambdas(
+function platform::extensions::language::truffle::gallery::collectAdapterEvalLambdas(
     exprs: platform::pure::metamodel::valuespecification::ValueSpecification[*]
 ): platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>[*]
 {
     $exprs->map(e | $e->collectAdapterEvalLambdasOne());
 }
 
-function platform::external::language::truffle::gallery::collectAdapterEvalLambdasOne(
+function platform::extensions::language::truffle::gallery::collectAdapterEvalLambdasOne(
     vs: platform::pure::metamodel::valuespecification::ValueSpecification[1]
 ): platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>[*]
 {
@@ -193,7 +193,7 @@ function platform::external::language::truffle::gallery::collectAdapterEvalLambd
     ])
 }
 
-function platform::external::language::truffle::gallery::extractLambdaArg(
+function platform::extensions::language::truffle::gallery::extractLambdaArg(
     vs: platform::pure::metamodel::valuespecification::ValueSpecification[1]
 ): platform::pure::metamodel::function::LambdaFunction<platform::pure::metamodel::type::Any>[*]
 {

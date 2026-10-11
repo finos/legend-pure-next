@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::*;
 
 /*
    The modeling strategy is to follow Java reflection
@@ -21,23 +21,23 @@ import platform::external::language::java::metamodel::*;
    That's why primitive and interface are flags on Class
 */
 
-Class platform::external::language::java::metamodel::Importable
+Class platform::extensions::language::java::metamodel::Importable
 {
 }
 
-Class platform::external::language::java::metamodel::Package extends platform::external::language::java::metamodel::AnnotatedElement, platform::external::language::java::metamodel::Importable
+Class platform::extensions::language::java::metamodel::Package extends platform::extensions::language::java::metamodel::AnnotatedElement, platform::extensions::language::java::metamodel::Importable
 {
    <<equality.Key>> name : String[1];
    fullPath: String[0..1];
 }
 
-Association platform::external::language::java::metamodel::PackageChildren
+Association platform::extensions::language::java::metamodel::PackageChildren
 {
-   <<equality.Key>> parent : platform::external::language::java::metamodel::Package[0..1];
-   children : platform::external::language::java::metamodel::Package[*];
+   <<equality.Key>> parent : platform::extensions::language::java::metamodel::Package[0..1];
+   children : platform::extensions::language::java::metamodel::Package[*];
 }
 
-Enum platform::external::language::java::metamodel::Modifier
+Enum platform::extensions::language::java::metamodel::Modifier
 {
    Abstract,
    Final,
@@ -54,50 +54,50 @@ Enum platform::external::language::java::metamodel::Modifier
    Default
 }
 
-Class platform::external::language::java::metamodel::AnnotatedElement
+Class platform::extensions::language::java::metamodel::AnnotatedElement
 {
-   annotations : platform::external::language::java::metamodel::Annotation[*];
+   annotations : platform::extensions::language::java::metamodel::Annotation[*];
    javaDoc: String[0..1];
 }
 
-Class platform::external::language::java::metamodel::Annotation
+Class platform::extensions::language::java::metamodel::Annotation
 {
 
 }
 
-Class platform::external::language::java::metamodel::GenericDeclaration
+Class platform::extensions::language::java::metamodel::GenericDeclaration
 {
    typeParameters : TypeVariable[*];
 }
 
-Class platform::external::language::java::metamodel::Member
+Class platform::extensions::language::java::metamodel::Member
 {
    modifiers : Modifier[*];
 }
 
-Class platform::external::language::java::metamodel::Class extends platform::external::language::java::metamodel::Type, platform::external::language::java::metamodel::GenericDeclaration, platform::external::language::java::metamodel::AnnotatedElement, platform::external::language::java::metamodel::Importable
+Class platform::extensions::language::java::metamodel::Class extends platform::extensions::language::java::metamodel::Type, platform::extensions::language::java::metamodel::GenericDeclaration, platform::extensions::language::java::metamodel::AnnotatedElement, platform::extensions::language::java::metamodel::Importable
 {
    <<equality.Key>> simpleName : String[1];
-   <<equality.Key>> package : platform::external::language::java::metamodel::Package[1];
+   <<equality.Key>> package : platform::extensions::language::java::metamodel::Package[1];
 
    modifiers : Modifier[*];
-   interfaces : platform::external::language::java::metamodel::Type[*];
-   superType : platform::external::language::java::metamodel::Type[0..1];
+   interfaces : platform::extensions::language::java::metamodel::Type[*];
+   superType : platform::extensions::language::java::metamodel::Type[0..1];
 
    constructors : Constructor[*];
    fields : Field[*];
-   methods : platform::external::language::java::metamodel::Method[*];
+   methods : platform::extensions::language::java::metamodel::Method[*];
 
    additionalImports : String[*];
    projectionParentName : String[0..1]; // Java doesn't really have an equivalent AFAIK but we need this
 }
 
-Class platform::external::language::java::metamodel::Enumeration extends platform::external::language::java::metamodel::Class
+Class platform::extensions::language::java::metamodel::Enumeration extends platform::extensions::language::java::metamodel::Class
 {
    enumeration : EnumerationEntry[*];
 }
 
-Class platform::external::language::java::metamodel::EnumerationEntry extends platform::external::language::java::metamodel::AnnotatedElement
+Class platform::extensions::language::java::metamodel::EnumerationEntry extends platform::extensions::language::java::metamodel::AnnotatedElement
 [
    $this.value->isEmpty() || $this.arguments->isEmpty()
 ]
@@ -107,49 +107,49 @@ Class platform::external::language::java::metamodel::EnumerationEntry extends pl
    arguments : Code[*];
 }
 
-Class platform::external::language::java::metamodel::Field extends platform::external::language::java::metamodel::AnnotatedElement, Member
+Class platform::extensions::language::java::metamodel::Field extends platform::extensions::language::java::metamodel::AnnotatedElement, Member
 [
    $this.value->isEmpty() || $this.valueCode->isEmpty()
 ]
 {
    name : String[1];
-   type : platform::external::language::java::metamodel::Type[1];
+   type : platform::extensions::language::java::metamodel::Type[1];
    value: String[0..1];
    valueCode: Code[0..1];
 }
 
-Class platform::external::language::java::metamodel::Method extends platform::external::language::java::metamodel::AnnotatedElement, Member, GenericDeclaration
+Class platform::extensions::language::java::metamodel::Method extends platform::extensions::language::java::metamodel::AnnotatedElement, Member, GenericDeclaration
 [
    $this.body->isEmpty() || $this.bodyCode->isEmpty()
 ]
 {
    name : String[1];
-   parameters : platform::external::language::java::metamodel::Parameter[*];
-   returnType : platform::external::language::java::metamodel::Type[1];
+   parameters : platform::extensions::language::java::metamodel::Parameter[*];
+   returnType : platform::extensions::language::java::metamodel::Type[1];
    body : String[0..1]; // String for now ... will model expressions later
    bodyCode: Code[0..1];
 
    nullResultPossible : Boolean[0..1];
-   functionType : platform::external::language::java::metamodel::FunctionType[0..1];
+   functionType : platform::extensions::language::java::metamodel::FunctionType[0..1];
 }
 
-Class platform::external::language::java::metamodel::Parameter extends platform::external::language::java::metamodel::AnnotatedElement
+Class platform::extensions::language::java::metamodel::Parameter extends platform::extensions::language::java::metamodel::AnnotatedElement
 {
    name : String[1];
-   type : platform::external::language::java::metamodel::Type[1];
+   type : platform::extensions::language::java::metamodel::Type[1];
 }
 
-Class platform::external::language::java::metamodel::Constructor extends platform::external::language::java::metamodel::AnnotatedElement, Member, GenericDeclaration
+Class platform::extensions::language::java::metamodel::Constructor extends platform::extensions::language::java::metamodel::AnnotatedElement, Member, GenericDeclaration
 [
    $this.body->isEmpty() || $this.bodyCode->isEmpty()
 ]
 {
-   parameters : platform::external::language::java::metamodel::Parameter[*];
+   parameters : platform::extensions::language::java::metamodel::Parameter[*];
    body : String[0..1]; // String for now ... will model expressions later
    bodyCode: Code[0..1];
 }
 
-Profile platform::external::language::java::metamodel::annotations::AnnotationJavaInfo
+Profile platform::extensions::language::java::metamodel::annotations::AnnotationJavaInfo
 {
   tags : [javaClass];
 }

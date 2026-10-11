@@ -32,14 +32,14 @@
 //     Callers are responsible for pre-escaping if needed.
 //   - No line wrapping; long signatures are emitted on one line.
 
-import platform::external::language::javascript::metamodel::*;
-import platform::external::language::javascript::serialization::*;
+import platform::extensions::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::serialization::*;
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-function platform::external::language::javascript::serialization::indentStep(): String[1]
+function platform::extensions::language::javascript::serialization::indentStep(): String[1]
 {
    '  ';
 }
@@ -56,12 +56,12 @@ function platform::external::language::javascript::serialization::indentStep(): 
 // V8 reports a frame's enclosing-function start at exactly the token a
 // definition marker precedes, and a call site at the callee a call marker
 // precedes, so the runtime maps frames without parsing JavaScript.
-function platform::external::language::javascript::serialization::callSiteMarker(n: Node[1]): String[1]
+function platform::extensions::language::javascript::serialization::callSiteMarker(n: Node[1]): String[1]
 {
    $n.sourceInformation->map(si | '/*@' + $si.startLine->toString() + ':' + $si.startColumn->toString() + '*/')->joinStrings('');
 }
 
-function platform::external::language::javascript::serialization::definitionMarker(n: Node[1], kind: String[1], name: String[0..1]): String[1]
+function platform::extensions::language::javascript::serialization::definitionMarker(n: Node[1], kind: String[1], name: String[0..1]): String[1]
 {
    $n.sourceInformation->map(si |
       '/*@' + $kind + ' ' + $si.sourceId->joinStrings('') + ':' + $si.startLine->toString() + ':' + $si.startColumn->toString()
@@ -72,7 +72,7 @@ function platform::external::language::javascript::serialization::definitionMark
 // Entry point
 // =============================================================================
 
-function platform::external::language::javascript::serialization::serialize(sf: SourceFile[1]): String[1]
+function platform::extensions::language::javascript::serialization::serialize(sf: SourceFile[1]): String[1]
 {
    let leading = if($sf.leadingComment->isEmpty(),
                     | '',
@@ -93,12 +93,12 @@ function platform::external::language::javascript::serialization::serialize(sf: 
 // Modifiers
 // =============================================================================
 
-function platform::external::language::javascript::serialization::serializeModifier(mf: ModifierFlag[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeModifier(mf: ModifierFlag[1]): String[1]
 {
    $mf->toString()->toLower();
 }
 
-function platform::external::language::javascript::serialization::serializeModifiers(modifiers: ModifierFlag[*]): String[1]
+function platform::extensions::language::javascript::serialization::serializeModifiers(modifiers: ModifierFlag[*]): String[1]
 {
    if($modifiers->isEmpty(),
       | '',
@@ -109,7 +109,7 @@ function platform::external::language::javascript::serialization::serializeModif
 // Parameters
 // =============================================================================
 
-function platform::external::language::javascript::serialization::serializeParameter(p: ParameterDeclaration[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeParameter(p: ParameterDeclaration[1]): String[1]
 {
    let initStr = if($p.initializer->isEmpty(), | '', | ' = ' + $p.initializer->toOne()->serializeExpression());
    $p.name->serializeBindingName() + $initStr;
@@ -119,7 +119,7 @@ function platform::external::language::javascript::serialization::serializeParam
 // Binding names and destructuring patterns.
 // =============================================================================
 
-function platform::external::language::javascript::serialization::serializeBindingName(bn: BindingName[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeBindingName(bn: BindingName[1]): String[1]
 {
    $bn->match([
       i: Identifier[1]              | $i.text,
@@ -128,19 +128,19 @@ function platform::external::language::javascript::serialization::serializeBindi
    ]);
 }
 
-function platform::external::language::javascript::serialization::serializeObjectBindingPattern(o: ObjectBindingPattern[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeObjectBindingPattern(o: ObjectBindingPattern[1]): String[1]
 {
    if($o.elements->isEmpty(),
       | '{}',
       | '{ ' + $o.elements->map(e | $e->serializeBindingElement())->joinStrings(', ') + ' }');
 }
 
-function platform::external::language::javascript::serialization::serializeArrayBindingPattern(a: ArrayBindingPattern[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeArrayBindingPattern(a: ArrayBindingPattern[1]): String[1]
 {
    '[' + $a.elements->map(e | $e->serializeBindingElement())->joinStrings(', ') + ']';
 }
 
-function platform::external::language::javascript::serialization::serializeBindingElement(e: BindingElement[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeBindingElement(e: BindingElement[1]): String[1]
 {
    let restMark = if($e.isRest == true, | '...', | '');
    let propPart = if($e.propertyName->isEmpty(), | '', | $e.propertyName->toOne() + ': ');
@@ -154,7 +154,7 @@ function platform::external::language::javascript::serialization::serializeBindi
 // Declarations and other statements all flow through this.
 // =============================================================================
 
-function platform::external::language::javascript::serialization::serializeStatement(stmt: Statement[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeStatement(stmt: Statement[1], indent: String[1]): String[1]
 {
    $stmt->match([
       i: ImportDeclaration[1]    | $i->serializeImport($indent),
@@ -172,12 +172,12 @@ function platform::external::language::javascript::serialization::serializeState
 // Imports
 // =============================================================================
 
-function platform::external::language::javascript::serialization::serializeImportSpec(s: ImportSpecifier[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeImportSpec(s: ImportSpecifier[1]): String[1]
 {
    if($s.alias->isEmpty(), | $s.name, | $s.name + ' as ' + $s.alias->toOne());
 }
 
-function platform::external::language::javascript::serialization::serializeImport(i: ImportDeclaration[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeImport(i: ImportDeclaration[1], indent: String[1]): String[1]
 {
    let hasBindings = $i.defaultImport->isNotEmpty()
                      || $i.namedImports->isNotEmpty()
@@ -197,7 +197,7 @@ function platform::external::language::javascript::serialization::serializeImpor
 // Class
 // =============================================================================
 
-function platform::external::language::javascript::serialization::serializeClass(c: ClassDeclaration[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeClass(c: ClassDeclaration[1], indent: String[1]): String[1]
 {
    let modsStr = $c.modifiers->serializeModifiers();
    let extStr  = if($c.extendsClause->isEmpty(), | '', | ' extends ' + $c.extendsClause->toOne()->serializeExpression());
@@ -209,7 +209,7 @@ function platform::external::language::javascript::serialization::serializeClass
    $indent + $modsStr + 'class ' + $c.name + $extStr + ' ' + $bodyStr;
 }
 
-function platform::external::language::javascript::serialization::serializeClassMember(m: ClassMember[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeClassMember(m: ClassMember[1], indent: String[1]): String[1]
 {
    $m->match([
       method: MethodDeclaration[1]      | $method->serializeMethod($indent),
@@ -220,14 +220,14 @@ function platform::external::language::javascript::serialization::serializeClass
    ]);
 }
 
-function platform::external::language::javascript::serialization::serializeGetAccessor(g: GetAccessor[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeGetAccessor(g: GetAccessor[1], indent: String[1]): String[1]
 {
    let modsStr = $g.modifiers->serializeModifiers();
    let bodyStr = if($g.body->isEmpty(), | ';', | ' ' + $g.body->toOne()->serializeBlock($indent));
    $indent + $modsStr + 'get ' + $g.name + '()' + $bodyStr;
 }
 
-function platform::external::language::javascript::serialization::serializeSetAccessor(s: SetAccessor[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeSetAccessor(s: SetAccessor[1], indent: String[1]): String[1]
 {
    let modsStr = $s.modifiers->serializeModifiers();
    let paramStr = $s.parameter->serializeParameter();
@@ -235,7 +235,7 @@ function platform::external::language::javascript::serialization::serializeSetAc
    $indent + $modsStr + 'set ' + $s.name + '(' + $paramStr + ')' + $bodyStr;
 }
 
-function platform::external::language::javascript::serialization::serializeMethod(m: MethodDeclaration[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeMethod(m: MethodDeclaration[1], indent: String[1]): String[1]
 {
    let modsStr   = $m.modifiers->serializeModifiers();
    let paramsStr = $m.parameters->map(p | $p->serializeParameter())->joinStrings(', ');
@@ -243,14 +243,14 @@ function platform::external::language::javascript::serialization::serializeMetho
    $indent + $modsStr + $m.name + '(' + $paramsStr + ')' + $bodyStr;
 }
 
-function platform::external::language::javascript::serialization::serializeProperty(p: PropertyDeclaration[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeProperty(p: PropertyDeclaration[1], indent: String[1]): String[1]
 {
    let modsStr = $p.modifiers->serializeModifiers();
    let initStr = if($p.initializer->isEmpty(), | '', | ' = ' + $p.initializer->toOne()->serializeExpression());
    $indent + $modsStr + $p.name + $initStr + ';';
 }
 
-function platform::external::language::javascript::serialization::serializeConstructor(c: ConstructorDeclaration[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeConstructor(c: ConstructorDeclaration[1], indent: String[1]): String[1]
 {
    let modsStr   = $c.modifiers->serializeModifiers();
    let paramsStr = $c.parameters->map(p | $p->serializeParameter())->joinStrings(', ');
@@ -262,7 +262,7 @@ function platform::external::language::javascript::serialization::serializeConst
 // Function declaration
 // =============================================================================
 
-function platform::external::language::javascript::serialization::serializeFunction(f: FunctionDeclaration[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeFunction(f: FunctionDeclaration[1], indent: String[1]): String[1]
 {
    let modsStr   = $f.modifiers->serializeModifiers();
    let paramsStr = $f.parameters->map(p | $p->serializeParameter())->joinStrings(', ');
@@ -274,7 +274,7 @@ function platform::external::language::javascript::serialization::serializeFunct
 // Block / If / Variable
 // =============================================================================
 
-function platform::external::language::javascript::serialization::serializeBlock(b: Block[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeBlock(b: Block[1], indent: String[1]): String[1]
 {
    if($b.statements->isEmpty(),
       | '{}',
@@ -283,7 +283,7 @@ function platform::external::language::javascript::serialization::serializeBlock
         '\n' + $indent + '}');
 }
 
-function platform::external::language::javascript::serialization::serializeIf(ifs: IfStatement[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeIf(ifs: IfStatement[1], indent: String[1]): String[1]
 {
    $indent + $ifs->serializeIfInline($indent);
 }
@@ -291,7 +291,7 @@ function platform::external::language::javascript::serialization::serializeIf(if
 // serializeIfInline renders an IfStatement WITHOUT the leading indent on its
 // `if (` head. Called recursively from the else clause so `} else if (…) {`
 // renders inline rather than on a new indented line.
-function platform::external::language::javascript::serialization::serializeIfInline(ifs: IfStatement[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeIfInline(ifs: IfStatement[1], indent: String[1]): String[1]
 {
    let head = 'if (' + $ifs.expression->serializeExpression() + ') ';
    let thenStr = $ifs.thenStatement->match([
@@ -308,14 +308,14 @@ function platform::external::language::javascript::serialization::serializeIfInl
    $head + $thenStr + $elseStr;
 }
 
-function platform::external::language::javascript::serialization::serializeVarStmt(vs: VariableStatement[1], indent: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeVarStmt(vs: VariableStatement[1], indent: String[1]): String[1]
 {
    let kindStr = $vs.declarationKind->toString()->toLower();
    let declsStr = $vs.declarations->map(d | $d->serializeVarDecl())->joinStrings(', ');
    $indent + $vs.modifiers->serializeModifiers() + $kindStr + ' ' + $declsStr + ';';
 }
 
-function platform::external::language::javascript::serialization::serializeVarDecl(d: VariableDeclaration[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeVarDecl(d: VariableDeclaration[1]): String[1]
 {
    let initStr = if($d.initializer->isEmpty(), | '', | ' = ' + $d.initializer->toOne()->serializeExpression());
    $d.name->serializeBindingName() + $initStr;
@@ -325,13 +325,13 @@ function platform::external::language::javascript::serialization::serializeVarDe
 // Expressions
 // =============================================================================
 
-function platform::external::language::javascript::serialization::serializeExpression(e: Expression[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeExpression(e: Expression[1]): String[1]
 {
    // Arrows carry a lambda marker instead (serializeArrow).
    if($e->instanceOf(ArrowFunction), | '', | $e->callSiteMarker()) + $e->serializeExpressionBody();
 }
 
-function platform::external::language::javascript::serialization::serializeExpressionBody(e: Expression[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeExpressionBody(e: Expression[1]): String[1]
 {
    $e->match([
       i:    Identifier[1]                | $i.text,
@@ -358,7 +358,7 @@ function platform::external::language::javascript::serialization::serializeExpre
    ]);
 }
 
-function platform::external::language::javascript::serialization::serializeArrow(af: ArrowFunction[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeArrow(af: ArrowFunction[1]): String[1]
 {
    let asyncStr = if($af.isAsync == true, | 'async ', | '');
    let psStr    = $af.parameters->map(p | $p->serializeParameter())->joinStrings(', ');
@@ -374,7 +374,7 @@ function platform::external::language::javascript::serialization::serializeArrow
    $af->definitionMarker('lambda', []->cast(@String)) + $asyncStr + '(' + $psStr + ')' + ' => ' + $bodyStr;
 }
 
-function platform::external::language::javascript::serialization::serializePropAssign(pa: PropertyAssignment[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializePropAssign(pa: PropertyAssignment[1]): String[1]
 {
    let key = if($pa.computed == true, | '[' + $pa.name + ']', | $pa.name);
    $key + ': ' + $pa.initializer->serializeExpression();
@@ -385,7 +385,7 @@ function platform::external::language::javascript::serialization::serializePropA
 // in JS, so we MUST parenthesize them to preserve intent.
 // `!x === y` parses as `(!x) === y` (wrong); we want `!(x === y)` for an
 // expression like `!isEmpty(x)`.
-function platform::external::language::javascript::serialization::serializePrefixOperand(e: Expression[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializePrefixOperand(e: Expression[1]): String[1]
 {
    $e->match([
       b:    BinaryExpression[1]      | '(' + $b->serializeExpression() + ')',
@@ -401,7 +401,7 @@ function platform::external::language::javascript::serialization::serializePrefi
 // into the ternary's else-branch, turning a Boolean result into a Number.
 // Arrow functions in operand position are equally hazardous and always
 // require parens.
-function platform::external::language::javascript::serialization::serializeBinaryOperand(e: Expression[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeBinaryOperand(e: Expression[1]): String[1]
 {
    $e->match([
       ce:  ConditionalExpression[1]  | '(' + $ce->serializeExpression() + ')',
@@ -419,7 +419,7 @@ function platform::external::language::javascript::serialization::serializeBinar
 // Escape a Pure string for inclusion in a JS single-quoted string literal.
 // Order matters: backslash first (otherwise later replacements re-introduce
 // unescaped backslashes via their own escape sequences).
-function platform::external::language::javascript::serialization::escapeJsString(s: String[1]): String[1]
+function platform::extensions::language::javascript::serialization::escapeJsString(s: String[1]): String[1]
 {
    $s->replace('\\', '\\\\')
      ->replace('\'', '\\\'')
@@ -435,7 +435,7 @@ function platform::external::language::javascript::serialization::escapeJsString
 //                       the arrow.
 //   - `(a ? f : g)()`: ternary needs grouping or `f()` is invoked unconditionally.
 // Identifiers, property accesses, and other call expressions don't need wrapping.
-function platform::external::language::javascript::serialization::serializeCallee(e: Expression[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeCallee(e: Expression[1]): String[1]
 {
    $e->match([
       af:  ArrowFunction[1]          | '(' + $af->serializeExpression() + ')',
@@ -445,7 +445,7 @@ function platform::external::language::javascript::serialization::serializeCalle
    ]);
 }
 
-function platform::external::language::javascript::serialization::serializeObjectLiteralElement(e: ObjectLiteralElement[1]): String[1]
+function platform::extensions::language::javascript::serialization::serializeObjectLiteralElement(e: ObjectLiteralElement[1]): String[1]
 {
    $e->match([
       pa: PropertyAssignment[1]         | $pa->serializePropAssign(),

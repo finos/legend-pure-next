@@ -63,15 +63,15 @@ pure_rt := "bootstrap"
 emit_rt := if pure_rt == "truffle" { pure_truffle } else { pure_bootstrap }
 
 # Pure package -> standalone JS, emitted into generated/ (gitignored).
-translate_fn := "platform::external::language::javascript::translation::pdb::translatePackageToJs_String_1__String_1_"
+translate_fn := "platform::extensions::language::javascript::translation::pdb::translatePackageToJs_String_1__String_1_"
 # The TEST half of a package. Tests are not in a package of their own — a PCT test model sits
 # inside platform::pure::functions — so the emit splits them by stereotype instead, the same rule the
 # pdb split uses. Only the test harnesses load the companions; the browser IDE does not.
-translate_tests_fn := "platform::external::language::javascript::translation::pdb::translatePackageTestsToJs_String_1__String_1_"
+translate_tests_fn := "platform::extensions::language::javascript::translation::pdb::translatePackageTestsToJs_String_1__String_1_"
 # The test FRAMEWORK package (platform::pure::test) emits whole: its adapters are test material by
 # the stereotype rule, but only test hosts ever load it, so splitting it would just produce two
 # files that always travel together.
-translate_all_fn := "platform::external::language::javascript::translation::pdb::translatePackageAllToJs_String_1__String_1_"
+translate_all_fn := "platform::extensions::language::javascript::translation::pdb::translatePackageAllToJs_String_1__String_1_"
 
 # Everything an emission reads: the pdbs the translator runs against and the jars
 # of the runtime running it (bin/pure-truffle puts every build/*.jar on its classpath).
@@ -154,7 +154,7 @@ generate-pdb-reader: (_emit "platform::pure::compiler::pdb" "pure/compiler/pdb.j
 # (src/core/execution): the Pure→JS translator itself translated to JS, its shared
 # canonicalization pipeline, the JS-language metamodel/factories it builds on,
 # and the platform::pure::test helpers (resolveChild & co.) its package walker calls.
-generate-translator: (_emit "platform::pure::test" "test.js" translate_all_fn) (_emit "platform::pure::translation::shared" "pure/runtime/translator/shared.js") (_emit "platform::external::language::javascript" "pure/runtime/translator/javascript.js") (_emit "platform::external::language::javascript::translation" "pure/runtime/translator/translation.js") (_emit "platform::pure::translation::shared" "pure/runtime/translator/shared-tests.js" translate_tests_fn) (_emit "platform::external::language::javascript" "pure/runtime/translator/javascript-tests.js" translate_tests_fn) (_emit "platform::external::language::javascript::translation" "pure/runtime/translator/translation-tests.js" translate_tests_fn)
+generate-translator: (_emit "platform::pure::test" "test.js" translate_all_fn) (_emit "platform::extensions::pure::translation" "pure/runtime/translator/shared.js") (_emit "platform::extensions::language::javascript" "pure/runtime/translator/javascript.js") (_emit "platform::extensions::language::javascript::translation" "pure/runtime/translator/translation.js") (_emit "platform::extensions::pure::translation" "pure/runtime/translator/shared-tests.js" translate_tests_fn) (_emit "platform::extensions::language::javascript" "pure/runtime/translator/javascript-tests.js" translate_tests_fn) (_emit "platform::extensions::language::javascript::translation" "pure/runtime/translator/translation-tests.js" translate_tests_fn)
     @{{header}} 'generate-translator'
 
 # THE PLATFORM'S EXTENSION AREA: one descriptor per extension found under pure/extensions, read
@@ -189,7 +189,7 @@ generate-extensions-code: generate-extensions
         }
     ' | while IFS=$'\t' read -r pkg out; do
         # WHOLE, not split. An extension's tests sit inside the packages it declares
-        # (platform::pure::diagram::parser::tests is part of platform::pure::diagram::parser), and its whole
+        # (platform::extensions::pure::diagram::parser::tests is part of platform::extensions::pure::diagram::parser), and its whole
         # generated output is ~80 KB — so there is nothing to save by cutting it in two, and a host
         # that registers an extension loads all of it anyway. The library/test split exists for
         # functions.js, where the test corpus was 1.2 MB.
@@ -422,7 +422,7 @@ test-ide: web-deps generate-all
 # instance was still being emitted as an object literal.
 test-translation: generate-all
     @{{header}} 'test-translation'
-    @{{substep}} 'runTests platform::external::language::javascript::translation (the module that generated this host)'
+    @{{substep}} 'runTests platform::extensions::language::javascript::translation (the module that generated this host)'
     just --justfile {{repo_root}}/Justfile modules::translation_javascript::test-translation
 
 test-all: test test-compiler test-execution spec-grammar spec-compiler spec-pct test-pdb spec-pdb-golden test-printer-compiled test-printer-protocol test-host-api usage-example test-extensions test-diagram test-section-hint test-source-store test-ide test-translation
@@ -437,7 +437,7 @@ test-all: test test-compiler test-execution spec-grammar spec-compiler spec-pct 
 # that platform has not adapted the extension; see pure/extensions/diagram/Justfile.
 test-extensions: generate-all
     @{{header}} 'test-extensions'
-    @{{substep}} 'runTests platform::pure::diagram (JavaScript host)'
+    @{{substep}} 'runTests platform::extensions::pure::diagram (JavaScript host)'
     test -f {{extension_diagram_out}}/diagram.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram.pdb (run \`just extensions::build\` first)" && exit 1)
     test -f {{extension_diagram_out}}/diagram-tests.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram-tests.pdb (run \`just extensions::build-tests\` first — the lean pdb drops <<test.Test>> elements whether or not the build splits)" && exit 1)
     mkdir -p {{test_results}}/pure/extensions-diagram
@@ -448,7 +448,7 @@ test-extensions: generate-all
         --pdb {{extension_diagram_out}}/diagram.pdb \
         --pdb {{extension_diagram_out}}/diagram-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-javascript.json"
+        --args "platform::extensions::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-javascript.json"
 
 # Generate the lexers/parsers this host parses with: the Pure language's own (Top + M3) and one
 # directory per extension. ANTLR's JavaScript target via the complete jar bundled with antlr4ng-cli
@@ -535,7 +535,7 @@ gallery PACKAGE="platform::pure::functions" OUT=(js_root / "build" / "javascript
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation.pdb \
         --pdb {{translation_javascript_out}}/javascript-translation-tests.pdb \
-        --function "platform::external::language::javascript::translation::gallery::renderGallery_String_1__String_1_" \
+        --function "platform::extensions::language::javascript::translation::gallery::renderGallery_String_1__String_1_" \
         --args "{{PACKAGE}}" > {{OUT}}
     @echo "  wrote {{OUT}} ($(wc -c < {{OUT}} | tr -d ' ') bytes)"
 

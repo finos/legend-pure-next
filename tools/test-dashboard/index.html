@@ -747,13 +747,17 @@ const stepOrder = step => { const i = STEPS.findIndex(([s]) => s === step); retu
 const stepLabel = step => STEPS[stepOrder(step)]?.[1] ?? step;
 const stepColor = step => stepOrder(step) < STEPS.length ? `var(--step-${stepOrder(step) + 1})` : "var(--skip)";
 
+// A `test-all/<stage>` step spans other steps (the stage timing of test-all), so it stays out of
+// the stacked bars, which would count its time twice, and is shown only in the trend table.
+const isStage = step => step.startsWith("test-all/");
+
 // Build time: one stacked bar per `just` command that ran heavy steps, then each step's trend.
 function buildTime(records = []) {
   const head = h("h3", { class: "section" }, "Build time");
   if (!records.length) return h("section", { class: "builds" }, head,
     h("div", { class: "caption" }, "No build steps recorded yet. They appear after the next command that runs Maven, native-image, the module PDBs or JavaScript generation."));
   const byCommand = new Map();
-  for (const r of records) {
+  for (const r of records.filter(r => !isStage(r.step))) {
     const id = r.invocation?.id ?? r.at;
     if (!byCommand.has(id)) byCommand.set(id, { command: r.invocation?.command ?? "just", at: r.at, steps: [] });
     byCommand.get(id).steps.push(r);

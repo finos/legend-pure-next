@@ -28,7 +28,7 @@
 // boot. Each function value is tagged with __purePath so evaluate/eval
 // dispatch to the freshly eval'd translated global via __metadataInvoke.
 
-const TRANSLATE_ELEMENT = "platform$external$language$javascript$translation$pdb$translateElement_PackageableElement_1__String_1_";
+const TRANSLATE_ELEMENT = "platform$extensions$language$javascript$translation$pdb$translateElement_PackageableElement_1__String_1_";
 
 /**
  * Translate every translatable element kind from a compile result and eval

@@ -13,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::*;
 
 Class
 {
-  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'java.lang.Override'
+  platform::extensions::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'java.lang.Override'
 }
-platform::external::language::java::metamodel::annotations::override::Override extends platform::external::language::java::metamodel::Annotation
+platform::extensions::language::java::metamodel::annotations::override::Override extends platform::extensions::language::java::metamodel::Annotation
 {
 }

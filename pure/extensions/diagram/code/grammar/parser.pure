@@ -23,12 +23,12 @@
 // generated it fails here with "Unknown grammar: DiagramParser", which is the honest error —
 // the extension exists but that platform has not adapted it.
 
-import platform::pure::diagram::parser::*;
-import platform::pure::diagram::protocol::*;
+import platform::extensions::pure::diagram::parser::*;
+import platform::extensions::pure::diagram::protocol::*;
 import platform::pure::protocol::grammar::*;
 
 // Parse one `###Diagram` section body into one protocol element per diagram it declares.
-function platform::pure::diagram::parser::buildDiagramSection(
+function platform::extensions::pure::diagram::parser::buildDiagramSection(
    content: String[1], sourceId: String[1], lineOffset: Integer[1]
 ): platform::pure::protocol::grammar::PackageableElement[*]
 {
@@ -39,7 +39,7 @@ function platform::pure::diagram::parser::buildDiagramSection(
 // The registry entry a host appends to whatever section parsers it already has — the same
 // shape as platform::pure::parser::mappings::interpreter::pureSectionParser(), so a host composes
 // the two without either side knowing about the other.
-function platform::pure::diagram::parser::diagramSectionParsers():
+function platform::extensions::pure::diagram::parser::diagramSectionParsers():
    platform::pure::functions::collection::Pair<String, platform::pure::metamodel::function::Function<{String[1], String[1], Integer[1] -> platform::pure::protocol::grammar::PackageableElement[*]}>>[*]
 {
    [

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::pure::translation::shared::*;
+import platform::extensions::pure::translation::decompile::*;
 
 // Decompiler: compiled FunctionDefinition (`platform::pure::metamodel::*`) →
 // protocol grammar form (`platform::pure::protocol::grammar::*`) that the
@@ -35,7 +35,7 @@ import platform::pure::translation::shared::*;
 // the captured value (toProtocolFromRuntime).
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::toProtocolUserDefinedFunction(
+function platform::extensions::pure::translation::decompile::toProtocolUserDefinedFunction(
    compiledBody: platform::pure::metamodel::valuespecification::ValueSpecification[*],
    compiledParams: platform::pure::metamodel::valuespecification::VariableExpression[*],
    compiledReturnGT: platform::pure::metamodel::type::generics::GenericType[1],
@@ -67,7 +67,7 @@ function platform::pure::translation::shared::toProtocolUserDefinedFunction(
 // concrete rawType + optional type-args). Generics like List<String> emit
 // recursively. Falls back to InferredGenericType with Any when the rawType
 // can't be resolved (a TypeParameter binding pre-resolution, etc.).
-function platform::pure::translation::shared::toProtocolGenericType(
+function platform::extensions::pure::translation::decompile::toProtocolGenericType(
    gt: platform::pure::metamodel::type::generics::GenericType[1]
 ): platform::pure::protocol::grammar::type::generics::GenericTypeValue[1]
 {
@@ -105,7 +105,7 @@ function platform::pure::translation::shared::toProtocolGenericType(
 //     or `y` that the canonical recompile must re-bind.
 //   - ConcreteMultiplicity ad-hoc (e.g. `[2..5]`) -> UserDefinedAdHocMultiplicity
 //     with the literal lowerBound/upperBound.
-function platform::pure::translation::shared::toProtocolMultiplicity(
+function platform::extensions::pure::translation::decompile::toProtocolMultiplicity(
    m: platform::pure::metamodel::multiplicity::Multiplicity[1]
 ): platform::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]
 {
@@ -144,7 +144,7 @@ function platform::pure::translation::shared::toProtocolMultiplicity(
 // (the recompile will infer them).
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::toProtocolParameter(
+function platform::extensions::pure::translation::decompile::toProtocolParameter(
    p: platform::pure::metamodel::valuespecification::VariableExpression[1]
 ): platform::pure::protocol::grammar::valuespecification::VariableExpression[1]
 {
@@ -167,7 +167,7 @@ function platform::pure::translation::shared::toProtocolParameter(
 // for the captured value instead of a fresh VariableExpression reference.
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::toProtocolValueSpec(
+function platform::extensions::pure::translation::decompile::toProtocolValueSpec(
    vs: platform::pure::metamodel::valuespecification::ValueSpecification[1],
    captureMap: Map<String, List<Any>>[1]
 ): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
@@ -324,7 +324,7 @@ function platform::pure::translation::shared::toProtocolValueSpec(
 // protocol Collections.
 // ----------------------------------------------------------------------------
 
-function platform::pure::translation::shared::captureToProtocol(
+function platform::extensions::pure::translation::decompile::captureToProtocol(
    values: List<Any>[1]
 ): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
@@ -351,7 +351,7 @@ function platform::pure::translation::shared::captureToProtocol(
 
 // Single captured value → protocol expression. Scalars wrap in AtomicValue;
 // class instances build a `new`-FunctionExpression with key=value pairs.
-function platform::pure::translation::shared::singleValueToProtocol(
+function platform::extensions::pure::translation::decompile::singleValueToProtocol(
    v: Any[1]
 ): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
@@ -391,7 +391,7 @@ function platform::pure::translation::shared::singleValueToProtocol(
 // detect it via `enumValueAccess(fe)` (an AtomicValue receiver typed
 // Enumeration) and emit the short-name access `<ShortName>.<VALUE>` rather
 // than the structural fallback that walks Any's properties.
-function platform::pure::translation::shared::enumValueToProtocol(
+function platform::extensions::pure::translation::decompile::enumValueToProtocol(
    v: Any[1]
 ): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {
@@ -412,7 +412,7 @@ function platform::pure::translation::shared::enumValueToProtocol(
    );
 }
 
-function platform::pure::translation::shared::isPrimitiveValue(v: Any[1]): Boolean[1]
+function platform::extensions::pure::translation::decompile::isPrimitiveValue(v: Any[1]): Boolean[1]
 {
    // Dates and Decimals are primitives too: a captured one must become a
    // literal AtomicValue, not a class-instance constructor (a captured
@@ -428,7 +428,7 @@ function platform::pure::translation::shared::isPrimitiveValue(v: Any[1]): Boole
 
 // Resolve a Pure primitive runtime value to its canonical Type path. Used to
 // emit Type_Pointer for protocol AtomicValue.genericType.
-function platform::pure::translation::shared::primitiveTypePath(v: Any[1]): String[1]
+function platform::extensions::pure::translation::decompile::primitiveTypePath(v: Any[1]): String[1]
 {
    if ($v->instanceOf(Integer), | 'platform::pure::metamodel::type::primitives::Integer',
    |if ($v->instanceOf(Float),   | 'platform::pure::metamodel::type::primitives::Float',
@@ -448,7 +448,7 @@ function platform::pure::translation::shared::primitiveTypePath(v: Any[1]): Stri
 // classifier's type. We tag the protocol AtomicValue's genericType with a
 // Type_Pointer at the instance's class path so the compiler doesn't have to
 // re-derive it during pass-2 resolution.
-function platform::pure::translation::shared::classInstanceToProtocol(
+function platform::extensions::pure::translation::decompile::classInstanceToProtocol(
    v: Any[1]
 ): platform::pure::protocol::grammar::valuespecification::ValueSpecification[1]
 {

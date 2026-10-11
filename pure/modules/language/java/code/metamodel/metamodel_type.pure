@@ -13,44 +13,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::*;
 
-Class platform::external::language::java::metamodel::Type
+Class platform::extensions::language::java::metamodel::Type
 {
 }
 
-Class platform::external::language::java::metamodel::ParameterizedType extends platform::external::language::java::metamodel::Type
+Class platform::extensions::language::java::metamodel::ParameterizedType extends platform::extensions::language::java::metamodel::Type
 {
-   <<equality.Key>> rawType : platform::external::language::java::metamodel::Type[1];
-   <<equality.Key>> typeArguments : platform::external::language::java::metamodel::Type[*];
+   <<equality.Key>> rawType : platform::extensions::language::java::metamodel::Type[1];
+   <<equality.Key>> typeArguments : platform::extensions::language::java::metamodel::Type[*];
 }
 
-Class platform::external::language::java::metamodel::WildcardType extends platform::external::language::java::metamodel::Type
+Class platform::extensions::language::java::metamodel::WildcardType extends platform::extensions::language::java::metamodel::Type
 {
-   <<equality.Key>> lowerBounds : platform::external::language::java::metamodel::Type[*];
-   <<equality.Key>> upperBounds : platform::external::language::java::metamodel::Type[*];
+   <<equality.Key>> lowerBounds : platform::extensions::language::java::metamodel::Type[*];
+   <<equality.Key>> upperBounds : platform::extensions::language::java::metamodel::Type[*];
 }
 
-Class platform::external::language::java::metamodel::TypeVariable extends platform::external::language::java::metamodel::Type
+Class platform::extensions::language::java::metamodel::TypeVariable extends platform::extensions::language::java::metamodel::Type
 {
-   <<equality.Key>> bounds : platform::external::language::java::metamodel::Type[*];
+   <<equality.Key>> bounds : platform::extensions::language::java::metamodel::Type[*];
    <<equality.Key>> name : String[1];
 }
 
-Class platform::external::language::java::metamodel::Array extends platform::external::language::java::metamodel::Type, platform::external::language::java::metamodel::AnnotatedElement
+Class platform::extensions::language::java::metamodel::Array extends platform::extensions::language::java::metamodel::Type, platform::extensions::language::java::metamodel::AnnotatedElement
 {
-   <<equality.Key>> rawType : platform::external::language::java::metamodel::Type[1];
+   <<equality.Key>> rawType : platform::extensions::language::java::metamodel::Type[1];
 }
 
-Class platform::external::language::java::metamodel::PrimitiveType extends platform::external::language::java::metamodel::Type
+Class platform::extensions::language::java::metamodel::PrimitiveType extends platform::extensions::language::java::metamodel::Type
 {
    <<equality.Key>> simpleName : String[1];
 }
 
 // Not really a type in Java but used to carry type information for lambdas during code generation
-Class platform::external::language::java::metamodel::FunctionType extends platform::external::language::java::metamodel::Type
+Class platform::extensions::language::java::metamodel::FunctionType extends platform::extensions::language::java::metamodel::Type
 {
-   <<equality.Key>> parameterTypes : platform::external::language::java::metamodel::Type[*];
-   <<equality.Key>> returnType     : platform::external::language::java::metamodel::Type[1];
+   <<equality.Key>> parameterTypes : platform::extensions::language::java::metamodel::Type[*];
+   <<equality.Key>> returnType     : platform::extensions::language::java::metamodel::Type[1];
    nullResultPossible : Boolean[0..1];
 }

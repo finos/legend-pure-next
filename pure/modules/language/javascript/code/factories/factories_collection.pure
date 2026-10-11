@@ -27,44 +27,44 @@
 // language-foreign aliases ('exists', 'fold', 'contains') — the goal is
 // that what the user types is what the output reads as.
 
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::metamodel::*;
 
 // =============================================================================
 // Lambda-taking methods, single parameter.
 // =============================================================================
 
-function platform::external::language::javascript::factories::jsMap(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsMap(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'map'), [jsArrowExpr([jsParam($param)], $body)]);
 }
 
-function platform::external::language::javascript::factories::jsFilter(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsFilter(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'filter'), [jsArrowExpr([jsParam($param)], $body)]);
 }
 
-function platform::external::language::javascript::factories::jsForEach(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsForEach(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'forEach'), [jsArrowExpr([jsParam($param)], $body)]);
 }
 
-function platform::external::language::javascript::factories::jsFind(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsFind(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'find'), [jsArrowExpr([jsParam($param)], $body)]);
 }
 
-function platform::external::language::javascript::factories::jsSome(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsSome(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'some'), [jsArrowExpr([jsParam($param)], $body)]);
 }
 
-function platform::external::language::javascript::factories::jsEvery(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsEvery(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'every'), [jsArrowExpr([jsParam($param)], $body)]);
 }
 
-function platform::external::language::javascript::factories::jsFlatMap(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsFlatMap(collection: Expression[1], param: String[1], body: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'flatMap'), [jsArrowExpr([jsParam($param)], $body)]);
 }
@@ -74,7 +74,7 @@ function platform::external::language::javascript::factories::jsFlatMap(collecti
 // =============================================================================
 
 // items.reduce((acc, val) => body, init)
-function platform::external::language::javascript::factories::jsReduce(collection: Expression[1], accName: String[1], valName: String[1], body: Expression[1], init: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsReduce(collection: Expression[1], accName: String[1], valName: String[1], body: Expression[1], init: Expression[1]): CallExpression[1]
 {
    jsCall(
       jsAccess($collection, 'reduce'),
@@ -86,7 +86,7 @@ function platform::external::language::javascript::factories::jsReduce(collectio
 }
 
 // items.sort((a, b) => body)   -- custom comparator
-function platform::external::language::javascript::factories::jsSortBy(collection: Expression[1], aName: String[1], bName: String[1], body: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsSortBy(collection: Expression[1], aName: String[1], bName: String[1], body: Expression[1]): CallExpression[1]
 {
    jsCall(
       jsAccess($collection, 'sort'),
@@ -98,27 +98,27 @@ function platform::external::language::javascript::factories::jsSortBy(collectio
 // Value-argument methods (no lambda).
 // =============================================================================
 
-function platform::external::language::javascript::factories::jsIncludes(collection: Expression[1], value: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsIncludes(collection: Expression[1], value: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'includes'), [$value]);
 }
 
-function platform::external::language::javascript::factories::jsIndexOf(collection: Expression[1], value: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsIndexOf(collection: Expression[1], value: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'indexOf'), [$value]);
 }
 
-function platform::external::language::javascript::factories::jsConcat(collection: Expression[1], other: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsConcat(collection: Expression[1], other: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'concat'), [$other]);
 }
 
-function platform::external::language::javascript::factories::jsJoin(collection: Expression[1], separator: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsJoin(collection: Expression[1], separator: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'join'), [$separator]);
 }
 
-function platform::external::language::javascript::factories::jsSlice(collection: Expression[1], start: Expression[1], end: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsSlice(collection: Expression[1], start: Expression[1], end: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'slice'), [$start, $end]);
 }
@@ -127,17 +127,17 @@ function platform::external::language::javascript::factories::jsSlice(collection
 // No-argument methods and property.
 // =============================================================================
 
-function platform::external::language::javascript::factories::jsLength(collection: Expression[1]): PropertyAccessExpression[1]
+function platform::extensions::language::javascript::factories::jsLength(collection: Expression[1]): PropertyAccessExpression[1]
 {
    jsAccess($collection, 'length');
 }
 
-function platform::external::language::javascript::factories::jsReverse(collection: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsReverse(collection: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'reverse'), []);
 }
 
-function platform::external::language::javascript::factories::jsSort(collection: Expression[1]): CallExpression[1]
+function platform::extensions::language::javascript::factories::jsSort(collection: Expression[1]): CallExpression[1]
 {
    jsCall(jsAccess($collection, 'sort'), []);
 }
@@ -146,7 +146,7 @@ function platform::external::language::javascript::factories::jsSort(collection:
 // Array literal helper — fully-typed convenience for emitting `[a, b, c]`.
 // =============================================================================
 
-function platform::external::language::javascript::factories::jsArrayLit(elements: Expression[*]): ArrayLiteralExpression[1]
+function platform::extensions::language::javascript::factories::jsArrayLit(elements: Expression[*]): ArrayLiteralExpression[1]
 {
    ^ArrayLiteralExpression(elements=$elements);
 }

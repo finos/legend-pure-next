@@ -42,13 +42,13 @@
      (`expressionBody`).
 */
 
-import platform::external::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::metamodel::*;
 
 // =============================================================================
 // Node — root of the syntax tree. Marker base; mirrors ts.Node.
 // =============================================================================
 
-Class platform::external::language::javascript::metamodel::Node
+Class platform::extensions::language::javascript::metamodel::Node
 {
    // The Pure source position this node was translated from, when known. The
    // serializer turns it into a position marker comment (see serialization.pure)

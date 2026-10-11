@@ -40,7 +40,7 @@ public class ModuleManifestTest
     private static final String JSON_WITH_TEST_DEPS = """
             {
               "name": "javascript-translation",
-              "packagePattern": "(platform::external)(::.*)?",
+              "packagePattern": "(platform::extensions)(::.*)?",
               "dependencies": ["core", "javascript"],
               "testDependencies": ["core-tests"]
             }

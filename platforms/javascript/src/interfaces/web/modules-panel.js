@@ -12,20 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// modules-panel.js — where the graph came from, as a dependency tree.
+// modules-panel.js — where the graph came from, as layers.
 //
 // The concept tree answers "what is in the graph"; this answers "which archive holds it and
-// what did that archive drag in". Those are different questions: a path tells you nothing
+// what does that archive build on". Those are different questions: a path tells you nothing
 // about which PDB owns it, and a dependency that is declared but not loaded stays invisible
 // until `validate()` throws.
 //
-// A module graph is a DAG, not a tree, so rendering it as one needs two decisions. The ROOTS
-// are the modules nothing else depends on — the things the page actually asked for — and
-// children are what they pull in, so reading downwards answers "why is this loaded". And
-// because a shared module (core, above all) would otherwise appear under every parent and
-// expand every time, the SECOND occurrence onwards is marked and not re-expanded, the way
-// `npm ls` dedupes. That marking is informative rather than merely economical: it is how the
-// sharing becomes visible.
+// The modules are listed foundation first: every module comes after everything it depends on,
+// so core is on top and the editor's module — which depends on all the rest — is at the
+// bottom. A module graph is a DAG, and drawing it as a tree (either way up) repeats every
+// shared module under each of its parents; a flat list in dependency order shows each module
+// once, and each row folds open onto the modules it uses directly.
 //
 // Counts come from `registry.elementKinds()`, which reads each archive's index and decodes
 // nothing. Listing modules must stay as cheap as listing concepts — a cold decode of the
@@ -48,6 +46,7 @@ export function createModulePanel(host, onSelectModule, files = null) {
     let renaming = null;    // the file whose name is being edited
     let confirming = null;  // the file whose delete is awaiting a second click
     let creating = false;   // a new file's name is being typed
+    const usesOpen = new Set(); // modules whose "uses" list is unfolded — kept across redraws
 
     const body = document.createElement("div");
     body.className = "mod-body";
@@ -58,15 +57,30 @@ export function createModulePanel(host, onSelectModule, files = null) {
     const byName = () => new Map(modules.map((m) => [m.name, m]));
 
     /**
-     * The modules nothing else depends on. Everything is reachable from them, so they are
-     * where reading starts. If every module is depended upon — a cycle, which the registry's
-     * topological sort should prevent — fall back to listing them all rather than showing
-     * nothing.
+     * The modules in dependency order: a module comes after everything it depends on. Its
+     * layer is the length of its longest chain of loaded dependencies, and ties keep
+     * registration order. A dependency that is not loaded does not count (its row flags it),
+     * and a cycle — which the registry should prevent — is cut where it is met, not followed.
+     * An in-memory module (the editor's) declares no dependencies because it is compiled
+     * against every loaded module, so it goes after all the archives.
      */
-    function roots() {
-        const depended = new Set(modules.flatMap((m) => m.dependencies));
-        const tops = modules.filter((m) => !depended.has(m.name));
-        return tops.length ? tops : modules;
+    function inDependencyOrder() {
+        const known = byName();
+        const layers = new Map();
+        const layer = (module, path) => {
+            if (layers.has(module.name)) return layers.get(module.name);
+            if (path.has(module.name)) return 0;
+            const inner = new Set(path).add(module.name);
+            const depth = module.dependencies
+                .filter((dep) => known.has(dep))
+                .reduce((deepest, dep) => Math.max(deepest, layer(known.get(dep), inner) + 1), 0);
+            layers.set(module.name, depth);
+            return depth;
+        };
+        return modules
+            .map((module, index) => ({ module, index, layer: layer(module, new Set()), editor: isInMemory(module) ? 1 : 0 }))
+            .sort((a, b) => a.editor - b.editor || a.layer - b.layer || a.index - b.index)
+            .map((entry) => entry.module);
     }
 
     /** The clickable module name: filters the concept tree without toggling the disclosure. */
@@ -94,22 +108,36 @@ export function createModulePanel(host, onSelectModule, files = null) {
         return count;
     }
 
-    /** A dependency that is declared but absent — what `validate()` fails on. */
-    function missingNode(name) {
-        const row = document.createElement("div");
-        row.className = "mod-leaf missing";
-        row.textContent = name;
-        row.title = `${name} is declared as a dependency but is NOT loaded`;
-        return row;
-    }
-
-    /** A second or later occurrence: named, counted, but not expanded again. */
-    function repeatNode(module) {
-        const row = document.createElement("div");
-        row.className = "mod-leaf repeat";
-        row.append(nameButton(module), countSpan(module));
-        row.title = `${module.name} is shared — already expanded above`;
-        return row;
+    /**
+     * The modules `module` uses directly, folded under it: one per line, each clickable like
+     * any module name. A dependency that is declared but not loaded — what `validate()` fails
+     * on — is flagged rather than left out.
+     */
+    function usesNode(module) {
+        const uses = document.createElement("details");
+        uses.className = "mod-uses";
+        uses.open = usesOpen.has(module.name);
+        uses.addEventListener("toggle", () => {
+            if (uses.open) usesOpen.add(module.name);
+            else usesOpen.delete(module.name);
+        });
+        const summary = document.createElement("summary");
+        summary.textContent = `uses (${module.dependencies.length})`;
+        const known = byName();
+        const deps = module.dependencies.map((dep) => {
+            const row = document.createElement("div");
+            row.className = "mod-dep";
+            if (known.has(dep)) {
+                row.append(nameButton(known.get(dep)));
+            } else {
+                row.classList.add("missing");
+                row.textContent = dep;
+                row.title = `${dep} is declared as a dependency but is NOT loaded`;
+            }
+            return row;
+        });
+        uses.append(summary, ...deps);
+        return uses;
     }
 
     /** An input row: used for both naming a new file and renaming an existing one. */
@@ -217,54 +245,31 @@ export function createModulePanel(host, onSelectModule, files = null) {
         return nodes;
     }
 
-    /**
-     * One module and, below it, its dependencies and (for an in-memory module) its files.
-     * `expanded` carries the modules already shown in full anywhere in the forest, so a
-     * shared module is expanded once; `ancestors` guards a cycle on the current path.
-     */
-    function moduleNode(module, expanded, ancestors) {
-        const children = module.dependencies.length + (isInMemory(module) ? 1 : 0);
-        if (children === 0)
-        {
+    /** One module's row, its "uses" fold below it; the editor's module also opens onto its files. */
+    function moduleRow(module) {
+        if (!isInMemory(module)) {
             const row = document.createElement("div");
             row.className = "mod-leaf";
             row.append(nameButton(module), countSpan(module));
-            return row;
+            if (module.dependencies.length === 0) return row;
+            const entry = document.createElement("div");
+            entry.className = "mod-entry";
+            entry.append(row, usesNode(module));
+            return entry;
         }
-
         const node = document.createElement("details");
         node.className = "pkg mod-node";
-        // Open the top of the forest; deeper levels start closed so the pane is readable.
-        node.open = ancestors.size === 0;
+        node.open = true;
         const summary = document.createElement("summary");
-        summary.append(nameButton(module), countSpan(module));
-        if (isInMemory(module)) {
-            const badge = document.createElement("span");
-            badge.className = "mod-kind";
-            badge.textContent = "editor";
-            summary.append(badge);
-        }
-        node.append(summary);
-
+        const badge = document.createElement("span");
+        badge.className = "mod-kind";
+        badge.textContent = "editor";
+        summary.append(nameButton(module), countSpan(module), badge);
         const inner = document.createElement("div");
         inner.className = "pkg-body";
-        const known = byName();
-        const nextAncestors = new Set(ancestors).add(module.name);
-
-        if (isInMemory(module)) inner.append(...sourceNodes(module));
-
-        for (const dep of module.dependencies) {
-            const depModule = known.get(dep);
-            if (!depModule) {
-                inner.append(missingNode(dep));
-            } else if (ancestors.has(dep) || expanded.has(dep)) {
-                inner.append(repeatNode(depModule));
-            } else {
-                expanded.add(dep);
-                inner.append(moduleNode(depModule, expanded, nextAncestors));
-            }
-        }
-        node.append(inner);
+        if (module.dependencies.length > 0) inner.append(usesNode(module));
+        inner.append(...sourceNodes(module));
+        node.append(summary, inner);
         return node;
     }
 
@@ -274,11 +279,7 @@ export function createModulePanel(host, onSelectModule, files = null) {
             total.textContent = "loading…";
             return;
         }
-        const expanded = new Set();
-        for (const root of roots()) {
-            expanded.add(root.name);
-            body.append(moduleNode(root, expanded, new Set()));
-        }
+        body.append(...inDependencyOrder().map(moduleRow));
         const elements = [...counts.values()].reduce((a, b) => a + b, 0);
         total.textContent = `${plural(modules.length, "module")} · ${plural(elements, "element")}`
             + (selected ? ` · showing ${selected}` : "");

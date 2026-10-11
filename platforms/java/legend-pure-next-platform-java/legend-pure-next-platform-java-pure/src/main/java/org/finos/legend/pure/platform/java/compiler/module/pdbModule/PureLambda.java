@@ -38,7 +38,7 @@ import java.util.function.Supplier;
 public final class PureLambda
 {
     private static final String LAMBDAS_IN_FUNCTION =
-            "platform::external::language::java::translation::lambdasInFunction_String_1__LambdaFunction_MANY_";
+            "platform::extensions::language::java::translation::lambdasInFunction_String_1__LambdaFunction_MANY_";
 
     /**
      * Resolved once: `of` and `ofElement` run on every Pure lambda VALUE creation,

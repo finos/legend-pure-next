@@ -115,8 +115,8 @@ generate-pdb-reader:
           | awk -v root="$out" '/^\/\/\/\/ FILE /{ f = root "/" $3; d = f; sub(/\/[^\/]*$/, "", d); system("mkdir -p \"" d "\""); next } f != "" { print > f }'
     }
     {{substep}} 'types + functions -> generated/'
-    emit "platform::external::language::java::translation::platform::generatePlatformTypesFor_String_1__String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
-    emit "platform::external::language::java::translation::translatePackagesToJavaFor_String_1__String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
+    emit "platform::extensions::language::java::translation::platform::generatePlatformTypesFor_String_1__String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
+    emit "platform::extensions::language::java::translation::translatePackagesToJavaFor_String_1__String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
     echo "  $(find "$out" -name '*.java' | wc -l | tr -d ' ') files"
 
 # Build the Truffle interpreter (mvn install -DskipTests, fat jar into truffle/build/).
@@ -370,7 +370,7 @@ gallery PACKAGE="platform::pure::functions" OUT=(truffle_root / "build" / "truff
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_truffle_out}}/truffle-translation-gallery.pdb \
         --pdb {{translation_truffle_out}}/truffle-translation-gallery-tests.pdb \
-        --function "platform::external::language::truffle::gallery::renderGallery_String_1__String_1_" \
+        --function "platform::extensions::language::truffle::gallery::renderGallery_String_1__String_1_" \
         --args "{{PACKAGE}}" \
         2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) \
         | grep -v '^\[graal-tripwire\]' \

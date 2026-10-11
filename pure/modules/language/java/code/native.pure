@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::*;
+import platform::extensions::language::java::*;
 
 // ----------------------------------------------------------------------------
 // JVM-runtime bridge: compile a Java source string in-process (via
@@ -31,7 +31,7 @@ import platform::external::language::java::*;
 // returns `Any[*]` from `resultToType` into an `X[o]` slot.
 // ----------------------------------------------------------------------------
 
-native function platform::external::language::java::compileAndExecute(
+native function platform::extensions::language::java::compileAndExecute(
    source: String[1],
    className: String[1],
    methodName: String[1],
@@ -43,7 +43,7 @@ native function platform::external::language::java::compileAndExecute(
 // failures point at the bridge rather than at any code-generator on top.
 // ----------------------------------------------------------------------------
 
-function <<test.Test>> platform::external::language::java::tests::testCompileAndExecuteIntegerAdd(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::tests::testCompileAndExecuteIntegerAdd(): Boolean[1]
 {
    let source = '''
                 package org.finos.test;
@@ -58,7 +58,7 @@ function <<test.Test>> platform::external::language::java::tests::testCompileAnd
    assertEquals(7, compileAndExecute($source, 'org.finos.test.Add', 'execute', [3, 4]));
 }
 
-function <<test.Test>> platform::external::language::java::tests::testCompileAndExecuteDoubleDivide(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::tests::testCompileAndExecuteDoubleDivide(): Boolean[1]
 {
    let source = '''
                 package org.finos.test;
@@ -73,7 +73,7 @@ function <<test.Test>> platform::external::language::java::tests::testCompileAnd
    assertEquals(2.5, compileAndExecute($source, 'org.finos.test.Div', 'execute', [10.0, 4.0]));
 }
 
-function <<test.Test>> platform::external::language::java::tests::testCompileAndExecuteBooleanReturn(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::tests::testCompileAndExecuteBooleanReturn(): Boolean[1]
 {
    let source = '''
                 package org.finos.test;
@@ -89,7 +89,7 @@ function <<test.Test>> platform::external::language::java::tests::testCompileAnd
    assertEquals(false, compileAndExecute($source, 'org.finos.test.IsPositive', 'execute', [-3]));
 }
 
-function <<test.Test>> platform::external::language::java::tests::testCompileAndExecuteStringReturn(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::tests::testCompileAndExecuteStringReturn(): Boolean[1]
 {
    let source = '''
                 package org.finos.test;
@@ -104,7 +104,7 @@ function <<test.Test>> platform::external::language::java::tests::testCompileAnd
    assertEquals('hello, world', compileAndExecute($source, 'org.finos.test.Greet', 'execute', ['world']));
 }
 
-function <<test.Test>> platform::external::language::java::tests::testCompileAndExecuteZeroArgs(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::tests::testCompileAndExecuteZeroArgs(): Boolean[1]
 {
    let source = '''
                 package org.finos.test;
@@ -121,7 +121,7 @@ function <<test.Test>> platform::external::language::java::tests::testCompileAnd
 
 // Compile failure — source has a deliberate unresolved identifier. The
 // native must throw with a message containing 'Java compilation failed'.
-function <<test.Test>> platform::external::language::java::tests::testCompileAndExecuteCompileErrorThrows(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::tests::testCompileAndExecuteCompileErrorThrows(): Boolean[1]
 {
    let badSource = '''
                    package org.finos.test;
@@ -142,7 +142,7 @@ function <<test.Test>> platform::external::language::java::tests::testCompileAnd
 // Only the JDK is visible: a class on the host JVM's class path (here the
 // runtime's own Variant) doesn't compile. Code emitted by the translators must
 // stand alone, so the harness must not let such a reference through.
-function <<test.Test>> platform::external::language::java::tests::testCompileAndExecuteSeesOnlyTheJdk(): Boolean[1]
+function <<test.Test>> platform::extensions::language::java::tests::testCompileAndExecuteSeesOnlyTheJdk(): Boolean[1]
 {
    let source = '''
                 package org.finos.test;

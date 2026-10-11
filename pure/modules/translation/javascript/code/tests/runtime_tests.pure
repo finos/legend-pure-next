@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::*;
-import platform::external::language::javascript::translation::*;
-import platform::external::language::javascript::serialization::*;
-import platform::pure::translation::shared::*;
+import platform::extensions::language::javascript::*;
+import platform::extensions::language::javascript::translation::*;
+import platform::extensions::language::javascript::serialization::*;
 
 // Runtime tests for the Pure->JavaScript translator: translate a function or
 // lambda, run it through the host's `compileModule` + `execute` natives, and
@@ -25,7 +24,7 @@ import platform::pure::translation::shared::*;
 // to inspect what the current translator emits for a typical lambda-bound
 // expression. See the matching commentary in `runtime.pure` for the target
 // __pureResolve / __pdo / __lambda emit shape we're moving to.
-function platform::external::language::javascript::translation::tests::tinyLambdaExample(): Boolean[1]
+function platform::extensions::language::javascript::translation::tests::tinyLambdaExample(): Boolean[1]
 {
    let inc = {x:Integer[1] | $x + 1};
    assertEquals(2, $inc->eval(1));
@@ -37,7 +36,7 @@ function platform::external::language::javascript::translation::tests::tinyLambd
 // execute on the host). Lets us catch regressions in the new metadata
 // strategy (compile/execute split, __pureResolve / __pdo / __lambda) on
 // a single small function before running the full PCT suite.
-function <<test.Test>> platform::external::language::javascript::translation::tests::runTinyLambdaViaTranslator(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::translation::tests::runTinyLambdaViaTranslator(): Boolean[1]
 {
    testAdapterForTranslatedJavaScript(| {x:Integer[1] | $x + 1}->eval(1) == 2);
 }
@@ -45,7 +44,7 @@ function <<test.Test>> platform::external::language::javascript::translation::te
 // Diagnostic: verify the round-tripped PDO has the right field values, even
 // if the assertEquals comparator rejects them. Pin firstName / lastName /
 // classifierGenericType type-path on the actual result.
-function <<test.Test>> platform::external::language::javascript::translation::tests::debugFilterInstanceRoundTripFields(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::translation::tests::debugFilterInstanceRoundTripFields(): Boolean[1]
 {
    let smith   = ^platform::pure::functions::collection::tests::model::CO_Person(firstName='Fabrice', lastName='Smith');
    let doe     = ^platform::pure::functions::collection::tests::model::CO_Person(firstName='Pierre', lastName='Doe');

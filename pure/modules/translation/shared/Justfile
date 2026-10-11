@@ -86,12 +86,12 @@ build-tests:
 # doesn't register the same natives surface so they're effectively
 # Truffle-only (see comment at top of canonical_tests.pure).
 
-# Run the canonical_tests.pure suite via Truffle (platform::pure::translation::shared::tests).
+# Run the canonical_tests.pure suite via Truffle (platform::extensions::pure::translation::canonical::tests).
 # Named `test-all` for symmetry with translation/{java,javascript}/Justfile, even
 # though there's only one suite here today.
 test-all: build-tests
     @{{header}} 'test-all'
-    @{{substep}} 'runTests platform::pure::translation::shared::tests (Truffle)'
+    @{{substep}} 'runTests platform::extensions::pure::translation::canonical::tests (Truffle)'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
@@ -101,7 +101,7 @@ test-all: build-tests
         --pdb {{translation_shared_out}}/translation-shared.pdb \
         --pdb {{translation_shared_out}}/translation-shared-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::pure::translation::shared::tests" "{{test_results}}/pure/translation-shared/pure@cli-truffle.json" {{err_filter}}
+        --args "platform::extensions::pure::translation::canonical::tests" "{{test_results}}/pure/translation-shared/pure@cli-truffle.json" {{err_filter}}
 
 # Remove build/ — the PDBs and anything else this module writes there.
 clean:

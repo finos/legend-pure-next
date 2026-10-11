@@ -13,21 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::metamodel::*;
-import platform::external::language::javascript::serialization::*;
-import platform::external::language::javascript::serialization::tests::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::serialization::*;
+import platform::extensions::language::javascript::serialization::tests::*;
 
 // =============================================================================
 // Optional property access  expr?.name
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::optionalAccessSimple(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::optionalAccessSimple(): Boolean[1]
 {
    testExpr('user?.name', jsOptAccess(jsId('user'), 'name'));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::optionalAccessChained(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::optionalAccessChained(): Boolean[1]
 {
    // Mix optional + non-optional in a chain: user?.profile.name
    // First step optional, rest plain — TS short-circuits on the first ?.
@@ -35,7 +35,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             jsAccess(jsOptAccess(jsId('user'), 'profile'), 'name'));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::optionalAccessTwice(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::optionalAccessTwice(): Boolean[1]
 {
    // user?.profile?.name
    testExpr('user?.profile?.name',
@@ -46,18 +46,18 @@ function <<test.Test>> platform::external::language::javascript::serialization::
 // Optional call  fn?.()
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::optionalCallNoArgs(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::optionalCallNoArgs(): Boolean[1]
 {
    testExpr('callback?.()', jsOptCall(jsId('callback'), []));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::optionalCallWithArgs(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::optionalCallWithArgs(): Boolean[1]
 {
    testExpr('callback?.(1, 2)',
             jsOptCall(jsId('callback'), [jsNumLit('1'), jsNumLit('2')]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::optionalMethodCall(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::optionalMethodCall(): Boolean[1]
 {
    // user.save?.()  — optional invocation of a property
    testExpr('user.save?.()',
@@ -68,12 +68,12 @@ function <<test.Test>> platform::external::language::javascript::serialization::
 // Nullish coalescing  a ?? b
 // =============================================================================
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::nullishCoalesceSimple(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::nullishCoalesceSimple(): Boolean[1]
 {
    testExpr('x ?? 0', jsNullishCoalesce(jsId('x'), jsNumLit('0')));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::nullishCoalesceWithAccess(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::nullishCoalesceWithAccess(): Boolean[1]
 {
    // user?.name ?? 'anonymous'
    testExpr('user?.name ?? \'anonymous\'',
@@ -82,7 +82,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
                jsStrLit('anonymous')));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::nullishCoalesceInConst(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::nullishCoalesceInConst(): Boolean[1]
 {
    testStmt('const name = user?.name ?? \'anonymous\';',
             jsConst('name',

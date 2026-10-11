@@ -13,30 +13,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::factory::packages::*;
-import platform::external::language::java::factory::*;
-import platform::external::language::java::factory::project::*;
-import platform::external::language::java::metamodel::*;
-import platform::external::language::java::metamodel::project::*;
-import platform::external::language::java::serialization::*;
+import platform::extensions::language::java::factory::packages::*;
+import platform::extensions::language::java::factory::*;
+import platform::extensions::language::java::factory::project::*;
+import platform::extensions::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::project::*;
+import platform::extensions::language::java::serialization::*;
 
-function <<access.private>> platform::external::language::java::factory::packageFromList( names:String[*], fullPath:String[0..1]): platform::external::language::java::metamodel::Package[1]
+function <<access.private>> platform::extensions::language::java::factory::packageFromList( names:String[*], fullPath:String[0..1]): platform::extensions::language::java::metamodel::Package[1]
 {
    let size = $names->size();
    if($size==0,
-      |^platform::external::language::java::metamodel::Package(name='', fullPath=''),
+      |^platform::extensions::language::java::metamodel::Package(name='', fullPath=''),
       |  let path = if($fullPath->isEmpty(), |$names->joinStrings('.'),|$fullPath);
          if($size==1,
-          | ^platform::external::language::java::metamodel::Package(fullPath=$path,name=$names->toOne()),
+          | ^platform::extensions::language::java::metamodel::Package(fullPath=$path,name=$names->toOne()),
           | // Fold lives INSIDE the outer ^Package so every intermediate
             // Package registers into the same fresh scope — `parent=$pack`
             // composes legally without copies.
-            ^platform::external::language::java::metamodel::Package(
+            ^platform::extensions::language::java::metamodel::Package(
                 fullPath = $path,
                 name     = $names->last()->toOne(),
                 parent   = $names->init()->tail()->fold(
-                   {cur, pack | ^platform::external::language::java::metamodel::Package(name=$cur, parent=$pack) },
-                   ^platform::external::language::java::metamodel::Package(name=$names->at(0)->toOne())
+                   {cur, pack | ^platform::extensions::language::java::metamodel::Package(name=$cur, parent=$pack) },
+                   ^platform::extensions::language::java::metamodel::Package(name=$names->at(0)->toOne())
                 )
             );
          );
@@ -44,9 +44,9 @@ function <<access.private>> platform::external::language::java::factory::package
 
 }
 
-function <<access.private>> platform::external::language::java::factory::usingKnownPackages(class:platform::external::language::java::metamodel::Class[1], knownPackages:Function<{platform::external::language::java::metamodel::Package[1]->platform::external::language::java::factory::KnownPackage[1]}>[1]):platform::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::extensions::language::java::factory::usingKnownPackages(class:platform::extensions::language::java::metamodel::Class[1], knownPackages:Function<{platform::extensions::language::java::metamodel::Package[1]->platform::extensions::language::java::factory::KnownPackage[1]}>[1]):platform::extensions::language::java::metamodel::Class[1]
 {
-   ^platform::external::language::java::factory::FactoryClass
+   ^platform::extensions::language::java::factory::FactoryClass
    (
       knownPackages        = $knownPackages,
       typeParameters       = $class.typeParameters,
@@ -65,13 +65,13 @@ function <<access.private>> platform::external::language::java::factory::usingKn
    )
 }
 
-Class platform::external::language::java::factory::FactoryClass extends platform::external::language::java::metamodel::Class
+Class platform::extensions::language::java::factory::FactoryClass extends platform::extensions::language::java::metamodel::Class
 {
-   knownPackages:Function<{platform::external::language::java::metamodel::Package[1]->platform::external::language::java::factory::KnownPackage[1]}>[1];
+   knownPackages:Function<{platform::extensions::language::java::metamodel::Package[1]->platform::extensions::language::java::factory::KnownPackage[1]}>[1];
 }
 
 
-function platform::external::language::java::factory::inferImports(class:platform::external::language::java::metamodel::Class[1]): platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::factory::inferImports(class:platform::extensions::language::java::metamodel::Class[1]): platform::extensions::language::java::metamodel::Class[1]
 {   //TODO: This can be skipped in fast mode
    let allCodes  = $class.fields.valueCode->concatenate($class.constructors.bodyCode)->concatenate($class.methods.bodyCode);
    let canInfer  = $class.additionalImports->isEmpty() && !$allCodes->containsSimpleCode();
@@ -84,14 +84,14 @@ function platform::external::language::java::factory::inferImports(class:platfor
                                   ->concatenate($class.constructors.annotations)
                                   ->concatenate($class.constructors.parameters.annotations)
                                   ->concatenate($class->match([
-                                     enm:platform::external::language::java::metamodel::Enumeration[1]| $enm.enumeration.annotations,
+                                     enm:platform::extensions::language::java::metamodel::Enumeration[1]| $enm.enumeration.annotations,
                                      oth:Any[1] | []
                                    ]))
                                   ->map(x|
                                           let rawType   = $x->genericType()->rawType()->toOne();
                                           let pe        = $rawType->cast(@platform::pure::metamodel::PackageableElement);
-                                          let javaClass = $pe->platform::pure::functions::meta::value4Tag('javaClass', platform::external::language::java::metamodel::annotations::AnnotationJavaInfo);
-                                          assert(!$javaClass->isEmpty(), 'Error: Please provide the Java class that supports the annotation "'+$pe->elementToPath()+'"" using the profile "platform::external::language::java::metamodel::annotations::AnnotationJavaInfo"');
+                                          let javaClass = $pe->platform::pure::functions::meta::value4Tag('javaClass', platform::extensions::language::java::metamodel::annotations::AnnotationJavaInfo);
+                                          assert(!$javaClass->isEmpty(), 'Error: Please provide the Java class that supports the annotation "'+$pe->elementToPath()+'"" using the profile "platform::extensions::language::java::metamodel::annotations::AnnotationJavaInfo"');
                                           $javaClass.value;
                                         )
                                   ->removeDuplicates()
@@ -116,7 +116,7 @@ function platform::external::language::java::factory::inferImports(class:platfor
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::containsSimpleCode(codes:Code[*]): Boolean[1]
+function <<access.private>> platform::extensions::language::java::factory::containsSimpleCode(codes:Code[*]): Boolean[1]
 {
    $codes->exists(code| $code->match([
       c:InfixExpression[1]          | $c.left->containsSimpleCode() || $c.right->containsSimpleCode(),
@@ -156,19 +156,19 @@ function <<access.private>> platform::external::language::java::factory::contain
 
 
 // TODO Eliminate this
-function platform::external::language::java::factory::merge(codes: Code[1..*]):Code[1]
+function platform::extensions::language::java::factory::merge(codes: Code[1..*]):Code[1]
 {
    let head = $codes->at(0);
    $codes->tail()->fold({c, a|^$a(requires=$a->dependencies()->concatenate($c->dependencies())->removeDuplicates())}, $head);
 }
 
-Class platform::external::language::java::factory::KnownPackage
+Class platform::extensions::language::java::factory::KnownPackage
 {
-   package: platform::external::language::java::metamodel::Package[1];
+   package: platform::extensions::language::java::metamodel::Package[1];
    classNames: String[*];
 }
 
-function platform::external::language::java::factory::knownPackage(pkg: platform::external::language::java::metamodel::Package[1]): KnownPackage[1]
+function platform::extensions::language::java::factory::knownPackage(pkg: platform::extensions::language::java::metamodel::Package[1]): KnownPackage[1]
 {
    let pkgName = $pkg->packageToString();
 
@@ -202,9 +202,9 @@ function platform::external::language::java::factory::knownPackage(pkg: platform
    )))))))));
 }
 
-function <<access.private>> platform::external::language::java::factory::javaLangPackage(): platform::external::language::java::factory::KnownPackage[1]
+function <<access.private>> platform::extensions::language::java::factory::javaLangPackage(): platform::extensions::language::java::factory::KnownPackage[1]
 {
-   ^platform::external::language::java::factory::KnownPackage(
+   ^platform::extensions::language::java::factory::KnownPackage(
       package    = javaPackage('java.lang'),
       classNames = [
          'AbstractMethodError',                  'Appendable',                           'ArithmeticException',                  'ArrayIndexOutOfBoundsException',
@@ -237,9 +237,9 @@ function <<access.private>> platform::external::language::java::factory::javaLan
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::javaUtilPackage(): platform::external::language::java::factory::KnownPackage[1]
+function <<access.private>> platform::extensions::language::java::factory::javaUtilPackage(): platform::extensions::language::java::factory::KnownPackage[1]
 {
-   ^platform::external::language::java::factory::KnownPackage(
+   ^platform::extensions::language::java::factory::KnownPackage(
       package    = javaPackage('java.util'),
       classNames = [
          'AbstractCollection',                   'AbstractList',                         'AbstractMap',                          'AbstractMap.SimpleEntry',
@@ -279,9 +279,9 @@ function <<access.private>> platform::external::language::java::factory::javaUti
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::javaUtilFunctionPackage(): platform::external::language::java::factory::KnownPackage[1]
+function <<access.private>> platform::extensions::language::java::factory::javaUtilFunctionPackage(): platform::extensions::language::java::factory::KnownPackage[1]
 {
-   ^platform::external::language::java::factory::KnownPackage(
+   ^platform::extensions::language::java::factory::KnownPackage(
       package    = javaPackage('java.util.function'),
       classNames = [
          'BiConsumer',                           'BiFunction',                           'BinaryOperator',                       'BiPredicate',
@@ -299,9 +299,9 @@ function <<access.private>> platform::external::language::java::factory::javaUti
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::javaUtilStreamPackage(): platform::external::language::java::factory::KnownPackage[1]
+function <<access.private>> platform::extensions::language::java::factory::javaUtilStreamPackage(): platform::extensions::language::java::factory::KnownPackage[1]
 {
-   ^platform::external::language::java::factory::KnownPackage(
+   ^platform::extensions::language::java::factory::KnownPackage(
       package    = javaPackage('java.util.stream'),
       classNames = [
          'BaseStream',                           'Collector',                            'Collector.Characteristics',            'Collectors',
@@ -312,9 +312,9 @@ function <<access.private>> platform::external::language::java::factory::javaUti
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::javaIoPackage(): platform::external::language::java::factory::KnownPackage[1]
+function <<access.private>> platform::extensions::language::java::factory::javaIoPackage(): platform::extensions::language::java::factory::KnownPackage[1]
 {
-   ^platform::external::language::java::factory::KnownPackage(
+   ^platform::extensions::language::java::factory::KnownPackage(
       package    = javaPackage('java.io'),
       classNames = [
          'BufferedInputStream',                  'BufferedOutputStream',                 'BufferedReader',                       'BufferedWriter',
@@ -342,9 +342,9 @@ function <<access.private>> platform::external::language::java::factory::javaIoP
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::javaNetPackage(): platform::external::language::java::factory::KnownPackage[1]
+function <<access.private>> platform::extensions::language::java::factory::javaNetPackage(): platform::extensions::language::java::factory::KnownPackage[1]
 {
-   ^platform::external::language::java::factory::KnownPackage(
+   ^platform::extensions::language::java::factory::KnownPackage(
       package    = javaPackage('java.net'),
       classNames = [
          'Authenticator',                        'Authenticator.RequestorType',          'BindException',                        'CacheRequest',
@@ -368,9 +368,9 @@ function <<access.private>> platform::external::language::java::factory::javaNet
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::javaMathPackage(): platform::external::language::java::factory::KnownPackage[1]
+function <<access.private>> platform::extensions::language::java::factory::javaMathPackage(): platform::extensions::language::java::factory::KnownPackage[1]
 {
-   ^platform::external::language::java::factory::KnownPackage(
+   ^platform::extensions::language::java::factory::KnownPackage(
       package    = javaPackage('java.math'),
       classNames = [
          'BigDecimal',                           'BigInteger',                           'MathContext',                          'RoundingMode'
@@ -378,9 +378,9 @@ function <<access.private>> platform::external::language::java::factory::javaMat
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::javaTimePackage(): platform::external::language::java::factory::KnownPackage[1]
+function <<access.private>> platform::extensions::language::java::factory::javaTimePackage(): platform::extensions::language::java::factory::KnownPackage[1]
 {
-   ^platform::external::language::java::factory::KnownPackage(
+   ^platform::extensions::language::java::factory::KnownPackage(
       package    = javaPackage('java.time'),
       classNames = [
          'Clock',                                'DateTimeException',                    'DayOfWeek',                            'Duration',
@@ -391,7 +391,7 @@ function <<access.private>> platform::external::language::java::factory::javaTim
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::smartJavaMath(in:platform::external::language::java::metamodel::Class[1]): platform::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::extensions::language::java::factory::smartJavaMath(in:platform::extensions::language::java::metamodel::Class[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    if($in.simpleName == 'BigDecimal',
       | $in->addMethodIfMissing(javaMethod(javaBigDecimal(),   'add',           [javaParam(javaBigDecimal(), 'x')]))
@@ -415,7 +415,7 @@ function <<access.private>> platform::external::language::java::factory::smartJa
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::smartJavaLang(in:platform::external::language::java::metamodel::Class[1]): platform::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::extensions::language::java::factory::smartJavaLang(in:platform::extensions::language::java::metamodel::Class[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    if($in.simpleName == 'String',
       | $in->addMethodIfMissing(javaMethod(javaChar(),    'charAt',           [javaParam(javaInt(), 'x')]))
@@ -483,7 +483,7 @@ function <<access.private>> platform::external::language::java::factory::smartJa
    )))))))));
 }
 
-function <<access.private>> platform::external::language::java::factory::smartJavaIO(in:platform::external::language::java::metamodel::Class[1]): platform::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::extensions::language::java::factory::smartJavaIO(in:platform::extensions::language::java::metamodel::Class[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    if($in.simpleName->endsWith('Reader'),
       | $in->addMethodIfMissing(javaMethod(javaInt(), 'read', []))
@@ -497,7 +497,7 @@ function <<access.private>> platform::external::language::java::factory::smartJa
    ));
 }
 
-function <<access.private>> platform::external::language::java::factory::smartJavaNet(in:platform::external::language::java::metamodel::Class[1]): platform::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::extensions::language::java::factory::smartJavaNet(in:platform::extensions::language::java::metamodel::Class[1]): platform::extensions::language::java::metamodel::Class[1]
 {
    if($in.simpleName->endsWith('URL'),
       | $in->addMethodIfMissing(javaMethod(javaInputStream(), 'openStream', [])),
@@ -505,7 +505,7 @@ function <<access.private>> platform::external::language::java::factory::smartJa
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::smartJavaUtilStream(in:platform::external::language::java::metamodel::Class[1]): platform::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::extensions::language::java::factory::smartJavaUtilStream(in:platform::extensions::language::java::metamodel::Class[1]): platform::extensions::language::java::metamodel::Class[1]
 {
 
    if($in.simpleName == 'LongStream',
@@ -520,9 +520,9 @@ function <<access.private>> platform::external::language::java::factory::smartJa
 
 }
 
-function <<access.private>> platform::external::language::java::factory::smartJavaUtil(in:platform::external::language::java::metamodel::ParameterizedType[1]): platform::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::extensions::language::java::factory::smartJavaUtil(in:platform::extensions::language::java::metamodel::ParameterizedType[1]): platform::extensions::language::java::metamodel::Class[1]
 {
-   let class       = $in.rawType->cast(@platform::external::language::java::metamodel::Class);
+   let class       = $in.rawType->cast(@platform::extensions::language::java::metamodel::Class);
    let elementType = $in.typeArguments->at(0);
 
    if(['List','ArrayList']->contains($class.simpleName),
@@ -560,9 +560,9 @@ function <<access.private>> platform::external::language::java::factory::smartJa
    )))));
 }
 
-function <<access.private>> platform::external::language::java::factory::smartJavaUtilStream(in:platform::external::language::java::metamodel::ParameterizedType[1]): platform::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::extensions::language::java::factory::smartJavaUtilStream(in:platform::extensions::language::java::metamodel::ParameterizedType[1]): platform::extensions::language::java::metamodel::Class[1]
 {
-   let class       = $in.rawType->cast(@platform::external::language::java::metamodel::Class);
+   let class       = $in.rawType->cast(@platform::extensions::language::java::metamodel::Class);
    let elementType = $in.typeArguments->at(0);
 
    if($class.simpleName == 'Stream',
@@ -571,9 +571,9 @@ function <<access.private>> platform::external::language::java::factory::smartJa
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::smartJavaUtilFunction(in:platform::external::language::java::metamodel::ParameterizedType[1]): platform::external::language::java::metamodel::Class[1]
+function <<access.private>> platform::extensions::language::java::factory::smartJavaUtilFunction(in:platform::extensions::language::java::metamodel::ParameterizedType[1]): platform::extensions::language::java::metamodel::Class[1]
 {
-   let class       = $in.rawType->cast(@platform::external::language::java::metamodel::Class);
+   let class       = $in.rawType->cast(@platform::extensions::language::java::metamodel::Class);
    let elementType = $in.typeArguments->at(0);
 
    if($class.simpleName == 'Supplier',
@@ -582,7 +582,7 @@ function <<access.private>> platform::external::language::java::factory::smartJa
    );
 }
 
-function <<access.private>> platform::external::language::java::factory::project::packageToDirectoryNames(pkg: platform::external::language::java::metamodel::Package[1]): String[*]
+function <<access.private>> platform::extensions::language::java::factory::project::packageToDirectoryNames(pkg: platform::extensions::language::java::metamodel::Package[1]): String[*]
 {
    if($pkg.parent->isEmpty(), |[], |$pkg.parent->toOne()->packageToDirectoryNames())
       ->concatenate([$pkg.name]);

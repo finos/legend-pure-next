@@ -90,17 +90,17 @@ build-tests:
 # testCompileAndExecute* tests fail there with "No native implementation
 # for: compileAndExecute".
 
-# Run all Pure tests under platform::external::language::javascript via pure-truffle.
+# Run all Pure tests under platform::extensions::language::javascript via pure-truffle.
 test-all: build-tests _depCheck_runtime-pdbs
     @{{header}} 'test-all'
-    @{{substep}} 'runTests platform::external::language::javascript (Truffle)'
+    @{{substep}} 'runTests platform::extensions::language::javascript (Truffle)'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{language_javascript_out}}/javascript.pdb \
         --pdb {{language_javascript_out}}/javascript-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::external::language::javascript" "{{test_results}}/pure/language-javascript/pure@cli-truffle.json" {{err_filter}}
+        --args "platform::extensions::language::javascript" "{{test_results}}/pure/language-javascript/pure@cli-truffle.json" {{err_filter}}
 
 # Internal: fail loudly if PDBs / pure-truffle aren't staged.
 _depCheck_runtime-pdbs:

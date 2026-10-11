@@ -111,17 +111,17 @@ build-tests:
 # there with "No native implementation for: compileAndExecute".
 # Needs core-tests.pdb because runTests is <<test.TestDependency>>.
 
-# Run all Pure tests under platform::external::language::java via pure-truffle.
+# Run all Pure tests under platform::extensions::language::java via pure-truffle.
 test-all: build-tests _depCheck_runtime-pdbs
     @{{header}} 'test-all'
-    @{{substep}} 'runTests platform::external::language::java (Truffle)'
+    @{{substep}} 'runTests platform::extensions::language::java (Truffle)'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{language_java_out}}/java.pdb \
         --pdb {{language_java_out}}/java-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::external::language::java" "{{test_results}}/pure/language-java/pure@cli-truffle.json" {{err_filter}}
+        --args "platform::extensions::language::java" "{{test_results}}/pure/language-java/pure@cli-truffle.json" {{err_filter}}
 
 # Internal: fail loudly if PDBs / pure-truffle aren't staged.
 _depCheck_runtime-pdbs:

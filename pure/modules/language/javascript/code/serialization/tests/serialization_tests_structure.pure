@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::factories::*;
-import platform::external::language::javascript::metamodel::*;
-import platform::external::language::javascript::serialization::*;
-import platform::external::language::javascript::serialization::tests::*;
+import platform::extensions::language::javascript::factories::*;
+import platform::extensions::language::javascript::metamodel::*;
+import platform::extensions::language::javascript::serialization::*;
+import platform::extensions::language::javascript::serialization::tests::*;
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::emptyClass(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::emptyClass(): Boolean[1]
 {
    testStmt('class Empty {}', jsClass('Empty', []));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::exportedEmptyClass(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::exportedEmptyClass(): Boolean[1]
 {
    testStmt('export class Empty {}', jsExportedClass('Empty', []));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::classWithOneProperty(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::classWithOneProperty(): Boolean[1]
 {
    testStmt('''
             class Person {
@@ -36,7 +36,7 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             jsClass('Person', [jsProperty('name')]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::classWithOneMethod(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::classWithOneMethod(): Boolean[1]
 {
    testStmt('''
             class Greeter {
@@ -51,21 +51,21 @@ function <<test.Test>> platform::external::language::javascript::serialization::
             ]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::simpleImport(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::simpleImport(): Boolean[1]
 {
    testStmt(
       'import { Foo } from \'./bar.js\';',
       jsImport('./bar.js', [jsNamedImport('Foo')]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::multipleNamedImports(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::multipleNamedImports(): Boolean[1]
 {
    testStmt(
       'import { Foo, Bar, Baz } from \'./things.js\';',
       jsImport('./things.js', [jsNamedImport('Foo'), jsNamedImport('Bar'), jsNamedImport('Baz')]));
 }
 
-function <<test.Test>> platform::external::language::javascript::serialization::tests::greeterEndToEnd(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::serialization::tests::greeterEndToEnd(): Boolean[1]
 {
    let method = jsMethod(
       'greet',

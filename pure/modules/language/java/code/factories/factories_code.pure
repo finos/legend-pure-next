@@ -13,31 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::factory::packages::*;
-import platform::external::language::java::factory::*;
-import platform::external::language::java::factory::project::*;
-import platform::external::language::java::metamodel::*;
-import platform::external::language::java::metamodel::project::*;
-import platform::external::language::java::serialization::*;
+import platform::extensions::language::java::factory::packages::*;
+import platform::extensions::language::java::factory::*;
+import platform::extensions::language::java::factory::project::*;
+import platform::extensions::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::project::*;
+import platform::extensions::language::java::serialization::*;
 
 // --- Java coding
 
-function platform::external::language::java::factory::j_code(code:String[1], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_code(code:String[1], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    j_code($code, $type, []);
 }
 
-function platform::external::language::java::factory::j_code(code:String[1], type:platform::external::language::java::metamodel::Type[1], dependencies:CodeDependency[*]):Code[1]
+function platform::extensions::language::java::factory::j_code(code:String[1], type:platform::extensions::language::java::metamodel::Type[1], dependencies:CodeDependency[*]):Code[1]
 {
    ^SimpleCode(code=$code, type=$type, requires=$dependencies);
 }
 
-function platform::external::language::java::factory::j_null():Code[1]
+function platform::extensions::language::java::factory::j_null():Code[1]
 {
    ^Null(type=javaVoid()); // void to represent bottom (Nil)
 }
 
-function platform::external::language::java::factory::j_null(type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_null(type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    ^Null(type=$type);
 }
@@ -65,65 +65,65 @@ function platform::external::language::java::factory::j_null(type:platform::exte
 
   This is different than the compiler which will make them: Something->$1, SomethingElse->$2, Another->$3
 */
-function platform::external::language::java::factory::anonymousNestedClass(level:Integer[1]):platform::external::language::java::metamodel::Class[1]
+function platform::extensions::language::java::factory::anonymousNestedClass(level:Integer[1]):platform::extensions::language::java::metamodel::Class[1]
 {
-   ^platform::external::language::java::metamodel::Class(simpleName='Level'+$level->toString(), package=anonymousPackage());
+   ^platform::extensions::language::java::metamodel::Class(simpleName='Level'+$level->toString(), package=anonymousPackage());
 }
 
-function platform::external::language::java::factory::j_this(type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_this(type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    ^This(type=$type);
 }
 
-function platform::external::language::java::factory::j_super(type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_super(type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    ^Super(type=$type);
 }
 
-function platform::external::language::java::factory::j_variable(param:platform::external::language::java::metamodel::Parameter[1]):Code[1]
+function platform::extensions::language::java::factory::j_variable(param:platform::extensions::language::java::metamodel::Parameter[1]):Code[1]
 {
    ^Variable(name=$param.name, type=$param.type);
 }
 
-function platform::external::language::java::factory::j_variable(type:platform::external::language::java::metamodel::Type[1], name:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_variable(type:platform::extensions::language::java::metamodel::Type[1], name:String[1]):Code[1]
 {
    ^Variable(name=$name, type=$type);
 }
 
-function platform::external::language::java::factory::j_parameter(param:platform::external::language::java::metamodel::Parameter[1]):Code[1]
+function platform::extensions::language::java::factory::j_parameter(param:platform::extensions::language::java::metamodel::Parameter[1]):Code[1]
 {
    ^CodeParameter(name=$param.name, type=$param.type);
 }
 
-function platform::external::language::java::factory::j_parameter(type:platform::external::language::java::metamodel::Type[1], name:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_parameter(type:platform::extensions::language::java::metamodel::Type[1], name:String[1]):Code[1]
 {
    ^CodeParameter(name=$name, type=$type);
 }
 
-function platform::external::language::java::factory::j_arrayAccess(array:Code[1], index:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_arrayAccess(array:Code[1], index:Code[1]):Code[1]
 {
    ^ArrayAccess(array=$array, index=$index, type=$array.type->elementTypeOfJavaArray());
 }
 
-function platform::external::language::java::factory::j_block(codes:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_block(codes:Code[*]):Code[1]
 {
    let statements = $codes->toStatements();
    let last       = $statements->last().type;
    ^Block(statements=$statements, type=if($last->isEmpty(), |javaVoid(), |$last->toOne()));
 }
 
-function platform::external::language::java::factory::j_expressionStatement(expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_expressionStatement(expression:Code[1]):Code[1]
 {
    assert($expression->isValidExpressionAsStatement(), |'Not a valid expression to use as a statement');
    ^ExpressionStatement(expression=$expression, type=$expression.type);
 }
 
-function platform::external::language::java::factory::j_if(test:Code[1], then:Code[1..*]):Code[1]
+function platform::extensions::language::java::factory::j_if(test:Code[1], then:Code[1..*]):Code[1]
 {
    j_if($test, $then, []);
 }
 
-function platform::external::language::java::factory::j_if(test:Code[1], then:Code[1..*], else:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_if(test:Code[1], then:Code[1..*], else:Code[*]):Code[1]
 {
    let canonicalThen = $then->match([
       c1:Code[1] | $c1->blockIfNot(),
@@ -138,18 +138,18 @@ function platform::external::language::java::factory::j_if(test:Code[1], then:Co
    ^If(test=$test, then=$canonicalThen, else=$canonicalElse, type=javaVoid());
 }
 
-function platform::external::language::java::factory::j_if(testsAndThens:List<Pair<Code,Code>>[1]):Code[1]
+function platform::extensions::language::java::factory::j_if(testsAndThens:List<Pair<Code,Code>>[1]):Code[1]
 {
    j_if($testsAndThens, []);
 }
 
-function platform::external::language::java::factory::j_if(testsAndThens:List<Pair<Code,Code>>[1], else:Code[0..1]):Code[1]
+function platform::extensions::language::java::factory::j_if(testsAndThens:List<Pair<Code,Code>>[1], else:Code[0..1]):Code[1]
 {
    assert($testsAndThens.values->isNotEmpty(), |'No then clauses');
    $testsAndThens.values->reverse()->fold({tt, a| j_if($tt.first, $tt.second, $a)}, $else)->toOne();
 }
 
-function platform::external::language::java::factory::j_for(init:Code[0..1], test:Code[0..1], update:Code[0..1], body:Code[1..*]):Code[1]
+function platform::extensions::language::java::factory::j_for(init:Code[0..1], test:Code[0..1], update:Code[0..1], body:Code[1..*]):Code[1]
 {
    let canonicalBody = $body->match([
       c1:Code[1] | $c1->blockIfNot(),
@@ -158,7 +158,7 @@ function platform::external::language::java::factory::j_for(init:Code[0..1], tes
    ^For(init=$init, test=$test, update=$update, body=$canonicalBody, type=javaVoid());
 }
 
-function platform::external::language::java::factory::j_for(parameter:Code[1], collection:Code[1], body:Code[1..*]):Code[1]
+function platform::extensions::language::java::factory::j_for(parameter:Code[1], collection:Code[1], body:Code[1..*]):Code[1]
 {
    assert($parameter->instanceOf(CodeParameter), 'Parameter must be properly created (j_parameter)');
    let canonicalBody = $body->match([
@@ -168,7 +168,7 @@ function platform::external::language::java::factory::j_for(parameter:Code[1], c
    ^ForEach(parameter=$parameter->cast(@CodeParameter), collection=$collection, body=$canonicalBody, type=javaVoid());
 }
 
-function platform::external::language::java::factory::j_while(test:Code[1], then:Code[1..*]):Code[1]
+function platform::extensions::language::java::factory::j_while(test:Code[1], then:Code[1..*]):Code[1]
 {
    let canonicalThen = $then->match([
       c1:Code[1] | $c1->blockIfNot(),
@@ -177,7 +177,7 @@ function platform::external::language::java::factory::j_while(test:Code[1], then
    ^While(test=$test, then=$canonicalThen, type=javaVoid());
 }
 
-function platform::external::language::java::factory::j_doWhile(do:Code[1..*], while:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_doWhile(do:Code[1..*], while:Code[1]):Code[1]
 {
    let canonicalDo = $do->match([
       c1:Code[1] | $c1->blockIfNot(),
@@ -186,12 +186,12 @@ function platform::external::language::java::factory::j_doWhile(do:Code[1..*], w
    ^DoWhile(do=$canonicalDo, while=$while, type=javaVoid());
 }
 
-function platform::external::language::java::factory::j_catch(parameter:platform::external::language::java::metamodel::Parameter[1], clause:Code[1..*]):Code[1]
+function platform::extensions::language::java::factory::j_catch(parameter:platform::extensions::language::java::metamodel::Parameter[1], clause:Code[1..*]):Code[1]
 {
    j_catch($parameter->j_parameter(), $clause);
 }
 
-function platform::external::language::java::factory::j_catch(parameter:Code[1], clause:Code[1..*]):Code[1]
+function platform::extensions::language::java::factory::j_catch(parameter:Code[1], clause:Code[1..*]):Code[1]
 {
    assert($parameter->instanceOf(CodeParameter), 'Parameter must be properly created (j_parameter)');
    let canonicalClause = $clause->match([
@@ -201,7 +201,7 @@ function platform::external::language::java::factory::j_catch(parameter:Code[1],
    ^Catch(parameter=$parameter->cast(@CodeParameter), clause=$canonicalClause, type=javaVoid());
 }
 
-function platform::external::language::java::factory::j_finally(clause:Code[1..*]):Code[1]
+function platform::extensions::language::java::factory::j_finally(clause:Code[1..*]):Code[1]
 {
    let canonicalClause = $clause->match([
       c1:Code[1] | $c1->blockIfNot(),
@@ -210,7 +210,7 @@ function platform::external::language::java::factory::j_finally(clause:Code[1..*
    ^Finally(clause=$canonicalClause, type=javaVoid());
 }
 
-function platform::external::language::java::factory::j_try(try:Code[1..*], c1:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_try(try:Code[1..*], c1:Code[1]):Code[1]
 {
    if($c1->instanceOf(Catch),
       |j_tryInternal($try, [$c1], []),
@@ -218,7 +218,7 @@ function platform::external::language::java::factory::j_try(try:Code[1..*], c1:C
    );
 }
 
-function platform::external::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1]):Code[1]
 {
    if($c2->instanceOf(Catch),
       |j_tryInternal($try, [$c1, $c2], []),
@@ -226,7 +226,7 @@ function platform::external::language::java::factory::j_try(try:Code[1..*], c1:C
    );
 }
 
-function platform::external::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1], c3:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1], c3:Code[1]):Code[1]
 {
    if($c3->instanceOf(Catch),
       |j_tryInternal($try, [$c1, $c2, $c3], []),
@@ -234,7 +234,7 @@ function platform::external::language::java::factory::j_try(try:Code[1..*], c1:C
    );
 }
 
-function platform::external::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1], c3:Code[1], c4:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1], c3:Code[1], c4:Code[1]):Code[1]
 {
    if($c4->instanceOf(Catch),
       |j_tryInternal($try, [$c1, $c2, $c3, $c4], []),
@@ -242,7 +242,7 @@ function platform::external::language::java::factory::j_try(try:Code[1..*], c1:C
    );
 }
 
-function platform::external::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1], c3:Code[1], c4:Code[1], c5:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_try(try:Code[1..*], c1:Code[1], c2:Code[1], c3:Code[1], c4:Code[1], c5:Code[1]):Code[1]
 {
    if($c4->instanceOf(Catch),
       |j_tryInternal($try, [$c1, $c2, $c3, $c4, $c5], []),
@@ -250,12 +250,12 @@ function platform::external::language::java::factory::j_try(try:Code[1..*], c1:C
    );
 }
 
-function platform::external::language::java::factory::j_try(try:Code[1..*], catches:Code[*], finally:Code[0..1]):Code[1]
+function platform::extensions::language::java::factory::j_try(try:Code[1..*], catches:Code[*], finally:Code[0..1]):Code[1]
 {
    j_tryInternal($try, $catches, $finally);
 }
 
-function <<access.private>> platform::external::language::java::factory::j_tryInternal(try:Code[1..*], catches:Code[*], finally:Code[0..1]):Code[1]
+function <<access.private>> platform::extensions::language::java::factory::j_tryInternal(try:Code[1..*], catches:Code[*], finally:Code[0..1]):Code[1]
 {
    assert($catches->forAll(c| $c->instanceOf(Catch)), 'catch clauses must be properly created (j_catch)');
    assert($finally->forAll(f| $f->instanceOf(Finally)), 'finally clause must be properly created (j_finally)');
@@ -266,29 +266,29 @@ function <<access.private>> platform::external::language::java::factory::j_tryIn
    ^Try(try=$canonicalTry, catches=$catches->cast(@Catch), finally=$finally->cast(@Finally), type=javaVoid());
 }
 
-function platform::external::language::java::factory::j_return():Code[1]
+function platform::extensions::language::java::factory::j_return():Code[1]
 {
    ^Return(type=javaVoid());
 }
 
-function platform::external::language::java::factory::j_return(expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_return(expression:Code[1]):Code[1]
 {
    ^Return(expression=$expression, type=$expression.type);
 }
 
-function platform::external::language::java::factory::j_throw(expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_throw(expression:Code[1]):Code[1]
 {
    ^Throw(expression=$expression, type=$expression.type);
 }
 
-function platform::external::language::java::factory::j_castWithoutChecks(expression:Code[1], castTo:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_castWithoutChecks(expression:Code[1], castTo:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    ^Cast(expression=$expression, type=$castTo);
 }
 
-function <<access.private>> platform::external::language::java::factory::functionTypeCastBody(expression:Code[1], castTo:platform::external::language::java::metamodel::Type[1]):Code[1]
+function <<access.private>> platform::extensions::language::java::factory::functionTypeCastBody(expression:Code[1], castTo:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
-   let ft = $expression.type->cast(@platform::external::language::java::metamodel::FunctionType);
+   let ft = $expression.type->cast(@platform::extensions::language::java::metamodel::FunctionType);
    assert($castTo->isJavaSupplier() || $castTo->isJavaFunction(), 'Cannot cast \''+$expression.type->typeToString()+'\' to: ' + $castTo->typeToString());
 
    let funcResult = $ft.returnType;
@@ -340,7 +340,7 @@ function <<access.private>> platform::external::language::java::factory::functio
    );
 }
 
-function platform::external::language::java::factory::j_cast(expression:Code[1], castTo:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_cast(expression:Code[1], castTo:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    if($expression.type == $castTo,
      | $expression,
@@ -375,10 +375,10 @@ function platform::external::language::java::factory::j_cast(expression:Code[1],
    if($expression->isCollectionsEmptyList() && !$castTo->isJavaList(),
      | ^CastProxy(expression=$expression, proxy=j_null()->j_cast($castTo), type=$castTo),
      |
-   if($expression.type->instanceOf(platform::external::language::java::metamodel::FunctionType) && $castTo->instanceOf(platform::external::language::java::metamodel::FunctionType),
+   if($expression.type->instanceOf(platform::extensions::language::java::metamodel::FunctionType) && $castTo->instanceOf(platform::extensions::language::java::metamodel::FunctionType),
       {|
-         let ft = $expression.type->cast(@platform::external::language::java::metamodel::FunctionType);
-         let ct = $castTo->cast(@platform::external::language::java::metamodel::FunctionType);
+         let ft = $expression.type->cast(@platform::extensions::language::java::metamodel::FunctionType);
+         let ct = $castTo->cast(@platform::extensions::language::java::metamodel::FunctionType);
          assert($ft.parameterTypes->size() == $ct.parameterTypes->size(), 'Cannot cast to a differnt number of parameters');
          assert($expression->instanceOf(Lambda), 'Cannot cast other type to lambda of function type');
 
@@ -390,7 +390,7 @@ function platform::external::language::java::factory::j_cast(expression:Code[1],
          );
       },
       |
-   if($expression.type->instanceOf(platform::external::language::java::metamodel::FunctionType),
+   if($expression.type->instanceOf(platform::extensions::language::java::metamodel::FunctionType),
       | functionTypeCastBody($expression, $castTo),
       |
    if($expression.type->isJavaStream() && $castTo->isJavaStream(),
@@ -405,7 +405,7 @@ function platform::external::language::java::factory::j_cast(expression:Code[1],
    )))))))))))))));
 }
 
-function <<access.private>> platform::external::language::java::factory::isLambdaReturningCollectionsEmptyList(c:Code[1]):Boolean[1]
+function <<access.private>> platform::extensions::language::java::factory::isLambdaReturningCollectionsEmptyList(c:Code[1]):Boolean[1]
 {
    $c->match([
       {l:Lambda[1] |
@@ -423,7 +423,7 @@ function <<access.private>> platform::external::language::java::factory::isLambd
 }
 
 
-function platform::external::language::java::factory::j_string(s:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_string(s:String[1]):Code[1]
 {
    if($s->length() <= 65000,
       | ^Literal(literal=escapedString($s), type=javaString()),
@@ -431,99 +431,99 @@ function platform::external::language::java::factory::j_string(s:String[1]):Code
    );
 }
 
-function platform::external::language::java::factory::j_char(s:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_char(s:String[1]):Code[1]
 {
    assert($s->length() == 1, 'char must be a single character');
    let esc = escapedString($s);
    ^Literal(literal='\''+$esc->substring(1, $esc->length()-1)+'\'', type=javaChar());
 }
 
-function platform::external::language::java::factory::j_false():Code[1]
+function platform::extensions::language::java::factory::j_false():Code[1]
 {
    j_boolean('false');
 }
 
-function platform::external::language::java::factory::j_true():Code[1]
+function platform::extensions::language::java::factory::j_true():Code[1]
 {
    j_boolean('true');
 }
 
-function platform::external::language::java::factory::j_boolean(b:Boolean[1]):Code[1]
+function platform::extensions::language::java::factory::j_boolean(b:Boolean[1]):Code[1]
 {
    j_boolean($b->toString());
 }
 
-function platform::external::language::java::factory::j_boolean(literal:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_boolean(literal:String[1]):Code[1]
 {
    ^Literal(literal=$literal, type=javaBoolean());
 }
 
-function platform::external::language::java::factory::j_short(literal:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_short(literal:String[1]):Code[1]
 {
    ^Literal(literal=$literal, type=javaShort());
 }
 
-function platform::external::language::java::factory::j_int(i:Integer[1]):Code[1]
+function platform::extensions::language::java::factory::j_int(i:Integer[1]):Code[1]
 {
    ^Literal(literal=$i->toString(), type=javaInt());
 }
 
-function platform::external::language::java::factory::j_int(literal:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_int(literal:String[1]):Code[1]
 {
    ^Literal(literal=$literal, type=javaInt());
 }
 
-function platform::external::language::java::factory::j_long(i:Integer[1]):Code[1]
+function platform::extensions::language::java::factory::j_long(i:Integer[1]):Code[1]
 {
    ^Literal(literal=$i->toString()+'L', type=javaLong());
 }
 
-function platform::external::language::java::factory::j_long(literal:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_long(literal:String[1]):Code[1]
 {
    ^Literal(literal=$literal, type=javaLong());
 }
 
-function platform::external::language::java::factory::j_float(i:Integer[1]):Code[1]
+function platform::extensions::language::java::factory::j_float(i:Integer[1]):Code[1]
 {
    ^Literal(literal=$i->toString()+'.0F', type=javaFloat());
 }
 
-function platform::external::language::java::factory::j_float(f:Float[1]):Code[1]
+function platform::extensions::language::java::factory::j_float(f:Float[1]):Code[1]
 {
    ^Literal(literal=$f->toString()+'F', type=javaFloat());
 }
 
-function platform::external::language::java::factory::j_float(literal:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_float(literal:String[1]):Code[1]
 {
    ^Literal(literal=$literal, type=javaFloat());
 }
 
-function platform::external::language::java::factory::j_double(i:Integer[1]):Code[1]
+function platform::extensions::language::java::factory::j_double(i:Integer[1]):Code[1]
 {
    ^Literal(literal=$i->toString()+'.0', type=javaDouble());
 }
 
-function platform::external::language::java::factory::j_double(f:Float[1]):Code[1]
+function platform::extensions::language::java::factory::j_double(f:Float[1]):Code[1]
 {
    ^Literal(literal=$f->toString(), type=javaDouble());
 }
 
-function platform::external::language::java::factory::j_double(literal:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_double(literal:String[1]):Code[1]
 {
    ^Literal(literal=$literal, type=javaDouble());
 }
 
-function platform::external::language::java::factory::j_bigDecimal(literal:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_bigDecimal(literal:String[1]):Code[1]
 {
    ^Literal(literal=$literal, type=javaBigDecimal());
 }
 
-function platform::external::language::java::factory::j_bigDecimal(d:Decimal[1]):Code[1]
+function platform::extensions::language::java::factory::j_bigDecimal(d:Decimal[1]):Code[1]
 {
    ^Literal(literal=$d->toString(), type=javaBigDecimal());
 }
 
-function platform::external::language::java::factory::j_box(expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_box(expression:Code[1]):Code[1]
 {
    if($expression.type == javaBoolean(),
       | j_new(javaClass('java.lang.Boolean'), $expression),
@@ -546,22 +546,22 @@ function platform::external::language::java::factory::j_box(expression:Code[1]):
    ))))));
 }
 
-function platform::external::language::java::factory::j_assign(variable:Code[1], expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_assign(variable:Code[1], expression:Code[1]):Code[1]
 {
    ^InfixExpression(left=$variable, op='=', right=$expression, type=$variable.type);
 }
 
-function platform::external::language::java::factory::j_lt(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_lt(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='<', right=$right, type=javaBoolean());
 }
 
-function platform::external::language::java::factory::j_le(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_le(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='<=', right=$right, type=javaBoolean());
 }
 
-function platform::external::language::java::factory::j_eq(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_eq(left:Code[1], right:Code[1]):Code[1]
 {
    if($left->instanceOf(Null) || $right->instanceOf(Null),
       | ^InfixExpression(left=$left, op='==', right=$right, type=javaBoolean()),
@@ -578,7 +578,7 @@ function platform::external::language::java::factory::j_eq(left:Code[1], right:C
    );
 }
 
-function platform::external::language::java::factory::j_ne(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_ne(left:Code[1], right:Code[1]):Code[1]
 {
    if($left->instanceOf(Null) || $right->instanceOf(Null),
       | ^InfixExpression(left=$left, op='!=', right=$right, type=javaBoolean()),
@@ -595,57 +595,57 @@ function platform::external::language::java::factory::j_ne(left:Code[1], right:C
    );
 }
 
-function platform::external::language::java::factory::j_ge(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_ge(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='>=', right=$right, type=javaBoolean());
 }
 
-function platform::external::language::java::factory::j_gt(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_gt(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='>', right=$right, type=javaBoolean());
 }
 
-function platform::external::language::java::factory::j_or(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_or(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='||', right=$right, type=javaBoolean());
 }
 
-function platform::external::language::java::factory::j_and(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_and(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='&&', right=$right, type=javaBoolean());
 }
 
-function platform::external::language::java::factory::j_not(expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_not(expression:Code[1]):Code[1]
 {
    ^PrefixExpression(op='!', expression=$expression, type=javaBoolean());
 }
 
-function platform::external::language::java::factory::j_bitwiseNot(expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_bitwiseNot(expression:Code[1]):Code[1]
 {
    ^PrefixExpression(op='~', expression=$expression, type=$expression.type);
 }
 
-function platform::external::language::java::factory::j_bitwiseAnd(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_bitwiseAnd(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='&', right=$right, type=$left.type);
 }
 
-function platform::external::language::java::factory::j_bitwiseOr(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_bitwiseOr(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='|', right=$right, type=$left.type);
 }
 
-function platform::external::language::java::factory::j_bitwiseXor(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_bitwiseXor(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='^', right=$right, type=$left.type);
 }
 
-function platform::external::language::java::factory::j_bitwiseShiftLeft(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_bitwiseShiftLeft(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='<<', right=$right, type=$left.type);
 }
 
-function platform::external::language::java::factory::j_bitwiseShiftRight(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_bitwiseShiftRight(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='>>', right=$right, type=$left.type->arithmeticResultType());
 }
@@ -654,73 +654,73 @@ function platform::external::language::java::factory::j_bitwiseShiftRight(left:C
 // over boxed numbers evaluates to a primitive. Typing the node boxed makes a
 // later `j_cast(javaLong())` believe it still needs `.longValue()`, emitting
 // `((Long) a - b + 4L).longValue()` — `long cannot be dereferenced`.
-function <<access.private>> platform::external::language::java::factory::arithmeticResultType(type:platform::external::language::java::metamodel::Type[1]):platform::external::language::java::metamodel::Type[1]
+function <<access.private>> platform::extensions::language::java::factory::arithmeticResultType(type:platform::extensions::language::java::metamodel::Type[1]):platform::extensions::language::java::metamodel::Type[1]
 {
-   if($type->platform::external::language::java::metamodel::isBoxedNumberType(),
-      | $type->platform::external::language::java::factory::toUnboxed(),
+   if($type->platform::extensions::language::java::metamodel::isBoxedNumberType(),
+      | $type->platform::extensions::language::java::factory::toUnboxed(),
       | $type);
 }
 
-function platform::external::language::java::factory::j_plus(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_plus(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='+', right=$right, type=$left.type->arithmeticResultType());
 }
 
-function platform::external::language::java::factory::j_minus(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_minus(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='-', right=$right, type=$left.type->arithmeticResultType());
 }
 
-function platform::external::language::java::factory::j_minus(expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_minus(expression:Code[1]):Code[1]
 {
    ^PrefixExpression(op='-', expression=$expression, type=$expression.type->arithmeticResultType());
 }
 
-function platform::external::language::java::factory::j_multiply(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_multiply(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='*', right=$right, type=$left.type->arithmeticResultType());
 }
 
-function platform::external::language::java::factory::j_divide(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_divide(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='/', right=$right, type=$left.type->arithmeticResultType());
 }
 
-function platform::external::language::java::factory::j_remainder(left:Code[1], right:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_remainder(left:Code[1], right:Code[1]):Code[1]
 {
    ^InfixExpression(left=$left, op='%', right=$right, type=$left.type->arithmeticResultType());
 }
 
-function platform::external::language::java::factory::j_inc(expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_inc(expression:Code[1]):Code[1]
 {
    ^PostfixExpression(expression=$expression, op='++', type=$expression.type);
 }
 
-function platform::external::language::java::factory::j_dec(expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_dec(expression:Code[1]):Code[1]
 {
    ^PostfixExpression(expression=$expression, op='--', type=$expression.type);
 }
 
-function platform::external::language::java::factory::j_preInc(expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_preInc(expression:Code[1]):Code[1]
 {
    ^PrefixExpression(expression=$expression, op='++', type=$expression.type);
 }
 
-function platform::external::language::java::factory::j_preDec(expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_preDec(expression:Code[1]):Code[1]
 {
    ^PrefixExpression(expression=$expression, op='--', type=$expression.type);
 }
 
-function platform::external::language::java::factory::j_instanceof(expression:Code[1], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_instanceof(expression:Code[1], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    let class = $type->match([
-      cl:platform::external::language::java::metamodel::Class[1]             | $cl,
-      pt:platform::external::language::java::metamodel::ParameterizedType[1] | $pt.rawType->cast(@platform::external::language::java::metamodel::Class)
+      cl:platform::extensions::language::java::metamodel::Class[1]             | $cl,
+      pt:platform::extensions::language::java::metamodel::ParameterizedType[1] | $pt.rawType->cast(@platform::extensions::language::java::metamodel::Class)
    ]);
    ^InstanceOf(expression=$expression->j_box(), class=$class, type=javaBoolean());
 }
 
-function platform::external::language::java::factory::j_conditional(test:Code[1], then:Code[1], else:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_conditional(test:Code[1], then:Code[1], else:Code[1]):Code[1]
 {
    // TODO common interface inference
    let thenBoxed = if($then.type->isPrimitiveNumber() && $else.type->isBoxedNumberType() ||  ($then.type->isPrimitive() &&  $else.type->isBoxedType()   )  , | $then->j_box(), | []);
@@ -744,7 +744,7 @@ function platform::external::language::java::factory::j_conditional(test:Code[1]
    );
 }
 
-function platform::external::language::java::factory::optimizeEqualityComparison(expr:InfixExpression[1], then:Code[1], else:Code[1], type:platform::external::language::java::metamodel::Type[1]): Code[1]
+function platform::extensions::language::java::factory::optimizeEqualityComparison(expr:InfixExpression[1], then:Code[1], else:Code[1], type:platform::extensions::language::java::metamodel::Type[1]): Code[1]
 {
    if($expr.left->instanceOf(Null) && $expr.right->instanceOf(Null) && $expr.op == '==',
    | $then,
@@ -761,233 +761,233 @@ function platform::external::language::java::factory::optimizeEqualityComparison
    ))))
 }
 
-function platform::external::language::java::factory::j_conditional(test:Code[1], then:Code[1], else:Code[1], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_conditional(test:Code[1], then:Code[1], else:Code[1], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    ^Conditional(test=$test, then=$then, else=$else, type=$type);
 }
 
-function platform::external::language::java::factory::j_declare(variable:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_declare(variable:Code[1]):Code[1]
 {
    j_declare([], $variable, []);
 }
 
-function platform::external::language::java::factory::j_declare(variable:Code[1], initializer:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_declare(variable:Code[1], initializer:Code[1]):Code[1]
 {
    j_declare([], $variable, $initializer);
 }
 
-function platform::external::language::java::factory::j_declare(modifiers:String[*], variable:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_declare(modifiers:String[*], variable:Code[1]):Code[1]
 {
    j_declare($modifiers, $variable, []);
 }
 
-function platform::external::language::java::factory::j_declare(modifiers:String[*], variable:Code[1], initializer:Code[0..1]):Code[1]
+function platform::extensions::language::java::factory::j_declare(modifiers:String[*], variable:Code[1], initializer:Code[0..1]):Code[1]
 {
    let v = $variable->cast(@Variable);
    j_declare($modifiers, $v.type, $v.name, $initializer);
 }
 
-function platform::external::language::java::factory::j_declare(type:platform::external::language::java::metamodel::Type[1], variableName:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_declare(type:platform::extensions::language::java::metamodel::Type[1], variableName:String[1]):Code[1]
 {
    j_declare([], $type, $variableName, []);
 }
 
-function platform::external::language::java::factory::j_declare(type:platform::external::language::java::metamodel::Type[1], variableName:String[1], initializer:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_declare(type:platform::extensions::language::java::metamodel::Type[1], variableName:String[1], initializer:Code[1]):Code[1]
 {
    j_declare([], $type, $variableName, $initializer);
 }
 
-function platform::external::language::java::factory::j_declare(modifiers:String[*], type:platform::external::language::java::metamodel::Type[1], variableName:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_declare(modifiers:String[*], type:platform::extensions::language::java::metamodel::Type[1], variableName:String[1]):Code[1]
 {
    j_declare($modifiers, $type, $variableName, []);
 }
 
-function platform::external::language::java::factory::j_declare(modifiers:String[*], type:platform::external::language::java::metamodel::Type[1], variableName:String[1], initializer:Code[0..1]):Code[1]
+function platform::extensions::language::java::factory::j_declare(modifiers:String[*], type:platform::extensions::language::java::metamodel::Type[1], variableName:String[1], initializer:Code[0..1]):Code[1]
 {
    ^LocalVariableDeclaration(modifiers=$modifiers->javaModifiers(), type=$type, variableName=$variableName, initializer=$initializer);
 }
 
-function platform::external::language::java::factory::j_new(type:platform::external::language::java::metamodel::Type[1], args:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_new(type:platform::extensions::language::java::metamodel::Type[1], args:Code[*]):Code[1]
 {
    $type->match([
-      pt:platform::external::language::java::metamodel::ParameterizedType[1] | ^New(type=$pt.rawType, typeArguments=$pt.typeArguments, arguments=$args),
-      ar:platform::external::language::java::metamodel::Array[1]             | ^NewArray(type=$ar, arguments=$args),
-      cl:platform::external::language::java::metamodel::Class[1]             | ^New(type=$cl, arguments=$args)
+      pt:platform::extensions::language::java::metamodel::ParameterizedType[1] | ^New(type=$pt.rawType, typeArguments=$pt.typeArguments, arguments=$args),
+      ar:platform::extensions::language::java::metamodel::Array[1]             | ^NewArray(type=$ar, arguments=$args),
+      cl:platform::extensions::language::java::metamodel::Class[1]             | ^New(type=$cl, arguments=$args)
    ]);
 }
 
-function platform::external::language::java::factory::j_newAnon(type:platform::external::language::java::metamodel::Type[1], args:Code[*], methods:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_newAnon(type:platform::extensions::language::java::metamodel::Type[1], args:Code[*], methods:Code[*]):Code[1]
 {
    assert($methods->forAll(m| $m->instanceOf(CodeMethod)), 'Methods must be properly created (j_method)');
    $type->match([
-      pt:platform::external::language::java::metamodel::ParameterizedType[1] | ^NewAnonymous(type=$pt.rawType, typeArguments=$pt.typeArguments, arguments=$args, methods=$methods->cast(@CodeMethod)),
-      cl:platform::external::language::java::metamodel::Class[1]             | ^NewAnonymous(type=$cl, arguments=$args, methods=$methods->cast(@CodeMethod))
+      pt:platform::extensions::language::java::metamodel::ParameterizedType[1] | ^NewAnonymous(type=$pt.rawType, typeArguments=$pt.typeArguments, arguments=$args, methods=$methods->cast(@CodeMethod)),
+      cl:platform::extensions::language::java::metamodel::Class[1]             | ^NewAnonymous(type=$cl, arguments=$args, methods=$methods->cast(@CodeMethod))
    ]);
 }
 
-function platform::external::language::java::factory::j_method(modifiers:String[*], returnType:platform::external::language::java::metamodel::Type[1], name:String[1], parameters:Code[*], body:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_method(modifiers:String[*], returnType:platform::extensions::language::java::metamodel::Type[1], name:String[1], parameters:Code[*], body:Code[*]):Code[1]
 {
    j_method($modifiers, $returnType, $name, $parameters, $body->j_block());
 }
 
-function platform::external::language::java::factory::j_method(modifiers:String[*], returnType:platform::external::language::java::metamodel::Type[1], name:String[1], parameters:Code[*], body:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_method(modifiers:String[*], returnType:platform::extensions::language::java::metamodel::Type[1], name:String[1], parameters:Code[*], body:Code[1]):Code[1]
 {
    assert($parameters->forAll(p| $p->instanceOf(CodeParameter)), 'Parameters must be properly created (j_parameter)');
    ^CodeMethod(modifiers=$modifiers->javaModifiers(), type=$returnType, name=$name, parameters=$parameters->cast(@CodeParameter), body=$body->blockIfNot());
 }
 
-function platform::external::language::java::factory::j_thisInvoke(ofType:platform::external::language::java::metamodel::Type[1], args:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_thisInvoke(ofType:platform::extensions::language::java::metamodel::Type[1], args:Code[*]):Code[1]
 {
    ^ThisConstructorCall(arguments=$args, type=$ofType);
 }
 
-function platform::external::language::java::factory::j_superInvoke(ofType:platform::external::language::java::metamodel::Type[1], args:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_superInvoke(ofType:platform::extensions::language::java::metamodel::Type[1], args:Code[*]):Code[1]
 {
    ^SuperConstructorCall(arguments=$args, type=$ofType);
 }
 
-function platform::external::language::java::factory::j_invoke(instance:Code[1], method:platform::external::language::java::metamodel::Method[1], args:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_invoke(instance:Code[1], method:platform::extensions::language::java::metamodel::Method[1], args:Code[*]):Code[1]
 {
    j_invoke($instance, [], $method.name, $args, $method.returnType);
 }
 
-function platform::external::language::java::factory::j_invoke(instance:Code[1], methodName:String[1], args:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_invoke(instance:Code[1], methodName:String[1], args:Code[*]):Code[1]
 {
    j_invoke($instance, [], $methodName, $args);
 }
 
-function platform::external::language::java::factory::j_invoke(instance:Code[1], typeArguments:platform::external::language::java::metamodel::Type[*], methodName:String[1], args:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_invoke(instance:Code[1], typeArguments:platform::extensions::language::java::metamodel::Type[*], methodName:String[1], args:Code[*]):Code[1]
 {
    j_invoke($instance, $typeArguments, $methodName, $args, $instance.type->methodReturnType($methodName));
 }
 
-function platform::external::language::java::factory::j_invoke(instance:Code[1], methodName:String[1], args:Code[*], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_invoke(instance:Code[1], methodName:String[1], args:Code[*], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    j_invoke($instance, [], $methodName, $args, $type);
 }
 
-function platform::external::language::java::factory::j_invoke(instance:Code[1], typeArguments:platform::external::language::java::metamodel::Type[*], methodName:String[1], args:Code[*], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_invoke(instance:Code[1], typeArguments:platform::extensions::language::java::metamodel::Type[*], methodName:String[1], args:Code[*], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    ^MethodCall(instance=$instance, typeArguments=$typeArguments, methodName=$methodName, arguments=$args, type=$type);
 }
 
-function platform::external::language::java::factory::j_field(instance:Code[1], field:platform::external::language::java::metamodel::Field[1]):Code[1]
+function platform::extensions::language::java::factory::j_field(instance:Code[1], field:platform::extensions::language::java::metamodel::Field[1]):Code[1]
 {
    j_field($instance, $field.name, $field.type);
 }
 
-function platform::external::language::java::factory::j_field(instance:Code[1], fieldName:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_field(instance:Code[1], fieldName:String[1]):Code[1]
 {
    j_field($instance, $fieldName, $instance.type->typeForField($fieldName));
 }
 
-function platform::external::language::java::factory::j_field(instance:Code[1], fieldName:String[1], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_field(instance:Code[1], fieldName:String[1], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    ^FieldAccess(instance=$instance, fieldName=$fieldName, type=$type);
 }
 
-function platform::external::language::java::factory::j_methodReference(instance:Code[1], methodName:String[1], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_methodReference(instance:Code[1], methodName:String[1], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
-   assert($type->instanceOf(platform::external::language::java::metamodel::FunctionType));
+   assert($type->instanceOf(platform::extensions::language::java::metamodel::FunctionType));
    ^MethodReference(instance=$instance, methodName=$methodName, type=$type);
 }
 
-function platform::external::language::java::factory::j_invoke(class:platform::external::language::java::metamodel::Type[1], methodName:String[1], args:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_invoke(class:platform::extensions::language::java::metamodel::Type[1], methodName:String[1], args:Code[*]):Code[1]
 {
    j_invoke($class, [], $methodName, $args);
 }
 
-function platform::external::language::java::factory::j_invoke(class:platform::external::language::java::metamodel::Type[1], typeArguments:platform::external::language::java::metamodel::Type[*], methodName:String[1], args:Code[*]):Code[1]
+function platform::extensions::language::java::factory::j_invoke(class:platform::extensions::language::java::metamodel::Type[1], typeArguments:platform::extensions::language::java::metamodel::Type[*], methodName:String[1], args:Code[*]):Code[1]
 {
    j_invoke($class, $typeArguments, $methodName, $args, $class->methodReturnType($methodName));
 }
 
-function platform::external::language::java::factory::j_invoke(class:platform::external::language::java::metamodel::Type[1], methodName:String[1], args:Code[*], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_invoke(class:platform::extensions::language::java::metamodel::Type[1], methodName:String[1], args:Code[*], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    j_invoke($class, [], $methodName, $args, $type);
 }
 
-function platform::external::language::java::factory::j_invoke(class:platform::external::language::java::metamodel::Type[1], typeArguments:platform::external::language::java::metamodel::Type[*], methodName:String[1], args:Code[*], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_invoke(class:platform::extensions::language::java::metamodel::Type[1], typeArguments:platform::extensions::language::java::metamodel::Type[*], methodName:String[1], args:Code[*], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
-   assert($class->instanceOf(platform::external::language::java::metamodel::Class) || $class->instanceOf(platform::external::language::java::metamodel::Array), |'Cannot use static method '+$methodName +' on type: ' + $class->typeToString());
+   assert($class->instanceOf(platform::extensions::language::java::metamodel::Class) || $class->instanceOf(platform::extensions::language::java::metamodel::Array), |'Cannot use static method '+$methodName +' on type: ' + $class->typeToString());
    ^StaticMethodCall(class=$class, typeArguments=$typeArguments, methodName=$methodName, arguments=$args, type=$type);
 }
 
-function platform::external::language::java::factory::j_field(class:platform::external::language::java::metamodel::Type[1], field:platform::external::language::java::metamodel::Field[1]):Code[1]
+function platform::extensions::language::java::factory::j_field(class:platform::extensions::language::java::metamodel::Type[1], field:platform::extensions::language::java::metamodel::Field[1]):Code[1]
 {
    j_field($class, $field.name, $field.type);
 }
 
-function platform::external::language::java::factory::j_field(class:platform::external::language::java::metamodel::Type[1], fieldName:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_field(class:platform::extensions::language::java::metamodel::Type[1], fieldName:String[1]):Code[1]
 {
    j_field($class, $fieldName, $class->typeForField($fieldName));
 }
 
-function platform::external::language::java::factory::j_field(class:platform::external::language::java::metamodel::Type[1], fieldName:String[1], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_field(class:platform::extensions::language::java::metamodel::Type[1], fieldName:String[1], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
-   assert($class->instanceOf(platform::external::language::java::metamodel::Class) || $class->instanceOf(platform::external::language::java::metamodel::Array), |'Cannot use static field on type: ' + $class->typeToString());
+   assert($class->instanceOf(platform::extensions::language::java::metamodel::Class) || $class->instanceOf(platform::extensions::language::java::metamodel::Array), |'Cannot use static field on type: ' + $class->typeToString());
    ^StaticFieldAccess(class=$class, fieldName=$fieldName, type=$type);
 }
 
-function platform::external::language::java::factory::j_classField(type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_classField(type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    ^StaticFieldAccess(class=$type, fieldName='class', type=javaClassType());
 }
 
-function platform::external::language::java::factory::j_methodReference(class:platform::external::language::java::metamodel::Type[1], methodName:String[1]):Code[1]
+function platform::extensions::language::java::factory::j_methodReference(class:platform::extensions::language::java::metamodel::Type[1], methodName:String[1]):Code[1]
 {
    let refTo = $class->findMethod($methodName);
    j_methodReference($class, $methodName, $refTo.functionType->toOne());
 }
 
-function platform::external::language::java::factory::j_methodReference(class:platform::external::language::java::metamodel::Type[1], methodName:String[1], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_methodReference(class:platform::extensions::language::java::metamodel::Type[1], methodName:String[1], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
-   assert($class->instanceOf(platform::external::language::java::metamodel::Class) || $class->instanceOf(platform::external::language::java::metamodel::Array), |'Cannot use static method on type: ' + $class->typeToString());
-   assert($type->instanceOf(platform::external::language::java::metamodel::FunctionType));
+   assert($class->instanceOf(platform::extensions::language::java::metamodel::Class) || $class->instanceOf(platform::extensions::language::java::metamodel::Array), |'Cannot use static method on type: ' + $class->typeToString());
+   assert($type->instanceOf(platform::extensions::language::java::metamodel::FunctionType));
    ^StaticMethodReference(class=$class, methodName=$methodName, type=$type);
 }
 
-function platform::external::language::java::factory::j_lambda(parameters:platform::external::language::java::metamodel::Parameter[*], expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_lambda(parameters:platform::extensions::language::java::metamodel::Parameter[*], expression:Code[1]):Code[1]
 {
    j_lambda($parameters->map(p| $p->j_parameter()), $expression);
 }
 
-function platform::external::language::java::factory::j_lambda(parameters:platform::external::language::java::metamodel::Parameter[*], expression:Code[1], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_lambda(parameters:platform::extensions::language::java::metamodel::Parameter[*], expression:Code[1], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    j_lambda($parameters->map(p| $p->j_parameter()), $expression, $type);
 }
 
-function platform::external::language::java::factory::j_lambda(parameters:Code[*], expression:Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_lambda(parameters:Code[*], expression:Code[1]):Code[1]
 {
    j_lambda($parameters, $expression, javaFunctionType($parameters.type, $expression.type));
 }
 
-function platform::external::language::java::factory::j_lambda(parameters:Code[*], expression:Code[1], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_lambda(parameters:Code[*], expression:Code[1], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    assert($parameters->forAll(p| $p->instanceOf(CodeParameter)), 'Parameters must be properly created (j_parameter)');
    ^Lambda(parameters=$parameters->cast(@CodeParameter), expression=$expression, type=$type);
 }
 
-function platform::external::language::java::factory::j_identity(type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_identity(type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    j_identity('x', $type);
 }
 
-function platform::external::language::java::factory::j_identity(varName:String[1], type:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_identity(varName:String[1], type:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    let p = j_parameter($type, $varName);
    j_lambda($p, $p);
 }
 
-function platform::external::language::java::factory::j_emptyList(listType:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_emptyList(listType:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
-   if($listType->elementType()->instanceOf(platform::external::language::java::metamodel::WildcardType),
+   if($listType->elementType()->instanceOf(platform::extensions::language::java::metamodel::WildcardType),
       | javaCollections()->j_invoke('emptyList', [], $listType),
       | javaCollections()->j_invoke($listType->elementType(), 'emptyList', [], $listType)
    );
 }
 
-function platform::external::language::java::factory::j_listOf(of: Code[1], listType:platform::external::language::java::metamodel::Type[1]):Code[1]
+function platform::extensions::language::java::factory::j_listOf(of: Code[1], listType:platform::extensions::language::java::metamodel::Type[1]):Code[1]
 {
    if($of.type == $listType,
       | $of,
@@ -1008,7 +1008,7 @@ function platform::external::language::java::factory::j_listOf(of: Code[1], list
    ))));
 }
 
-function platform::external::language::java::factory::j_streamOf(of: Code[1]):Code[1]
+function platform::extensions::language::java::factory::j_streamOf(of: Code[1]):Code[1]
 {
    $of->match([
       {dsr:DeferredStreamResolve[1]| $dsr.stream; },
@@ -1031,33 +1031,33 @@ function platform::external::language::java::factory::j_streamOf(of: Code[1]):Co
    ]);
 }
 
-function platform::external::language::java::factory::j_toString(c:Code[1]): Code[1]
+function platform::extensions::language::java::factory::j_toString(c:Code[1]): Code[1]
 {
    $c->j_invoke('toString', [], javaString());
 }
 
 
-function platform::external::language::java::factory::j_println(s:String[1]): Code[1]
+function platform::extensions::language::java::factory::j_println(s:String[1]): Code[1]
 {
    j_println(j_string($s));
 }
 
-function platform::external::language::java::factory::j_println(msg:Code[1]): Code[1]
+function platform::extensions::language::java::factory::j_println(msg:Code[1]): Code[1]
 {
    javaSystem()->j_field('out', javaPrintStream())->j_invoke('println', $msg, javaVoid());
 }
 
-function platform::external::language::java::factory::j_sysout():Code[1]
+function platform::extensions::language::java::factory::j_sysout():Code[1]
 {
    javaSystem()->j_field('out', javaPrintStream());
 }
 
-function platform::external::language::java::factory::j_syserr():Code[1]
+function platform::extensions::language::java::factory::j_syserr():Code[1]
 {
    javaSystem()->j_field('out', javaPrintStream());
 }
 
-function platform::external::language::java::factory::j_exTryCatch(toTry:Code[1..*]): Code[1]
+function platform::extensions::language::java::factory::j_exTryCatch(toTry:Code[1..*]): Code[1]
 {
    let ex   = j_parameter(javaException(), 'e');
    let rtEx = j_parameter(javaRuntimeException(), 'e');
@@ -1069,7 +1069,7 @@ function platform::external::language::java::factory::j_exTryCatch(toTry:Code[1.
    );
 }
 
-function platform::external::language::java::factory::j_ioExTryCatch(toTry:Code[1..*]): Code[1]
+function platform::extensions::language::java::factory::j_ioExTryCatch(toTry:Code[1..*]): Code[1]
 {
    let ioEx = j_parameter(javaIOException(), 'e');
 
@@ -1081,13 +1081,13 @@ function platform::external::language::java::factory::j_ioExTryCatch(toTry:Code[
 
 // Utilities
 
-function platform::external::language::java::factory::asParameters(parameters:Code[*]):platform::external::language::java::metamodel::Parameter[*]
+function platform::extensions::language::java::factory::asParameters(parameters:Code[*]):platform::extensions::language::java::metamodel::Parameter[*]
 {
    assert($parameters->forAll(p |$p->instanceOf(Parameter)), 'Parameters must be properly created (j_parameter)');
-   $parameters->cast(@platform::external::language::java::metamodel::Parameter);
+   $parameters->cast(@platform::extensions::language::java::metamodel::Parameter);
 }
 
-function platform::external::language::java::factory::resolveDeferred(code: Code[1]):Code[1]
+function platform::extensions::language::java::factory::resolveDeferred(code: Code[1]):Code[1]
 {
    $code->match([
       {dsr:DeferredStreamResolve[1]|
@@ -1100,12 +1100,12 @@ function platform::external::language::java::factory::resolveDeferred(code: Code
    ])
 }
 
-Enum platform::external::language::java::factory::CastCompatibility
+Enum platform::extensions::language::java::factory::CastCompatibility
 {
    Identity, Widening, WideningAndNarrowing, Boxing, BoxingAndWidening, Unboxing, UnboxingAndWidening, Narrowing, UnboxingAndNarrowing, Disallowed, Unknown
 }
 
-function <<access.private>> platform::external::language::java::factory::bestCompatibility(c1:CastCompatibility[1], c2:CastCompatibility[1]):CastCompatibility[1]
+function <<access.private>> platform::extensions::language::java::factory::bestCompatibility(c1:CastCompatibility[1], c2:CastCompatibility[1]):CastCompatibility[1]
 {
    let compatibilities = CastCompatibility->enumValues()->cast(@CastCompatibility);
    let i1 = $compatibilities->indexOf($c1);
@@ -1113,12 +1113,12 @@ function <<access.private>> platform::external::language::java::factory::bestCom
    $compatibilities->at(min($i1, $i2));
 }
 
-function <<access.private>> platform::external::language::java::factory::castCompatibility(from:platform::external::language::java::metamodel::Type[1], to:platform::external::language::java::metamodel::Type[1]):CastCompatibility[1]
+function <<access.private>> platform::extensions::language::java::factory::castCompatibility(from:platform::extensions::language::java::metamodel::Type[1], to:platform::extensions::language::java::metamodel::Type[1]):CastCompatibility[1]
 {
    $from->match([
-      {fromP:platform::external::language::java::metamodel::PrimitiveType[1] |
+      {fromP:platform::extensions::language::java::metamodel::PrimitiveType[1] |
          $to->match([
-            {toP:platform::external::language::java::metamodel::PrimitiveType[1] |
+            {toP:platform::extensions::language::java::metamodel::PrimitiveType[1] |
                if($fromP.simpleName == $toP.simpleName,
                   | CastCompatibility.Identity,
                   |
@@ -1163,7 +1163,7 @@ function <<access.private>> platform::external::language::java::factory::castCom
                   | CastCompatibility.Disallowed
                ))))))))))))));
             },
-            {toC:platform::external::language::java::metamodel::Class[1] |
+            {toC:platform::extensions::language::java::metamodel::Class[1] |
                if($fromP.simpleName == 'byte' && $toC->isClass('java.lang', 'Byte'),
                   | CastCompatibility.Boxing,
                   |
@@ -1217,9 +1217,9 @@ function <<access.private>> platform::external::language::java::factory::castCom
             {a:Any[1] | CastCompatibility.Disallowed }
          ])
       },
-      {fromC:platform::external::language::java::metamodel::Class[1] |
+      {fromC:platform::extensions::language::java::metamodel::Class[1] |
          $to->match([
-            {toP:platform::external::language::java::metamodel::PrimitiveType[1] |
+            {toP:platform::extensions::language::java::metamodel::PrimitiveType[1] |
                if($fromC->isInPackage('java.lang'),
                   {|
                      if($fromC.simpleName == 'Byte' && $toP.simpleName == 'byte',
@@ -1275,7 +1275,7 @@ function <<access.private>> platform::external::language::java::factory::castCom
                   |  CastCompatibility.Disallowed
                );
             },
-            {toC:platform::external::language::java::metamodel::Class[1] |
+            {toC:platform::extensions::language::java::metamodel::Class[1] |
                if($fromC == $toC,
                   | CastCompatibility.Identity,
                   |
@@ -1294,12 +1294,12 @@ function <<access.private>> platform::external::language::java::factory::castCom
    ]);
 }
 
-function platform::external::language::java::factory::toStatement(code: Code[1]):Code[1]
+function platform::extensions::language::java::factory::toStatement(code: Code[1]):Code[1]
 {
    $code->toStatements()->toOne();
 }
 
-function platform::external::language::java::factory::toStatements(codes: Code[*]):Code[*]
+function platform::extensions::language::java::factory::toStatements(codes: Code[*]):Code[*]
 {
    $codes->fold(
       {c, a|
@@ -1321,19 +1321,19 @@ function platform::external::language::java::factory::toStatements(codes: Code[*
    ).first.values;
 }
 
-function platform::external::language::java::factory::variableDeclared(c:Code[1]):Code[1]
+function platform::extensions::language::java::factory::variableDeclared(c:Code[1]):Code[1]
 {
    assert($c->isDeclaration(), 'Not a declaration');
    j_variable($c.type, $c->cast(@LocalVariableDeclaration).variableName);
 }
 
-function platform::external::language::java::factory::variableAssigned(c:Code[1]):Code[1]
+function platform::extensions::language::java::factory::variableAssigned(c:Code[1]):Code[1]
 {
    assert($c->isAssignment(), 'Not an assignment');
    $c->cast(@InfixExpression).left;
 }
 
-function platform::external::language::java::factory::generateIfForCollection(emptyCase:String[1], singletonCase:String[1], nonEmptyCase:String[1]) : String[1]
+function platform::extensions::language::java::factory::generateIfForCollection(emptyCase:String[1], singletonCase:String[1], nonEmptyCase:String[1]) : String[1]
 {
    'if (in.isEmpty())\n'+
    '{\n'+

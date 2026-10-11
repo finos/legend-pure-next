@@ -13,10 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::javascript::*;
-import platform::external::language::javascript::translation::*;
-import platform::external::language::javascript::serialization::*;
-import platform::pure::translation::shared::*;
+import platform::extensions::language::javascript::*;
+import platform::extensions::language::javascript::translation::*;
+import platform::extensions::language::javascript::serialization::*;
 
 // PCT tests for the Pure->JavaScript translator. Each `<<test.Test>>` here
 // invokes an upstream `<<PCT.test>>` from the math/operation specs, passing
@@ -26,12 +25,12 @@ import platform::pure::translation::shared::*;
 // the PCT's expected constant, the translator + emitted TS + the JS engine's
 // arithmetic all agree with Pure semantics.
 
-function <<test.Test>> platform::external::language::javascript::translation::tests::pct::testSimplePlus(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::translation::tests::pct::testSimplePlus(): Boolean[1]
 {
    platform::pure::functions::math::tests::plus::testSimplePlus(testAdapterForTranslatedJavaScript_Function_1__X_o_);
 }
 
-function <<test.Test>> platform::external::language::javascript::translation::tests::pct::testFilterInstance(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::translation::tests::pct::testFilterInstance(): Boolean[1]
 {
    platform::pure::functions::collection::tests::filter::testFilterInstance(testAdapterForTranslatedJavaScript_Function_1__X_o_);
 }
@@ -41,7 +40,7 @@ function <<test.Test>> platform::external::language::javascript::translation::te
 //   .propertiesFromAssociations / .generalizations.general traversal.
 // First test to actually hit the address-walker + __metadataRead path
 // end-to-end with real metamodel reads.
-function <<test.Test>> platform::external::language::javascript::translation::tests::pct::testMetaProperties(): Boolean[1]
+function <<test.Test>> platform::extensions::language::javascript::translation::tests::pct::testMetaProperties(): Boolean[1]
 {
    platform::pure::functions::meta::tests::properties::testProperties(testAdapterForTranslatedJavaScript_Function_1__X_o_);
 }

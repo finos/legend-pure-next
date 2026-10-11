@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::pure::diagram::metamodel::*;
-import platform::pure::diagram::parser::*;
-import platform::pure::diagram::protocol::*;
+import platform::extensions::pure::diagram::metamodel::*;
+import platform::extensions::pure::diagram::parser::*;
+import platform::extensions::pure::diagram::protocol::*;
 import platform::pure::functions::meta::antlr::*;
 
-function platform::pure::diagram::parser::tests::sample(): String[1]
+function platform::extensions::pure::diagram::parser::tests::sample(): String[1]
 {
    'Diagram m::D(width=800.0, height=600.0)\n' +
    '{\n' +
@@ -32,14 +32,14 @@ function platform::pure::diagram::parser::tests::sample(): String[1]
    '}\n';
 }
 
-function platform::pure::diagram::parser::tests::parsed(): platform::pure::diagram::protocol::Diagram[*]
+function platform::extensions::pure::diagram::parser::tests::parsed(): platform::extensions::pure::diagram::protocol::Diagram[*]
 {
-   buildDiagrams(parseAntlr(platform::pure::diagram::parser::tests::sample(), 'DiagramParser', 'd.pure', 0), 0);
+   buildDiagrams(parseAntlr(platform::extensions::pure::diagram::parser::tests::sample(), 'DiagramParser', 'd.pure', 0), 0);
 }
 
-function <<test.Test>> platform::pure::diagram::parser::tests::testDiagramShape(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::diagram::parser::tests::testDiagramShape(): Boolean[1]
 {
-   let ds = platform::pure::diagram::parser::tests::parsed();
+   let ds = platform::extensions::pure::diagram::parser::tests::parsed();
    assert($ds->size() == 1, | 'one diagram, got ' + $ds->size()->toString());
    let d = $ds->toOne();
    assert($d.name == 'D', | 'name is the last path segment, got ' + $d.name);
@@ -50,9 +50,9 @@ function <<test.Test>> platform::pure::diagram::parser::tests::testDiagramShape(
    true;
 }
 
-function <<test.Test>> platform::pure::diagram::parser::tests::testTypeViewValues(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::diagram::parser::tests::testTypeViewValues(): Boolean[1]
 {
-   let tv = platform::pure::diagram::parser::tests::parsed()->toOne().typeViews->at(0);
+   let tv = platform::extensions::pure::diagram::parser::tests::parsed()->toOne().typeViews->at(0);
    assert($tv.id == 'tv_a', | 'id, got ' + $tv.id);
    // The qualified name survives as ONE token: `::` is part of the identifier.
    // The protocol carries the path in a Type_Pointer; resolving it is the compiler's job.
@@ -65,18 +65,18 @@ function <<test.Test>> platform::pure::diagram::parser::tests::testTypeViewValue
    true;
 }
 
-function <<test.Test>> platform::pure::diagram::parser::tests::testFlagsDefaultWhenAbsent(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::diagram::parser::tests::testFlagsDefaultWhenAbsent(): Boolean[1]
 {
    // tv_b says nothing about visibility; the editor omits what it has not changed.
-   let tv = platform::pure::diagram::parser::tests::parsed()->toOne().typeViews->at(1);
+   let tv = platform::extensions::pure::diagram::parser::tests::parsed()->toOne().typeViews->at(1);
    assert($tv.stereotypesVisible && $tv.attributesVisible, | 'absent flags default to true');
    assert($tv.color->isEmpty(), | 'an absent colour stays absent rather than becoming a default');
    true;
 }
 
-function <<test.Test>> platform::pure::diagram::parser::tests::testPropertyViewAndPoints(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::diagram::parser::tests::testPropertyViewAndPoints(): Boolean[1]
 {
-   let pv = platform::pure::diagram::parser::tests::parsed()->toOne().propertyViews->toOne();
+   let pv = platform::extensions::pure::diagram::parser::tests::parsed()->toOne().propertyViews->toOne();
    // `m::Person.firm` — the dot segment is part of the same token.
    assert($pv.property == 'm::Person.firm', | 'property, got ' + $pv.property);
    assert($pv.source == 'tv_a' && $pv.target == 'tv_b', | 'ends');
@@ -85,9 +85,9 @@ function <<test.Test>> platform::pure::diagram::parser::tests::testPropertyViewA
    true;
 }
 
-function <<test.Test>> platform::pure::diagram::parser::tests::testEmptyPointListAndLabel(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::diagram::parser::tests::testEmptyPointListAndLabel(): Boolean[1]
 {
-   let d = platform::pure::diagram::parser::tests::parsed()->toOne();
+   let d = platform::extensions::pure::diagram::parser::tests::parsed()->toOne();
    assert($d.associationViews->toOne().points->isEmpty(), | 'an empty point list is empty, not a failure');
    assert($d.associationViews->toOne().association == 'm::Employment', | 'association path');
    assert($d.generalizationViews->toOne().label == 'extends', | 'a label is carried');
@@ -95,7 +95,7 @@ function <<test.Test>> platform::pure::diagram::parser::tests::testEmptyPointLis
    true;
 }
 
-function <<test.Test>> platform::pure::diagram::parser::tests::testDiagramWithoutDimension(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::diagram::parser::tests::testDiagramWithoutDimension(): Boolean[1]
 {
    // A file that never had `(width=…, height=…)` must not acquire one.
    let ds = buildDiagrams(parseAntlr('Diagram a::B\n{\n}\n', 'DiagramParser', 'd.pure', 0), 0);
@@ -105,7 +105,7 @@ function <<test.Test>> platform::pure::diagram::parser::tests::testDiagramWithou
    true;
 }
 
-function <<test.Test>> platform::pure::diagram::parser::tests::testSeveralDiagramsInOneSection(): Boolean[1]
+function <<test.Test>> platform::extensions::pure::diagram::parser::tests::testSeveralDiagramsInOneSection(): Boolean[1]
 {
    let ds = buildDiagrams(parseAntlr('Diagram a::One\n{\n}\nDiagram a::Two\n{\n}\n',
                                      'DiagramParser', 'd.pure', 0), 0);

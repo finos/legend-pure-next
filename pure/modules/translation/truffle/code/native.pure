@@ -26,6 +26,6 @@ import platform::pure::metamodel::function::*;
 // Bootstrap (java-direct) has no implementation; calling this from anywhere
 // other than `--backend truffle` will fall through to the bridged-native
 // path and throw "no implementation".
-native function platform::external::language::truffle::truffleAstFor(
+native function platform::extensions::language::truffle::truffleAstFor(
     lambda: LambdaFunction<platform::pure::metamodel::type::Any>[1]
 ): String[1];

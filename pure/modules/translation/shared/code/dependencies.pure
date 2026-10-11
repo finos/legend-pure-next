@@ -16,7 +16,7 @@
 import platform::pure::metamodel::function::*;
 import platform::pure::metamodel::type::*;
 import platform::pure::metamodel::valuespecification::*;
-import platform::pure::translation::shared::*;
+import platform::extensions::pure::translation::dependencies::*;
 
 // ============================================================================
 // collectDependencies — given a FunctionDefinition (UserDefinedFunction or
@@ -41,7 +41,7 @@ import platform::pure::translation::shared::*;
 // past the level where re-walking is cheap.
 // ============================================================================
 
-function platform::pure::translation::shared::collectDependencies(f: FunctionDefinition<Any>[1]): PackageableElement[*]
+function platform::extensions::pure::translation::dependencies::collectDependencies(f: FunctionDefinition<Any>[1]): PackageableElement[*]
 {
    collectDependenciesTransitive([$f], []->cast(@PackageableElement));
 }
@@ -50,7 +50,7 @@ function platform::pure::translation::shared::collectDependencies(f: FunctionDef
 // `seen` is the accumulated dependency set (used as both the visited filter
 // AND the return value). On each iteration we pop one definition, gather its
 // immediate deps, add the unseen ones to both `seen` and `pending`, and loop.
-function platform::pure::translation::shared::collectDependenciesTransitive(
+function platform::extensions::pure::translation::dependencies::collectDependenciesTransitive(
    pending: FunctionDefinition<Any>[*],
    seen: PackageableElement[*]
 ): PackageableElement[*]
@@ -78,7 +78,7 @@ function platform::pure::translation::shared::collectDependenciesTransitive(
 
 // Direct (one-hop) dependencies of a single FunctionDefinition: walk its
 // expressionSequence and pull out every function/class referenced.
-function platform::pure::translation::shared::collectDirectDependencies(f: FunctionDefinition<Any>[1]): PackageableElement[*]
+function platform::extensions::pure::translation::dependencies::collectDirectDependencies(f: FunctionDefinition<Any>[1]): PackageableElement[*]
 {
    $f.expressionSequence->map(e | $e->depsFromExpression())->removeDuplicates();
 }
@@ -91,7 +91,7 @@ function platform::pure::translation::shared::collectDirectDependencies(f: Funct
 // (`new_Class_*` or similar) — they don't need a special arm. The Class
 // itself ends up as a dep once that factory's surface lands here too, but
 // for now we follow it through the same FunctionExpression branch.
-function platform::pure::translation::shared::depsFromExpression(e: ValueSpecification[1]): PackageableElement[*]
+function platform::extensions::pure::translation::dependencies::depsFromExpression(e: ValueSpecification[1]): PackageableElement[*]
 {
    $e->match([
       {fe: FunctionExpression[1] |

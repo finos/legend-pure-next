@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import platform::external::language::java::metamodel::*;
+import platform::extensions::language::java::metamodel::*;
 
 Class
 {
-  platform::external::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'javax.annotation.Generated'
+  platform::extensions::language::java::metamodel::annotations::AnnotationJavaInfo.javaClass = 'javax.annotation.Generated'
 }
-platform::external::language::java::metamodel::annotations::generated::Generated extends platform::external::language::java::metamodel::Annotation
+platform::extensions::language::java::metamodel::annotations::generated::Generated extends platform::extensions::language::java::metamodel::Annotation
 {
    value : String[1];
    comments: String[0..1];

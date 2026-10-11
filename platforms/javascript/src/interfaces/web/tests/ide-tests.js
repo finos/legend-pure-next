@@ -283,6 +283,24 @@ check("the compiled diagram element is browsable in the concept tree", async () 
     assert.match(text, /ide::PersonDiagram/);
 });
 
+check("the modules panel lists modules foundation first", async () => {
+    // One row per module, each after everything it uses: core on top, the editor's module last.
+    // Read off the rendered rows, so it is the order a user sees, not the registry's.
+    const rows = await page.evaluate(`[...document.querySelectorAll('#modules .mod-body > *')].map((row) => ({
+        name: row.querySelector('.mod-name')?.textContent ?? '',
+        uses: [...row.querySelectorAll('.mod-dep:not(.missing) .mod-name')].map((dep) => dep.textContent),
+        editor: row.querySelector('.mod-kind') !== null,
+    }))`);
+    const names = rows.map((row) => row.name);
+    assert.equal(names[0], "core", `core should be the first module, got ${names.join(", ")}`);
+    assert.ok(rows.at(-1).editor, `the editor's module should be last, got ${names.join(", ")}`);
+    assert.equal(new Set(names).size, names.length, `every module should be listed once, got ${names.join(", ")}`);
+    assert.ok(rows.find((row) => row.name === "compiler")?.uses.includes("core"),
+        "compiler's 'uses' list should name core");
+    rows.forEach((row, i) => row.uses.forEach((dep) =>
+        assert.ok(names.indexOf(dep) < i, `${row.name} is listed before ${dep}, which it uses`)));
+});
+
 for (const [name, fn] of queue) {
     const started = Date.now();
     try { await fn(); results.push({ name }); report.pass(name, Date.now() - started); }

@@ -167,9 +167,9 @@ check("every host native signature is a native declared in the loaded PDBs", () 
     const declaredIn = {
         [SIG.COMPILE_SOURCE]: "platform::pure::functions::meta",
         [SIG.EVALUATE]: "platform::pure::functions::lang",
-        [SIG.JS_COMPILE_MODULE]: "platform::external::language::javascript",
-        [SIG.JS_EXECUTE]: "platform::external::language::javascript",
-        [SIG.JS_DRAIN_COMPILED_SOURCES]: "platform::external::language::javascript",
+        [SIG.JS_COMPILE_MODULE]: "platform::extensions::language::javascript",
+        [SIG.JS_EXECUTE]: "platform::extensions::language::javascript",
+        [SIG.JS_DRAIN_COMPILED_SOURCES]: "platform::extensions::language::javascript",
         [SIG.READ_FILE_BYTES]: "platform::pure::functions::io",
         [SIG.DIRECTORY_TREE]: "platform::pure::functions::io",
         [SIG.WRITE_FILE]: "platform::pure::functions::io",
@@ -241,15 +241,15 @@ check("the extension descriptors come from the extensions' own manifests", () =>
         "extensions/diagram/compiler/compiler.js",
     ]);
     assert.deepEqual(diagram.translate.map((t) => t.package), [
-        "platform::pure::diagram::metamodel",
-        "platform::pure::diagram::protocol",
-        "platform::pure::diagram::parser",
-        "platform::pure::diagram::compiler",
+        "platform::extensions::pure::diagram::metamodel",
+        "platform::extensions::pure::diagram::protocol",
+        "platform::extensions::pure::diagram::parser",
+        "platform::extensions::pure::diagram::compiler",
     ]);
     // `pure` is the manifest's own block, re-exported verbatim — the generator copies no field, so a
     // key added to language_<name>.json arrives here untouched.
-    assert.ok(diagram.pure.sectionParsers.startsWith("platform::pure::diagram::"));
-    assert.ok(diagram.pure.compilerExtension.startsWith("platform::pure::diagram::"));
+    assert.ok(diagram.pure.sectionParsers.startsWith("platform::extensions::pure::diagram::"));
+    assert.ok(diagram.pure.compilerExtension.startsWith("platform::extensions::pure::diagram::"));
 });
 
 check("the Pure language declares its grammar like any other, and Top is not a language", () => {
@@ -439,7 +439,7 @@ check("every class in the graph has a translated JavaScript class", () => {
 });
 
 check("an accessor reads and writes the slot it names", () => {
-    const Point = globalThis["platform$pure$diagram$metamodel$Point"];
+    const Point = globalThis["platform$extensions$pure$diagram$metamodel$Point"];
     const p = new Point()._x(3n)._y(4n);   // construction IS a setter chain; there is no constructor
     assert.equal(p._x(), 3n, "_x() reads the slot");
     assert.equal(p._y(), 4n, "_y() reads the slot");

@@ -94,17 +94,17 @@ build-tests:
 # testCompileAndExecute* tests fail there with "No native implementation
 # for: compileAndExecute".
 
-# Run all Pure tests under platform::pure::diagram::analysis via pure-truffle.
+# Run all Pure tests under platform::extensions::pure::diagram::analysis via pure-truffle.
 test-all: build-tests _depCheck_runtime-pdbs
     @{{header}} 'test-all'
-    @{{substep}} 'runTests platform::pure::diagram::analysis (Truffle)'
+    @{{substep}} 'runTests platform::extensions::pure::diagram::analysis (Truffle)'
     {{pure_truffle}} execute \
         --pdb {{shared_out}}/core.pdb \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{analysis_out}}/diagram-analysis.pdb \
         --pdb {{analysis_out}}/diagram-analysis-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::pure::diagram::analysis" "{{test_results}}/pure/protocol/pure@cli-truffle.json" {{err_filter}}
+        --args "platform::extensions::pure::diagram::analysis" "{{test_results}}/pure/protocol/pure@cli-truffle.json" {{err_filter}}
 
 # Internal: fail loudly if PDBs / pure-truffle aren't staged.
 _depCheck_runtime-pdbs:

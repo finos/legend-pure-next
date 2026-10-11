@@ -21,7 +21,7 @@
 // grammar actually carries. Views refer to each other by ID, never by class: the same class
 // may be shown twice, and an edge has to know which box it joins.
 
-Class platform::pure::diagram::metamodel::Point
+Class platform::extensions::pure::diagram::metamodel::Point
 {
    x : Float[1];
    y : Float[1];
@@ -30,10 +30,10 @@ Class platform::pure::diagram::metamodel::Point
 // A class on the diagram. `type` is the class path as written; it stays a string until the
 // compiler's pass resolves it, so a diagram naming a class that does not exist can still be
 // parsed, reported on, and written back out unharmed.
-Class platform::pure::diagram::metamodel::TypeView
+Class platform::extensions::pure::diagram::metamodel::TypeView
 {
    id                 : String[1];
-   position           : platform::pure::diagram::metamodel::Point[1];
+   position           : platform::extensions::pure::diagram::metamodel::Point[1];
    width              : Float[1];
    height             : Float[1];
    color              : String[0..1];
@@ -56,41 +56,41 @@ Class platform::pure::diagram::metamodel::TypeView
    <<platform::pure::metamodel::ProtocolInfo.pointer>> type : platform::pure::metamodel::type::Type[0..1];
 }
 
-Class platform::pure::diagram::metamodel::RelationshipView
+Class platform::extensions::pure::diagram::metamodel::RelationshipView
 {
    id        : String[1];
    source    : String[1];
    target    : String[1];
-   points    : platform::pure::diagram::metamodel::Point[*];
+   points    : platform::extensions::pure::diagram::metamodel::Point[*];
    color     : String[0..1];
    lineWidth : Float[0..1];
    label     : String[0..1];
 }
 
-Class platform::pure::diagram::metamodel::PropertyView extends platform::pure::diagram::metamodel::RelationshipView
+Class platform::extensions::pure::diagram::metamodel::PropertyView extends platform::extensions::pure::diagram::metamodel::RelationshipView
 {
    // `m::Person.firm` as written.
    property : String[1];
 }
 
-Class platform::pure::diagram::metamodel::AssociationView extends platform::pure::diagram::metamodel::RelationshipView
+Class platform::extensions::pure::diagram::metamodel::AssociationView extends platform::extensions::pure::diagram::metamodel::RelationshipView
 {
    association : String[1];
 }
 
-Class platform::pure::diagram::metamodel::GeneralizationView extends platform::pure::diagram::metamodel::RelationshipView
+Class platform::extensions::pure::diagram::metamodel::GeneralizationView extends platform::extensions::pure::diagram::metamodel::RelationshipView
 {
 }
 
 // A compiled diagram. `width`/`height` are the optional `(width=…, height=…)` on the Diagram
 // line; absent, they stay empty and are not written back, so a file that never had them does
 // not acquire them.
-Class platform::pure::diagram::metamodel::Diagram extends platform::pure::metamodel::PackageableElement
+Class platform::extensions::pure::diagram::metamodel::Diagram extends platform::pure::metamodel::PackageableElement
 {
    width               : Float[0..1];
    height              : Float[0..1];
-   typeViews           : platform::pure::diagram::metamodel::TypeView[*];
-   propertyViews       : platform::pure::diagram::metamodel::PropertyView[*];
-   associationViews    : platform::pure::diagram::metamodel::AssociationView[*];
-   generalizationViews : platform::pure::diagram::metamodel::GeneralizationView[*];
+   typeViews           : platform::extensions::pure::diagram::metamodel::TypeView[*];
+   propertyViews       : platform::extensions::pure::diagram::metamodel::PropertyView[*];
+   associationViews    : platform::extensions::pure::diagram::metamodel::AssociationView[*];
+   generalizationViews : platform::extensions::pure::diagram::metamodel::GeneralizationView[*];
 }

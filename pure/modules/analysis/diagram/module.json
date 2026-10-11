@@ -1,6 +1,6 @@
 {
   "name": "diagram-analysis",
-  "packagePattern": "(platform::pure::diagram::analysis)(::.*)?",
+  "packagePattern": "(platform::extensions::pure::diagram::analysis)(::.*)?",
   "dependencies": [
     "core",
     "diagram"

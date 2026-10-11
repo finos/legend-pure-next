@@ -1,6 +1,6 @@
 {
   "name": "javascript-translation",
-  "packagePattern": "(platform::external::language::javascript::translation)(::.*)?",
+  "packagePattern": "(platform::extensions::language::javascript::translation)(::.*)?",
   "dependencies": [
     "core",
     "javascript",
