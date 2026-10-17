@@ -1,0 +1,10 @@
+# pnpm 10+ skips dependency build scripts unless they are allowed here, and recent pnpm fails the
+# install instead (ERR_PNPM_IGNORED_BUILDS). esbuild's postinstall sets up its platform binary.
+# `allowBuilds` is read by pnpm 11+, `onlyBuiltDependencies` by pnpm 10; pnpm 9 (CI) needs neither,
+# but refuses a workspace file without `packages`, hence the single-package workspace.
+packages:
+  - "."
+allowBuilds:
+  esbuild: true
+onlyBuiltDependencies:
+  - esbuild

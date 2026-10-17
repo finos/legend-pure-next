@@ -39,6 +39,9 @@ mod extensions "pure/extensions/Justfile"
 
 root := justfile_directory()
 out  := root / "shared"
+# Exactly this flatc: bootstrap-compiler's `flatc --java` output calls Constants.FLATBUFFERS_<version>(),
+# which only the matching flatbuffers-java runtime (pinned in its pom) has. Same pin as CI.
+flatc_version := "25.2.10"
 build_step := "node " + root / "tools" / "test-dashboard" / "build-step.mjs"
 
 header := "h(){ s=\"[root::$1]\"; ru=$(printf '█%.0s' $(seq 1 ${#s})); printf '\\n  %s\\n  %s\\n  %s\\n' \"$ru\" \"$s\" \"$ru\"; }; h"
@@ -46,6 +49,158 @@ substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\
 
 # Build and test everything.
 default: test
+
+# Check the toolchain and explain what is missing. `build`, `test` and `test-all` run it first, so a
+# fresh machine fails here with an install hint instead of a "command not found" deep in a recipe.
+# Pass "test-all" to also require native-image, which only Truffle's native suites use.
+# Versions mirror .github/workflows: GraalVM 25.0.2, Node 22, pnpm 9.
+doctor scope="build":
+    #!/usr/bin/env bash
+    missing=0
+    ok()  { printf '  ✓ %s\n' "$1"; }
+    bad() { printf '  ✗ %s\n' "$1" >&2; shift; for l in "$@"; do printf '      %s\n' "$l" >&2; done; missing=1; }
+    major() { "$1" -version 2>&1 | sed -nE '1s/.*version "([0-9]+).*/\1/p'; }
+    graal_hint=("just setup   (installs GraalVM 25 and sets JAVA_HOME + PATH in your shell init file)")
+    {{header}} 'doctor'
+    # Maven and Truffle use $JAVA_HOME; bin/pure-bootstrap and the ANTLR step use `java` on PATH.
+    if [[ -z "${JAVA_HOME:-}" ]]; then
+        bad "JAVA_HOME is not set (a GraalVM 25 JDK is required)" "${graal_hint[@]}"
+    elif [[ ! -x "$JAVA_HOME/bin/java" ]]; then
+        bad "JAVA_HOME ($JAVA_HOME) has no bin/java" "${graal_hint[@]}"
+    elif (( $(major "$JAVA_HOME/bin/java" || echo 0) < 25 )); then
+        bad "JAVA_HOME is Java $(major "$JAVA_HOME/bin/java"), every pom targets release 25" "${graal_hint[@]}"
+    elif ! "$JAVA_HOME/bin/java" -version 2>&1 | grep -qi graalvm; then
+        bad "JAVA_HOME ($JAVA_HOME) is not GraalVM; Truffle needs its optimizing runtime" "${graal_hint[@]}"
+    else
+        ok "JAVA_HOME: GraalVM $(major "$JAVA_HOME/bin/java")"
+    fi
+    m=$(major java); m=${m:-0}
+    if (( m < 25 )); then
+        bad "\`java\` on PATH is $([[ $m = 0 ]] && echo 'missing or not a JDK' || echo "Java $m"), 25+ required" "${graal_hint[@]}"
+    else
+        ok "java on PATH: $m"
+    fi
+    if [[ "{{scope}}" == test-all* ]]; then
+        command -v native-image >/dev/null && ok "native-image" \
+            || bad "native-image not on PATH (Truffle's native suites; ships with GraalVM)" "${graal_hint[@]}"
+        # native-image links with the system C toolchain. Linking a trivial program catches a broken
+        # one up front, e.g. a newer SDK left in CommandLineTools/SDKs that this ld cannot read.
+        t=$(mktemp -d); echo 'int main(void){return 0;}' > "$t/t.c"
+        if ! command -v cc >/dev/null; then
+            bad "no C compiler (native-image links with it)" "xcode-select --install"
+        elif err=$(cc -o "$t/t" "$t/t.c" 2>&1); then
+            ok "C toolchain links (SDK: $(basename "$(xcrun --show-sdk-path 2>/dev/null)"))"
+        else
+            bad "the C toolchain cannot link a trivial program (native-image needs it):" \
+                "default SDK $(basename "$(xcrun --show-sdk-path 2>/dev/null)"): $(grep 'error:' <<<"$err" | grep -v 'linker command failed' | tail -1 | sed 's/^.*error: //')" \
+                "just setup   (pins SDKROOT to an installed SDK that links), or fix the install for good:" \
+                "sudo rm -rf /Library/Developer/CommandLineTools && xcode-select --install"
+        fi
+        rm -rf "$t"
+        # javascript::test-ide drives headless Chrome over CDP; same lookup as ide-tests.js.
+        chrome=""
+        for c in "${CHROME_PATH:-}" "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+                 /usr/bin/google-chrome /usr/bin/google-chrome-stable /usr/bin/chromium /usr/bin/chromium-browser; do
+            [[ -n "$c" && -e "$c" ]] && { chrome=$c; break; }
+        done
+        [[ -n "$chrome" ]] && ok "chrome: $chrome" \
+            || bad "Chrome not found (javascript::test-ide drives it headless)" "brew install --cask google-chrome   (or: just setup), or set CHROME_PATH"
+    fi
+    command -v mvn  >/dev/null && ok "mvn: $(mvn -v 2>/dev/null | sed -nE '1s/Apache Maven ([^ ]+).*/\1/p')" \
+        || bad "mvn not found (bootstrap, truffle and java builds)" "brew install maven   (or: just setup)"
+    command -v node >/dev/null && ok "node: $(node -v)" \
+        || bad "node not found (test dashboard + JavaScript platform; CI uses 22)" "brew install node@22   (or: just setup)"
+    command -v pnpm >/dev/null && ok "pnpm: $(pnpm -v)" \
+        || bad "pnpm not found (JavaScript platform; CI uses 9)" "brew install pnpm   (or: just setup)"
+    fv=$(flatc --version 2>/dev/null | sed -nE 's/^flatc version //p')
+    if [[ "$fv" == "{{flatc_version}}" ]]; then
+        ok "flatc: $fv"
+    else
+        bad "flatc $([[ -z $fv ]] && echo 'not found' || echo "is $fv"), exactly {{flatc_version}} required (bootstrap's generated Java must match flatbuffers-java {{flatc_version}})" \
+            "just setup   (installs the {{flatc_version}} release binary to ~/.local/bin; Homebrew's flatbuffers is a different version)"
+    fi
+    if (( missing )); then
+        printf '\n  Missing requirements above. `just setup` installs them (macOS, Homebrew + flatc release binary).\n' >&2
+        exit 1
+    fi
+
+# Install the toolchain `doctor` checks, with Homebrew (macOS). Never run implicitly: it installs
+# software system-wide (flatc into ~/.local/bin), and appends marked JAVA_HOME/PATH (and, only when
+# the C toolchain cannot link, SDKROOT) blocks to your shell init file (once each).
+setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'setup'
+    if ! command -v brew >/dev/null; then
+        echo "Homebrew not found: install it from https://brew.sh, or install the tools listed by \`just doctor\` by hand." >&2
+        exit 1
+    fi
+    ls /Library/Java/JavaVirtualMachines 2>/dev/null | grep -qi graalvm.*25 || brew install --cask graalvm-jdk@25
+    command -v mvn  >/dev/null || brew install maven
+    command -v node >/dev/null || { brew install node@22 && brew link --overwrite node@22; }
+    command -v pnpm >/dev/null || brew install pnpm
+    [[ -n "${CHROME_PATH:-}" || -e "/Applications/Google Chrome.app" ]] || brew install --cask google-chrome
+    # flatc from the GitHub release, as CI does: Homebrew's flatbuffers is not {{flatc_version}}.
+    if [[ "$(flatc --version 2>/dev/null)" != "flatc version {{flatc_version}}" &&
+          "$("$HOME/.local/bin/flatc" --version 2>/dev/null)" != "flatc version {{flatc_version}}" ]]; then
+        tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+        # Mac.flatc.binary.zip is a universal (arm64 + x86_64) binary.
+        curl -fsSL "https://github.com/google/flatbuffers/releases/download/v{{flatc_version}}/Mac.flatc.binary.zip" -o "$tmp/flatc.zip"
+        unzip -q -o "$tmp/flatc.zip" -d "$tmp"
+        mkdir -p "$HOME/.local/bin"
+        install -m 755 "$tmp/flatc" "$HOME/.local/bin/flatc"
+        echo "  installed flatc {{flatc_version}} to ~/.local/bin/flatc"
+    fi
+    # Point JAVA_HOME at GraalVM 25 from the shell init file. The GraalVM path is written literally:
+    # `java_home -v 25` could pick another JDK 25 if one is installed beside it.
+    graal=$(ls -d /Library/Java/JavaVirtualMachines/graalvm*25*.jdk/Contents/Home 2>/dev/null | head -1)
+    [[ -n "$graal" ]] || { echo "GraalVM 25 not found under /Library/Java/JavaVirtualMachines after install." >&2; exit 1; }
+    case "$(basename "${SHELL:-zsh}")" in
+        bash) rc="$HOME/.bash_profile" ;;
+        *)    rc="$HOME/.zshrc" ;;
+    esac
+    marker="# >>> legend-pure-next JAVA_HOME >>>"
+    if grep -qF "$marker" "$rc" 2>/dev/null; then
+        echo "  $rc already has the legend-pure-next JAVA_HOME block"
+    elif grep -qE '^[^#]*JAVA_HOME=' "$rc" 2>/dev/null; then
+        echo "  $rc already sets JAVA_HOME; left as is. Point it at $graal if \`just doctor\` complains." >&2
+    else
+        printf '\n%s\nexport JAVA_HOME="%s"\nexport PATH="$JAVA_HOME/bin:$HOME/.local/bin:$PATH"\n%s\n' \
+            "$marker" "$graal" "# <<< legend-pure-next JAVA_HOME <<<" >> "$rc"
+        echo "  added JAVA_HOME=$graal to $rc"
+    fi
+    # native-image needs a C toolchain that links. If the default SDK does not (a newer SDK left in
+    # CommandLineTools/SDKs that this ld cannot read), pin SDKROOT to the newest installed one that
+    # does, in its own marked block — a workaround to delete once the Command Line Tools are fixed.
+    xcode-select -p >/dev/null 2>&1 || { echo "  installing the Command Line Tools: finish the dialog, then re-run \`just setup\`"; xcode-select --install; exit 1; }
+    t=$(mktemp -d); echo 'int main(void){return 0;}' > "$t/t.c"
+    sdk_marker="# >>> legend-pure-next SDKROOT >>>"
+    if ! cc -o "$t/t" "$t/t.c" 2>/dev/null; then
+        sdk=""
+        for s in $(ls -d /Library/Developer/CommandLineTools/SDKs/MacOSX[0-9]*.sdk 2>/dev/null | sort -rV); do
+            [[ -L "$s" ]] && continue
+            SDKROOT="$s" cc -o "$t/t" "$t/t.c" 2>/dev/null && { sdk=$s; break; }
+        done
+        if [[ -z "$sdk" ]]; then
+            echo "  no installed SDK links; reinstall the Command Line Tools:" >&2
+            echo "    sudo rm -rf /Library/Developer/CommandLineTools && xcode-select --install" >&2
+        elif grep -qF "$sdk_marker" "$rc" 2>/dev/null; then
+            echo "  $rc already has the legend-pure-next SDKROOT block (this shell has not loaded it)"
+            pinned=$(sed -nE 's/^export SDKROOT="(.*)"$/\1/p' "$rc" | tail -1)
+            [[ "$pinned" == "$sdk" ]] || echo "  it pins $pinned, but $sdk is the newest SDK that links: edit that block" >&2
+            export SDKROOT="$pinned"
+        else
+            printf '\n%s\n# The default SDK (%s) does not link with this ld. Delete this block once\n# `sudo rm -rf /Library/Developer/CommandLineTools && xcode-select --install` is done.\nexport SDKROOT="%s"\n%s\n' \
+                "$sdk_marker" "$(basename "$(xcrun --show-sdk-path)")" "$sdk" "# <<< legend-pure-next SDKROOT <<<" >> "$rc"
+            echo "  default SDK $(basename "$(xcrun --show-sdk-path)") does not link: pinned SDKROOT=$sdk in $rc"
+            export SDKROOT="$sdk"
+        fi
+    fi
+    rm -rf "$t"
+    # Verify with what the init file now sets, in a fresh `just` (this one predates the install).
+    export JAVA_HOME="$graal" PATH="$graal/bin:$HOME/.local/bin:$PATH"
+    just --justfile "{{justfile()}}" doctor test-all
+    printf '\n  Open a new terminal (or `source %s`) so your shell picks up the changes.\n' "$rc"
 
 # Build all subprojects (bootstrap → truffle → modules → javascript). The
 # javascript platform's generate recipes run the TRANSLATED translator, which
@@ -56,13 +211,13 @@ default: test
 # `diagram-analysis` (pure/modules/analysis/diagram) declares the diagram EXTENSION as a dependency. So
 # protocol -> extensions -> modules, not modules -> extensions or the reverse. A clean checkout is what
 # turns getting this wrong into a hard failure — "missing pure/modules/protocol/build/protocol.pdb".
-build: bootstrap::build truffle::build modules::protocol::build extensions::build-tests modules::build javascript::build
+build: doctor bootstrap::build truffle::build modules::protocol::build extensions::build-tests modules::build javascript::build
 
 # Top-level `build` already chains every subproject's `build` in dep order — alias for symmetry with sub-Justfiles' `build-all`.
 build-all: build
 
 # Run all tests across subprojects, then render the dashboard (see `test-all`).
-test:
+test: doctor
     #!/usr/bin/env bash
     status=0
     just --justfile "{{justfile()}}" _test || status=$?
@@ -106,7 +261,7 @@ clean-generated:
 #
 # The dashboard is rendered at the end even when a suite fails, so the failures show
 # up there; the recipe still exits with the suites' status.
-test-all:
+test-all: (doctor "test-all")
     #!/usr/bin/env bash
     status=0
     just --justfile "{{justfile()}}" _test-all || status=$?
@@ -193,7 +348,7 @@ _test-all-suites:
 
 # The previous, serial test-all: one stage at a time with live output — for chasing a failure that
 # the parallel run only shows as a log tail. Same build, same suites, same timing steps.
-test-all-serial:
+test-all-serial: (doctor "test-all")
     #!/usr/bin/env bash
     status=0
     just --justfile "{{justfile()}}" _test-all-serial || status=$?

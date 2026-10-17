@@ -110,9 +110,10 @@ generate-pdb-reader:
           --pdb {{repo_root}}/pure/modules/translation/java/build/java-translation.pdb
           --pdb {{repo_root}}/pure/modules/translation/java/build/java-translation-tests.pdb)
     rm -rf "$out"; mkdir -p "$out"
+    # One file per `//// FILE` marker; close the previous one: macOS caps a process at 256 open files by default.
     emit() {
         {{pure_bootstrap}} execute "${pdbs[@]}" --function "$1" --args "$pkgs" "$2" "$host" "$hooks" \
-          | awk -v root="$out" '/^\/\/\/\/ FILE /{ f = root "/" $3; d = f; sub(/\/[^\/]*$/, "", d); system("mkdir -p \"" d "\""); next } f != "" { print > f }'
+          | awk -v root="$out" '/^\/\/\/\/ FILE /{ if (f != "") close(f); f = root "/" $3; d = f; sub(/\/[^\/]*$/, "", d); system("mkdir -p \"" d "\""); next } f != "" { if (f in seen) print >> f; else { print > f; seen[f] = 1 } }'
     }
     {{substep}} 'types + functions -> generated/'
     emit "platform::extensions::language::java::translation::platform::generatePlatformTypesFor_String_1__String_1__String_1__String_1__String_1_" "org.finos.legend.pure.m3"
