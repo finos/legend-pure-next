@@ -98,6 +98,11 @@ substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\
 
 default: spike
 
+# The awk splitters below write one file per `//// FILE <path>` marker. Each closes the previous
+# file first: an unclosed file stays open, and macOS caps a process at 256 open files by default
+# (`launchctl limit maxfiles`), so awk fails past ~253 ("can't open file"); CI's Linux limit is far
+# higher. A path seen again is appended to, as an unclosed `>` stream would be.
+
 # Translate the self-hosted PDB reader (platform::pure::compiler::pdb reader + schema):
 # a class per function under generated/org/finos/legend/pure/m3/platform/pure/..., in
 # the Java package mirroring its Pure package.
@@ -125,7 +130,7 @@ generate-pdb:
         --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
         --args "platform::pure::compiler::pdb" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
-        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
+        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
 
 # Generate the Java interfaces / enums of the Pure metamodel (platform::pure::metamodel)
 # and of the core library's classes (platform::pure::functions: List, Pair, TryResult,
@@ -148,7 +153,7 @@ generate-types:
         --function "platform::extensions::language::java::translation::platform::generatePlatformTypes_String_1__String_1__String_1_" \
         --args "platform::pure::metamodel,platform::pure::functions,platform::pure::compiler::test" "org.finos.legend.pure.m3" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
-        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } { print > file }'
+        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
     echo "  $(find {{generated}}/org/finos/legend/pure/m3 -name '*.java' | wc -l | tr -d ' ') files"
 
 # Generate the runtime classes every translated program calls (PureMap, PureMatch,
@@ -169,7 +174,7 @@ generate-runtime:
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::extensions::language::java::translation::generateRuntimeClasses__String_1_" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
-        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
+        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
 
 # Translate the Java translator (platform::extensions::language::java::translation) and
 # every function it reaches (the java factory and serializer, translation shared,
@@ -191,7 +196,7 @@ generate-translator:
         --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
         --args "platform::extensions::language::java::translation" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
-        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
+        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
     echo "  $(grep -rl 'not translated' {{generated}} | wc -l | tr -d ' ') functions not translated"
 
 # Pre-generate the FUNCTION LIBRARY itself (platform::pure::functions).
@@ -225,7 +230,7 @@ generate-functions:
         --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
         --args "platform::pure::functions,platform::pure::test,platform::pure::parser::mappings,platform::pure::compiler::test" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
-        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
+        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
     @echo "  $(find {{generated}}/org/finos/legend/pure/m3/platform/pure/functions -name '*_*__*.java' -not -path '*tests*' 2>/dev/null | wc -l | tr -d ' ') function classes"
 
 # Pre-generate the PCT TEST wrappers (platform::pure::functions::**::tests).
@@ -253,7 +258,7 @@ generate-tests:
         --function "platform::extensions::language::java::translation::translateTestPackagesToJava_String_1__String_1_" \
         --args "platform::pure::functions,platform::pure::compiler::pdb" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
-        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
+        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
     @{{substep}} 'types the wrappers reference (FuncColSpec/AggColSpec: stored with the functions, so the package walk misses them)'
     set -o pipefail; {{emit_rt}} execute \
         --pdb {{shared}}/core.pdb \
@@ -268,7 +273,7 @@ generate-tests:
         --function "platform::extensions::language::java::translation::platform::generatePlatformTypesWithTests_String_1__String_1__String_1_" \
         --args "platform::pure::functions,platform::pure::compiler::pdb" "org.finos.legend.pure.m3" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
-        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
+        | awk -v root="{{generated}}" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
     @echo "  $(find {{generated}} -path '*tests*' -name '*.java' | wc -l | tr -d ' ') test classes"
 
 # The DIAGRAM EXTENSION's Pure, translated into its own module: platform::extensions::pure::diagram's metamodel,
@@ -303,7 +308,7 @@ generate-diagram: _depCheck_emit_rt
         --args "platform::extensions::pure::diagram" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{diagram_generated}}" -v keep="org/finos/legend/pure/m3/platform/extensions/pure/diagram/" \
-              '/^\/\/\/\/ FILE /{ if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { print > file }'
+              '/^\/\/\/\/ FILE /{ if (file != "") close(file); if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
     @{{substep}} 'translate the extension''s test packages (they live in diagram-tests.pdb)'
     set -o pipefail; {{emit_rt}} execute \
         --pdb {{shared}}/core.pdb \
@@ -320,7 +325,7 @@ generate-diagram: _depCheck_emit_rt
         --args "platform::extensions::pure::diagram" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{diagram_generated}}" -v keep="org/finos/legend/pure/m3/platform/extensions/pure/diagram/" \
-              '/^\/\/\/\/ FILE /{ if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { print > file }'
+              '/^\/\/\/\/ FILE /{ if (file != "") close(file); if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
     @echo "  $(find {{diagram_generated}} -name '*.java' | wc -l | tr -d ' ') files ($(find {{diagram_generated}} -path '*tests*' -name '*.java' | wc -l | tr -d ' ') of them tests)"
 
 # Remove everything this platform builds: the translator's output AND Maven's
@@ -396,14 +401,14 @@ fixpoint: compile
         --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
         --args "{{transform_roots}}" \
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
-        | awk -v root="{{java_root}}/build/fixpoint-ref" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
+        | awk -v root="{{java_root}}/build/fixpoint-ref" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
     set -o pipefail; java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
         --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --function "platform::extensions::language::java::translation::translatePackagesToJava_String_1__String_1_" \
         --args "{{transform_roots}}" \
-        | awk -v root="{{java_root}}/build/fixpoint" '/^\/\/\/\/ FILE /{ file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { print > file }'
+        | awk -v root="{{java_root}}/build/fixpoint" '/^\/\/\/\/ FILE /{ if (file != "") close(file); file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\""); next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
     diff -r {{java_root}}/build/fixpoint-ref {{java_root}}/build/fixpoint > {{java_root}}/build/fixpoint.diff 2>&1 && echo "  fixpoint: $(find {{java_root}}/build/fixpoint -name '*.java' | wc -l | tr -d ' ') files, the transform reproduces its own sources" || (echo "  FIXPOINT DIFFERS (build/fixpoint.diff):" && head -20 {{java_root}}/build/fixpoint.diff && exit 1)
 
 # The PCT corpus ON this platform: the translated runner discovers the tests,
