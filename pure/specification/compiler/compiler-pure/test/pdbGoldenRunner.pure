@@ -83,8 +83,8 @@ function <<test.TestDependency>> platform::pure::compiler::test::pdb::assertMatc
     let result = platform::pure::compiler::test::pdb::compileFixture($content, $sourceId);
     assert($result.errors->isEmpty(), | 'the fixture does not compile: ' + $result.errors->joinStrings('; '));
     let written = if($result.context->isEmpty(),
-        | platform::pure::compiler::pdb::archive::writeArchive($result.elements, 'test', '*', ['core']),
-        | platform::pure::compiler::pdb::archive::writeArchive($result.elements, 'test', '*', ['core'], $result.context->toOne().referencedBy));
+        | platform::pure::compiler::pdb::archive::writeArchive($result.elements, platform::pure::compiler::extension::pureExtension(), 'test', '*', ['core']),
+        | platform::pure::compiler::pdb::archive::writeArchive($result.elements, platform::pure::compiler::extension::pureExtension(), 'test', '*', ['core'], $result.context->toOne().referencedBy));
     let findings = platform::pure::compiler::test::pdb::diffArchives($schema, $written, $golden);
     assert($findings->isEmpty(), | $findings->size()->toString() + ' difference(s) from the Java golden, first: ' + $findings->at(0));
 }

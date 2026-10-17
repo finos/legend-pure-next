@@ -364,6 +364,12 @@ function readProp(store, address, prop) {
         return obj[prop];
     }
     const sx = store.schema;
+    // A table the schema does not declare is a language extension's element read by a registry that
+    // never registered that language (and so never got its schema fragment): say so, rather than
+    // answer every property with nothing.
+    if (!sx.tables.has(node.type)) {
+        throw new Error(`${address}: no schema for ${node.type} — is the language that defines it registered?`);
+    }
     const f = fieldDef(sx, node.type, prop);
     if (!f) return undefined;
     // The marshal chain starts at the element itself: an AncestorRef reaching

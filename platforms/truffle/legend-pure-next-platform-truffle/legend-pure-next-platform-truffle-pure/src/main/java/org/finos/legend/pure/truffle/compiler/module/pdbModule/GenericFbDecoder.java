@@ -14,9 +14,10 @@
 
 package org.finos.legend.pure.truffle.compiler.module.pdbModule;
 
+import org.finos.legend.pure.truffle.grammar.Language;
 import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.decodeNode_FbsNode_1__Any_1_;
 import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readBoolField_FbsNode_1__Integer_1__Boolean_1__Boolean_1_;
-import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readFloatField_FbsNode_1__Integer_1__Float_1_;
+import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readOptionalFloatField_FbsNode_1__Integer_1__Float_$0_1$_;
 import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readIntField_FbsNode_1__Integer_1__Integer_1__Boolean_1__Integer_1__Integer_1_;
 import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readStringField_FbsNode_1__Integer_1__String_$0_1$_;
 import org.finos.legend.pure.m3.platform.pure.compiler.pdb.reader.readStringVector_FbsNode_1__Integer_1__String_MANY_;
@@ -38,9 +39,12 @@ import org.finos.legend.pure.truffle.compiler.module.MetadataAccess;
 import org.finos.legend.pure.truffle.execution.types.ObjectSequence;
 import org.finos.legend.pure.truffle.execution.types.PureSequence;
 
-import java.io.InputStream;
+import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.list.ListIterable;
+import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.list.fixed.ArrayAdapter;
+
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -90,7 +94,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class GenericFbDecoder
 {
-    private static final String SCHEMA_RESOURCE = "generated-specification/m3.fbs";
     private static final String ENUMERATION_PATH = "platform::pure::metamodel::type::Enumeration";
     private static final String ATOMIC_VALUE_CONTENT_UNION = "AtomicValueContentUnion";
 
@@ -156,18 +159,73 @@ public final class GenericFbDecoder
 
     private static FbsSchema loadSchema()
     {
-        try (InputStream in = GenericFbDecoder.class.getClassLoader().getResourceAsStream(SCHEMA_RESOURCE))
+        return FbsSchema.parseContent(schemaText());
+    }
+
+    // =========================================================================
+    // Language extensions' schema fragments
+    // =========================================================================
+
+    private static final String PURE_CLASS_PREFIX = "// pure-class ";
+    private static final MutableList<Language> LANGUAGES = Lists.mutable.empty();
+
+    /**
+     * A language whose {@code fbs} joins the schema — m3's from {@code ###Pure}, a generated fragment
+     * from an extension (compiler-pure pdb/fbsgen) — what lets a PDB holding its elements be read.
+     *
+     * <p>The decoder's schema and plans are static — decoding is a static {@code @TruffleBoundary}
+     * call from PureDynamicObject on purpose — and table names are global (fbsgen refuses a name m3
+     * already declares), so languages are registered process-wide rather than per runtime. Both parses
+     * re-run over every registered schema as ONE text: the Java FbsSchema decides whether a field is a
+     * union from the text it parses, and a fragment refers to m3's unions. A fragment's
+     * {@code // pure-class <Table> <path>} lines name the class each table decodes to, so extension
+     * tables never go through the short-name guess in {@link #purePathForDef}. Registering a language
+     * already registered (by name) is a no-op: two runtimes in one process must not duplicate m3.</p>
+     */
+    public static synchronized void registerLanguage(Language language)
+    {
+        if (language.fbsText() == null || LANGUAGES.anySatisfy(l -> l.name().equals(language.name())))
         {
-            if (in == null)
-            {
-                throw new IllegalStateException("Schema resource not on classpath: " + SCHEMA_RESOURCE);
-            }
-            return FbsSchema.parseContent(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+            return;
         }
-        catch (java.io.IOException e)
+        LANGUAGES.add(language);
+        ArrayAdapter.adapt(language.fbsText().split("\n"))
+                .select(line -> line.startsWith(PURE_CLASS_PREFIX))
+                .forEach(line ->
+                {
+                    String[] tableAndPath = line.substring(PURE_CLASS_PREFIX.length()).trim().split(" ");
+                    DEF_PURE_PATH.put(tableAndPath[0], tableAndPath[1]);
+                });
+        schema = null;
+        pureSchema = null;
+        PLANS.clear();
+        STRING_INFO.clear();
+    }
+
+    /**
+     * The schema the given languages make: the always-active ones' FIRST — m3, which the rest refer to —
+     * whatever order they come in, then the rest in order. Nothing is registered on the caller's behalf:
+     * with no always-active language there is nothing to decode with, and that is an error naming the
+     * builder method that installs one, not a default.
+     */
+    static String schemaText(ListIterable<Language> languages)
+    {
+        ListIterable<Language> always = languages.select(Language::bundled);
+        if (always.isEmpty())
         {
-            throw new IllegalStateException("Failed to read schema resource " + SCHEMA_RESOURCE, e);
+            throw new IllegalStateException("no languages to decode with — build a PureRuntime with "
+                    + "withLanguages(...) first (PureLanguage.all() before any extension)");
         }
+        return Lists.mutable.withAll(always.collect(Language::fbsText))
+                .withAll(languages.reject(Language::bundled).collect(Language::fbsText))
+                .select(t -> t != null)
+                .makeString("\n");
+    }
+
+    /** Every registered language's schema — what {@code PureRuntime.Builder.build()} registered. */
+    static synchronized String schemaText()
+    {
+        return schemaText(LANGUAGES.toImmutable());
     }
 
     // =========================================================================
@@ -305,13 +363,19 @@ public final class GenericFbDecoder
 
     private static final ConcurrentHashMap<String, TablePlan> PLANS = new ConcurrentHashMap<>();
 
-    private static TablePlan planFor(String tableName)
+    static TablePlan planFor(String tableName)
     {
         TablePlan plan = PLANS.get(tableName);
         if (plan == null)
         {
+            // Cached only when the schema it was built from is still current: a fragment registered
+            // meanwhile (registerLanguage clears PLANS) must not be undone by a plan built without it.
+            FbsSchema builtFrom = schema();
             plan = buildPlan(tableName);
-            PLANS.putIfAbsent(tableName, plan);
+            if (schema == builtFrom)
+            {
+                PLANS.putIfAbsent(tableName, plan);
+            }
         }
         return plan;
     }
@@ -332,18 +396,11 @@ public final class GenericFbDecoder
                 s = pureSchema;
                 if (s == null)
                 {
-                    try (InputStream in = GenericFbDecoder.class.getClassLoader().getResourceAsStream(SCHEMA_RESOURCE))
+                    pureSchema = s = org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.parseFbs_String_1__FbsSchema_1_
+                            .execute(schemaText());
+                    if (s == null)
                     {
-                        if (in == null)
-                        {
-                            throw new IllegalStateException("Schema resource not on classpath: " + SCHEMA_RESOURCE);
-                        }
-                        pureSchema = s = org.finos.legend.pure.m3.platform.pure.compiler.pdb.schema.parseFbs_String_1__FbsSchema_1_
-                                .execute(new String(in.readAllBytes(), StandardCharsets.UTF_8));
-                    }
-                    catch (java.io.IOException e)
-                    {
-                        throw new IllegalStateException("Cannot read " + SCHEMA_RESOURCE, e);
+                        throw new IllegalStateException("Cannot parse the registered languages' schema");
                     }
                 }
             }
@@ -368,7 +425,9 @@ public final class GenericFbDecoder
         List<FbsSchema.FbsField> fields = schema().getTableFields(tableName);
         if (fields == null)
         {
-            return plan; // not an m3.fbs table — every property decodes to null
+            // A language extension's element read by a runtime that never registered the language (and
+            // so never got its schema fragment). An empty plan would answer every property with nothing.
+            throw new IllegalStateException("no schema for " + tableName + " — is the language that defines it registered?");
         }
         for (FbsSchema.FbsField f : fields)
         {
@@ -555,7 +614,8 @@ public final class GenericFbDecoder
             {
                 case "bool" -> readBoolField_FbsNode_1__Integer_1__Boolean_1__Boolean_1_
                         .execute(n, (long) fbsId, Boolean.FALSE);
-                case "double", "float" -> readFloatField_FbsNode_1__Integer_1__Float_1_.execute(n, (long) fbsId);
+                // Absent = an empty Float[0..1]: generated writers write a double whenever it has a value.
+                case "double", "float" -> readOptionalFloatField_FbsNode_1__Integer_1__Float_$0_1$_.execute(n, (long) fbsId);
                 default -> readIntField_FbsNode_1__Integer_1__Integer_1__Boolean_1__Integer_1__Integer_1_
                         .execute(n, (long) fbsId, (long) scalarWidth, Boolean.TRUE, 0L);
             };

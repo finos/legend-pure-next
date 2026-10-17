@@ -27,9 +27,9 @@
 // via pure-reader.js) — only touched elements are inflated/decoded; archive
 // opening and inflation stay host wiring (zip/zip.js).
 //
-// Environment-neutral: takes the m3.fbs schema TEXT (or an already-parsed
-// schema index) and already-opened archives. The schema is parsed on first
-// use — the translated parser lives in generated JS the hosts import AFTER
+// Environment-neutral: takes already-opened archives, and the schema of the
+// languages in play from `useLanguages` (PureRuntime.build() calls it with
+// withLanguages(...)). The schema is parsed on first use — the translated parser lives in generated JS the hosts import AFTER
 // building the registry, so nothing here may touch translated code until the
 // first real read.
 
@@ -38,16 +38,25 @@ import {
     isPointerRef, isAncestorRef, isFbsNode,
 } from "./pdbModule/pure-reader.js";
 
+import { languageSchema } from "../../runtime/LanguageExtensions.js";
+
 export { PdbModule } from "./pdbModule/PdbModule.js";
 export { InMemoryModule } from "./inMemoryModule/InMemoryModule.js";
 
 // ModuleRegistry's state: resolution across an ordered module list (first
-// match wins), the caches, and the graph/function-index queries. `schemaSrc` is
-// the m3.fbs text (parsed lazily via the translated parser) or an already-parsed
-// schema index.
-function createRegistryState(schemaSrc) {
-    let sx = typeof schemaSrc === "string" ? null : schemaSrc;
-    const schema = () => sx ?? (sx = parseSchema(schemaSrc));
+// match wins), the caches, and the graph/function-index queries. The schema text
+// is the languages' (useSchema), parsed lazily via the translated parser.
+function createRegistryState() {
+    let sx = null;
+    // m3.fbs followed by every named extension's generated schema fragment (useSchema).
+    let schemaText = null;
+    const schema = () => {
+        if (schemaText === null) {
+            throw new Error("ModuleRegistry: no languages — build a PureRuntime with withLanguages(...) "
+                          + "(or call registry.useLanguages(descriptors)) before reading");
+        }
+        return sx ?? (sx = parseSchema(schemaText));
+    };
     const mods = [];
 
     // --- caches, all flushed when the module list changes -----------------
@@ -288,8 +297,19 @@ function createRegistryState(schemaSrc) {
         throw new Error(`__metadataInvoke not implemented: ${path} (no in-memory module registered)`);
     }
 
+    // The languages' schema: m3.fbs and each named extension's generated fragment (compiler-pure
+    // pdb/fbsgen), decoded as ONE text because a fragment refers to m3's tables and unions. The parsed
+    // index is rebuilt lazily, and every decode cached against the old one is dropped.
+    function useSchema(text) {
+        if (text === schemaText) return;
+        schemaText = text;
+        sx = null;
+        invalidate();
+    }
+
     return {
         get schema() { return schema(); },
+        useSchema,
         get modules() { return [...mods]; },
         register, unregister,
         /** `l(path)` after one path changed; `l(undefined)` after everything did. */
@@ -304,20 +324,33 @@ function createRegistryState(schemaSrc) {
 /**
  * The canonical module registry: ordered first-match resolution over the
  * registered modules (MetadataAccess), plus the graph and function-index
- * services the metadata globals consume (pdb/marshal.js). JavaScript extra: the
- * constructor takes the m3.fbs schema (text, parsed lazily, or a parsed index).
+ * services the metadata globals consume (pdb/marshal.js). It decodes with the schema of the languages
+ * named in `useLanguages` — what PureRuntime.build() calls with `withLanguages(...)` — and takes none
+ * in its constructor: a registry read before it has languages fails saying so.
  */
 export class ModuleRegistry {
     #state;
     /** Language-extension descriptors, paired with their modules by `registerExtension`. */
     #extensions = [];
 
-    constructor(schema) {
-        this.#state = createRegistryState(schema);
+    constructor(...args) {
+        if (args.length) {
+            throw new Error("ModuleRegistry() takes no schema: PureRuntime.build() derives it from withLanguages(...)");
+        }
+        this.#state = createRegistryState();
     }
 
-    /** Register `module` after the current ones (`{front: true}`: before them). Returns the module. */
-    register(module, opts = {}) { return this.#state.register(module, opts); }
+    /** The languages whose PDB schema this registry decodes with — what PureRuntime.build() calls. Returns this. */
+    useLanguages(descriptors) {
+        this.#state.useSchema(languageSchema(descriptors));
+        return this;
+    }
+
+    /** Register `module` after the current ones (`{front: true}`: before them). Returns this registry. */
+    register(module, opts = {}) { this.#state.register(module, opts); return this; }
+
+    /** Register each of `modules`, in order. Returns this registry, so a host can build one inline. */
+    registerAll(modules) { [...modules].forEach((module) => this.register(module)); return this; }
 
     /**
      * Register a LANGUAGE EXTENSION: its Pure module, and the fact that the extension is here.
@@ -341,14 +374,20 @@ export class ModuleRegistry {
         }
         if (!module) {
             throw new Error(`Language extension '${descriptor.name}' needs its module '${descriptor.module}' `
-                          + `(build it with \`just extensions::build-tests\` and load ${descriptor.pdbPath})`);
+                          + `(build it with \`just extensions::build-tests\` and load ${(descriptor.pdbs ?? []).join(", ")})`);
         }
         if (module.name !== descriptor.module) {
             throw new Error(`Language extension '${descriptor.name}' declares module '${descriptor.module}' `
                           + `but was given '${module.name}'`);
         }
+        // Its elements' PDB form: without the fragment, a PDB holding them cannot be decoded.
+        if (descriptor.fbs && !descriptor.fbsText) {
+            throw new Error(`Language extension '${descriptor.name}' declares fbs ${descriptor.fbs} but its descriptor `
+                          + "has no fragment text: build the extension (`just extensions::build`), then regenerate "
+                          + "the descriptors (`just javascript::generate-extensions`)");
+        }
         this.#extensions.push(descriptor);
-        return this.register(module);
+        return this.register(module);   // this registry
     }
 
     /** The extension descriptors registered here. */

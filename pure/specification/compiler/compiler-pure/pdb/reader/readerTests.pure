@@ -240,7 +240,7 @@ function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testReadRef
 function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testReadArchiveRoundTrip():Boolean[1]
 {
    let bytes   = platform::pure::compiler::pdb::archive::writeArchive(
-                    platform::pure::compiler::pdb::archive::tests::testElements(), 'test', '*', 'core');
+                    platform::pure::compiler::pdb::archive::tests::testElements(), platform::pure::compiler::extension::pureExtension(), 'test', '*', 'core');
    let entries = platform::pure::compiler::pdb::archive::entryNames($bytes);
    assertEquals(['elements/myPkg.Package', 'elements/myProf.Profile', 'elementIndex', 'manifest'], $entries);
    assertEquals(platform::pure::compiler::pdb::archive::tests::refPackageBytes(),
@@ -255,4 +255,19 @@ function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testReadArc
    let node = platform::pure::compiler::pdb::reader::elementNode(
                  platform::pure::compiler::pdb::archive::entryBytes($bytes, 'elements/myPkg.Package'), 'Package');
    assertEquals('myPkg', platform::pure::compiler::pdb::reader::readField($s, $node, 'name'));
+}
+
+// A metamodel property's double: written whenever it has a value (0.0 included), so an absent
+// field reads back as an EMPTY Float[0..1] — not as 0.0, which is what flatc's default elision
+// would make it.
+function <<test.Test>> platform::pure::compiler::pdb::reader::tests::testOptionalFloatPresence():Boolean[1]
+{
+   let fbb    = platform::pure::compiler::pdb::fbb::newBuilder();
+   let absent = $fbb->platform::pure::compiler::pdb::fbb::startObject(1)->platform::pure::compiler::pdb::fbb::endObject();
+   let absentBytes = $absent.builder->platform::pure::compiler::pdb::fbb::finish($absent.offset)->platform::pure::compiler::pdb::fbb::result();
+   let zero   = platform::pure::compiler::pdb::fbb::newBuilder()->platform::pure::compiler::pdb::fbb::startObject(1)
+                   ->platform::pure::compiler::pdb::fbb::addFieldFloatPresent(0, 0.0)->platform::pure::compiler::pdb::fbb::endObject();
+   let zeroBytes = $zero.builder->platform::pure::compiler::pdb::fbb::finish($zero.offset)->platform::pure::compiler::pdb::fbb::result();
+   assert(platform::pure::compiler::pdb::reader::readOptionalFloatField(platform::pure::compiler::pdb::reader::rootNode($absentBytes, 'T'), 0)->isEmpty());
+   assertEquals(0.0, platform::pure::compiler::pdb::reader::readOptionalFloatField(platform::pure::compiler::pdb::reader::rootNode($zeroBytes, 'T'), 0));
 }

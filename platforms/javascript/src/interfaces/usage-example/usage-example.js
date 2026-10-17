@@ -25,9 +25,9 @@
 // what it proves is only that the system starts, because it throws if any step fails. The
 // behaviour is pinned next door in host-api-tests.js.
 //
-// Run: node --stack-size=4000 src/core/tests/usage-example.js
+// Run: node --stack-size=4000 src/interfaces/usage-example/usage-example.js
 
-import { readFileSync } from "node:fs";
+import { extensionNamed } from "../../core/runtime/LanguageExtensions.js";
 import { ModuleRegistry, PdbModule } from "../../core/compiler/module/ModuleRegistry.js";
 import { InMemoryModule } from "../../core/compiler/module/inMemoryModule/InMemoryModule.js";
 import { Execution } from "../../core/execution/Execution.js";
@@ -60,15 +60,16 @@ Diagram sample::PersonDiagram
 
 // 1. The only module this host owns: "sample" holds source rather than a prebuilt archive, and so is
 //    the only one `compile()` has anything to do. What the LANGUAGES need is not named here.
-const registry = new ModuleRegistry(readFileSync(repo("shared/specification/m3.fbs"), "utf8"));
-const sample = registry.register(new InMemoryModule("sample", ["core"]));
+const sample = new InMemoryModule("sample", ["core"]);
+const registry = new ModuleRegistry().register(sample);
 
-// 2. The runtime, which brings the rest: the modules `###Pure` declares in its own manifest, this
-//    platform's metamodel and translator, and every language extension found on disk — each paired with
-//    the language it adds. It then loads the translated code it runs on. The two loaders are all a host
-//    supplies, because only it knows HOW to read: files here, `fetch` in the browser page.
+// 2. The runtime. `###Pure` is always there; the host NAMES the extensions it wants — `###Diagram` — and
+//    the runtime brings their modules (from each language's own manifest) and this platform's metamodel and
+//    translator, then loads the translated code it runs on. The two loaders are all a host supplies
+//    besides, because only it knows HOW to read: files here, `fetch` in the browser page.
 const runtime = await PureRuntime.builder()
     .withRegistry(registry)
+    .withLanguages([extensionNamed("diagram")])   // ###Pure is always there; name the extensions
     .withNatives(NativeRegistry.createDefault())
     .withEvalJs(new Execution(sample).evalJs)
     .withModuleLoader(async (paths) => paths.map((pdb) => PdbModule.open(repo(pdb))))

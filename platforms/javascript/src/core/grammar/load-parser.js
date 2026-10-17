@@ -153,7 +153,7 @@ let parserRuntime = null;
  */
 export function loadParser(pdbPaths = [join(SHARED, "core.pdb")]) {
     if (!parserRuntime) {
-        const registry = new ModuleRegistry(readFileSync(join(SHARED, "specification/m3.fbs"), "utf8"));
+        const registry = new ModuleRegistry();
         for (const p of pdbPaths) registry.register(PdbModule.open(p));
         registry.validate();
         parserRuntime = PureRuntime.builder().withRegistry(registry).withNatives(NativeRegistry.createDefault([antlrExtension])).build();

@@ -85,9 +85,9 @@ public final class ModuleRegistry implements MetadataAccess
 
     /**
      * Register a module. Validates that all declared dependencies are already
-     * present so resolution order is unambiguous.
+     * present so resolution order is unambiguous. Returns this registry.
      */
-    public void register(Module module)
+    public ModuleRegistry register(Module module)
     {
         // A PDB module resolves cross-module references through the registry it belongs to; wire it before
         // anything reads its elements (the uniqueness check below does).
@@ -135,9 +135,8 @@ public final class ModuleRegistry implements MetadataAccess
             {
                 if (existing.hasElement(path))
                 {
-                    Object hereElement = module.getElement(path);
-                    if (org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(
-                            hereElement, "platform::pure::metamodel::Package"))
+                    // Asked of the module, not of a decoded element: registering needs no schema.
+                    if (module.isPackage(path))
                     {
                         continue;
                     }
@@ -170,6 +169,14 @@ public final class ModuleRegistry implements MetadataAccess
         // its compile, so this staleness manifests as silent class-info
         // population failures (writeProperty: ... has no property ...).
         elementCache.clear();
+        return this;
+    }
+
+    /** Register each of {@code modules}, in order. Returns this registry, so a host can build one inline. */
+    public ModuleRegistry registerAll(Iterable<? extends Module> modules)
+    {
+        modules.forEach(this::register);
+        return this;
     }
 
     /**
@@ -183,7 +190,7 @@ public final class ModuleRegistry implements MetadataAccess
      * <p>Reports every missing dependency (not just the first) so a caller
      * with multiple gaps sees them all at once.</p>
      */
-    public void validate()
+    public ModuleRegistry validate()
     {
         java.util.List<String> errors = new java.util.ArrayList<>();
         for (Module m : modules.values())
@@ -208,20 +215,22 @@ public final class ModuleRegistry implements MetadataAccess
             for (String e : errors) sb.append("\n  - ").append(e);
             throw new IllegalStateException(sb.toString());
         }
+        return this;
     }
 
     /**
      * Unregister a module and cascade-invalidate any module that depends on
      * it. After this returns, the named module and every transitive dependent
      * are gone from the registry; their associated state (caches, shapes,
-     * etc.) becomes garbage as soon as the caller drops references.
+     * etc.) becomes garbage as soon as the caller drops references. Returns the
+     * module named {@code name}, or null when no such module was registered.
      */
-    public void unregister(String name)
+    public Module unregister(String name)
     {
         Module removed = modules.get(name);
         if (removed == null)
         {
-            return;
+            return null;
         }
         // Snapshot dependents before removing, so we can recurse.
         List<String> dependents = new ArrayList<>();
@@ -299,6 +308,7 @@ public final class ModuleRegistry implements MetadataAccess
         {
             unregister(d);
         }
+        return removed;
     }
 
     /**

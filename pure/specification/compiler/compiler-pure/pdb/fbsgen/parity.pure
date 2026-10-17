@@ -1,0 +1,116 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// PARITY: the Pure fbs generator, run over m3 itself, must reproduce m3.fbs.
+//
+// m3.fbs stays the Java generator's output (RdfFbsSchemaGenerator, from m3.ttl); this is what
+// keeps the Pure port of its rules honest. The comparison is STRUCTURAL, on parsed schemas:
+//   - tables: same names, and per table the same (name, type, vector, id) fields — except
+//     ElementEntry and the hand-written m3_fbs_addition.fbs tables, which no rule produces;
+//   - unions: same names, members compared as SETS (Java collects pointer-union members into an
+//     unordered set, so their order is not part of the rule);
+//   - enums: PointerKind's values;
+//   - ids: generating over m3 assigns no new field id.
+
+import platform::pure::compiler::pdb::schema::*;
+import platform::pure::compiler::pdb::fbsgen::*;
+
+function platform::pure::compiler::pdb::fbsgen::parityExcludedTables():String[*]
+{
+   ['ElementEntry', 'FunctionIndexEntry', 'FunctionIndex', 'ElementIndexEntry', 'ElementIndex', 'Manifest', 'Format'];
+}
+
+function platform::pure::compiler::pdb::fbsgen::fieldKey(f:FbsField[1]):String[1]
+{
+   $f.name + ': ' + if($f.vector, | '[' + $f.type + ']', | $f.type) + ' (id: ' + $f.id->toString() + ')';
+}
+
+function platform::pure::compiler::pdb::fbsgen::onlyIn(label:String[1], these:String[*], those:String[*]):String[*]
+{
+   $these->filter(x | !$those->contains($x))->sort()->map(x | $label + ' ' + $x);
+}
+
+function platform::pure::compiler::pdb::fbsgen::tableDiffs(ref:FbsSchema[1], gen:FbsSchema[1]):String[*]
+{
+   let refNames = $ref.tables.name->filter(n | !platform::pure::compiler::pdb::fbsgen::parityExcludedTables()->contains($n));
+   let genNames = $gen.tables.name;
+   platform::pure::compiler::pdb::fbsgen::onlyIn('table only in m3.fbs:', $refNames, $genNames)
+      ->concatenate(platform::pure::compiler::pdb::fbsgen::onlyIn('table only generated:', $genNames, $refNames))
+      ->concatenate($refNames->filter(n | $genNames->contains($n))->sort()
+                       ->map(n | platform::pure::compiler::pdb::fbsgen::fieldDiffs($n, $ref, $gen)));
+}
+
+function platform::pure::compiler::pdb::fbsgen::fieldDiffs(table:String[1], ref:FbsSchema[1], gen:FbsSchema[1]):String[*]
+{
+   let r = $ref.tables->filter(t | $t.name == $table)->toOne().fields->map(f | platform::pure::compiler::pdb::fbsgen::fieldKey($f));
+   let g = $gen.tables->filter(t | $t.name == $table)->toOne().fields->map(f | platform::pure::compiler::pdb::fbsgen::fieldKey($f));
+   platform::pure::compiler::pdb::fbsgen::onlyIn($table + ' field only in m3.fbs:', $r, $g)
+      ->concatenate(platform::pure::compiler::pdb::fbsgen::onlyIn($table + ' field only generated:', $g, $r));
+}
+
+function platform::pure::compiler::pdb::fbsgen::unionDiffs(ref:FbsSchema[1], gen:FbsSchema[1]):String[*]
+{
+   let refNames = $ref.unions.name;
+   let genNames = $gen.unions.name;
+   platform::pure::compiler::pdb::fbsgen::onlyIn('union only in m3.fbs:', $refNames, $genNames)
+      ->concatenate(platform::pure::compiler::pdb::fbsgen::onlyIn('union only generated:', $genNames, $refNames))
+      ->concatenate($refNames->filter(n | $genNames->contains($n))->sort()
+                       ->map(n | platform::pure::compiler::pdb::fbsgen::memberDiff($n, $ref, $gen)));
+}
+
+function platform::pure::compiler::pdb::fbsgen::memberDiff(union:String[1], ref:FbsSchema[1], gen:FbsSchema[1]):String[*]
+{
+   let r = $ref.unions->filter(u | $u.name == $union)->toOne().members->sort()->joinStrings(', ');
+   let g = $gen.unions->filter(u | $u.name == $union)->toOne().members->sort()->joinStrings(', ');
+   if($r == $g, | [], | 'union ' + $union + ': m3.fbs { ' + $r + ' } vs generated { ' + $g + ' }');
+}
+
+function platform::pure::compiler::pdb::fbsgen::enumDiffs(ref:FbsSchema[1], gen:FbsSchema[1]):String[*]
+{
+   $ref.enums->map(e | let g = $gen.enums->filter(x | $x.name == $e.name)->head();
+                       if($g->isNotEmpty() && ($g->toOne().values == $e.values), | [],
+                          | 'enum ' + $e.name + ' differs'););
+}
+
+function platform::pure::compiler::pdb::fbsgen::idDiffs(idsText:String[1], generatedIds:String[1]):String[*]
+{
+   let file = parseFieldIds($idsText)->map(i | $i.table + '.' + $i.field + '=' + $i.id->toString());
+   let gen  = parseFieldIds($generatedIds)->map(i | $i.table + '.' + $i.field + '=' + $i.id->toString());
+   platform::pure::compiler::pdb::fbsgen::onlyIn('field id newly assigned:', $gen, $file);
+}
+
+function platform::pure::compiler::pdb::fbsgen::fbsParity(m3FbsPath:String[1], idsPath:String[1]):String[1]
+{
+   let ref     = parseFbs(platform::pure::functions::io::readFile($m3FbsPath));
+   let idsText = platform::pure::functions::io::readFile($idsPath);
+   // m3's own classes are the ones the bootstrap built from m3.ttl: they have no source. Classes
+   // written in Pure under platform::pure::metamodel (relation ColSpecs, Variant) are not m3.ttl's.
+   let m3      = platform::pure::compiler::pdb::fbsgen::ownClasses('platform::pure::metamodel')->filter(c | $c.sourceInformation->isEmpty());
+   let result  = generateFbs($m3, $m3, ^FbsSchema(tables = [], unions = [], enums = []), $idsText, 'platform::pure::metamodel (m3.ttl classes)');
+   let gen     = parseFbs($result.fbs);
+   platform::pure::compiler::pdb::fbsgen::tableDiffs($ref, $gen)
+      ->concatenate(platform::pure::compiler::pdb::fbsgen::unionDiffs($ref, $gen))
+      ->concatenate(platform::pure::compiler::pdb::fbsgen::enumDiffs($ref, $gen))
+      ->concatenate(platform::pure::compiler::pdb::fbsgen::idDiffs($idsText, $result.ids))
+      ->joinStrings('\n');
+}
+
+// Entry point for `just bootstrap::check-fbs-parity`.
+function platform::pure::compiler::pdb::fbsgen::printFbsParity(m3FbsPath:String[1], idsPath:String[1]):Boolean[1]
+{
+   let diffs = platform::pure::compiler::pdb::fbsgen::fbsParity($m3FbsPath, $idsPath);
+   if($diffs == '',
+      | print('FBS PARITY OK\n', 1); true;,
+      | print($diffs + '\n', 1); fail('fbsgen does not reproduce m3.fbs (see above)'););
+}

@@ -1,0 +1,5 @@
+{
+  "name": "roundtrip",
+  "packagePattern": "(m)(::.*)?",
+  "dependencies": ["core", "compiler", "diagram"]
+}

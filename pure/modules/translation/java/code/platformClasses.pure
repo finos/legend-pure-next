@@ -87,6 +87,24 @@ function <<test.TestDependency>> platform::extensions::language::java::translati
    platform::extensions::language::java::translation::platform::generatePlatformTypesForHost($rootPackagePaths, $javaRoot, $platformPackage, $hooksPackage, $hooksPackage);
 }
 
+// A language extension's table -> implementation factory, over the classes of its metamodel package
+// — the tables its generated PDB schema fragment declares (pdb/fbsgen). The runtime asks it after
+// PdbTypes for a table m3 does not have, so a PDB holding ###Diagram elements decodes to DiagramImpl
+// & co. rather than UntypedObject. Only the metamodel package: the protocol package has classes with
+// the same simple names (`Diagram`), and a PDB names its tables by simple name.
+function <<test.TestDependency>> platform::extensions::language::java::translation::platform::generateExtensionTypeFactory(packagePath: String[1], javaRoot: String[1], factoryName: String[1]): String[1]
+{
+   let pkg     = platform::extensions::language::java::translation::defaultPlatformPackage();
+   let conv    = ^(platform::extensions::language::java::translation::conventionsFor($javaRoot, $pkg))(metadataElements = true,
+                    pdbPackage = platform::extensions::language::java::translation::defaultPdbPackage($pkg),
+                    runtimePkg = platform::extensions::language::java::translation::defaultRuntimePackage($pkg));
+   let classes = $packagePath->pathToElement()->cast(@platform::pure::metamodel::Package)->translatableElements()
+      ->filter(e | $e->instanceOf(Class) && !$e->instanceOf(Enumeration))->cast(@Class<Any>);
+   '//// FILE ' + $factoryName->replace('.', '/') + '.java\n'
+      + $classes->platform::extensions::language::java::translation::platform::platformTypeFactory($javaRoot, $conv, $factoryName)
+           ->platform::extensions::language::java::serialization::classToStringWithPositions();
+}
+
 // The two support packages, separately — see translatePackagesToJavaForHost.
 function <<test.TestDependency>> platform::extensions::language::java::translation::platform::generatePlatformTypesForHost(rootPackagePaths: String[1], javaRoot: String[1], platformPackage: String[1], hooksPackage: String[1], runtimePackage: String[1]): String[1]
 {
@@ -419,8 +437,15 @@ function platform::extensions::language::java::translation::platform::platformTy
    // SIMPLE name: including those would collide `Any` with `Any` and
    // `PackageableElement` with `PackageableElement`.
    let storable = $classes->filter(c | $c->elementToPath()->isPrebuiltType());
+   platform::extensions::language::java::translation::platform::platformTypeFactory($storable, $javaRoot, $conv, $javaRoot + '.PdbTypes');
+}
+
+// A table -> implementation factory named `factoryName` over exactly `storable`: m3's PdbTypes,
+// or a language extension's (see generateExtensionTypeFactory).
+function platform::extensions::language::java::translation::platform::platformTypeFactory(storable: Class<Any>[*], javaRoot: String[1], conv: platform::extensions::language::java::translation::Conventions[1], factoryName: String[1]): platform::extensions::language::java::metamodel::Class[1]
+{
    let cases = $storable->map(c | '    case "' + $c.name->toOne() + 'Def": return new ' + $c->platformTypeName($javaRoot) + 'Impl();')->joinStrings('\n');
-   javaClass(['public', 'final'], $javaRoot + '.PdbTypes')
+   javaClass(['public', 'final'], $factoryName)
       ->javaDoc('FlatBuffer table name to generated implementation. Generated.')
       ->addMethod(javaMethod(['public', 'static'], javaClass($conv->platform::extensions::language::java::translation::pdbClass('LazyObject')), 'create', [j_parameter(javaString(), 'table')],
            'switch (table)\n{\n' + $cases + '\n    default: return null;\n}'));

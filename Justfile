@@ -382,7 +382,7 @@ dashboard:
 # Remove shared/, per-subproject build artifacts, every generated/ tree and the test reports.
 # The dashboard's history.json and builds.json are kept: they are the trend across runs, not
 # one run's output. Every generated/ tree is rebuilt by the build that consumes it
-# (bootstrap::generate-writer, truffle::generate-pdb-reader, diagram's generate-protocol,
+# (bootstrap::generate-writer, truffle::generate-pdb-reader, diagram's generate,
 # javascript::generate-all), so removing them is safe.
 #
 # The last step is a guard: anything git ignores under a build/, generated/ or target/

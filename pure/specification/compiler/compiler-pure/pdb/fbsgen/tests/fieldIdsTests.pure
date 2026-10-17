@@ -1,0 +1,64 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Tests for the Pure port of FbsFieldIdRegistry (fieldIds.pure).
+
+import platform::pure::compiler::pdb::fbsgen::*;
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testParseFieldIds():Boolean[1]
+{
+   let ids = parseFieldIds('# header\n\nPointDef.x=0\nPointDef.y=1\n\nTypeViewDef.type_=4\n');
+   assertEquals(['PointDef.x=0', 'PointDef.y=1', 'TypeViewDef.type_=4'],
+                $ids->map(i | $i.table + '.' + $i.field + '=' + $i.id->toString()));
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testAssignIdKeepsExisting():Boolean[1]
+{
+   let a = assignId(parseFieldIds('PointDef.x=0\nPointDef.y=1\n'), 'PointDef', 'y', false);
+   assertEquals(1, $a.id);
+   assertEquals(2, $a.ids->size());
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testAssignIdAppendsAfterMax():Boolean[1]
+{
+   let a = assignId(parseFieldIds('PointDef.x=0\nPointDef.y=1\n'), 'PointDef', 'z', false);
+   assertEquals(2, $a.id);
+   assertEquals(3, $a.ids->size());
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testAssignIdUnionTakesTwoSlots():Boolean[1]
+{
+   let a = assignId([], 'TypeViewDef', 'classifier_generic_type', true);
+   assertEquals(1, $a.id);
+   let b = assignId($a.ids, 'TypeViewDef', 'source_information', false);
+   assertEquals(2, $b.id);
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testRenderFieldIds():Boolean[1]
+{
+   let ids = parseFieldIds('TypeViewDef.id=3\nPointDef.y=1\nPointDef.x=0\n');
+   assertEquals('# FlatBuffer field-ID registry — keeps wire format stable across builds.\n'
+              + '# Auto-maintained by RdfFbsSchemaGenerator. Append-only.\n'
+              + '# Format: TableName.field_name=ID\n'
+              + '\n'
+              + 'PointDef.x=0\nPointDef.y=1\n\n'
+              + 'TypeViewDef.id=3\n\n',
+                renderFieldIds($ids));
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testDeprecatedFields():Boolean[1]
+{
+   let ids = parseFieldIds('PointDef.x=0\nPointDef.y=1\nPointDef.old=2\n');
+   assertEquals(['old'], deprecatedFields($ids, 'PointDef', ['x', 'y']).field);
+}

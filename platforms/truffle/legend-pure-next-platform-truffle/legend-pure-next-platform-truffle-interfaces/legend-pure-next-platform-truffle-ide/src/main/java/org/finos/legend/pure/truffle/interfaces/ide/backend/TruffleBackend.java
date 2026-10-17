@@ -133,12 +133,14 @@ public final class TruffleBackend implements PureBackend
                 reg.register(compilerLoader);
                 coreLoader.setResolver(reg);
                 compilerLoader.setResolver(reg);
-                coreLoader.preloadAll();
-                compilerLoader.preloadAll();
                 PureRuntime rt = PureRuntime.builder()
                         .withRegistry(reg)
+                        .withNatives(org.finos.legend.pure.truffle.execution.natives.NativeRegistry.createDefault())
                         .withCompileImmediately(false)
                         .build();
+                // Decoding needs the languages' schema, which build() installs: preload after it.
+                coreLoader.preloadAll();
+                compilerLoader.preloadAll();
                 return new Object[]{reg, rt};
             }).get();
             this.registry = (ModuleRegistry) built[0];

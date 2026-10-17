@@ -149,12 +149,16 @@ public class M3BootstrapReader
             wireStereotypesToProfiles(model, m3Stereotype, index);
             wireClassifierGenericType(model, m3Stereotype, index);
 
-            // Wire tags into their parent profiles (assuming Tag also exists)
+            // Wire tags into their parent profiles
             Resource m3Tag = model.createResource(M3_NS + "Tag");
+            wireTagsToProfiles(model, m3Tag, index);
             wireClassifierGenericType(model, m3Tag, index);
 
             // Wire stereotypes onto matching elements
             wireStereotypesToElements(model, index);
+
+            // Wire tagged values onto matching elements ({ProtocolInfo.nonPointerSubtypes = '…'})
+            wireTaggedValuesToElements(model, index);
 
             // Third pass: wire enum values as properties on their Enumeration
             // Must run before property wiring so AggregationKind values are available
@@ -664,6 +668,96 @@ public class M3BootstrapReader
                 }
             }
         }
+    }
+
+    /**
+     * Wire Tag instances into their parent Profile's {@code _p_tags()} list — the tag counterpart
+     * of {@link #wireStereotypesToProfiles}, so a tagged value's tag is a profile-owned Tag the PDB
+     * writer can path and every reader can resolve.
+     */
+    private static void wireTagsToProfiles(Model model, Resource tagResource, MutableMap<String, PackageableElement> index)
+    {
+        for (ResIterator it = model.listSubjectsWithProperty(RDF.type, tagResource); it.hasNext();)
+        {
+            Resource tagRes = it.next();
+            String tagName = getName(model, tagRes);
+            platform.pure.metamodel.extension.Profile profile = tagProfile(model, tagRes, index);
+            if (tagName != null && profile != null)
+            {
+                platform.pure.metamodel.extension.TagImpl tag = new platform.pure.metamodel.extension.TagImpl()._value(tagName)._profile(profile);
+                Statement cgtStmt = getM3Statement(model, tagRes, "classifierGenericType");
+                if (cgtStmt != null && cgtStmt.getObject().isResource())
+                {
+                    tag._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                }
+                profile._p_tags().add(tag);
+            }
+        }
+    }
+
+    private static platform.pure.metamodel.extension.Profile tagProfile(Model model, Resource tagRes, MutableMap<String, PackageableElement> index)
+    {
+        Statement profStmt = getM3Statement(model, tagRes, "tag_profile");
+        String profName = profStmt != null && profStmt.getObject().isResource() ? getName(model, profStmt.getObject().asResource()) : null;
+        return profName == null
+                ? null
+                : (platform.pure.metamodel.extension.Profile) index.valuesView().detect(el -> el instanceof platform.pure.metamodel.extension.Profile && profName.equals(el._name()));
+    }
+
+    private static platform.pure.metamodel.extension.Tag findTag(Model model, Resource tagRes, MutableMap<String, PackageableElement> index)
+    {
+        String tagName = getName(model, tagRes);
+        platform.pure.metamodel.extension.Profile profile = tagProfile(model, tagRes, index);
+        return tagName == null || profile == null
+                ? null
+                : Lists.mutable.withAll(profile._p_tags()).detect(t -> tagName.equals(t._value()));
+    }
+
+    /**
+     * Wire {@code :taggedValues} onto the elements that declare them, as {@link #wireStereotypesToElements}
+     * does for stereotypes. m3.ttl uses them for {@code ProtocolInfo.nonPointerSubtypes}, which the
+     * Pure fbs generator (compiler-pure pdb/fbsgen) reads from the compiled classes.
+     */
+    private static void wireTaggedValuesToElements(Model model, MutableMap<String, PackageableElement> index)
+    {
+        org.apache.jena.rdf.model.Property taggedValuesPred = model.getProperty(M3_NS + "taggedValues");
+        for (StmtIterator tvIt = model.listStatements(null, taggedValuesPred, (RDFNode) null); tvIt.hasNext();)
+        {
+            Statement tvStmt = tvIt.next();
+            Resource subject = tvStmt.getSubject();
+            String name = getName(model, subject);
+            String packagePath = getPackagePath(model, subject);
+            PackageableElement element = name == null ? null : index.get(packagePath != null ? packagePath + "::" + name : name);
+            if (element instanceof platform.pure.metamodel.extension.ElementWithTaggedValues ewt && tvStmt.getObject().isResource())
+            {
+                platform.pure.metamodel.extension.TaggedValue tv = buildTaggedValue(model, tvStmt.getObject().asResource(), index);
+                if (tv != null)
+                {
+                    MutableList<platform.pure.metamodel.extension.TaggedValue> taggedValues = Lists.mutable.withAll(ewt._taggedValues());
+                    taggedValues.add(tv);
+                    ewt._taggedValues(taggedValues);
+                }
+            }
+        }
+    }
+
+    private static platform.pure.metamodel.extension.TaggedValue buildTaggedValue(Model model, Resource tvRes, MutableMap<String, PackageableElement> index)
+    {
+        Statement tagStmt = getM3Statement(model, tvRes, "tag");
+        Statement valueStmt = getM3Statement(model, tvRes, "taggedValue_value");
+        platform.pure.metamodel.extension.Tag tag = tagStmt != null && tagStmt.getObject().isResource() ? findTag(model, tagStmt.getObject().asResource(), index) : null;
+        String value = valueStmt == null ? null : getLiteralString(model, valueStmt);
+        if (tag == null || value == null)
+        {
+            return null;
+        }
+        platform.pure.metamodel.extension.TaggedValueImpl tv = new platform.pure.metamodel.extension.TaggedValueImpl()._tag(tag)._value(value);
+        Statement cgtStmt = getM3Statement(model, tvRes, "classifierGenericType");
+        if (cgtStmt != null && cgtStmt.getObject().isResource())
+        {
+            tv._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+        }
+        return tv;
     }
 
     /**

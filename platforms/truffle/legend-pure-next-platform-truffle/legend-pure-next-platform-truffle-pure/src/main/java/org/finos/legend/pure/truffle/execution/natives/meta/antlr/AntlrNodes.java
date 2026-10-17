@@ -397,15 +397,15 @@ public final class AntlrNodes
         @CompilerDirectives.TruffleBoundary
         private static Object doExecute(String source, String grammar, String sourceId, int lineOffset)
         {
-            // Dispatch via the per-runtime GrammarExtension registry (set up
-            // by PureRuntime.Builder.withGrammarExtensions). The
-            // node itself stays grammar-agnostic.
+            // Dispatch via the per-runtime GrammarExtension registry: Top, plus
+            // every grammar the runtime's languages declare (PureRuntime.Builder
+            // .withLanguages). The node itself stays grammar-agnostic.
             org.finos.legend.pure.truffle.grammar.GrammarExtension ext =
                     org.finos.legend.pure.truffle.execution.PureLanguage.get(null).grammars().get(grammar);
             if (ext == null)
             {
                 throw new RuntimeException("Unknown grammar: " + grammar
-                        + " (no GrammarExtension registered; pass it via PureRuntime.Builder.withGrammarExtensions)");
+                        + " (none of the languages passed to PureRuntime.Builder.withLanguages declares it)");
             }
             return ext.parse(source, sourceId, lineOffset);
         }

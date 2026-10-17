@@ -164,7 +164,7 @@ test-java: (_mvn "with-tests")
 # remain visible.
 
 # Every specification run of the Truffle host (self-host excluded: see `spec-compiler-selfhost`).
-spec: spec-compiler spec-functions spec-pct spec-grammar spec-pdb spec-pdb-golden spec-printer-compiled spec-printer-protocol spec-functions-inmemory spec-pct-inmemory
+spec: spec-compiler spec-functions spec-pct spec-grammar spec-pdb spec-pdb-golden spec-printer-compiled spec-printer-protocol spec-functions-inmemory spec-pct-inmemory spec-compile-languages spec-diagram-pdb
 
 # Needs core-tests.pdb (runTests itself is <<test.TestDependency>> and is classified into the
 # tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
@@ -321,6 +321,59 @@ spec-pct-inmemory:
 # Truffle-compiled compiler.pdb goes to {{truffle_out}}/ to keep it separate from the
 # Java-compiled shared/compiler.pdb (filename is derived from module manifest).
 # Self-host: compile compiler-pure on Truffle, run compiler tests, then diff PDB vs Java direct (assumes `just build` was run).
+# `pure-truffle compile` on a module with a language-extension section (pure/testdata/diagram-roundtrip):
+# the ###Diagram section must parse with the diagram language, compile with its compiler extension,
+# exactly as an in-memory compile does, and be WRITTEN by the extension's generated PDB writer. The PDB
+# must equal the committed golden every host's round trip reads (see regen-diagram-golden).
+spec-compile-languages: _depCheck_pdbs
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'spec-compile-languages'
+    {{substep}} 'pure-truffle compile a module with a ###Diagram section'
+    out="{{truffle_out}}/spec-compile-languages"
+    golden="{{repo_root}}/pure/testdata/diagram-roundtrip/expected/roundtrip.pdb"
+    rm -rf "$out" && mkdir -p "$out"
+    {{pure_truffle}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/parser-mappings.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --base-pdb {{repo_root}}/pure/extensions/diagram/build/diagram.pdb \
+        --source {{repo_root}}/pure/testdata/diagram-roundtrip \
+        --output-dir "$out" {{err_filter}}
+    entries=$(unzip -Z1 "$out/roundtrip.pdb")
+    for e in elements/m/Person.Class elements/m/D.Diagram elements/m/E.Diagram; do
+        grep -qx "$e" <<< "$entries" || { echo "FAIL: $e missing from roundtrip.pdb" >&2; exit 1; }
+    done
+    if [[ "${REGEN_GOLDEN:-}" == "1" ]]; then
+        mkdir -p "$(dirname "$golden")" && cp "$out/roundtrip.pdb" "$golden"
+        echo "  wrote $golden"
+    fi
+    cmp -s "$out/roundtrip.pdb" "$golden" \
+        || { echo "FAIL: roundtrip.pdb differs from the committed golden (just truffle::regen-diagram-golden after an intended change)" >&2; exit 1; }
+    echo "OK: m::D and m::E compiled into roundtrip.pdb, identical to the committed golden"
+
+# A PDB holding ###Diagram elements, read back on Truffle: the committed golden (written by Truffle's
+# compile, see regen-diagram-golden), loaded with the diagram language registered, then m::describe
+# prints what a reader sees of m::D and m::E. The same line is checked on JavaScript and Java.
+spec-diagram-pdb: _depCheck_pdbs
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'spec-diagram-pdb'
+    out=$({{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb {{repo_root}}/pure/extensions/diagram/build/diagram.pdb \
+        --pdb {{repo_root}}/pure/testdata/diagram-roundtrip/expected/roundtrip.pdb \
+        --function "m::describe__Boolean_1_" 2>&1) || { echo "$out" >&2; exit 1; }
+    grep -qx 'DESCRIBE 800.0 tv_person m::Person 40.0,60.0 E:0:0' <<< "$out" \
+        || { echo "FAIL: unexpected describe output:" >&2; echo "$out" >&2; exit 1; }
+    echo "OK: Truffle reads m::D and m::E back from roundtrip.pdb"
+
+# Rewrite the committed round-trip golden after an intended change to the diagram metamodel or the
+# PDB format. Every host's diagram round trip reads THIS file, so none depends on Truffle's build.
+regen-diagram-golden:
+    REGEN_GOLDEN=1 just --justfile {{source_file()}} spec-compile-languages
+
 spec-compiler-selfhost: _depCheck_pdbs
     @{{header}} 'spec-compiler-selfhost'
     @{{substep}} 'compiler-pure → {{truffle_out}}/compiler.pdb (truffle), then run compiler tests'

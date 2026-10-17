@@ -338,40 +338,25 @@ public final class PureRuntime
 
     public static final class Builder
     {
-        private MetadataAccess resolver;
+        private ModuleRegistry registry;
         private NativeRegistry natives;
-        private final List<org.finos.legend.pure.truffle.grammar.GrammarExtension> grammarExtensions = new ArrayList<>();
         private final List<Path> sourceRoots = new ArrayList<>();
         private org.eclipse.collections.api.list.ListIterable<org.finos.legend.pure.truffle.grammar.Language> languages =
                 org.eclipse.collections.api.factory.Lists.immutable.empty();
         private Path moduleRoot;
         private final Map<String, String> polyglotOptions = new LinkedHashMap<>();
 
-        public Builder withRegistry(MetadataAccess registry)
+        /** The registry this runtime resolves through, and registers the languages' modules in. Required. */
+        public Builder withRegistry(ModuleRegistry registry)
         {
-            this.resolver = registry;
+            this.registry = registry;
             return this;
         }
 
-        /** Natives to install; defaults to {@link NativeRegistry#createDefault()}. */
+        /** Natives to install. Required: {@link NativeRegistry#createDefault()} is the usual choice. */
         public Builder withNatives(NativeRegistry natives)
         {
             this.natives = natives;
-            return this;
-        }
-
-        /**
-         * Register grammar extensions consulted by the {@code parseAntlr}
-         * native. Reuses the bootstrap-side
-         * {@link org.finos.legend.pure.truffle.grammar.GrammarExtension} interface
-         * — the M3/Top implementations work for both runtimes.
-         */
-        public Builder withGrammarExtensions(Iterable<? extends org.finos.legend.pure.truffle.grammar.GrammarExtension> extensions)
-        {
-            if (extensions != null)
-            {
-                extensions.forEach(grammarExtensions::add);
-            }
             return this;
         }
 
@@ -422,12 +407,10 @@ public final class PureRuntime
         }
 
         /**
-         * The languages this runtime can parse and compile — {@code PureLanguage.all()}, plus any extension
-         * the host chose. Their MODULES are registered by {@code build()} from each language's own manifest,
-         * so a host names languages rather than repeating their module lists.
-         *
-         * <p>Named by the host rather than discovered, so the order is explicit: {@code ###Pure} before
-         * anything is parsed.</p>
+         * The extensions this runtime parses and compiles beyond {@code ###Pure} — {@code DiagramLanguage.all()},
+         * say. {@code ###Pure} is never optional, so {@code build()} puts {@code PureLanguage.all()} first unless
+         * the list already names it. Their MODULES are opened by {@code build()} (with {@code withModuleRoot})
+         * from each language's own manifest, so a host names languages rather than repeating module lists.
          */
         public Builder withLanguages(
                 org.eclipse.collections.api.list.ListIterable<org.finos.legend.pure.truffle.grammar.Language> languages)
@@ -448,6 +431,25 @@ public final class PureRuntime
 
         public PureRuntime build()
         {
+            if (registry == null)
+            {
+                throw new IllegalStateException("PureRuntime needs withRegistry(...)");
+            }
+            if (natives == null)
+            {
+                throw new IllegalStateException("PureRuntime needs withNatives(...) — NativeRegistry.createDefault() for the built-in natives");
+            }
+            // ###Pure is never optional, so it is always there: the always-active languages first, unless
+            // the host already named them — as on the Java platform and in JavaScript. Its compiler
+            // extension is what writes m3's elements to a PDB.
+            if (languages.noneSatisfy(org.finos.legend.pure.truffle.grammar.Language::bundled))
+            {
+                languages = org.finos.legend.pure.truffle.grammar.PureLanguage.all().newWithAll(languages);
+            }
+            // Every installed language's PDB schema — m3's from ###Pure, a generated fragment from each
+            // extension whose elements have a PDB form; without one, a PDB holding those elements fails to
+            // decode. From the class path, so it does not depend on withModuleRoot.
+            languages.forEach(org.finos.legend.pure.truffle.compiler.module.pdbModule.GenericFbDecoder::registerLanguage);
             registerDeclaredModules();
             // System-property default: surefire's argLine sets this so every
             // test that drives PureRuntime gets aggressive JIT
@@ -460,31 +462,19 @@ public final class PureRuntime
                     polyglotOptions.put("engine.CompileImmediately", prop);
                 }
             }
-            // Always register the M3 + top-level grammars by default so the
-            // parseAntlr native works out of the box. Callers that need a
-            // custom grammar add it via withGrammarExtensions; conflicts on
-            // the same grammarName throw at runtime construction time.
-            List<org.finos.legend.pure.truffle.grammar.GrammarExtension> allGrammars = new ArrayList<>(grammarExtensions);
-            boolean hasM3 = false, hasTop = false;
-            for (org.finos.legend.pure.truffle.grammar.GrammarExtension g : allGrammars)
-            {
-                if ("M3Parser".equals(g.grammarName())) hasM3 = true;
-                if ("TopParser".equals(g.grammarName())) hasTop = true;
-            }
-            if (!hasM3) allGrammars.add(new org.finos.legend.pure.truffle.grammar.M3GrammarExtension());
-            if (!hasTop) allGrammars.add(new org.finos.legend.pure.truffle.grammar.TopGrammarExtension());
-            // Every installed language that adds syntax. This is what makes `###Diagram` parse here: the
-            // adapter comes from the extension's manifest and its generated parser, so no host names it.
+            // Top is the engine's own grammar — it splits a file into sections and belongs to no language.
+            // Every other grammar, M3 included, comes from the language that declares it.
+            org.eclipse.collections.api.list.MutableList<org.finos.legend.pure.truffle.grammar.GrammarExtension> allGrammars =
+                    org.eclipse.collections.api.factory.Lists.mutable.with(new org.finos.legend.pure.truffle.grammar.TopGrammarExtension());
             languages.forEach((language) ->
             {
                 if (language.grammar() != null
-                        && allGrammars.stream().noneMatch((g) -> g.grammarName().equals(language.grammar().grammarName())))
+                        && allGrammars.noneSatisfy((g) -> g.grammarName().equals(language.grammar().grammarName())))
                 {
                     allGrammars.add(language.grammar());
                 }
             });
-            return new PureRuntime(resolver, natives != null ? natives : NativeRegistry.createDefault(),
-                    allGrammars, sourceRoots, polyglotOptions, languages);
+            return new PureRuntime(registry, natives, allGrammars, sourceRoots, polyglotOptions, languages);
         }
 
         /**
@@ -496,9 +486,9 @@ public final class PureRuntime
          * language's list is the whole of it, unlike the Java and JavaScript platforms which each bring a
          * translator.</p>
          *
-         * <p>Only when the registry is a {@link ModuleRegistry}: {@code withRegistry} takes the read-only
-         * {@link MetadataAccess}, and a host that passed something else registered its own modules already.
-         * A module already registered is left alone.</p>
+         * <p>Only with {@code withModuleRoot}: without one the host's registry is all there is — the CLI's
+         * {@code --pdb} list, say — and nothing is opened on its behalf. A module already registered is left
+         * alone.</p>
          */
         private void registerDeclaredModules()
         {
@@ -511,16 +501,10 @@ public final class PureRuntime
             }
             if (moduleRoot == null)
             {
-                // AUTOLOAD IS OPT-IN, through withModuleRoot: a host may name its languages only for their
-                // grammars and section parsers — neither needs a file — and register its modules itself,
-                // which is what every `--pdb` caller does. Without a root there is nothing to resolve
-                // repo-relative paths against, and guessing one would be worse than leaving it alone.
+                // No root, nothing opened: the host's registry is what this runtime has. That is the host's
+                // explicit choice (the CLI's --pdb list, a test that needs only core.pdb), not a default —
+                // build() adds nothing it was not asked for. A language whose module is absent is inert.
                 return;
-            }
-            if (!(resolver instanceof ModuleRegistry registry))
-            {
-                throw new IllegalStateException("withLanguages(...) needs withRegistry(...) to be a "
-                        + "ModuleRegistry, so the declared modules can be registered");
             }
             declared.distinct().forEach((pdb) ->
             {
@@ -557,6 +541,12 @@ public final class PureRuntime
         return resolver;
     }
 
+    /** The languages this runtime parses and compiles: {@code ###Pure}'s first, then the host's extensions. */
+    public org.eclipse.collections.api.list.ListIterable<org.finos.legend.pure.truffle.grammar.Language> languages()
+    {
+        return languages;
+    }
+
     /**
      * Compile, in dependency order, the in-memory modules with code: parse their sources, compile them with
      * compiler-pure, and replace each module's elements with the result, so later modules and {@link #execute}
@@ -584,6 +574,16 @@ public final class PureRuntime
      * <p>GUARDED on the element being present: an extension whose Pure module is not registered contributes
      * nothing rather than failing, which is what lets a module arrive late.</p>
      */
+    /**
+     * The compiler passes of this runtime's languages — what {@link #compile()} hands compiler-pure — for a host
+     * that compiles a module itself (`pure-truffle compile`), so a module compiled that way and one compiled in
+     * memory see the same languages.
+     */
+    public org.finos.legend.pure.truffle.execution.types.ObjectSequence compilerExtensions()
+    {
+        return compilerExtensions(moduleRegistry());
+    }
+
     private org.finos.legend.pure.truffle.execution.types.ObjectSequence compilerExtensions(ModuleRegistry registry)
     {
         org.eclipse.collections.api.list.MutableList<Object> extensions =

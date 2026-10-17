@@ -236,8 +236,21 @@ public final class PureCompileMain
         {
             basePdbs.add(Path.of(p));
         }
+        // The same languages as execute: a module's ###Diagram (or other extension) section parses and
+        // compiles here exactly as it does when the runtime compiles in memory.
         org.finos.legend.pure.truffle.runtime.compilation.TruffleCompilerBinaryBuilder.compile(
-                basePdbs, Path.of(source), Path.of(outputDir), mode, profiling::apply);
+                basePdbs, Path.of(source), Path.of(outputDir), mode, languages(),
+                profiling::apply);
+    }
+
+    /**
+     * THE COMPOSITION ROOT, shared by every command: every extension this CLI was linked against — ###Pure is
+     * always there, put first by build(). That registers each language's grammar, section parser and
+     * compiler passes. An extension stays inert until its own module is loaded.
+     */
+    private static org.eclipse.collections.api.list.ListIterable<org.finos.legend.pure.truffle.grammar.Language> languages()
+    {
+        return DiagramLanguage.all();   // ###Pure is always there
     }
 
     private static void execute(String[] args) throws Exception
@@ -292,11 +305,6 @@ public final class PureCompileMain
         }
         // Wire composite registry into each pdbModule for cross-module FBW resolution
         for (var pdbModule : pdbModules) pdbModule.setResolver(registry);
-        for (var pdbModule : pdbModules) pdbModule.preloadAll();
-        // Setup is done — globally validate cross-references so any missing
-        // dependency PDB (e.g. forgot --pdb shared/core.pdb) fails here with
-        // a clear "missing class" diagnostic instead of a downstream NPE.
-        registry.validate();
 
         // Section parsers (CompiledGraph / CompilerStats / TestFile /
         // ReverseIndex / Error) come from compiler-pure's testSectionParsers()
@@ -304,17 +312,19 @@ public final class PureCompileMain
         PureRuntime.Builder runtimeBuilder = PureRuntime.builder()
                 .withRegistry(registry)
                 .withNatives(NativeRegistry.createDefault())
-                // THE COMPOSITION ROOT: the Pure language first — nothing parses before `###Pure` — then
-                // every extension this CLI was linked against. That is what registers each language's
-                // grammar and its section parser, so a `###Diagram` section parses and compiles here as it
-                // does in the embedding example. An extension stays inert until its own module is loaded.
-                .withLanguages(PureLanguage.all().newWithAll(DiagramLanguage.all()));
+                // The composition root — see languages().
+                .withLanguages(languages());
         profiling.apply(runtimeBuilder);
         if (strictJit)
         {
             runtimeBuilder.withCompileImmediately(true);
         }
         PureRuntime runtime = runtimeBuilder.build();
+        // Decoding needs the languages' schema, which build() installs: preload after it. Then globally
+        // validate cross-references so any missing dependency PDB (e.g. forgot --pdb shared/core.pdb)
+        // fails here with a clear "missing class" diagnostic instead of a downstream NPE.
+        for (var pdbModule : pdbModules) pdbModule.preloadAll();
+        registry.validate();
 
         try
         {
@@ -408,8 +418,6 @@ public final class PureCompileMain
             pdbModules.add(pdbModule);
         }
         for (var pdbModule : pdbModules) pdbModule.setResolver(registry);
-        for (var pdbModule : pdbModules) pdbModule.preloadAll();
-        registry.validate();
 
         // Section parsers (CompiledGraph / CompilerStats / TestFile /
         // ReverseIndex / Error) come from compiler-pure's testSectionParsers()
@@ -417,17 +425,19 @@ public final class PureCompileMain
         PureRuntime.Builder runtimeBuilder = PureRuntime.builder()
                 .withRegistry(registry)
                 .withNatives(NativeRegistry.createDefault())
-                // THE COMPOSITION ROOT: the Pure language first — nothing parses before `###Pure` — then
-                // every extension this CLI was linked against. That is what registers each language's
-                // grammar and its section parser, so a `###Diagram` section parses and compiles here as it
-                // does in the embedding example. An extension stays inert until its own module is loaded.
-                .withLanguages(PureLanguage.all().newWithAll(DiagramLanguage.all()));
+                // The composition root — see languages().
+                .withLanguages(languages());
         profiling.apply(runtimeBuilder);
         if (strictJit)
         {
             runtimeBuilder.withCompileImmediately(true);
         }
         PureRuntime runtime = runtimeBuilder.build();
+        // Decoding needs the languages' schema, which build() installs: preload after it. Then globally
+        // validate cross-references so any missing dependency PDB (e.g. forgot --pdb shared/core.pdb)
+        // fails here with a clear "missing class" diagnostic instead of a downstream NPE.
+        for (var pdbModule : pdbModules) pdbModule.preloadAll();
+        registry.validate();
 
         try
         {
