@@ -25,7 +25,6 @@
 // the proxy's Pure path to its translated global and calls it — here the
 // translated code IS the runtime.
 
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { ModuleRegistry, PdbModule } from "../compiler/module/ModuleRegistry.js";
@@ -35,11 +34,10 @@ import { Execution } from "../execution/Execution.js";
 import { DEFAULT_NATIVES_EXTENSIONS, NativeRegistry } from "../execution/natives/NativeRegistry.js";
 import { fileSystemExtension } from "../execution/natives/FileSystemExtension.js";
 import { PureRuntime } from "./PureRuntime.js";
-import { EXTENSION_DESCRIPTORS } from "./LanguageExtensions.js";
+import { EXTENSION_DESCRIPTORS, extensionLanguages } from "./LanguageExtensions.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));   // .../platforms/javascript/src/core/runtime
 const REPO = join(HERE, "../../../../..");                 // -> repo root
-const SHARED = join(REPO, "shared");
 const GEN = join(HERE, "../../../generated");              // -> platforms/javascript/generated
 
 // The Pure language and nothing else — the same set the browser IDE loads. This entry point also
@@ -98,7 +96,7 @@ export async function loadRuntime({ pdbs, extraPdbs = [] } = {}) {
         const runtimeModule = new InMemoryModule("runtime");
         const execution = new Execution(runtimeModule);
 
-        const registry = new ModuleRegistry(readFileSync(join(SHARED, "specification/m3.fbs"), "utf8"));
+        const registry = new ModuleRegistry();
         // A caller that named its own `pdbs` chose exactly what to load, so nothing is autoloaded for it
         // — an extension it did not ask for must not appear behind its back. Otherwise only the EXTRA
         // modules are registered here and the runtime brings the rest.
@@ -106,8 +104,10 @@ export async function loadRuntime({ pdbs, extraPdbs = [] } = {}) {
             .forEach((p) => registry.register(PdbModule.open(p)));
         registry.register(runtimeModule); // __metadataInvoke routes here via the metadata globals
 
+        // Every extension this platform was built with, said explicitly: the CLI runs their tests too.
         const builder = PureRuntime.builder()
             .withRegistry(registry)
+            .withLanguages(extensionLanguages)
             .withNatives(NativeRegistry.createDefault([...DEFAULT_NATIVES_EXTENSIONS, fileSystemExtension]))
             .withEvalJs(execution.evalJs)
             .withSourceText(execution.sourceText)

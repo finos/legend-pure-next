@@ -43,7 +43,7 @@ public final class PureLanguage
     {
     }
 
-    /** The languages this module owns, for {@code PureRuntime.installLanguages}. */
+    /** The languages this module owns, for {@code PureRuntime.Builder.withLanguages}. */
     public static ImmutableList<Language> all()
     {
         return Language.fromResources(MANIFESTS, GRAMMAR_PACKAGE);

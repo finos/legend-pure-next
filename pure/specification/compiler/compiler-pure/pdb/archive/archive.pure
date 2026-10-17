@@ -42,6 +42,8 @@ Class platform::pure::compiler::pdb::archive::ElementEntryInfo
    path     : String[1];
    typeName : String[1];
    element  : Any[1];
+   // The extension writer that claimed the element; empty for m3's own kinds.
+   blob     : platform::pure::metamodel::function::Function<{Any[1]->Binary[1]}>[0..1];
 }
 
 
@@ -72,23 +74,46 @@ function platform::pure::compiler::pdb::archive::entryName(path:String[1], typeN
    'elements/' + $path->split('::')->joinStrings('/') + '.' + $typeName;
 }
 
-// The serializable elements with their paths and type names; unhandled
-// element kinds are dropped (reference: no extension claims them, so they are
-// silently skipped). Wire contract (mirrors CompressedArchiveWriter): entries
-// SORTED by path — deterministic regardless of the producing compiler's
-// registration order. The writer writes what it is given faithfully;
-// filtering belongs to the element collectors.
-function platform::pure::compiler::pdb::archive::elementEntryInfos(elements:Any[*]):platform::pure::compiler::pdb::archive::ElementEntryInfo[*]
+// The elements with their paths and type names, each written by the first extension whose `pdb`
+// claims it — m3's own kinds by pureExtension(). ###Pure is never optional, so pureExtension() is put
+// first when the list does not name it, and a list that does is used as given. One nobody claims FAILS —
+// it used to be dropped silently, which left a PDB that compiled fine and was missing the element. Wire
+// contract (mirrors CompressedArchiveWriter): entries SORTED by path — deterministic regardless of the
+// producing compiler's registration order.
+function platform::pure::compiler::pdb::archive::elementEntryInfos(elements:Any[*], extensions:platform::pure::compiler::extension::CompilerExtension[*]):platform::pure::compiler::pdb::archive::ElementEntryInfo[*]
 {
-   $elements->map(e |
-      let tn = platform::pure::compiler::pdb::archive::elementTypeName($e);
-      if($tn->isEmpty(),
-         | [],
-         | ^platform::pure::compiler::pdb::archive::ElementEntryInfo(
-              path     = $e->cast(@platform::pure::metamodel::PackageableElement)->fullPath(),
-              typeName = $tn->toOne(),
-              element  = $e));
-   )->sort({a, b | $a.path->compare($b.path)});
+   let all = platform::pure::compiler::pdb::archive::withPureExtension($extensions);
+   $elements->map(e | platform::pure::compiler::pdb::archive::entryInfo($e, $all))
+      ->sort({a, b | $a.path->compare($b.path)});
+}
+
+// The extensions with ###Pure's first, unless they already include it (by name).
+function platform::pure::compiler::pdb::archive::withPureExtension(extensions:platform::pure::compiler::extension::CompilerExtension[*]):platform::pure::compiler::extension::CompilerExtension[*]
+{
+   let pure = platform::pure::compiler::extension::pureExtension();
+   if($extensions->exists(x | $x.name == $pure.name), | $extensions, | $pure->concatenate($extensions));
+}
+
+function platform::pure::compiler::pdb::archive::entryInfo(e:Any[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):platform::pure::compiler::pdb::archive::ElementEntryInfo[1]
+{
+   let path  = $e->cast(@platform::pure::metamodel::PackageableElement)->fullPath();
+   let claim = $extensions.pdb->filter(s | $s.elementTypeName->eval($e)->isNotEmpty())->head();
+   if($claim->isEmpty(),
+      | fail('PDB writer: no serializer for ' + $path + ' ('
+             + platform::pure::functions::meta::type($e)->cast(@platform::pure::metamodel::PackageableElement)->fullPath() + ')');
+        ^platform::pure::compiler::pdb::archive::ElementEntryInfo(path = $path, typeName = '', element = $e);,
+      | ^platform::pure::compiler::pdb::archive::ElementEntryInfo(path = $path, element = $e,
+           typeName = $claim->toOne().elementTypeName->eval($e)->toOne(),
+           blob     = $claim->toOne().writeElementBlob));
+}
+
+// (Not `entryBytes`: that short name is the archive READ native, and the JavaScript translator binds
+// natives by short name.)
+function platform::pure::compiler::pdb::archive::elementBytes(info:platform::pure::compiler::pdb::archive::ElementEntryInfo[1]):Binary[1]
+{
+   if($info.blob->isEmpty(),
+      | platform::pure::compiler::pdb::archive::writeElementBlob($info.element),
+      | $info.blob->toOne()->eval($info.element));
 }
 
 // --- elementIndex section ------------------------------------------------------
@@ -301,13 +326,13 @@ function platform::pure::compiler::pdb::archive::zipCentralBytes(e:platform::pur
 // (omitted when no function was written), then reverseReferenceIndex (omitted
 // when no reference was recorded) — the reference CompressedArchiveWriter
 // section order (extension sections before caller-provided ones).
-function platform::pure::compiler::pdb::archive::archiveEntries(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*], referencedBy:Map<String, List<String>>[1]):platform::pure::compiler::pdb::archive::ArchiveEntry[*]
+function platform::pure::compiler::pdb::archive::archiveEntries(elements:Any[*], extensions:platform::pure::compiler::extension::CompilerExtension[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*], referencedBy:Map<String, List<String>>[1]):platform::pure::compiler::pdb::archive::ArchiveEntry[*]
 {
-   let infos = platform::pure::compiler::pdb::archive::elementEntryInfos($elements);
+   let infos = platform::pure::compiler::pdb::archive::elementEntryInfos($elements, $extensions);
    let elementEntries = $infos->map(i |
       ^platform::pure::compiler::pdb::archive::ArchiveEntry(
          name = platform::pure::compiler::pdb::archive::entryName($i.path, $i.typeName),
-         data = platform::pure::compiler::pdb::archive::writeElementBlob($i.element)));
+         data = platform::pure::compiler::pdb::archive::elementBytes($i)));
    let indexEntry = if($infos->isEmpty(),
       | [],
       | ^platform::pure::compiler::pdb::archive::ArchiveEntry(
@@ -331,23 +356,23 @@ function platform::pure::compiler::pdb::archive::archiveEntries(elements:Any[*],
       ->concatenate($functionIndexEntry)->concatenate($reverseEntry);
 }
 
-// Back-compat: no recorded references.
-function platform::pure::compiler::pdb::archive::archiveEntries(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*]):platform::pure::compiler::pdb::archive::ArchiveEntry[*]
+// No recorded references: the archive has no reverse index.
+function platform::pure::compiler::pdb::archive::archiveEntries(elements:Any[*], extensions:platform::pure::compiler::extension::CompilerExtension[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*]):platform::pure::compiler::pdb::archive::ArchiveEntry[*]
 {
-   platform::pure::compiler::pdb::archive::archiveEntries($elements, $moduleName, $packagePattern, $dependencies,
+   platform::pure::compiler::pdb::archive::archiveEntries($elements, $extensions, $moduleName, $packagePattern, $dependencies,
       newMap([]->cast(@Pair<String, List<String>>)));
 }
 
-// A whole .pdb archive as bytes.
-function platform::pure::compiler::pdb::archive::writeArchive(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*], referencedBy:Map<String, List<String>>[1]):Binary[1]
+// A whole .pdb archive as bytes, language extensions' elements included.
+function platform::pure::compiler::pdb::archive::writeArchive(elements:Any[*], extensions:platform::pure::compiler::extension::CompilerExtension[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*], referencedBy:Map<String, List<String>>[1]):Binary[1]
 {
    platform::pure::compiler::pdb::archive::zipStored(
-      platform::pure::compiler::pdb::archive::archiveEntries($elements, $moduleName, $packagePattern, $dependencies, $referencedBy));
+      platform::pure::compiler::pdb::archive::archiveEntries($elements, $extensions, $moduleName, $packagePattern, $dependencies, $referencedBy));
 }
 
-// A whole .pdb archive as bytes, with no recorded references.
-function platform::pure::compiler::pdb::archive::writeArchive(elements:Any[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*]):Binary[1]
+// A whole .pdb archive as bytes, without a reverse index.
+function platform::pure::compiler::pdb::archive::writeArchive(elements:Any[*], extensions:platform::pure::compiler::extension::CompilerExtension[*], moduleName:String[1], packagePattern:String[1], dependencies:String[*]):Binary[1]
 {
-   platform::pure::compiler::pdb::archive::writeArchive($elements, $moduleName, $packagePattern, $dependencies,
-      newMap([]->cast(@Pair<String, List<String>>)));
+   platform::pure::compiler::pdb::archive::zipStored(
+      platform::pure::compiler::pdb::archive::archiveEntries($elements, $extensions, $moduleName, $packagePattern, $dependencies));
 }

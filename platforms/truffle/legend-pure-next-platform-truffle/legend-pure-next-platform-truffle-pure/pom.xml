@@ -200,7 +200,9 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.build.outputDirectory}/generated-specification</outputDirectory>
+                            <!-- Beside the manifests: language_pure.json's `fbs` names m3.fbs, and
+                                 Language reads a manifest's schema from its own directory. -->
+                            <outputDirectory>${project.build.outputDirectory}/languages</outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${project.basedir}/../../../../shared/specification</directory>
@@ -398,11 +400,14 @@
                                 <!-- Include the embedded PDB resources in the image.
                                      native-image strips unreferenced resources by default. -->
                                 <buildArg>-H:IncludeResources=embedded/.*\.pdb</buildArg>
-                                <!-- m3.fbs: GenericFbDecoder loads the wire schema as a
-                                     classpath resource at runtime; without this the AOT
-                                     image fails on first deserialize ("Schema resource
-                                     not on classpath"). -->
-                                <buildArg>-H:IncludeResources=generated-specification/m3\.fbs</buildArg>
+                                <!-- The LANGUAGE MANIFESTS and their schemas: the runtime always has
+                                     ###Pure (PureLanguage.all(), read from `languages/language_*.json`),
+                                     and GenericFbDecoder decodes with every language's `fbs` — m3.fbs
+                                     included — read from the same directory. Native-image strips
+                                     unregistered resources, so without these the first parse or
+                                     deserialize fails. -->
+                                <buildArg>-H:IncludeResources=languages/.*\.json</buildArg>
+                                <buildArg>-H:IncludeResources=languages/.*\.fbs</buildArg>
                             </buildArgs>
                         </configuration>
                     </plugin>

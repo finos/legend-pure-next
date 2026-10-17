@@ -29,8 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * one says. Without them, a manifest naming a class or rule that does not exist would surface as a
  * section that mysteriously stops parsing.
  *
- * <p>The engine's own languages are installed in a static block, because the natives read the installed
- * set and nothing else in this module installs it. No extension is installed, which is what lets the
+ * <p>The engine's own languages are installed in a static block, by building a runtime — the natives read
+ * the installed set, and build() is the only thing that installs it. No extension is installed, which is what lets the
  * Top-belongs-to-no-language check mean something.</p>
  */
 class TestLanguages
@@ -38,7 +38,23 @@ class TestLanguages
     /** Installed once so the natives can reach them; the engine's own languages, no extension. */
     static
     {
-        org.finos.legend.pure.platform.java.runtime.PureRuntime.installLanguages(PureLanguage.all());
+        // Through the builder, as every host does: build() is what installs the languages.
+        org.finos.legend.pure.platform.java.runtime.PureRuntime.builder()
+                .withRegistry(new org.finos.legend.pure.platform.java.compiler.module.ModuleRegistry())
+                .withLanguages(PureLanguage.all())
+                .withModuleRoot(repoRoot())
+                .build();
+    }
+
+    private static java.nio.file.Path repoRoot()
+    {
+        java.nio.file.Path p = java.nio.file.Path.of("").toAbsolutePath();
+        while (p != null && !java.nio.file.Files.isDirectory(p.resolve("pure/testdata/diagram-roundtrip")))
+        {
+            p = p.getParent();
+        }
+        assertNotNull(p, "repo root not found above " + java.nio.file.Path.of("").toAbsolutePath());
+        return p;
     }
 
     private static final String GRAMMAR_PACKAGE = "org.finos.legend.pure.platform.java.grammar.m3";
@@ -59,7 +75,8 @@ class TestLanguages
         assertTrue(pure.bundled(), "the Pure language is bundled");
         assertNull(pure.module(), "it has no module to be guarded on");
         assertEquals("platform::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_", pure.sectionParsers());
-        assertNull(pure.compilerExtension(), "the built-in passes compile ###Pure");
+        assertEquals("platform::pure::compiler::extension::pureExtension__CompilerExtension_1_", pure.compilerExtension(),
+                "m3's PDB writer reaches the archive writer through the same hook as an extension's");
         assertNotNull(pure.grammar(), "M3 comes from the manifest, not from a literal in the host");
         assertEquals("M3Parser", pure.grammar().grammarName());
     }
@@ -71,6 +88,19 @@ class TestLanguages
         assertEquals("compiler-tests", tests.module(), "guarded on this module being registered");
         assertTrue(!tests.bundled(), "an unbundled language stays inert until its module arrives");
         assertNull(tests.grammar(), "its sections are parsed by Pure functions, not by ANTLR");
+    }
+
+    @Test
+    void everyManifestNamesItsSectionsAsAListAndNoneSaysBundled() throws Exception
+    {
+        for (String resource : Lists.immutable.of("languages/language_pure.json", "languages/language_test.json"))
+        {
+            String text = new String(TestLanguages.class.getClassLoader().getResourceAsStream(resource).readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8);
+            assertTrue(text.contains("\"sections\""), resource + " names its sections as a list");
+            assertTrue(!text.contains("\"section\""), resource + " has no singular `section`");
+            assertTrue(!text.contains("\"bundled\""), resource + ": always-active is `no module`, not a flag");
+        }
     }
 
     @Test

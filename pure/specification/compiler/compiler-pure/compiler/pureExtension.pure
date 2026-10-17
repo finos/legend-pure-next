@@ -1,0 +1,30 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The `###Pure` language's CompilerExtension, named by pure/specification/language_pure.json's
+// `pure.compilerExtension` exactly as an extension's manifest names its own. It compiles nothing —
+// m3 elements are compiled by the compiler itself, so it claims no parsed element — and exists so
+// m3's PDB writer reaches the archive writer through the same `pdb` hook every extension uses.
+//
+// The two archive:: functions reach the GENERATED m3 writer through genFn, so this adds no
+// compile-time dependency on pdb::gen (the cycle pdb/writer/writerHelper.pure documents).
+function platform::pure::compiler::extension::pureExtension():platform::pure::compiler::extension::CompilerExtension[1]
+{
+   ^platform::pure::compiler::extension::CompilerExtension(
+      name    = 'Pure',
+      handles = e: platform::pure::protocol::grammar::PackageableElement[1] | false,
+      pdb     = ^platform::pure::compiler::extension::PdbSerialization(
+                   elementTypeName  = e: Any[1] | platform::pure::compiler::pdb::archive::elementTypeName($e),
+                   writeElementBlob = e: Any[1] | platform::pure::compiler::pdb::archive::writeElementBlob($e)));
+}

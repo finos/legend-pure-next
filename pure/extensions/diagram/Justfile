@@ -40,6 +40,8 @@ diagram_out    := ts_root / "build"
 # `**/generated/` keeps it out of git, because it is derived from code/compiler/metamodel.pure and must
 # never be hand-edited.
 protocol_gen   := ts_root / "code" / "protocol" / "generated"
+# The extension's PDB writer, generated like the protocol (and gitignored the same way).
+pdb_gen        := ts_root / "code" / "pdb" / "generated"
 protocol_pdb   := repo_root / "pure" / "modules" / "protocol" / "build" / "protocol.pdb"
 metamodel_stage := ts_root / "build" / "metamodel-stage"
 pure_bootstrap := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
@@ -55,15 +57,18 @@ substep := "p(){ ru=$(printf '─%.0s' $(seq 1 $((${#1}+2)))); printf '\\n  %s\\
 default: build
 
 # Compile pure/extensions/diagram into build/diagram.pdb.
-# THREE PHASES, because the protocol form is DERIVED from the metamodel rather than written beside
-# it (pure/modules/protocol). The metamodel is the only authored shape; `<<ProtocolInfo.pointer>>` on
-# a slot is what makes the protocol carry a path where the metamodel carries the resolved element.
+# The metamodel is the only authored shape; everything else the extension needs from it is DERIVED,
+# by `generate`, so it can never drift from it:
 #
-#   1. compile code/metamodel.pure ALONE — the generator reads a compiled metamodel, and the rest of
-#      the extension cannot compile yet because it references classes that do not exist until step 2.
-#   2. run generateProtocol over it -> code/generated/protocol.pure
-#   3. compile the extension, generated protocol included -> build/diagram.pdb
-build: _depCheck_base-pdbs generate-protocol
+#   1. compile code/compiler/metamodel.pure ALONE — the generators read a compiled metamodel, and the
+#      rest of the extension cannot compile until their output exists.
+#   2. generateProtocol -> code/protocol/generated/protocol.pure (`<<ProtocolInfo.pointer>>` on a slot
+#      makes the protocol carry a path where the metamodel carries the resolved element).
+#   3. generateFbs -> build/diagram.fbs, the PDB schema fragment for the metamodel's classes, with
+#      field ids pinned in diagram-fbs-field-ids.txt (committed, append-only — the wire format).
+#   4. generateExtensionWriter -> code/pdb/generated/writer.pure, which diagramExtension's `pdb` uses.
+#   5. compile the extension, generated code included -> build/diagram.pdb
+build: _depCheck_base-pdbs generate
     @{{header}} 'build'
     @{{substep}} 'compile pure/extensions/diagram -> build/diagram.pdb'
     mkdir -p {{diagram_out}}
@@ -73,11 +78,13 @@ build: _depCheck_base-pdbs generate-protocol
         --source {{ts_root}} \
         --output-dir {{diagram_out}} {{err_filter}}
 
-# Phases 1 and 2: the metamodel compiled on its own, then its protocol form generated from it.
-generate-protocol: _depCheck_base-pdbs
+# Phases 1-4: the metamodel compiled on its own, then everything DERIVED from it — its protocol
+# form, its PDB schema fragment (pdb/fbsgen, ids pinned in diagram-fbs-field-ids.txt, which is
+# committed) and its PDB writer (pdb/writer/generator.pure). Nothing derived is hand-edited.
+generate: _depCheck_base-pdbs
     #!/usr/bin/env bash
     set -euo pipefail
-    {{header}} 'generate-protocol'
+    {{header}} 'generate'
     test -f {{protocol_pdb}} || (echo "ERROR: missing {{protocol_pdb}} (run \`just modules::protocol::build\` first)" && exit 1)
     {{substep}} 'compile code/compiler/metamodel.pure alone (the generator reads a compiled metamodel)'
     rm -rf "{{metamodel_stage}}"
@@ -99,14 +106,43 @@ generate-protocol: _depCheck_base-pdbs
         --function "platform::pure::protocol::generation::generateProtocol_String_1__String_1__String_1_" \
         --args "platform::extensions::pure::diagram::metamodel" "platform::extensions::pure::diagram::protocol" \
         2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) > "{{protocol_gen}}/protocol.pure"
-    rm -rf "{{metamodel_stage}}"
     echo "  wrote code/protocol/generated/protocol.pure ($(wc -c < "{{protocol_gen}}/protocol.pure" | tr -d ' ') bytes)"
+    {{substep}} 'generateFbs -> build/diagram.fbs (+ diagram-fbs-field-ids.txt)'
+    ids="{{ts_root}}/diagram-fbs-field-ids.txt"
+    test -f "$ids" || printf '# FlatBuffer field-ID registry — keeps wire format stable across builds.\n# Auto-maintained by RdfFbsSchemaGenerator. Append-only.\n# Format: TableName.field_name=ID\n\n' > "$ids"
+    mkdir -p "{{diagram_out}}"
+    gen=$(mktemp); trap 'rm -f "$gen"' EXIT
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb "{{metamodel_stage}}/build/diagram.pdb" \
+        --function "platform::pure::compiler::pdb::fbsgen::printFbs_String_1__String_1__String_1__Boolean_1_" \
+        --args "platform::extensions::pure::diagram::metamodel" "{{shared_out}}/specification/m3.fbs" "$ids" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) > "$gen"
+    awk '/^===FBS-BEGIN===$/{f=1;next} /^===FBS-END===$/{f=0} f' "$gen" > "{{diagram_out}}/diagram.fbs"
+    awk '/^===IDS-BEGIN===$/{f=1;next} /^===IDS-END===$/{f=0} f' "$gen" > "$ids"
+    test -s "{{diagram_out}}/diagram.fbs" || { echo "ERROR: generateFbs produced nothing" >&2; cat "$gen" >&2; exit 1; }
+    echo "  wrote build/diagram.fbs ($(grep -c '^table ' "{{diagram_out}}/diagram.fbs") tables)"
+    {{substep}} 'generateExtensionWriter -> code/pdb/generated/writer.pure'
+    mkdir -p "{{pdb_gen}}"
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --pdb "{{metamodel_stage}}/build/diagram.pdb" \
+        --function "platform::pure::compiler::pdb::generator::printExtensionWriter_String_1__String_1__String_1__String_1__Boolean_1_" \
+        --args "{{shared_out}}/specification/m3.fbs" "{{diagram_out}}/diagram.fbs" \
+               "platform::extensions::pure::diagram::metamodel" "platform::extensions::pure::diagram::pdb::gen" \
+        2> >(grep -E -v '^(SLF4J(\(W\))?:|WARNING: |Note: )' >&2) > "$gen"
+    awk '/^===GENWRITER-BEGIN===$/{f=1;next} /^===GENWRITER-END===$/{f=0} f' "$gen" > "{{pdb_gen}}/writer.pure"
+    test -s "{{pdb_gen}}/writer.pure" || { echo "ERROR: generateExtensionWriter produced nothing" >&2; cat "$gen" >&2; exit 1; }
+    rm -rf "{{metamodel_stage}}"
+    echo "  wrote code/pdb/generated/writer.pure ($(wc -c < "{{pdb_gen}}/writer.pure" | tr -d ' ') bytes)"
 
 # No sibling-extension deps — alias of `build` for symmetry with the module Justfiles.
 build-all: build
 
 # Compile with tests split into build/diagram-tests.pdb (needed by `test-all`).
-build-tests: _depCheck_base-pdbs generate-protocol
+build-tests: _depCheck_base-pdbs generate
     @{{header}} 'build-tests'
     @{{substep}} 'compile pure/extensions/diagram -> build/diagram.pdb + diagram-tests.pdb'
     mkdir -p {{diagram_out}}
@@ -118,7 +154,7 @@ build-tests: _depCheck_base-pdbs generate-protocol
         --tests split {{err_filter}}
 
 # Compile -> build/diagram.pdb via the Pure compiler on Truffle (picks up compiler-pure changes automatically).
-build-truffle: _depCheck_base-pdbs generate-protocol
+build-truffle: _depCheck_base-pdbs generate
     @{{header}} 'build-truffle'
     @{{substep}} 'compile pure/extensions/diagram -> build/diagram.pdb (Truffle)'
     test -x {{pure_truffle}} || (echo "ERROR: missing {{pure_truffle}} (run \`just truffle::build\` from repo root first)" && exit 1)

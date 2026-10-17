@@ -41,7 +41,7 @@ import { createModulePanel } from "./modules-panel.js";
 import { createWorkspace } from "./workspace.js";
 import { debounce } from "./source-store.js";
 import { createProgress, downloadAll, fetchBytesWithProgress } from "./progress.js";
-import { EXTENSION_DESCRIPTORS } from "../../core/runtime/LanguageExtensions.js";
+import { EXTENSION_DESCRIPTORS, extensionLanguages } from "../../core/runtime/LanguageExtensions.js";
 import { createConsole } from "./console-panel.js";
 import { initSplitters, initTheme, definePureThemes } from "./layout.js";
 import { openInspector } from "./inspector.js";
@@ -171,12 +171,11 @@ async function setup() {
     // The bar overlays the header's bottom edge and the status line is its label, so there is
     // no progress row to insert and remove — which is what made the page jump on load.
     progress = createProgress({ bar: document.getElementById("startup-bar"), label: status });
-    progress.indeterminate("fetching the metamodel schema…");
-    // Schema TEXT — the store parses it lazily with the translated Pure parser
-    // (pdb/schema/parser.pure), which is only available once the generated compiler
-    // modules below have loaded; the first metadata read comes after that.
-    const schemaText = await fetchText(`${SHARED}/specification/m3.fbs`);
-    registry = new ModuleRegistry(schemaText);
+    progress.indeterminate("loading…");
+    // No schema here: the runtime installs the named languages' (their descriptors carry the text, so
+    // there is nothing to fetch), and the store parses it lazily with the translated Pure parser
+    // (pdb/schema/parser.pure) once the generated compiler modules below have loaded.
+    registry = new ModuleRegistry();
 
     registry.register(runtimeModule); // __metadataInvoke routes here via the metadata globals
     // Metadata globals (globalThis.__metadata*, PDB-backed), the compileSource hook and
@@ -187,6 +186,8 @@ async function setup() {
     // registered them itself until `buildAsync` existed, with its own copy of the two pdb lists.
     runtime = await PureRuntime.builder()
         .withRegistry(registry)
+        // The IDE offers every extension it was built with — said here, not assumed by the builder.
+        .withLanguages(extensionLanguages)
         .withNatives(NativeRegistry.createDefault([compileSourceExtension, antlrExtension]))
         .withEvalJs(evalJs)
         .withRuntimeModule(runtimeModule)

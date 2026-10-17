@@ -105,7 +105,7 @@ function <<test.Test>> platform::pure::compiler::pdb::archive::tests::testElemen
 // 0), plain createString, entry order preserved.
 function <<test.Test>> platform::pure::compiler::pdb::archive::tests::testElementIndexWireFormat():Boolean[1]
 {
-   let infos = platform::pure::compiler::pdb::archive::elementEntryInfos(platform::pure::compiler::pdb::archive::tests::testElements());
+   let infos = platform::pure::compiler::pdb::archive::elementEntryInfos(platform::pure::compiler::pdb::archive::tests::testElements(), platform::pure::compiler::extension::pureExtension());
    assertEquals(['myPkg', 'myProf'], $infos.path);
    assertEquals(['Package', 'Profile'], $infos.typeName);
    assertEquals(platform::pure::compiler::pdb::archive::tests::refElementIndexBytes(),
@@ -126,7 +126,7 @@ function <<test.Test>> platform::pure::compiler::pdb::archive::tests::testManife
 function <<test.Test>> platform::pure::compiler::pdb::archive::tests::testArchiveEntriesVsJavaPdb():Boolean[1]
 {
    let entries = platform::pure::compiler::pdb::archive::archiveEntries(
-                    platform::pure::compiler::pdb::archive::tests::testElements(), 'test', '*', 'core');
+                    platform::pure::compiler::pdb::archive::tests::testElements(), platform::pure::compiler::extension::pureExtension(), 'test', '*', 'core');
    assertEquals(['elements/myPkg.Package', 'elements/myProf.Profile', 'elementIndex', 'manifest'], $entries.name);
    assertEquals(platform::pure::compiler::pdb::archive::tests::refPackageBytes(),      $entries->at(0).data);
    assertEquals(platform::pure::compiler::pdb::archive::tests::refProfileBytes(),      $entries->at(1).data);
@@ -158,7 +158,7 @@ function <<test.Test>> platform::pure::compiler::pdb::archive::tests::testZipSto
 function <<test.Test>> platform::pure::compiler::pdb::archive::tests::testWriteArchive():Boolean[1]
 {
    let bytes = platform::pure::compiler::pdb::archive::writeArchive(
-                  platform::pure::compiler::pdb::archive::tests::testElements(), 'test', '*', 'core');
+                  platform::pure::compiler::pdb::archive::tests::testElements(), platform::pure::compiler::extension::pureExtension(), 'test', '*', 'core');
    // local headers: 4 sigs; central: 4; EOCD: 1
    assertEquals('504B0304', $bytes->binarySlice(0, 4)->binaryToHex());
    assertEquals('504B0506', $bytes->binarySlice($bytes->binarySize() - 22, $bytes->binarySize() - 18)->binaryToHex());
@@ -169,4 +169,73 @@ function <<test.Test>> platform::pure::compiler::pdb::archive::tests::testWriteA
                  + platform::pure::compiler::pdb::archive::tests::refManifestBytes()->binarySize();
    let nameSizes = $names->map(n | $n->length())->fold({x, a | $x + $a}, 0);
    assertEquals($dataSizes + (2 * $nameSizes) + (4 * 30) + (4 * 46) + 22, $bytes->binarySize());
+}
+
+// --- extension elements -------------------------------------------------------------
+//
+// An element of a class m3's dispatch does not know is written by the extension that claims it
+// (CompilerExtension.pdb), under the type name that extension gives; one nobody claims fails the
+// write with its path instead of vanishing from the archive.
+
+Class platform::pure::compiler::pdb::archive::tests::Widget extends platform::pure::metamodel::PackageableElement
+{
+}
+
+function platform::pure::compiler::pdb::archive::tests::widget():platform::pure::compiler::pdb::archive::tests::Widget[1]
+{
+   // `x`'s own parent is the (parentless) root, so the path is x::w.
+   ^platform::pure::compiler::pdb::archive::tests::Widget(name = 'w',
+      package = ^platform::pure::metamodel::Package(name = 'x', package = ^platform::pure::metamodel::Package(name = 'Root')));
+}
+
+function platform::pure::compiler::pdb::archive::tests::widgetExtension():platform::pure::compiler::extension::CompilerExtension[1]
+{
+   ^platform::pure::compiler::extension::CompilerExtension(
+      name    = 'Widget',
+      handles = e: platform::pure::protocol::grammar::PackageableElement[1] | false,
+      pdb     = ^platform::pure::compiler::extension::PdbSerialization(
+                   elementTypeName  = e: Any[1] | if($e->instanceOf(platform::pure::compiler::pdb::archive::tests::Widget), | 'Widget', | []),
+                   writeElementBlob = e: Any[1] | stringToUtf8Bytes('W')));
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::archive::tests::testExtensionElementIsWritten():Boolean[1]
+{
+   let entries = platform::pure::compiler::pdb::archive::archiveEntries(
+      platform::pure::compiler::pdb::archive::tests::widget(),
+      platform::pure::compiler::pdb::archive::tests::widgetExtension(),
+      'test', '*', ['core'], newMap([]->cast(@Pair<String, List<String>>)));
+   assertEquals(['elements/x/w.Widget', 'elementIndex', 'manifest'], $entries.name);
+   assertEquals(stringToUtf8Bytes('W'), $entries->at(0).data);
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::archive::tests::testUnclaimedElementFails():Boolean[1]
+{
+   assertError(| platform::pure::compiler::pdb::archive::elementEntryInfos(
+                    platform::pure::compiler::pdb::archive::tests::widget(), []),
+               'PDB writer: no serializer for x::w (platform::pure::compiler::pdb::archive::tests::Widget)');
+}
+
+// m3 is written through the same `pdb` hook as any extension: listing pureExtension() beside another
+// extension writes both kinds, and m3's bytes are the reference pipeline's.
+function <<test.Test>> platform::pure::compiler::pdb::archive::tests::testPureExtensionWritesM3Elements():Boolean[1]
+{
+   let entries = platform::pure::compiler::pdb::archive::archiveEntries(
+      platform::pure::compiler::pdb::archive::tests::testElements()
+         ->concatenate(platform::pure::compiler::pdb::archive::tests::widget()),
+      [platform::pure::compiler::extension::pureExtension(), platform::pure::compiler::pdb::archive::tests::widgetExtension()],
+      'test', '*', ['core'], newMap([]->cast(@Pair<String, List<String>>)));
+   assertEquals(['elements/myPkg.Package', 'elements/myProf.Profile', 'elements/x/w.Widget', 'elementIndex', 'manifest'], $entries.name);
+   assertEquals(platform::pure::compiler::pdb::archive::tests::refPackageBytes(), $entries->at(0).data);
+   assertEquals(platform::pure::compiler::pdb::archive::tests::refProfileBytes(), $entries->at(1).data);
+   assertEquals(stringToUtf8Bytes('W'), $entries->at(2).data);
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::archive::tests::testPureExtensionIsAddedByDefault():Boolean[1]
+{
+   // ###Pure is never optional: a list that does not name pureExtension() still writes m3's elements.
+   let infos = platform::pure::compiler::pdb::archive::elementEntryInfos(
+                  platform::pure::compiler::pdb::archive::tests::testElements(),
+                  platform::pure::compiler::pdb::archive::tests::widgetExtension());
+   assertEquals(['myPkg', 'myProf'], $infos.path);
+   assertEquals(['Package', 'Profile'], $infos.typeName);
 }

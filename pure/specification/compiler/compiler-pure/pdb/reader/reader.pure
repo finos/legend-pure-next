@@ -110,6 +110,15 @@ function platform::pure::compiler::pdb::reader::readFloatField(node:platform::pu
    if($fp == -1, | 0.0, | leBytesToFloat($node.bytes->binarySlice($fp, $fp + 8)));
 }
 
+// fbs `double` field of a metamodel PROPERTY: absent means empty. The generated writers write a
+// double whenever the property has a value (fbb::addFieldFloatPresent), so an absent field is an
+// empty Float[0..1], never 0.0.
+function platform::pure::compiler::pdb::reader::readOptionalFloatField(node:platform::pure::compiler::pdb::reader::FbsNode[1], id:Integer[1]):Float[0..1]
+{
+   let fp = platform::pure::compiler::pdb::reader::fieldPos($node, $id);
+   if($fp == -1, | [], | leBytesToFloat($node.bytes->binarySlice($fp, $fp + 8)));
+}
+
 // Decode the string whose uoffset lives at absolute position `p`.
 function platform::pure::compiler::pdb::reader::stringAt(bytes:Binary[1], p:Integer[1]):String[1]
 {
@@ -261,7 +270,7 @@ function platform::pure::compiler::pdb::reader::readField(s:platform::pure::comp
        pair(| $cat == 'enum',                     | platform::pure::compiler::pdb::schema::enumValues($s, $f.type)->at(platform::pure::compiler::pdb::reader::readIntField($node, $f.id, 1, false, 0))),
        pair(| $f.type == 'string',                | platform::pure::compiler::pdb::reader::readStringField($node, $f.id)),
        pair(| $f.type == 'bool',                  | platform::pure::compiler::pdb::reader::readBoolField($node, $f.id, false)),
-       pair(| $f.type == 'double',                | platform::pure::compiler::pdb::reader::readFloatField($node, $f.id))],
+       pair(| $f.type == 'double',                | platform::pure::compiler::pdb::reader::readOptionalFloatField($node, $f.id))],
       | platform::pure::compiler::pdb::reader::readIntField($node, $f.id, platform::pure::compiler::pdb::schema::scalarWidth($f.type), true, 0)
    );
 }

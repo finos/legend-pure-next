@@ -1,18 +1,19 @@
 {
   "name": "Pure",
-  "section": "Pure",
-  "bundled": true,
+  "sections": ["Pure"],
   "grammar": {
     "lexer": "M3Lexer",
     "parser": "M3Parser",
     "entryRule": "definition"
   },
   "pure": {
-    "sectionParsers": "platform::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_"
+    "sectionParsers": "platform::pure::parser::mappings::interpreter::pureSectionParser__Pair_1_",
+    "compilerExtension": "platform::pure::compiler::extension::pureExtension__CompilerExtension_1_"
   },
   "pdbs": [
     "shared/core.pdb",
     "shared/parser-mappings.pdb",
     "shared/compiler.pdb"
-  ]
+  ],
+  "fbs": "shared/specification/m3.fbs"
 }

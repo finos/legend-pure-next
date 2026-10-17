@@ -53,6 +53,23 @@ Class platform::pure::compiler::extension::CompilerExtension
    // Whether this extension owns a compiled element, for pass 3. Left empty, pass 3 is not
    // offered to it.
    owns : platform::pure::metamodel::function::Function<{platform::pure::metamodel::PackageableElement[1] -> Boolean[1]}>[0..1];
+
+   // How this extension's compiled elements are written to a PDB. Left empty, the extension has
+   // nothing to persist — and an element of its that reaches the archive writer is an error.
+   pdb : platform::pure::compiler::extension::PdbSerialization[0..1];
+}
+
+// How an extension's COMPILED elements are written to a PDB. Generated, never hand-written:
+// pdb/writer/generator.pure emits `<ns>::serialization()` from the extension's metamodel and the
+// schema fragment pdb/fbsgen generated for it. The archive writer asks each extension in the order
+// given — m3's own is pureExtension() —; an element nobody claims fails the write instead of being left out.
+Class platform::pure::compiler::extension::PdbSerialization
+{
+   // The entry's type name (`elements/<path>.<TypeName>`), or empty for an element this extension
+   // does not write.
+   elementTypeName  : platform::pure::metamodel::function::Function<{Any[1]->String[0..1]}>[1];
+   // The entry's bytes: a finished FlatBuffer whose root is the element's <TypeName>Def table.
+   writeElementBlob : platform::pure::metamodel::function::Function<{Any[1]->Binary[1]}>[1];
 }
 
 // The extension that claims `element`, if any.

@@ -154,7 +154,9 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.build.outputDirectory}/generated-specification</outputDirectory>
+                            <!-- Beside the manifests: language_pure.json's `fbs` names m3.fbs, and
+                                 Language reads a manifest's schema from its own directory. -->
+                            <outputDirectory>${project.build.outputDirectory}/languages</outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${shared.dir}/specification</directory>

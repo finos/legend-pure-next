@@ -16,6 +16,7 @@ package org.finos.legend.pure.platform.java.extensions.diagram;
 
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.ImmutableList;
+import org.finos.legend.pure.m3.platform.extensions.pure.diagram.DiagramPdbTypes;
 import org.finos.legend.pure.platform.java.grammar.Language;
 
 /**
@@ -41,9 +42,14 @@ public final class DiagramLanguage
     {
     }
 
-    /** The language, for {@code Languages.install}. */
+    /**
+     * The language, for {@code Languages.install} — with the PDB table -> implementation factory
+     * generated from its metamodel ({@code just java::generate-diagram}), so a PDB holding diagrams
+     * decodes to DiagramImpl &amp; co.
+     */
     public static ImmutableList<Language> all()
     {
-        return Language.fromResources(Lists.immutable.of(MANIFEST), GRAMMAR_PACKAGE);
+        return Language.fromResources(Lists.immutable.of(MANIFEST), GRAMMAR_PACKAGE)
+                .collect(language -> language.withTypes(DiagramPdbTypes::create));
     }
 }

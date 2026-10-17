@@ -22,9 +22,8 @@ import org.finos.legend.pure.platform.java.compiler.module.ModuleRegistry;
 import org.finos.legend.pure.platform.java.compiler.module.inMemoryModule.InMemoryModule;
 import org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject;
 import org.eclipse.collections.api.factory.Lists;
-import org.eclipse.collections.api.factory.Sets;
+import org.eclipse.collections.impl.block.factory.Functions;
 import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.api.list.ListIterable;
 import org.finos.legend.pure.platform.java.compiler.module.pdbModule.Metadata;
 import org.finos.legend.pure.platform.java.grammar.Antlr;
@@ -73,43 +72,57 @@ public final class PureRuntime
      * <p>Empty until something installs: a run that parses without installing fails saying so, which is
      * better than a default that quietly decides which languages a host has.</p>
      */
-    private static volatile ListIterable<Language> languages = Lists.immutable.empty();
+    private static volatile ListIterable<Language> installedLanguages = Lists.immutable.empty();
+
+    /** The last runtime built — what natives reached from translated Pure use (see {@link #current()}). */
+    private static volatile PureRuntime current;
 
     private final ModuleRegistry registry;
     private final PdbRuntime runtime;
+    private final ListIterable<Language> languages;
 
-    private PureRuntime(ModuleRegistry registry, Path schema, ListIterable<Language> languages, Path root,
-                        ListIterable<Path> hostArchives) throws IOException
+    private PureRuntime(ModuleRegistry registry, Path schema, ListIterable<Language> languages, Path root) throws IOException
     {
         installLanguages(languages);
         this.registry = registry;
-        registerDeclaredModules(registry, languages, root);
-        for (Path archive : hostArchives)
-        {
-            PdbModule module = PdbModule.open(archive);
-            // A caller may name a module a language also declares — the extension's own pdb, say. It is
-            // already registered then, and registering it twice would be an error rather than a no-op.
-            if (registry.module(module.name()) == null)
-            {
-                registry.register(module);
-            }
-        }
+        this.languages = Lists.immutable.withAll(languages);
+        MutableList<String> declared = registerDeclaredModules(registry, languages, root);
         registry.validate();
-        List<Path> archives = new ArrayList<>();
-        for (Module module : registry.modules())
-        {
-            if (module instanceof PdbModule pdb)
-            {
-                archives.add(pdb.path());
-            }
-        }
-        this.runtime = schema == null
-                ? PdbRuntime.open(PdbTypes::create, archives.toArray(new Path[0]))
-                : PdbRuntime.open(schema, PdbTypes::create, archives.toArray(new Path[0]));
+        // The archives in the order the metadata opens them: what the languages declare first — core.pdb
+        // leads, whatever the host registered before build() — then the host's own, in registration order
+        // (a stable sort keeps it).
+        ListIterable<Path> archives = Lists.mutable.withAll(registry.modules())
+                .selectInstancesOf(PdbModule.class)
+                .toSortedListBy(pdb -> declared.contains(pdb.name()) ? declared.indexOf(pdb.name()) : Integer.MAX_VALUE)
+                .collect(PdbModule::path);
+        // m3's tables, then each language's generated factory for the tables its schema fragment adds.
+        ListIterable<java.util.function.Function<String, LazyObject>> factories =
+                Lists.mutable.<java.util.function.Function<String, LazyObject>>with(PdbTypes::create)
+                        .withAll(languages.collect(Language::types).select(java.util.Objects::nonNull));
+        java.util.function.Function<String, LazyObject> types =
+                table -> factories.asLazy().collect(factory -> factory.apply(table)).detect(java.util.Objects::nonNull);
+        // The schema is the languages' own: m3's from ###Pure, then each extension's fragment.
+        this.runtime = PdbRuntime.open(Language.schemaText(languages, schema), types, archives.toArray(new Path[0]));
         registry.attach(runtime);
         // Translated code reaches the metadata through the static Metadata, so a runtime
         // built here becomes the one it reads. One runtime at a time, as on the CLI.
         Metadata.install(runtime);
+        current = this;
+    }
+
+    /**
+     * The runtime built last — what a native reached from translated Pure (compileSource) works against,
+     * since translated code cannot pass it along. One set of languages per JVM at a time: the last
+     * {@code build()} wins.
+     */
+    public static PureRuntime current()
+    {
+        PureRuntime runtime = current;
+        if (runtime == null)
+        {
+            throw new IllegalStateException("no PureRuntime has been built — PureRuntime.builder()...build() first");
+        }
+        return runtime;
     }
 
     /**
@@ -121,34 +134,23 @@ public final class PureRuntime
      * repo-relative, so {@code root} anchors them.</p>
      *
      * <p>Already-registered modules are skipped, so a host that opened one itself — a different build of
-     * core.pdb, say — keeps its own. Registered AFTER the host's own modules, which is why an embedder
-     * should register only non-PDB modules of its own: the archive order the metadata is opened with
-     * follows registration order, and core.pdb has to be first.</p>
+     * core.pdb, say — keeps its own. Returns the declared modules' names in declared order: the archives
+     * are opened in that order, before the host's own, so core.pdb leads.</p>
      */
-    private static void registerDeclaredModules(ModuleRegistry registry, ListIterable<Language> languages, Path root)
-            throws IOException
+    private static MutableList<String> registerDeclaredModules(ModuleRegistry registry, ListIterable<Language> languages, Path root)
     {
-        MutableList<String> declared = Lists.mutable.empty();
-        languages.forEach((language) -> declared.addAllIterable(language.pdbs()));
-        declared.addAllIterable(PlatformModules.PDBS);
-        if (declared.notEmpty() && root == null)
+        if (root == null)
         {
-            throw new IllegalStateException("the languages declare modules (" + declared.makeString(", ")
-                    + "), so PureRuntime needs withModuleRoot(...) to resolve their repo-relative paths");
+            // No root, nothing opened: the host's registry is what this runtime has — its explicit choice,
+            // not a default (the same rule as Truffle). A language whose module is absent is inert.
+            return Lists.mutable.empty();
         }
-        MutableSet<String> seen = Sets.mutable.empty();
-        for (String pdb : declared)
-        {
-            if (!seen.add(pdb))
-            {
-                continue;   // two languages naming the same module is normal
-            }
-            PdbModule module = PdbModule.open(root.resolve(pdb));
-            if (registry.module(module.name()) == null)
-            {
-                registry.register(module);
-            }
-        }
+        // Two languages naming the same module is normal, hence distinct().
+        MutableList<PdbModule> opened = languages.flatCollect(Language::pdbs, Lists.mutable.empty())
+                .withAll(PlatformModules.PDBS).distinct()
+                .collect(Functions.throwing(pdb -> PdbModule.open(root.resolve(pdb))));
+        registry.registerAll(opened.reject(module -> registry.module(module.name()) != null));
+        return opened.collect(PdbModule::name);
     }
 
     public static Builder builder()
@@ -157,25 +159,27 @@ public final class PureRuntime
     }
 
     /**
-     * Install the languages this run has, before anything is parsed — what
-     * {@link Builder#withLanguages} does, exposed for a host that drives the platform without building a
-     * runtime (the CLI opens the archives itself).
+     * Install the languages this run has, before anything is parsed. Called by {@code build()} only: a host
+     * names its languages with {@link Builder#withLanguages}.
      *
      * <p>Caches derived from the previous set are dropped here rather than by each holder, because a set
      * installed after the first parse would otherwise be read from a memo that predates it: a section
      * would simply stop parsing, with nothing to say why.</p>
      */
-    public static void installLanguages(ListIterable<Language> languages)
+    private static void installLanguages(ListIterable<Language> languages)
     {
-        PureRuntime.languages = Lists.immutable.withAll(languages);
+        PureRuntime.installedLanguages = Lists.immutable.withAll(languages);
         Antlr.reloadGrammars();
         PureParsing.reloadSectionParsers();
     }
 
-    /** The installed languages, in registration order. */
+    /**
+     * The languages of the runtime built last, in registration order — read by the parser natives, which
+     * translated Pure reaches without a runtime to ask. Not part of the host contract.
+     */
     public static ListIterable<Language> languages()
     {
-        return languages;
+        return installedLanguages;
     }
 
     /**
@@ -190,10 +194,10 @@ public final class PureRuntime
      * <p>GUARDED on the element being loaded, like the section parsers: an extension whose Pure module is
      * not registered contributes nothing rather than throwing.</p>
      */
-    public static MutableList<Object> compilerExtensions()
+    public MutableList<Object> compilerExtensions()
     {
         MutableList<Object> extensions = Lists.mutable.empty();
-        languages.forEach((language) ->
+        this.languages.forEach((language) ->
         {
             String path = language.compilerExtension();
             if (path == null || Metadata.lenientElement(path) == null)
@@ -227,7 +231,6 @@ public final class PureRuntime
         private Path schema;
         private ListIterable<Language> languages = Lists.immutable.empty();
         private Path root;
-        private ListIterable<Path> archives = Lists.immutable.empty();
 
         public Builder withRegistry(ModuleRegistry registry)
         {
@@ -236,8 +239,8 @@ public final class PureRuntime
         }
 
         /**
-         * Decode with the schema at {@code schema} instead of the one the platform ships as a
-         * classpath resource. Only for a caller that deliberately wants a different schema —
+         * Decode with the schema at {@code schema} instead of the always-active languages'
+         * own. Only for a caller that deliberately wants a different schema —
          * the archives and the schema that describes them have to match.
          */
         public Builder withSchema(Path schema)
@@ -247,11 +250,9 @@ public final class PureRuntime
         }
 
         /**
-         * The languages this runtime can parse and compile — the Pure language, and every extension the
-         * host chose: {@code PureLanguage.all().newWithAll(DiagramLanguage.all())}.
-         *
-         * <p>Named by the host rather than discovered, so the ORDER is explicit ({@code ###Pure} before
-         * anything else) and a test can build a runtime with one language rather than two.</p>
+         * The extensions this runtime parses and compiles beyond {@code ###Pure} — {@code DiagramLanguage.all()},
+         * say. {@code ###Pure} is never optional, so {@code build()} puts {@code PureLanguage.all()} first unless
+         * the list already names it.
          */
         public Builder withLanguages(ListIterable<Language> languages)
         {
@@ -260,23 +261,12 @@ public final class PureRuntime
         }
 
         /**
-         * Where the repo-relative module paths a language declares are resolved from. Required as soon
-         * as a language declares any.
+         * Where the repo-relative module paths the languages declare (and this platform's own) are opened
+         * from. Without one, {@code build()} opens nothing: the host's registry is all the runtime has.
          */
         public Builder withModuleRoot(Path root)
         {
             this.root = root;
-            return this;
-        }
-
-        /**
-         * Archives of the host's own, beyond what the languages declare — test content, an extension's
-         * module, anything a caller names itself. Registered AFTER the declared ones, because the order
-         * modules are registered in is the order the metadata opens them and core.pdb has to be first.
-         */
-        public Builder withArchives(ListIterable<Path> archives)
-        {
-            this.archives = archives;
             return this;
         }
 
@@ -286,9 +276,14 @@ public final class PureRuntime
             {
                 throw new IllegalStateException("PureRuntime needs withRegistry(...)");
             }
+            // ###Pure is never optional, so it is always there: the always-active languages first, unless
+            // the host already named them — as on Truffle and in JavaScript.
+            ListIterable<Language> all = languages.anySatisfy(Language::bundled)
+                    ? languages
+                    : org.finos.legend.pure.platform.java.grammar.PureLanguage.all().newWithAll(languages);
             try
             {
-                return new PureRuntime(registry, schema, languages, root, archives);
+                return new PureRuntime(registry, schema, all, root);
             }
             catch (IOException e)
             {

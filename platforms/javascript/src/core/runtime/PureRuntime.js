@@ -22,8 +22,8 @@
 
 import { metadataHost } from "../compiler/module/pdbModule/marshal.js";
 import { NativeRegistry, hostHookFor } from "../execution/natives/NativeRegistry.js";
-import { DEFAULT_LANGUAGE_EXTENSIONS, EXTENSION_DESCRIPTORS, PURE_LANGUAGE_PDBS } from "./LanguageExtensions.js";
 import { PLATFORM_PDBS } from "./PlatformModules.js";
+import { coreLanguages } from "./LanguageExtensions.js";
 import { translateProgramElements } from "../execution/translate-elements.js";
 
 // The translated compiler-pure entry point (generated/pure/compiler/compiler.js): the overload that takes the
@@ -54,16 +54,16 @@ export class PureRuntime {
 
     #registry;
     #natives;
-    #languageExtensions;
+    #languages;
     #evalJs;
     #runtimeModule;
     #host = Object.create(null);
 
     /** Use PureRuntime.builder(). */
-    constructor({ registry, natives, languageExtensions, evalJs, runtimeModule, sourceText }) {
+    constructor({ registry, natives, languages, evalJs, runtimeModule, sourceText }) {
         this.#registry = registry;
         this.#natives = natives;
-        this.#languageExtensions = languageExtensions;
+        this.#languages = languages;
         this.#evalJs = evalJs;
         this.#runtimeModule = runtimeModule;
         Object.assign(this.#host, metadataHost(registry));
@@ -81,7 +81,8 @@ export class PureRuntime {
 
     get registry() { return this.#registry; }
     get natives() { return this.#natives; }
-    get languageExtensions() { return this.#languageExtensions; }
+    /** The languages this runtime parses and compiles — what `withLanguages(...)` named. */
+    get languages() { return this.#languages; }
     get evalJs() { return this.#evalJs; }
     get runtimeModule() { return this.#runtimeModule; }
     /** What this runtime provides to translated code (installed as globalThis.__pureHost). */
@@ -103,7 +104,7 @@ export class PureRuntime {
 
     /** The section parsers of every registered language extension. */
     sectionParsers() {
-        return this.#languageExtensions.flatMap((extension) => extension.sectionParsers(this));
+        return this.#languages.flatMap((language) => language.sectionParsers(this));
     }
 
     /**
@@ -111,7 +112,7 @@ export class PureRuntime {
      * because a section whose text the compiler merely carries has no compiler half.
      */
     compilerExtensions() {
-        return this.#languageExtensions.flatMap((extension) => extension.compilerExtensions?.(this) ?? []);
+        return this.#languages.flatMap((language) => language.compilerExtensions?.(this) ?? []);
     }
 
 
@@ -176,10 +177,26 @@ export class PureRuntime {
     }
 }
 
+/**
+ * Each extension with ITS module — the one its manifest's `module` names, wherever it sits in `pdbs` —
+ * and the rest of its pdbs. `loaded` holds the modules opened for the declared pdbs (the first
+ * `declaredCount`, which belong to no extension) and then every extension's `pdbs`, in order.
+ */
+export function pairExtensionModules(descriptors, loaded, declaredCount) {
+    return descriptors.reduce((acc, extension) => {
+        const mine = loaded.slice(acc.start, acc.start + (extension.pdbs ?? []).length);
+        const own = mine.find((module) => module.name === extension.module) ?? null;
+        return {
+            start: acc.start + mine.length,
+            pairs: [...acc.pairs, { extension, own, others: mine.filter((module) => module !== own) }],
+        };
+    }, { start: declaredCount, pairs: [] }).pairs;
+}
+
 export class PureRuntimeBuilder {
     #registry = null;
     #natives = null;
-    #languageExtensions = null;
+    #languages = null;
     #evalJs = null;
     #runtimeModule = null;
     #sourceText = null;
@@ -187,9 +204,15 @@ export class PureRuntimeBuilder {
     #loadTranslatedCode = null;
 
     withRegistry(registry) { this.#registry = registry; return this; }
+    /** The natives to install. Required: `NativeRegistry.createDefault(...)` for the built-in ones. */
     withNatives(natives) { this.#natives = natives; return this; }
-    /** Language extensions (their section parsers); DEFAULT_LANGUAGE_EXTENSIONS when not set. */
-    withLanguageExtensions(extensions) { this.#languageExtensions = [...extensions]; return this; }
+    /**
+     * The extensions this runtime parses and compiles beyond ###Pure — `extensionNamed("diagram")`, or
+     * `extensionLanguages` for every one built. ###Pure is never optional, so `build()` puts
+     * `coreLanguages` first unless the list already names them. Their schema is what the registry decodes
+     * with.
+     */
+    withLanguages(languages) { this.#languages = [...languages]; return this; }
     withEvalJs(evalJs) { this.#evalJs = evalJs; return this; }
     withRuntimeModule(runtimeModule) { this.#runtimeModule = runtimeModule; return this; }
     /** `fileName -> source text` of evaluated JavaScript, for Pure stack traces. */
@@ -223,28 +246,38 @@ export class PureRuntimeBuilder {
     /**
      * Register what the languages declare, then build.
      *
-     * <p>`PURE_LANGUAGE_PDBS` is what `###Pure` MEANS — from pure/specification/language_pure.json —
-     * and `PLATFORM_PDBS` is what makes it runnable HERE; each extension found on disk is registered as
-     * one act, its module paired with the language it adds. A module the host already registered is
-     * left alone, and registration order is preserved because it decides the order the archives are
-     * opened in: core.pdb has to be first.</p>
-     *
-     * <p>This used to be copied in three places — load-runtime.js, the browser page and the usage
-     * example — each with its own `[...PURE_LANGUAGE_PDBS, ...PLATFORM_PDBS]`.</p>
+     * <p>The `pdbs` of the languages named in `withLanguages` — ###Pure's from its own manifest — and
+     * `PLATFORM_PDBS`, what makes Pure runnable HERE; each named extension is registered as one act, its
+     * module paired with the language it adds. An extension that was not named is not loaded. A module
+     * the host already registered is left alone, and registration order is preserved because it decides
+     * the order the archives are opened in: core.pdb has to be first.</p>
      */
     async buildAsync() {
-        if (!this.#registry) throw new Error("PureRuntime.builder(): withRegistry(registry) is required");
+        this.#requireComplete();
         if (typeof this.#loadModules !== "function") {
             throw new Error("PureRuntime.buildAsync(): withModuleLoader(load) is required — it is what "
                           + "reads the modules the languages declare (fs on Node, fetch in a browser)");
         }
-        const declared = [...PURE_LANGUAGE_PDBS, ...PLATFORM_PDBS];
-        const loaded = await this.#loadModules([...declared, ...EXTENSION_DESCRIPTORS.map((e) => e.pdbPath)]);
+        // What the NAMED languages declare — ###Pure's modules, then each named extension's — and the
+        // platform's own (its metamodel and translator, which are the platform, not a choice).
+        const descriptors = this.#languages.map((language) => language.descriptor);
+        this.#registry.useLanguages(descriptors);
+        const declared = [...new Set([...descriptors.filter((d) => !d.module).flatMap((d) => d.pdbs ?? []), ...PLATFORM_PDBS])];
+        // Extensions are the languages with a `dir` (LanguageExtensions.js's rule): each arrives with its
+        // own module. A core language with a module and no pdbs (the compiler test sections) is
+        // activated by whichever host registers that module.
+        const extensions = descriptors.filter((d) => d.dir);
+        const loaded = await this.#loadModules([...declared, ...extensions.flatMap((e) => e.pdbs ?? [])]);
         loaded.slice(0, declared.length)
             .filter((module) => !this.#registry.module(module.name))
             .forEach((module) => this.#registry.register(module));
-        EXTENSION_DESCRIPTORS.forEach((extension, i) =>
-            this.#registry.registerExtension(extension, loaded[declared.length + i]));
+        // Each extension is paired with ITS module — the one its manifest's `module` names — whatever
+        // else it declares and in whatever order; the rest of its pdbs are registered as plain modules.
+        pairExtensionModules(extensions, loaded, declared.length).forEach(({ extension, own, others }) => {
+            others.filter((module) => !this.#registry.module(module.name))
+                .forEach((module) => this.#registry.register(module));
+            this.#registry.registerExtension(extension, own ?? null);
+        });
         // Every module's dependencies are present, and each extension came with its own module. Cheap
         // and repeatable, so a host that also validates loses nothing.
         this.#registry.validate();
@@ -259,12 +292,28 @@ export class PureRuntimeBuilder {
         return runtime;
     }
 
-    build() {
+    #requireComplete() {
         if (!this.#registry) throw new Error("PureRuntime.builder(): withRegistry(registry) is required");
+        if (!this.#natives) {
+            throw new Error("PureRuntime.builder(): withNatives(...) is required — "
+                + "NativeRegistry.createDefault(...) for the built-in natives");
+        }
+        // ###Pure is never optional, so it is always there: the always-active languages first, unless
+        // the host already named them — as on Truffle and the Java platform.
+        const languages = this.#languages ?? [];
+        this.#languages = languages.some((language) => language.descriptor && !language.descriptor.module)
+            ? languages
+            : [...coreLanguages, ...languages];
+    }
+
+    build() {
+        this.#requireComplete();
+        // The registry decodes with the NAMED languages' schema: m3's, then each named extension's.
+        this.#registry.useLanguages(this.#languages.map((language) => language.descriptor));
         return new PureRuntime({
             registry: this.#registry,
-            natives: this.#natives ?? new NativeRegistry(),
-            languageExtensions: this.#languageExtensions ?? DEFAULT_LANGUAGE_EXTENSIONS,
+            natives: this.#natives,
+            languages: this.#languages,
             evalJs: this.#evalJs,
             runtimeModule: this.#runtimeModule,
             sourceText: this.#sourceText,

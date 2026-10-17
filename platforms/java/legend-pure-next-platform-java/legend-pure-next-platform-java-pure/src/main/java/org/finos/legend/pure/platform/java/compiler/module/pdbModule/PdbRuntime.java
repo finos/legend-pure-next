@@ -104,45 +104,18 @@ public final class PdbRuntime
         paths.forEach(elements::remove);
     }
 
-    /**
-     * Where the build stages {@code m3.fbs} (see the pom). The schema is part of this
-     * platform's contract rather than a caller's input: the decoder is generated against a
-     * specific schema, and an archive must match the one that describes it. Truffle packages
-     * its copy the same way.
-     */
-    private static final String SCHEMA_RESOURCE = "generated-specification/m3.fbs";
-
-    /**
-     * A runtime over the given PDBs, decoding with the schema this platform ships.
-     * {@link #open(Path, Function, Path...)} takes one from disk instead, for a caller that
-     * deliberately wants a different schema.
-     */
-    public static PdbRuntime open(Function<String, LazyObject> types, Path... pdbs) throws IOException
-    {
-        return open(readPackagedSchema(), types, pdbs);
-    }
-
-    private static String readPackagedSchema() throws IOException
-    {
-        try (java.io.InputStream in = PdbRuntime.class.getClassLoader().getResourceAsStream(SCHEMA_RESOURCE))
-        {
-            if (in == null)
-            {
-                throw new IOException("Schema resource not on the class path (" + SCHEMA_RESOURCE
-                        + "): the build stages shared/specification/m3.fbs into it, so this means the platform"
-                        + " was not built by its pom, or shared/ was missing when it was");
-            }
-            return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-        }
-    }
-
     /** A runtime over the given PDBs, decoding with the schema at {@code fbsSchema}. */
     public static PdbRuntime open(Path fbsSchema, Function<String, LazyObject> types, Path... pdbs) throws IOException
     {
         return open(Files.readString(fbsSchema), types, pdbs);
     }
 
-    private static PdbRuntime open(String schemaText, Function<String, LazyObject> types, Path... pdbs) throws IOException
+    /**
+     * A runtime over the given PDBs, decoding with {@code schemaText} — {@code Language.schemaText} of the
+     * languages in play, m3's first. The schema is the languages' rather than the platform's: an archive
+     * must be decoded with the schema that describes it, and every language brings its own part.
+     */
+    public static PdbRuntime open(String schemaText, Function<String, LazyObject> types, Path... pdbs) throws IOException
     {
         PdbRuntime runtime = new PdbRuntime(parseFbs_String_1__FbsSchema_1_.execute(schemaText), types);
         for (Path pdb : pdbs)
@@ -361,6 +334,13 @@ public final class PdbRuntime
         // The reader takes a Binary — the raw byte[] handle. ByteList existed
         // only to present the buffer as a boxed Integer[*].
         byte[] data = archive.zip.read(entry);
+        // A table the schema does not declare is a language extension's element read by a runtime that
+        // never registered that language (and so never got its schema fragment): say so, rather than
+        // decode an object whose every property is empty.
+        if (table_FbsSchema_1__String_1__FbsTable_$0_1$_.execute(schema, typeName + "Def") == null)
+        {
+            throw new IllegalStateException(path + ": no schema for " + typeName + "Def — is the language that defines it registered?");
+        }
         return wrap(elementNode_Binary_1__String_1__FbsNode_1_.execute(data, typeName), null);
     }
 

@@ -60,7 +60,7 @@ public final class Compilation
             // The LANGUAGES' compiler passes, so a `compileSource` of a source containing an extension's
             // section produces its element too — the same overload PureRuntime.compile uses.
             Object result = Execute.call(COMPILE, List.of(file),
-                                        org.finos.legend.pure.platform.java.runtime.PureRuntime.compilerExtensions(), true);
+                                        org.finos.legend.pure.platform.java.runtime.PureRuntime.current().compilerExtensions(), true);
             elements = values(result, "elements");
             errors = values(result, "errors");
         }

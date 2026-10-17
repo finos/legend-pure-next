@@ -326,6 +326,22 @@ generate-diagram: _depCheck_emit_rt
         2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
         | awk -v root="{{diagram_generated}}" -v keep="org/finos/legend/pure/m3/platform/extensions/pure/diagram/" \
               '/^\/\/\/\/ FILE /{ if (file != "") close(file); if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { if (file in seen) print >> file; else { print > file; seen[file] = 1 } }'
+    @{{substep}} 'the PDB table -> implementation factory for the metamodel (DiagramPdbTypes)'
+    set -o pipefail; {{emit_rt}} execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/parser-mappings.pdb \
+        --pdb {{language_java_out}}/java.pdb \
+        --pdb {{translation_shared_out}}/translation-shared.pdb \
+        --pdb {{translation_java_out}}/java-translation.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{diagram_out}}/diagram.pdb \
+        --function "platform::extensions::language::java::translation::platform::generateExtensionTypeFactory_String_1__String_1__String_1__String_1_" \
+        --args "platform::extensions::pure::diagram::metamodel" "org.finos.legend.pure.m3" "org.finos.legend.pure.m3.platform.extensions.pure.diagram.DiagramPdbTypes" \
+        2> >(grep -v '^WARNING' >&2) | grep -v '^\[graal-tripwire\]' \
+        | awk -v root="{{diagram_generated}}" -v keep="org/finos/legend/pure/m3/platform/extensions/pure/diagram/" \
+              '/^\/\/\/\/ FILE /{ if (index($3, keep) == 1) { file = root "/" $3; dir = file; sub(/\/[^\/]*$/, "", dir); system("mkdir -p \"" dir "\"") } else { file = "" } next } file != "" { print > file }'
     @echo "  $(find {{diagram_generated}} -name '*.java' | wc -l | tr -d ' ') files ($(find {{diagram_generated}} -path '*tests*' -name '*.java' | wc -l | tr -d ' ') of them tests)"
 
 # Remove everything this platform builds: the translator's output AND Maven's
@@ -425,6 +441,21 @@ pct PACKAGE="platform::pure::functions": compile
         --function "platform::pure::test::runPCTTests_String_1__String_1__String_1_" \
         --args "{{PACKAGE}}" "{{repo_root}}/test-results/spec/pct/java@platform.json" \
         || echo "  PCT failures do not fail the build: they are in the report"
+
+# A PDB holding ###Diagram elements, read back on the Java platform: the committed golden (written by
+# Truffle's compile with the diagram extension's generated writer), then m::describe prints what a
+# reader sees of m::D and m::E. The same line is checked on Truffle; JavaScript pins it in host-api-tests.
+spec-diagram-pdb:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'spec-diagram-pdb'
+    out=$(java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
+        --pdb {{repo_root}}/pure/testdata/diagram-roundtrip/expected/roundtrip.pdb \
+        --function "m::describe__Boolean_1_" 2>&1) || { echo "$out" >&2; exit 1; }
+    grep -qx 'DESCRIBE 800.0 tv_person m::Person 40.0,60.0 E:0:0' <<< "$out" \
+        || { echo "FAIL: unexpected describe output:" >&2; echo "$out" >&2; exit 1; }
+    echo "OK: the Java platform reads m::D and m::E back from roundtrip.pdb"
 
 # The grammar corpus ON this platform: parse each fixture under
 # pure/specification/grammar/tests and compare with its expected protocol.
@@ -568,7 +599,7 @@ test-junit: compile
     @{{substep}} 'mvn test: src/test/java'
     cd {{aggregator}} && mvn -q test
 
-test-all: pct test-junit test-translation spec-functions spec-grammar spec-compiler spec-pdb-format spec-pdb spec-diagram usage-example
+test-all: pct test-junit test-translation spec-functions spec-grammar spec-compiler spec-pdb-format spec-pdb spec-diagram spec-diagram-pdb usage-example
 
 # The Pure -> Java gallery, rendered BY THIS PLATFORM: the translated renderer
 # runs on the JVM, so every card shows the Java this platform generates and runs

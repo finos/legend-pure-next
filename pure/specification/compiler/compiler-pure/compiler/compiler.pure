@@ -521,8 +521,19 @@ function platform::pure::compiler::compile(
    extensions:platform::pure::compiler::extension::CompilerExtension[*],
    silent:Boolean[1]):CompilationResult[1]
 {
-    let ctx = newCompilerContext(false);
-    platform::pure::compiler::compile($files, ^$ctx(extensions = $extensions), false, $silent);
+    platform::pure::compiler::compile($files, $extensions, false, $silent);
+}
+
+// The same, choosing debug mode — for a CLI host that honours a debug switch (`pure-truffle compile`
+// reads -Dlegend.pure.compileDebug).
+function platform::pure::compiler::compile(
+   files:platform::pure::protocol::PureFile[*],
+   extensions:platform::pure::compiler::extension::CompilerExtension[*],
+   debugMode:Boolean[1],
+   silent:Boolean[1]):CompilationResult[1]
+{
+    let ctx = newCompilerContext($debugMode);
+    platform::pure::compiler::compile($files, ^$ctx(extensions = $extensions), $debugMode, $silent);
 }
 
 // Default 2-arg form is verbose (CLI-friendly): live 3-line progress bar

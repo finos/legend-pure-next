@@ -207,6 +207,13 @@ public final class PdbModule implements Module
         return archive.elementPaths();
     }
 
+    /** From the archive's entry name ({@code elements/<path>.Package}): nothing is decoded. */
+    @Override
+    public boolean isPackage(String path)
+    {
+        return "Package".equals(archive.getElementType(path));
+    }
+
     @Override
     public TruffleTypeCache typeCache()
     {

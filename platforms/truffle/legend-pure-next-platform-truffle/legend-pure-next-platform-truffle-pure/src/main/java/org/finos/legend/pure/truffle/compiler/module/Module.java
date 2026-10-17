@@ -47,4 +47,15 @@ public interface Module extends MetadataAccess
     {
         return null;
     }
+
+    /**
+     * Whether the element at {@code path} is a Package — the one kind of path two modules may both
+     * declare. By default the element is read and asked; a module that knows the kind without reading
+     * (a PDB, from its entry names) says so cheaply, which keeps registration free of decoding.
+     */
+    default boolean isPackage(String path)
+    {
+        return hasElement(path) && org.finos.legend.pure.truffle.compiler.helper._Any.pureTypeIs(
+                getElement(path), "platform::pure::metamodel::Package");
+    }
 }

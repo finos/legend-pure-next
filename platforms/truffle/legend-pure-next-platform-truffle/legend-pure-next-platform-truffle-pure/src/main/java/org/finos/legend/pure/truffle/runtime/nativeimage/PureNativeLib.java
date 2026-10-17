@@ -101,6 +101,7 @@ public final class PureNativeLib
             org.finos.legend.pure.truffle.runtime.compilation.TruffleCompilerBinaryBuilder.compile(
                     basePdbs, Path.of(src), Path.of(out),
                     org.finos.legend.pure.truffle.compiler.module.TestElementFilter.Mode.NONE,
+                    org.eclipse.collections.api.factory.Lists.immutable.empty(),   // ###Pure only (always there)
                     b -> {});
             return 0;
         }
@@ -177,13 +178,15 @@ public final class PureNativeLib
             loaders.add(loader);
         }
         for (var l : loaders) l.setResolver(resolver);
-        for (var l : loaders) l.preloadAll();
 
         // Section parsers come from compiler-pure's testSectionParsers() via
         // the Pure-side registry — no Java extensions needed.
         PureRuntime runtime = PureRuntime.builder()
                 .withRegistry(resolver)
+                .withNatives(org.finos.legend.pure.truffle.execution.natives.NativeRegistry.createDefault())
                 .build();
+        // Decoding needs the languages' schema, which build() installs: preload after it.
+        for (var l : loaders) l.preloadAll();
         try
         {
             Object fd = resolver.getElement(function);

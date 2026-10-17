@@ -23,12 +23,14 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { openZip } from "../compiler/module/pdbModule/zip/zip.js";
 import { PdbModule } from "../compiler/module/pdbModule/PdbModule.js";
+import { metadataHost } from "../compiler/module/pdbModule/marshal.js";
 import { InMemoryModule } from "../compiler/module/inMemoryModule/InMemoryModule.js";
 import { ModuleRegistry } from "../compiler/module/ModuleRegistry.js";
 import { loadRuntime } from "../runtime/load-runtime.js";
 import { NativeRegistry } from "../execution/natives/NativeRegistry.js";
-import { PureRuntime } from "../runtime/PureRuntime.js";
-import { DEFAULT_LANGUAGE_EXTENSIONS, EXTENSION_DESCRIPTORS, extensionNamed, languageNamed } from "../runtime/LanguageExtensions.js";
+import { PureRuntime, pairExtensionModules } from "../runtime/PureRuntime.js";
+import { EXTENSION_DESCRIPTORS, coreLanguages, extensionLanguages, extensionNamed, languageNamed, languageSchema } from "../runtime/LanguageExtensions.js";
+import { LANGUAGES } from "../../../generated/languages.js";
 import * as SIG from "../execution/natives/native-signatures.js";
 import { TestReport } from "./test-report.js";
 
@@ -39,6 +41,17 @@ const ANY = "platform::pure::metamodel::type::Any";
 
 const results = [];
 const report = new TestReport("host-api");
+async function checkAsync(name, fn) {
+    const started = Date.now();
+    try {
+        await fn();
+        results.push({ name });
+        report.pass(name, Date.now() - started);
+    } catch (error) {
+        results.push({ name, error });
+        report.fail(name, Date.now() - started, error);
+    }
+}
 function check(name, fn) {
     const started = Date.now();
     try {
@@ -96,14 +109,18 @@ check("InMemoryModule identity and elements", () => {
     assert.deepEqual(changed, ["a::B", "a::B"]);
 });
 
-const SCHEMA = readFileSync(join(SHARED, "specification/m3.fbs"), "utf8");
+// A registry decodes with the schema of the languages it is given: ###Pure's (and the compiler test
+// sections'), plus the diagram extension's where a check reads diagram elements.
+const CORE = coreLanguages.map((l) => l.descriptor);
+const WITH_DIAGRAM = [...CORE, extensionNamed("diagram").descriptor];
 // Pure values cross as a value OR a one-element array; a [*] slot may be either or absent.
 const asArray = (v) => (v === undefined || v === null ? [] : Array.isArray(v) ? v : [v]);
 const one = (v) => (Array.isArray(v) ? v[0] : v);
 
 check("ModuleRegistry registers modules in order", () => {
-    const registry = new ModuleRegistry(SCHEMA);
-    const core = registry.register(PdbModule.open(join(SHARED, "core.pdb")));
+    const registry = new ModuleRegistry().useLanguages(CORE);
+    const core = PdbModule.open(join(SHARED, "core.pdb"));
+    registry.register(core);
     registry.register(PdbModule.open(join(SHARED, "compiler.pdb")));
     assert.equal(core.name, "core");
     assert.deepEqual(registry.modules.map((m) => m.name), ["core", "compiler"]);
@@ -112,14 +129,14 @@ check("ModuleRegistry registers modules in order", () => {
 });
 
 check("ModuleRegistry.validate accepts satisfied dependencies", () => {
-    const registry = new ModuleRegistry(SCHEMA);
+    const registry = new ModuleRegistry().useLanguages(CORE);
     registry.register(PdbModule.open(join(SHARED, "core.pdb")));
     registry.register(PdbModule.open(join(SHARED, "compiler.pdb")));
     assert.equal(registry.validate(), registry);
 });
 
 check("ModuleRegistry.validate names a missing dependency", () => {
-    const registry = new ModuleRegistry(SCHEMA);
+    const registry = new ModuleRegistry().useLanguages(CORE);
     registry.register(PdbModule.open(join(SHARED, "compiler.pdb")));
     assert.throws(() => registry.validate(), {
         message: "Module 'compiler' declares dependency 'core' but it was not loaded (loaded: [compiler])",
@@ -127,9 +144,10 @@ check("ModuleRegistry.validate names a missing dependency", () => {
 });
 
 check("ModuleRegistry is MetadataAccess over every module", () => {
-    const registry = new ModuleRegistry(SCHEMA);
+    const registry = new ModuleRegistry().useLanguages(CORE);
     registry.register(PdbModule.open(join(SHARED, "core.pdb")));
-    const runtime = registry.register(new InMemoryModule("runtime"));
+    const runtime = new InMemoryModule("runtime");
+    registry.register(runtime);
     runtime.addElement("a::B", { name: "B" });
     assert.equal(registry.hasElement(ANY), true);
     assert.equal(registry.hasElement("a::B"), true);
@@ -139,9 +157,10 @@ check("ModuleRegistry is MetadataAccess over every module", () => {
 });
 
 check("ModuleRegistry.unregister removes a module by name", () => {
-    const registry = new ModuleRegistry(SCHEMA);
+    const registry = new ModuleRegistry().useLanguages(CORE);
     registry.register(PdbModule.open(join(SHARED, "core.pdb")));
-    const runtime = registry.register(new InMemoryModule("runtime"));
+    const runtime = new InMemoryModule("runtime");
+    registry.register(runtime);
     assert.equal(registry.unregister("runtime"), runtime);
     assert.equal(registry.module("runtime"), null);
     assert.equal(registry.unregister("runtime"), null);
@@ -196,8 +215,8 @@ check("host services live on one global: no __host*, __metadata* or ANTLR global
     assert.equal(__metadataPathToElement("platform::pure::metamodel::type::Any", "::"), "platform::pure::metamodel::type::Any");
 });
 
-check("PureRuntime has the default language extensions", () => {
-    assert.deepEqual(runtime.languageExtensions.map((e) => e.name), DEFAULT_LANGUAGE_EXTENSIONS.map((e) => e.name));
+check("PureRuntime has the languages its host named, in order", () => {
+    assert.deepEqual(runtime.languages.map((e) => e.name), [...coreLanguages, ...extensionLanguages].map((e) => e.name));
 });
 
 check("PureRuntime.parse parses a ###Pure section, and runtime-lib's __pureParseTop reaches it", () => {
@@ -208,9 +227,9 @@ check("PureRuntime.parse parses a ###Pure section, and runtime-lib's __pureParse
 });
 
 check("compiler test sections are contributed only when compiler-tests is registered", () => {
-    const withTests = new ModuleRegistry(SCHEMA);
+    const withTests = new ModuleRegistry().useLanguages(CORE);
     for (const pdb of ["core.pdb", "compiler.pdb", "compiler-tests.pdb"]) withTests.register(PdbModule.open(join(SHARED, pdb)));
-    const withoutTests = new ModuleRegistry(SCHEMA);
+    const withoutTests = new ModuleRegistry().useLanguages(CORE);
     withoutTests.register(PdbModule.open(join(SHARED, "core.pdb")));
     // Reached by NAME now: the test sections are a core language from pure/specification/language_test.json,
     // built through the same languageExtensionFor as any extension.
@@ -225,24 +244,27 @@ check("the extension descriptors come from the extensions' own manifests", () =>
     // so adding an extension is a directory on disk rather than an edit to LanguageExtensions.js.
     const diagram = EXTENSION_DESCRIPTORS.find((d) => d.name === "diagram");
     assert.ok(diagram, `no diagram descriptor in [${EXTENSION_DESCRIPTORS.map((d) => d.name).join(", ")}]`);
-    assert.equal(diagram.section, "Diagram");
+    assert.deepEqual(diagram.sections, ["Diagram"]);
     assert.equal(diagram.module, "diagram");
-    assert.equal(diagram.pdbPath, "pure/extensions/diagram/build/diagram.pdb");
+    assert.deepEqual(diagram.pdbs, ["pure/extensions/diagram/build/diagram.pdb"]);
     // One translated file per half the manifest declares — parser.js and compiler.js — rather than one
     // opaque code.js. Derived: the package is the element path minus the function name.
     // One file per Pure package: the classes first, then each half. The grammar half sits under
     // grammar/, beside the ANTLR parser it drives (grammar/antlr/).
     // Grouped by subject: grammar/ is text -> model (ANTLR, the mapping rules, the protocol form they
     // produce); compiler/ is model -> graph (the passes, the metamodel they build).
+    // pdb/ is graph -> archive: the PDB writer generated from the metamodel.
     assert.deepEqual(diagram.jsPaths, [
         "extensions/diagram/compiler/metamodel.js",
         "extensions/diagram/grammar/protocol.js",
+        "extensions/diagram/pdb/gen.js",
         "extensions/diagram/grammar/parser.js",
         "extensions/diagram/compiler/compiler.js",
     ]);
     assert.deepEqual(diagram.translate.map((t) => t.package), [
         "platform::extensions::pure::diagram::metamodel",
         "platform::extensions::pure::diagram::protocol",
+        "platform::extensions::pure::diagram::pdb::gen",
         "platform::extensions::pure::diagram::parser",
         "platform::extensions::pure::diagram::compiler",
     ]);
@@ -262,15 +284,15 @@ check("the Pure language declares its grammar like any other, and Top is not a l
     // Top frames a document into `###Section` blocks before any language is consulted (`###Diagram`
     // goes through it too), so no descriptor may claim it.
     const claimsTop = (l) => l.descriptor.grammar && l.descriptor.grammar.parser === "TopParser";
-    assert.ok(!DEFAULT_LANGUAGE_EXTENSIONS.some(claimsTop), "no language may declare the Top grammar");
+    assert.ok(![...coreLanguages, ...extensionLanguages].some(claimsTop), "no language may declare the Top grammar");
 });
 
 check("both halves of the diagram language are contributed only when its module is registered", () => {
     const diagram = extensionNamed("diagram");
-    const withDiagram = new ModuleRegistry(SCHEMA);
+    const withDiagram = new ModuleRegistry().useLanguages(WITH_DIAGRAM);
     withDiagram.register(PdbModule.open(join(SHARED, "core.pdb")));
-    withDiagram.registerExtension(diagram.descriptor, PdbModule.open(join(REPO, diagram.descriptor.pdbPath)));
-    const withoutDiagram = new ModuleRegistry(SCHEMA);
+    withDiagram.registerExtension(diagram.descriptor, PdbModule.open(join(REPO, diagram.descriptor.pdbs.find((p) => p.endsWith(`/${diagram.descriptor.module}.pdb`)))));
+    const withoutDiagram = new ModuleRegistry().useLanguages(CORE);
     withoutDiagram.register(PdbModule.open(join(SHARED, "core.pdb")));
     assert.ok(diagram.sectionParsers({ registry: withDiagram }).length > 0);
     assert.equal(diagram.sectionParsers({ registry: withoutDiagram }).length, 0);
@@ -282,23 +304,23 @@ check("both halves of the diagram language are contributed only when its module 
 check("registerExtension pairs an extension with its module, and validate() enforces it", () => {
     const diagram = extensionNamed("diagram").descriptor;
     // Forgetting the module used to leave the extension silently inert; now it is refused outright.
-    const registry = new ModuleRegistry(SCHEMA);
+    const registry = new ModuleRegistry().useLanguages(CORE);
     assert.throws(() => registry.registerExtension(diagram, null), /needs its module 'diagram'/);
     assert.throws(() => registry.registerExtension(diagram, PdbModule.open(join(SHARED, "core.pdb"))),
                   /declares module 'diagram' but was given 'core'/);
 
     // The extension's module brings dependencies of its own, and they have to be there too. The
     // message blames the extension, because the caller asked for an extension and not for 'compiler'.
-    const partial = new ModuleRegistry(SCHEMA);
+    const partial = new ModuleRegistry().useLanguages(CORE);
     partial.register(PdbModule.open(join(SHARED, "core.pdb")));
-    partial.registerExtension(diagram, PdbModule.open(join(REPO, diagram.pdbPath)));
+    partial.registerExtension(diagram, PdbModule.open(join(REPO, diagram.pdbs.find((p) => p.endsWith(`/${diagram.module}.pdb`)))));
     assert.throws(() => partial.validate(), /declares dependency 'compiler' but it was not loaded/);
 
     // Complete, and valid — and validate() may be called as often as you like.
-    const paired = new ModuleRegistry(SCHEMA);
+    const paired = new ModuleRegistry().useLanguages(WITH_DIAGRAM);
     paired.register(PdbModule.open(join(SHARED, "core.pdb")));
     paired.register(PdbModule.open(join(SHARED, "compiler.pdb")));
-    paired.registerExtension(diagram, PdbModule.open(join(REPO, diagram.pdbPath)));
+    paired.registerExtension(diagram, PdbModule.open(join(REPO, diagram.pdbs.find((p) => p.endsWith(`/${diagram.module}.pdb`)))));
     paired.validate().validate();
     assert.equal(paired.extensions.length, 1);
 
@@ -308,14 +330,63 @@ check("registerExtension pairs an extension with its module, and validate() enfo
     assert.throws(() => paired.validate(), /Language extension 'diagram' needs module 'diagram'/);
 });
 
+check("every language manifest names its sections as a list and none says bundled", () => {
+    LANGUAGES.forEach((language) => {
+        assert.ok(Array.isArray(language.sections), `${language.name}: sections is a list`);
+        assert.equal(language.section, undefined, `${language.name}: no singular section`);
+        assert.equal(language.bundled, undefined, `${language.name}: always-active is "no module", not a flag`);
+    });
+});
+
+check("the Pure language's schema comes from its manifest", () => {
+    assert.equal(languageSchema(CORE), readFileSync(join(SHARED, "specification/m3.fbs"), "utf8"));
+    assert.equal(LANGUAGES.find((l) => l.name === "Pure").fbs, "shared/specification/m3.fbs");
+});
+
+check("a Pure language without its generated schema fails naming the file", () => {
+    const bare = LANGUAGES.map((l) => (l.module ? l : { ...l, fbsText: null }));
+    assert.throws(() => languageSchema(bare), /shared\/specification\/m3\.fbs/);
+});
+
+check("extension descriptors carry their manifest's pdbs, not a derived pdbPath", () => {
+    const diagram = EXTENSION_DESCRIPTORS.find((e) => e.name === "diagram");
+    assert.equal(diagram.pdbPath, undefined, "no path is derived from `module`; `pdbs` is read");
+    assert.ok(diagram.pdbs.some((p) => p.endsWith("/diagram.pdb")));
+});
+
+check("the module paired with an extension is the one its manifest names, wherever it is in pdbs", () => {
+    const descriptors = [
+        { name: "one", module: "one", pdbs: ["x/one.pdb"] },
+        { name: "two", module: "two", pdbs: ["x/helper.pdb", "x/two.pdb"] },
+    ];
+    const loaded = [{ name: "core" }, { name: "one" }, { name: "helper" }, { name: "two" }];
+    const pairs = pairExtensionModules(descriptors, loaded, 1);
+    assert.deepEqual(pairs.map((p) => [p.extension.name, p.own?.name, p.others.map((m) => m.name)]),
+        [["one", "one", []], ["two", "two", ["helper"]]]);
+});
+
+check("a runtime naming only an extension gets ###Pure first", () => {
+    const scratch = PureRuntime.builder().withRegistry(new ModuleRegistry()).withNatives(new NativeRegistry())
+        .withLanguages([extensionNamed("diagram")]).build();
+    try {
+        assert.deepEqual(scratch.languages.map((l) => l.name), [...coreLanguages, extensionNamed("diagram")].map((l) => l.name));
+    } finally {
+        scratch.close();
+        globalThis.__pureHost = runtime.host;   // the scratch runtime replaced the suite's host
+    }
+});
+
 check("a language extension need not have a compiler half", () => {
     // `compilerExtensions` is optional on the contract, so an extension that only parses must
     // not make PureRuntime.compile throw.
     assert.deepEqual(runtime.compilerExtensions !== undefined, true);
-    // Pure declares no `compilerExtension`, so its compiler half contributes nothing. Asserted as
-    // BEHAVIOUR rather than as a missing key: every language now comes from a descriptor, so the key
-    // is always present and what matters is that it yields nothing.
-    assert.deepEqual(languageNamed("Pure").compilerExtensions(runtime), []);
+    // compiler-pure's test sections declare no `compilerExtension`, so that half contributes nothing.
+    // Asserted as BEHAVIOUR rather than as a missing key: every language now comes from a descriptor,
+    // so the key is always present and what matters is that it yields nothing.
+    assert.deepEqual(languageNamed("compiler test sections").compilerExtensions(runtime), []);
+    // `###Pure` does declare one — pureExtension(), which carries m3's PDB writer to the archive
+    // writer through the same hook an extension uses — and it is the only one it contributes.
+    assert.deepEqual(languageNamed("Pure").compilerExtensions(runtime).map((e) => e.name), ["Pure"]);
 });
 
 check("PureRuntime.parse parses a ###Diagram section into diagram elements", () => {
@@ -369,6 +440,40 @@ check("a ###Diagram section compiles to a Diagram element with its types resolve
     host.module("runtime").removeSource("diagram.pure");
 });
 
+// The diagram round trip's committed golden: a module whose PDB holds ###Diagram elements, written by
+// `pure-truffle compile` with the extension's GENERATED writer (just truffle::regen-diagram-golden).
+const ROUNDTRIP_PDB = join(REPO, "pure/testdata/diagram-roundtrip/expected/roundtrip.pdb");
+
+check("a PDB holding ###Diagram elements reads back once the diagram language is registered", () => {
+    // The host registered the diagram extension, and with it the schema fragment generated from its
+    // metamodel — so DiagramDef, TypeViewDef and PointDef decode like any m3 table.
+    host.register(PdbModule.open(ROUNDTRIP_PDB));
+    try {
+        const d = host.getElement("m::D");
+        assert.equal(Number(one(d.width)), 800);
+        const view = asArray(d.typeViews)[0];
+        assert.equal(one(view.id), "tv_person");
+        assert.equal(Number(one(one(view.position).y)), 60);
+        // The PointerRef resolves to the class itself.
+        assert.equal(one(one(view.type).name), "Person");
+        // m::E has neither size nor views: absent optional fields read back EMPTY, not 0.0.
+        const e = host.getElement("m::E");
+        assert.equal(asArray(e.width).length, 0);
+        assert.equal(asArray(e.typeViews).length, 0);
+    } finally {
+        host.unregister("roundtrip");
+    }
+});
+
+check("a PDB holding ###Diagram elements fails loudly without the diagram language", () => {
+    const registry = new ModuleRegistry().useLanguages(CORE);
+    registry.register(PdbModule.open(join(SHARED, "core.pdb")));
+    registry.register(PdbModule.open(ROUNDTRIP_PDB));
+    // Read through THIS registry (element proxies read through the process-wide host, which has the
+    // diagram language registered).
+    assert.throws(() => metadataHost(registry).metadataRead("m::D", "width"), /no schema for DiagramDef/);
+});
+
 check("PureRuntime.execute runs a function element", () => {
     const fn = host.getElement("platform::pure::ui::progress::statusWidth__Integer_1_");
     assert.ok(fn);
@@ -415,7 +520,7 @@ check("every class declares its properties as accessors", () => {
 
 check("PureRuntime.close uninstalls its host object", () => {
     const natives = new NativeRegistry().register(SIG.JS_DRAIN_COMPILED_SOURCES, () => () => ["x"]);
-    const scratch = PureRuntime.builder().withRegistry(host).withNatives(natives).build();
+    const scratch = PureRuntime.builder().withRegistry(host).withLanguages(runtime.languages).withNatives(natives).build();
     assert.deepEqual(globalThis.__pureHost.hostJsDrainCompiledSources(), ["x"]);
     scratch.close();
     assert.equal(globalThis.__pureHost, undefined);
@@ -449,6 +554,70 @@ check("an accessor reads and writes the slot it names", () => {
     assert.equal(p.x, 7n, "the accessor writes the SLOT, not a parallel field");
     // The accessors are on the prototype, which is the property the pointer guard depends on.
     assert.deepEqual(Object.keys(p), ["x", "y"], "accessors add no own keys");
+});
+
+check("a runtime without withLanguages has ###Pure, once", () => {
+    const scratch = PureRuntime.builder().withRegistry(new ModuleRegistry()).withNatives(new NativeRegistry()).build();
+    const named = PureRuntime.builder().withRegistry(new ModuleRegistry()).withNatives(new NativeRegistry())
+        .withLanguages(coreLanguages).build();
+    try {
+        assert.deepEqual(scratch.languages.map((l) => l.name), coreLanguages.map((l) => l.name));
+        assert.deepEqual(named.languages.map((l) => l.name), coreLanguages.map((l) => l.name));
+    } finally {
+        named.close();
+        scratch.close();
+        globalThis.__pureHost = runtime.host;   // the scratch runtimes replaced the suite's host
+    }
+});
+
+check("a runtime without withNatives fails naming it", () => {
+    assert.throws(() => PureRuntime.builder().withRegistry(new ModuleRegistry())
+        .withLanguages(coreLanguages).build(), /withNatives\(/);
+});
+
+check("a registry takes no schema", () => {
+    assert.throws(() => new ModuleRegistry("table X {}"), /takes no schema/);
+});
+
+check("a registry read before it has languages fails naming withLanguages", () => {
+    const registry = new ModuleRegistry();
+    registry.register(PdbModule.open(join(SHARED, "core.pdb")));
+    assert.throws(() => metadataHost(registry).metadataRead(ANY, "name"), /withLanguages/);
+});
+
+check("the schema is the named languages': ###Pure's first, then the extensions'", () => {
+    const diagram = extensionNamed("diagram").descriptor;
+    const text = languageSchema(WITH_DIAGRAM);
+    assert.ok(text.startsWith(readFileSync(join(SHARED, "specification/m3.fbs"), "utf8")));
+    assert.ok(text.includes(diagram.fbsText));
+    assert.ok(!languageSchema(CORE).includes(diagram.fbsText));
+});
+
+await checkAsync("buildAsync registers only the named languages' modules", async () => {
+    const opened = [];
+    const loader = async (paths) => paths.map((p) => { opened.push(p); return PdbModule.open(join(REPO, p)); });
+    const registry = new ModuleRegistry();
+    const scratch = await PureRuntime.builder().withRegistry(registry).withLanguages(coreLanguages)
+        .withNatives(new NativeRegistry()).withModuleLoader(loader).buildAsync();
+    try {
+        assert.ok(!registry.module("diagram"), `diagram registered from [${opened.join(", ")}]`);
+        assert.ok(registry.module("core"), "###Pure's own modules are registered");
+    } finally {
+        scratch.close();
+        globalThis.__pureHost = runtime.host;   // the scratch runtime replaced the suite's host
+    }
+});
+
+check("the registry API: register/registerAll/validate return the registry, unregister the module", () => {
+    const a = new InMemoryModule("a", []);
+    const b = new InMemoryModule("b", ["a"]);
+    const registry = new ModuleRegistry();
+    assert.equal(registry.registerAll([a, b]), registry);
+    assert.deepEqual(registry.modules.map((m) => m.name), ["a", "b"]);
+    assert.equal(registry.validate(), registry);
+    assert.equal(registry.unregister("b"), b);
+    assert.equal(registry.unregister("b"), null);
+    assert.equal(registry.register(b), registry);
 });
 
 // --- summary (later tasks insert their checks above this line) ---------------

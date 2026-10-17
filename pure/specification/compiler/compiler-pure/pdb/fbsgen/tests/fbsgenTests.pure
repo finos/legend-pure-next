@@ -1,0 +1,94 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Tests for the fbs generator (fbsgen.pure). The fixture metamodel is tests/model.pure. The base
+// schema is the slice of m3.fbs the fixture refers to, copied verbatim (as readerTests does): these
+// tests run on every host from different working directories, so they must not read files.
+
+import platform::pure::compiler::pdb::fbsgen::*;
+import platform::pure::compiler::pdb::schema::*;
+
+function platform::pure::compiler::pdb::fbsgen::tests::m3():FbsSchema[1]
+{
+   parseFbs([
+      'union ClassifierGenericTypePropertyUnion { PointerRef, AncestorRef, InferredGenericTypeDef, UserDefinedGenericTypeDef }',
+      'union TypePropertyUnion { PointerRef, AncestorRef, FunctionTypeDef, RelationTypeDef, TypeParameterDef }',
+      'table SourceInformationDef {',
+      '    source_id: string (id: 3);',
+      '}'
+   ]->joinStrings('\n'));
+}
+
+function platform::pure::compiler::pdb::fbsgen::tests::sheetSchema():FbsGenResult[1]
+{
+   generateFbs(['platform::pure::compiler::pdb::fbsgen::tests::model'],
+               platform::pure::compiler::pdb::fbsgen::tests::m3(), '');
+}
+
+function platform::pure::compiler::pdb::fbsgen::tests::field(s:FbsSchema[1], table:String[1], field:String[1]):FbsField[1]
+{
+   $s.tables->filter(t | $t.name == $table)->toOne().fields->filter(f | $f.name == $field)->toOne();
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testTablesAndClassMap():Boolean[1]
+{
+   let r = platform::pure::compiler::pdb::fbsgen::tests::sheetSchema();
+   let s = parseFbs($r.fbs);
+   assertEquals(['BoxDef', 'EdgeDef', 'LabelledEdgeDef', 'SheetDef', 'SpotDef'], $s.tables.name->sort());
+   assert($r.fbs->contains('// pure-class SheetDef platform::pure::compiler::pdb::fbsgen::tests::model::Sheet\n'));
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testFieldTypes():Boolean[1]
+{
+   let s = parseFbs(platform::pure::compiler::pdb::fbsgen::tests::sheetSchema().fbs);
+   assertEquals('double', platform::pure::compiler::pdb::fbsgen::tests::field($s, 'SheetDef', 'width').type);
+   assertEquals('BoxDef', platform::pure::compiler::pdb::fbsgen::tests::field($s, 'SheetDef', 'boxes').type);
+   assert(platform::pure::compiler::pdb::fbsgen::tests::field($s, 'SheetDef', 'boxes').vector);
+   assertEquals('LabelledEdgeDef', platform::pure::compiler::pdb::fbsgen::tests::field($s, 'SheetDef', 'edges').type);
+   assertEquals('PointerRef', platform::pure::compiler::pdb::fbsgen::tests::field($s, 'SheetDef', 'package').type);
+   assertEquals('SourceInformationDef', platform::pure::compiler::pdb::fbsgen::tests::field($s, 'SheetDef', 'source_information').type);
+   // Type's nonPointerSubtypes give the same member set as m3's TypePropertyUnion: reused, not redeclared.
+   assertEquals('TypePropertyUnion', platform::pure::compiler::pdb::fbsgen::tests::field($s, 'BoxDef', 'type_').type);
+   assert($s.unions->filter(u | $u.name == 'TypePropertyUnion')->isEmpty());
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testTaxonomyUnion():Boolean[1]
+{
+   let s = parseFbs(platform::pure::compiler::pdb::fbsgen::tests::sheetSchema().fbs);
+   assertEquals(['LabelledEdgeDef', 'EdgeDef', 'AncestorRef'],
+                $s.unions->filter(u | $u.name == 'EdgeUnion')->toOne().members);
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testIdsAreStable():Boolean[1]
+{
+   let first  = platform::pure::compiler::pdb::fbsgen::tests::sheetSchema();
+   let second = generateFbs(['platform::pure::compiler::pdb::fbsgen::tests::model'],
+                            platform::pure::compiler::pdb::fbsgen::tests::m3(), $first.ids);
+   assertEquals($first.fbs, $second.fbs);
+   assertEquals($first.ids, $second.ids);
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testRemovedFieldIsDeprecated():Boolean[1]
+{
+   let r = generateFbs(['platform::pure::compiler::pdb::fbsgen::tests::model'],
+                       platform::pure::compiler::pdb::fbsgen::tests::m3(), 'SpotDef.x=1\nSpotDef.y=2\nSpotDef.z=3\n');
+   assert($r.fbs->contains('    z: bool (deprecated, id: 3);\n'));
+}
+
+function <<test.Test>> platform::pure::compiler::pdb::fbsgen::tests::testClashWithBaseFails():Boolean[1]
+{
+   let base = ^FbsSchema(tables = ^FbsTable(name = 'SpotDef', fields = []), unions = [], enums = []);
+   assertError(| generateFbs(['platform::pure::compiler::pdb::fbsgen::tests::model'], $base, ''),
+               'fbsgen: SpotDef already declared by the base schema');
+}
