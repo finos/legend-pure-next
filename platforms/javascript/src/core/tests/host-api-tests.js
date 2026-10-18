@@ -472,6 +472,49 @@ check("a PDB holding ###Diagram elements reads back once the diagram language is
     }
 });
 
+const DIAGRAM_GOLDENS = join(REPO, "pure/extensions/diagram/tests/compiler-pdb-serialization/diagram");
+
+check("a ###Diagram golden reads back every edge styling field and multi-point path", () => {
+    host.register(PdbModule.open(join(DIAGRAM_GOLDENS, "complexGeometry.pdb")));
+    try {
+        const d = host.getElement("m::D");
+        assert.equal(Number(one(d.width)), 1920.5);
+        assert.equal(Number(one(d.height)), 1080, "an integer in the source reads back as the number");
+        const firm = asArray(d.typeViews)[1];
+        assert.equal(one(firm.color), "#ffcc00", "a colour keeps the case it was written in");
+        assert.equal(one(firm.attributesVisible), false);
+        assert.equal(Number(one(one(firm.position).y)), -20);
+        const [manager, toFirm] = asArray(d.propertyViews);
+        assert.equal(one(manager.source), "tv_person");
+        assert.equal(one(manager.target), "tv_person", "a self-loop keeps both ends");
+        assert.deepEqual(asArray(manager.points).map(p => [Number(one(p.x)), Number(one(p.y))]),
+            [[-70.25, 50], [-40, 50], [-40, 10], [-160.5, 10]]);
+        assert.equal(one(manager.color), "#FF0000");
+        assert.equal(Number(one(manager.lineWidth)), 2.5);
+        assert.equal(one(manager.label), "manager");
+        assert.equal(asArray(toFirm.color).length, 0, "an absent colour reads back EMPTY");
+        assert.equal(asArray(toFirm.label).length, 0);
+        const [left, right] = asArray(d.associationViews);
+        assert.equal(one(left.label), "employment");
+        assert.equal(one(right.source), "tv_person_copy");
+        assert.equal(Number(one(one(asArray(d.generalizationViews)[0]).lineWidth)), 0.5);
+    } finally {
+        host.unregister("test");
+    }
+});
+
+check("a ###Diagram golden reads back pointers to class-typed, generic and inherited properties", () => {
+    host.register(PdbModule.open(join(DIAGRAM_GOLDENS, "complexTypeProperties.pdb")));
+    try {
+        const views = asArray(host.getElement("m::D").propertyViews);
+        const owned = views.map(v => one(one(one(v.property).owner).name) + "." + one(one(v.property).name));
+        assert.deepEqual(owned, ["Person.home", "Person.mailbox", "Person.previous", "Person.archive", "Box.items", "Person.home"],
+            "m::Employee.home resolved to the property m::Person declares");
+    } finally {
+        host.unregister("test");
+    }
+});
+
 check("a PDB holding ###Diagram elements fails loudly without the diagram language", () => {
     const registry = new ModuleRegistry().useLanguages(CORE);
     registry.register(PdbModule.open(join(SHARED, "core.pdb")));

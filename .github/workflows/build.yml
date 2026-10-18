@@ -609,10 +609,17 @@ jobs:
       # ~9s with the bootstrap CLI it already restored. Without it the truffle
       # reactor cannot compile at all: GenericFbDecoder imports the generated
       # reader, and the failure reads as "package ...pdb.reader does not exist".
-      - name: Build the module PDBs the Truffle PDB reader is generated from
+      # The diagram extension too, for the same reason: Truffle's diagram jar stages its GENERATED
+      # pure/extensions/diagram/generated/diagram.fbs (gitignored), so packaging Truffle first ships a jar
+      # without it and every Truffle run fails with "languages/diagram.fbs is not on the class path".
+      # protocol before the extension (it derives its protocol form from protocol.pdb), as the root
+      # Justfile's `build` orders them; all of it runs on the bootstrap CLI restored above.
+      - name: Build the module PDBs the Truffle PDB reader and diagram jar are generated from
         run: |
           just modules::translation_java::build-all
           just modules::translation_java::build-tests
+          just modules::protocol::build
+          just extensions::build-tests
 
       # `truffle::test` runs the truffle reactor with surefire (Java unit
       # tests) and then the Pure compiler-graph spec suite on Truffle.
@@ -762,10 +769,17 @@ jobs:
       # ~9s with the bootstrap CLI it already restored. Without it the truffle
       # reactor cannot compile at all: GenericFbDecoder imports the generated
       # reader, and the failure reads as "package ...pdb.reader does not exist".
-      - name: Build the module PDBs the Truffle PDB reader is generated from
+      # The diagram extension too, for the same reason: Truffle's diagram jar stages its GENERATED
+      # pure/extensions/diagram/generated/diagram.fbs (gitignored), so packaging Truffle first ships a jar
+      # without it and every Truffle run fails with "languages/diagram.fbs is not on the class path".
+      # protocol before the extension (it derives its protocol form from protocol.pdb), as the root
+      # Justfile's `build` orders them; all of it runs on the bootstrap CLI restored above.
+      - name: Build the module PDBs the Truffle PDB reader and diagram jar are generated from
         run: |
           just modules::translation_java::build-all
           just modules::translation_java::build-tests
+          just modules::protocol::build
+          just extensions::build-tests
 
       # `truffle::native::spec-compiler-selfhost` first builds the native-image
       # binary (~5–10 min, dominated by AOT analysis + compile), then uses it

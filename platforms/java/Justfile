@@ -444,8 +444,9 @@ pct PACKAGE="platform::pure::functions": compile
         || echo "  PCT failures do not fail the build: they are in the report"
 
 # The diagram's PDB form on the Java platform: the goldens beside the compiler fixtures (see
-# truffle::spec-diagram-pdb), then the Java platform's OWN decoder reads propertyAndAssociation's golden
-# back and prints the diagram exactly as that fixture's ###CompiledGraph shows it.
+# truffle::spec-diagram-pdb), then the Java platform's OWN decoder reads the propertyAndAssociation,
+# complexGeometry and complexTypeProperties goldens back, one per run, and prints each diagram exactly as
+# its fixture's ###CompiledGraph shows it.
 spec-diagram-pdb:
     @{{header}} 'spec-diagram-pdb'
     mkdir -p {{repo_root}}/test-results/spec/diagram/pdb
@@ -457,15 +458,17 @@ spec-diagram-pdb:
         --pdb {{diagram_out}}/diagram-tests.pdb \
         --function "platform::extensions::pure::diagram::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_" \
         --args "{{repo_root}}/pure/extensions/diagram/tests/compiler" "{{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{repo_root}}/pure/extensions/diagram/generated/diagram.fbs" "{{repo_root}}/test-results/spec/diagram/pdb/java@platform.json"
+    for f in propertyAndAssociation complexGeometry complexTypeProperties; do \
     java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
         --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{shared}}/compiler-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --pdb {{diagram_out}}/diagram-tests.pdb \
-        --pdb {{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/propertyAndAssociation.pdb \
+        --pdb {{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/$f.pdb \
         --function "platform::extensions::pure::diagram::tests::readBack_String_1__String_1__String_1_" \
-        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler/diagram/propertyAndAssociation.pure" "m::D"
+        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler/diagram/$f.pure" "m::D" || exit 1; \
+    done
 
 # The grammar corpus ON this platform: parse each fixture under
 # pure/specification/grammar/tests and compare with its expected protocol.

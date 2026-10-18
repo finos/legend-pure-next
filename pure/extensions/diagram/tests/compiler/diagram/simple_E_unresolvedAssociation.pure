@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 ###Error
-Diagram m::D: AssociationView av refers to 'm::Nope', which is not an association in scope (at diagram/simple_E_unresolvedAssociation:39c4-39c79)
+Diagram m::D: AssociationView 'av' refers to 'm::Nope', which is not an association in scope (at diagram/simple_E_unresolvedAssociation:39c4-39c79)
 
 ###Pure
 Class m::Person

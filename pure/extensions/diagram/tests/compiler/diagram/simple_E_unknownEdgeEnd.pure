@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 ###Error
-Diagram m::D: GeneralizationView gv's source 'tv_x' is not a TypeView of this diagram (at diagram/simple_E_unknownEdgeEnd:39c4-39c61)
+Diagram m::D: GeneralizationView 'gv' refers to 'tv_x' as its source, which is not a TypeView of this diagram (at diagram/simple_E_unknownEdgeEnd:39c4-39c61)
 
 ###Pure
 Class m::Person

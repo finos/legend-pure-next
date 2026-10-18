@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 ###Error
-Diagram m::D: PropertyView pv refers to 'm::Person.nope', which is not a property in scope (at diagram/simple_E_unresolvedProperty:39c4-39c80)
+Diagram m::D: PropertyView 'pv' refers to 'm::Person.nope', which is not a property in scope (at diagram/simple_E_unresolvedProperty:39c4-39c80)
 
 ###Pure
 Class m::Person

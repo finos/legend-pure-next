@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 ###Error
-Diagram m::D: TypeView tv_gone refers to 'm::Gone', which is not a type in scope (at diagram/multipleErrors_E_:40c4-40c79)
+Diagram m::D: TypeView 'tv_gone' refers to 'm::Gone', which is not a type in scope (at diagram/multipleErrors_E_:40c4-40c79)
 Diagram m::D: view id 'tv_a' is used more than once (at diagram/multipleErrors_E_:41c4-41c78)
-Diagram m::D: GeneralizationView gv's target 'tv_y' is not a TypeView of this diagram (at diagram/multipleErrors_E_:42c4-42c61)
+Diagram m::D: GeneralizationView 'gv' refers to 'tv_y' as its target, which is not a TypeView of this diagram (at diagram/multipleErrors_E_:42c4-42c61)
 
 ###Pure
 Class m::Person

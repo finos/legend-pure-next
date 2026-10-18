@@ -323,9 +323,10 @@ spec-pct-inmemory:
 # Self-host: compile compiler-pure on Truffle, run compiler tests, then diff PDB vs Java direct (assumes `just build` was run).
 # The diagram's PDB form, as the specification's (spec-pdb-golden): each success fixture under
 # pure/extensions/diagram/tests/compiler compiles and writes the archive in tests/compiler-pdb-serialization,
-# table by table; then Truffle's OWN decoder reads propertyAndAssociation's golden back and prints the
-# diagram exactly as that fixture's ###CompiledGraph shows it (every view kind, the association-owned
-# property pointer included). Regenerate the goldens with `just extensions::diagram::regen-pdb-goldens`.
+# table by table; then Truffle's OWN decoder reads goldens back, one per run (each defines m::D), and prints
+# the diagram exactly as its fixture's ###CompiledGraph shows it: propertyAndAssociation (every view kind,
+# an association-owned property pointer), complexGeometry (edge colour, line width, label, multi-point
+# paths, a self-loop) and complexTypeProperties (pointers to class-typed, generic and inherited properties). Regenerate the goldens with `just extensions::diagram::regen-pdb-goldens`.
 spec-diagram-pdb: _depCheck_pdbs
     @{{header}} 'spec-diagram-pdb'
     mkdir -p {{test_results}}/spec/diagram/pdb
@@ -336,14 +337,16 @@ spec-diagram-pdb: _depCheck_pdbs
         --pdb {{repo_root}}/pure/extensions/diagram/build/diagram-tests.pdb \
         --function "platform::extensions::pure::diagram::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_" \
         --args "{{repo_root}}/pure/extensions/diagram/tests/compiler" "{{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization" "{{shared_out}}/specification/m3.fbs" "{{repo_root}}/pure/extensions/diagram/generated/diagram.fbs" "{{test_results}}/spec/diagram/pdb/pure@cli-truffle.json" {{err_filter}}
+    for f in propertyAndAssociation complexGeometry complexTypeProperties; do \
     {{pure_truffle}} execute \
         --root {{repo_root}} \
         --pdb {{shared_out}}/core-tests.pdb \
         --pdb {{shared_out}}/compiler-tests.pdb \
         --pdb {{repo_root}}/pure/extensions/diagram/build/diagram-tests.pdb \
-        --pdb {{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/propertyAndAssociation.pdb \
+        --pdb {{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/$f.pdb \
         --function "platform::extensions::pure::diagram::tests::readBack_String_1__String_1__String_1_" \
-        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler/diagram/propertyAndAssociation.pure" "m::D" {{err_filter}}
+        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler/diagram/$f.pure" "m::D" {{err_filter}} || exit 1; \
+    done
 
 spec-compiler-selfhost: _depCheck_pdbs
     @{{header}} 'spec-compiler-selfhost'

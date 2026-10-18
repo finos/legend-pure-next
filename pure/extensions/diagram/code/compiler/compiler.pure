@@ -182,11 +182,11 @@ function platform::extensions::pure::diagram::compiler::unresolvedErrors(
    d: platform::extensions::pure::diagram::protocol::Diagram[1], path: String[1], ctx: CompilerContext[1]): platform::extensions::pure::diagram::compiler::ViewError[*]
 {
    let types = $d.typeViews->filter(v | $v.type->isNotEmpty() && resolveType($v.type->toOne().value, $ctx)->isEmpty())
-      ->map(v | viewError($v.p_sourceInformation, 'Diagram ' + $path + ': TypeView ' + $v.id + ' refers to \'' + $v.type->toOne().value + '\', which is not a type in scope'));
+      ->map(v | viewError($v.p_sourceInformation, 'Diagram ' + $path + ': TypeView \'' + $v.id + '\' refers to \'' + $v.type->toOne().value + '\', which is not a type in scope'));
    let properties = $d.propertyViews->filter(v | $v.property->isNotEmpty() && resolveProperty($v.property->toOne().value, $ctx)->isEmpty())
-      ->map(v | viewError($v.p_sourceInformation, 'Diagram ' + $path + ': PropertyView ' + $v.id + ' refers to \'' + $v.property->toOne().value + '\', which is not a property in scope'));
+      ->map(v | viewError($v.p_sourceInformation, 'Diagram ' + $path + ': PropertyView \'' + $v.id + '\' refers to \'' + $v.property->toOne().value + '\', which is not a property in scope'));
    let associations = $d.associationViews->filter(v | $v.association->isNotEmpty() && resolveAssociation($v.association->toOne().value, $ctx)->isEmpty())
-      ->map(v | viewError($v.p_sourceInformation, 'Diagram ' + $path + ': AssociationView ' + $v.id + ' refers to \'' + $v.association->toOne().value + '\', which is not an association in scope'));
+      ->map(v | viewError($v.p_sourceInformation, 'Diagram ' + $path + ': AssociationView \'' + $v.id + '\' refers to \'' + $v.association->toOne().value + '\', which is not an association in scope'));
    $types->concatenate($properties)->concatenate($associations);
 }
 
@@ -200,8 +200,8 @@ function platform::extensions::pure::diagram::compiler::edgeEndErrors(
       ->concatenate($d.generalizationViews->map(v | pair('GeneralizationView', $v->cast(@platform::extensions::pure::diagram::protocol::RelationshipView))));
    $edges->map(e | [pair('source', $e.second.source), pair('target', $e.second.target)]
       ->filter(end | !$ids->contains($end.second))
-      ->map(end | viewError($e.second.p_sourceInformation, 'Diagram ' + $path + ': ' + $e.first + ' ' + $e.second.id
-                            + '\'s ' + $end.first + ' \'' + $end.second + '\' is not a TypeView of this diagram')));
+      ->map(end | viewError($e.second.p_sourceInformation, 'Diagram ' + $path + ': ' + $e.first + ' \'' + $e.second.id
+                            + '\' refers to \'' + $end.second + '\' as its ' + $end.first + ', which is not a TypeView of this diagram')));
 }
 
 // Every view whose id an earlier view of the diagram already uses — reported at the later one.
