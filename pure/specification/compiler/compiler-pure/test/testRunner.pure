@@ -61,6 +61,18 @@ function <<test.TestDependency>> platform::pure::compiler::test::runCompiledGrap
 
 function <<test.TestDependency>> platform::pure::compiler::test::runCompiledGraphTestsWithReport(testDir:String[1], reportPath:String[0..1]):String[1]
 {
+    platform::pure::compiler::test::runCompiledGraphTestsWithReport($testDir, $reportPath, [], []);
+}
+
+// What a language extension's own fixtures run with: its compiler passes and its graph printers (see
+// assertCompiledGraph). The specification's fixtures run with none.
+function <<test.TestDependency>> platform::pure::compiler::test::runCompiledGraphTests(testDir:String[1], reportPath:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*], printers:Function<{platform::pure::metamodel::PackageableElement[1], platform::pure::compiler::CompilerContext[1]->String[0..1]}>[*]):String[1]
+{
+    platform::pure::compiler::test::runCompiledGraphTestsWithReport($testDir, $reportPath, $extensions, $printers);
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::runCompiledGraphTestsWithReport(testDir:String[1], reportPath:String[0..1], extensions:platform::pure::compiler::extension::CompilerExtension[*], printers:Function<{platform::pure::metamodel::PackageableElement[1], platform::pure::compiler::CompilerContext[1]->String[0..1]}>[*]):String[1]
+{
     let files = directoryTree($testDir)
         ->filter(f | $f->endsWith('.pure'));
     let total = $files->size();
@@ -80,7 +92,7 @@ function <<test.TestDependency>> platform::pure::compiler::test::runCompiledGrap
         let name = substring($f, $prefixLen, $f->length() - 5);
         tickProgress($i + 1, $total, $name);
         let testStart = currentTimeMillis();
-        let result = tryEval(| platform::pure::compiler::test::assertCompiledGraph(readFile($f), $name));
+        let result = tryEval(| platform::pure::compiler::test::assertCompiledGraph(readFile($f), $name, $extensions, $printers));
         ^platform::pure::compiler::test::CompiledGraphTestResult(name = $name, error = $result.failure, durationMs = currentTimeMillis() - $testStart);
     );
 

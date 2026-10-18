@@ -114,7 +114,7 @@ class PureRuntimeBuilderTest
     private static Path repoRoot()
     {
         Path p = Path.of("").toAbsolutePath();
-        while (p != null && !Files.isDirectory(p.resolve("pure/testdata/diagram-roundtrip")))
+        while (p != null && !Files.isDirectory(p.resolve("pure/extensions/diagram/tests/compiler-pdb-serialization")))
         {
             p = p.getParent();
         }

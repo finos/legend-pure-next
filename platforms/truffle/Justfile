@@ -164,7 +164,7 @@ test-java: (_mvn "with-tests")
 # remain visible.
 
 # Every specification run of the Truffle host (self-host excluded: see `spec-compiler-selfhost`).
-spec: spec-compiler spec-functions spec-pct spec-grammar spec-pdb spec-pdb-golden spec-printer-compiled spec-printer-protocol spec-functions-inmemory spec-pct-inmemory spec-compile-languages spec-diagram-pdb
+spec: spec-compiler spec-functions spec-pct spec-grammar spec-pdb spec-pdb-golden spec-printer-compiled spec-printer-protocol spec-functions-inmemory spec-pct-inmemory spec-diagram-pdb
 
 # Needs core-tests.pdb (runTests itself is <<test.TestDependency>> and is classified into the
 # tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
@@ -321,58 +321,29 @@ spec-pct-inmemory:
 # Truffle-compiled compiler.pdb goes to {{truffle_out}}/ to keep it separate from the
 # Java-compiled shared/compiler.pdb (filename is derived from module manifest).
 # Self-host: compile compiler-pure on Truffle, run compiler tests, then diff PDB vs Java direct (assumes `just build` was run).
-# `pure-truffle compile` on a module with a language-extension section (pure/testdata/diagram-roundtrip):
-# the ###Diagram section must parse with the diagram language, compile with its compiler extension,
-# exactly as an in-memory compile does, and be WRITTEN by the extension's generated PDB writer. The PDB
-# must equal the committed golden every host's round trip reads (see regen-diagram-golden).
-spec-compile-languages: _depCheck_pdbs
-    #!/usr/bin/env bash
-    set -euo pipefail
-    {{header}} 'spec-compile-languages'
-    {{substep}} 'pure-truffle compile a module with a ###Diagram section'
-    out="{{truffle_out}}/spec-compile-languages"
-    golden="{{repo_root}}/pure/testdata/diagram-roundtrip/expected/roundtrip.pdb"
-    rm -rf "$out" && mkdir -p "$out"
-    {{pure_truffle}} compile \
-        --base-pdb {{shared_out}}/core.pdb \
-        --base-pdb {{shared_out}}/parser-mappings.pdb \
-        --base-pdb {{shared_out}}/compiler.pdb \
-        --base-pdb {{repo_root}}/pure/extensions/diagram/build/diagram.pdb \
-        --source {{repo_root}}/pure/testdata/diagram-roundtrip \
-        --output-dir "$out" {{err_filter}}
-    entries=$(unzip -Z1 "$out/roundtrip.pdb")
-    for e in elements/m/Person.Class elements/m/D.Diagram elements/m/E.Diagram; do
-        grep -qx "$e" <<< "$entries" || { echo "FAIL: $e missing from roundtrip.pdb" >&2; exit 1; }
-    done
-    if [[ "${REGEN_GOLDEN:-}" == "1" ]]; then
-        mkdir -p "$(dirname "$golden")" && cp "$out/roundtrip.pdb" "$golden"
-        echo "  wrote $golden"
-    fi
-    cmp -s "$out/roundtrip.pdb" "$golden" \
-        || { echo "FAIL: roundtrip.pdb differs from the committed golden (just truffle::regen-diagram-golden after an intended change)" >&2; exit 1; }
-    echo "OK: m::D and m::E compiled into roundtrip.pdb, identical to the committed golden"
-
-# A PDB holding ###Diagram elements, read back on Truffle: the committed golden (written by Truffle's
-# compile, see regen-diagram-golden), loaded with the diagram language registered, then m::describe
-# prints what a reader sees of m::D and m::E. The same line is checked on JavaScript and Java.
+# The diagram's PDB form, as the specification's (spec-pdb-golden): each success fixture under
+# pure/extensions/diagram/tests/compiler compiles and writes the archive in tests/compiler-pdb-serialization,
+# table by table; then Truffle's OWN decoder reads propertyAndAssociation's golden back and prints the
+# diagram exactly as that fixture's ###CompiledGraph shows it (every view kind, the association-owned
+# property pointer included). Regenerate the goldens with `just extensions::diagram::regen-pdb-goldens`.
 spec-diagram-pdb: _depCheck_pdbs
-    #!/usr/bin/env bash
-    set -euo pipefail
-    {{header}} 'spec-diagram-pdb'
-    out=$({{pure_truffle}} execute \
-        --pdb {{shared_out}}/core.pdb \
-        --pdb {{shared_out}}/compiler.pdb \
-        --pdb {{repo_root}}/pure/extensions/diagram/build/diagram.pdb \
-        --pdb {{repo_root}}/pure/testdata/diagram-roundtrip/expected/roundtrip.pdb \
-        --function "m::describe__Boolean_1_" 2>&1) || { echo "$out" >&2; exit 1; }
-    grep -qx 'DESCRIBE 800.0 tv_person m::Person 40.0,60.0 E:0:0' <<< "$out" \
-        || { echo "FAIL: unexpected describe output:" >&2; echo "$out" >&2; exit 1; }
-    echo "OK: Truffle reads m::D and m::E back from roundtrip.pdb"
-
-# Rewrite the committed round-trip golden after an intended change to the diagram metamodel or the
-# PDB format. Every host's diagram round trip reads THIS file, so none depends on Truffle's build.
-regen-diagram-golden:
-    REGEN_GOLDEN=1 just --justfile {{source_file()}} spec-compile-languages
+    @{{header}} 'spec-diagram-pdb'
+    mkdir -p {{test_results}}/spec/diagram/pdb
+    {{pure_truffle}} execute \
+        --root {{repo_root}} \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --pdb {{repo_root}}/pure/extensions/diagram/build/diagram-tests.pdb \
+        --function "platform::extensions::pure::diagram::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler" "{{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization" "{{shared_out}}/specification/m3.fbs" "{{repo_root}}/pure/extensions/diagram/generated/diagram.fbs" "{{test_results}}/spec/diagram/pdb/pure@cli-truffle.json" {{err_filter}}
+    {{pure_truffle}} execute \
+        --root {{repo_root}} \
+        --pdb {{shared_out}}/core-tests.pdb \
+        --pdb {{shared_out}}/compiler-tests.pdb \
+        --pdb {{repo_root}}/pure/extensions/diagram/build/diagram-tests.pdb \
+        --pdb {{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/propertyAndAssociation.pdb \
+        --function "platform::extensions::pure::diagram::tests::readBack_String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler/diagram/propertyAndAssociation.pure" "m::D" {{err_filter}}
 
 spec-compiler-selfhost: _depCheck_pdbs
     @{{header}} 'spec-compiler-selfhost'

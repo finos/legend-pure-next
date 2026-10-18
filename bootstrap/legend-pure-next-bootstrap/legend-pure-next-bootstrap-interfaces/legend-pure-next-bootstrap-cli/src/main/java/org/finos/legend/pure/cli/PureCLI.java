@@ -309,7 +309,7 @@ public class PureCLI
     private static void compile(String[] args) throws Exception
     {
         List<String> basePdbs = new ArrayList<>();
-        String source = null;
+        List<Path> sources = new ArrayList<>();
         String outputDir = null;
         org.finos.legend.pure.m3.module.TestElementFilter.Mode mode =
                 org.finos.legend.pure.m3.module.TestElementFilter.Mode.NONE;
@@ -319,16 +319,16 @@ public class PureCLI
             switch (args[i])
             {
                 case "--base-pdb" -> basePdbs.add(args[++i]);
-                case "--source" -> source = args[++i];
+                case "--source" -> sources.add(Path.of(args[++i]));   // repeatable: code/ and generated/
                 case "--output-dir" -> outputDir = args[++i];
                 case "--tests" -> mode = org.finos.legend.pure.m3.module.TestElementFilter.Mode.parse(args[++i]);
                 default -> throw new IllegalArgumentException("Unknown option: " + args[i]);
             }
         }
 
-        if (basePdbs.isEmpty() || source == null || outputDir == null)
+        if (basePdbs.isEmpty() || sources.isEmpty() || outputDir == null)
         {
-            System.err.println("Usage: pure-bootstrap compile --base-pdb <file>... --source <dir> --output-dir <dir> [--tests {none|with|only|split}]");
+            System.err.println("Usage: pure-bootstrap compile --base-pdb <file>... --source <dir>... --output-dir <dir> [--tests {none|with|only|split}]");
             System.err.println("  Repeat --base-pdb to load multiple dependency PDBs (e.g. core + java).");
             System.err.println("  Output filename comes from the module manifest 'name' field.");
             System.exit(1);
@@ -339,7 +339,7 @@ public class PureCLI
         {
             basePaths.add(Path.of(b));
         }
-        CompilerBinaryBuilder.compile(basePaths, Path.of(source), Path.of(outputDir), mode);
+        CompilerBinaryBuilder.compile(basePaths, sources, Path.of(outputDir), mode);
     }
 
     /**

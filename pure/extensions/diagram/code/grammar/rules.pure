@@ -90,10 +90,12 @@ function platform::extensions::pure::diagram::parser::pointsOf(props: ViewProper
          ->map(c | buildPoint($c));
 }
 
-function platform::extensions::pure::diagram::parser::buildTypeView(ctx: AntlrContext[1]): TypeView[1]
+function platform::extensions::pure::diagram::parser::buildTypeView(ctx: AntlrContext[1], lineOffset: Integer[1]): TypeView[1]
 {
    let props = viewProperties($ctx);
    ^TypeView(
+      // Where the view is written: the compiler locates its errors here, not at the diagram.
+      p_sourceInformation = sourceInfoOf($ctx, $lineOffset),
       id                 = $ctx->getTokenText('QUALIFIED_NAME')->toOne(),
       // A PATH, wrapped the way every protocol reference is: the compiler resolves it to a Type.
       type               = ^platform::pure::protocol::grammar::type::Type_Pointer(
@@ -106,12 +108,15 @@ function platform::extensions::pure::diagram::parser::buildTypeView(ctx: AntlrCo
       attributesVisible  = flagOf($props, 'attributesVisible'));
 }
 
-function platform::extensions::pure::diagram::parser::buildPropertyView(ctx: AntlrContext[1]): PropertyView[1]
+function platform::extensions::pure::diagram::parser::buildPropertyView(ctx: AntlrContext[1], lineOffset: Integer[1]): PropertyView[1]
 {
    let props = viewProperties($ctx);
    ^PropertyView(
+      // Where the view is written: the compiler locates its errors here, not at the diagram.
+      p_sourceInformation = sourceInfoOf($ctx, $lineOffset),
       id        = $ctx->getTokenText('QUALIFIED_NAME')->toOne(),
-      property  = textOf($props, 'property')->orElse(''),
+      // A PATH (`m::Person.firm`), wrapped like `type`: the compiler resolves it to the property.
+      property  = textOf($props, 'property')->map(t | ^platform::extensions::pure::diagram::protocol::Property_Pointer(value = $t)),
       source    = textOf($props, 'source')->orElse(''),
       target    = textOf($props, 'target')->orElse(''),
       points    = pointsOf($props, 'points'),
@@ -120,12 +125,14 @@ function platform::extensions::pure::diagram::parser::buildPropertyView(ctx: Ant
       label     = textOf($props, 'label'));
 }
 
-function platform::extensions::pure::diagram::parser::buildAssociationView(ctx: AntlrContext[1]): AssociationView[1]
+function platform::extensions::pure::diagram::parser::buildAssociationView(ctx: AntlrContext[1], lineOffset: Integer[1]): AssociationView[1]
 {
    let props = viewProperties($ctx);
    ^AssociationView(
+      // Where the view is written: the compiler locates its errors here, not at the diagram.
+      p_sourceInformation = sourceInfoOf($ctx, $lineOffset),
       id          = $ctx->getTokenText('QUALIFIED_NAME')->toOne(),
-      association = textOf($props, 'association')->orElse(''),
+      association = textOf($props, 'association')->map(t | ^platform::extensions::pure::diagram::protocol::Association_Pointer(value = $t)),
       source      = textOf($props, 'source')->orElse(''),
       target      = textOf($props, 'target')->orElse(''),
       points      = pointsOf($props, 'points'),
@@ -134,10 +141,12 @@ function platform::extensions::pure::diagram::parser::buildAssociationView(ctx: 
       label       = textOf($props, 'label'));
 }
 
-function platform::extensions::pure::diagram::parser::buildGeneralizationView(ctx: AntlrContext[1]): GeneralizationView[1]
+function platform::extensions::pure::diagram::parser::buildGeneralizationView(ctx: AntlrContext[1], lineOffset: Integer[1]): GeneralizationView[1]
 {
    let props = viewProperties($ctx);
    ^GeneralizationView(
+      // Where the view is written: the compiler locates its errors here, not at the diagram.
+      p_sourceInformation = sourceInfoOf($ctx, $lineOffset),
       id        = $ctx->getTokenText('QUALIFIED_NAME')->toOne(),
       source    = textOf($props, 'source')->orElse(''),
       target    = textOf($props, 'target')->orElse(''),
@@ -175,10 +184,10 @@ function platform::extensions::pure::diagram::parser::buildDiagram(ctx: AntlrCon
       p_sourceInformation = sourceInfoOf($ctx, $lineOffset),
       width               = floatOf($dimension, 'width'),
       height              = floatOf($dimension, 'height'),
-      typeViews           = $ctx->getChildren('typeView')->map(v | buildTypeView($v)),
-      propertyViews       = $ctx->getChildren('propertyView')->map(v | buildPropertyView($v)),
-      associationViews    = $ctx->getChildren('associationView')->map(v | buildAssociationView($v)),
-      generalizationViews = $ctx->getChildren('generalizationView')->map(v | buildGeneralizationView($v)));
+      typeViews           = $ctx->getChildren('typeView')->map(v | buildTypeView($v, $lineOffset)),
+      propertyViews       = $ctx->getChildren('propertyView')->map(v | buildPropertyView($v, $lineOffset)),
+      associationViews    = $ctx->getChildren('associationView')->map(v | buildAssociationView($v, $lineOffset)),
+      generalizationViews = $ctx->getChildren('generalizationView')->map(v | buildGeneralizationView($v, $lineOffset)));
 }
 
 // Every diagram in a parsed `###Diagram` section. `lineOffset` is where the section starts in

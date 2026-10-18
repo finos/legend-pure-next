@@ -1,0 +1,53 @@
+{
+  "_type": "PureFile",
+  "sections": [
+    {
+      "_type": "Section",
+      "elements": [
+        {
+          "_type": "Diagram",
+          "name": "D",
+          "p_sourceInformation": {
+            "_type": "SourceInformation",
+            "endColumn": 1,
+            "endLine": 18,
+            "startColumn": 1,
+            "startLine": 15
+          },
+          "package": {
+            "_type": "Package_Pointer",
+            "value": "m"
+          },
+          "typeViews": [
+            {
+              "_type": "TypeView",
+              "attributesVisible": true,
+              "height": 90.0,
+              "id": "tv_b",
+              "p_sourceInformation": {
+                "_type": "SourceInformation",
+                "endColumn": 80,
+                "endLine": 17,
+                "startColumn": 4,
+                "startLine": 17
+              },
+              "position": {
+                "_type": "Point",
+                "x": 400.0,
+                "y": 60.0
+              },
+              "stereotypesVisible": true,
+              "type": {
+                "_type": "Type_Pointer",
+                "value": "m::Firm"
+              },
+              "width": 200.0
+            }
+          ]
+        }
+      ],
+      "parserName": "Diagram"
+    }
+  ],
+  "sourceId": "testFile"
+}

@@ -45,12 +45,20 @@ import platform::pure::ui::progress::*;
 
 function <<test.TestDependency>> platform::pure::compiler::test::pdb::runPdbGoldenTests(testDir:String[1], goldenDir:String[1], schemaPath:String[1], reportPath:String[1]):String[1]
 {
-    let schema = platform::pure::compiler::pdb::schema::parseFbs(readFile($schemaPath));
+    platform::pure::compiler::test::pdb::runPdbGoldenTests($testDir, $goldenDir, $schemaPath, $reportPath, []);
+}
+
+// With a language extension's compiler passes (which also write its elements): its fixtures compile and
+// archive like any other. The schema files are read as ONE text — m3's, then the extension's fragment,
+// which refers to m3's tables. No extensions is exactly the call above.
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::runPdbGoldenTests(testDir:String[1], goldenDir:String[1], schemaPaths:String[*], reportPath:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):String[1]
+{
+    let schema = platform::pure::compiler::pdb::schema::parseFbs($schemaPaths->map(p | readFile($p))->joinStrings('\n'));
     let goldens = directoryTree($goldenDir)->filter(f | $f->endsWith('.pdb'));
     let total = $goldens->size();
     startProgress('Comparing ' + $total->toString() + ' PDB archives with the Java goldens in ' + $goldenDir + '...');
     let start = currentTimeMillis();
-    let results = range(0, $total)->map(i | platform::pure::compiler::test::pdb::goldenCase($testDir, $goldenDir, $schema, $goldens->at($i), $i, $total));
+    let results = range(0, $total)->map(i | platform::pure::compiler::test::pdb::goldenCase($testDir, $goldenDir, $schema, $goldens->at($i), $i, $total, $extensions));
     let elapsedMs = currentTimeMillis() - $start;
     finishProgress();
 
@@ -61,43 +69,58 @@ function <<test.TestDependency>> platform::pure::compiler::test::pdb::runPdbGold
     );
     let failed = $failures->size();
     let summary = if($failed > 0,
-        | 'FAIL: ' + ($total - $failed)->toString() + ' / ' + $total->toString() + ' archives match their Java golden (' + $failed->toString() + ' differ) in ' + $elapsedMs->toString() + ' ms',
-        | 'OK: ' + $total->toString() + ' / ' + $total->toString() + ' archives match their Java golden in ' + $elapsedMs->toString() + ' ms');
+        | 'FAIL: ' + ($total - $failed)->toString() + ' / ' + $total->toString() + ' archives match their golden (' + $failed->toString() + ' differ) in ' + $elapsedMs->toString() + ' ms',
+        | 'OK: ' + $total->toString() + ' / ' + $total->toString() + ' archives match their golden in ' + $elapsedMs->toString() + ' ms');
     platform::pure::test::report::writeSuiteReport($reportPath, 'pdbGolden', $elapsedMs,
         $results->map(r | ^platform::pure::test::report::TestCaseReport(id = $r.name, durationMs = $r.durationMs, error = $r.error)));
     assert($failed == 0, $summary);
     $summary;
 }
 
-function <<test.TestDependency>> platform::pure::compiler::test::pdb::goldenCase(testDir:String[1], goldenDir:String[1], schema:platform::pure::compiler::pdb::schema::FbsSchema[1], goldenPath:String[1], i:Integer[1], total:Integer[1]):platform::pure::compiler::test::CompiledGraphTestResult[1]
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::goldenCase(testDir:String[1], goldenDir:String[1], schema:platform::pure::compiler::pdb::schema::FbsSchema[1], goldenPath:String[1], i:Integer[1], total:Integer[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):platform::pure::compiler::test::CompiledGraphTestResult[1]
 {
     let name = $goldenPath->substring($goldenDir->length() + 1, $goldenPath->length() - 4);
     tickProgress($i + 1, $total, $name);
     let caseStart = currentTimeMillis();
-    let result = tryEval(| platform::pure::compiler::test::pdb::assertMatchesGolden(readFile($testDir + '/' + $name + '.pure'), $name, readFileBytes($goldenPath), $schema));
+    let result = tryEval(| platform::pure::compiler::test::pdb::assertMatchesGolden(readFile($testDir + '/' + $name + '.pure'), $name, readFileBytes($goldenPath), $schema, $extensions));
     ^platform::pure::compiler::test::CompiledGraphTestResult(name = $name, error = $result.failure, durationMs = currentTimeMillis() - $caseStart);
 }
 
-function <<test.TestDependency>> platform::pure::compiler::test::pdb::assertMatchesGolden(content:String[1], sourceId:String[1], golden:Binary[1], schema:platform::pure::compiler::pdb::schema::FbsSchema[1]):Boolean[1]
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::assertMatchesGolden(content:String[1], sourceId:String[1], golden:Binary[1], schema:platform::pure::compiler::pdb::schema::FbsSchema[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):Boolean[1]
 {
-    let result = platform::pure::compiler::test::pdb::compileFixture($content, $sourceId);
-    assert($result.errors->isEmpty(), | 'the fixture does not compile: ' + $result.errors->joinStrings('; '));
-    let written = if($result.context->isEmpty(),
-        | platform::pure::compiler::pdb::archive::writeArchive($result.elements, platform::pure::compiler::extension::pureExtension(), 'test', '*', ['core']),
-        | platform::pure::compiler::pdb::archive::writeArchive($result.elements, platform::pure::compiler::extension::pureExtension(), 'test', '*', ['core'], $result.context->toOne().referencedBy));
+    let written = platform::pure::compiler::test::pdb::writeFixture($content, $sourceId, $extensions);
     let findings = platform::pure::compiler::test::pdb::diffArchives($schema, $written, $golden);
-    assert($findings->isEmpty(), | $findings->size()->toString() + ' difference(s) from the Java golden, first: ' + $findings->at(0));
+    assert($findings->isEmpty(), | $findings->size()->toString() + ' difference(s) from the golden, first: ' + $findings->at(0));
+}
+
+// The archive a fixture compiles to — what its golden holds. The writer asks the given extensions
+// (pureExtension() is always among them) for each element's serializer.
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::writeFixture(content:String[1], sourceId:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):Binary[1]
+{
+    let result = platform::pure::compiler::test::pdb::compileFixture($content, $sourceId, $extensions);
+    assert($result.errors->isEmpty(), | 'the fixture does not compile: ' + $result.errors->joinStrings('; '));
+    if($result.context->isEmpty(),
+        | platform::pure::compiler::pdb::archive::writeArchive($result.elements, platform::pure::compiler::extension::pureExtension()->concatenate($extensions), 'test', '*', ['core']),
+        | platform::pure::compiler::pdb::archive::writeArchive($result.elements, platform::pure::compiler::extension::pureExtension()->concatenate($extensions), 'test', '*', ['core'], $result.context->toOne().referencedBy));
 }
 
 // Compiles a fixture as assertCompiledGraph does: lines before ###Pure are blanked so
 // positions stay aligned, and each ###Pure / ###File chunk becomes its own file.
 function <<test.TestDependency>> platform::pure::compiler::test::pdb::compileFixture(content:String[1], sourceId:String[1]):platform::pure::compiler::CompilationResult[1]
 {
+    platform::pure::compiler::test::pdb::compileFixture($content, $sourceId, []);
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::pdb::compileFixture(content:String[1], sourceId:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*]):platform::pure::compiler::CompilationResult[1]
+{
     let pureStart = $content->indexOf('###' + 'Pure');
     let prepared = if($pureStart > 0,
         | $content->substring(0, $pureStart)->split('\n')->map(l | '')->joinStrings('\n') + $content->substring($pureStart),
         | $content);
-    platform::pure::compiler::compile(manageFileSections(platform::pure::functions::meta::parse($sourceId, $prepared)), false, true);
+    let files = manageFileSections(platform::pure::functions::meta::parse($sourceId, $prepared));
+    if($extensions->isEmpty(),
+        | platform::pure::compiler::compile($files, false, true),
+        | platform::pure::compiler::compile($files, $extensions, false, true));
 }
 
 // --- archive diff ----------------------------------------------------------

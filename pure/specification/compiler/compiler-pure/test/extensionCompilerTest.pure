@@ -79,3 +79,22 @@ function <<test.Test>> platform::pure::compiler::test::testWithoutExtensionTheSe
    assert(!$paths->contains('extensionTest::Claimed'), | 'nothing was claimed');
    true;
 }
+
+// The compiled-graph runner prints an extension's elements with printers the extension supplies; the
+// built-in arms still print everything a printer does not claim.
+function <<test.TestDependency>> platform::pure::compiler::test::extensionTestPrinter(e: PackageableElement[1], ctx: CompilerContext[1]): String[0..1]
+{
+   if($e->elementToPath() == 'extensionTest::Claimed', | 'claimed by the extension printer', | []);
+}
+
+function <<test.Test>> platform::pure::compiler::test::testGraphPrintersComeBeforeTheBuiltInArms(): Boolean[1]
+{
+   let file = platform::pure::functions::meta::parse('extTest',
+      '###Pure\nClass a::B {}\n\n###CompiledGraph\nanything at all\n');
+   let result = platform::pure::compiler::compile($file, extensionTestExtension(), true);
+   let printed = platform::pure::compiler::test::printer::printCompiledGraph($result.elements, $result.context->toOne(),
+      {e: PackageableElement[1], c: CompilerContext[1] | extensionTestPrinter($e, $c)});
+   assert($printed->contains('claimed by the extension printer'), | 'the printer printed its element: ' + $printed);
+   assert($printed->contains('class a::B'), | 'an element it does not claim prints as before: ' + $printed);
+   true;
+}

@@ -201,7 +201,7 @@ public final class PureCompileMain
         args = consumeProfilingFlags(args, profiling);
 
         List<String> basePdbPaths = new ArrayList<>();
-        String source = null;
+        List<Path> sources = new ArrayList<>();
         String outputDir = null;
         org.finos.legend.pure.truffle.compiler.module.TestElementFilter.Mode mode =
                 org.finos.legend.pure.truffle.compiler.module.TestElementFilter.Mode.NONE;
@@ -210,25 +210,25 @@ public final class PureCompileMain
             switch (args[i])
             {
                 case "--base-pdb" -> basePdbPaths.add(args[++i]);
-                case "--source" -> source = args[++i];
+                case "--source" -> sources.add(Path.of(args[++i]));   // repeatable: code/ and generated/
                 case "--output-dir" -> outputDir = args[++i];
                 case "--tests" -> mode = org.finos.legend.pure.truffle.compiler.module.TestElementFilter.Mode.parse(args[++i]);
                 default -> throw new IllegalArgumentException("Unknown option: " + args[i]);
             }
         }
 
-        if (basePdbPaths.isEmpty() || source == null || outputDir == null)
+        if (basePdbPaths.isEmpty() || sources.isEmpty() || outputDir == null)
         {
-            System.err.println("Usage: pure-truffle compile --base-pdb <file>... --source <dir> --output-dir <dir> [--tests {none|with|only|split}]");
+            System.err.println("Usage: pure-truffle compile --base-pdb <file>... --source <dir>... --output-dir <dir> [--tests {none|with|only|split}]");
             System.err.println("  Output filename comes from the module manifest 'name' field.");
             System.exit(1);
         }
 
-        // If --source-root wasn't given, default to the source directory we're
-        // compiling — its files match the sourceIds the parser embeds in the PDB.
+        // If --source-root wasn't given, default to the source directories we're
+        // compiling — their files match the sourceIds the parser embeds in the PDB.
         if (profiling.sourceRoots.isEmpty())
         {
-            profiling.sourceRoots.add(Path.of(source));
+            profiling.sourceRoots.addAll(sources);
         }
 
         List<Path> basePdbs = new ArrayList<>();
@@ -239,7 +239,7 @@ public final class PureCompileMain
         // The same languages as execute: a module's ###Diagram (or other extension) section parses and
         // compiles here exactly as it does when the runtime compiles in memory.
         org.finos.legend.pure.truffle.runtime.compilation.TruffleCompilerBinaryBuilder.compile(
-                basePdbs, Path.of(source), Path.of(outputDir), mode, languages(),
+                basePdbs, sources, Path.of(outputDir), mode, languages(),
                 profiling::apply);
     }
 

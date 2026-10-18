@@ -1,0 +1,47 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Error
+Diagram m::D: TypeView tv_gone refers to 'm::Gone', which is not a type in scope (at diagram/multipleErrors_E_:40c4-40c79)
+Diagram m::D: view id 'tv_a' is used more than once (at diagram/multipleErrors_E_:41c4-41c78)
+Diagram m::D: GeneralizationView gv's target 'tv_y' is not a TypeView of this diagram (at diagram/multipleErrors_E_:42c4-42c61)
+
+###Pure
+Class m::Person
+{
+   name : String[1];
+}
+
+Class m::Firm
+{
+   legalName : String[1];
+}
+
+Association m::Employment
+{
+   firm : m::Firm[0..1];
+   employees : m::Person[*];
+}
+
+###Diagram
+Diagram m::D
+{
+   TypeView tv_a(type=m::Person, position=(0.0, 0.0), width=10.0, height=10.0)
+   TypeView tv_gone(type=m::Gone, position=(0.0, 0.0), width=10.0, height=10.0)
+   TypeView tv_a(type=m::Firm, position=(100.0, 0.0), width=10.0, height=10.0)
+   GeneralizationView gv(source=tv_a, target=tv_y, points=[])
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

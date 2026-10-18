@@ -27,6 +27,10 @@
 // reference unreachable.
 
 import platform::pure::compiler::*;
+import platform::pure::metamodel::*;
+import platform::pure::metamodel::type::*;
+import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::compiler::helper::class::*;
 import platform::pure::compiler::extension::*;
 import platform::pure::compiler::helper::pointer::*;
 import platform::pure::compiler::structural::sourceInformationCompiler::*;
@@ -70,7 +74,8 @@ function platform::extensions::pure::diagram::compiler::pass1(
 // Protocol -> metamodel
 //
 // The two forms are different classes, so every one is mapped. Geometry copies across unchanged;
-// the only thing that changes is the reference, which arrives as a path and leaves as an element.
+// what changes is every reference, which arrives as a path and leaves as an element — or as nothing,
+// with an error, so the diagram still compiles and an editor can open it to repair it.
 // ---------------------------------------------------------------------------
 
 function platform::extensions::pure::diagram::compiler::compilePoint(
@@ -79,16 +84,39 @@ function platform::extensions::pure::diagram::compiler::compilePoint(
    ^platform::extensions::pure::diagram::metamodel::Point(x = $p.x, y = $p.y);
 }
 
-// `type` is a Type_Pointer carrying the path as written. Resolved, the metamodel view holds the real
-// Type; unresolved, it holds nothing and the caller reports it — a diagram naming a class that was
-// since renamed still compiles, so the editor can open it and repair it.
+// `m::Person` -> the type, if one is in scope.
+function platform::extensions::pure::diagram::compiler::resolveType(path: String[1], ctx: CompilerContext[1]): platform::pure::metamodel::type::Type[0..1]
+{
+   $ctx->pathToElementInContext($path)
+      ->filter(f | $f->instanceOf(platform::pure::metamodel::type::Type))
+      ->cast(@platform::pure::metamodel::type::Type)
+      ->head();
+}
+
+// `m::Person.firm` -> the property `firm` of class `m::Person`: its own, inherited, or contributed by an
+// association (the context-aware lookup sees association properties registered in pass 2).
+function platform::extensions::pure::diagram::compiler::resolveProperty(path: String[1], ctx: CompilerContext[1]): platform::pure::metamodel::function::property::Property<Nil, Any|*>[0..1]
+{
+   let dot = $path->lastIndexOf('.');
+   let owner = if($dot < 1, | [], | $ctx->pathToElementInContext($path->substring(0, $dot)));
+   if($owner->isEmpty() || !$owner->toOne()->instanceOf(platform::pure::metamodel::type::Class),
+      | [],
+      | $owner->toOne()->findProperty($path->substring($dot + 1), $ctx));
+}
+
+// `m::Employment` -> the association, if one is in scope.
+function platform::extensions::pure::diagram::compiler::resolveAssociation(path: String[1], ctx: CompilerContext[1]): platform::pure::metamodel::relationship::Association[0..1]
+{
+   $ctx->pathToElementInContext($path)
+      ->filter(f | $f->instanceOf(platform::pure::metamodel::relationship::Association))
+      ->cast(@platform::pure::metamodel::relationship::Association)
+      ->head();
+}
+
 function platform::extensions::pure::diagram::compiler::compileTypeView(
    v: platform::extensions::pure::diagram::protocol::TypeView[1], ctx: CompilerContext[1]
 ): platform::extensions::pure::diagram::metamodel::TypeView[1]
 {
-   let found = $v.type->map(ptr | pathToElementInContext($ctx, $ptr.value))
-                      ->filter(f | $f->instanceOf(platform::pure::metamodel::type::Type))
-                      ->cast(@platform::pure::metamodel::type::Type);
    ^platform::extensions::pure::diagram::metamodel::TypeView(
       id                 = $v.id,
       position           = compilePoint($v.position),
@@ -97,48 +125,127 @@ function platform::extensions::pure::diagram::compiler::compileTypeView(
       color              = $v.color,
       stereotypesVisible = $v.stereotypesVisible,
       attributesVisible  = $v.attributesVisible,
-      type               = $found->head());
+      type               = $v.type->map(ptr | resolveType($ptr.value, $ctx)),
+      sourceInformation  = compileSourceInformation($v.p_sourceInformation, $ctx));
 }
 
 function platform::extensions::pure::diagram::compiler::compilePropertyView(
-   v: platform::extensions::pure::diagram::protocol::PropertyView[1]): platform::extensions::pure::diagram::metamodel::PropertyView[1]
+   v: platform::extensions::pure::diagram::protocol::PropertyView[1], ctx: CompilerContext[1]): platform::extensions::pure::diagram::metamodel::PropertyView[1]
 {
    ^platform::extensions::pure::diagram::metamodel::PropertyView(
       id = $v.id, source = $v.source, target = $v.target,
       points = $v.points->map(p | compilePoint($p)),
       color = $v.color, lineWidth = $v.lineWidth, label = $v.label,
-      property = $v.property);
+      property = $v.property->map(ptr | resolveProperty($ptr.value, $ctx)),
+      sourceInformation = compileSourceInformation($v.p_sourceInformation, $ctx));
 }
 
 function platform::extensions::pure::diagram::compiler::compileAssociationView(
-   v: platform::extensions::pure::diagram::protocol::AssociationView[1]): platform::extensions::pure::diagram::metamodel::AssociationView[1]
+   v: platform::extensions::pure::diagram::protocol::AssociationView[1], ctx: CompilerContext[1]): platform::extensions::pure::diagram::metamodel::AssociationView[1]
 {
    ^platform::extensions::pure::diagram::metamodel::AssociationView(
       id = $v.id, source = $v.source, target = $v.target,
       points = $v.points->map(p | compilePoint($p)),
       color = $v.color, lineWidth = $v.lineWidth, label = $v.label,
-      association = $v.association);
+      association = $v.association->map(ptr | resolveAssociation($ptr.value, $ctx)),
+      sourceInformation = compileSourceInformation($v.p_sourceInformation, $ctx));
 }
 
 function platform::extensions::pure::diagram::compiler::compileGeneralizationView(
-   v: platform::extensions::pure::diagram::protocol::GeneralizationView[1]): platform::extensions::pure::diagram::metamodel::GeneralizationView[1]
+   v: platform::extensions::pure::diagram::protocol::GeneralizationView[1], ctx: CompilerContext[1]): platform::extensions::pure::diagram::metamodel::GeneralizationView[1]
 {
    ^platform::extensions::pure::diagram::metamodel::GeneralizationView(
       id = $v.id, source = $v.source, target = $v.target,
       points = $v.points->map(p | compilePoint($p)),
-      color = $v.color, lineWidth = $v.lineWidth, label = $v.label);
+      color = $v.color, lineWidth = $v.lineWidth, label = $v.label,
+      sourceInformation = compileSourceInformation($v.p_sourceInformation, $ctx));
 }
 
-// The error a view whose class could not be found contributes.
-function platform::extensions::pure::diagram::compiler::unresolvedMessage(
-   diagramPath: String[1], v: platform::extensions::pure::diagram::protocol::TypeView[1]): String[1]
+// ---------------------------------------------------------------------------
+// Checks — each a (where, what) pair; pass 2 reports them in source order, located at the view.
+// ---------------------------------------------------------------------------
+
+Class <<platform::pure::metamodel::ProtocolInfo.transientCompilerOnly>> platform::extensions::pure::diagram::compiler::ViewError
 {
-   'Diagram ' + $diagramPath + ': TypeView ' + $v.id + ' refers to \''
-      + $v.type->map(p | $p.value)->orElse('') + '\', which is not a type in scope';
+   at      : platform::pure::protocol::grammar::SourceInformation[0..1];
+   message : String[1];
 }
 
-// Pass 2 — the diagram itself: every view mapped onto the metamodel, each `type` resolved against a
-// graph that now holds every element pass 1 registered.
+function platform::extensions::pure::diagram::compiler::viewError(
+   at: platform::pure::protocol::grammar::SourceInformation[0..1], message: String[1]): platform::extensions::pure::diagram::compiler::ViewError[1]
+{
+   ^platform::extensions::pure::diagram::compiler::ViewError(at = $at, message = $message);
+}
+
+// Every reference that does not resolve.
+function platform::extensions::pure::diagram::compiler::unresolvedErrors(
+   d: platform::extensions::pure::diagram::protocol::Diagram[1], path: String[1], ctx: CompilerContext[1]): platform::extensions::pure::diagram::compiler::ViewError[*]
+{
+   let types = $d.typeViews->filter(v | $v.type->isNotEmpty() && resolveType($v.type->toOne().value, $ctx)->isEmpty())
+      ->map(v | viewError($v.p_sourceInformation, 'Diagram ' + $path + ': TypeView ' + $v.id + ' refers to \'' + $v.type->toOne().value + '\', which is not a type in scope'));
+   let properties = $d.propertyViews->filter(v | $v.property->isNotEmpty() && resolveProperty($v.property->toOne().value, $ctx)->isEmpty())
+      ->map(v | viewError($v.p_sourceInformation, 'Diagram ' + $path + ': PropertyView ' + $v.id + ' refers to \'' + $v.property->toOne().value + '\', which is not a property in scope'));
+   let associations = $d.associationViews->filter(v | $v.association->isNotEmpty() && resolveAssociation($v.association->toOne().value, $ctx)->isEmpty())
+      ->map(v | viewError($v.p_sourceInformation, 'Diagram ' + $path + ': AssociationView ' + $v.id + ' refers to \'' + $v.association->toOne().value + '\', which is not an association in scope'));
+   $types->concatenate($properties)->concatenate($associations);
+}
+
+// Every edge end that names no TypeView of this diagram.
+function platform::extensions::pure::diagram::compiler::edgeEndErrors(
+   d: platform::extensions::pure::diagram::protocol::Diagram[1], path: String[1]): platform::extensions::pure::diagram::compiler::ViewError[*]
+{
+   let ids = $d.typeViews.id;
+   let edges = $d.propertyViews->map(v | pair('PropertyView', $v->cast(@platform::extensions::pure::diagram::protocol::RelationshipView)))
+      ->concatenate($d.associationViews->map(v | pair('AssociationView', $v->cast(@platform::extensions::pure::diagram::protocol::RelationshipView))))
+      ->concatenate($d.generalizationViews->map(v | pair('GeneralizationView', $v->cast(@platform::extensions::pure::diagram::protocol::RelationshipView))));
+   $edges->map(e | [pair('source', $e.second.source), pair('target', $e.second.target)]
+      ->filter(end | !$ids->contains($end.second))
+      ->map(end | viewError($e.second.p_sourceInformation, 'Diagram ' + $path + ': ' + $e.first + ' ' + $e.second.id
+                            + '\'s ' + $end.first + ' \'' + $end.second + '\' is not a TypeView of this diagram')));
+}
+
+// Every view whose id an earlier view of the diagram already uses — reported at the later one.
+function platform::extensions::pure::diagram::compiler::duplicateIdErrors(
+   d: platform::extensions::pure::diagram::protocol::Diagram[1], path: String[1]): platform::extensions::pure::diagram::compiler::ViewError[*]
+{
+   // Each view as (where, id), in source order of kind then position.
+   let views = $d.typeViews->map(v | viewError($v.p_sourceInformation, $v.id))
+      ->concatenate($d.propertyViews->map(v | viewError($v.p_sourceInformation, $v.id)))
+      ->concatenate($d.associationViews->map(v | viewError($v.p_sourceInformation, $v.id)))
+      ->concatenate($d.generalizationViews->map(v | viewError($v.p_sourceInformation, $v.id)));
+   range($views->size())
+      ->filter(i | $views->take($i).message->contains($views->at($i).message))
+      ->map(i | viewError($views->at($i).at, 'Diagram ' + $path + ': view id \'' + $views->at($i).message + '\' is used more than once'));
+}
+
+// Source order: by line, then column; a view without a position sorts last.
+function platform::extensions::pure::diagram::compiler::inSourceOrder(errors: platform::extensions::pure::diagram::compiler::ViewError[*]): platform::extensions::pure::diagram::compiler::ViewError[*]
+{
+   $errors->sort({a, b | platform::extensions::pure::diagram::compiler::sourceKey($a) - platform::extensions::pure::diagram::compiler::sourceKey($b)});
+}
+
+function platform::extensions::pure::diagram::compiler::sourceKey(e: platform::extensions::pure::diagram::compiler::ViewError[1]): Integer[1]
+{
+   $e.at->map(si | $si.startLine->toOne() * 100000 + $si.startColumn->toOne())->orElse(2147483647);
+}
+
+// Every resolved reference, recorded under the diagram (the reverse index lists it as their user).
+function platform::extensions::pure::diagram::compiler::recordReferences(
+   d: platform::extensions::pure::diagram::metamodel::Diagram[1], path: String[1], ctx: CompilerContext[1]): CompilerContext[1]
+{
+   let typePaths = $d.typeViews.type->map(t | $t->cast(@PackageableElement)->elementToPath());
+   let associationPaths = $d.associationViews.association->map(a | $a->elementToPath());
+   let withTypes = $typePaths->concatenate($associationPaths)
+      ->fold({p, c | $c->recordReference($p)}, $ctx->setCurrentElement($path));
+   // A property is keyed `Owner.name` — its class, or the association that contributes it — as the
+   // core compiler keys property references.
+   $d.propertyViews.property
+      ->map(p | $p.owner->toOne()->cast(@PackageableElement)->elementToPath() + '.' + $p.name->toOne())
+      ->fold({p, c | $c->recordReference($p)}, $withTypes)->clearCurrentElement();
+}
+
+// Pass 2 — the diagram itself: every view mapped onto the metamodel, each reference resolved against a
+// graph that now holds every element pass 1 registered, every problem reported where it is written.
 function platform::extensions::pure::diagram::compiler::pass2(
    e: platform::pure::protocol::grammar::PackageableElement[1],
    acc: CompilerListResult<platform::pure::metamodel::PackageableElement>[1]
@@ -149,21 +256,32 @@ function platform::extensions::pure::diagram::compiler::pass2(
    let skeleton = $acc.context.elementMap->get($path);
    if($skeleton->isEmpty(),
       | $acc,
-      | let views = $parsed.typeViews->map(v | compileTypeView($v, $acc.context));
-        let unresolved = $parsed.typeViews->filter(v |
-           $v.type->map(ptr | pathToElementInContext($acc.context, $ptr.value))->isEmpty());
-        let diagram = ^$skeleton->toOne()->cast(@platform::extensions::pure::diagram::metamodel::Diagram)(
-           width               = $parsed.width,
-           height              = $parsed.height,
-           typeViews           = $views,
-           propertyViews       = $parsed.propertyViews->map(v | compilePropertyView($v)),
-           associationViews    = $parsed.associationViews->map(v | compileAssociationView($v)),
-           generalizationViews = $parsed.generalizationViews->map(v | compileGeneralizationView($v)));
-        let messages = $unresolved->map(v | unresolvedMessage($path, $v));
-        let ctx = ^$acc.context(
-           elementMap = $acc.context.elementMap->put($path, $diagram),
-           errors     = $acc.context.errors->concatenate($messages));
-        ^$acc(values += $diagram->cast(@platform::pure::metamodel::PackageableElement), context = $ctx););
+      | platform::extensions::pure::diagram::compiler::completeDiagram($parsed, $path, $skeleton->toOne(), $acc));
+}
+
+function platform::extensions::pure::diagram::compiler::completeDiagram(
+   parsed: platform::extensions::pure::diagram::protocol::Diagram[1], path: String[1],
+   skeleton: platform::pure::metamodel::PackageableElement[1],
+   acc: CompilerListResult<platform::pure::metamodel::PackageableElement>[1]
+): CompilerListResult<platform::pure::metamodel::PackageableElement>[1]
+{
+   let ctx = $acc.context;
+   let diagram = ^$skeleton->cast(@platform::extensions::pure::diagram::metamodel::Diagram)(
+      width               = $parsed.width,
+      height              = $parsed.height,
+      typeViews           = $parsed.typeViews->map(v | compileTypeView($v, $ctx)),
+      propertyViews       = $parsed.propertyViews->map(v | compilePropertyView($v, $ctx)),
+      associationViews    = $parsed.associationViews->map(v | compileAssociationView($v, $ctx)),
+      generalizationViews = $parsed.generalizationViews->map(v | compileGeneralizationView($v, $ctx)));
+   let errors = inSourceOrder(unresolvedErrors($parsed, $path, $ctx)
+                                ->concatenate(edgeEndErrors($parsed, $path))
+                                ->concatenate(duplicateIdErrors($parsed, $path)))
+      ->map(err | $err.message + formatSourceInfo($err.at, $ctx));
+   let recorded = recordReferences($diagram, $path, $ctx);
+   let next = ^$recorded(
+      elementMap = $recorded.elementMap->put($path, $diagram),
+      errors     = $recorded.errors->concatenate($errors));
+   ^$acc(values += $diagram->cast(@platform::pure::metamodel::PackageableElement), context = $next);
 }
 
 // The extension a host registers. Named for the section it owns, so an error that names an
@@ -184,6 +302,6 @@ function platform::extensions::pure::diagram::compiler::diagramExtension(): Comp
                  acc: CompilerListResult<platform::pure::metamodel::PackageableElement>[1] |
                    platform::extensions::pure::diagram::compiler::pass2($e, $acc)},
       // How a compiled Diagram is written to a PDB — generated from metamodel.pure by `generate`
-      // (pure/extensions/diagram/Justfile) into code/pdb/generated/writer.pure.
+      // (pure/extensions/diagram/Justfile) into generated/writer.pure.
       pdb     = platform::extensions::pure::diagram::pdb::gen::serialization());
 }

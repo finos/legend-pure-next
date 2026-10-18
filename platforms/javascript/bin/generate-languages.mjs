@@ -259,6 +259,10 @@ for (const ext of extensions) {
     // Classes first, so a half never loads before the types it builds — order is not required for
     // correctness (these files only declare functions) but depending on that would be needless.
     const translate = [...new Map([...extra, ...halves].map((h) => [h.pkg, h])).values()];
+    // TEST packages (the fixture runners): translated like the rest, so the CLI's suites can run them,
+    // but kept out of jsPaths — every host loads those, the browser IDE included, and these call
+    // test-only functions its lean PDBs do not have. Only a host that runs tests loads testJsPaths.
+    const tests = (manifest.testPackages ?? []).map((pkg) => ({ half: null, pkg, file: fileFor(pkg) }));
 
     // The manifest is re-exported VERBATIM rather than field by field, so a new key in
     // language_<name>.json reaches the host with no change to this generator. Only what the host cannot
@@ -279,7 +283,8 @@ for (const ext of extensions) {
         `    ...${JSON.stringify(manifest)},`,
         `    dir: ${JSON.stringify(dir)},`,
         `    jsPaths: ${JSON.stringify(translate.map((t) => `extensions/${dir}/${t.file}`))},`,
-        `    translate: ${JSON.stringify(translate.map((t) => ({ package: t.pkg, out: `extensions/${dir}/${t.file}` })))},`,
+        `    testJsPaths: ${JSON.stringify(tests.map((t) => `extensions/${dir}/${t.file}`))},`,
+        `    translate: ${JSON.stringify([...translate, ...tests].map((t) => ({ package: t.pkg, out: `extensions/${dir}/${t.file}` })))},`,
         // The PDB schema fragment generated from the extension's metamodel, embedded rather than
         // loaded: it is needed wherever the extension is registered, a browser included, and this is
         // the one moment the file is at hand. `fbs` (from the manifest) stays its repo path.

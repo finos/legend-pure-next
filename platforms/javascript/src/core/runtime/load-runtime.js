@@ -60,7 +60,7 @@ const GEN_MODULES = [
     "pure/compiler/compiler-tests.js", "pure/runtime/translator/shared-tests.js",
     "pure/runtime/translator/javascript-tests.js", "pure/runtime/translator/translation-tests.js",
     // Every extension's translated Pure, from its descriptor — no extension is named here.
-    ...EXTENSION_DESCRIPTORS.flatMap((extension) => extension.jsPaths),
+    ...EXTENSION_DESCRIPTORS.flatMap((extension) => [...extension.jsPaths, ...(extension.testJsPaths ?? [])]),
 ];
 
 /**

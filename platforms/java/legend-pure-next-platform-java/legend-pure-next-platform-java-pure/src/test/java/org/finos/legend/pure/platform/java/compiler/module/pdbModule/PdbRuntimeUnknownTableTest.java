@@ -33,7 +33,7 @@ public class PdbRuntimeUnknownTableTest
     public void unknownTableFailsNamingIt() throws Exception
     {
         PdbRuntime runtime = PdbRuntime.open(org.finos.legend.pure.platform.java.grammar.Language.schemaText(
-                org.finos.legend.pure.platform.java.grammar.PureLanguage.all(), null), PdbTypes::create, repoRoot().resolve("pure/testdata/diagram-roundtrip/expected/roundtrip.pdb"));
+                org.finos.legend.pure.platform.java.grammar.PureLanguage.all(), null), PdbTypes::create, repoRoot().resolve("pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/propertyAndAssociation.pdb"));
         IllegalStateException e = Assertions.assertThrows(IllegalStateException.class, () -> runtime.element("m::D"));
         Assertions.assertTrue(e.getMessage().contains("no schema for DiagramDef"), e.getMessage());
     }
@@ -41,7 +41,7 @@ public class PdbRuntimeUnknownTableTest
     private static Path repoRoot()
     {
         Path p = Paths.get("").toAbsolutePath();
-        while (p != null && !Files.isDirectory(p.resolve("pure/testdata/diagram-roundtrip")))
+        while (p != null && !Files.isDirectory(p.resolve("pure/extensions/diagram/tests/compiler-pdb-serialization")))
         {
             p = p.getParent();
         }

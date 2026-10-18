@@ -1473,6 +1473,21 @@ function __matchType(v, typePath, lower, upper) {
           return __metadataSubtypeOf(cgtPath, typePath);
         }
         if (e.__purePath) return false;
+        // No classifier, but an instance of a TRANSLATED class (named by its mangled Pure path): it is
+        // what its class is. A GenericTypeValue from __newCgt carries no classifierGenericType of its
+        // own, and the permissive answer below made it match whichever class arm came first (a
+        // GenericTypeOperation, say). Only plain objects — the lean parser host's protocol values —
+        // stay permissive.
+        // Only when a runtime is installed and its registry knows the class: one compiled at run time
+        // (compileSource, the IDE) has no PDB entry to answer for its supertypes, and keeps the
+        // permissive answer it always had.
+        const ctor = Object.getPrototypeOf(e)?.constructor;
+        const host = globalThis.__pureHost;
+        if (typeof ctor === "function" && ctor !== Object && ctor.name.includes("$")
+            && host && typeof host.metadataPathToElement === "function" && typeof host.metadataSubtypeOf === "function") {
+          const classPath = ctor.name.split("$").join("::");
+          if (host.metadataPathToElement(classPath, "::") !== null) return host.metadataSubtypeOf(classPath, typePath);
+        }
         return true;
       }
     }

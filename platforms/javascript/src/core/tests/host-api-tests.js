@@ -261,12 +261,16 @@ check("the extension descriptors come from the extensions' own manifests", () =>
         "extensions/diagram/grammar/parser.js",
         "extensions/diagram/compiler/compiler.js",
     ]);
+    // The fixture runners are TEST code: translated (so the CLI's suites can run them) but not in jsPaths,
+    // which every host loads — the browser IDE included, with the lean PDBs those runners cannot use.
+    assert.deepEqual(diagram.testJsPaths, ["extensions/diagram/tests.js"]);
     assert.deepEqual(diagram.translate.map((t) => t.package), [
         "platform::extensions::pure::diagram::metamodel",
         "platform::extensions::pure::diagram::protocol",
         "platform::extensions::pure::diagram::pdb::gen",
         "platform::extensions::pure::diagram::parser",
         "platform::extensions::pure::diagram::compiler",
+        "platform::extensions::pure::diagram::tests",
     ]);
     // `pure` is the manifest's own block, re-exported verbatim — the generator copies no field, so a
     // key added to language_<name>.json arrives here untouched.
@@ -440,35 +444,38 @@ check("a ###Diagram section compiles to a Diagram element with its types resolve
     host.module("runtime").removeSource("diagram.pure");
 });
 
-// The diagram round trip's committed golden: a module whose PDB holds ###Diagram elements, written by
-// `pure-truffle compile` with the extension's GENERATED writer (just truffle::regen-diagram-golden).
-const ROUNDTRIP_PDB = join(REPO, "pure/testdata/diagram-roundtrip/expected/roundtrip.pdb");
+// A golden beside the diagram's compiler fixtures (pure/extensions/diagram/tests/compiler-pdb-serialization,
+// regenerated with `just extensions::diagram::regen-pdb-goldens`): every view kind, with an association-
+// owned property pointer, read back with THIS host's decoder.
+const DIAGRAM_GOLDEN = join(REPO, "pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/propertyAndAssociation.pdb");
 
 check("a PDB holding ###Diagram elements reads back once the diagram language is registered", () => {
     // The host registered the diagram extension, and with it the schema fragment generated from its
-    // metamodel — so DiagramDef, TypeViewDef and PointDef decode like any m3 table.
-    host.register(PdbModule.open(ROUNDTRIP_PDB));
+    // metamodel — so DiagramDef, TypeViewDef, PropertyViewDef, … decode like any m3 table.
+    host.register(PdbModule.open(DIAGRAM_GOLDEN));
     try {
         const d = host.getElement("m::D");
-        assert.equal(Number(one(d.width)), 800);
-        const view = asArray(d.typeViews)[0];
-        assert.equal(one(view.id), "tv_person");
-        assert.equal(Number(one(one(view.position).y)), 60);
-        // The PointerRef resolves to the class itself.
-        assert.equal(one(one(view.type).name), "Person");
-        // m::E has neither size nor views: absent optional fields read back EMPTY, not 0.0.
-        const e = host.getElement("m::E");
-        assert.equal(asArray(e.width).length, 0);
-        assert.equal(asArray(e.typeViews).length, 0);
+        // No dimension clause: an absent optional reads back EMPTY, not 0.0.
+        assert.equal(asArray(d.width).length, 0);
+        const [a, b] = asArray(d.typeViews);
+        assert.equal(one(a.id), "tv_a");
+        assert.equal(one(one(a.type).name), "Person", "a type PointerRef resolves to the class itself");
+        assert.equal(Number(one(one(b.position).x)), 100);
+        const pv = asArray(d.propertyViews)[0];
+        assert.equal(one(one(pv.property).name), "firm");
+        assert.equal(one(one(one(pv.property).owner).name), "Employment", "the property pointer resolves to the association's property");
+        const av = asArray(d.associationViews)[0];
+        assert.equal(one(one(av.association).name), "Employment");
+        assert.equal(Number(one(asArray(av.points)[0].x)), 50);
     } finally {
-        host.unregister("roundtrip");
+        host.unregister("test");
     }
 });
 
 check("a PDB holding ###Diagram elements fails loudly without the diagram language", () => {
     const registry = new ModuleRegistry().useLanguages(CORE);
     registry.register(PdbModule.open(join(SHARED, "core.pdb")));
-    registry.register(PdbModule.open(ROUNDTRIP_PDB));
+    registry.register(PdbModule.open(DIAGRAM_GOLDEN));
     // Read through THIS registry (element proxies read through the process-wide host, which has the
     // diagram language registered).
     assert.throws(() => metadataHost(registry).metadataRead("m::D", "width"), /no schema for DiagramDef/);
@@ -618,6 +625,24 @@ check("the registry API: register/registerAll/validate return the registry, unre
     assert.equal(registry.unregister("b"), b);
     assert.equal(registry.unregister("b"), null);
     assert.equal(registry.register(b), registry);
+});
+
+check("a translated instance without a classifier is matched by its own class, not by the first arm", () => {
+    // __newCgt builds a GenericTypeValue with no classifierGenericType of its own (the translator emits
+    // one for every ^X(...) of a class without a canonical anchor — a Diagram's, say). A match must not
+    // take it for a GenericTypeOperation just because nothing says otherwise.
+    const gtv = globalThis.__newCgt({ type: globalThis.__pureResolve("platform::pure::metamodel::type::Any") });
+    assert.equal(globalThis.__matchType(gtv, "platform::pure::metamodel::type::generics::GenericTypeOperation", 1, 1), false);
+    assert.equal(globalThis.__matchType(gtv, "platform::pure::metamodel::type::generics::GenericTypeValue", 1, 1), true);
+    assert.equal(globalThis.__matchType(gtv, "platform::pure::metamodel::type::generics::GenericType", 1, 1), true);
+});
+
+check("a classifier-less instance of a class the registry does not know stays permissively matched", () => {
+    // A class compiled at run time (compileSource, the IDE) has a translated class but no PDB entry, so
+    // the registry cannot answer for its supertypes — it must keep matching as it did, not fail every arm.
+    // The class's NAME is what the match reads, so it is set to a mangled path the registry has never seen.
+    const Unregistered = { ["platform$probe$Unregistered"]: class {} }["platform$probe$Unregistered"];
+    assert.equal(globalThis.__matchType(new Unregistered(), "platform::pure::metamodel::type::generics::GenericType", 1, 1), true);
 });
 
 // --- summary (later tasks insert their checks above this line) ---------------

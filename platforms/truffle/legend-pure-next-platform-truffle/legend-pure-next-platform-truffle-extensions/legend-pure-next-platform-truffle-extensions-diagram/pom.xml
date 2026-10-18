@@ -93,7 +93,7 @@
                                 <!-- The PDB schema fragment generated from the metamodel (the manifest's
                                      `fbs`), beside the manifest: the PDB reader decodes diagrams with it. -->
                                 <resource>
-                                    <directory>${extension.dir}/build</directory>
+                                    <directory>${extension.dir}/generated</directory>
                                     <includes>
                                         <include>diagram.fbs</include>
                                     </includes>

@@ -1,0 +1,149 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The diagram is tested the way the specification is: parser fixtures (tests/grammar/<case>/grammar.pure
+// beside the expected protocol.json) and compiler fixtures (tests/compiler/<area>/<case>.pure with
+// ###CompiledGraph + ###ReverseIndex, or ###Error + ###CompilerStats), run by the specification's own
+// runners. What the diagram adds is its compiler passes and how a compiled Diagram prints.
+
+import platform::pure::compiler::*;
+import platform::pure::compiler::helper::packageableElement::*;
+import platform::pure::compiler::test::printer::*;
+import platform::pure::metamodel::*;
+import platform::extensions::pure::diagram::compiler::*;
+import platform::extensions::pure::diagram::metamodel::*;
+
+// Every tests/grammar/<case>/grammar.pure parses to its protocol.json (the `parse` native dispatches
+// `###Diagram` on a runtime that has the diagram language).
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::runGrammarTests(testDir: String[1], reportPath: String[1]): String[1]
+{
+   platform::pure::test::grammar::runGrammarCorpus($testDir, $reportPath);
+}
+
+// Every tests/compiler/**/*.pure compiles to its ###CompiledGraph / ###Error, with the diagram's passes.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::runCompilerTests(testDir: String[1], reportPath: String[1]): String[1]
+{
+   platform::pure::compiler::test::runCompiledGraphTests($testDir, $reportPath, diagramExtension(),
+      {e: PackageableElement[1], c: CompilerContext[1] | platform::extensions::pure::diagram::tests::printDiagram($e, $c)});
+}
+
+// Every tests/compiler-pdb-serialization/<area>/<case>.pdb is what tests/compiler/<area>/<case>.pure writes,
+// table by table — the specification's golden runner, with the diagram's passes (which write its elements)
+// and its schema (m3's, then the diagram fragment).
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::runPdbGoldenTests(testDir: String[1], goldenDir: String[1], m3Fbs: String[1], diagramFbs: String[1], reportPath: String[1]): String[1]
+{
+   platform::pure::compiler::test::pdb::runPdbGoldenTests($testDir, $goldenDir, [$m3Fbs, $diagramFbs], $reportPath, diagramExtension());
+}
+
+// The archive a compiler fixture writes, as hex — how a golden is (re)generated (`xxd -r -p`), then
+// inspected before it is kept. `name` is the fixture's path under testDir without `.pure`, as the runner
+// names it: it is the archive's sourceId.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::goldenHexOf(testDir: String[1], name: String[1]): String[1]
+{
+   platform::pure::compiler::test::pdb::writeFixture(readFile($testDir + '/' + $name + '.pure'), $name, diagramExtension())->platform::pure::functions::binary::binaryToHex();
+}
+
+// A host READS a golden back with its own decoder: the diagram at `diagramPath`, decoded from the loaded
+// archive, prints exactly as the fixture's ###CompiledGraph shows it. The golden runner compares archives
+// with the Pure reader; this is what checks each host's own (Truffle, the Java platform, JavaScript).
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::readBack(fixtureFile: String[1], diagramPath: String[1]): String[1]
+{
+   let graph = readFile($fixtureFile)->split('###CompiledGraph')->at(1)->split('###')->at(0);
+   let expected = $graph->split('\n\n')->filter(b | $b->trim()->startsWith('diagram ' + $diagramPath + ' ') || $b->trim()->startsWith('diagram ' + $diagramPath + '\n'))
+                        ->map(b | $b->split('\n')->map(l | $l->trim())->filter(l | $l != '')->joinStrings('\n'))->toOne();
+   let actual = platform::extensions::pure::diagram::tests::printDiagramElement(
+                   platform::pure::functions::meta::pathToElement($diagramPath)->cast(@Diagram))
+                ->split('\n')->map(l | $l->trim())->filter(l | $l != '')->joinStrings('\n');
+   assertEquals($expected, $actual);
+   'READ BACK ' + $diagramPath + ': identical to its ###CompiledGraph';
+}
+
+// What a grammar fixture's protocol.json holds — how a baseline is (re)generated, then read before it is kept.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::protocolJsonOf(file: String[1]): String[1]
+{
+   platform::pure::test::grammar::protocolJson(platform::pure::functions::meta::parse('testFile', readFile($file)), true);
+}
+
+// A compiled Diagram in the ###CompiledGraph style; empty for anything else.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::printDiagram(e: PackageableElement[1], c: CompilerContext[1]): String[0..1]
+{
+   if($e->instanceOf(Diagram),
+      | platform::extensions::pure::diagram::tests::printDiagramElement($e->cast(@Diagram)),
+      | []);
+}
+
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::printDiagramElement(d: Diagram[1]): String[1]
+{
+   [
+      'diagram ', $d->fullPath(),
+      platform::extensions::pure::diagram::tests::printDimension($d),
+      $d->classifierGT(),
+      $d.sourceInformation->printSourceInfo(),
+      '\n',
+      $d.typeViews->map(v | '  ' + platform::extensions::pure::diagram::tests::printTypeView($v) + '\n')->joinStrings(''),
+      $d.propertyViews->map(v | '  PropertyView ' + platform::extensions::pure::diagram::tests::printEdge($v)
+                                + ' property=' + platform::extensions::pure::diagram::tests::printProperty($v) + '\n')->joinStrings(''),
+      $d.associationViews->map(v | '  AssociationView ' + platform::extensions::pure::diagram::tests::printEdge($v)
+                                   + ' association=' + platform::extensions::pure::diagram::tests::printAssociation($v) + '\n')->joinStrings(''),
+      $d.generalizationViews->map(v | '  GeneralizationView ' + platform::extensions::pure::diagram::tests::printEdge($v) + '\n')->joinStrings('')
+   ]->joinStrings('');
+}
+
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::printDimension(d: Diagram[1]): String[1]
+{
+   if($d.width->isEmpty() && $d.height->isEmpty(),
+      | '',
+      | ' (width=' + $d.width->map(w | $w->toString())->orElse('-') + ', height=' + $d.height->map(h | $h->toString())->orElse('-') + ')');
+}
+
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::printTypeView(v: TypeView[1]): String[1]
+{
+   [
+      'TypeView ', $v.id,
+      ' type=', $v.type->map(t | $t->cast(@PackageableElement)->fullPath())->orElse('<unresolved>'),
+      ' position=', platform::extensions::pure::diagram::tests::printPoint($v.position),
+      ' size=(', $v.width->toString(), ',', $v.height->toString(), ')',
+      $v.color->map(col | ' color=' + $col)->orElse(''),
+      ' stereotypes=', $v.stereotypesVisible->toString(),
+      ' attributes=', $v.attributesVisible->toString()
+   ]->joinStrings('');
+}
+
+// An edge's own part: id, ends, points and the optional styling, in the order the source writes them.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::printEdge(v: RelationshipView[1]): String[1]
+{
+   [
+      $v.id, ' ', $v.source, '->', $v.target,
+      ' points=[', $v.points->map(p | platform::extensions::pure::diagram::tests::printPoint($p))->joinStrings(','), ']',
+      $v.color->map(col | ' color=' + $col)->orElse(''),
+      $v.lineWidth->map(w | ' lineWidth=' + $w->toString())->orElse(''),
+      $v.label->map(l | ' label=' + $l)->orElse('')
+   ]->joinStrings('');
+}
+
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::printPoint(p: Point[1]): String[1]
+{
+   '(' + $p.x->toString() + ',' + $p.y->toString() + ')';
+}
+
+// The resolved property as `Owner.name` — its owner a class or the association that contributes it.
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::printProperty(v: PropertyView[1]): String[1]
+{
+   $v.property->map(p | $p.owner->toOne()->cast(@PackageableElement)->fullPath() + '.' + $p.name->toOne())->orElse('<unresolved>');
+}
+
+function <<platform::pure::profiles::test.TestDependency>> platform::extensions::pure::diagram::tests::printAssociation(v: AssociationView[1]): String[1]
+{
+   $v.association->map(a | $a->fullPath())->orElse('<unresolved>');
+}

@@ -96,10 +96,40 @@ public final class Metadata
         {
             return canonical;
         }
+        // No canonical anchor (a language extension's class — a Diagram — has none): the CONCRETE generic
+        // type the compiler gives `^X(...)`, a UserDefinedGenericType, as Truffle builds it. A bare
+        // GenericTypeValue is abstract in the PDB's union and the writer has no arm for it.
         Object element = installed.element(path);
         return element == null
                 ? null
-                : new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTypeValueImpl()._type(element);
+                : userDefinedGenericType(installed)._type(element);
+    }
+
+    /**
+     * A UserDefinedGenericType that carries its own classifier — the canonical GenericType element for
+     * UserDefinedGenericType itself, which the PDB writer requires ([1]), as Truffle's compiled ones do.
+     */
+    private static org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl userDefinedGenericType(PdbRuntime installed)
+    {
+        org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl gt =
+                new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
+        Object own = installed.element(CANONICAL_GENERIC_TYPES + "GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType");
+        if (own != null)
+        {
+            // The platform's own canonical element, so nothing to check — and checking would recurse: the
+            // check reads the anchor, reading builds objects, and each asks for a classifier like this one.
+            boolean outer = PdbRuntime.DECODING.get();
+            PdbRuntime.DECODING.set(Boolean.TRUE);
+            try
+            {
+                gt._classifierGenericType(own);
+            }
+            finally
+            {
+                PdbRuntime.DECODING.set(outer);
+            }
+        }
+        return gt;
     }
 
     /**
@@ -122,9 +152,9 @@ public final class Metadata
         for (Object typeArgument : typeArguments)
         {
             Object argument = installed.element((String) typeArgument);
-            arguments.add(new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTypeValueImpl()._type(argument));
+            arguments.add(userDefinedGenericType(installed)._type(argument));
         }
-        return new org.finos.legend.pure.m3.platform.pure.metamodel.type.generics.GenericTypeValueImpl()
+        return userDefinedGenericType(installed)
                 ._type(element)
                 ._typeArguments(arguments);
     }

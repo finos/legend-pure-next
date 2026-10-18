@@ -156,13 +156,38 @@ function platform::pure::protocol::generation::protocolTypeOf(
       // wrapper was found. The branch has to be lazy.
       | let found = existingPointerWrapper($raw2, $metamodelPackage, $protocolPackage);
         if($found->isEmpty(),
-           | fail('no pointer wrapper exists for ' + $raw2->elementToPath()
-                  + ' (referenced by ' + $p.name->toOne() + '); declare the slot as a taxonomy that has '
-                  + 'one, e.g. platform::pure::metamodel::type::Type')->cast(@String),
+           | localPointerWrapper($raw2, $protocolPackage),
            | $found->toOne());,
       | if(hasProtocolStereotype($p.stereotypes, 'maybePointer'),
            | $mapped + '_Protocol',
            | $mapped));
+}
+
+// The wrapper a pointer slot gets when the language declares none for its type (an Association, a
+// Property): emitted in the extension's own protocol package, holding the path like every T_Pointer.
+function platform::pure::protocol::generation::localPointerWrapper(
+   type: platform::pure::metamodel::type::Type[1], protocolPackage: String[1]): String[1]
+{
+   $protocolPackage + '::' + $type->elementToPath()->split('::')->last()->toOne() + '_Pointer';
+}
+
+// Every local wrapper the mirrored classes' pointer slots need, once each, in name order.
+function platform::pure::protocol::generation::localPointerWrappers(
+   classes: platform::pure::metamodel::type::Class<platform::pure::metamodel::type::Any>[*],
+   metamodelPackage: String[1], protocolPackage: String[1]): String[*]
+{
+   $classes->map(c | protocolProperties($c))
+      ->filter(p | hasProtocolStereotype($p.stereotypes, 'pointer'))
+      ->map(p | $p.genericType->platform::pure::metamodel::type::rawType()->toOne())
+      ->filter(t | existingPointerWrapper($t, $metamodelPackage, $protocolPackage)->isEmpty())
+      ->map(t | localPointerWrapper($t, $protocolPackage))
+      ->removeDuplicates()
+      ->sort();
+}
+
+function platform::pure::protocol::generation::emitPointerWrapper(path: String[1]): String[1]
+{
+   'Class ' + $path + '\n{\n   p_sourceInformation : platform::pure::protocol::grammar::SourceInformation[0..1];\n   value : String[1];\n}';
 }
 
 // `  name: Type[mul];`
@@ -217,7 +242,10 @@ function platform::pure::protocol::generation::emitClass(
    let path = protocolPathOf($cls->elementToPath(), $metamodelPackage, $protocolPackage);
    let parents = protocolParentsOf($cls, $metamodelPackage, $protocolPackage);
    let extends = if($parents->isEmpty(), | '', | ' extends ' + $parents->joinStrings(', '));
-   let props = protocolProperties($cls)->map(p | emitProperty($p, $metamodelPackage, $protocolPackage));
+   // Every protocol object is parsed syntax, so each records where it was written — on the root of
+   // each hierarchy (subclasses inherit it; one that extends a pointer source already has it).
+   let sourceSlot = if($parents->isEmpty(), | '   p_sourceInformation : platform::pure::protocol::grammar::SourceInformation[0..1];', | []);
+   let props = $sourceSlot->concatenate(protocolProperties($cls)->map(p | emitProperty($p, $metamodelPackage, $protocolPackage)));
    'Class ' + $path + $extends + '\n{\n' + $props->joinStrings('\n') + if($props->isEmpty(), | '', | '\n') + '}';
 }
 
@@ -235,10 +263,11 @@ function platform::pure::protocol::generation::generateProtocol(
               + '// resolved. Derived from the metamodel\'s <<ProtocolInfo>> annotations, the same rules\n'
               + '// bootstrap\'s M3ProtocolGenerator applies to m3.ttl — see\n'
               + '// pure/specification/PROTOCOL_INFO_ANNOTATIONS.md.\n';
-   // No wrappers are emitted: the language's protocol already declares one per pointer-encodable
-   // taxonomy, and `protocolTypeOf` fails loudly rather than invent one.
+   // A pointer slot uses the wrapper the language's protocol declares for its taxonomy (Type_Pointer,
+   // …); one whose type has none (an Association, a Property) gets a wrapper of its own, emitted here.
    let mirrored = $classes->map(c | emitClass($c, $metamodelPackage, $protocolPackage));
-   $header + '\n' + $mirrored->joinStrings('\n\n') + '\n';
+   let wrappers = localPointerWrappers($classes, $metamodelPackage, $protocolPackage)->map(w | emitPointerWrapper($w));
+   $header + '\n' + $mirrored->concatenate($wrappers)->joinStrings('\n\n') + '\n';
 }
 
 // Diagnostic: whether a path resolves in the loaded graph. Used to check that the language's protocol

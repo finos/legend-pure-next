@@ -34,7 +34,7 @@ public class PdbLoaderUnknownKindTest
     @Test
     public void diagramEntriesAreSkipped() throws Exception
     {
-        PdbLoader loader = new PdbLoader(repoRoot().resolve("pure/testdata/diagram-roundtrip/expected/roundtrip.pdb"));
+        PdbLoader loader = new PdbLoader(repoRoot().resolve("pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/propertyAndAssociation.pdb"));
         // As the compiler sets it up: m3's own element kinds, and nothing for ###Diagram.
         loader.setExtensions(List.of(new PureLanguageExtension()));
         Map<String, ?> loaded = loader.loadAll();
@@ -45,7 +45,7 @@ public class PdbLoaderUnknownKindTest
     private static Path repoRoot()
     {
         Path p = Paths.get("").toAbsolutePath();
-        while (p != null && !Files.isDirectory(p.resolve("pure/testdata/diagram-roundtrip")))
+        while (p != null && !Files.isDirectory(p.resolve("pure/extensions/diagram/tests/compiler-pdb-serialization")))
         {
             p = p.getParent();
         }

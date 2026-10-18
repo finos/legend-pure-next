@@ -1,0 +1,27 @@
+{
+  "_type": "PureFile",
+  "sections": [
+    {
+      "_type": "Section",
+      "elements": [
+        {
+          "_type": "Diagram",
+          "name": "B",
+          "p_sourceInformation": {
+            "_type": "SourceInformation",
+            "endColumn": 1,
+            "endLine": 17,
+            "startColumn": 1,
+            "startLine": 15
+          },
+          "package": {
+            "_type": "Package_Pointer",
+            "value": "a"
+          }
+        }
+      ],
+      "parserName": "Diagram"
+    }
+  ],
+  "sourceId": "testFile"
+}

@@ -320,6 +320,7 @@ generate-diagram: _depCheck_emit_rt
         --pdb {{translation_java_out}}/java-translation.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --pdb {{diagram_out}}/diagram.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
         --pdb {{diagram_out}}/diagram-tests.pdb \
         --function "platform::extensions::language::java::translation::translateTestPackagesToJava_String_1__String_1_" \
         --args "platform::extensions::pure::diagram" \
@@ -442,20 +443,29 @@ pct PACKAGE="platform::pure::functions": compile
         --args "{{PACKAGE}}" "{{repo_root}}/test-results/spec/pct/java@platform.json" \
         || echo "  PCT failures do not fail the build: they are in the report"
 
-# A PDB holding ###Diagram elements, read back on the Java platform: the committed golden (written by
-# Truffle's compile with the diagram extension's generated writer), then m::describe prints what a
-# reader sees of m::D and m::E. The same line is checked on Truffle; JavaScript pins it in host-api-tests.
+# The diagram's PDB form on the Java platform: the goldens beside the compiler fixtures (see
+# truffle::spec-diagram-pdb), then the Java platform's OWN decoder reads propertyAndAssociation's golden
+# back and prints the diagram exactly as that fixture's ###CompiledGraph shows it.
 spec-diagram-pdb:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    {{header}} 'spec-diagram-pdb'
-    out=$(java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+    @{{header}} 'spec-diagram-pdb'
+    mkdir -p {{repo_root}}/test-results/spec/diagram/pdb
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
         --root {{repo_root}} \
-        --pdb {{repo_root}}/pure/testdata/diagram-roundtrip/expected/roundtrip.pdb \
-        --function "m::describe__Boolean_1_" 2>&1) || { echo "$out" >&2; exit 1; }
-    grep -qx 'DESCRIBE 800.0 tv_person m::Person 40.0,60.0 E:0:0' <<< "$out" \
-        || { echo "FAIL: unexpected describe output:" >&2; echo "$out" >&2; exit 1; }
-    echo "OK: the Java platform reads m::D and m::E back from roundtrip.pdb"
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{diagram_out}}/diagram-tests.pdb \
+        --function "platform::extensions::pure::diagram::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler" "{{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{repo_root}}/pure/extensions/diagram/generated/diagram.fbs" "{{repo_root}}/test-results/spec/diagram/pdb/java@platform.json"
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{diagram_out}}/diagram-tests.pdb \
+        --pdb {{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization/diagram/propertyAndAssociation.pdb \
+        --function "platform::extensions::pure::diagram::tests::readBack_String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler/diagram/propertyAndAssociation.pure" "m::D"
 
 # The grammar corpus ON this platform: parse each fixture under
 # pure/specification/grammar/tests and compare with its expected protocol.
@@ -511,16 +521,27 @@ usage-example: compile
 # PDBs below, the same set spec-grammar passes.
 spec-diagram: compile
     @{{header}} 'spec-diagram'
-    @{{substep}} 'runTests over platform::extensions::pure::diagram (Java platform)'
     test -f {{diagram_out}}/diagram-tests.pdb || (echo "ERROR: missing {{diagram_out}}/diagram-tests.pdb (run \`just extensions::diagram::build-tests\` first)" && exit 1)
-    mkdir -p {{repo_root}}/test-results/pure/extensions-diagram
+    mkdir -p {{repo_root}}/test-results/spec/diagram/grammar {{repo_root}}/test-results/spec/diagram/compiler
+    @{{substep}} 'grammar fixtures: pure/extensions/diagram/tests/grammar (Java platform)'
     java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
         --root {{repo_root}} \
         --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
         --pdb {{translation_java_out}}/java-translation-tests.pdb \
         --pdb {{diagram_out}}/diagram-tests.pdb \
-        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::extensions::pure::diagram" "{{repo_root}}/test-results/pure/extensions-diagram/java@platform.json" \
+        --function "platform::extensions::pure::diagram::tests::runGrammarTests_String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/diagram/tests/grammar" "{{repo_root}}/test-results/spec/diagram/grammar/java@platform.json" \
+        || echo "  failures do not fail the build: they are in the report"
+    @{{substep}} 'compiler fixtures: pure/extensions/diagram/tests/compiler (Java platform)'
+    java -Xmx{{jvm_heap}} -Xss64m -cp "{{run_classpath}}" {{main_class}} \
+        --root {{repo_root}} \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{translation_java_out}}/java-translation-tests.pdb \
+        --pdb {{diagram_out}}/diagram-tests.pdb \
+        --function "platform::extensions::pure::diagram::tests::runCompilerTests_String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler" "{{repo_root}}/test-results/spec/diagram/compiler/java@platform.json" \
         || echo "  failures do not fail the build: they are in the report"
 
 # The function corpus ON this platform: every `<<test.Test>>` under

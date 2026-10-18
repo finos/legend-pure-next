@@ -188,11 +188,10 @@ generate-extensions-code: generate-extensions
             for (const t of e.translate ?? []) console.log(`${t.package}\t${t.out}`);
         }
     ' | while IFS=$'\t' read -r pkg out; do
-        # WHOLE, not split. An extension's tests sit inside the packages it declares
-        # (platform::extensions::pure::diagram::parser::tests is part of platform::extensions::pure::diagram::parser), and its whole
-        # generated output is ~80 KB — so there is nothing to save by cutting it in two, and a host
-        # that registers an extension loads all of it anyway. The library/test split exists for
-        # functions.js, where the test corpus was 1.2 MB.
+        # WHOLE, not split: each declared package is one file. An extension's TEST code is its own
+        # packages (`testPackages` in its manifest — the diagram's fixture runners), translated here but
+        # listed apart (testJsPaths), so only a host that runs tests loads it. The library/test split
+        # inside one package exists for functions.js, where the test corpus was 1.2 MB.
         just --justfile "{{js_root}}/Justfile" _emit "$pkg" "$out" "{{translate_all_fn}}"
     done
 
@@ -437,18 +436,40 @@ test-all: test test-compiler test-execution spec-grammar spec-compiler spec-pct 
 # that platform has not adapted the extension; see pure/extensions/diagram/Justfile.
 test-extensions: generate-all
     @{{header}} 'test-extensions'
-    @{{substep}} 'runTests platform::extensions::pure::diagram (JavaScript host)'
     test -f {{extension_diagram_out}}/diagram.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram.pdb (run \`just extensions::build\` first)" && exit 1)
     test -f {{extension_diagram_out}}/diagram-tests.pdb || (echo "ERROR: missing {{extension_diagram_out}}/diagram-tests.pdb (run \`just extensions::build-tests\` first — the lean pdb drops <<test.Test>> elements whether or not the build splits)" && exit 1)
-    mkdir -p {{test_results}}/pure/extensions-diagram
+    mkdir -p {{test_results}}/spec/diagram/grammar {{test_results}}/spec/diagram/compiler
+    @{{substep}} 'grammar fixtures: pure/extensions/diagram/tests/grammar (JavaScript host)'
     {{js_root}}/bin/pure-js execute \
         --pdb {{shared}}/core.pdb \
         --pdb {{shared}}/core-tests.pdb \
         --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
         --pdb {{extension_diagram_out}}/diagram.pdb \
         --pdb {{extension_diagram_out}}/diagram-tests.pdb \
-        --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
-        --args "platform::extensions::pure::diagram" "{{test_results}}/pure/extensions-diagram/pure@cli-javascript.json"
+        --function "platform::extensions::pure::diagram::tests::runGrammarTests_String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/diagram/tests/grammar" "{{test_results}}/spec/diagram/grammar/pure@cli-javascript.json"
+    @{{substep}} 'compiler fixtures: pure/extensions/diagram/tests/compiler (JavaScript host)'
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{extension_diagram_out}}/diagram.pdb \
+        --pdb {{extension_diagram_out}}/diagram-tests.pdb \
+        --function "platform::extensions::pure::diagram::tests::runCompilerTests_String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler" "{{test_results}}/spec/diagram/compiler/pure@cli-javascript.json"
+    @{{substep}} 'PDB goldens: pure/extensions/diagram/tests/compiler-pdb-serialization (JavaScript host; its own decoder reads one back in host-api)'
+    mkdir -p {{test_results}}/spec/diagram/pdb
+    {{js_root}}/bin/pure-js execute \
+        --pdb {{shared}}/core.pdb \
+        --pdb {{shared}}/core-tests.pdb \
+        --pdb {{shared}}/compiler.pdb \
+        --pdb {{shared}}/compiler-tests.pdb \
+        --pdb {{extension_diagram_out}}/diagram.pdb \
+        --pdb {{extension_diagram_out}}/diagram-tests.pdb \
+        --function "platform::extensions::pure::diagram::tests::runPdbGoldenTests_String_1__String_1__String_1__String_1__String_1__String_1_" \
+        --args "{{repo_root}}/pure/extensions/diagram/tests/compiler" "{{repo_root}}/pure/extensions/diagram/tests/compiler-pdb-serialization" "{{shared}}/specification/m3.fbs" "{{repo_root}}/pure/extensions/diagram/generated/diagram.fbs" "{{test_results}}/spec/diagram/pdb/pure@cli-javascript.json"
 
 # Generate the lexers/parsers this host parses with: the Pure language's own (Top + M3) and one
 # directory per extension. ANTLR's JavaScript target via the complete jar bundled with antlr4ng-cli

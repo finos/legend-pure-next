@@ -99,7 +99,7 @@ public final class PureNativeLib
             // The "outputDir" C param holds the directory where <name>.pdb will
             // be written (filename derived from module manifest).
             org.finos.legend.pure.truffle.runtime.compilation.TruffleCompilerBinaryBuilder.compile(
-                    basePdbs, Path.of(src), Path.of(out),
+                    basePdbs, List.of(Path.of(src)), Path.of(out),
                     org.finos.legend.pure.truffle.compiler.module.TestElementFilter.Mode.NONE,
                     org.eclipse.collections.api.factory.Lists.immutable.empty(),   // ###Pure only (always there)
                     b -> {});

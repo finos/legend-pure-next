@@ -43,9 +43,30 @@ public class TruffleCompilerBinaryBuilderLanguagesTest
         Path shared = sharedDir();
         TruffleCompilerBinaryBuilder.compile(
                 List.of(shared.resolve("core.pdb"), shared.resolve("parser-mappings.pdb"), shared.resolve("compiler.pdb")),
-                source, out, TestElementFilter.Mode.NONE, PureLanguage.all(), b -> { });
+                List.of(source), out, TestElementFilter.Mode.NONE, PureLanguage.all(), b -> { });
 
         Assertions.assertTrue(Files.exists(out.resolve("tiny.pdb")), "tiny.pdb written");
+    }
+
+    @Test
+    public void aModuleCompilesFromSeveralSourceDirectories(@TempDir Path dir) throws IOException
+    {
+        // code/ and generated/ are the module; tests/ beside them holds fixtures that are not Pure to load.
+        Files.writeString(dir.resolve("module.json"),
+                "{ \"name\": \"two\", \"packagePattern\": \"(t)(::.*)?\", \"dependencies\": [\"core\"] }");
+        Path code = Files.createDirectories(dir.resolve("code"));
+        Path generated = Files.createDirectories(dir.resolve("generated"));
+        Files.writeString(code.resolve("a.pure"), "Class t::A { b: t::B[1]; }\n");
+        Files.writeString(generated.resolve("b.pure"), "Class t::B { }\n");
+        Files.writeString(Files.createDirectories(dir.resolve("tests")).resolve("fixture.pure"), "not Pure at all\n");
+        Path out = Files.createDirectories(dir.resolve("out"));
+
+        Path shared = sharedDir();
+        TruffleCompilerBinaryBuilder.compile(
+                List.of(shared.resolve("core.pdb"), shared.resolve("parser-mappings.pdb"), shared.resolve("compiler.pdb")),
+                List.of(code, generated), out, TestElementFilter.Mode.NONE, PureLanguage.all(), b -> { });
+
+        Assertions.assertTrue(Files.exists(out.resolve("two.pdb")), "two.pdb written from code/ + generated/, tests/ ignored");
     }
 
     private static Path sharedDir()

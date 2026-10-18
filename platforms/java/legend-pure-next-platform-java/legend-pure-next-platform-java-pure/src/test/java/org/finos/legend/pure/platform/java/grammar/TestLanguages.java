@@ -49,7 +49,7 @@ class TestLanguages
     private static java.nio.file.Path repoRoot()
     {
         java.nio.file.Path p = java.nio.file.Path.of("").toAbsolutePath();
-        while (p != null && !java.nio.file.Files.isDirectory(p.resolve("pure/testdata/diagram-roundtrip")))
+        while (p != null && !java.nio.file.Files.isDirectory(p.resolve("pure/extensions/diagram/tests/compiler-pdb-serialization")))
         {
             p = p.getParent();
         }

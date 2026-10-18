@@ -34,6 +34,13 @@ import platform::pure::compiler::test::printer::*;
 // each section parses into a typed grammar element.
 function <<test.TestDependency>> platform::pure::compiler::test::assertCompiledGraph(content:String[1], sourceId:String[1]):Boolean[1]
 {
+    platform::pure::compiler::test::assertCompiledGraph($content, $sourceId, [], []);
+}
+
+// With a language extension's compiler passes and graph printers: a fixture holding its section (a
+// `###Diagram`, say) compiles and prints like any other. No extensions is exactly the call above.
+function <<test.TestDependency>> platform::pure::compiler::test::assertCompiledGraph(content:String[1], sourceId:String[1], extensions:platform::pure::compiler::extension::CompilerExtension[*], printers:Function<{platform::pure::metamodel::PackageableElement[1], platform::pure::compiler::CompilerContext[1]->String[0..1]}>[*]):Boolean[1]
+{
     if(!contains($content, '###' + 'Pure'),
         | assert(false, 'Test file has no ###Pure section: ' + $sourceId);,
         | // Every test must declare its expected outcome: either ###Error
@@ -65,7 +72,10 @@ function <<test.TestDependency>> platform::pure::compiler::test::assertCompiledG
                 // silent=true — tests pull errors/stats structurally off the
                 // result; the CLI progress bar + stats summary would flood the
                 // 247-test run with noise.
-                let result = platform::pure::compiler::compile(manageFileSections($parsedFile), false, true);
+                let files = manageFileSections($parsedFile);
+                let result = if($extensions->isEmpty(),
+                    | platform::pure::compiler::compile($files, false, true),
+                    | platform::pure::compiler::compile($files, $extensions, false, true));
 
                 // Mandatory-section rules (every test must pin BOTH its AST and
                 // its reference telemetry): a success test (###CompiledGraph) must
@@ -80,7 +90,7 @@ function <<test.TestDependency>> platform::pure::compiler::test::assertCompiledG
                                     | assertCompilationErrorOnResult($content, $result, $sourceId);,
                                     | true);
                 let graphCheck = if($hasGraph,
-                                    | assertCompiledGraphOnResult($parsedFile, $result, $sourceId);,
+                                    | assertCompiledGraphOnResult($parsedFile, $result, $sourceId, $printers);,
                                     | true);
                 let reverseCheck = if($hasReverse,
                                     | assertReverseIndexOnResult($parsedFile, $result, $sourceId);,
@@ -124,6 +134,11 @@ function <<test.TestDependency>> platform::pure::compiler::test::assertCompilati
 
 function <<test.TestDependency>> platform::pure::compiler::test::assertCompiledGraphOnResult(parsedFile:platform::pure::protocol::PureFile[1], result:platform::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]
 {
+    platform::pure::compiler::test::assertCompiledGraphOnResult($parsedFile, $result, $sourceId, []);
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::assertCompiledGraphOnResult(parsedFile:platform::pure::protocol::PureFile[1], result:platform::pure::compiler::CompilationResult[1], sourceId:String[1], printers:Function<{platform::pure::metamodel::PackageableElement[1], platform::pure::compiler::CompilerContext[1]->String[0..1]}>[*]):Boolean[1]
+{
     // Compilation must produce zero errors when ###CompiledGraph is asserted.
     // A compiler bug that still emits partial elements would otherwise pass
     // the printed-graph comparison silently.
@@ -134,7 +149,7 @@ function <<test.TestDependency>> platform::pure::compiler::test::assertCompiledG
     if($expectedGraphElement->isEmpty(),
        | assert(false, 'Test file contains ###CompiledGraph section but CompiledGraph element was not found in parsed output for ' + $sourceId);,
        | let expectedGraphValue = $expectedGraphElement->toOne()->cast(@platform::pure::compiler::test::CompiledGraph).value;
-         let actualGraph = platform::pure::compiler::test::printer::printCompiledGraph($result.elements, $result.context->toOne());
+         let actualGraph = platform::pure::compiler::test::printer::printCompiledGraph($result.elements, $result.context->toOne(), $printers);
 
          let cleanedExpected = $expectedGraphValue->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
          let cleanedActual = $actualGraph->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
