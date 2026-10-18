@@ -218,6 +218,16 @@ function platform::pure::compiler::pdb::fbb::addFieldFloat(b:platform::pure::com
          ->platform::pure::compiler::pdb::fbb::slot($voff));
 }
 
+// Float (fbs `double`) field written whenever the property HAS a value, 0.0 included — the field's
+// presence is what tells an optional Float[0..1] that is empty from one holding 0.0 (flatc's
+// force_defaults). Used for metamodel properties; m3's FloatValueDef keeps the eliding form above.
+function platform::pure::compiler::pdb::fbb::addFieldFloatPresent(b:platform::pure::compiler::pdb::fbb::Builder[1], voff:Integer[1], value:Float[1]):platform::pure::compiler::pdb::fbb::Builder[1]
+{
+   $b->platform::pure::compiler::pdb::fbb::prep(8, 0)
+      ->platform::pure::compiler::pdb::fbb::prepend(platform::pure::functions::binary::floatToLeBytes($value))
+      ->platform::pure::compiler::pdb::fbb::slot($voff);
+}
+
 // Offset field: written (and slotted) only when non-zero (i.e. present).
 function platform::pure::compiler::pdb::fbb::addFieldOffset(b:platform::pure::compiler::pdb::fbb::Builder[1], voff:Integer[1], off:Integer[1]):platform::pure::compiler::pdb::fbb::Builder[1]
 {

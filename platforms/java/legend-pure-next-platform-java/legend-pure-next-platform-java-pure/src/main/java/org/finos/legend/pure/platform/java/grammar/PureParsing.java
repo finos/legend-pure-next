@@ -84,7 +84,7 @@ public final class PureParsing
         return sectionParsers;
     }
 
-    /** Drop the memo after {@code PureRuntime.installLanguages}. */
+    /** Drop the memo after {@code PureRuntime.Builder.build()}. */
     public static synchronized void reloadSectionParsers()
     {
         sectionParsers = null;

@@ -60,13 +60,15 @@ function platform::pure::compiler::test::buildTestFileSection(
 // expected values from the original parsed source separately.
 function platform::pure::compiler::test::manageFileSections(parsedFile:platform::pure::protocol::PureFile[1]):platform::pure::protocol::PureFile[*]
 {
-    // Keep ALL ###Pure sections as the primary file's sections. The parser
-    // prepends a synthetic `###Pure` header when the source doesn't start
-    // with one, so a test that has blanked-out ###Error lines before its
-    // real ###Pure header ends up with two Pure sections (synthetic empty +
-    // real). Both need to flow through compile() so the real elements are
-    // seen.
-    let primarySections = $parsedFile.sections->filter(s | $s.parserName == 'Pure');
+    // Keep every section the test harness does not own as the primary file's
+    // sections: ALL ###Pure sections (the parser prepends a synthetic `###Pure`
+    // header when the source doesn't start with one, so a test that has
+    // blanked-out ###Error lines before its real ###Pure header ends up with
+    // two Pure sections — both must reach compile()), and any language
+    // extension's section (a ###Diagram), which the extension's compiler
+    // passes claim. Only the harness's own sections are taken out.
+    let harnessSections = ['CompiledGraph', 'CompilerStats', 'Error', 'ReverseIndex', 'File'];
+    let primarySections = $parsedFile.sections->filter(s | !$harnessSections->contains($s.parserName));
     let primaryFile = ^platform::pure::protocol::PureFile(
         sourceId = $parsedFile.sourceId,
         sections = $primarySections

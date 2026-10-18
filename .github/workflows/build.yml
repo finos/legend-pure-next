@@ -609,10 +609,17 @@ jobs:
       # ~9s with the bootstrap CLI it already restored. Without it the truffle
       # reactor cannot compile at all: GenericFbDecoder imports the generated
       # reader, and the failure reads as "package ...pdb.reader does not exist".
-      - name: Build the module PDBs the Truffle PDB reader is generated from
+      # The diagram extension too, for the same reason: Truffle's diagram jar stages its GENERATED
+      # pure/extensions/diagram/generated/diagram.fbs (gitignored), so packaging Truffle first ships a jar
+      # without it and every Truffle run fails with "languages/diagram.fbs is not on the class path".
+      # protocol before the extension (it derives its protocol form from protocol.pdb), as the root
+      # Justfile's `build` orders them; all of it runs on the bootstrap CLI restored above.
+      - name: Build the module PDBs the Truffle PDB reader and diagram jar are generated from
         run: |
           just modules::translation_java::build-all
           just modules::translation_java::build-tests
+          just modules::protocol::build
+          just extensions::build-tests
 
       # `truffle::test` runs the truffle reactor with surefire (Java unit
       # tests) and then the Pure compiler-graph spec suite on Truffle.
@@ -762,10 +769,17 @@ jobs:
       # ~9s with the bootstrap CLI it already restored. Without it the truffle
       # reactor cannot compile at all: GenericFbDecoder imports the generated
       # reader, and the failure reads as "package ...pdb.reader does not exist".
-      - name: Build the module PDBs the Truffle PDB reader is generated from
+      # The diagram extension too, for the same reason: Truffle's diagram jar stages its GENERATED
+      # pure/extensions/diagram/generated/diagram.fbs (gitignored), so packaging Truffle first ships a jar
+      # without it and every Truffle run fails with "languages/diagram.fbs is not on the class path".
+      # protocol before the extension (it derives its protocol form from protocol.pdb), as the root
+      # Justfile's `build` orders them; all of it runs on the bootstrap CLI restored above.
+      - name: Build the module PDBs the Truffle PDB reader and diagram jar are generated from
         run: |
           just modules::translation_java::build-all
           just modules::translation_java::build-tests
+          just modules::protocol::build
+          just extensions::build-tests
 
       # `truffle::native::spec-compiler-selfhost` first builds the native-image
       # binary (~5–10 min, dominated by AOT analysis + compile), then uses it
@@ -1036,12 +1050,15 @@ jobs:
           retention-days: 1
 
   # Pure -> <target> translation modules. Matrix entries:
-  #   - java              : translator — `just build test-all gallery`
-  #                          (translator self-tests + runtime suites + render HTML),
-  #                          executed by pure-truffle. Downloads its own language pdb.
+  #   - java              : translator — `just build-tests` (the PDBs only), then
+  #                          `just java::test-all java::gallery` as the platform suite.
+  #                          The module's own test-all/gallery are NOT used here: each
+  #                          shells out to a fresh `just java::…`, and java::compile
+  #                          regenerates and recompiles the whole platform (~2 min), so
+  #                          they cost two extra compiles and a second test-translation.
   #                          One `just` invocation, not an `&&` chain: just runs a
-  #                          shared dependency (build-tests, _host-generate) once
-  #                          per invocation, so a chain would rebuild it per recipe.
+  #                          shared dependency (compile, build-tests) once per
+  #                          invocation, so a chain would rebuild it per recipe.
   #   - javascript        : translator — the same recipes, executed by the Node
   #                          host (platforms/javascript/bin/pure-js); `antlr-all`
   #                          first, because that host loads the parser bundles.
@@ -1070,14 +1087,16 @@ jobs:
           - target: java
             gallery_file: platforms/java/build/java-platform-gallery.html
             language_pdb_artifact: language-java-pdb
-            gallery_cmd: just build test-all gallery
-            # The Java platform's own seven suites, so the dashboard's java@platform
+            gallery_cmd: just build-tests
+            # The Java platform's own suites, so the dashboard's java@platform
             # column is populated from CI rather than only from a local run. Everything
             # they need is already in this job: pure-truffle.jar (the runtime that
             # generates this platform's Java) from truffle-artifacts, the five shared
             # PDBs from bootstrap-artifacts, java.pdb, translation-shared.pdb, and the
-            # two java-translation PDBs built by the step above.
-            platform_suite: just java::test-all
+            # two java-translation PDBs built by the step above. test-all already
+            # includes test-translation (the translator's self-tests), and gallery
+            # rides the same invocation so the platform compiles once.
+            platform_suite: just java::test-all java::gallery
           - target: javascript
             gallery_file: platforms/javascript/build/javascript-translation-gallery.html
             language_pdb_artifact: language-javascript-pdb

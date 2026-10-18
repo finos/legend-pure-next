@@ -41,7 +41,7 @@ import java.util.List;
 public final class PurePdbArchiveWriter
 {
     private static final String WRITE_ARCHIVE_FN_PATH =
-            "platform::pure::compiler::pdb::archive::writeArchive_Any_MANY__String_1__String_1__String_MANY__Map_1__Binary_1_";
+            "platform::pure::compiler::pdb::archive::writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Map_1__Binary_1_";
     private static final String REFBY_FROM_LISTS_FN_PATH =
             "platform::pure::compiler::pdb::archive::referencedByFromLists_String_MANY__String_MANY__Map_1_";
 
@@ -83,8 +83,11 @@ public final class PurePdbArchiveWriter
         Object refMap = runtime.execute(refFn,
                 new ObjectSequence(targets.toArray()),
                 new ObjectSequence(joinedCallers.toArray()));
+        // The runtime's language extensions write their own element kinds (###Diagram, …); an
+        // element neither m3 nor an extension claims fails the write rather than going missing.
         Object bytesObj = runtime.execute(writeFn,
                 new ObjectSequence(elements.toArray()),
+                runtime.compilerExtensions(),
                 manifest.name(),
                 manifest.packagePattern(),
                 new ObjectSequence(manifest.dependencies().toArray()),

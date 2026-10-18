@@ -236,7 +236,7 @@ public final class Antlr
         }
     }
 
-    /** Rebuild the registry after {@code PureRuntime.installLanguages}. */
+    /** Rebuild the registry after {@code PureRuntime.Builder.build()}. */
     public static void reloadGrammars()
     {
         GRAMMARS = grammars();

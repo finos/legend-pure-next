@@ -202,7 +202,7 @@ setup:
     just --justfile "{{justfile()}}" doctor test-all
     printf '\n  Open a new terminal (or `source %s`) so your shell picks up the changes.\n' "$rc"
 
-# Build all subprojects (bootstrap → truffle → modules → javascript). The
+# Build all subprojects (bootstrap → modules → truffle → javascript). The
 # javascript platform's generate recipes run the TRANSLATED translator, which
 # lives in the modules tree's pdbs (javascript.pdb, translation-shared.pdb,
 # javascript-translation.pdb) — so modules must build first.
@@ -211,7 +211,12 @@ setup:
 # `diagram-analysis` (pure/modules/analysis/diagram) declares the diagram EXTENSION as a dependency. So
 # protocol -> extensions -> modules, not modules -> extensions or the reverse. A clean checkout is what
 # turns getting this wrong into a hard failure — "missing pure/modules/protocol/build/protocol.pdb".
-build: doctor bootstrap::build truffle::build modules::protocol::build extensions::build-tests modules::build javascript::build
+# All of it comes BEFORE truffle::build (it runs on bootstrap's CLI), as in `_test-all-build`:
+#   - Truffle's diagram jar stages the generated pure/extensions/diagram/generated/diagram.fbs, so packaging
+#     it first ships a jar without the schema ("languages/diagram.fbs is not on the class path");
+#   - Truffle's generate-pdb-reader runs on java.pdb, translation-shared.pdb and java-translation{,-tests}.pdb
+#     ("NoSuchFileException: .../java.pdb" on a clean checkout).
+build: doctor bootstrap::build modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests truffle::build javascript::build
 
 # Top-level `build` already chains every subproject's `build` in dep order — alias for symmetry with sub-Justfiles' `build-all`.
 build-all: build
@@ -225,8 +230,9 @@ test: doctor
     exit $status
 
 # The suites `test` runs. modules::build stages the translator pdbs
-# javascript::test's generate step needs (see `build` ordering note).
-_test: bootstrap::test truffle::test modules::protocol::build extensions::build-tests modules::build javascript::test java::test-all
+# javascript::test's generate step needs (see `build` ordering note, which is also why protocol, the
+# extensions and the modules come before truffle::test).
+_test: bootstrap::test modules::protocol::build extensions::build-tests modules::build modules::translation_java::build-tests truffle::test javascript::test java::test-all
 
 # Delete every generated/ directory so the suites below cannot pass against
 # stale output. These are all gitignored build artifacts, each with a recipe
@@ -382,7 +388,7 @@ dashboard:
 # Remove shared/, per-subproject build artifacts, every generated/ tree and the test reports.
 # The dashboard's history.json and builds.json are kept: they are the trend across runs, not
 # one run's output. Every generated/ tree is rebuilt by the build that consumes it
-# (bootstrap::generate-writer, truffle::generate-pdb-reader, diagram's generate-protocol,
+# (bootstrap::generate-writer, truffle::generate-pdb-reader, diagram's generate,
 # javascript::generate-all), so removing them is safe.
 #
 # The last step is a guard: anything git ignores under a build/, generated/ or target/

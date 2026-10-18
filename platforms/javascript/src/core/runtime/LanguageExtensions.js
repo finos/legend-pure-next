@@ -58,18 +58,18 @@ export function languageExtensionFor(descriptor) {
         if (!elementPath) return [];
         const fn = globalThis[mangled(elementPath)];
         if (typeof fn !== "function") {
-            // A BUNDLED language's parser is not optional: `###Pure` arrives through
-            // parser-mappings-bundle.js, so a missing one is a broken host, not an absent feature.
-            if (descriptor.bundled) {
-                throw new Error(`the ${descriptor.name} section parser is not loaded `
-                    + "(parser-mappings-bundle.js)");
+            // An ALWAYS-ACTIVE language (no `module`) is not optional: `###Pure`'s halves arrive with the
+            // platform bundles, so a missing one is a broken host, not an absent feature.
+            if (!descriptor.module) {
+                throw new Error(`the ${descriptor.name} language's ${elementPath} is not loaded `
+                    + "(an always-active language's halves ship with the platform bundles)");
             }
             return [];
         }
         // Guarded on the element being REGISTERED, so an extension whose module has not been loaded
-        // contributes nothing rather than throwing — that is what lets a module arrive late. A
-        // bundled language has no module to check against.
-        if (!descriptor.bundled && !runtime.registry.hasElement(elementPath)) return [];
+        // contributes nothing rather than throwing — that is what lets a module arrive late. An
+        // always-active language has no module to check against.
+        if (descriptor.module && !runtime.registry.hasElement(elementPath)) return [];
         return asArray(fn());
     };
     // `pure` is the manifest's own block, re-exported verbatim by the generated descriptor — so a
@@ -86,7 +86,7 @@ export function languageExtensionFor(descriptor) {
 }
 
 // What separates an extension from a language that ships with the compiler: `dir`, and the paths the
-// generator derives from it (pdbPath, jsPaths). Nothing else does, which is why one baked list serves
+// generator derives from it (jsPaths). Nothing else does, which is why one baked list serves
 // both and this file filters rather than importing two.
 const isExtension = (language) => Boolean(language.dir);
 
@@ -99,14 +99,28 @@ export const EXTENSION_DESCRIPTORS = LANGUAGES.filter(isExtension);
 /** The extension named `name`, for a host that wants one rather than all of them. */
 export const extensionNamed = (name) => extensionLanguages.find((e) => e.name === name) ?? null;
 
+/**
+ * The PDB schema the given languages make — what `registry.useLanguages(descriptors)` decodes with, and
+ * what PureRuntime.build() installs from `withLanguages(...)`: the always-active languages' `fbs` FIRST
+ * (m3's, from ###Pure, which every extension's fragment refers to), then each extension's, in order. As
+ * on Truffle and the Java platform. Nothing is assumed: the languages are named.
+ */
+export function languageSchema(descriptors) {
+    if (!Array.isArray(descriptors)) throw new Error("languageSchema(descriptors): name the languages");
+    const always = descriptors.filter((l) => !l.module && l.fbs);
+    if (!always.length) {
+        throw new Error("no always-active language declares a schema — name ###Pure's (coreLanguages) in withLanguages(...)");
+    }
+    const missing = always.find((l) => !l.fbsText);
+    if (missing) {
+        throw new Error(`the ${missing.name} language's schema (${missing.fbs}) was not there when `
+            + "generate-languages ran — build bootstrap, then run `just javascript::generate`");
+    }
+    return [...always, ...descriptors.filter((l) => l.module && l.fbsText)].map((l) => l.fbsText).join("\n");
+}
+
 /** The languages that ship with the compiler — `###Pure` and compiler-pure's test sections. */
 export const coreLanguages = LANGUAGES.filter((l) => !isExtension(l)).map(languageExtensionFor);
 
-// Core languages first — `###Pure` has to be registered before anything can be parsed — then every
-// extension found on disk. NOTHING HERE NAMES A LANGUAGE: both halves of this list come from
-// manifests (pure/specification/language_*.json and pure/extensions/*/language_<name>.json),
-// aggregated into one generated list.
-export const DEFAULT_LANGUAGE_EXTENSIONS = [...coreLanguages, ...extensionLanguages];
-
 /** The language named `name` — core or extension alike, since nothing distinguishes them here. */
-export const languageNamed = (name) => DEFAULT_LANGUAGE_EXTENSIONS.find((l) => l.name === name) ?? null;
+export const languageNamed = (name) => [...coreLanguages, ...extensionLanguages].find((l) => l.name === name) ?? null;

@@ -1,0 +1,98 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The append-only FlatBuffer field-id registry, in Pure — the port of bootstrap's
+// FbsFieldIdRegistry, so a schema generated from Pure classes (fbsgen.pure) pins its wire
+// format exactly the way m3.fbs does. Same file format, same assignment rule: an existing
+// (table, field) keeps its id; a new scalar gets max+1, a new union max+2 (slot max+1 is the
+// union's implicit `_type` byte); a table with no ids yet starts from max = -1. Removed fields
+// stay in the file — the schema renders them `(deprecated, id: N)` so vtables keep their shape.
+
+import platform::pure::compiler::pdb::fbsgen::*;
+
+Class platform::pure::compiler::pdb::fbsgen::FieldId
+{
+   table : String[1];
+   field : String[1];
+   id    : Integer[1];
+}
+
+// The id given to one field, and the registry after giving it.
+Class platform::pure::compiler::pdb::fbsgen::IdAssignment
+{
+   id  : Integer[1];
+   ids : platform::pure::compiler::pdb::fbsgen::FieldId[*];
+}
+
+// `TableName.field_name=ID` lines; `#` comments and blank lines are skipped.
+function platform::pure::compiler::pdb::fbsgen::parseFieldIds(text:String[1]):platform::pure::compiler::pdb::fbsgen::FieldId[*]
+{
+   $text->replace('\r', '')->split('\n')
+      ->map(l | $l->trim())
+      ->filter(l | ($l != '') && !$l->platform::pure::compiler::pdb::schema::startsWith('#'))
+      ->map(l | platform::pure::compiler::pdb::fbsgen::parseFieldIdLine($l));
+}
+
+function platform::pure::compiler::pdb::fbsgen::parseFieldIdLine(line:String[1]):platform::pure::compiler::pdb::fbsgen::FieldId[1]
+{
+   let eq  = $line->indexOf('=');
+   let dot = $line->indexOf('.');
+   if(($eq < 0) || ($dot < 0) || ($dot > $eq), | fail('Malformed field-id line: ' + $line), | true);
+   ^platform::pure::compiler::pdb::fbsgen::FieldId(
+      table = $line->substring(0, $dot),
+      field = $line->substring($dot + 1, $eq),
+      id    = $line->substring($eq + 1, $line->length())->trim()->parseInteger());
+}
+
+function platform::pure::compiler::pdb::fbsgen::assignId(ids:platform::pure::compiler::pdb::fbsgen::FieldId[*], table:String[1], field:String[1], isUnion:Boolean[1]):platform::pure::compiler::pdb::fbsgen::IdAssignment[1]
+{
+   let existing = $ids->filter(i | ($i.table == $table) && ($i.field == $field))->head();
+   if($existing->isNotEmpty(),
+      | ^platform::pure::compiler::pdb::fbsgen::IdAssignment(id = $existing->toOne().id, ids = $ids),
+      | platform::pure::compiler::pdb::fbsgen::appendId($ids, $table, $field, $isUnion));
+}
+
+function platform::pure::compiler::pdb::fbsgen::appendId(ids:platform::pure::compiler::pdb::fbsgen::FieldId[*], table:String[1], field:String[1], isUnion:Boolean[1]):platform::pure::compiler::pdb::fbsgen::IdAssignment[1]
+{
+   let max  = $ids->filter(i | $i.table == $table)->map(i | $i.id)->fold({a, b | if($a > $b, | $a, | $b)}, -1);
+   let next = if($isUnion, | $max + 2, | $max + 1);
+   ^platform::pure::compiler::pdb::fbsgen::IdAssignment(id = $next,
+      ids = $ids->concatenate(^platform::pure::compiler::pdb::fbsgen::FieldId(table = $table, field = $field, id = $next)));
+}
+
+// Registry fields of `table` the schema no longer has: rendered `(deprecated, id: N)`.
+function platform::pure::compiler::pdb::fbsgen::deprecatedFields(ids:platform::pure::compiler::pdb::fbsgen::FieldId[*], table:String[1], current:String[*]):platform::pure::compiler::pdb::fbsgen::FieldId[*]
+{
+   $ids->filter(i | ($i.table == $table) && !$current->contains($i.field));
+}
+
+// The file: three header lines and a blank line, then tables in name order, each table's
+// fields by id followed by a blank line — byte-for-byte what FbsFieldIdRegistry.saveIfDirty writes.
+function platform::pure::compiler::pdb::fbsgen::renderFieldIds(ids:platform::pure::compiler::pdb::fbsgen::FieldId[*]):String[1]
+{
+   let header = '# FlatBuffer field-ID registry — keeps wire format stable across builds.\n'
+              + '# Auto-maintained by RdfFbsSchemaGenerator. Append-only.\n'
+              + '# Format: TableName.field_name=ID\n\n';
+   $header + $ids.table->removeDuplicates()->sort()
+      ->map(t | platform::pure::compiler::pdb::fbsgen::renderTableIds($ids, $t))
+      ->joinStrings('');
+}
+
+function platform::pure::compiler::pdb::fbsgen::renderTableIds(ids:platform::pure::compiler::pdb::fbsgen::FieldId[*], table:String[1]):String[1]
+{
+   $ids->filter(i | $i.table == $table)
+      ->sort({a, b | $a.id - $b.id})
+      ->map(i | $table + '.' + $i.field + '=' + $i.id->toString() + '\n')
+      ->joinStrings('') + '\n';
+}

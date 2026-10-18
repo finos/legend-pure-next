@@ -41,18 +41,30 @@ public final class ModuleRegistry
     private final List<Module> modules = new ArrayList<>();
     private PdbRuntime runtime;
 
-    public void register(Module module)
+    /** Register {@code module} after the current ones (replacing one of the same name). Returns this registry. */
+    public ModuleRegistry register(Module module)
     {
         unregister(module.name());
         modules.add(module);
+        return this;
     }
 
-    /** Remove the module named {@code name}, if it is registered. */
-    public void unregister(String name)
+    /** Register each of {@code modules}, in order. Returns this registry, so a host can build one inline. */
+    public ModuleRegistry registerAll(Iterable<? extends Module> modules)
     {
-        modules.removeIf(m -> m.name().equals(name));
+        modules.forEach(this::register);
+        return this;
     }
 
+    /** Remove the module named {@code name}. Returns it, or null when no such module is registered. */
+    public Module unregister(String name)
+    {
+        Module removed = module(name);
+        modules.removeIf(m -> m.name().equals(name));
+        return removed;
+    }
+
+    /** The registered modules, in registration (lookup) order. */
     public List<Module> modules()
     {
         return List.copyOf(modules);
@@ -64,8 +76,8 @@ public final class ModuleRegistry
         return modules.stream().filter(m -> m.name().equals(name)).findFirst().orElse(null);
     }
 
-    /** Every declared dependency must be registered; says which module wanted what. */
-    public void validate()
+    /** Every declared dependency must be registered; says which module wanted what. Returns this registry. */
+    public ModuleRegistry validate()
     {
         Set<String> known = new LinkedHashSet<>();
         modules.forEach(m -> known.add(m.name()));
@@ -84,6 +96,7 @@ public final class ModuleRegistry
         {
             throw new IllegalStateException("Modules depend on modules that are not registered: " + missing);
         }
+        return this;
     }
 
     /** Called by PureRuntime once it has opened the registered archives. */
@@ -104,11 +117,16 @@ public final class ModuleRegistry
 
     /**
      * The element at {@code path} — from an in-memory module's last compile if one
-     * defined it, otherwise from the archives. Throws when nothing has it, as
-     * {@code pathToElement} does.
+     * defined it, otherwise from the archives — or null when nothing has it.
      */
     public Object getElement(String path)
     {
         return runtime().element(path);
+    }
+
+    /** Whether some registered module has the element at {@code path}. */
+    public boolean hasElement(String path)
+    {
+        return getElement(path) != null;
     }
 }

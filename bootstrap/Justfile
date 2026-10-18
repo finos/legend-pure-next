@@ -208,7 +208,7 @@ build-parser-mappings-pdb:
 
 # Build + run the Java tests (surefire — including TestPureExecution / TestPCT, the Pure runTests and PCT
 # suites over core-tests.pdb) + the compiler corpus and PDB specification runs on the bootstrap interpreter.
-test: test-java stage build-compiler-pdb spec-compiler spec-pdb
+test: test-java stage build-compiler-pdb spec-compiler spec-pdb check-fbs-parity
 
 # `test` plus the self-hosted compiler run and both printer corpora.
 test-all: test spec-compiler-selfhost spec-functions spec-pct spec-printer-compiled spec-printer-protocol
@@ -223,7 +223,7 @@ test-java: (_mvn "with-tests")
 # remain visible.
 
 # Every specification run of the bootstrap host (self-host excluded: see `spec-compiler-selfhost`).
-spec: spec-compiler spec-pdb spec-functions spec-pct spec-printer-compiled spec-printer-protocol
+spec: spec-compiler spec-pdb check-fbs-parity spec-functions spec-pct spec-printer-compiled spec-printer-protocol
 
 # Needs core-tests.pdb (runTests is <<test.TestDependency>>, classified into the
 # tests-only PDB) and compiler-tests.pdb (mirrors the compiler-graph recipe).
@@ -312,6 +312,20 @@ spec-pdb:
         --pdb {{shared_out}}/compiler-tests.pdb \
         --function "platform::pure::test::runTests_String_1__String_1__String_1_" \
         --args "platform::pure::compiler::pdb" "{{test_results}}/spec/pdb-format/pure@cli-bootstrap.json" {{err_filter}}
+
+# The Pure fbs generator (compiler-pure pdb/fbsgen) run over m3 itself must reproduce m3.fbs.
+# m3.fbs stays RdfFbsSchemaGenerator's output (from m3.ttl); this keeps the Pure port of its rules —
+# which generates every language extension's schema — the same rules. Run as part of `just test`.
+check-fbs-parity:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{header}} 'check-fbs-parity'
+    cd "{{repo_root}}"
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "platform::pure::compiler::pdb::fbsgen::printFbsParity_String_1__String_1__Boolean_1_" \
+        --args "shared/specification/m3.fbs" "pure/specification/m3-fbs-field-ids.txt" {{err_filter}}
 
 # Self-host: compile compiler-pure on Pure-on-Java, run compiler tests, then diff PDBs vs Java direct (and Truffle if present; assumes `just build` was run).
 spec-compiler-selfhost: generate-writer

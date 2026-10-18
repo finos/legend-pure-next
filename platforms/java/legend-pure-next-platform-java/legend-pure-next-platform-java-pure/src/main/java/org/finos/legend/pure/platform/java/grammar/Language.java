@@ -17,6 +17,8 @@ package org.finos.legend.pure.platform.java.grammar;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.ImmutableList;
@@ -40,26 +42,46 @@ import org.eclipse.collections.api.map.MapIterable;
  * @param module            the Pure module carrying this language's code, or null when it needs none.
  *                          What its halves are GUARDED on: an extension whose module is not registered
  *                          contributes nothing instead of throwing, which lets a module arrive late.
- * @param bundled           the section parser ships with the compiler rather than in a registered
- *                          module, so there is no element to guard against. True for {@code ###Pure}
- *                          alone: it is not optional and must not be guarded into silence.
  * @param pdbs              the Pure modules this language needs, in load order, repo-relative — what
  *                          `###Pure` MEANS on any host, as opposed to what a platform brings to make it
  *                          executable (see PlatformModules). Empty for a language that needs none.
  * @param sectionParsers    the Pure element returning this language's section parsers, or null.
- * @param compilerExtension the Pure element returning its compiler passes, or null when the built-in
- *                          passes already compile it (as for {@code ###Pure}).
+ * @param compilerExtension the Pure element returning its compiler passes, or null when it has
+ *                          none. {@code ###Pure} names pureExtension(), which carries m3's PDB writer.
  * @param grammar           its ANTLR adapter, or null when the language adds no syntax.
+ * @param fbsText           the language's PDB schema text — m3.fbs for {@code ###Pure}, the fragment
+ *                          generated from its metamodel (pdb/fbsgen) for an extension — or null when its
+ *                          compiled elements have no PDB form. Shipped next to the manifest (`fbs` names
+ *                          it); the host's schema is every language's, the always-active ones first.
+ * @param types             the language's table -> implementation factory (generated, like
+ *                          {@code PdbTypes}), or null. Not in the manifest: the module that owns the
+ *                          generated classes supplies it, through {@link #withTypes}.
  */
 public record Language(
         String name,
         String module,
-        boolean bundled,
         ImmutableList<String> pdbs,
         String sectionParsers,
         String compilerExtension,
-        GrammarExtension grammar)
+        GrammarExtension grammar,
+        String fbsText,
+        java.util.function.Function<String, org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject> types)
 {
+    /**
+     * Always active: the language has no module to wait for, so its halves are never guarded into
+     * silence — true for {@code ###Pure} alone, whose manifest is the one with no {@code module}.
+     */
+    public boolean bundled()
+    {
+        return module == null;
+    }
+
+    /** This language with its generated table -> implementation factory. */
+    public Language withTypes(java.util.function.Function<String, org.finos.legend.pure.platform.java.compiler.module.pdbModule.LazyObject> types)
+    {
+        return new Language(name, module, pdbs, sectionParsers, compilerExtension, grammar, fbsText, types);
+    }
+
     /**
      * The languages declared by {@code resources}, in the order given — which is registration order,
      * and {@code ###Pure} must come before anything is parsed.
@@ -94,21 +116,20 @@ public record Language(
         {
             throw new IllegalStateException("cannot read the language manifest '" + resource + "'", e);
         }
-        return fromJson(text, resource, javaPackage);
+        return fromJson(text, resource, javaPackage, loader);
     }
 
-    private static Language fromJson(String text, String source, String javaPackage)
+    private static Language fromJson(String text, String source, String javaPackage, ClassLoader loader)
     {
         MapIterable<String, Object> json = Json.parseObject(text);
         MapIterable<String, Object> pure = Json.object(json, "pure");
         MapIterable<String, Object> grammar = Json.object(json, "grammar");
         String name = required(Json.string(json, "name"), "name", source);
-        // `section`/`sections` is deliberately unread: a section is claimed by the Pure function named
+        // `sections` is deliberately unread: a section is claimed by the Pure function named
         // in `sectionParsers`, so restating its name here would be a second place to keep right.
         return new Language(
                 name,
                 Json.string(json, "module"),
-                Json.bool(json, "bundled"),
                 Json.strings(json, "pdbs"),
                 Json.string(pure, "sectionParsers"),
                 Json.string(pure, "compilerExtension"),
@@ -117,7 +138,55 @@ public record Language(
                         required(Json.string(grammar, "lexer"), "grammar.lexer", source),
                         required(Json.string(grammar, "parser"), "grammar.parser", source),
                         required(Json.string(grammar, "entryRule"), "grammar.entryRule", source),
-                        name));
+                        name),
+                fbsText(Json.string(json, "fbs"), source, name, loader),
+                null);
+    }
+
+    /**
+     * The `fbs` file a manifest names, read from the class path BESIDE the manifest: the manifest
+     * gives the repo path the extension's build writes it to, and the module that stages the
+     * manifest stages the file into the same directory.
+     */
+    private static String fbsText(String fbs, String source, String name, ClassLoader loader)
+    {
+        if (fbs == null || fbs.isEmpty())
+        {
+            return null;
+        }
+        String dir = source.contains("/") ? source.substring(0, source.lastIndexOf('/') + 1) : "";
+        String resource = dir + fbs.substring(fbs.lastIndexOf('/') + 1);
+        try (InputStream in = loader.getResourceAsStream(resource))
+        {
+            if (in == null)
+            {
+                throw new IllegalStateException("language " + name + " declares fbs " + fbs + " but " + resource
+                        + " is not on the class path — the module that owns it did not stage it (see its pom)");
+            }
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        catch (IOException e)
+        {
+            throw new IllegalStateException("cannot read the schema '" + resource + "'", e);
+        }
+    }
+
+    /**
+     * The PDB schema of {@code languages}: the always-active languages' {@code fbs} first — m3's, which
+     * every other language's tables refer to — then each other language's in order. {@code override},
+     * when given, replaces the always-active part (a caller decoding with a schema of its own).
+     */
+    public static String schemaText(ListIterable<Language> languages, Path override) throws IOException
+    {
+        String first = override != null
+                ? Files.readString(override)
+                : languages.select(l -> l.bundled() && l.fbsText() != null).collect(Language::fbsText).makeString("\n");
+        if (first.isEmpty())
+        {
+            throw new IllegalStateException("no always-active language declares a schema — install PureLanguage.all() first");
+        }
+        ListIterable<String> rest = languages.reject(Language::bundled).collect(Language::fbsText).select(t -> t != null);
+        return rest.isEmpty() ? first : first + "\n" + rest.makeString("\n");
     }
 
     private static String required(String value, String field, String source)

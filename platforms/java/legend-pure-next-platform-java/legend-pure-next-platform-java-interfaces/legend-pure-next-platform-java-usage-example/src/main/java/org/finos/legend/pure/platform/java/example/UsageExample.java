@@ -19,7 +19,6 @@ import org.finos.legend.pure.platform.java.compiler.module.CompilationResult;
 import org.finos.legend.pure.platform.java.compiler.module.ModuleRegistry;
 import org.finos.legend.pure.platform.java.compiler.module.inMemoryModule.InMemoryModule;
 import org.finos.legend.pure.platform.java.extensions.diagram.DiagramLanguage;
-import org.finos.legend.pure.platform.java.grammar.PureLanguage;
 import org.finos.legend.pure.platform.java.runtime.PureRuntime;
 
 import java.nio.file.Files;
@@ -76,13 +75,12 @@ public final class UsageExample
         InMemoryModule sample = new InMemoryModule("sample", List.of("core"));
         sample.setSource("sample.pure", SOURCE);
 
-        ModuleRegistry registry = new ModuleRegistry();
-        registry.register(sample);
+        ModuleRegistry registry = new ModuleRegistry().register(sample);
 
         // 2. The runtime, which brings the rest.
         PureRuntime runtime = PureRuntime.builder()
                 .withRegistry(registry)
-                .withLanguages(PureLanguage.all().newWithAll(DiagramLanguage.all()))
+                .withLanguages(DiagramLanguage.all())   // ###Pure is always there; name the extensions
                 .withModuleRoot(repoRoot())
                 .build();
         try

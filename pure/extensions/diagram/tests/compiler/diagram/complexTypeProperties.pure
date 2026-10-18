@@ -1,0 +1,105 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+Class m::Address
+{
+   street : String[1];
+}
+
+Class m::Box<T>
+{
+   items : T[*];
+}
+
+Class m::Person
+{
+   home : m::Address[1];
+   mailbox : m::Address[0..1];
+   previous : m::Address[*];
+   archive : m::Box<m::Address>[1];
+}
+
+Class m::Employee extends m::Person
+{
+}
+
+###Diagram
+Diagram m::D
+{
+   TypeView tv_person(type=m::Person, position=(0.0, 0.0), width=10.0, height=10.0)
+   TypeView tv_address(type=m::Address, position=(100.0, 0.0), width=10.0, height=10.0)
+   TypeView tv_box(type=m::Box, position=(100.0, 100.0), width=10.0, height=10.0)
+   TypeView tv_employee(type=m::Employee, position=(0.0, 100.0), width=10.0, height=10.0)
+   PropertyView pv_home(property=m::Person.home, source=tv_person, target=tv_address, points=[])
+   PropertyView pv_mailbox(property=m::Person.mailbox, source=tv_person, target=tv_address, points=[])
+   PropertyView pv_previous(property=m::Person.previous, source=tv_person, target=tv_address, points=[])
+   PropertyView pv_archive(property=m::Person.archive, source=tv_person, target=tv_box, points=[])
+   PropertyView pv_items(property=m::Box.items, source=tv_box, target=tv_address, points=[])
+   PropertyView pv_inherited(property=m::Employee.home, source=tv_employee, target=tv_address, points=[])
+   GeneralizationView gv(source=tv_employee, target=tv_person, points=[])
+}
+
+###CompiledGraph
+class m::Address extends Any  ~Class<m::Address>  @15:1-18:1
+  property street :@String@[1]  ~Property<m::Address, @String@|1>
+
+class m::Box extends Any  ~Class<m::Box<T~m::Box>>  @20:1-23:1
+  property items :T~m::Box[*]  ~Property<m::Box<T~m::Box>, T~m::Box|*>
+
+class m::Person extends Any  ~Class<m::Person>  @25:1-31:1
+  property home :m::Address[1]  ~Property<m::Person, m::Address|1>
+  property mailbox :m::Address[0..1]  ~Property<m::Person, m::Address|0..1>
+  property previous :m::Address[*]  ~Property<m::Person, m::Address|*>
+  property archive :m::Box<m::Address>[1]  ~Property<m::Person, m::Box<m::Address>|1>
+
+class m::Employee extends m::Person  ~Class<m::Employee>  @33:1-35:1
+
+diagram m::D  ~platform::extensions::pure::diagram::metamodel::Diagram  @38:1-51:1
+  TypeView tv_person type=m::Person position=(0.0,0.0) size=(10.0,10.0) stereotypes=true attributes=true
+  TypeView tv_address type=m::Address position=(100.0,0.0) size=(10.0,10.0) stereotypes=true attributes=true
+  TypeView tv_box type=m::Box position=(100.0,100.0) size=(10.0,10.0) stereotypes=true attributes=true
+  TypeView tv_employee type=m::Employee position=(0.0,100.0) size=(10.0,10.0) stereotypes=true attributes=true
+  PropertyView pv_home tv_person->tv_address points=[] property=m::Person.home
+  PropertyView pv_mailbox tv_person->tv_address points=[] property=m::Person.mailbox
+  PropertyView pv_previous tv_person->tv_address points=[] property=m::Person.previous
+  PropertyView pv_archive tv_person->tv_box points=[] property=m::Person.archive
+  PropertyView pv_items tv_box->tv_address points=[] property=m::Box.items
+  PropertyView pv_inherited tv_employee->tv_address points=[] property=m::Person.home
+  GeneralizationView gv tv_employee->tv_person points=[]
+
+###ReverseIndex
+m::Address:
+  m::D
+  m::Person.archive
+  m::Person.home
+  m::Person.mailbox
+  m::Person.previous
+m::Box:
+  m::D
+  m::Person.archive
+m::Box.items:
+  m::D
+m::Employee:
+  m::D
+m::Person:
+  m::D
+  m::Employee
+m::Person.archive:
+  m::D
+m::Person.home:
+  m::D
+m::Person.mailbox:
+  m::D
+m::Person.previous:
+  m::D

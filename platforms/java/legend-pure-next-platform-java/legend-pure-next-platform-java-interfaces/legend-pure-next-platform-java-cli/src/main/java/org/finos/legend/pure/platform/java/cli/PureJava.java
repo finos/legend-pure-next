@@ -15,14 +15,15 @@
 package org.finos.legend.pure.platform.java.cli;
 
 import org.finos.legend.pure.platform.java.compiler.module.ModuleRegistry;
+import org.finos.legend.pure.platform.java.compiler.module.pdbModule.PdbModule;
 import org.finos.legend.pure.platform.java.execution.Execute;
 import org.finos.legend.pure.platform.java.execution.PureStack;
 import org.finos.legend.pure.platform.java.extensions.diagram.DiagramLanguage;
-import org.finos.legend.pure.platform.java.grammar.PureLanguage;
 import org.finos.legend.pure.platform.java.runtime.PureRuntime;
 
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.block.factory.Functions;
 
 import java.nio.file.Path;
 
@@ -98,14 +99,14 @@ public final class PureJava
             System.exit(2);
         }
 
-        // In a definite order: the Pure language first — nothing parses before `###Pure` — then each
-        // extension this CLI was linked against. An extension stays inert until its own module is
-        // loaded, so naming one here costs nothing when it is not used.
+        // The --pdb archives go into the registry, as on every host; build() still opens what the languages
+        // declare first, so core.pdb leads whatever order these come in. The languages: ###Pure, then each
+        // extension this CLI was linked against — inert until its own module is loaded, so naming one
+        // costs nothing when it is not used.
         PureRuntime.Builder builder = PureRuntime.builder()
-                .withRegistry(new ModuleRegistry())
-                .withLanguages(PureLanguage.all().newWithAll(DiagramLanguage.all()))
-                .withModuleRoot(root)
-                .withArchives(archives);
+                .withRegistry(new ModuleRegistry().registerAll(archives.collect(Functions.throwing(PdbModule::open))))
+                .withLanguages(DiagramLanguage.all())
+                .withModuleRoot(root);
         if (schema != null)
         {
             // Only for a caller that deliberately wants a different schema; otherwise the one this

@@ -1,6 +1,6 @@
 {
   "name": "diagram",
-  "section": "Diagram",
+  "sections": ["Diagram"],
   "module": "diagram",
   "grammar": {
     "lexer": "DiagramLexer",
@@ -14,8 +14,13 @@
   "pdbs": [
     "pure/extensions/diagram/build/diagram.pdb"
   ],
+  "fbs": "pure/extensions/diagram/generated/diagram.fbs",
   "packages": [
     "platform::extensions::pure::diagram::metamodel",
-    "platform::extensions::pure::diagram::protocol"
+    "platform::extensions::pure::diagram::protocol",
+    "platform::extensions::pure::diagram::pdb::gen"
+  ],
+  "testPackages": [
+    "platform::extensions::pure::diagram::tests"
   ]
 }

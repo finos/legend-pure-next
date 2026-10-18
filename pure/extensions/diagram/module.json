@@ -1,5 +1,6 @@
 {
   "name": "diagram",
   "packagePattern": "(platform::extensions::pure::diagram)(::.*)?",
-  "dependencies": ["core", "compiler"]
+  "dependencies": ["core", "compiler"],
+  "testDependencies": ["core-tests", "compiler-tests"]
 }

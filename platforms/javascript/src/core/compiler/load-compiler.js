@@ -25,7 +25,6 @@
 // Same shape as grammar/load-parser.js's loadParser — one idempotent loader, no JVM;
 // the difference is the wider PDB set and the generated compiler modules.
 
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { ModuleRegistry, PdbModule } from "./module/ModuleRegistry.js";
@@ -78,7 +77,7 @@ const runtimeModule = new InMemoryModule("runtime");
 
 export async function loadCompiler({ tests = false } = {}) {
     if (!loaded) {
-        registry = new ModuleRegistry(readFileSync(join(SHARED, "specification/m3.fbs"), "utf8"));
+        registry = new ModuleRegistry();
         for (const f of PDBS) registry.register(PdbModule.open(join(SHARED, f)));
         registry.register(runtimeModule);
         registry.validate();

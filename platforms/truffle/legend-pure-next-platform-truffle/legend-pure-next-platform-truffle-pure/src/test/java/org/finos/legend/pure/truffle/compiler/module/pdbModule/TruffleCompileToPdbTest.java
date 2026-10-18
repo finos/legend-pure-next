@@ -51,7 +51,7 @@ import java.util.stream.Stream;
 public class TruffleCompileToPdbTest
 {
     private static PureRuntime runtime;
-    private static MetadataAccess resolver;
+    private static ModuleRegistry resolver;
     private static Object compileFn;
     private static Object manageFileSectionsFn;
     private static org.finos.legend.pure.truffle.grammar.TrufflePureParser pureParser;
@@ -100,9 +100,6 @@ public class TruffleCompileToPdbTest
         coreLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
         parserMappingsLoader.setResolver(resolver);
-        coreLoader.preloadAll();
-        compilerLoader.preloadAll();
-        parserMappingsLoader.preloadAll();
 
         // Section parsers (CompiledGraph / CompilerStats / TestFile /
         // ReverseIndex / Error) are loaded from compiler-pure's
@@ -110,7 +107,13 @@ public class TruffleCompileToPdbTest
         // extensions needed here.
         runtime = PureRuntime.builder()
                 .withRegistry(resolver)
+                .withLanguages(org.finos.legend.pure.truffle.grammar.PureLanguage.all())
+                .withNatives(org.finos.legend.pure.truffle.execution.natives.NativeRegistry.createDefault())
                 .build();
+        // Decoding needs the languages' schema, which build() installs: preload after it.
+        coreLoader.preloadAll();
+        compilerLoader.preloadAll();
+        parserMappingsLoader.preloadAll();
 
         // 3-arg silent variant — tests pull errors/stats structurally off the
         // result; the live progress bar + stats summary would flood surefire output.

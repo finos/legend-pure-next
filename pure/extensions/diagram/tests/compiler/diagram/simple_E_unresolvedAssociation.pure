@@ -1,0 +1,44 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Error
+Diagram m::D: AssociationView 'av' refers to 'm::Nope', which is not an association in scope (at diagram/simple_E_unresolvedAssociation:39c4-39c79)
+
+###Pure
+Class m::Person
+{
+   name : String[1];
+}
+
+Class m::Firm
+{
+   legalName : String[1];
+}
+
+Association m::Employment
+{
+   firm : m::Firm[0..1];
+   employees : m::Person[*];
+}
+
+###Diagram
+Diagram m::D
+{
+   TypeView tv_a(type=m::Person, position=(0.0, 0.0), width=10.0, height=10.0)
+   TypeView tv_b(type=m::Firm, position=(100.0, 0.0), width=10.0, height=10.0)
+   AssociationView av(association=m::Nope, source=tv_a, target=tv_b, points=[])
+}
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

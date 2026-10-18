@@ -1,0 +1,48 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// A tiny metamodel the fbsgen tests generate a schema for — shaped like the diagram extension's:
+// a PackageableElement root, a nested value class, a pointer to an m3 Type, a small taxonomy and
+// Float fields.
+
+Class platform::pure::compiler::pdb::fbsgen::tests::model::Spot
+{
+   x : Float[1];
+   y : Float[1];
+}
+
+Class platform::pure::compiler::pdb::fbsgen::tests::model::Box
+{
+   id   : String[1];
+   at   : platform::pure::compiler::pdb::fbsgen::tests::model::Spot[1];
+   <<platform::pure::metamodel::ProtocolInfo.pointer>> type : platform::pure::metamodel::type::Type[0..1];
+}
+
+Class platform::pure::compiler::pdb::fbsgen::tests::model::Edge
+{
+   from : String[1];
+   to   : String[1];
+}
+
+Class platform::pure::compiler::pdb::fbsgen::tests::model::LabelledEdge extends platform::pure::compiler::pdb::fbsgen::tests::model::Edge
+{
+   label : String[0..1];
+}
+
+Class platform::pure::compiler::pdb::fbsgen::tests::model::Sheet extends platform::pure::metamodel::PackageableElement
+{
+   width : Float[0..1];
+   boxes : platform::pure::compiler::pdb::fbsgen::tests::model::Box[*];
+   edges : platform::pure::compiler::pdb::fbsgen::tests::model::LabelledEdge[*];
+}

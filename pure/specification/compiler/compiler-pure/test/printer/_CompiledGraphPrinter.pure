@@ -41,6 +41,13 @@ import platform::pure::compiler::test::printer::primitive::*;
 
 function <<test.TestDependency>> platform::pure::compiler::test::printer::printCompiledGraph(elements:PackageableElement[*], context:CompilerContext[1]):String[1]
 {
+    platform::pure::compiler::test::printer::printCompiledGraph($elements, $context, []);
+}
+
+// `printers` print what a language extension adds (a Diagram, say): each is asked in turn, and the first
+// non-empty answer is the element's text; an element none claims is printed by the built-in arms.
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printCompiledGraph(elements:PackageableElement[*], context:CompilerContext[1], printers:Function<{PackageableElement[1], CompilerContext[1]->String[0..1]}>[*]):String[1]
+{
     // Skip test-framework elements (###CompiledGraph, ###CompilerStats,
     // ###File markers) and synthetic Packages — they parse into
     // PackageableElements that show up in the compiled output but aren't
@@ -84,7 +91,7 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::printC
                  );
             );
         })
-        ->map(e | $e->printElement($context)->stripTrailingNewlines())
+        ->map(e | $e->printElement($context, $printers)->stripTrailingNewlines())
         ->joinStrings('\n\n')
 }
 
@@ -98,6 +105,17 @@ function <<test.TestDependency>> platform::pure::compiler::test::printer::stripT
 // -----------------------------------------------------------------------
 
 function <<test.TestDependency>> platform::pure::compiler::test::printer::printElement(element:PackageableElement[1], context:CompilerContext[1]):String[1]
+{
+    platform::pure::compiler::test::printer::printElement($element, $context, []);
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printElement(element:PackageableElement[1], context:CompilerContext[1], printers:Function<{PackageableElement[1], CompilerContext[1]->String[0..1]}>[*]):String[1]
+{
+    let claimed = $printers->map(p | $p->eval($element, $context))->head();
+    if($claimed->isEmpty(), | $element->printBuiltInElement($context), | $claimed->toOne());
+}
+
+function <<test.TestDependency>> platform::pure::compiler::test::printer::printBuiltInElement(element:PackageableElement[1], context:CompilerContext[1]):String[1]
 {
     $element->match(
         [

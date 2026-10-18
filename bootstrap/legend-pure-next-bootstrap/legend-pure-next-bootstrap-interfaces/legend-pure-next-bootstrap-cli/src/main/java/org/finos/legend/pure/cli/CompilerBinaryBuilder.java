@@ -48,7 +48,7 @@ public class CompilerBinaryBuilder
     public static void main(String[] args) throws Exception
     {
         List<Path> basePdbs = new ArrayList<>();
-        Path sourceDir = null;
+        List<Path> sourceDirs = new ArrayList<>();
         Path outputDir = null;
         TestElementFilter.Mode mode = TestElementFilter.Mode.NONE;
         for (int i = 0; i < args.length; i++)
@@ -56,33 +56,34 @@ public class CompilerBinaryBuilder
             switch (args[i])
             {
                 case "--base-pdb" -> basePdbs.add(Path.of(args[++i]));
-                case "--source" -> sourceDir = Path.of(args[++i]);
+                case "--source" -> sourceDirs.add(Path.of(args[++i]));   // repeatable: code/ and generated/
                 case "--output-dir" -> outputDir = Path.of(args[++i]);
                 case "--tests" -> mode = TestElementFilter.Mode.parse(args[++i]);
                 default -> throw new IllegalArgumentException("Unknown option: " + args[i]);
             }
         }
-        if (basePdbs.isEmpty() || sourceDir == null || outputDir == null)
+        if (basePdbs.isEmpty() || sourceDirs.isEmpty() || outputDir == null)
         {
-            System.err.println("Usage: CompilerBinaryBuilder --base-pdb <file>... --source <sourceDir> --output-dir <dir> [--tests {none|with|only|split}]");
+            System.err.println("Usage: CompilerBinaryBuilder --base-pdb <file>... --source <sourceDir>... --output-dir <dir> [--tests {none|with|only|split}]");
             System.err.println("  Repeat --base-pdb to load multiple dependency PDBs (e.g. core + java).");
-            System.err.println("  module.json is auto-discovered by walking up from <sourceDir>.");
+            System.err.println("  module.json is auto-discovered by walking up from the first <sourceDir>.");
             System.err.println("  Output filename comes from module manifest 'name'.");
             System.exit(1);
         }
 
-        compile(basePdbs, sourceDir, outputDir, mode);
+        compile(basePdbs, sourceDirs, outputDir, mode);
     }
 
-    public static void compile(List<Path> basePdbs, Path sourceDir, Path outputDir, TestElementFilter.Mode mode) throws IOException
+    public static void compile(List<Path> basePdbs, List<Path> sourceDirs, Path outputDir, TestElementFilter.Mode mode) throws IOException
     {
-        ModuleManifest manifest = ModuleManifest.locate(sourceDir);
+        // The module's manifest sits at or above its first source dir (code/ and generated/ share one).
+        ModuleManifest manifest = ModuleManifest.locate(sourceDirs.get(0));
         Path outputFile = outputDir.resolve(manifest.name() + ".pdb");
 
         System.out.println();
         System.out.println("Pure Compiler Binary Builder From Pure Files (PDB)");
         System.out.println("==================================================");
-        System.out.println("  Inputs: " + sourceDir);
+        System.out.println("  Inputs: " + sourceDirs);
         for (Path p : basePdbs)
         {
             System.out.println("          " + p);
@@ -109,7 +110,7 @@ public class CompilerBinaryBuilder
         // the test half genuinely references its testDependencies. Only the LEAN archive's
         // written manifest is narrowed (see writeFiltered).
         SourceModule localModule = new SourceModule(
-                manifest.name(), manifest.packagePattern(), manifest.allDependencies(), sourceDir);
+                manifest.name(), manifest.packagePattern(), sourceDirs, manifest.allDependencies());
 
         // Compile through the runtime with the Java compiler, against the base PDBs.
         MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());

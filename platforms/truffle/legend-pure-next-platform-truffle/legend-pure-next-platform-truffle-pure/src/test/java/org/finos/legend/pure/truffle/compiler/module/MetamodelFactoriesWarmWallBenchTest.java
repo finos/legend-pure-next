@@ -45,7 +45,7 @@ import java.nio.file.Path;
 public class MetamodelFactoriesWarmWallBenchTest
 {
     private static PureRuntime runtime;
-    private static MetadataAccess resolver;
+    private static ModuleRegistry resolver;
     private static Object compileFn;
     private static TrufflePureParser pureParser;
     private static String metamodelFactoriesSource;
@@ -66,14 +66,13 @@ public class MetamodelFactoriesWarmWallBenchTest
         coreLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
         parserMappingsLoader.setResolver(resolver);
-        coreLoader.preloadAll();
-        compilerLoader.preloadAll();
-        parserMappingsLoader.preloadAll();
 
         // Section parsers come from compiler-pure's testSectionParsers() via
         // TrufflePureParser's Pure registry; no Java extensions needed here.
         PureRuntime.Builder runtimeBuilder = PureRuntime.builder()
                 .withRegistry(resolver)
+                .withLanguages(org.finos.legend.pure.truffle.grammar.PureLanguage.all())
+                .withNatives(org.finos.legend.pure.truffle.execution.natives.NativeRegistry.createDefault())
                 .withCompileImmediately(false);
         if (Boolean.getBoolean("pure.bench.profiler"))
         {
@@ -83,6 +82,10 @@ public class MetamodelFactoriesWarmWallBenchTest
                     .withPolyglotOption("pureprofiler.Top", "40");
         }
         runtime = runtimeBuilder.build();
+        // Decoding needs the languages' schema, which build() installs: preload after it.
+        coreLoader.preloadAll();
+        compilerLoader.preloadAll();
+        parserMappingsLoader.preloadAll();
 
         compileFn = resolver.getElement("platform::pure::compiler::compile_PureFile_1__CompilationResult_1_");
         pureParser = PureLanguage.get(null).pureParser();

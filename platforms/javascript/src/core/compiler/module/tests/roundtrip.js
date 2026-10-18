@@ -44,19 +44,22 @@ const pathFromEntry = (name) => {
 // of BigInts (0n..255n). Manifest identity matches what the Java golden
 // generator stamps on spec-test PDBs. `referencedBy` is the compile result's
 // CompilerContext.referencedBy (a translated Pure Map); when absent, the
-// 4-arg overload writes without a reverse index.
+// overload without it writes no reverse index.
 function pureWriteArchive(elements, referencedBy) {
-    if (referencedBy != null) {
-        const fn5 = globalThis["platform$pure$compiler$pdb$archive$writeArchive_Any_MANY__String_1__String_1__String_MANY__Map_1__Integer_MANY_"];
-        if (typeof fn5 === "function") {
-            return Uint8Array.from(fn5(elements, "test", "*", ["core"], referencedBy), Number);
-        }
+    const WRITE = "platform$pure$compiler$pdb$archive$writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Binary_1_";
+    const WRITE_WITH_REFERENCES = "platform$pure$compiler$pdb$archive$writeArchive_Any_MANY__CompilerExtension_MANY__String_1__String_1__String_MANY__Map_1__Binary_1_";
+    const PURE_EXTENSION = "platform$pure$compiler$extension$pureExtension__CompilerExtension_1_";
+    const name = referencedBy != null ? WRITE_WITH_REFERENCES : WRITE;
+    if (typeof globalThis[name] !== "function" || typeof globalThis[PURE_EXTENSION] !== "function") {
+        throw new Error(`translated Pure pdb writer not loaded: ${name} and ${PURE_EXTENSION} `
+                      + "(run `just javascript::generate-all` and loadCompiler() first)");
     }
-    const fn = globalThis["platform$pure$compiler$pdb$archive$writeArchive_Any_MANY__String_1__String_1__String_MANY__Integer_MANY_"];
-    if (typeof fn !== "function") {
-        throw new Error("translated Pure pdb writer not loaded (run `just javascript::generate-all` and loadCompiler() first)");
-    }
-    return Uint8Array.from(fn(elements, "test", "*", ["core"]), Number);
+    // m3's elements are written by ###Pure's own extension, named like any other.
+    const extensions = [globalThis[PURE_EXTENSION]()];
+    const bytes = referencedBy != null
+        ? globalThis[name](elements, extensions, "test", "*", ["core"], referencedBy)
+        : globalThis[name](elements, extensions, "test", "*", ["core"]);
+    return Uint8Array.from(bytes, Number);
 }
 
 /**

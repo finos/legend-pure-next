@@ -70,12 +70,12 @@ Class platform::extensions::pure::diagram::metamodel::RelationshipView
 Class platform::extensions::pure::diagram::metamodel::PropertyView extends platform::extensions::pure::diagram::metamodel::RelationshipView
 {
    // `m::Person.firm` as written.
-   property : String[1];
+   <<platform::pure::metamodel::ProtocolInfo.pointer>> property : platform::pure::metamodel::function::property::Property<platform::pure::metamodel::type::Nil, platform::pure::metamodel::type::Any|*>[0..1];
 }
 
 Class platform::extensions::pure::diagram::metamodel::AssociationView extends platform::extensions::pure::diagram::metamodel::RelationshipView
 {
-   association : String[1];
+   <<platform::pure::metamodel::ProtocolInfo.pointer>> association : platform::pure::metamodel::relationship::Association[0..1];
 }
 
 Class platform::extensions::pure::diagram::metamodel::GeneralizationView extends platform::extensions::pure::diagram::metamodel::RelationshipView

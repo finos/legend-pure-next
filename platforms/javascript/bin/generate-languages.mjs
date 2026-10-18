@@ -93,10 +93,9 @@ if (existsSync(extensionsDir)) {
 //
 // Two fields are worth knowing, since JSON cannot explain itself:
 //
-//   bundled   the section parser arrives through the parser bundle rather than a registered module,
-//             so there is no element to guard it against. `###Pure` is not optional and must not be
-//             guarded into silence; an extension has a `module` instead and stays quietly inert until
-//             that module is registered.
+//   module    absent ⇔ always active: the language ships with the platform, so its halves are never
+//             guarded on a module being registered. `###Pure` is the one; an extension names its module
+//             and stays quietly inert until that module is registered.
 //   pdbs      the modules the language needs, in load order, repo-relative — bootstrap writes into
 //             shared/ and each module into its own build/, and a host that fetches rather than opens
 //             files (the browser IDE) uses the same list as URLs. Pure's last three are THIS
@@ -115,16 +114,21 @@ const manifests = readdirSync(coreDir)
     .sort()
     .map((name) => join(coreDir, name));
 // ONE FILE PER LANGUAGE, and one discovery module over them — the same shape the extensions have
-// (extensions/<dir>/language_<dir>.js + extensions/extensions.js). `//` is commentary and `pdbs` is
-// the host's load list, so neither belongs in the descriptor a host reads.
+// (extensions/<dir>/language_<dir>.js + extensions/extensions.js). `//` is commentary; `pdbs` stays
+// in the descriptor, as an extension's does, because PureRuntime.buildAsync loads the NAMED languages'
+// modules from it — and is also exported on its own, for PURE_LANGUAGE_PDBS.
 // Straight into `pure/`, beside the rest of the Pure language's generated code (pure/grammar,
 // pure/compiler, pure/runtime): these descriptors describe the language itself, not the platform's
 // extension area, and `language_*.js` already says what each one is without a folder to repeat it.
 const dir = join(genDir, "pure");
 mkdirSync(dir, { recursive: true });
 const core = manifests.map((file) => {
-    const { "//": _comment, pdbs, ...language } = JSON.parse(readFileSync(file, "utf8"));
+    const { "//": _comment, ...language } = JSON.parse(readFileSync(file, "utf8"));
+    const pdbs = language.pdbs;
     // `language_pure.json` -> `pure`, which is both the file's suffix and its import alias.
+    // The schema TEXT travels in the descriptor, as an extension's fragment does: needed wherever the
+    // language is registered (a browser included), and this is the one moment the file is at hand.
+    const descriptor = language.fbs ? { ...language, fbsText: fbsText(language) } : language;
     const slug = file.split("/").pop().replace(/^language_/, "").replace(/\.json$/, "")
         .replace(/[^A-Za-z0-9_]/g, "_");
     writeFileSync(join(dir, `language_${slug}.js`), [
@@ -133,7 +137,7 @@ const core = manifests.map((file) => {
         `// The '${language.name}' language, from pure/specification/language_${slug}.json verbatim. A host`,
         "// registers it the same way it registers an extension.",
         "",
-        `export const language = ${JSON.stringify(language, null, 4)};`,
+        `export const language = ${JSON.stringify(descriptor, null, 4)};`,
         ...(pdbs ? ["",
             "/** The modules this language needs, in load order. */",
             `export const pdbs = ${JSON.stringify(pdbs, null, 4)};`] : []),
@@ -232,10 +236,11 @@ for (const ext of extensions) {
     //              and the protocol those rules build — the protocol IS the grammar's output, so it
     //              sits with the grammar rather than in a directory of its own.
     //   compiler/  protocol -> graph: the compiler passes, and the metamodel they build.
+    //   pdb/       graph -> archive: the PDB writer generated from the metamodel (pdb::gen).
     //
     // Keyed on the package's last segment, so it applies to a declared half and a declared package
     // alike. A package not listed here lands at the extension root.
-    const SUBDIR = { parser: "grammar", protocol: "grammar", compiler: "compiler", metamodel: "compiler" };
+    const SUBDIR = { parser: "grammar", protocol: "grammar", compiler: "compiler", metamodel: "compiler", gen: "pdb" };
     const fileFor = (pkg) => {
         const leaf = pkg.split("::").pop();
         return SUBDIR[leaf] ? `${SUBDIR[leaf]}/${leaf}.js` : `${leaf}.js`;
@@ -254,10 +259,14 @@ for (const ext of extensions) {
     // Classes first, so a half never loads before the types it builds — order is not required for
     // correctness (these files only declare functions) but depending on that would be needless.
     const translate = [...new Map([...extra, ...halves].map((h) => [h.pkg, h])).values()];
+    // TEST packages (the fixture runners): translated like the rest, so the CLI's suites can run them,
+    // but kept out of jsPaths — every host loads those, the browser IDE included, and these call
+    // test-only functions its lean PDBs do not have. Only a host that runs tests loads testJsPaths.
+    const tests = (manifest.testPackages ?? []).map((pkg) => ({ half: null, pkg, file: fileFor(pkg) }));
 
     // The manifest is re-exported VERBATIM rather than field by field, so a new key in
     // language_<name>.json reaches the host with no change to this generator. Only what the host cannot
-    // read off the manifest is added: where the extension's pdb is built, and which translated files
+    // read off the manifest is added: which translated files
     // this platform writes.
     writeFileSync(join(own, `language_${dir}.js`), [
         "// GENERATED by platforms/javascript/bin/generate-languages.mjs — do not edit.",
@@ -273,12 +282,25 @@ for (const ext of extensions) {
         "export const extension = {",
         `    ...${JSON.stringify(manifest)},`,
         `    dir: ${JSON.stringify(dir)},`,
-        `    pdbPath: ${JSON.stringify(`pure/extensions/${dir}/build/${manifest.module}.pdb`)},`,
         `    jsPaths: ${JSON.stringify(translate.map((t) => `extensions/${dir}/${t.file}`))},`,
-        `    translate: ${JSON.stringify(translate.map((t) => ({ package: t.pkg, out: `extensions/${dir}/${t.file}` })))},`,
+        `    testJsPaths: ${JSON.stringify(tests.map((t) => `extensions/${dir}/${t.file}`))},`,
+        `    translate: ${JSON.stringify([...translate, ...tests].map((t) => ({ package: t.pkg, out: `extensions/${dir}/${t.file}` })))},`,
+        // The PDB schema fragment generated from the extension's metamodel, embedded rather than
+        // loaded: it is needed wherever the extension is registered, a browser included, and this is
+        // the one moment the file is at hand. `fbs` (from the manifest) stays its repo path.
+        ...(manifest.fbs ? [`    fbsText: ${JSON.stringify(fbsText(manifest))},`] : []),
         "};",
         "",
     ].join("\n"));
+}
+
+// The text of an extension's generated schema fragment, or null when the extension is not built
+// yet. Not an error HERE: the descriptors are generated early in a clean build (the grammar half is
+// needed before any extension is compiled) and again before anything runs. Registering an extension
+// whose fragment is missing is the error (ModuleRegistry.registerExtension).
+function fbsText(manifest) {
+    const path = join(repoRoot, manifest.fbs);
+    return existsSync(path) ? readFileSync(path, "utf8") : null;
 }
 
 // --- the ONE baked list of languages -----------------------------------------

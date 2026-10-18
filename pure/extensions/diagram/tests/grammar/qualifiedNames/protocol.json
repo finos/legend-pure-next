@@ -1,0 +1,96 @@
+{
+  "_type": "PureFile",
+  "sections": [
+    {
+      "_type": "Section",
+      "elements": [
+        {
+          "_type": "Diagram",
+          "name": "D",
+          "p_sourceInformation": {
+            "_type": "SourceInformation",
+            "endColumn": 1,
+            "endLine": 20,
+            "startColumn": 1,
+            "startLine": 15
+          },
+          "package": {
+            "_type": "Package_Pointer",
+            "value": "a::b::c"
+          },
+          "propertyViews": [
+            {
+              "_type": "PropertyView",
+              "id": "pv",
+              "p_sourceInformation": {
+                "_type": "SourceInformation",
+                "endColumn": 83,
+                "endLine": 19,
+                "startColumn": 4,
+                "startLine": 19
+              },
+              "property": {
+                "_type": "Property_Pointer",
+                "value": "a::b::c::Person.firm"
+              },
+              "source": "tv",
+              "target": "tv2"
+            }
+          ],
+          "typeViews": [
+            {
+              "_type": "TypeView",
+              "attributesVisible": true,
+              "height": 10.0,
+              "id": "tv",
+              "p_sourceInformation": {
+                "_type": "SourceInformation",
+                "endColumn": 82,
+                "endLine": 17,
+                "startColumn": 4,
+                "startLine": 17
+              },
+              "position": {
+                "_type": "Point",
+                "x": 0.0,
+                "y": 0.0
+              },
+              "stereotypesVisible": true,
+              "type": {
+                "_type": "Type_Pointer",
+                "value": "a::b::c::Person"
+              },
+              "width": 10.0
+            },
+            {
+              "_type": "TypeView",
+              "attributesVisible": true,
+              "height": 10.0,
+              "id": "tv2",
+              "p_sourceInformation": {
+                "_type": "SourceInformation",
+                "endColumn": 75,
+                "endLine": 18,
+                "startColumn": 4,
+                "startLine": 18
+              },
+              "position": {
+                "_type": "Point",
+                "x": 0.0,
+                "y": 0.0
+              },
+              "stereotypesVisible": true,
+              "type": {
+                "_type": "Type_Pointer",
+                "value": "x::Firm"
+              },
+              "width": 10.0
+            }
+          ]
+        }
+      ],
+      "parserName": "Diagram"
+    }
+  ],
+  "sourceId": "testFile"
+}

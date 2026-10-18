@@ -1235,10 +1235,13 @@ function platform::extensions::language::javascript::translation::genericTypeToC
    // it implicit). Stamp its own classifier — the canonical UserDefinedGenericType
    // optimization singleton — so it lifts/serialises as UserDefinedGenericType (not
    // an untyped `{type,typeArguments}`), matching the JVM/Java graph. Metamodel
-   // types only; user classes keep the `__equalityKeys` self-describing form above.
-   let cgtEntry  = if ($rt->isNotEmpty()
-                       && $rt->toOne()->instanceOf(platform::pure::metamodel::PackageableElement)
-                       && $rt->toOne()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath()->startsWith('platform::pure::metamodel::'),
+   // types only — m3's, and a language extension's (its `…::metamodel::` package: a
+   // Diagram and its views are graph elements the PDB writer serialises, union arm and
+   // all); user classes keep the `__equalityKeys` self-describing form above.
+   let rtPath    = if ($rt->isNotEmpty() && $rt->toOne()->instanceOf(platform::pure::metamodel::PackageableElement),
+                       | $rt->toOne()->cast(@platform::pure::metamodel::PackageableElement)->elementToPath(),
+                       | '');
+   let cgtEntry  = if ($rtPath->startsWith('platform::pure::metamodel::') || $rtPath->contains('::metamodel::'),
                        | [jsEntry('classifierGenericType', jsCall(jsId('__pureResolve'), [jsStrLit('platform::pure::metamodel::type::generics::optimization::GenericType_platform_pure_metamodel_type_generics_UserDefinedGenericType')]))],
                        | []->cast(@platform::extensions::language::javascript::metamodel::PropertyAssignment));
    // A cgt object IS a GenericTypeValue, so hand the slots to `__newCgt`, which makes it an instance

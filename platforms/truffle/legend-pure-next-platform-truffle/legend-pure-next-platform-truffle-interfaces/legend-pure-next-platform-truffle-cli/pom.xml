@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2026 Goldman Sachs
+ ©2026 JP Morgan Chase & Co. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -142,19 +152,15 @@
                                      build time so its singleton lands in the heap as a fully constructed
                                      object rather than triggering the build-time/run-time mismatch error. -->
                                 <buildArg>--initialize-at-build-time=org.finos.legend.pure.truffle.execution.profiler.PureProfilerProvider</buildArg>
-                                <!-- m3.fbs: GenericFbDecoder loads the wire schema as a
-                                     classpath resource at runtime; native-image strips
-                                     unregistered resources, and without this the binary
-                                     fails on first deserialize ("Schema resource not on
-                                     classpath"). -->
-                                <buildArg>-H:IncludeResources=generated-specification/m3\.fbs</buildArg>
-                                <!-- The LANGUAGE MANIFESTS, for the same reason: PureLanguage and each
-                                     extension's own accessor read `languages/language_*.json` as classpath
-                                     resources at startup, so a binary without them fails immediately with
-                                     "no language manifest on the class path". One pattern covers the Pure
-                                     language, compiler-pure's test sections and every extension, because
-                                     all of them stage into the same `languages/` prefix. -->
+                                <!-- The LANGUAGE MANIFESTS and their schemas: native-image strips unregistered
+                                     resources, and PureLanguage and each extension's own accessor read
+                                     `languages/language_*.json` at startup ("no language manifest on the
+                                     class path" without them), while the PDB decoder reads every language's
+                                     `fbs` — m3.fbs included — from the same directory. One pattern each
+                                     covers the Pure language, compiler-pure's test sections and every
+                                     extension, because all of them stage into the same `languages/` prefix. -->
                                 <buildArg>-H:IncludeResources=languages/.*\.json</buildArg>
+                                <buildArg>-H:IncludeResources=languages/.*\.fbs</buildArg>
                             </buildArgs>
                         </configuration>
                     </plugin>

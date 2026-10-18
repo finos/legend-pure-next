@@ -90,6 +90,14 @@
                                         <include>language_diagram.json</include>
                                     </includes>
                                 </resource>
+                                <!-- The PDB schema fragment generated from the metamodel (the manifest's
+                                     `fbs`), beside the manifest: the PDB reader decodes diagrams with it. -->
+                                <resource>
+                                    <directory>${extension.dir}/generated</directory>
+                                    <includes>
+                                        <include>diagram.fbs</include>
+                                    </includes>
+                                </resource>
                             </resources>
                         </configuration>
                     </execution>

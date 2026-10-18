@@ -35,7 +35,7 @@ import java.util.function.Consumer;
 
 /**
  * Truffle-side analog of {@code CompilerBinaryBuilder}: compile every
- * {@code .pure} file under {@code sourceDir} via the truffle interpreter
+ * {@code .pure} file under each of {@code sourceDirs} via the truffle interpreter
  * (running compiler-pure), aggregate the resulting metamodel elements,
  * and write them to a {@code .pdb} archive via {@link PurePdbArchiveWriter}
  * (the self-hosted Pure writer).
@@ -53,17 +53,19 @@ public final class TruffleCompilerBinaryBuilder
     // pre-parsed files. Keeping the platforms structurally identical is what
     // makes the output PDBs comparable — the only platform-specific code is
     // the runtime hosting the same Pure entry points.
-    private static final String PARSE_DIR_FN_PATH =
-            "platform::pure::compiler::parseDir_String_1__PureFile_MANY_";
+    private static final String PARSE_DIRS_FN_PATH =
+            "platform::pure::compiler::parseDirs_String_MANY__PureFile_MANY_";
+    // The overload taking the languages' compiler passes, as PureRuntime.compile() uses: without them a
+    // `###Diagram` (or any extension) section in the module would not compile.
     private static final String COMPILE_FN_PATH =
-            "platform::pure::compiler::compile_PureFile_MANY__Boolean_1__CompilationResult_1_";
+            "platform::pure::compiler::compile_PureFile_MANY__CompilerExtension_MANY__Boolean_1__Boolean_1__CompilationResult_1_";
 
     private TruffleCompilerBinaryBuilder()
     {
     }
 
     /**
-     * Compile {@code sourceDir} against the given base PDBs and write to
+     * Compile the {@code .pure} files under {@code sourceDirs} (in order) against the given base PDBs and write to
      * {@code outputDir} (filename derived from the module manifest), with
      * optional tests-companion via {@code mode}. Each base PDB is loaded
      * read-only to provide cross-references; only freshly-compiled elements
@@ -72,33 +74,36 @@ public final class TruffleCompilerBinaryBuilder
      * <p>The writer enforces required-property validation: any {@code [1]}
      * property that's null or any {@code [1..*]} that's empty aborts the
      * write. Surfaces compiler-pure gaps as build failures.</p>
+     *
+     * <p>{@code languages} are the extensions the module's sections parse and compile with — {@code ###Pure}
+     * is always added — and an argument rather than something a customizer may forget. {@code runtimeCustomizer} lets the
+     * CLI forward {@code --source-root} and {@code --cpu-sampler*} options.</p>
      */
-    public static void compile(List<Path> basePdbs, Path sourceDir, Path outputDir, TestElementFilter.Mode mode) throws IOException
-    {
-        compile(basePdbs, sourceDir, outputDir, mode, b -> {});
-    }
-
-    /**
-     * Variant that lets callers customise the {@link PureRuntime}
-     * before it boots — used by the CLI to forward {@code --source-root}
-     * and {@code --cpu-sampler*} options.
-     */
-    public static void compile(List<Path> basePdbs, Path sourceDir, Path outputDir,
+    public static void compile(List<Path> basePdbs, List<Path> sourceDirs, Path outputDir,
                                TestElementFilter.Mode mode,
+                               org.eclipse.collections.api.list.ListIterable<org.finos.legend.pure.truffle.grammar.Language> languages,
                                Consumer<PureRuntime.Builder> runtimeCustomizer) throws IOException
     {
         if (basePdbs.isEmpty())
         {
             throw new IllegalArgumentException("At least one --base-pdb is required");
         }
-        if (!Files.isDirectory(sourceDir))
+        if (sourceDirs.isEmpty())
         {
-            throw new IllegalArgumentException("source dir does not exist: " + sourceDir);
+            throw new IllegalArgumentException("At least one --source is required");
         }
-        ModuleManifest manifest = ModuleManifest.locate(sourceDir);
+        for (Path sourceDir : sourceDirs)
+        {
+            if (!Files.isDirectory(sourceDir))
+            {
+                throw new IllegalArgumentException("source dir does not exist: " + sourceDir);
+            }
+        }
+        // The module's manifest sits at or above its first source dir (code/ and generated/ share one).
+        ModuleManifest manifest = ModuleManifest.locate(sourceDirs.get(0));
         Path outputFile = outputDir.resolve(manifest.name() + ".pdb");
 
-        System.out.println("Compiling Pure model from " + sourceDir
+        System.out.println("Compiling Pure model from " + sourceDirs
                 + " (base: " + basePdbs + ") via truffle interpreter...");
         System.out.println("  Manifest: module='" + manifest.name() + "', deps=" + manifest.dependencies()
                 + (manifest.testDependencies().isEmpty() ? "" : ", testDeps=" + manifest.testDependencies()));
@@ -120,32 +125,36 @@ public final class TruffleCompilerBinaryBuilder
         {
             loader.setResolver(resolver);
         }
+        // 2. Boot the truffle runtime. Section parsers (CompiledGraph /
+        // CompilerStats / TestFile / ReverseIndex / Error) come from
+        // compiler-pure's testSectionParsers() via TrufflePureParser's
+        // Pure-side registry. The LANGUAGES (###Pure, ###Diagram, …) are the
+        // caller's argument; their compiler passes reach compile() below via
+        // compilerExtensions().
+        PureRuntime.Builder runtimeBuilder = PureRuntime.builder()
+                .withRegistry(resolver)
+                .withLanguages(languages)
+                .withNatives(org.finos.legend.pure.truffle.execution.natives.NativeRegistry.createDefault());
+        runtimeCustomizer.accept(runtimeBuilder);
+        PureRuntime runtime = runtimeBuilder.build();
+        // Decoding needs the languages' schema, which build() installs: preload after it.
         for (PdbModule loader : loaders)
         {
             loader.preloadAll();
         }
 
-        // 2. Boot the truffle runtime. Section parsers (CompiledGraph /
-        // CompilerStats / TestFile / ReverseIndex / Error) come from
-        // compiler-pure's testSectionParsers() via TrufflePureParser's
-        // Pure-side registry; no Java extensions needed.
-        PureRuntime.Builder runtimeBuilder = PureRuntime.builder()
-                .withRegistry(resolver);
-        runtimeCustomizer.accept(runtimeBuilder);
-        PureRuntime runtime = runtimeBuilder.build();
-
         // Post-loader-flip the resolver may return a PureDynamicObject for
         // these functions; runtime.execute accepts Object.
-        Object parseDirFn = resolver.getElement(PARSE_DIR_FN_PATH);
+        Object parseDirsFn = resolver.getElement(PARSE_DIRS_FN_PATH);
         Object compileFn = resolver.getElement(COMPILE_FN_PATH);
-        if (parseDirFn == null || compileFn == null
-                || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(parseDirFn,
+        if (parseDirsFn == null || compileFn == null
+                || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(parseDirsFn,
                         "platform::pure::metamodel::function::FunctionDefinition", resolver)
                 || !org.finos.legend.pure.truffle.compiler.helper._Any.isType(compileFn,
                         "platform::pure::metamodel::function::FunctionDefinition", resolver))
         {
             throw new RuntimeException("parseDir/compile FunctionDefinition not resolvable: "
-                    + "parseDir=" + (parseDirFn == null ? "null" : parseDirFn.getClass().getName())
+                    + "parseDir=" + (parseDirsFn == null ? "null" : parseDirsFn.getClass().getName())
                     + ", compile=" + (compileFn == null ? "null" : compileFn.getClass().getName()));
         }
 
@@ -160,8 +169,11 @@ public final class TruffleCompilerBinaryBuilder
             Object result;
             try
             {
-                Object parsedFiles = runtime.execute(parseDirFn, sourceDir.toAbsolutePath().toString());
-                result = runtime.execute(compileFn, parsedFiles, Boolean.getBoolean("legend.pure.compileDebug"));
+                Object parsedFiles = runtime.execute(parseDirsFn,
+                        org.eclipse.collections.impl.list.mutable.ListAdapter.adapt(sourceDirs)
+                                .collect(dir -> dir.toAbsolutePath().toString()));
+                result = runtime.execute(compileFn, parsedFiles, runtime.compilerExtensions(),
+                        Boolean.getBoolean("legend.pure.compileDebug"), Boolean.FALSE);
             }
             catch (Throwable t)
             {

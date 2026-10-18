@@ -1,0 +1,432 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// THE FBS GENERATOR, over Pure — RdfFbsSchemaGenerator for a metamodel written in Pure.
+//
+// m3.fbs is generated in Java from m3.ttl, because it has to exist before any Pure can be compiled
+// (the same bootstrap reason the Pure protocol generator records). Everything compiled afterwards —
+// a language extension's metamodel — gets its schema here, from the COMPILED classes, by the SAME
+// rules (RdfFbsSchemaGenerator.generate + ModelUtils). One specification, two implementations:
+// `fbsParity` (parity.pure) runs this one over m3 itself and checks it reproduces m3.fbs, which is
+// what keeps the two together.
+//
+// An EXTENSION schema is a fragment: it declares the extension's own tables and any new unions,
+// refers to m3 names (PointerRef, SourceInformationDef, TypePropertyUnion, …) without redeclaring
+// them, and never adds a member to an m3 union — so no discriminant in an existing archive moves.
+// Each table is preceded by `// pure-class <Table> <path>`: the readers' table → class map, in a
+// form parseFbs already skips.
+//
+// Two passes, like the Java generator: pointer unions over EVERY class (abstract ones included —
+// their properties are inherited), then one table per concrete class. Union names are settled in
+// the first pass, in class-name order, so the tie-breaks match.
+
+import platform::pure::metamodel::type::*;
+import platform::pure::metamodel::function::property::*;
+import platform::pure::compiler::pdb::schema::*;
+import platform::pure::compiler::pdb::generator::*;
+import platform::pure::compiler::pdb::fbsgen::*;
+
+Class platform::pure::compiler::pdb::fbsgen::FbsGenResult
+{
+   fbs : String[1];
+   ids : String[1];
+}
+
+Class platform::pure::compiler::pdb::fbsgen::GenState
+{
+   ids         : platform::pure::compiler::pdb::fbsgen::FieldId[*];
+   unions      : platform::pure::compiler::pdb::schema::FbsUnion[*];   // pointer unions declared by this run
+   fieldUnions : Pair<String, String>[*];                             // '<Class>.<fbs_field>' -> union name
+   tables      : String[*];                                           // rendered table blocks
+}
+
+// --- classes -------------------------------------------------------------------
+
+// A Package child resolved to the live element (children read from a PDB may still be pointers).
+function platform::pure::compiler::pdb::fbsgen::resolveChild(c:platform::pure::metamodel::PackageableElement[1]):platform::pure::metamodel::PackageableElement[1]
+{
+   if($c->instanceOf(platform::pure::metamodel::pointer::TempCompilerPointer),
+      | platform::pure::functions::meta::pathToElement($c->cast(@platform::pure::metamodel::pointer::TempCompilerPointer).path),
+      | $c);
+}
+
+function platform::pure::compiler::pdb::fbsgen::classesUnder(pkg:platform::pure::metamodel::Package[1]):Class<Any>[*]
+{
+   $pkg.children
+      ->map(c | platform::pure::compiler::pdb::fbsgen::resolveChild($c))
+      ->map(e | platform::pure::compiler::pdb::fbsgen::classesOf($e));
+}
+
+function platform::pure::compiler::pdb::fbsgen::classesOf(e:platform::pure::metamodel::PackageableElement[1]):Class<Any>[*]
+{
+   if([
+      pair(| $e->instanceOf(platform::pure::metamodel::Package),
+           | platform::pure::compiler::pdb::fbsgen::classesUnder($e->cast(@platform::pure::metamodel::Package))),
+      pair(| $e->instanceOf(Class),
+           | $e->cast(@Class<Any>))
+   ],
+      | []->cast(@Class<Any>));
+}
+
+function platform::pure::compiler::pdb::fbsgen::byName(classes:Class<Any>[*]):Class<Any>[*]
+{
+   $classes->sort({a, b | $a.name->toOne()->compare($b.name->toOne())});
+}
+
+// Every class under the given packages (recursively), by simple name.
+function platform::pure::compiler::pdb::fbsgen::ownClasses(packages:String[*]):Class<Any>[*]
+{
+   platform::pure::compiler::pdb::fbsgen::byName($packages
+      ->map(p | platform::pure::compiler::pdb::fbsgen::classesUnder(
+                   platform::pure::functions::meta::pathToElement($p)->cast(@platform::pure::metamodel::Package)))
+      ->removeDuplicates());
+}
+
+// What subtype questions are asked over: the generated classes plus m3's.
+function platform::pure::compiler::pdb::fbsgen::universe(own:Class<Any>[*]):Class<Any>[*]
+{
+   $own->concatenate(platform::pure::compiler::pdb::fbsgen::ownClasses('platform::pure::metamodel'))->removeDuplicates();
+}
+
+function platform::pure::compiler::pdb::fbsgen::isConcrete(c:Class<Any>[1]):Boolean[1]
+{
+   !hasClassStereotype($c, 'abstract') && !hasClassStereotype($c, 'pointer');
+}
+
+function platform::pure::compiler::pdb::fbsgen::isTransient(c:Class<Any>[1]):Boolean[1]
+{
+   hasClassStereotype($c, 'transientCompilerOnly');
+}
+
+// Concrete, non-pointer classes of `universe` that (transitively) extend `c` — ModelUtils.collectAllSubtypes.
+function platform::pure::compiler::pdb::fbsgen::concreteSubtypes(c:Class<Any>[1], universe:Class<Any>[*]):Class<Any>[*]
+{
+   let path = $c->elementToPath();
+   platform::pure::compiler::pdb::fbsgen::byName($universe->filter(x |
+      platform::pure::compiler::pdb::fbsgen::isConcrete($x)
+         && allSuperClasses($x)->map(s | $s->elementToPath())->contains($path)));
+}
+
+// ModelUtils.reachableConcreteSubtypes: `c` itself when concrete, plus its concrete subtypes, never
+// compile-time-only classes.
+function platform::pure::compiler::pdb::fbsgen::reachable(c:Class<Any>[1], universe:Class<Any>[*]):String[*]
+{
+   let self = if(platform::pure::compiler::pdb::fbsgen::isConcrete($c) && !platform::pure::compiler::pdb::fbsgen::isTransient($c),
+                 | $c->cast(@Class<Any>), | []->cast(@Class<Any>));
+   $self->concatenate(platform::pure::compiler::pdb::fbsgen::concreteSubtypes($c, $universe))
+      ->filter(x | !platform::pure::compiler::pdb::fbsgen::isTransient($x))
+      .name->removeDuplicates();
+}
+
+function platform::pure::compiler::pdb::fbsgen::classNamed(name:String[1], universe:Class<Any>[*]):Class<Any>[0..1]
+{
+   $universe->filter(c | $c.name == $name)->head();
+}
+
+function platform::pure::compiler::pdb::fbsgen::directSuperClasses(cls:Class<Any>[1]):Class<Any>[*]
+{
+   $cls.generalizations.general
+      ->map(g:platform::pure::metamodel::type::generics::GenericType[1] | $g->platform::pure::metamodel::type::rawType())
+      ->filter(t:Type[1] | $t->instanceOf(Class))
+      ->map(t:Type[1] | $t->cast(@Class<Any>));
+}
+
+// --- ProtocolInfo annotations ----------------------------------------------------
+
+function platform::pure::compiler::pdb::fbsgen::tagName(t:Any[1]):String[1]
+{
+   if($t->instanceOf(platform::pure::metamodel::pointer::TagPointer),
+      | $t->cast(@platform::pure::metamodel::pointer::TagPointer).element->toOne(),
+      | $t->cast(@platform::pure::metamodel::extension::Tag).value->toOne());
+}
+
+// `{ProtocolInfo.nonPointerSubtypes = 'A,B'}` on the class or, failing that, its first parent.
+function platform::pure::compiler::pdb::fbsgen::nonPointerSubtypes(cls:Class<Any>[1]):String[*]
+{
+   let tag     = $cls.taggedValues->filter(tv | platform::pure::compiler::pdb::fbsgen::tagName($tv.tag) == 'nonPointerSubtypes')->head();
+   let parents = platform::pure::compiler::pdb::fbsgen::directSuperClasses($cls);
+   if([
+      pair(| $tag->isNotEmpty(),
+           | $tag->toOne().value->split(',')->map(s | $s->trim())->filter(s | $s != '')),
+      pair(| $parents->isNotEmpty(),
+           | platform::pure::compiler::pdb::fbsgen::nonPointerSubtypes($parents->at(0)))
+   ],
+      | []->cast(@String));
+}
+
+// ModelUtils.inlineEligibleSubtypes: what may be written INLINE through a pointer-typed slot.
+function platform::pure::compiler::pdb::fbsgen::inline(t:Class<Any>[1], universe:Class<Any>[*]):String[*]
+{
+   let leaves = platform::pure::compiler::pdb::fbsgen::nonPointerSubtypes($t)
+      ->map(n | platform::pure::compiler::pdb::fbsgen::classNamed($n, $universe))
+      ->map(c | platform::pure::compiler::pdb::fbsgen::reachable($c, $universe));
+   platform::pure::compiler::pdb::fbsgen::reachable($t, $universe)->filter(n | $leaves->contains($n))->sort();
+}
+
+function platform::pure::compiler::pdb::fbsgen::hasPropertyStereotype(p:Property<Nil, Any|*>[1], name:String[1]):Boolean[1]
+{
+   $p.stereotypes->exists(s | stereotypeName($s) == $name);
+}
+
+function platform::pure::compiler::pdb::fbsgen::rawTypeOf(p:Property<Nil, Any|*>[1]):Type[0..1]
+{
+   $p.genericType->map(g:platform::pure::metamodel::type::generics::GenericType[1] | $g->platform::pure::metamodel::type::rawType())->head();
+}
+
+function platform::pure::compiler::pdb::fbsgen::rawClassOf(p:Property<Nil, Any|*>[1]):Class<Any>[0..1]
+{
+   platform::pure::compiler::pdb::fbsgen::rawTypeOf($p)->filter(t | $t->instanceOf(Class))->map(t | $t->cast(@Class<Any>))->head();
+}
+
+// PrimitiveFbsTypeMapping.toFbsType.
+function platform::pure::compiler::pdb::fbsgen::primitiveFbsType(name:String[1]):String[0..1]
+{
+   [pair('String', 'string'), pair('Boolean', 'bool'), pair('Integer', 'long'), pair('Float', 'double'),
+    pair('Decimal', 'string'), pair('Date', 'string'), pair('DateTime', 'string'), pair('StrictDate', 'string'),
+    pair('LatestDate', 'string'), pair('StrictTime', 'string'), pair('Number', 'double'), pair('Byte', 'ubyte'),
+    pair('Binary', 'string'), pair('Any', 'string')]
+      ->filter(m | $m.first == $name)->map(m | $m.second)->head();
+}
+
+function platform::pure::compiler::pdb::fbsgen::isMany(p:Property<Nil, Any|*>[1]):Boolean[1]
+{
+   platform::pure::functions::meta::isToMany($p.multiplicity->toOne());
+}
+
+// --- pass 1: pointer unions --------------------------------------------------------
+
+// ModelUtils.unionTypeName: snake_case -> PascalCase + 'PropertyUnion'.
+function platform::pure::compiler::pdb::fbsgen::unionTypeName(fbsField:String[1]):String[1]
+{
+   $fbsField->split('_')->filter(s | $s != '')
+      ->map(s | $s->substring(0, 1)->toUpper() + $s->substring(1, $s->length()))
+      ->joinStrings('') + 'PropertyUnion';
+}
+
+function platform::pure::compiler::pdb::fbsgen::stripDefSuffix(m:String[1]):String[1]
+{
+   if($m->endsWith('Def'), | $m->substring(0, $m->length() - 3), | $m);
+}
+
+// A pointer union's identity: its inline members, sorted.
+function platform::pure::compiler::pdb::fbsgen::contentKey(u:platform::pure::compiler::pdb::schema::FbsUnion[1]):String[1]
+{
+   $u.members->filter(m | !['PointerRef', 'AncestorRef']->contains($m))
+      ->map(m | platform::pure::compiler::pdb::fbsgen::stripDefSuffix($m))->sort()->joinStrings(',');
+}
+
+function platform::pure::compiler::pdb::fbsgen::pointerUnionWithKey(unions:platform::pure::compiler::pdb::schema::FbsUnion[*], key:String[1]):String[0..1]
+{
+   $unions->filter(u | $u.members->contains('PointerRef') && (platform::pure::compiler::pdb::fbsgen::contentKey($u) == $key))->map(u | $u.name)->head();
+}
+
+function platform::pure::compiler::pdb::fbsgen::pointerUnionStep(cls:Class<Any>[1], p:Property<Nil, Any|*>[1], universe:Class<Any>[*], base:FbsSchema[1], st:GenState[1]):GenState[1]
+{
+   let t = platform::pure::compiler::pdb::fbsgen::rawClassOf($p);
+   let pointerish = platform::pure::compiler::pdb::fbsgen::hasPropertyStereotype($p, 'pointer')
+                    || platform::pure::compiler::pdb::fbsgen::hasPropertyStereotype($p, 'maybePointer');
+   let members = if($pointerish && $t->isNotEmpty(), | platform::pure::compiler::pdb::fbsgen::inline($t->toOne(), $universe), | []->cast(@String));
+   if($members->isEmpty(),
+      | $st,
+      | platform::pure::compiler::pdb::fbsgen::registerPointerUnion($cls.name->toOne(), toFbsFieldName($p.name->toOne()), $members, $base, $st));
+}
+
+function platform::pure::compiler::pdb::fbsgen::registerPointerUnion(clsName:String[1], fbsField:String[1], members:String[*], base:FbsSchema[1], st:GenState[1]):GenState[1]
+{
+   let key      = $members->sort()->joinStrings(',');
+   let existing = platform::pure::compiler::pdb::fbsgen::pointerUnionWithKey($base.unions->concatenate($st.unions), $key);
+   let default  = platform::pure::compiler::pdb::fbsgen::unionTypeName($fbsField);
+   let taken    = $base.unions.name->concatenate($st.unions.name);
+   let name     = if([pair(| $existing->isNotEmpty(), | $existing->toOne()),
+                      pair(| !$taken->contains($default), | $default)],
+                     | $clsName + $default);
+   let declared = if($existing->isNotEmpty(),
+                     | $st.unions,
+                     | $st.unions->concatenate(^FbsUnion(name = $name,
+                          members = ['PointerRef', 'AncestorRef']->concatenate($members->map(m | $m + 'Def')))));
+   ^$st(unions = $declared, fieldUnions = $st.fieldUnions->concatenate(pair($clsName + '.' + $fbsField, $name)));
+}
+
+function platform::pure::compiler::pdb::fbsgen::pointerUnions(own:Class<Any>[*], universe:Class<Any>[*], base:FbsSchema[1], st:GenState[1]):GenState[1]
+{
+   $own->fold({c, s | platform::pure::compiler::pdb::fbsgen::classPointerUnions($c, $universe, $base, $s)}, $st);
+}
+
+function platform::pure::compiler::pdb::fbsgen::classPointerUnions(cls:Class<Any>[1], universe:Class<Any>[*], base:FbsSchema[1], st:GenState[1]):GenState[1]
+{
+   allWriterProperties($cls)->fold({p, s | platform::pure::compiler::pdb::fbsgen::pointerUnionStep($cls, $p, $universe, $base, $s)}, $st);
+}
+
+// --- taxonomy unions ------------------------------------------------------------------
+
+// `<C>Union { <concrete subtypes>Def…, <C>Def if concrete, AncestorRef }` for every class with
+// concrete subtypes — skipped when the base schema already declares it (m3's own taxonomies).
+function platform::pure::compiler::pdb::fbsgen::taxonomyUnions(own:Class<Any>[*], universe:Class<Any>[*], base:FbsSchema[1]):FbsUnion[*]
+{
+   $own->map(c | platform::pure::compiler::pdb::fbsgen::taxonomyUnion($c, $universe))
+      ->filter(u | !$base.unions.name->contains($u.name));
+}
+
+function platform::pure::compiler::pdb::fbsgen::taxonomyUnion(c:Class<Any>[1], universe:Class<Any>[*]):FbsUnion[0..1]
+{
+   let subs = platform::pure::compiler::pdb::fbsgen::concreteSubtypes($c, $universe)
+      ->filter(s | $s->elementToPath() != $c->elementToPath());
+   let self = if(!hasClassStereotype($c, 'abstract'), | $c.name->toOne() + 'Def', | []->cast(@String));
+   if($subs->isEmpty(),
+      | []->cast(@FbsUnion),
+      | ^FbsUnion(name = $c.name->toOne() + 'Union',
+                  members = $subs->map(s | $s.name->toOne() + 'Def')->concatenate($self)->concatenate('AncestorRef')));
+}
+
+// --- pass 2: tables -------------------------------------------------------------------
+
+function platform::pure::compiler::pdb::fbsgen::wrap(type:String[1], many:Boolean[1]):String[1]
+{
+   if($many, | '[' + $type + ']', | $type);
+}
+
+// RdfFbsSchemaGenerator's field-type decision, first match wins.
+function platform::pure::compiler::pdb::fbsgen::fieldType(cls:Class<Any>[1], p:Property<Nil, Any|*>[1], universe:Class<Any>[*], unionNames:String[*], st:GenState[1]):String[1]
+{
+   let fbsField = toFbsFieldName($p.name->toOne());
+   let many     = platform::pure::compiler::pdb::fbsgen::isMany($p);
+   let pointerU = $st.fieldUnions->filter(f | $f.first == ($cls.name->toOne() + '.' + $fbsField))->map(f | $f.second)->head();
+   let raw      = platform::pure::compiler::pdb::fbsgen::rawTypeOf($p);
+   let rawName  = $raw->filter(t | $t->instanceOf(platform::pure::metamodel::PackageableElement))->map(t | $t->cast(@platform::pure::metamodel::PackageableElement).name)->head();
+   let prim     = if($raw->isNotEmpty() && !$raw->toOne()->instanceOf(Class) && $rawName->isNotEmpty(),
+                     | platform::pure::compiler::pdb::fbsgen::primitiveFbsType($rawName->toOne()), | []->cast(@String));
+   let rawClass = platform::pure::compiler::pdb::fbsgen::rawClassOf($p);
+   if([
+      pair(| $pointerU->isNotEmpty(),
+           | platform::pure::compiler::pdb::fbsgen::wrap($pointerU->toOne(), $many)),
+      pair(| ($cls.name == 'AtomicValue') && ($p.name == 'value'),
+           | 'AtomicValueContentUnion'),
+      pair(| platform::pure::compiler::pdb::fbsgen::hasPropertyStereotype($p, 'pointer'),
+           | platform::pure::compiler::pdb::fbsgen::wrap('PointerRef', $many)),
+      pair(| $rawClass->isNotEmpty() && $unionNames->contains($rawClass->toOne().name->toOne() + 'Union'),
+           | platform::pure::compiler::pdb::fbsgen::wrap($rawClass->toOne().name->toOne() + 'Union', $many)),
+      pair(| $prim->isNotEmpty(),
+           | platform::pure::compiler::pdb::fbsgen::wrap($prim->toOne(), $many)),
+      pair(| $rawClass->isNotEmpty() && $universe.name->contains($rawClass->toOne().name->toOne()),
+           | platform::pure::compiler::pdb::fbsgen::wrap($rawClass->toOne().name->toOne() + 'Def', $many))
+   ],
+      | platform::pure::compiler::pdb::fbsgen::wrap('string', $many));
+}
+
+function platform::pure::compiler::pdb::fbsgen::isUnionType(type:String[1]):Boolean[1]
+{
+   $type->replace('[', '')->replace(']', '')->endsWith('Union');
+}
+
+// One `table` block: ids assigned through the registry, removed fields kept as deprecated,
+// emitted in id order.
+function platform::pure::compiler::pdb::fbsgen::renderTable(table:String[1], pureClass:String[0..1], fields:Pair<String, String>[*], st:GenState[1]):GenState[1]
+{
+   let assigned = $fields->fold({f, acc | platform::pure::compiler::pdb::fbsgen::assignFieldStep($table, $f, $acc)},
+                                ^IdAssignment(id = -1, ids = $st.ids));
+   let lines = $fields->map(f | pair(platform::pure::compiler::pdb::fbsgen::idOf($assigned.ids, $table, $f.first),
+                                     '    ' + $f.first + ': ' + $f.second + ' (id: ' + platform::pure::compiler::pdb::fbsgen::idOf($assigned.ids, $table, $f.first)->toString() + ');\n'))
+      ->concatenate(deprecatedFields($assigned.ids, $table, $fields.first)
+         ->map(d | pair($d.id, '    ' + $d.field + ': bool (deprecated, id: ' + $d.id->toString() + ');\n')));
+   let header = $pureClass->map(c | '// pure-class ' + $table + ' ' + $c + '\n')->joinStrings('');
+   let block  = $header + 'table ' + $table + ' {\n'
+              + $lines->sort({a, b | $a.first - $b.first})->map(l | $l.second)->joinStrings('') + '}\n';
+   ^$st(ids = $assigned.ids, tables = $st.tables->concatenate($block));
+}
+
+function platform::pure::compiler::pdb::fbsgen::assignFieldStep(table:String[1], f:Pair<String, String>[1], acc:IdAssignment[1]):IdAssignment[1]
+{
+   assignId($acc.ids, $table, $f.first, platform::pure::compiler::pdb::fbsgen::isUnionType($f.second));
+}
+
+function platform::pure::compiler::pdb::fbsgen::idOf(ids:FieldId[*], table:String[1], field:String[1]):Integer[1]
+{
+   $ids->filter(i | ($i.table == $table) && ($i.field == $field))->toOne().id;
+}
+
+function platform::pure::compiler::pdb::fbsgen::classTable(cls:Class<Any>[1], universe:Class<Any>[*], unionNames:String[*], st:GenState[1]):GenState[1]
+{
+   let fields = allWriterProperties($cls)->map(p |
+      pair(toFbsFieldName($p.name->toOne()), platform::pure::compiler::pdb::fbsgen::fieldType($cls, $p, $universe, $unionNames, $st)));
+   platform::pure::compiler::pdb::fbsgen::renderTable($cls.name->toOne() + 'Def', $cls->elementToPath(), $fields, $st);
+}
+
+// --- m3 only --------------------------------------------------------------------------
+
+// What RdfFbsSchemaGenerator emits by hand before the class tables (PointerRef, AncestorRef and the
+// AtomicValue content tables). Only generated when the metamodel IS m3 — the parity check's case.
+function platform::pure::compiler::pdb::fbsgen::m3PreludeTables(st:GenState[1]):GenState[1]
+{
+   let s1 = platform::pure::compiler::pdb::fbsgen::renderTable('PointerRef', [], [pair('kind', 'PointerKind'), pair('path', '[string]')], $st);
+   let s2 = platform::pure::compiler::pdb::fbsgen::renderTable('AncestorRef', [], pair('depth', 'int'), $s1);
+   let s3 = platform::pure::compiler::pdb::fbsgen::renderTable('IntegerValueDef', [], pair('val', 'long'), $s2);
+   let s4 = platform::pure::compiler::pdb::fbsgen::renderTable('FloatValueDef', [], pair('val', 'double'), $s3);
+   let s5 = platform::pure::compiler::pdb::fbsgen::renderTable('DecimalValueDef', [], pair('val', 'string'), $s4);
+   let s6 = platform::pure::compiler::pdb::fbsgen::renderTable('BooleanValueDef', [], pair('val', 'bool'), $s5);
+   platform::pure::compiler::pdb::fbsgen::renderTable('StringValueDef', [], pair('val', 'string'), $s6);
+}
+
+function platform::pure::compiler::pdb::fbsgen::m3PreludeUnions():String[1]
+{
+   'enum PointerKind : byte { Element, Property, QualifiedProperty, Stereotype, Tag }\n\n'
+      + 'union AtomicValueContentUnion { IntegerValueDef, FloatValueDef, BooleanValueDef, StringValueDef, LambdaFunctionDef, PointerRef, DecimalValueDef }\n\n';
+}
+
+// --- the whole schema ---------------------------------------------------------------------
+
+function platform::pure::compiler::pdb::fbsgen::checkClashes(base:FbsSchema[1], tables:String[*], unions:FbsUnion[*]):Boolean[1]
+{
+   let clash = $tables->filter(t | $base.tables.name->contains($t))
+      ->concatenate($unions.name->filter(u | $base.unions.name->contains($u)))->head();
+   if($clash->isEmpty(), | true, | fail('fbsgen: ' + $clash->toOne() + ' already declared by the base schema'));
+}
+
+function platform::pure::compiler::pdb::fbsgen::generateFbs(packages:String[*], base:FbsSchema[1], idsText:String[1]):FbsGenResult[1]
+{
+   let own = platform::pure::compiler::pdb::fbsgen::ownClasses($packages);
+   platform::pure::compiler::pdb::fbsgen::generateFbs($own, platform::pure::compiler::pdb::fbsgen::universe($own), $base, $idsText, $packages->joinStrings(', '));
+}
+
+// `own` gets tables; `universe` answers subtype questions. Exposed for the parity check, which
+// generates over m3's bootstrap classes only (see parity.pure).
+function platform::pure::compiler::pdb::fbsgen::generateFbs(own:Class<Any>[*], universe:Class<Any>[*], base:FbsSchema[1], idsText:String[1], label:String[1]):FbsGenResult[1]
+{
+   let isM3     = $own->exists(c | $c.name == 'AtomicValue');
+   let start    = ^GenState(ids = parseFieldIds($idsText), unions = [], fieldUnions = [], tables = []);
+   let unioned  = platform::pure::compiler::pdb::fbsgen::pointerUnions($own, $universe, $base, $start);
+   let taxonomy = platform::pure::compiler::pdb::fbsgen::taxonomyUnions($own, $universe, $base);
+   let names    = $base.unions.name->concatenate($taxonomy.name);
+   let concrete = $own->filter(c | platform::pure::compiler::pdb::fbsgen::isConcrete($c));
+   platform::pure::compiler::pdb::fbsgen::checkClashes($base, $concrete->map(c | $c.name->toOne() + 'Def'), $unioned.unions->concatenate($taxonomy));
+   let prelude  = if($isM3, | platform::pure::compiler::pdb::fbsgen::m3PreludeTables($unioned), | $unioned);
+   let end      = $concrete->fold({c, s | platform::pure::compiler::pdb::fbsgen::classTable($c, $universe, $names, $s)}, $prelude);
+   ^FbsGenResult(
+      fbs = '// AUTO-GENERATED by platform::pure::compiler::pdb::fbsgen from ' + $label + ' - DO NOT EDIT\n\n'
+          + if($isM3, | platform::pure::compiler::pdb::fbsgen::m3PreludeUnions(), | '')
+          + $unioned.unions->concatenate($taxonomy)->map(u | 'union ' + $u.name + ' { ' + $u.members->joinStrings(', ') + ' }\n\n')->joinStrings('')
+          + $end.tables->map(t | $t + '\n')->joinStrings(''),
+      ids = renderFieldIds($end.ids));
+}
+
+// Entry point for `pure-bootstrap execute`: the fragment and the updated registry between markers.
+// An empty `baseFbsPath` means no base schema (generating m3 itself).
+function platform::pure::compiler::pdb::fbsgen::printFbs(packagesCsv:String[1], baseFbsPath:String[1], idsPath:String[1]):Boolean[1]
+{
+   let base = if($baseFbsPath == '',
+                 | ^FbsSchema(tables = [], unions = [], enums = []),
+                 | parseFbs(platform::pure::functions::io::readFile($baseFbsPath)));
+   let r = generateFbs($packagesCsv->split(','), $base, platform::pure::functions::io::readFile($idsPath));
+   print('===FBS-BEGIN===\n' + $r.fbs + '===FBS-END===\n===IDS-BEGIN===\n' + $r.ids + '===IDS-END===\n', 1);
+   true;
+}

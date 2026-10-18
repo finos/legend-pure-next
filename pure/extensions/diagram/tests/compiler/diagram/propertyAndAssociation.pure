@@ -1,0 +1,67 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+###Pure
+Class m::Person
+{
+   name : String[1];
+}
+
+Class m::Firm
+{
+   legalName : String[1];
+}
+
+Association m::Employment
+{
+   firm : m::Firm[0..1];
+   employees : m::Person[*];
+}
+
+###Diagram
+Diagram m::D
+{
+   TypeView tv_a(type=m::Person, position=(0.0, 0.0), width=10.0, height=10.0)
+   TypeView tv_b(type=m::Firm, position=(100.0, 0.0), width=10.0, height=10.0)
+   PropertyView pv(property=m::Person.firm, source=tv_a, target=tv_b, points=[])
+   AssociationView av(association=m::Employment, source=tv_a, target=tv_b, points=[(50.0, 5.0)])
+}
+
+###CompiledGraph
+class m::Person extends Any  ~Class<m::Person>  @15:1-18:1
+  property name :@String@[1]  ~Property<m::Person, @String@|1>
+
+class m::Firm extends Any  ~Class<m::Firm>  @20:1-23:1
+  property legalName :@String@[1]  ~Property<m::Firm, @String@|1>
+
+association m::Employment  ~@Association@  @25:1-29:1
+  property firm :m::Firm[0..1]  ~Property<m::Person, m::Firm|0..1>
+  property employees :m::Person[*]  ~Property<m::Firm, m::Person|*>
+
+diagram m::D  ~platform::extensions::pure::diagram::metamodel::Diagram  @32:1-38:1
+  TypeView tv_a type=m::Person position=(0.0,0.0) size=(10.0,10.0) stereotypes=true attributes=true
+  TypeView tv_b type=m::Firm position=(100.0,0.0) size=(10.0,10.0) stereotypes=true attributes=true
+  PropertyView pv tv_a->tv_b points=[] property=m::Employment.firm
+  AssociationView av tv_a->tv_b points=[(50.0,5.0)] association=m::Employment
+
+###ReverseIndex
+m::Employment:
+  m::D
+m::Employment.firm:
+  m::D
+m::Firm:
+  m::D
+  m::Employment.firm
+m::Person:
+  m::D
+  m::Employment.employees

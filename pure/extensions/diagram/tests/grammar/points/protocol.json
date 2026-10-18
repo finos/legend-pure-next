@@ -1,0 +1,155 @@
+{
+  "_type": "PureFile",
+  "sections": [
+    {
+      "_type": "Section",
+      "elements": [
+        {
+          "_type": "Diagram",
+          "associationViews": [
+            {
+              "_type": "AssociationView",
+              "association": {
+                "_type": "Association_Pointer",
+                "value": "m::Employment"
+              },
+              "id": "empty",
+              "p_sourceInformation": {
+                "_type": "SourceInformation",
+                "endColumn": 88,
+                "endLine": 19,
+                "startColumn": 4,
+                "startLine": 19
+              },
+              "source": "tv_a",
+              "target": "tv_b"
+            }
+          ],
+          "generalizationViews": [
+            {
+              "_type": "GeneralizationView",
+              "id": "one",
+              "label": "extends",
+              "p_sourceInformation": {
+                "_type": "SourceInformation",
+                "endColumn": 87,
+                "endLine": 20,
+                "startColumn": 4,
+                "startLine": 20
+              },
+              "points": [
+                {
+                  "_type": "Point",
+                  "x": 1.0,
+                  "y": 2.0
+                }
+              ],
+              "source": "tv_b",
+              "target": "tv_a"
+            }
+          ],
+          "name": "D",
+          "p_sourceInformation": {
+            "_type": "SourceInformation",
+            "endColumn": 1,
+            "endLine": 22,
+            "startColumn": 1,
+            "startLine": 15
+          },
+          "package": {
+            "_type": "Package_Pointer",
+            "value": "m"
+          },
+          "propertyViews": [
+            {
+              "_type": "PropertyView",
+              "id": "several",
+              "p_sourceInformation": {
+                "_type": "SourceInformation",
+                "endColumn": 119,
+                "endLine": 21,
+                "startColumn": 4,
+                "startLine": 21
+              },
+              "points": [
+                {
+                  "_type": "Point",
+                  "x": 1.0,
+                  "y": 2.0
+                },
+                {
+                  "_type": "Point",
+                  "x": 3.0,
+                  "y": 4.0
+                },
+                {
+                  "_type": "Point",
+                  "x": 5.0,
+                  "y": 6.0
+                }
+              ],
+              "property": {
+                "_type": "Property_Pointer",
+                "value": "m::Person.firm"
+              },
+              "source": "tv_a",
+              "target": "tv_b"
+            }
+          ],
+          "typeViews": [
+            {
+              "_type": "TypeView",
+              "attributesVisible": true,
+              "height": 10.0,
+              "id": "tv_a",
+              "p_sourceInformation": {
+                "_type": "SourceInformation",
+                "endColumn": 78,
+                "endLine": 17,
+                "startColumn": 4,
+                "startLine": 17
+              },
+              "position": {
+                "_type": "Point",
+                "x": 0.0,
+                "y": 0.0
+              },
+              "stereotypesVisible": true,
+              "type": {
+                "_type": "Type_Pointer",
+                "value": "m::Person"
+              },
+              "width": 10.0
+            },
+            {
+              "_type": "TypeView",
+              "attributesVisible": true,
+              "height": 10.0,
+              "id": "tv_b",
+              "p_sourceInformation": {
+                "_type": "SourceInformation",
+                "endColumn": 76,
+                "endLine": 18,
+                "startColumn": 4,
+                "startLine": 18
+              },
+              "position": {
+                "_type": "Point",
+                "x": 0.0,
+                "y": 0.0
+              },
+              "stereotypesVisible": true,
+              "type": {
+                "_type": "Type_Pointer",
+                "value": "m::Firm"
+              },
+              "width": 10.0
+            }
+          ]
+        }
+      ],
+      "parserName": "Diagram"
+    }
+  ],
+  "sourceId": "testFile"
+}

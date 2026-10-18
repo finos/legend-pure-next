@@ -100,16 +100,55 @@ function platform::pure::compiler::pdb::generator::classesInPackage(pkg:platform
          | if($c->instanceOf(Class), | [$c->cast(@Class<Any>)], | []->cast(@Class<Any>))));
 }
 
+// WHAT a generated writer is for. m3's (generatedWriter.pure): the metamodel package, every table
+// and union of m3.fbs, emitted into pdb::gen. A language extension's: its metamodel package, the
+// tables and unions of the fragment pdb/fbsgen generated for it, emitted into the extension's own
+// namespace — `schema` is then m3.fbs + the fragment, because the fragment's tables refer to m3's
+// (SourceInformationDef, TypePropertyUnion, …) and the writer calls m3's generated functions for those.
+Class platform::pure::compiler::pdb::generator::WriterTarget
+{
+   packages  : String[*];
+   ns        : String[1];
+   schema    : FbsSchema[1];
+   ownTables : String[*];
+   ownUnions : String[*];
+   m3        : Boolean[1];
+}
+
+function platform::pure::compiler::pdb::generator::m3Ns():String[1]
+{
+   'platform::pure::compiler::pdb::gen';
+}
+
+function platform::pure::compiler::pdb::generator::m3Target(schema:FbsSchema[1]):WriterTarget[1]
+{
+   ^WriterTarget(packages = 'platform::pure::metamodel', ns = m3Ns(), schema = $schema,
+                 ownTables = $schema.tables.name, ownUnions = $schema.unions.name, m3 = true);
+}
+
+// The namespace whose generated writeX / writeUnion_X serves a table or union: the target's own,
+// or m3's for everything the target refers to but does not declare.
+function platform::pure::compiler::pdb::generator::nsFor(target:WriterTarget[1], name:String[1]):String[1]
+{
+   if($target.ownTables->contains($name) || $target.ownUnions->contains($name), | $target.ns, | m3Ns());
+}
+
 // The classes the writer emits writeX for: mirror of the reference generator's
 // class walk — skip <<typemodifiers.abstract>> and <<compiler.pointer>>, keep only
-// classes with an XDef table in the schema, sorted by simple name.
-function platform::pure::compiler::pdb::generator::writerClasses(schema:FbsSchema[1]):Class<Any>[*]
+// classes with an XDef table the target owns, sorted by simple name.
+function platform::pure::compiler::pdb::generator::writerClasses(target:WriterTarget[1]):Class<Any>[*]
 {
-   classesInPackage(platform::pure::functions::meta::pathToElement('platform::pure::metamodel')->cast(@platform::pure::metamodel::Package))
+   $target.packages
+      ->map(p | platform::pure::compiler::pdb::fbsgen::classesUnder(platform::pure::functions::meta::pathToElement($p)->cast(@platform::pure::metamodel::Package)))
       ->filter(c | !hasClassStereotype($c, 'abstract')
                    && !hasClassStereotype($c, 'pointer')
-                   && $schema.tables->exists(t | $t.name == ($c.name->toOne() + 'Def')))
+                   && $target.ownTables->contains($c.name->toOne() + 'Def'))
       ->sort({a, b | $a.name->toOne()->compare($b.name->toOne())});
+}
+
+function platform::pure::compiler::pdb::generator::writerClasses(schema:FbsSchema[1]):Class<Any>[*]
+{
+   writerClasses(m3Target($schema));
 }
 
 function platform::pure::compiler::pdb::generator::classByName(classes:Class<Any>[*], name:String[1]):Class<Any>[1]
@@ -229,6 +268,7 @@ Class platform::pure::compiler::pdb::generator::PropPlan
    unionName : String[0..1];
    castType  : String[0..1];   // full path + type args (table kind)
    writeName : String[0..1];   // simple class name (table kind)
+   ns        : String[0..1];   // namespace of the called writeX / writeUnion_X (table, union kinds)
    idx       : Integer[1];
 }
 
@@ -238,8 +278,9 @@ Class platform::pure::compiler::pdb::generator::EmitAcc
    prev : String[1];
 }
 
-function platform::pure::compiler::pdb::generator::buildPlan(schema:FbsSchema[1], clsName:String[1], prop:Property<Nil, Any|*>[1], tbl:FbsTable[1], idx:Integer[1], classes:Class<Any>[*]):PropPlan[1]
+function platform::pure::compiler::pdb::generator::buildPlan(target:WriterTarget[1], clsName:String[1], prop:Property<Nil, Any|*>[1], tbl:FbsTable[1], idx:Integer[1], classes:Class<Any>[*]):PropPlan[1]
 {
+   let schema = $target.schema;
    let pname = $prop.name->toOne();
    let fname = toFbsFieldName($pname);
    let fieldOpt = $tbl.fields->filter(f | $f.name == $fname)->head();
@@ -249,22 +290,36 @@ function platform::pure::compiler::pdb::generator::buildPlan(schema:FbsSchema[1]
    if(($clsName == 'AtomicValue') && ($pname == 'value'),
       | ^PropPlan(name = $pname, id = $field.id, vector = false, kind = 'value', idx = $idx),
       | if($cat == 'union',
-         | ^PropPlan(name = $pname, id = $field.id, vector = $field.vector, kind = 'union', unionName = $field.type, idx = $idx),
+         | ^PropPlan(name = $pname, id = $field.id, vector = $field.vector, kind = 'union', unionName = $field.type, ns = nsFor($target, $field.type), idx = $idx),
          | if($field.type == 'PointerRef',
             | ^PropPlan(name = $pname, id = $field.id, vector = $field.vector, kind = 'pointer', idx = $idx),
             | if($cat == 'table',
                | let simple = stripDef($field.type);
-                 let target = classByName($classes, $simple);
+                 let targetCls = classByName($classes, $simple);
                  ^PropPlan(name = $pname, id = $field.id, vector = $field.vector, kind = 'table',
-                           castType = $target->elementToPath() + typeArgsSuffix($target), writeName = $simple, idx = $idx);,
+                           castType = $targetCls->elementToPath() + typeArgsSuffix($targetCls), writeName = $simple, ns = nsFor($target, $field.type), idx = $idx);,
                | if($field.type == 'string',
                   | ^PropPlan(name = $pname, id = $field.id, vector = $field.vector, kind = 'string', idx = $idx),
                   | if($field.type == 'bool',
                      | ^PropPlan(name = $pname, id = $field.id, vector = $field.vector, kind = 'bool', idx = $idx),
                      | if($field.type == 'long',
                         | ^PropPlan(name = $pname, id = $field.id, vector = $field.vector, kind = 'long', idx = $idx),
-                        | fail('PDB generator: unsupported fbs field type ' + $field.type + ' for ' + $tbl.name + '.' + $fname);
-                          ^PropPlan(name = $pname, id = $field.id, vector = $field.vector, kind = 'long', idx = $idx);)))))));
+                        | platform::pure::compiler::pdb::generator::doublePlan($pname, $field, $tbl, $idx))))))));
+}
+
+// Float fields (an extension metamodel's; m3 has none). A vector of them is not written by any
+// metamodel yet, so it is refused rather than guessed at.
+function platform::pure::compiler::pdb::generator::doublePlan(pname:String[1], field:FbsField[1], tbl:FbsTable[1], idx:Integer[1]):PropPlan[1]
+{
+   if([
+      pair(| ($field.type == 'double') && $field.vector,
+           | fail('PDB generator: vectors of double are not supported (' + $tbl.name + '.' + $field.name + ')');
+             ^PropPlan(name = $pname, id = $field.id, vector = true, kind = 'double', idx = $idx);),
+      pair(| $field.type == 'double',
+           | ^PropPlan(name = $pname, id = $field.id, vector = false, kind = 'double', idx = $idx))
+   ],
+      | fail('PDB generator: unsupported fbs field type ' + $field.type + ' for ' + $tbl.name + '.' + $field.name);
+        ^PropPlan(name = $pname, id = $field.id, vector = $field.vector, kind = 'long', idx = $idx););
 }
 
 // Declared multiplicity of a property, by NAME of its (possibly pointered)
@@ -306,10 +361,10 @@ function platform::pure::compiler::pdb::generator::emitPhase1Step(p:PropPlan[1],
       pair(| ($p.kind == 'union') && ($p.vector == false),
            | ^EmitAcc(prev = $r + '.builder', code =
                 ['   platform::pure::compiler::pdb::writerHelper::checkGtvAnchor($obj.', $p.name, ', $obj);\n',
-                 '   let r', $i, ' = platform::pure::compiler::pdb::gen::writeUnion_', $p.unionName->toOne(), '(', $prev, ', $obj.', $p.name, ', $stack);\n']->joinStrings(''))),
+                 '   let r', $i, ' = ', $p.ns->toOne(), '::writeUnion_', $p.unionName->toOne(), '(', $prev, ', $obj.', $p.name, ', $stack);\n']->joinStrings(''))),
       pair(| $p.kind == 'union',
            | ^EmitAcc(prev = $r + '.builder', code =
-                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let u = platform::pure::compiler::pdb::gen::writeUnion_', $p.unionName->toOne(), '($acc.builder, $item, $stack); ^platform::pure::compiler::pdb::writerHelper::UnionListAcc(builder = $u.builder, offsets = $acc.offsets->concatenate($u.offset), types = $acc.types->concatenate($u.typeByte));}, ^platform::pure::compiler::pdb::writerHelper::UnionListAcc(builder = ', $prev, ', offsets = [], types = []));\n']->joinStrings(''))),
+                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let u = ', $p.ns->toOne(), '::writeUnion_', $p.unionName->toOne(), '($acc.builder, $item, $stack); ^platform::pure::compiler::pdb::writerHelper::UnionListAcc(builder = $u.builder, offsets = $acc.offsets->concatenate($u.offset), types = $acc.types->concatenate($u.typeByte));}, ^platform::pure::compiler::pdb::writerHelper::UnionListAcc(builder = ', $prev, ', offsets = [], types = []));\n']->joinStrings(''))),
       pair(| ($p.kind == 'pointer') && ($p.vector == false),
            | ^EmitAcc(prev = $r + '.builder', code =
                 ['   let r', $i, ' = if($obj.', $p.name, '->isEmpty(), | ', $bo, ', | platform::pure::compiler::pdb::writerHelper::writePointerRefFor(', $prev, ', $obj.', $p.name, '->toOne()));\n']->joinStrings(''))),
@@ -318,10 +373,10 @@ function platform::pure::compiler::pdb::generator::emitPhase1Step(p:PropPlan[1],
                 ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let p = platform::pure::compiler::pdb::writerHelper::writePointerRefFor($acc.builder, $item); ^platform::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $p.builder, offsets = $acc.offsets->concatenate($p.offset));}, ^platform::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = ', $prev, ', offsets = []));\n']->joinStrings(''))),
       pair(| ($p.kind == 'table') && ($p.vector == false),
            | ^EmitAcc(prev = $r + '.builder', code =
-                ['   let r', $i, ' = if($obj.', $p.name, '->isEmpty() || ($obj.', $p.name, '->toOne() == $obj), | ', $bo, ', | platform::pure::compiler::pdb::gen::write', $p.writeName->toOne(), '(', $prev, ', $obj.', $p.name, '->toOne()->cast(@', $p.castType->toOne(), '), $stack));\n']->joinStrings(''))),
+                ['   let r', $i, ' = if($obj.', $p.name, '->isEmpty() || ($obj.', $p.name, '->toOne() == $obj), | ', $bo, ', | ', $p.ns->toOne(), '::write', $p.writeName->toOne(), '(', $prev, ', $obj.', $p.name, '->toOne()->cast(@', $p.castType->toOne(), '), $stack));\n']->joinStrings(''))),
       pair(| $p.kind == 'table',
            | ^EmitAcc(prev = $r + '.builder', code =
-                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let t = platform::pure::compiler::pdb::gen::write', $p.writeName->toOne(), '($acc.builder, $item->cast(@', $p.castType->toOne(), '), $stack); ^platform::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $t.builder, offsets = $acc.offsets->concatenate($t.offset));}, ^platform::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = ', $prev, ', offsets = []));\n']->joinStrings(''))),
+                ['   let r', $i, ' = $obj.', $p.name, '->fold({item, acc | let t = ', $p.ns->toOne(), '::write', $p.writeName->toOne(), '($acc.builder, $item->cast(@', $p.castType->toOne(), '), $stack); ^platform::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = $t.builder, offsets = $acc.offsets->concatenate($t.offset));}, ^platform::pure::compiler::pdb::writerHelper::StringsAndBuilder(builder = ', $prev, ', offsets = []));\n']->joinStrings(''))),
       pair(| ($p.kind == 'string') && ($p.vector == false),
            | ^EmitAcc(prev = $r + '.builder', code =
                 ['   let r', $i, ' = if($obj.', $p.name, '->isEmpty(), | ', $bo, ', | platform::pure::compiler::pdb::fbb::createSharedString(', $prev, ', platform::pure::compiler::pdb::writerHelper::asFbsString($obj.', $p.name, '->toOne())));\n']->joinStrings(''))),
@@ -367,6 +422,8 @@ function platform::pure::compiler::pdb::generator::emitAddStep(p:PropPlan[1], pr
            | ^EmitAcc(prev = $t, code = ['   let t', $i, ' = if($r', $i, '.offset == 0, | ', $prev, ', | ', $prev, '->', $fbb, '::addFieldScalar(', $tid, ', $r', $i, '.typeByte, 0, 1)->', $fbb, '::addFieldOffset(', $id, ', $r', $i, '.offset));\n']->joinStrings(''))),
       pair(| ($p.kind == 'pointer') || ($p.kind == 'table') || ($p.kind == 'string'),
            | ^EmitAcc(prev = $t, code = ['   let t', $i, ' = ', $prev, '->', $fbb, '::addFieldOffset(', $id, ', $r', $i, '.offset);\n']->joinStrings(''))),
+      pair(| $p.kind == 'double',
+           | ^EmitAcc(prev = $t, code = ['   let t', $i, ' = if($obj.', $p.name, '->isEmpty(), | ', $prev, ', | ', $prev, '->', $fbb, '::addFieldFloatPresent(', $id, ', $obj.', $p.name, '->toOne()));\n']->joinStrings(''))),
       pair(| $p.kind == 'bool',
            | ^EmitAcc(prev = $t, code = ['   let t', $i, ' = if($obj.', $p.name, '->isEmpty(), | ', $prev, ', | ', $prev, '->', $fbb, '::addFieldScalar(', $id, ', if($obj.', $p.name, '->toOne(), | 1, | 0), 0, 1));\n']->joinStrings('')))
    ],
@@ -374,13 +431,14 @@ function platform::pure::compiler::pdb::generator::emitAddStep(p:PropPlan[1], pr
       | ^EmitAcc(prev = $t, code = ['   let t', $i, ' = if($obj.', $p.name, '->isEmpty(), | ', $prev, ', | ', $prev, '->', $fbb, '::addFieldScalar(', $id, ', $obj.', $p.name, '->toOne(), 0, 8));\n']->joinStrings('')));
 }
 
-function platform::pure::compiler::pdb::generator::emitClass(schema:FbsSchema[1], cls:Class<Any>[1], classes:Class<Any>[*]):String[1]
+function platform::pure::compiler::pdb::generator::emitClass(target:WriterTarget[1], cls:Class<Any>[1], classes:Class<Any>[*]):String[1]
 {
+   let schema = $target.schema;
    let clsName = $cls.name->toOne();
    let tblOpt = $schema.tables->filter(t | $t.name == ($clsName + 'Def'))->head();
    let tbl = $tblOpt->toOne();
    let props = allWriterProperties($cls);
-   let plans = range(0, $props->size())->map(i | buildPlan($schema, $clsName, $props->at($i), $tbl, $i, $classes));
+   let plans = range(0, $props->size())->map(i | buildPlan($target, $clsName, $props->at($i), $tbl, $i, $classes));
    let objType = $cls->elementToPath() + typeArgsSuffix($cls);
    let fieldCount = $tbl.fields.id->fold({v, m | if($v > $m, |$v, |$m)}, -1) + 1;
 
@@ -407,14 +465,14 @@ function platform::pure::compiler::pdb::generator::emitClass(schema:FbsSchema[1]
            '   let tV = if($rV.offset == 0, | ' + $adds.prev + ', | ' + $adds.prev + '->platform::pure::compiler::pdb::fbb::addFieldScalar(' + ($valuePlan.id->toOne() - 1)->toString() + ', $rV.typeByte, 0, 1)->platform::pure::compiler::pdb::fbb::addFieldOffset(' + $valuePlan.id->toOne()->toString() + ', $rV.offset));\n'));
    let body = $withValueAdd.code + '   ' + $withValueAdd.prev + '->platform::pure::compiler::pdb::fbb::endObject();\n';
 
-   'function platform::pure::compiler::pdb::gen::write' + $clsName + '(b:platform::pure::compiler::pdb::fbb::Builder[1], obj:' + $objType + '[1], stack:Any[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]\n' +
+   'function ' + $target.ns + '::write' + $clsName + '(b:platform::pure::compiler::pdb::fbb::Builder[1], obj:' + $objType + '[1], stack:Any[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]\n' +
    '{\n' +
    '   if(platform::pure::compiler::pdb::writerHelper::onStack($stack, $obj),\n' +
    '      | platform::pure::compiler::pdb::writerHelper::encodeAncestorRef($b, platform::pure::compiler::pdb::writerHelper::ancestorDepth($stack, $obj)),\n' +
-   '      | platform::pure::compiler::pdb::gen::write' + $clsName + '_body($b, $obj, $stack->concatenate($obj)));\n' +
+   '      | ' + $target.ns + '::write' + $clsName + '_body($b, $obj, $stack->concatenate($obj)));\n' +
    '}\n' +
    '\n' +
-   'function platform::pure::compiler::pdb::gen::write' + $clsName + '_body(b:platform::pure::compiler::pdb::fbb::Builder[1], obj:' + $objType + '[1], stack:Any[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]\n' +
+   'function ' + $target.ns + '::write' + $clsName + '_body(b:platform::pure::compiler::pdb::fbb::Builder[1], obj:' + $objType + '[1], stack:Any[*]):platform::pure::compiler::pdb::fbb::BuilderAndOffset[1]\n' +
    '{\n' + $body + '}\n';
 }
 
@@ -429,9 +487,9 @@ function platform::pure::compiler::pdb::generator::emitClass(schema:FbsSchema[1]
 // platform::pure::metamodel that own a Def table, so the protocol/grammar
 // PackageableElement extensions (compiler::test::CompiledGraph & co.) are
 // excluded twice over: wrong package, and no Def table.
-function platform::pure::compiler::pdb::generator::elementClasses(schema:FbsSchema[1]):Class<Any>[*]
+function platform::pure::compiler::pdb::generator::elementClasses(target:WriterTarget[1]):Class<Any>[*]
 {
-   writerClasses($schema)->filter(c | allSuperClasses($c).name->contains('PackageableElement'));
+   writerClasses($target)->filter(c | allSuperClasses($c).name->contains('PackageableElement'));
 }
 
 // Arm types are disjoint concrete classes, so match order carries no meaning
@@ -439,32 +497,32 @@ function platform::pure::compiler::pdb::generator::elementClasses(schema:FbsSche
 // reference's hand-authored instanceof order, which is not derivable from the
 // schema. elementTypeName's `Any` catch-all must stay LAST; it is appended after
 // the derived arms, never sorted among them.
-function platform::pure::compiler::pdb::generator::emitElementTypeName(schema:FbsSchema[1]):String[1]
+function platform::pure::compiler::pdb::generator::emitElementTypeName(target:WriterTarget[1]):String[1]
 {
-   let arms = elementClasses($schema)->map(c |
+   let arms = elementClasses($target)->map(c |
       '      v' + $c.name->toOne() + ' : ' + $c->elementToPath() + typeArgsSuffix($c)
          + '[1] | \'' + $c.name->toOne() + '\',\n');
-   'function platform::pure::compiler::pdb::gen::elementTypeName(e:Any[1]):String[0..1]\n'
+   'function ' + $target.ns + '::elementTypeName(e:Any[1]):String[0..1]\n'
       + '{\n   $e->match([\n'
       + $arms->joinStrings('')
       + '      x : Any[1] | []\n   ]);\n}\n';
 }
 
-function platform::pure::compiler::pdb::generator::emitWriteElementBlob(schema:FbsSchema[1]):String[1]
+function platform::pure::compiler::pdb::generator::emitWriteElementBlob(target:WriterTarget[1]):String[1]
 {
    let fbb = 'platform::pure::compiler::pdb::fbb';
-   let arms = elementClasses($schema)->map(c |
+   let arms = elementClasses($target)->map(c |
       '      v' + $c.name->toOne() + ' : ' + $c->elementToPath() + typeArgsSuffix($c)
-         + '[1] | platform::pure::compiler::pdb::gen::write' + $c.name->toOne()
+         + '[1] | ' + $target.ns + '::write' + $c.name->toOne()
          + '(' + $fbb + '::newBuilder(), $v' + $c.name->toOne() + ', []),\n');
-   'function platform::pure::compiler::pdb::gen::writeElementBlob(e:Any[1]):Binary[1]\n'
+   'function ' + $target.ns + '::writeElementBlob(e:Any[1]):Binary[1]\n'
       + '{\n   let r = $e->match([\n'
       + $arms->joinStrings('')->substring(0, $arms->joinStrings('')->length() - 2) + '\n'
       + '   ]);\n'
       + '   $r.builder->' + $fbb + '::finish($r.offset)->' + $fbb + '::result();\n}\n';
 }
 
-function platform::pure::compiler::pdb::generator::emitUnion(u:FbsUnion[1], classes:Class<Any>[*]):String[1]
+function platform::pure::compiler::pdb::generator::emitUnion(target:WriterTarget[1], u:FbsUnion[1], classes:Class<Any>[*]):String[1]
 {
    let members = $u.members;
    let ur = '^platform::pure::compiler::pdb::writerHelper::UnionRes(builder = $r.builder, offset = $r.offset, typeByte = ';
@@ -486,18 +544,18 @@ function platform::pure::compiler::pdb::generator::emitUnion(u:FbsUnion[1], clas
               let cls = classByName($classes, $simple);
               let full = $cls->elementToPath();
               'pair(| $vv->instanceOf(' + $full + '),\n' +
-              '           | let r = platform::pure::compiler::pdb::gen::write' + $simple + '($b, $vv->cast(@' + $full + typeArgsSuffix($cls) + '), $stack); ' + $ur + $byte + ');)';));
+              '           | let r = ' + nsFor($target, $m) + '::write' + $simple + '($b, $vv->cast(@' + $full + typeArgsSuffix($cls) + '), $stack); ' + $ur + $byte + ');)';));
    });
    let inner = 'if([\n       ' + $arms->joinStrings(',\n       ') + '],\n      | platform::pure::compiler::pdb::writerHelper::failUnion($b, \'' + $u.name + '\'))';
 
-   'function platform::pure::compiler::pdb::gen::writeUnion_' + $u.name + '(b:platform::pure::compiler::pdb::fbb::Builder[1], v:Any[0..1], stack:Any[*]):platform::pure::compiler::pdb::writerHelper::UnionRes[1]\n' +
+   'function ' + $target.ns + '::writeUnion_' + $u.name + '(b:platform::pure::compiler::pdb::fbb::Builder[1], v:Any[0..1], stack:Any[*]):platform::pure::compiler::pdb::writerHelper::UnionRes[1]\n' +
    '{\n' +
    '   if($v->isEmpty(),\n' +
    '      | ^platform::pure::compiler::pdb::writerHelper::UnionRes(builder = $b, offset = 0, typeByte = 0),\n' +
-   '      | platform::pure::compiler::pdb::gen::writeUnionValue_' + $u.name + '($b, $v->toOne(), $stack));\n' +
+   '      | ' + $target.ns + '::writeUnionValue_' + $u.name + '($b, $v->toOne(), $stack));\n' +
    '}\n' +
    '\n' +
-   'function platform::pure::compiler::pdb::gen::writeUnionValue_' + $u.name + '(b:platform::pure::compiler::pdb::fbb::Builder[1], vv:Any[1], stack:Any[*]):platform::pure::compiler::pdb::writerHelper::UnionRes[1]\n' +
+   'function ' + $target.ns + '::writeUnionValue_' + $u.name + '(b:platform::pure::compiler::pdb::fbb::Builder[1], vv:Any[1], stack:Any[*]):platform::pure::compiler::pdb::writerHelper::UnionRes[1]\n' +
    '{\n   ' + $inner + ';\n}\n';
 }
 
@@ -553,17 +611,56 @@ function platform::pure::compiler::pdb::generator::emitAtomicValueContent(schema
 
 function platform::pure::compiler::pdb::generator::generateWriter(fbsPath:String[1]):String[1]
 {
-   let schema = parseFbs(platform::pure::functions::io::readFile($fbsPath));
-   let classes = writerClasses($schema);
    let header = '// AUTO-GENERATED by platform::pure::compiler::pdb::generator (from m3.fbs + the live\n' +
                 '// metamodel) - DO NOT EDIT. Regenerate: see pdb/writer/generator.pure printGeneratedWriter.\n' +
                 '// Byte-compatible with the reference bootstrap GeneratedFlatBufferWriter.\n\n';
-   $header
-      + $schema.unions->filter(u | $u.name != 'AtomicValueContentUnion')->map(u | emitUnion($u, $classes))->joinStrings('\n')
-      + '\n' + emitAtomicValueContent($schema, $classes)
-      + '\n' + $classes->map(c | emitClass($schema, $c, $classes))->joinStrings('\n')
-      + '\n' + emitElementTypeName($schema)
-      + '\n' + emitWriteElementBlob($schema);
+   $header + emitAll(m3Target(parseFbs(platform::pure::functions::io::readFile($fbsPath))));
+}
+
+// Everything a target's writer holds: union dispatches, (m3 only) the AtomicValue content
+// dispatch, one writeX per table class, then the element-level dispatches.
+function platform::pure::compiler::pdb::generator::emitAll(target:WriterTarget[1]):String[1]
+{
+   let own     = writerClasses($target);
+   let classes = if($target.m3, | $own, | $own->concatenate(writerClasses(m3Target($target.schema))));
+   $target.schema.unions->filter(u | $target.ownUnions->contains($u.name) && ($u.name != 'AtomicValueContentUnion'))->map(u | emitUnion($target, $u, $classes))->joinStrings('\n')
+      + if($target.m3, | '\n' + emitAtomicValueContent($target.schema, $classes), | '')
+      + '\n' + $own->map(c | emitClass($target, $c, $classes))->joinStrings('\n')
+      + '\n' + emitElementTypeName($target)
+      + '\n' + emitWriteElementBlob($target);
+}
+
+// The generated function an extension's `CompilerExtension.pdb` points at.
+function platform::pure::compiler::pdb::generator::emitSerialization(target:WriterTarget[1]):String[1]
+{
+   'function ' + $target.ns + '::serialization():platform::pure::compiler::extension::PdbSerialization[1]\n'
+      + '{\n'
+      + '   ^platform::pure::compiler::extension::PdbSerialization(\n'
+      + '      elementTypeName  = e: Any[1] | ' + $target.ns + '::elementTypeName($e),\n'
+      + '      writeElementBlob = e: Any[1] | ' + $target.ns + '::writeElementBlob($e));\n'
+      + '}\n';
+}
+
+// A language extension's writer: its metamodel package, the fbs fragment pdb/fbsgen generated for
+// it, emitted into `ns`. Run from the extension's build (see pure/extensions/diagram/Justfile).
+function platform::pure::compiler::pdb::generator::generateExtensionWriter(m3FbsPath:String[1], fragmentPath:String[1], packagesCsv:String[1], ns:String[1]):String[1]
+{
+   let fragText = platform::pure::functions::io::readFile($fragmentPath);
+   let fragment = parseFbs($fragText);
+   let target   = ^WriterTarget(packages = $packagesCsv->split(','), ns = $ns,
+                                schema = parseFbs(platform::pure::functions::io::readFile($m3FbsPath) + '\n' + $fragText),
+                                ownTables = $fragment.tables.name, ownUnions = $fragment.unions.name, m3 = false);
+   '// AUTO-GENERATED by platform::pure::compiler::pdb::generator from ' + $packagesCsv + '\n'
+      + '// and its fbs fragment (pdb/fbsgen) - DO NOT EDIT. Regenerated by the extension build.\n\n'
+      + emitAll($target) + '\n' + emitSerialization($target);
+}
+
+function platform::pure::compiler::pdb::generator::printExtensionWriter(m3FbsPath:String[1], fragmentPath:String[1], packagesCsv:String[1], ns:String[1]):Boolean[1]
+{
+   print('===GENWRITER-BEGIN===\n', 1);
+   print(generateExtensionWriter($m3FbsPath, $fragmentPath, $packagesCsv, $ns), 1);
+   print('\n===GENWRITER-END===\n', 1);
+   true;
 }
 
 // Entry point for `pure-bootstrap execute` (run from the repo root):

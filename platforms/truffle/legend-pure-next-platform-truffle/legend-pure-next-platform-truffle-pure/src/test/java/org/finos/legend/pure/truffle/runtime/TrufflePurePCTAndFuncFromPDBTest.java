@@ -99,6 +99,12 @@ class TrufflePurePCTAndFuncFromPDBTest
         PdbModule parserMappingsLoader =
                 new PdbModule(parserMappingsPdb);
 
+        // This test wires the engine itself (to capture Graal's trace) rather than building a PureRuntime,
+        // so it names its languages to the decoder itself — what PureRuntime.build() does — before
+        // anything is decoded.
+        org.finos.legend.pure.truffle.grammar.PureLanguage.all().forEach(
+                org.finos.legend.pure.truffle.compiler.module.pdbModule.GenericFbDecoder::registerLanguage);
+
         // Module registry replaces the previous anonymous-class composite resolver.
         // Registration order is dependency-first: core, parser-mappings, core-tests,
         // compiler, compiler-tests (each tests pdb depends on its lean pair).

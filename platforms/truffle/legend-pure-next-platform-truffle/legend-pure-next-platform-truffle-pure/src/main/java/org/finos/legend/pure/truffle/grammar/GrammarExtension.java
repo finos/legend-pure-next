@@ -27,7 +27,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
  * {@code "TopParser"}) and produces a root {@link ParserRuleContext} from
  * a source string.
  *
- * <p>Registered via {@link PureRuntime.Builder#withGrammarExtensions} and
+ * <p>Contributed by a language's manifest ({@code Language.grammar()}) — Top is the engine's own — and
  * looked up by the {@code parseAntlr} native: Pure code calls
  * {@code parseAntlr($source, 'M3Parser', $sourceId, $lineOffset)}; the native
  * resolves the matching {@code GrammarExtension} from the per-runtime
