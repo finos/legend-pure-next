@@ -1,0 +1,6 @@
+{
+  "name": "legacy",
+  "packagePattern": "(meta)(::.*)?",
+  "dependencies": ["core"],
+  "testDependencies": ["core-tests"]
+}

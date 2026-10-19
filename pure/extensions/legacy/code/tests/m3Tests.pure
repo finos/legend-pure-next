@@ -1,0 +1,123 @@
+// ©2026 JP Morgan Chase & Co. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The legacy m3 over next objects: legacy navigation, as legend-pure code writes it, reads the next graph.
+
+Class meta::pure::bridge::tests::model::Firm
+{
+   legalName : String[1];
+   employees : meta::pure::bridge::tests::model::Person[*];
+   employeeByName(name: String[1]) { $this.employees->filter(e | $e.name == $name)->head() }: meta::pure::bridge::tests::model::Person[0..1];
+}
+
+Class meta::pure::bridge::tests::model::Person
+{
+   name : String[1];
+   nickNames : String[0..2];
+   kind : meta::pure::bridge::tests::model::Kind[1];
+}
+
+Enum meta::pure::bridge::tests::model::Kind
+{
+   EMPLOYEE, CONTRACTOR
+}
+
+function meta::pure::bridge::tests::model::adults(people: meta::pure::bridge::tests::model::Person[*]): String[*]
+{
+   $people->map(p | $p.name)
+}
+
+function <<platform::pure::profiles::test.TestDependency>> meta::pure::bridge::tests::legacyClass(c: platform::pure::metamodel::type::Class<Any>[1]): meta::pure::metamodel::type::Class<Any>[1]
+{
+   meta::pure::bridge::m3::wrap($c)->cast(@meta::pure::metamodel::type::Class<Any>)
+}
+
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testAClassWrapsAsTheLegacyClass(): Boolean[1]
+{
+   let c = meta::pure::bridge::m3::wrap(meta::pure::bridge::tests::model::Person);
+   assert($c->instanceOf(meta::pure::metamodel::type::Class));
+   assert($c->instanceOf(meta::pure::metamodel::type::Type));
+   assert($c->instanceOf(meta::pure::metamodel::PackageableElement));
+}
+
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testWrappersOfTheSameObjectAreEqual(): Boolean[1]
+{
+   assertEquals(meta::pure::bridge::tests::legacyClass(meta::pure::bridge::tests::model::Person), meta::pure::bridge::tests::legacyClass(meta::pure::bridge::tests::model::Person));
+   assertFalse(meta::pure::bridge::tests::legacyClass(meta::pure::bridge::tests::model::Person) == meta::pure::bridge::tests::legacyClass(meta::pure::bridge::tests::model::Firm));
+}
+
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testPrimitivesAndUserInstancesAreNotWrapped(): Boolean[1]
+{
+   assertEquals(1, meta::pure::bridge::m3::wrap(1));
+   assertEquals('a', meta::pure::bridge::m3::wrap('a'));
+}
+
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testPropertiesNamesAndRawTypes(): Boolean[1]
+{
+   let props = meta::pure::bridge::tests::legacyClass(meta::pure::bridge::tests::model::Person).properties;
+   assertEquals(['name', 'nickNames', 'kind'], $props.name);
+   assertEquals(['String', 'String', 'Kind'], $props->map(p | $p.genericType.rawType->toOne().name->toOne()));
+}
+
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testATypeParameterIsNotARawType(): Boolean[1]
+{
+   let gt = meta::pure::bridge::m3::wrap(platform::pure::metamodel::type::Class.properties->filter(p | $p.name == 'typeVariables')->toOne().classifierGenericType->toOne())->cast(@meta::pure::metamodel::type::generics::GenericType);
+   let owner = $gt.typeArguments->at(0);
+   assertEquals('Class', $owner.rawType->toOne().name);
+   assertEquals('T', $owner.typeArguments->toOne().typeParameter->toOne().name);
+   assert($owner.typeArguments->toOne().rawType->isEmpty());
+}
+
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testMultiplicityBounds(): Boolean[1]
+{
+   let nickNames = meta::pure::bridge::tests::legacyClass(meta::pure::bridge::tests::model::Person).properties->filter(p | $p.name == 'nickNames')->toOne();
+   assertEquals(0, $nickNames.multiplicity.lowerBound.value);
+   assertEquals(2, $nickNames.multiplicity.upperBound.value);
+   let employees = meta::pure::bridge::tests::legacyClass(meta::pure::bridge::tests::model::Firm).properties->filter(p | $p.name == 'employees')->toOne();
+   assert($employees.multiplicity.upperBound.value->isEmpty());
+}
+
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testEnumerationValues(): Boolean[1]
+{
+   let kind = meta::pure::bridge::m3::wrap(meta::pure::bridge::tests::model::Kind)->cast(@meta::pure::metamodel::type::Enumeration<Any>);
+   assertEquals(['EMPLOYEE', 'CONTRACTOR'], $kind.values->map(v | $v->toString()));
+}
+
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testQualifiedPropertyIdAsLegacyPrintsIt(): Boolean[1]
+{
+   let qp = meta::pure::bridge::tests::legacyClass(meta::pure::bridge::tests::model::Firm).qualifiedProperties->toOne();
+   assertEquals('employeeByName', $qp.name);
+   assertEquals('employeeByName(String[1])', $qp.id);
+}
+
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testAFunctionBodyReadsAsLegacyExpressions(): Boolean[1]
+{
+   let f = meta::pure::bridge::m3::wrap(meta::pure::bridge::tests::model::adults_Person_MANY__String_MANY_)->cast(@meta::pure::metamodel::function::ConcreteFunctionDefinition<Any>);
+   assertEquals('adults_Person_MANY__String_MANY_', $f.name);
+   assertEquals('adults', $f.functionName);
+   let map = $f.expressionSequence->toOne()->cast(@meta::pure::metamodel::valuespecification::SimpleFunctionExpression);
+   assertEquals('map', $map.func.functionName);
+   // the lambda argument is an InstanceValue whose value is a (wrapped) lambda
+   let lambda = $map.parametersValues->at(1)->cast(@meta::pure::metamodel::valuespecification::InstanceValue).values->toOne();
+   assert($lambda->instanceOf(meta::pure::metamodel::function::LambdaFunction));
+   let body = $lambda->cast(@meta::pure::metamodel::function::LambdaFunction<Any>).expressionSequence->toOne()->cast(@meta::pure::metamodel::valuespecification::SimpleFunctionExpression);
+   assertEquals('name', $body.func->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>).name);
+}
+
+function <<platform::pure::profiles::test.Test>> meta::pure::bridge::tests::testInstanceValueOfACollection(): Boolean[1]
+{
+   let f = meta::pure::bridge::m3::wrap({|[1, 2, 3]})->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+   let iv = $f.expressionSequence->toOne()->cast(@meta::pure::metamodel::valuespecification::InstanceValue);
+   assertEquals([1, 2, 3], $iv.values);
+}
